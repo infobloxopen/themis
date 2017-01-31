@@ -5,6 +5,21 @@ import (
 	"strings"
 )
 
+type anyArgumentsFunctionType func(args []ExpressionType) ExpressionType
+type argumentChecker func(args []ExpressionType) anyArgumentsFunctionType
+
+var expressionArgumentCheckers map[string][]argumentChecker = map[string][]argumentChecker{
+	"equal": {checkerFunctionStringEqual},
+	"contains": {
+		checkerFunctionStringContains,
+		checkerFunctionNetworkContainsAddress,
+		checkerFunctionSetOfStringContains,
+		checkerFunctionSetOfNetworksContainsAddress,
+		checkerFunctionSetOfDomainsContains},
+	"not": {checkerFunctionBooleanNot},
+	"or":  {checkerFunctionBooleanOr},
+	"and": {checkerFunctionBooleanAnd}}
+
 func (ctx yastCtx) unmarshalStringValue(v interface{}) (*AttributeValueType, error) {
 	s, err := ctx.validateString(v, "value of string type")
 	if err != nil {

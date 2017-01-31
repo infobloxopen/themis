@@ -5,6 +5,24 @@ import (
 	"strings"
 )
 
+type twoArgumentsFunctionType func(first ExpressionType, second ExpressionType) ExpressionType
+
+var targetCompatibleExpressions map[string]map[int]map[int]twoArgumentsFunctionType = map[string]map[int]map[int]twoArgumentsFunctionType{
+	"equal": map[int]map[int]twoArgumentsFunctionType{
+		DataTypeString: map[int]twoArgumentsFunctionType{
+			DataTypeString: makeFunctionStringEqual}},
+	"contains": map[int]map[int]twoArgumentsFunctionType{
+		DataTypeString: map[int]twoArgumentsFunctionType{
+			DataTypeString: makeFunctionStringContains},
+		DataTypeNetwork: map[int]twoArgumentsFunctionType{
+			DataTypeAddress: makeFunctionNetworkContainsAddress},
+		DataTypeSetOfStrings: map[int]twoArgumentsFunctionType{
+			DataTypeString: makeFunctionSetOfStringContains},
+		DataTypeSetOfNetworks: map[int]twoArgumentsFunctionType{
+			DataTypeAddress: makeFunctionSetOfNetworksContainsAddress},
+		DataTypeSetOfDomains: map[int]twoArgumentsFunctionType{
+			DataTypeDomain: makeFunctionSetOfDomainsContains}}}
+
 func (ctx *yastCtx) getAdjustedArgument(v interface{}, val ExpressionType, attr *AttributeDesignatorType) (ExpressionType, *AttributeDesignatorType, error) {
 	a, err := ctx.unmarshalExpression(v)
 	if err != nil {
@@ -156,7 +174,7 @@ func (ctx *yastCtx) unmarshalTargetAllOf(item interface{}) (AllOfType, error) {
 		return AllOfType{}, err
 	}
 
-	return MakeAll(m), nil
+	return AllOfType{[]MatchType{m}}, nil
 }
 
 func (ctx *yastCtx) unmarshalTargetAnyOfItem(v interface{}, i int, allOfs []AllOfType) ([]AllOfType, error) {
@@ -213,7 +231,7 @@ func (ctx *yastCtx) unmarshalTargetAnyOf(item interface{}) (AnyOfType, error) {
 		return AnyOfType{}, err
 	}
 
-	return MakeAny(MakeAll(m)), nil
+	return AnyOfType{[]AllOfType{AllOfType{[]MatchType{m}}}}, nil
 }
 
 func (ctx *yastCtx) unmarshalTargetItem(v interface{}, i int, anyOfs []AnyOfType) ([]AnyOfType, error) {
