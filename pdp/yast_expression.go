@@ -211,7 +211,7 @@ func (ctx *yastCtx) unmarshalSetOfDomainsValueItem(v interface{}, i int, set *Se
 		return ctx.errorf("Expected value of domain type but got %#v (%v)", s, err)
 	}
 
-	set.addToSetOfDomains(d)
+	set.addToSetOfDomains(d, nil)
 
 	return nil
 }
@@ -222,7 +222,7 @@ func (ctx *yastCtx) unmarshalSetOfDomainsImmediateValue(v interface{}) (*Attribu
 		return nil, nil
 	}
 
-	set := SetOfSubdomains{false, make(map[string]*SetOfSubdomains)}
+	set := SetOfSubdomains{false, nil, make(map[string]*SetOfSubdomains)}
 	for i, item := range items {
 		err = ctx.unmarshalSetOfDomainsValueItem(item, i, &set)
 		if err != nil {
@@ -277,6 +277,12 @@ func (ctx *yastCtx) unmarshalSelectorPath(m map[interface{}]interface{}) (string
 			a, ok := ctx.attrs[ID]
 			if !ok {
 				return path, nil, ctx.errorf("Unknown attribute ID %s for %d element of selector path", ID, i+1)
+			}
+
+			if a.DataType != DataTypeString && a.DataType != DataTypeDomain {
+				return path, nil, ctx.errorf("Expected only %s or %s for %d element of selector path but got %s " +
+					"attribute %s",
+					DataTypeNames[DataTypeString], DataTypeNames[DataTypeDomain], i+1, DataTypeNames[a.DataType], ID)
 			}
 
 			p = append(p, AttributeDesignatorType{a})

@@ -82,12 +82,21 @@ policies:
 
               effect: Permit
 
-          alg: FirstApplicableEffect
+          alg:
+            id: Mapper
+            map:
+              selector:
+                type: String
+                path: $d
+                content: domains_to_rules
 
   alg: FirstApplicableEffect`
 
+var YASTTestContent map[string]interface{} = map[string]interface{}{
+	"domains_to_rules": map[interface{}]interface{}{"test.com": "Rule #1.1.1"}}
+
 func TestUnmarshalYAST(t *testing.T) {
-	p, err := UnmarshalYAST([]byte(YASTTestPolicy), "", nil)
+	p, err := UnmarshalYAST([]byte(YASTTestPolicy), "", YASTTestContent)
 	if err != nil {
 		t.Errorf("Expected no errors but got:\n%#v\n\n%s\n", err, err)
 	} else {

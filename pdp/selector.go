@@ -233,7 +233,7 @@ func castToSetOfNetworksSelectorType(v interface{}, path string) (AttributeValue
 }
 
 func castArrayToSetOfDomainsSelectorType(v []interface{}, path string) (SetOfSubdomains, error) {
-	set := SetOfSubdomains{false, make(map[string]*SetOfSubdomains)}
+	set := SetOfSubdomains{false, nil, make(map[string]*SetOfSubdomains)}
 
 	for i, item := range v {
 		s, ok := item.(string)
@@ -248,14 +248,14 @@ func castArrayToSetOfDomainsSelectorType(v []interface{}, path string) (SetOfSub
 				i, item, path, DataTypeNames[DataTypeDomain], err)
 		}
 
-		set.addToSetOfDomains(d)
+		set.addToSetOfDomains(d, nil)
 	}
 
 	return set, nil
 }
 
 func castMapToSetOfDomainsSelectorType(m map[string]interface{}, path string) (SetOfSubdomains, error) {
-	set := SetOfSubdomains{false, make(map[string]*SetOfSubdomains)}
+	set := SetOfSubdomains{false, nil, make(map[string]*SetOfSubdomains)}
 
 	for k, _ := range m {
 		d, err := AdjustDomainName(k)
@@ -264,7 +264,7 @@ func castMapToSetOfDomainsSelectorType(m map[string]interface{}, path string) (S
 				k, path, DataTypeNames[DataTypeDomain], err)
 		}
 
-		set.addToSetOfDomains(d)
+		set.addToSetOfDomains(d, nil)
 	}
 
 	return set, nil
@@ -336,15 +336,15 @@ func castMissingSelectorValue(t int, err error) (AttributeValueType, error) {
 		return AttributeValueType{DataTypeSetOfNetworks, make([]net.IPNet, 0)}, nil
 
 	case DataTypeSetOfDomains:
-		return AttributeValueType{DataTypeSetOfDomains, SetOfSubdomains{false, make(map[string]*SetOfSubdomains)}}, nil
+		return AttributeValueType{DataTypeSetOfDomains, SetOfSubdomains{false, nil, make(map[string]*SetOfSubdomains)}}, nil
 	}
 
 	return AttributeValueType{}, err
 }
 
-func dispatchContentByType(c interface{}, path []string) (map[string]interface{}, AttributeValueType, bool, error) {
+func dispatchContentByType(c interface{}, path []string) (interface{}, AttributeValueType, bool, error) {
 	switch v := c.(type) {
-	case map[string]interface{}:
+	case *SetOfSubdomains, map[string]interface{}:
 		return v, AttributeValueType{}, false, nil
 
 	case AttributeValueType:
@@ -358,7 +358,7 @@ func dispatchContentByType(c interface{}, path []string) (map[string]interface{}
 	}
 
 	return nil, AttributeValueType{}, false,
-		fmt.Errorf("Expected map, value, missing value or error at %s but got %T (%#v)", strings.Join(path, "/"), c, c)
+		fmt.Errorf("Expected map, domain set, value, missing value or error at %s but got %T (%#v)", strings.Join(path, "/"), c, c)
 }
 
 func (s SelectorType) calculate(ctx *Context) (AttributeValueType, error) {
@@ -376,7 +376,7 @@ func (s SelectorType) calculate(ctx *Context) (AttributeValueType, error) {
 	for i, item := range s.Path {
 		if m == nil {
 			return AttributeValueType{},
-				fmt.Errorf("Expected map, missing value or error at %s but got attribute value (%#v)",
+				fmt.Errorf("Expected map, domain set, missing value or error at %s but got attribute value (%#v)",
 					strings.Join(path, "/"), v)
 		}
 
@@ -395,9 +395,27 @@ func (s SelectorType) calculate(ctx *Context) (AttributeValueType, error) {
 
 		path[len(path)-1] = fmt.Sprintf("%s(%s)", path[len(path)-1], idx)
 
-		c, ok := m[idx]
-		if !ok {
-			return castMissingSelectorValue(s.DataType, fmt.Errorf("No value at %s", strings.Join(path, "/")))
+		var (
+			c interface{}
+			ok bool
+		)
+
+		switch m := m.(type) {
+		default:
+			return AttributeValueType{},
+				fmt.Errorf("Expected map or domain set at %s but got %T (%#v)", strings.Join(path, "/"), m, m)
+
+		case map[string]interface{}:
+			c, ok = m[idx]
+			if !ok {
+				return castMissingSelectorValue(s.DataType, fmt.Errorf("No value at %s", strings.Join(path, "/")))
+			}
+
+		case *SetOfSubdomains:
+			c, ok = m.Get(idx)
+			if !ok {
+				return castMissingSelectorValue(s.DataType, fmt.Errorf("No value at %s", strings.Join(path, "/")))
+			}
 		}
 
 		m, v, miss, err = dispatchContentByType(c, path)
@@ -413,10 +431,19 @@ func (s SelectorType) calculate(ctx *Context) (AttributeValueType, error) {
 	return v, nil
 }
 
-func duckToSelectorContentbyAttribute(c interface{}, rawPath []interface{}, t int, reprPath []string) interface{} {
+func duckToSelectorContentbyAttribute(a AttributeDesignatorType, c interface{}, rawPath []interface{}, t int, reprPath []string) interface{} {
 	m, ok := c.(map[string]interface{})
 	if !ok {
 		return fmt.Errorf("Expected map at %s but got %T", strings.Join(reprPath, "/"), c)
+	}
+
+	if a.getResultType() == DataTypeDomain {
+		s := &SetOfSubdomains{false, nil, make(map[string]*SetOfSubdomains)}
+		for k, v := range m {
+			s.addToSetOfDomains(k, v)
+		}
+
+		return s
 	}
 
 	r := make(map[string]interface{})
@@ -458,7 +485,7 @@ func duckToSelectorContent(rawCtx interface{}, rawPath []interface{}, t int, rep
 	for i, item := range rawPath {
 		switch v := item.(type) {
 		case AttributeDesignatorType:
-			return duckToSelectorContentbyAttribute(c, rawPath[i+1:], t, reprPath)
+			return duckToSelectorContentbyAttribute(v, c, rawPath[i+1:], t, reprPath)
 
 		case string:
 			a, ok := c.([]interface{})

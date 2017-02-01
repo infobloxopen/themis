@@ -22,6 +22,7 @@ const (
 	yastTagContent    = "content"
 	yastTagSelector   = "selector"
 	yastTagPath       = "path"
+	yastTagMap        = "map"
 	yastTagDefault    = "default"
     yastTagError      = "error"
 

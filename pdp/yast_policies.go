@@ -9,45 +9,56 @@ var paramUnmarshalersRCA = map[string]paramUnmarshalerRCAType{yastTagMapperAlg: 
 var paramUnmarshalersPCA = map[string]paramUnmarshalerPCAType{yastTagMapperAlg: unmarshalMapperPCAParams}
 
 func unmarshalMapperRCAParams(ctx *yastCtx, p *PolicyType, m map[interface{}]interface{}) error {
-	ID, err := ctx.extractString(m, yastTagAttribute, "attribute")
+	v, ok  := m[yastTagMap]
+	if !ok {
+		return ctx.errorf("Missing map")
+	}
+
+	expr, err := ctx.unmarshalExpression(v)
 	if err != nil {
 		return err
 	}
 
-	a, ok := ctx.attrs[ID]
-	if !ok {
-		return ctx.errorf("Unknown attribute ID %s", ID)
+	exprType := expr.getResultType()
+	if exprType != DataTypeString {
+		return ctx.errorf("Expected %q expression but got %q", DataTypeNames[DataTypeString], DataTypeNames[exprType])
 	}
 
-	p.argument = AttributeDesignatorType{a}
+	p.argument = expr
 
 	p.rulesMap = make(map[string]*RuleType)
 	for _, r := range p.Rules {
 		p.rulesMap[r.ID] = &r
 	}
 
-	ID, err = ctx.extractString(m, yastTagDefault, "default rule ID")
-	if err != nil {
-		return err
-	}
+	var defRule *RuleType = nil
+	v, ok = m[yastTagDefault]
+	if ok {
+		ID, err := ctx.validateString(v, "default rule ID")
+		if err != nil {
+			return err
+		}
 
-	defRule, ok := p.rulesMap[ID]
-	if !ok {
-		return ctx.errorf("Unknown rule ID %s (expected rule defined in current policy)", ID)
+		defRule, ok = p.rulesMap[ID]
+		if !ok {
+			return ctx.errorf("Unknown rule ID %s (expected rule defined in current policy)", ID)
+		}
 	}
-
 	p.defaultRule = defRule
 
-	ID, err = ctx.extractString(m, yastTagError, "error rule ID")
-	if err != nil {
-		return err
-	}
+	var errRule *RuleType = nil
+	v, ok = m[yastTagError]
+	if ok {
+		ID, err := ctx.validateString(v, "error rule ID")
+		if err != nil {
+			return err
+		}
 
-	errRule, ok := p.rulesMap[ID]
-	if !ok {
-		return ctx.errorf("Unknown rule ID %s (expected rule defined in current policy)", ID)
+		errRule, ok = p.rulesMap[ID]
+		if !ok {
+			return ctx.errorf("Unknown rule ID %s (expected rule defined in current policy)", ID)
+		}
 	}
-
 	p.errorRule = errRule
 
 	return nil
@@ -176,23 +187,34 @@ func unmarshalMapperPCAParams(ctx *yastCtx, p *PolicySetType, m map[interface{}]
 		return err
 	}
 
-	defPolicy, ok := p.policiesMap[ID]
-	if !ok {
-		return ctx.errorf("Unknown policy ID %s (expected policy defined in current set)", ID)
-	}
+	var defPolicy EvaluableType = nil
+	v, ok := m[yastTagDefault]
+	if ok {
+		ID, err := ctx.validateString(v, "default policy or set ID")
+		if err != nil {
+			return err
+		}
 
+		defPolicy, ok = p.policiesMap[ID]
+		if !ok {
+			return ctx.errorf("Unknown policy or set ID %s (expected item defined in current set)", ID)
+		}
+	}
 	p.defaultPolicy = defPolicy
 
-	ID, err = ctx.extractString(m, yastTagError, "error policy ID")
-	if err != nil {
-		return err
-	}
+	var errPolicy EvaluableType = nil
+	v, ok = m[yastTagError]
+	if ok {
+		ID, err := ctx.validateString(v, "error policy or set ID")
+		if err != nil {
+			return err
+		}
 
-	errPolicy, ok := p.policiesMap[ID]
-	if !ok {
-		return ctx.errorf("Unknown policy ID %s (expected policy defined in current set)", ID)
+		errPolicy, ok = p.policiesMap[ID]
+		if !ok {
+			return ctx.errorf("Unknown policy or set ID %s (expected item defined in current set)", ID)
+		}
 	}
-
 	p.errorPolicy = errPolicy
 
 	return nil
