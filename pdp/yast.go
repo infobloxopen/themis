@@ -22,6 +22,8 @@ const (
 	yastTagContent    = "content"
 	yastTagSelector   = "selector"
 	yastTagPath       = "path"
+	yastTagDefault    = "default"
+    yastTagError      = "error"
 
 	yastTagDataTypeUndefined     = "undefined"
 	yastTagDataTypeBoolean       = "boolean"
@@ -33,7 +35,10 @@ const (
 	yastTagDataTypeSetOfNetworks = "set of networks"
 	yastTagDataTypeSetOfDomains  = "set of domains"
 
-	yastTagDefaultAlg = "FirstApplicableEffect"
+	yastTagFirstApplicableEffectAlg = "firstapplicableeffect"
+	yastTagDenyOverridesAlg         = "denyoverrides"
+	yastTagMapperAlg                = "mapper"
+	yastTagDefaultAlg               = yastTagFirstApplicableEffectAlg
 )
 
 func UnmarshalYAST(in []byte, dir string, ext map[string]interface{}) (EvaluableType, error) {

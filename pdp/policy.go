@@ -1,10 +1,13 @@
 package pdp
 
-type RuleCombiningAlgType func(rules []RuleType, ctx *Context) ResponseType
+import "fmt"
+
+type RuleCombiningAlgType func(policy *PolicyType, ctx *Context) ResponseType
 
 var RuleCombiningAlgMap map[string]RuleCombiningAlgType = map[string]RuleCombiningAlgType{
-	"firstapplicableeffect": FirstApplicableEffectRCA,
-	"denyoverrides":         DenyOverridesRCA}
+	yastTagFirstApplicableEffectAlg: FirstApplicableEffectRCA,
+	yastTagDenyOverridesAlg:         DenyOverridesRCA,
+	yastTagMapperAlg:                MapperRCA}
 
 type PolicyType struct {
 	ID               string
@@ -12,19 +15,28 @@ type PolicyType struct {
 	Rules            []RuleType
 	Obligations      []AttributeAssignmentExpressionType
 	RuleCombiningAlg RuleCombiningAlgType
+
+	argument     ExpressionType
+	rulesMap     map[string]*RuleType
+	defaultRule  *RuleType
+	errorRule    *RuleType
+}
+
+func (p PolicyType) getID() string {
+	return p.ID
 }
 
 func (p PolicyType) Calculate(ctx *Context) ResponseType {
 	match, err := p.Target.calculate(ctx)
 	if err != nil {
-		return combineEffectAndStatus(err, p.ID, p.RuleCombiningAlg(p.Rules, ctx))
+		return combineEffectAndStatus(err, p.ID, p.RuleCombiningAlg(&p, ctx))
 	}
 
 	if !match {
 		return ResponseType{EffectNotApplicable, "Ok", nil}
 	}
 
-	r := p.RuleCombiningAlg(p.Rules, ctx)
+	r := p.RuleCombiningAlg(&p, ctx)
 	if r.Effect == EffectDeny || r.Effect == EffectPermit {
 		r.Obligations = append(r.Obligations, p.Obligations...)
 	}
@@ -32,8 +44,8 @@ func (p PolicyType) Calculate(ctx *Context) ResponseType {
 	return r
 }
 
-func FirstApplicableEffectRCA(rules []RuleType, ctx *Context) ResponseType {
-	for _, rule := range rules {
+func FirstApplicableEffectRCA(policy *PolicyType, ctx *Context) ResponseType {
+	for _, rule := range policy.Rules {
 		r := rule.calculate(ctx)
 		if r.Effect != EffectNotApplicable {
 			return r
@@ -43,7 +55,7 @@ func FirstApplicableEffectRCA(rules []RuleType, ctx *Context) ResponseType {
 	return ResponseType{EffectNotApplicable, "Ok", nil}
 }
 
-func DenyOverridesRCA(rules []RuleType, ctx *Context) ResponseType {
+func DenyOverridesRCA(policy *PolicyType, ctx *Context) ResponseType {
 	status := ""
 	obligations := make([]AttributeAssignmentExpressionType, 0)
 
@@ -53,7 +65,7 @@ func DenyOverridesRCA(rules []RuleType, ctx *Context) ResponseType {
 
 	permits := 0
 
-	for _, rule := range rules {
+	for _, rule := range policy.Rules {
 		r := rule.calculate(ctx)
 		if r.Effect == EffectDeny {
 			obligations = append(obligations, r.Obligations...)
@@ -102,6 +114,37 @@ func DenyOverridesRCA(rules []RuleType, ctx *Context) ResponseType {
 
 	if indetP > 0 {
 		return ResponseType{EffectIndeterminateP, status, nil}
+	}
+
+	return ResponseType{EffectNotApplicable, "Ok", nil}
+}
+
+func MapperRCA(policy *PolicyType, ctx *Context) ResponseType {
+	v, err := policy.argument.calculate(ctx)
+	if err != nil {
+		if policy.errorRule != nil {
+			return policy.errorRule.calculate(ctx)
+		}
+
+		return ResponseType{EffectIndeterminate, fmt.Sprintf("Mapper Rule Combining Algorithm: %s", err), nil}
+	}
+
+	ID, err := ExtractStringValue(v, "argument")
+	if err != nil {
+		if policy.errorRule != nil {
+			return policy.errorRule.calculate(ctx)
+		}
+
+		return ResponseType{EffectIndeterminate, fmt.Sprintf("Mapper Rule Combining Algorithm: %s", err), nil}
+	}
+
+	rule, ok := policy.rulesMap[ID]
+	if ok {
+		return rule.calculate(ctx)
+	}
+
+	if policy.defaultRule != nil {
+		return policy.defaultRule.calculate(ctx)
 	}
 
 	return ResponseType{EffectNotApplicable, "Ok", nil}

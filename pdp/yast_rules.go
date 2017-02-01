@@ -120,16 +120,24 @@ func (ctx *yastCtx) unmarshalRules(v interface{}) ([]RuleType, error) {
 	return r, nil
 }
 
-func (ctx *yastCtx) unmarshalRuleCombiningAlg(m map[interface{}]interface{}) (RuleCombiningAlgType, error) {
-	s, err := ctx.extractStringDef(m, yastTagAlg, yastTagDefaultAlg, "rule combining algorithm")
+func (ctx *yastCtx) unmarshalRuleCombiningAlg(m map[interface{}]interface{}) (string, RuleCombiningAlgType, map[interface{}]interface{}, error) {
+	s, algMap, err := ctx.extractStringOrMapDef(m, yastTagAlg, yastTagDefaultAlg, nil, "rule combining algorithm")
 	if err != nil {
-		return nil, err
+		return "", nil, nil, err
 	}
 
-	a, ok := RuleCombiningAlgMap[strings.ToLower(s)]
+	if algMap != nil {
+		s, err = ctx.extractString(algMap, yastTagID, "rule combining algorithm id")
+		if err != nil {
+			return "", nil, nil, err
+		}
+	}
+
+	ID := strings.ToLower(s)
+	a, ok := RuleCombiningAlgMap[ID]
 	if !ok {
-		return nil, ctx.errorf("Excpected policy combining algorithm but got %s", s)
+		return "", nil, nil, ctx.errorf("Excpected policy combining algorithm but got %s", s)
 	}
 
-	return a, nil
+	return ID, a, algMap, nil
 }

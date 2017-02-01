@@ -79,6 +79,7 @@ type ResponseType struct {
 }
 
 type EvaluableType interface {
+	getID() string
 	Calculate(ctx *Context) ResponseType
 }
 

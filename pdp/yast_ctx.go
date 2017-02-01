@@ -103,3 +103,19 @@ func (ctx yastCtx) extractContentByItem(v interface{}) (interface{}, error) {
 
 	return c, nil
 }
+
+func (ctx yastCtx) extractStringOrMapDef(m map[interface{}]interface{}, k, defStr string, defMap map[interface{}]interface{}, desc string) (string, map[interface{}]interface{}, error) {
+	v, ok := m[k]
+	if !ok {
+		return defStr, defMap, nil
+	}
+
+	switch r := v.(type) {
+	case string:
+		return r, nil, nil
+	case map[interface{}]interface{}:
+		return "", r, nil
+	}
+
+	return "", nil, ctx.errorf("Expected %s but got %T", desc, v)
+}

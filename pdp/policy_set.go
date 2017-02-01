@@ -2,11 +2,12 @@ package pdp
 
 import "fmt"
 
-type PolicyCombiningAlgType func(policies []EvaluableType, ctx *Context) ResponseType
+type PolicyCombiningAlgType func(policySet *PolicySetType, ctx *Context) ResponseType
 
 var PolicyCombiningAlgMap map[string]PolicyCombiningAlgType = map[string]PolicyCombiningAlgType{
-	"firstapplicableeffect": FirstApplicableEffectPCA,
-	"denyoverrides":         DenyOverridesPCA}
+	yastTagFirstApplicableEffectAlg: FirstApplicableEffectPCA,
+	yastTagDenyOverridesAlg:         DenyOverridesPCA,
+	yastTagMapperAlg:                MapperPCA}
 
 type PolicySetType struct {
 	ID                 string
@@ -14,19 +15,28 @@ type PolicySetType struct {
 	Policies           []EvaluableType
 	Obligations        []AttributeAssignmentExpressionType
 	PolicyCombiningAlg PolicyCombiningAlgType
+
+	argument      ExpressionType
+	policiesMap   map[string]EvaluableType
+	defaultPolicy EvaluableType
+	errorPolicy   EvaluableType
+}
+
+func (p PolicySetType) getID() string {
+	return p.ID
 }
 
 func (p PolicySetType) Calculate(ctx *Context) ResponseType {
 	match, err := p.Target.calculate(ctx)
 	if err != nil {
-		return combineEffectAndStatus(err, p.ID, p.PolicyCombiningAlg(p.Policies, ctx))
+		return combineEffectAndStatus(err, p.ID, p.PolicyCombiningAlg(&p, ctx))
 	}
 
 	if !match {
 		return ResponseType{EffectNotApplicable, "Ok", nil}
 	}
 
-	r := p.PolicyCombiningAlg(p.Policies, ctx)
+	r := p.PolicyCombiningAlg(&p, ctx)
 	if r.Effect == EffectDeny || r.Effect == EffectPermit {
 		r.Obligations = append(r.Obligations, p.Obligations...)
 	}
@@ -34,21 +44,9 @@ func (p PolicySetType) Calculate(ctx *Context) ResponseType {
 	return r
 }
 
-func calculateItem(item interface{}, ctx *Context) ResponseType {
-	switch p := item.(type) {
-	default:
-		s := fmt.Sprintf("Expected policy or policy set but got %T", p)
-		return ResponseType{EffectIndeterminate, s, nil}
-	case PolicyType:
-		return p.Calculate(ctx)
-	case PolicySetType:
-		return p.Calculate(ctx)
-	}
-}
-
-func FirstApplicableEffectPCA(policies []EvaluableType, ctx *Context) ResponseType {
-	for _, p := range policies {
-		r := calculateItem(p, ctx)
+func FirstApplicableEffectPCA(policySet *PolicySetType, ctx *Context) ResponseType {
+	for _, p := range policySet.Policies {
+		r := p.Calculate(ctx)
 		if r.Effect != EffectNotApplicable {
 			return r
 		}
@@ -57,7 +55,7 @@ func FirstApplicableEffectPCA(policies []EvaluableType, ctx *Context) ResponseTy
 	return ResponseType{EffectNotApplicable, "Ok", nil}
 }
 
-func DenyOverridesPCA(policies []EvaluableType, ctx *Context) ResponseType {
+func DenyOverridesPCA(policySet *PolicySetType, ctx *Context) ResponseType {
 	status := ""
 	obligations := make([]AttributeAssignmentExpressionType, 0)
 
@@ -67,8 +65,8 @@ func DenyOverridesPCA(policies []EvaluableType, ctx *Context) ResponseType {
 
 	permits := 0
 
-	for _, p := range policies {
-		r := calculateItem(p, ctx)
+	for _, p := range policySet.Policies {
+		r := p.Calculate(ctx)
 		if r.Effect == EffectDeny {
 			return r
 		}
@@ -115,6 +113,37 @@ func DenyOverridesPCA(policies []EvaluableType, ctx *Context) ResponseType {
 
 	if indetP > 0 {
 		return ResponseType{EffectIndeterminateP, status, nil}
+	}
+
+	return ResponseType{EffectNotApplicable, "Ok", nil}
+}
+
+func MapperPCA(policySet *PolicySetType, ctx *Context) ResponseType {
+	v, err := policySet.argument.calculate(ctx)
+	if err != nil {
+		if policySet.errorPolicy != nil {
+			return policySet.errorPolicy.Calculate(ctx)
+		}
+
+		return ResponseType{EffectIndeterminate, fmt.Sprintf("Mapper Policy Combining Algorithm: %s", err), nil}
+	}
+
+	ID, err := ExtractStringValue(v, "argument")
+	if err != nil {
+		if policySet.errorPolicy != nil {
+			return policySet.errorPolicy.Calculate(ctx)
+		}
+
+		return ResponseType{EffectIndeterminate, fmt.Sprintf("Mapper Policy Combining Algorithm: %s", err), nil}
+	}
+
+	policy, ok := policySet.policiesMap[ID]
+	if ok {
+		return policy.Calculate(ctx)
+	}
+
+	if policySet.defaultPolicy != nil {
+		return policySet.defaultPolicy.Calculate(ctx)
 	}
 
 	return ResponseType{EffectNotApplicable, "Ok", nil}
