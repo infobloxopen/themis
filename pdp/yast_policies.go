@@ -165,30 +165,30 @@ func (ctx *yastCtx) unmarshalPolicyCombiningAlg(m map[interface{}]interface{}) (
 }
 
 func unmarshalMapperPCAParams(ctx *yastCtx, p *PolicySetType, m map[interface{}]interface{}) error {
-	ID, err := ctx.extractString(m, yastTagAttribute, "attribute")
+	v, ok  := m[yastTagMap]
+	if !ok {
+		return ctx.errorf("Missing map")
+	}
+
+	expr, err := ctx.unmarshalExpression(v)
 	if err != nil {
 		return err
 	}
 
-	a, ok := ctx.attrs[ID]
-	if !ok {
-		return ctx.errorf("Unknown attribute ID %s", ID)
+	exprType := expr.getResultType()
+	if exprType != DataTypeString {
+		return ctx.errorf("Expected %q expression but got %q", DataTypeNames[DataTypeString], DataTypeNames[exprType])
 	}
 
-	p.argument = AttributeDesignatorType{a}
+	p.argument = expr
 
 	p.policiesMap = make(map[string]EvaluableType)
 	for _, e := range p.Policies {
 		p.policiesMap[e.getID()] = e
 	}
 
-	ID, err = ctx.extractString(m, yastTagDefault, "default policy ID")
-	if err != nil {
-		return err
-	}
-
 	var defPolicy EvaluableType = nil
-	v, ok := m[yastTagDefault]
+	v, ok = m[yastTagDefault]
 	if ok {
 		ID, err := ctx.validateString(v, "default policy or set ID")
 		if err != nil {

@@ -388,9 +388,24 @@ func (s SelectorType) calculate(ctx *Context) (AttributeValueType, error) {
 				fmt.Errorf("Error on calculating %s at %s: %v", item.Attribute.ID, strings.Join(path, "/"), err)
 		}
 
-		idx, err := ExtractStringValue(v, fmt.Sprintf("%s at %s", item.Attribute.ID, strings.Join(path, "/")))
-		if err != nil {
-			return AttributeValueType{}, err
+		var idx string
+		switch v.DataType {
+		default:
+			return AttributeValueType{},
+				fmt.Errorf("Expected string or domain as %s at %s but got %s",
+					item.Attribute.ID, strings.Join(path, "/"), DataTypeNames[v.DataType])
+
+		case DataTypeString:
+			idx, err = ExtractStringValue(v, fmt.Sprintf("%s at %s", item.Attribute.ID, strings.Join(path, "/")))
+			if err != nil {
+				return AttributeValueType{}, err
+			}
+
+		case DataTypeDomain:
+			idx, err = ExtractDomainValue(v, fmt.Sprintf("%s at %s", item.Attribute.ID, strings.Join(path, "/")))
+			if err != nil {
+				 return AttributeValueType{}, err
+			}
 		}
 
 		path[len(path)-1] = fmt.Sprintf("%s(%s)", path[len(path)-1], idx)
@@ -440,7 +455,7 @@ func duckToSelectorContentbyAttribute(a AttributeDesignatorType, c interface{}, 
 	if a.getResultType() == DataTypeDomain {
 		s := &SetOfSubdomains{false, nil, make(map[string]*SetOfSubdomains)}
 		for k, v := range m {
-			s.addToSetOfDomains(k, v)
+			s.addToSetOfDomains(k, duckToSelectorContent(v, rawPath, t, append(reprPath, k)))
 		}
 
 		return s
