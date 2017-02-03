@@ -35,7 +35,7 @@ func NewContext() Context {
 	return Context{make(map[string]map[int]AttributeValueType)}
 }
 
-func (c *Context) StoreAttribute(ID string, dataType int, a AttributeValueType) {
+func (c *Context) StoreRawAttribute(ID string, dataType int, a AttributeValueType) {
 	t, ok := c.Attributes[ID]
 	if ok {
 		t[dataType] = a
@@ -43,6 +43,10 @@ func (c *Context) StoreAttribute(ID string, dataType int, a AttributeValueType) 
 	}
 
 	c.Attributes[ID] = map[int]AttributeValueType{dataType: a}
+}
+
+func (c *Context) StoreAttribute(ID string, dataType int, v interface{}) {
+	c.StoreRawAttribute(ID, dataType, AttributeValueType{dataType, v})
 }
 
 func (c *Context) GetAttribute(attr AttributeType) (AttributeValueType, error) {
@@ -66,7 +70,7 @@ func (c *Context) CalculateObligations(obligations []AttributeAssignmentExpressi
 			return err
 		}
 
-		c.StoreAttribute(obligation.Attribute.ID, obligation.Attribute.DataType, v)
+		c.StoreRawAttribute(obligation.Attribute.ID, obligation.Attribute.DataType, v)
 	}
 
 	return nil
