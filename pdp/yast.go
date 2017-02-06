@@ -24,7 +24,7 @@ const (
 	yastTagPath       = "path"
 	yastTagMap        = "map"
 	yastTagDefault    = "default"
-    yastTagError      = "error"
+	yastTagError      = "error"
 
 	yastTagDataTypeUndefined     = "undefined"
 	yastTagDataTypeBoolean       = "boolean"

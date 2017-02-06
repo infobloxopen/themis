@@ -16,10 +16,10 @@ type PolicyType struct {
 	Obligations      []AttributeAssignmentExpressionType
 	RuleCombiningAlg RuleCombiningAlgType
 
-	argument     ExpressionType
-	rulesMap     map[string]*RuleType
-	defaultRule  *RuleType
-	errorRule    *RuleType
+	argument    ExpressionType
+	rulesMap    map[string]*RuleType
+	defaultRule *RuleType
+	errorRule   *RuleType
 }
 
 func (p PolicyType) getID() string {
@@ -119,23 +119,28 @@ func DenyOverridesRCA(policy *PolicyType, ctx *Context) ResponseType {
 	return ResponseType{EffectNotApplicable, "Ok", nil}
 }
 
+func calculateErrorRule(rule *RuleType, ctx *Context, err error) ResponseType {
+	if rule != nil {
+		return rule.calculate(ctx)
+	}
+
+	return ResponseType{EffectIndeterminate, fmt.Sprintf("Mapper Rule Combining Algorithm: %s", err), nil}
+}
+
 func MapperRCA(policy *PolicyType, ctx *Context) ResponseType {
 	v, err := policy.argument.calculate(ctx)
 	if err != nil {
-		if policy.errorRule != nil {
-			return policy.errorRule.calculate(ctx)
+		_, ok := err.(MissingValueError)
+		if ok && policy.defaultRule != nil {
+			return policy.defaultRule.calculate(ctx)
 		}
 
-		return ResponseType{EffectIndeterminate, fmt.Sprintf("Mapper Rule Combining Algorithm: %s", err), nil}
+		return calculateErrorRule(policy.errorRule, ctx, err)
 	}
 
 	ID, err := ExtractStringValue(v, "argument")
 	if err != nil {
-		if policy.errorRule != nil {
-			return policy.errorRule.calculate(ctx)
-		}
-
-		return ResponseType{EffectIndeterminate, fmt.Sprintf("Mapper Rule Combining Algorithm: %s", err), nil}
+		return calculateErrorRule(policy.errorRule, ctx, err)
 	}
 
 	rule, ok := policy.rulesMap[ID]

@@ -280,7 +280,7 @@ func (ctx *yastCtx) unmarshalSelectorPath(m map[interface{}]interface{}) (string
 			}
 
 			if a.DataType != DataTypeString && a.DataType != DataTypeDomain {
-				return path, nil, ctx.errorf("Expected only %s or %s for %d element of selector path but got %s " +
+				return path, nil, ctx.errorf("Expected only %s or %s for %d element of selector path but got %s "+
 					"attribute %s",
 					DataTypeNames[DataTypeString], DataTypeNames[DataTypeDomain], i+1, DataTypeNames[a.DataType], ID)
 			}

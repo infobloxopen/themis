@@ -118,23 +118,28 @@ func DenyOverridesPCA(policySet *PolicySetType, ctx *Context) ResponseType {
 	return ResponseType{EffectNotApplicable, "Ok", nil}
 }
 
+func calculateErrorPolicy(policy EvaluableType, ctx *Context, err error) ResponseType {
+	if policy != nil {
+		return policy.Calculate(ctx)
+	}
+
+	return ResponseType{EffectIndeterminate, fmt.Sprintf("Mapper Policy Combining Algorithm: %s", err), nil}
+}
+
 func MapperPCA(policySet *PolicySetType, ctx *Context) ResponseType {
 	v, err := policySet.argument.calculate(ctx)
 	if err != nil {
-		if policySet.errorPolicy != nil {
-			return policySet.errorPolicy.Calculate(ctx)
+		_, ok := err.(MissingValueError)
+		if ok && policySet.defaultPolicy != nil {
+			return policySet.defaultPolicy.Calculate(ctx)
 		}
 
-		return ResponseType{EffectIndeterminate, fmt.Sprintf("Mapper Policy Combining Algorithm: %s", err), nil}
+		return calculateErrorPolicy(policySet.errorPolicy, ctx, err)
 	}
 
 	ID, err := ExtractStringValue(v, "argument")
 	if err != nil {
-		if policySet.errorPolicy != nil {
-			return policySet.errorPolicy.Calculate(ctx)
-		}
-
-		return ResponseType{EffectIndeterminate, fmt.Sprintf("Mapper Policy Combining Algorithm: %s", err), nil}
+		return calculateErrorPolicy(policySet.errorPolicy, ctx, err)
 	}
 
 	policy, ok := policySet.policiesMap[ID]

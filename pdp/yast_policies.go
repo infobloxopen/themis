@@ -2,14 +2,14 @@ package pdp
 
 import "strings"
 
-type paramUnmarshalerRCAType func (ctx *yastCtx, p *PolicyType, m map[interface{}]interface{}) error
-type paramUnmarshalerPCAType func (ctx *yastCtx, p *PolicySetType, m map[interface{}]interface{}) error
+type paramUnmarshalerRCAType func(ctx *yastCtx, p *PolicyType, m map[interface{}]interface{}) error
+type paramUnmarshalerPCAType func(ctx *yastCtx, p *PolicySetType, m map[interface{}]interface{}) error
 
 var paramUnmarshalersRCA = map[string]paramUnmarshalerRCAType{yastTagMapperAlg: unmarshalMapperRCAParams}
 var paramUnmarshalersPCA = map[string]paramUnmarshalerPCAType{yastTagMapperAlg: unmarshalMapperPCAParams}
 
 func unmarshalMapperRCAParams(ctx *yastCtx, p *PolicyType, m map[interface{}]interface{}) error {
-	v, ok  := m[yastTagMap]
+	v, ok := m[yastTagMap]
 	if !ok {
 		return ctx.errorf("Missing map")
 	}
@@ -165,7 +165,7 @@ func (ctx *yastCtx) unmarshalPolicyCombiningAlg(m map[interface{}]interface{}) (
 }
 
 func unmarshalMapperPCAParams(ctx *yastCtx, p *PolicySetType, m map[interface{}]interface{}) error {
-	v, ok  := m[yastTagMap]
+	v, ok := m[yastTagMap]
 	if !ok {
 		return ctx.errorf("Missing map")
 	}

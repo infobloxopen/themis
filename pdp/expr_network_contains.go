@@ -4,6 +4,7 @@ type FunctionNetworkContainsAddressType struct {
 	Network ExpressionType
 	Address ExpressionType
 }
+
 func (f FunctionNetworkContainsAddressType) getResultType() int {
 	return DataTypeBoolean
 }

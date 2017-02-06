@@ -423,13 +423,15 @@ func (s SelectorType) calculate(ctx *Context) (AttributeValueType, error) {
 		case map[string]interface{}:
 			c, ok = m[idx]
 			if !ok {
-				return castMissingSelectorValue(s.DataType, fmt.Errorf("No value at %s", strings.Join(path, "/")))
+				err := fmt.Errorf("No value at %s", strings.Join(path, "/"))
+				return castMissingSelectorValue(s.DataType, &MissingValueError{err})
 			}
 
 		case *SetOfSubdomains:
 			c, ok = m.Get(idx)
 			if !ok {
-				return castMissingSelectorValue(s.DataType, fmt.Errorf("No value at %s", strings.Join(path, "/")))
+				err := fmt.Errorf("No value at %s", strings.Join(path, "/"))
+				return castMissingSelectorValue(s.DataType, &MissingValueError{err})
 			}
 		}
 
@@ -487,7 +489,8 @@ func fetchFromSelectorContentArray(c []interface{}, s string, reprPath []string)
 func fetchFromSelectorContentMap(c map[string]interface{}, s string, reprPath []string) interface{} {
 	v, ok := c[s]
 	if !ok {
-		return missingSelectorValue{fmt.Errorf("Missing value for key %s at %s", s, strings.Join(reprPath, "/"))}
+		err := fmt.Errorf("Missing value for key %s at %s", s, strings.Join(reprPath, "/"))
+		return missingSelectorValue{&MissingValueError{err}}
 	}
 
 	return v
