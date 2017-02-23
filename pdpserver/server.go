@@ -7,6 +7,7 @@ package main
 import (
 	"net"
 	"os"
+	"sync"
 
 	log "github.com/Sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -17,19 +18,24 @@ import (
 	"github.com/infobloxopen/policy-box/pdp"
 )
 
+type Transport struct {
+	Interface net.Listener
+	Protocol  *grpc.Server
+}
+
 type Server struct {
 	Path   string
 	Policy pdp.EvaluableType
+	Lock   *sync.RWMutex
 
-	Requests net.Listener
-	Control  net.Listener
+	Requests Transport
+	Control  Transport
 
-	RequestsProtocol *grpc.Server
-	ControlProtocol  *grpc.Server
+	Updates *Queue
 }
 
 func NewServer(path string) *Server {
-	return &Server{Path: path}
+	return &Server{Path: path, Lock: &sync.RWMutex{}, Updates: NewQueue()}
 }
 
 func (s *Server) LoadPolicies(path string) {
@@ -55,7 +61,7 @@ func (s *Server) ListenRequests(addr string) {
 		os.Exit(1)
 	}
 
-	s.Requests = ln
+	s.Requests.Interface = ln
 }
 
 func (s *Server) ListenControl(addr string) {
@@ -66,23 +72,23 @@ func (s *Server) ListenControl(addr string) {
 		os.Exit(1)
 	}
 
-	s.Control = ln
+	s.Control.Interface = ln
 }
 
 func (s *Server) Serve() {
 	go func () {
 		log.Info("Creating control protocol handler")
-		s.ControlProtocol = grpc.NewServer()
-		pbc.RegisterPDPControlServer(s.ControlProtocol, s)
+		s.Control.Protocol = grpc.NewServer()
+		pbc.RegisterPDPControlServer(s.Control.Protocol, s)
 
 		log.Info("Serving control requests")
-		s.ControlProtocol.Serve(s.Control)
+		s.Control.Protocol.Serve(s.Control.Interface)
 	}()
 
 	log.Info("Creating service protocol handler")
-	s.RequestsProtocol = grpc.NewServer()
-	pbs.RegisterPDPServer(s.RequestsProtocol, s)
+	s.Requests.Protocol = grpc.NewServer()
+	pbs.RegisterPDPServer(s.Requests.Protocol, s)
 
 	log.Info("Serving decision requests")
-	s.RequestsProtocol.Serve(s.Requests)
+	s.Requests.Protocol.Serve(s.Requests.Interface)
 }
