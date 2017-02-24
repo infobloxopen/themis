@@ -4,14 +4,14 @@ import (
 	"flag"
 	"os"
 
-	 log "github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 )
 
 type Config struct {
 	Verbose   bool
 	CWD       string
 	Policy    string
-    ServiceEP string
+	ServiceEP string
 	ControlEP string
 }
 
