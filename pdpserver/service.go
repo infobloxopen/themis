@@ -18,7 +18,7 @@ type AttrMarshaller func(v pdp.AttributeValueType) (string, error)
 type AttrUnmarshaller func(v string) (pdp.AttributeValueType, error)
 
 var (
-	Marshallers map[int]AttrMarshaller = map[int]AttrMarshaller {
+	Marshallers map[int]AttrMarshaller = map[int]AttrMarshaller{
 		pdp.DataTypeUndefined: undefinedMarshaller,
 		pdp.DataTypeBoolean:   booleanMarshaller,
 		pdp.DataTypeString:    stringMarshaller,
@@ -135,8 +135,8 @@ func UnmarshalAttribute(attr *pb.Attribute) (int, pdp.AttributeValueType) {
 	if err != nil {
 		log.WithFields(log.Fields{
 			"value": attr.Value,
-			"type": attr.Type,
-			"id": attr.Id,
+			"type":  attr.Type,
+			"id":    attr.Id,
 			"error": err}).Error("Unmarshaling error")
 
 		return pdp.DataTypeUndefined, pdp.AttributeValueType{}
@@ -178,8 +178,8 @@ func MarshalAttributes(ctx *pdp.Context) []*pb.Attribute {
 			s, err := MarshalAttribute(v)
 			if err != nil {
 				log.WithFields(log.Fields{
-					"type": pdp.DataTypeNames[v.DataType],
-					"id": id,
+					"type":  pdp.DataTypeNames[v.DataType],
+					"id":    id,
 					"error": err}).Error("Marshaling error")
 
 				continue
@@ -233,7 +233,7 @@ func MakeResponse(r pdp.ResponseType, ctx *pdp.Context) *pb.Response {
 
 func (s *Server) Validate(server_ctx context.Context, in *pb.Request) (*pb.Response, error) {
 	ctx := MakeRequestContext(in)
-	log.Info("Validating context")
+	log.Infof("Validating context %v", ctx)
 
 	s.Lock.RLock()
 	p := s.Policy

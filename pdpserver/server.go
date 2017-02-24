@@ -12,8 +12,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"google.golang.org/grpc"
 
-	pbs "github.com/infobloxopen/policy-box/pdp-service"
 	pbc "github.com/infobloxopen/policy-box/pdp-control"
+	pbs "github.com/infobloxopen/policy-box/pdp-service"
 
 	"github.com/infobloxopen/policy-box/pdp"
 )
@@ -76,7 +76,7 @@ func (s *Server) ListenControl(addr string) {
 }
 
 func (s *Server) Serve() {
-	go func () {
+	go func() {
 		log.Info("Creating control protocol handler")
 		s.Control.Protocol = grpc.NewServer()
 		pbc.RegisterPDPControlServer(s.Control.Protocol, s)

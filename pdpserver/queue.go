@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
-    "sync"
+	"sync"
 
 	"github.com/infobloxopen/policy-box/pdp"
 )
@@ -16,7 +16,7 @@ type Content struct {
 type Queue struct {
 	Lock          *sync.Mutex
 	AutoIncrement int32
-    Items         map[int32]interface{}
+	Items         map[int32]interface{}
 }
 
 func NewQueue() *Queue {

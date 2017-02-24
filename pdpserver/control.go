@@ -3,9 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"golang.org/x/net/context"
 	log "github.com/Sirupsen/logrus"
+	"golang.org/x/net/context"
+	"io"
 
 	pb "github.com/infobloxopen/policy-box/pdp-control"
 
@@ -55,7 +55,7 @@ func (s *Server) Upload(stream pb.PDPControl_UploadServer) error {
 
 	log.WithFields(log.Fields{
 		"size": len(data),
-		"id": id}).Info("Data enqueued")
+		"id":   id}).Info("Data enqueued")
 
 	return stream.SendAndClose(controlAck(id))
 }
