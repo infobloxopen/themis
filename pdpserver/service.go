@@ -233,7 +233,8 @@ func MakeResponse(r pdp.ResponseType, ctx *pdp.Context) *pb.Response {
 
 func (s *Server) Validate(server_ctx context.Context, in *pb.Request) (*pb.Response, error) {
 	ctx := MakeRequestContext(in)
-	log.Infof("Validating context %v", ctx)
+	log.Info("Validating context")
+	log.WithFields(log.Fields{"context": ctx}).Debug()
 
 	s.Lock.RLock()
 	p := s.Policy
@@ -245,6 +246,7 @@ func (s *Server) Validate(server_ctx context.Context, in *pb.Request) (*pb.Respo
 
 	r := p.Calculate(&ctx)
 	log.Info("Returning response")
+	log.WithFields(log.Fields{"response": r}).Debug()
 
 	return MakeResponse(r, &ctx), nil
 }
