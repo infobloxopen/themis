@@ -8,7 +8,7 @@ import (
 )
 
 type Config struct {
-	Verbose   bool
+	Verbose   int
 	CWD       string
 	Policy    string
 	ServiceEP string
@@ -18,7 +18,7 @@ type Config struct {
 var config Config
 
 func init() {
-	flag.BoolVar(&config.Verbose, "v", false, "log verbosity")
+	flag.IntVar(&config.Verbose, "v", 1, "log verbosity (0 - error, 1 - warn (default), 2 - info, 3 - debug)")
 	flag.StringVar(&config.CWD, "d", getWd(), "directory of config files")
 	flag.StringVar(&config.Policy, "p", "", "policy file to start with")
 	flag.StringVar(&config.ServiceEP, "l", "0.0.0.0:5555", "listen for decision requests on this address:port")

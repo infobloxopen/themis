@@ -136,7 +136,7 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 	rcode := dns.RcodeRefused
 	switch result.Effect {
 	case pb.Response_PERMIT:
-		rcode, err = p.Next.ServeDNS(ctx, w, r)
+		return middleware.NextOrFailure(p.Name(), p.Next, ctx, w, r)
 	case pb.Response_DENY:
 		if len(result.Obligation) > 0 {
 			o := result.Obligation[0]
