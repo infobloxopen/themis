@@ -90,6 +90,34 @@ func (m *Item) String() string            { return proto.CompactTextString(m) }
 func (*Item) ProtoMessage()               {}
 func (*Item) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
+func (m *Item) GetType() Item_DataType {
+	if m != nil {
+		return m.Type
+	}
+	return Item_POLICIES
+}
+
+func (m *Item) GetDataId() int32 {
+	if m != nil {
+		return m.DataId
+	}
+	return 0
+}
+
+func (m *Item) GetId() string {
+	if m != nil {
+		return m.Id
+	}
+	return ""
+}
+
+func (m *Item) GetIncludes() []int32 {
+	if m != nil {
+		return m.Includes
+	}
+	return nil
+}
+
 type Chunk struct {
 	Data string `protobuf:"bytes,1,opt,name=data" json:"data,omitempty"`
 }
@@ -99,6 +127,13 @@ func (m *Chunk) String() string            { return proto.CompactTextString(m) }
 func (*Chunk) ProtoMessage()               {}
 func (*Chunk) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
+func (m *Chunk) GetData() string {
+	if m != nil {
+		return m.Data
+	}
+	return ""
+}
+
 type Update struct {
 	Id int32 `protobuf:"varint,1,opt,name=id" json:"id,omitempty"`
 }
@@ -107,6 +142,13 @@ func (m *Update) Reset()                    { *m = Update{} }
 func (m *Update) String() string            { return proto.CompactTextString(m) }
 func (*Update) ProtoMessage()               {}
 func (*Update) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+func (m *Update) GetId() int32 {
+	if m != nil {
+		return m.Id
+	}
+	return 0
+}
 
 type Response struct {
 	Status  Response_Status `protobuf:"varint,1,opt,name=status,enum=control.Response_Status" json:"status,omitempty"`
@@ -118,6 +160,27 @@ func (m *Response) Reset()                    { *m = Response{} }
 func (m *Response) String() string            { return proto.CompactTextString(m) }
 func (*Response) ProtoMessage()               {}
 func (*Response) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+
+func (m *Response) GetStatus() Response_Status {
+	if m != nil {
+		return m.Status
+	}
+	return Response_ACK
+}
+
+func (m *Response) GetId() int32 {
+	if m != nil {
+		return m.Id
+	}
+	return 0
+}
+
+func (m *Response) GetDetails() string {
+	if m != nil {
+		return m.Details
+	}
+	return ""
+}
 
 func init() {
 	proto.RegisterType((*Item)(nil), "control.Item")
@@ -134,7 +197,7 @@ var _ grpc.ClientConn
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion3
+const _ = grpc.SupportPackageIsVersion4
 
 // Client API for PDPControl service
 
@@ -298,7 +361,7 @@ var _PDPControl_serviceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
-	Metadata: fileDescriptor0,
+	Metadata: "control.proto",
 }
 
 func init() { proto.RegisterFile("control.proto", fileDescriptor0) }
