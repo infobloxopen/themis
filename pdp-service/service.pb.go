@@ -82,6 +82,27 @@ func (m *Attribute) String() string            { return proto.CompactTextString(
 func (*Attribute) ProtoMessage()               {}
 func (*Attribute) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
+func (m *Attribute) GetId() string {
+	if m != nil {
+		return m.Id
+	}
+	return ""
+}
+
+func (m *Attribute) GetType() string {
+	if m != nil {
+		return m.Type
+	}
+	return ""
+}
+
+func (m *Attribute) GetValue() string {
+	if m != nil {
+		return m.Value
+	}
+	return ""
+}
+
 type Request struct {
 	Attributes []*Attribute `protobuf:"bytes,1,rep,name=attributes" json:"attributes,omitempty"`
 }
@@ -109,6 +130,20 @@ func (m *Response) String() string            { return proto.CompactTextString(m
 func (*Response) ProtoMessage()               {}
 func (*Response) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
 
+func (m *Response) GetEffect() Response_Effect {
+	if m != nil {
+		return m.Effect
+	}
+	return Response_DENY
+}
+
+func (m *Response) GetReason() string {
+	if m != nil {
+		return m.Reason
+	}
+	return ""
+}
+
 func (m *Response) GetObligation() []*Attribute {
 	if m != nil {
 		return m.Obligation
@@ -129,7 +164,7 @@ var _ grpc.ClientConn
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion3
+const _ = grpc.SupportPackageIsVersion4
 
 // Client API for PDP service
 
@@ -192,7 +227,7 @@ var _PDP_serviceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: fileDescriptor0,
+	Metadata: "service.proto",
 }
 
 func init() { proto.RegisterFile("service.proto", fileDescriptor0) }
