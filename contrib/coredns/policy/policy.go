@@ -10,11 +10,16 @@ import (
 	"time"
 
 	"github.com/coredns/coredns/middleware"
+	"github.com/coredns/coredns/middleware/trace"
 	"github.com/coredns/coredns/request"
 
 	pb "github.com/infobloxopen/policy-box/pdp-service"
 	"github.com/infobloxopen/policy-box/pep"
+
 	"github.com/miekg/dns"
+
+	ot "github.com/opentracing/opentracing-go"
+
 	"golang.org/x/net/context"
 )
 
@@ -42,6 +47,7 @@ type PolicyMiddleware struct {
 	Zones     []string
 	EDNS0Map  []edns0Map
 	Timeout   time.Duration
+	Trace     middleware.Handler
 	Next      middleware.Handler
 	pdp       *pep.Client
 	ErrorFunc func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
@@ -49,7 +55,13 @@ type PolicyMiddleware struct {
 
 func (p *PolicyMiddleware) Connect() error {
 	log.Printf("[DEBUG] Connecting %v", p)
-	p.pdp = pep.NewClient(p.Endpoint)
+	var tracer ot.Tracer
+	if p.Trace != nil {
+		if t, ok := p.Trace.(trace.Trace); ok {
+			tracer = t.Tracer()
+		}
+	}
+	p.pdp = pep.NewClient(p.Endpoint, tracer)
 	return p.pdp.Connect(p.Timeout)
 }
 
@@ -127,7 +139,7 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 	}
 
 	var result pb.Response
-	err := p.pdp.Validate(pb.Request{Attributes: attrs}, &result)
+	err := p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &result)
 	if err != nil {
 		log.Printf("[ERROR] Policy validation failed due to error %s\n", err)
 		return dns.RcodeServerFailure, err

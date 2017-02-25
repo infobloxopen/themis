@@ -12,5 +12,10 @@ func main() {
 
 	pdp.ListenRequests(config.ServiceEP)
 	pdp.ListenControl(config.ControlEP)
-	pdp.Serve()
+
+	tracer, err := InitTracing("zipkin", config.TracingEP)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Warning("Could not initialize tracing.")
+	}
+	pdp.Serve(tracer)
 }
