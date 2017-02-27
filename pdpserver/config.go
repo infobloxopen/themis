@@ -13,6 +13,7 @@ type Config struct {
 	Policy    string
 	ServiceEP string
 	ControlEP string
+	TracingEP string
 }
 
 var config Config
@@ -23,6 +24,7 @@ func init() {
 	flag.StringVar(&config.Policy, "p", "", "policy file to start with")
 	flag.StringVar(&config.ServiceEP, "l", "0.0.0.0:5555", "listen for decision requests on this address:port")
 	flag.StringVar(&config.ControlEP, "c", "0.0.0.0:5554", "listen for policies on this address:port")
+	flag.StringVar(&config.TracingEP, "t", "", "OpenZipkin tracing endpoint")
 
 	flag.Parse()
 }

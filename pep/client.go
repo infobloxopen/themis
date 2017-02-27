@@ -10,7 +10,11 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
+	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
+
 	pb "github.com/infobloxopen/policy-box/pdp-service"
+
+	ot "github.com/opentracing/opentracing-go"
 )
 
 var (
@@ -22,18 +26,27 @@ type Client struct {
 	addr   string
 	conn   *grpc.ClientConn
 	client *pb.PDPClient
+	tracer ot.Tracer
 }
 
-func NewClient(addr string) *Client {
-	return &Client{addr: addr}
+func NewClient(addr string, tracer ot.Tracer) *Client {
+	return &Client{addr: addr, tracer: tracer}
 }
 
 func (c *Client) Connect(timeout time.Duration) error {
 	if c.conn != nil {
 		return ErrorConnected
 	}
-
-	conn, err := grpc.Dial(c.addr, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(timeout))
+	var dialOpts []grpc.DialOption
+	dialOpts = append(dialOpts, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(timeout))
+	if c.tracer != nil {
+		onlyIfParent := func(parentSpanCtx ot.SpanContext, method string, req, resp interface{}) bool {
+			return parentSpanCtx != nil
+		}
+		intercept := otgrpc.OpenTracingClientInterceptor(c.tracer, otgrpc.IncludingSpans(onlyIfParent))
+		dialOpts = append(dialOpts, grpc.WithUnaryInterceptor(intercept))
+	}
+	conn, err := grpc.Dial(c.addr, dialOpts...)
 	if err != nil {
 		return err
 	}
@@ -55,7 +68,7 @@ func (c *Client) Close() {
 	c.client = nil
 }
 
-func (c *Client) Validate(in, out interface{}) error {
+func (c *Client) Validate(ctx context.Context, in, out interface{}) error {
 	if c.client == nil {
 		return ErrorNotConnected
 	}
@@ -65,7 +78,7 @@ func (c *Client) Validate(in, out interface{}) error {
 		return err
 	}
 
-	res, err := (*c.client).Validate(context.Background(), &req)
+	res, err := (*c.client).Validate(ctx, &req)
 	if err != nil {
 		return err
 	}

@@ -12,10 +12,14 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"google.golang.org/grpc"
 
+	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
+
 	pbc "github.com/infobloxopen/policy-box/pdp-control"
 	pbs "github.com/infobloxopen/policy-box/pdp-service"
 
 	"github.com/infobloxopen/policy-box/pdp"
+
+	ot "github.com/opentracing/opentracing-go"
 )
 
 type Transport struct {
@@ -75,7 +79,7 @@ func (s *Server) ListenControl(addr string) {
 	s.Control.Interface = ln
 }
 
-func (s *Server) Serve() {
+func (s *Server) Serve(tracer ot.Tracer) {
 	go func() {
 		log.Info("Creating control protocol handler")
 		s.Control.Protocol = grpc.NewServer()
@@ -86,7 +90,15 @@ func (s *Server) Serve() {
 	}()
 
 	log.Info("Creating service protocol handler")
-	s.Requests.Protocol = grpc.NewServer()
+	if tracer == nil {
+		s.Requests.Protocol = grpc.NewServer()
+	} else {
+		onlyIfParent := func(parentSpanCtx ot.SpanContext, method string, req, resp interface{}) bool {
+			return parentSpanCtx != nil
+		}
+		intercept := otgrpc.OpenTracingServerInterceptor(tracer, otgrpc.IncludingSpans(onlyIfParent))
+		s.Requests.Protocol = grpc.NewServer(grpc.UnaryInterceptor(intercept))
+	}
 	pbs.RegisterPDPServer(s.Requests.Protocol, s)
 
 	log.Info("Serving decision requests")
