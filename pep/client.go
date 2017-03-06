@@ -9,6 +9,7 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/naming"
 
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 
@@ -23,10 +24,18 @@ var (
 )
 
 type Client struct {
-	addr   string
-	conn   *grpc.ClientConn
-	client *pb.PDPClient
-	tracer ot.Tracer
+	addr     string
+	balancer grpc.Balancer
+	conn     *grpc.ClientConn
+	client   *pb.PDPClient
+	tracer   ot.Tracer
+}
+
+func NewBalancedClient(addrs []string, tracer ot.Tracer) *Client {
+	c := &Client{addr: "pdp", tracer: tracer}
+	r := newStaticResolver("pdp", addrs...)
+	c.balancer = grpc.RoundRobin(r)
+	return c
 }
 
 func NewClient(addr string, tracer ot.Tracer) *Client {
@@ -39,6 +48,9 @@ func (c *Client) Connect(timeout time.Duration) error {
 	}
 	var dialOpts []grpc.DialOption
 	dialOpts = append(dialOpts, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(timeout))
+	if c.balancer != nil {
+		dialOpts = append(dialOpts, grpc.WithBalancer(c.balancer))
+	}
 	if c.tracer != nil {
 		onlyIfParent := func(parentSpanCtx ot.SpanContext, method string, req, resp interface{}) bool {
 			return parentSpanCtx != nil
@@ -100,4 +112,47 @@ func makeRequest(v interface{}) (pb.Request, error) {
 
 func fillResponse(res *pb.Response, v interface{}) error {
 	return unmarshalToValue(res, reflect.ValueOf(v))
+}
+
+type staticResolver struct {
+	Name  string
+	Addrs []string
+}
+
+func newStaticResolver(name string, addrs ...string) naming.Resolver {
+	return &staticResolver{Name: name, Addrs: addrs}
+}
+
+func (r *staticResolver) Resolve(target string) (naming.Watcher, error) {
+	if target != r.Name {
+		return nil, fmt.Errorf("%q is an invalid target for resolver %q", target, r.Name)
+	}
+
+	return &staticWatcher{Addrs: r.Addrs}, nil
+}
+
+type staticWatcher struct {
+	Addrs []string
+	stop  chan bool
+	sent  bool
+}
+
+func (w *staticWatcher) Next() ([]*naming.Update, error) {
+	if w.sent {
+		stop := <-w.stop
+		if stop {
+			return nil, nil
+		}
+	}
+	w.stop = make(chan bool)
+	w.sent = true
+	u := make([]*naming.Update, len(w.Addrs))
+	for i, a := range w.Addrs {
+		u[i] = &naming.Update{Op: naming.Add, Addr: a}
+	}
+	return u, nil
+}
+
+func (w *staticWatcher) Close() {
+	w.stop <- true
 }

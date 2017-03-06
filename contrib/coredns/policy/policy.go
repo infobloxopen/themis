@@ -43,7 +43,7 @@ type edns0Map struct {
 }
 
 type PolicyMiddleware struct {
-	Endpoint  string
+	Endpoints []string
 	Zones     []string
 	EDNS0Map  []edns0Map
 	Timeout   time.Duration
@@ -61,7 +61,7 @@ func (p *PolicyMiddleware) Connect() error {
 			tracer = t.Tracer()
 		}
 	}
-	p.pdp = pep.NewClient(p.Endpoint, tracer)
+	p.pdp = pep.NewBalancedClient(p.Endpoints, tracer)
 	return p.pdp.Connect(p.Timeout)
 }
 

@@ -67,7 +67,7 @@ func policyParse(c *caddy.Controller) (*PolicyMiddleware, error) {
 				case "endpoint":
 					args := c.RemainingArgs()
 					if len(args) > 0 {
-						mw.Endpoint = args[0]
+						mw.Endpoints = args
 						continue
 					}
 					return nil, c.ArgErr()
