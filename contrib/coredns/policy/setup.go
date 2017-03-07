@@ -3,16 +3,11 @@ package policy
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/middleware"
 
 	"github.com/mholt/caddy"
-)
-
-const (
-	defaultTimeoutSecs = 5
 )
 
 func init() {
@@ -51,7 +46,7 @@ func setup(c *caddy.Controller) error {
 
 func policyParse(c *caddy.Controller) (*PolicyMiddleware, error) {
 	t := dnsserver.GetMiddleware(c, "trace")
-	mw := &PolicyMiddleware{Timeout: time.Duration(defaultTimeoutSecs) * time.Second, Trace: t}
+	mw := &PolicyMiddleware{Trace: t}
 
 	for c.Next() {
 		if c.Val() == "policy" {
@@ -67,18 +62,7 @@ func policyParse(c *caddy.Controller) (*PolicyMiddleware, error) {
 				case "endpoint":
 					args := c.RemainingArgs()
 					if len(args) > 0 {
-						mw.Endpoint = args[0]
-						continue
-					}
-					return nil, c.ArgErr()
-				case "timeout":
-					args := c.RemainingArgs()
-					if len(args) > 0 {
-						d, err := time.ParseDuration(args[0])
-						if err != nil {
-							return nil, fmt.Errorf("Invalid timeout duration'%s': %v. Valid examples are: 5s, 30s, 2m, etc.", args[0], err)
-						}
-						mw.Timeout = d
+						mw.Endpoints = args
 						continue
 					}
 					return nil, c.ArgErr()
