@@ -7,7 +7,6 @@ import (
 	"net"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/coredns/coredns/middleware"
 	"github.com/coredns/coredns/middleware/trace"
@@ -46,7 +45,6 @@ type PolicyMiddleware struct {
 	Endpoints []string
 	Zones     []string
 	EDNS0Map  []edns0Map
-	Timeout   time.Duration
 	Trace     middleware.Handler
 	Next      middleware.Handler
 	pdp       *pep.Client
@@ -62,7 +60,7 @@ func (p *PolicyMiddleware) Connect() error {
 		}
 	}
 	p.pdp = pep.NewBalancedClient(p.Endpoints, tracer)
-	return p.pdp.Connect(p.Timeout)
+	return p.pdp.Connect()
 }
 
 func (p *PolicyMiddleware) AddEDNS0Map(code, name, dataType, destType string) error {

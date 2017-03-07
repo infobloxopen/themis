@@ -5,7 +5,6 @@ package pep
 import (
 	"fmt"
 	"reflect"
-	"time"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -42,12 +41,12 @@ func NewClient(addr string, tracer ot.Tracer) *Client {
 	return &Client{addr: addr, tracer: tracer}
 }
 
-func (c *Client) Connect(timeout time.Duration) error {
+func (c *Client) Connect() error {
 	if c.conn != nil {
 		return ErrorConnected
 	}
 	var dialOpts []grpc.DialOption
-	dialOpts = append(dialOpts, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(timeout))
+	dialOpts = append(dialOpts, grpc.WithInsecure())
 	if c.balancer != nil {
 		dialOpts = append(dialOpts, grpc.WithBalancer(c.balancer))
 	}
