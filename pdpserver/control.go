@@ -22,6 +22,7 @@ func collect(stream pb.PDPControl_UploadServer) ([]byte, error) {
 		}
 
 		if err != nil {
+			log.WithField("error", err).Error("collect failed to receive data")
 			return nil, err
 		}
 

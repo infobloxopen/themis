@@ -50,6 +50,7 @@ func booleanMarshaller(v pdp.AttributeValueType) (string, error) {
 func booleanUnmarshaller(v string) (pdp.AttributeValueType, error) {
 	b, err := strconv.ParseBool(v)
 	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to parse boolean in booleanUnmarshaller.")
 		return pdp.AttributeValueType{}, err
 	}
 
@@ -79,6 +80,7 @@ func addressUnmarshaller(v string) (pdp.AttributeValueType, error) {
 
 	ip := net.ParseIP(v)
 	if ip == nil {
+		log.Error("Failed to pase IP in addressUnmarshaller")
 		return pdp.AttributeValueType{}, fmt.Errorf("Can't treat \"%s\" as address", v)
 	}
 
@@ -93,6 +95,7 @@ func networkMarshaller(v pdp.AttributeValueType) (string, error) {
 func networkUnmarshaller(v string) (pdp.AttributeValueType, error) {
 	_, n, err := net.ParseCIDR(v)
 	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to parse CIDR in networkUnmarshaller.")
 		return pdp.AttributeValueType{}, err
 	}
 
@@ -106,6 +109,7 @@ func domainMarshaller(v pdp.AttributeValueType) (string, error) {
 func domainUnmarshaller(v string) (pdp.AttributeValueType, error) {
 	d, err := pdp.AdjustDomainName(v)
 	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to Adjust domain name in domainUnmarshaller.")
 		return pdp.AttributeValueType{}, err
 	}
 
@@ -225,6 +229,7 @@ func MakeResponse(r pdp.ResponseType, ctx *pdp.Context) *pb.Response {
 
 	err := o.CalculateObligations(r.Obligations, ctx)
 	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("CalculateObligations failed.")
 		return serviceFail(r, "Obligations: %s", err)
 	}
 
@@ -241,6 +246,7 @@ func (s *Server) Validate(server_ctx context.Context, in *pb.Request) (*pb.Respo
 	s.Lock.RUnlock()
 
 	if p == nil {
+		log.Error("No Policy or policy set defined");
 		return serviceReply(pdp.EffectIndeterminate, "No policy or policy set defined", nil), nil
 	}
 

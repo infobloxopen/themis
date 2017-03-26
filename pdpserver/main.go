@@ -1,6 +1,9 @@
 package main
 
-import log "github.com/Sirupsen/logrus"
+import (
+	log "github.com/Sirupsen/logrus"
+	"os"
+)
 
 func main() {
 	InitLogging(config.Verbose)
@@ -8,10 +11,24 @@ func main() {
 
 	pdp := NewServer(config.CWD)
 
-	pdp.LoadPolicies(config.Policy)
+	if pdp == nil {
+		log.Error("Failed to create Server.")
+		os.Exit(1)
+	}
 
-	pdp.ListenRequests(config.ServiceEP)
-	pdp.ListenControl(config.ControlEP)
+	if pdp.LoadPolicies(config.Policy) != true {
+		log.Error("Failed to Load Policies.")
+		os.Exit(1)
+	}
+
+	if pdp.ListenRequests(config.ServiceEP) != true {
+		log.Error("Failed to Listen to Requests.")
+		os.Exit(1)
+	}
+	if pdp.ListenControl(config.ControlEP) != true {
+		log.Error("Failed to Listen to Control Packets.")
+		os.Exit(1)
+	}
 
 	tracer, err := InitTracing("zipkin", config.TracingEP)
 	if err != nil {
