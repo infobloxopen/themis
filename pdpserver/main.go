@@ -16,10 +16,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if pdp.LoadPolicies(config.Policy) != true {
-		log.Error("Failed to Load Policies.")
-		os.Exit(1)
-	}
+	pdp.LoadPolicies(config.Policy) 
+	//if pdp.LoadPolicies(config.Policy) != true {
+	//	log.Error("Failed to Load Policies.")
+	// 	os.Exit(1)
+	//}
 
 	if pdp.ListenRequests(config.ServiceEP) != true {
 		log.Error("Failed to Listen to Requests.")
