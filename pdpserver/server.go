@@ -6,7 +6,6 @@ package main
 
 import (
 	"net"
-	"os"
 	"sync"
 
 	log "github.com/Sirupsen/logrus"
@@ -20,6 +19,7 @@ import (
 	"github.com/infobloxopen/policy-box/pdp"
 
 	ot "github.com/opentracing/opentracing-go"
+	"errors"
 )
 
 type Transport struct {
@@ -42,45 +42,49 @@ func NewServer(path string) *Server {
 	return &Server{Path: path, Lock: &sync.RWMutex{}, Updates: NewQueue()}
 }
 
-func (s *Server) LoadPolicies(path string) {
+func (s *Server) LoadPolicies(path string) error {
 	if len(path) == 0 {
-		return
+		log.Error("Invalid path specified. Failed to Load Policies.")
+		return errors.New("Invalid path specified.")
 	}
 
 	log.WithField("policy", path).Info("Loading policy")
 	p, err := pdp.UnmarshalYASTFromFile(path, s.Path)
 	if err != nil {
 		log.WithFields(log.Fields{"policy": path, "error": err}).Error("Failed load policy")
-		return
+		return err
 	}
 
 	s.Policy = p
+	return nil
 }
 
-func (s *Server) ListenRequests(addr string) {
+func (s *Server) ListenRequests(addr string) error {
 	log.WithField("address", addr).Info("Opening service port")
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open service port")
-		os.Exit(1)
+		return err
 	}
 
 	s.Requests.Interface = ln
+	return nil
 }
 
-func (s *Server) ListenControl(addr string) {
+func (s *Server) ListenControl(addr string) error {
 	log.WithField("address", addr).Info("Opening control port")
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open control port")
-		os.Exit(1)
+		return err
 	}
 
 	s.Control.Interface = ln
+	return nil
 }
 
 func (s *Server) Serve(tracer ot.Tracer) {
-	go func() {
+	go func()  {
 		log.Info("Creating control protocol handler")
 		s.Control.Protocol = grpc.NewServer()
 		pbc.RegisterPDPControlServer(s.Control.Protocol, s)
