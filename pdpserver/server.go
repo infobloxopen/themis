@@ -44,9 +44,8 @@ func NewServer(path string) *Server {
 
 func (s *Server) LoadPolicies(path string) error {
 	if len(path) == 0 {
-		err := errors.New("Invalid path specified.")
 		log.Error("Invalid path specified. Failed to Load Policies.")
-		return err
+		return errors.New("Invalid path specified.")
 	}
 
 	log.WithField("policy", path).Info("Loading policy")
