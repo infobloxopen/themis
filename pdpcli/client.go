@@ -77,7 +77,10 @@ func (c *Client) Send(reqs *Requests, name string) error {
 			return fmt.Errorf("can't send request %d: %s", req.Index, err)
 		}
 
-		fmt.Printf("\t%#v\n", res)
+		err = DumpResponse(res, f)
+		if err != nil {
+			return fmt.Errorf("can't dump response for reqiest %d: %s", req.Index, err)
+		}
 	}
 
 	return nil

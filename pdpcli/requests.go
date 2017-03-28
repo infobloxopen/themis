@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"gopkg.in/yaml.v2"
+	"io"
 	"io/ioutil"
 	"net"
 	"os"
 	"strconv"
+	"strings"
 
 	pb "github.com/infobloxopen/policy-box/pdp-service"
 )
@@ -60,6 +62,28 @@ func (r *Requests) Parse() (chan Request) {
 	}()
 
 	return ch
+}
+
+func DumpResponse(r *pb.Response, f io.Writer) error {
+	lines := []string{fmt.Sprintf("- effect: %s", r.Effect.String())}
+	if len(r.Reason) > 0 {
+		lines = append(lines, fmt.Sprintf("  reason: %q", r.Reason))
+	}
+
+	if len(r.Obligation) > 0 {
+		lines = append(lines, "  obligation:")
+		for _, attr := range r.Obligation {
+			lines = append(lines, fmt.Sprintf("    - id: %q", attr.Id))
+			lines = append(lines, fmt.Sprintf("      type: %q", attr.Type))
+			lines = append(lines, fmt.Sprintf("      value: %q", attr.Value))
+			lines = append(lines, "")
+		}
+	} else {
+		lines = append(lines, "")
+	}
+
+	_, err := fmt.Fprintf(f, "%s\n", strings.Join(lines, "\n"))
+	return err
 }
 
 const (
