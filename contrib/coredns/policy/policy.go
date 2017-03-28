@@ -51,6 +51,11 @@ type PolicyMiddleware struct {
 	ErrorFunc func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
 }
 
+type Response struct {
+	Permit   bool   `pdp:"effect"`
+	Redirect net.IP `pdp:"redirect_to"`
+}
+
 func (p *PolicyMiddleware) Connect() error {
 	log.Printf("[DEBUG] Connecting %v", p)
 	var tracer ot.Tracer
@@ -136,32 +141,22 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 		attrs = append(attrs, &pb.Attribute{Id: "source_ip", Type: "address", Value: state.IP()})
 	}
 
-	var result pb.Response
-	err := p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &result)
+	var response Response
+	err := p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &response)
 	if err != nil {
 		log.Printf("[ERROR] Policy validation failed due to error %s\n", err)
 		return dns.RcodeServerFailure, err
 	}
 
-	rcode := dns.RcodeRefused
-	switch result.Effect {
-	case pb.Response_PERMIT:
+	if response.Permit {
 		return middleware.NextOrFailure(p.Name(), p.Next, ctx, w, r)
-	case pb.Response_DENY:
-		if len(result.Obligation) > 0 {
-			o := result.Obligation[0]
-			if o.Id == "redirect_to" {
-				return p.redirect(o.Value, w, r)
-			} else {
-				log.Printf("[WARNING] Unknown obligation: %v", o)
-			}
-		}
-		if len(result.Obligation) > 1 {
-			log.Printf("[WARNING] Only the first obligation will be enforced: %v", result.Obligation)
-		}
 	}
 
-	return rcode, err
+	if response.Redirect != nil {
+		return p.redirect(response.Redirect.String(), w, r)
+	}
+
+	return dns.RcodeRefused, nil
 }
 
 // Name implements the Handler interface
