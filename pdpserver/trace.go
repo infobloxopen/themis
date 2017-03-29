@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strings"
+	log "github.com/Sirupsen/logrus"
 
 	ot "github.com/opentracing/opentracing-go"
 	zipkin "github.com/openzipkin/zipkin-go-opentracing"
@@ -28,6 +29,7 @@ func setupZipkin(tracingEP string) (ot.Tracer, error) {
 
 	collector, err := zipkin.NewHTTPCollector(tracingEP)
 	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to create zipkin HTTP Collector.")
 		return nil, err
 	}
 
