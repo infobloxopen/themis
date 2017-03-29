@@ -19,9 +19,10 @@ type Requests struct {
 }
 
 type Request struct {
-	Index   int
-	Request *pb.Request
-	Error   error
+	Index    int
+	Position int
+	Request  *pb.Request
+	Error    error
 }
 
 func LoadRequests(name string) (*Requests, error) {
@@ -40,24 +41,32 @@ func LoadRequests(name string) (*Requests, error) {
 	return r, yaml.Unmarshal(b, r)
 }
 
-func (r *Requests) Parse() (chan Request) {
+func (r *Requests) Parse(count int) (chan Request) {
 	ch := make(chan Request)
 	go func () {
 		defer close(ch)
 
-		for i, req := range r.Requests {
+		length := len(r.Requests)
+		if count <= 0 {
+			count = length
+		}
+
+		for i := 0; i < count; i++ {
+			j := i % length
+			req := r.Requests[j]
+
 			attrs := []*pb.Attribute{}
 			for name, value := range req {
 				attr, err := makeAttribute(name, value, r.Attributes)
 				if err != nil {
-					ch <- Request{Index: i, Error: err}
+					ch <- Request{Index: i+1, Position: j+1, Error: err}
 					return
 				}
 
 				attrs = append(attrs, attr)
 			}
 
-			ch <- Request{Index: i, Request: &pb.Request{attrs}}
+			ch <- Request{Index: i+1, Position: j+1, Request: &pb.Request{attrs}}
 		}
 	}()
 

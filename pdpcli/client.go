@@ -56,7 +56,7 @@ func (c *Client) Close() {
 	c.client = nil
 }
 
-func (c *Client) Send(reqs *Requests, name string) error {
+func (c *Client) Send(reqs *Requests, count int, name string) error {
 	f := os.Stdout
 	var err error
 	if len(name) > 0 {
@@ -67,19 +67,19 @@ func (c *Client) Send(reqs *Requests, name string) error {
 		defer f.Close()
 	}
 
-	for req := range reqs.Parse() {
+	for req := range reqs.Parse(count) {
 		if req.Error != nil {
-			return fmt.Errorf("don't understand request %d: %s", req.Index, req.Error)
+			return fmt.Errorf("don't understand request %d: %s", req.Position, req.Error)
 		}
 
 		res, err := (*c.client).Validate(context.Background(), req.Request)
 		if err != nil {
-			return fmt.Errorf("can't send request %d: %s", req.Index, err)
+			return fmt.Errorf("can't send request %d (%d): %s", req.Index, req.Position, err)
 		}
 
 		err = DumpResponse(res, f)
 		if err != nil {
-			return fmt.Errorf("can't dump response for reqiest %d: %s", req.Index, err)
+			return fmt.Errorf("can't dump response for reqiest %d (%d): %s", req.Index, req.Position, err)
 		}
 	}
 

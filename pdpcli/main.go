@@ -25,6 +25,6 @@ func main() {
 	check(err, "can't load requests from \"%s\"", config.Input)
 
 	fmt.Printf("Got %d requests. Sending...\n", len(reqs.Requests))
-	err = client.Send(reqs, config.Output)
+	err = client.Send(reqs, config.Count, config.Output)
 	check(err, "can't send requests")
 }
