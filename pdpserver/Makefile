@@ -22,9 +22,7 @@ install:
 
 .PHONY: lint
 lint: $(GOLINT)
-	if [ -n "$$(golint ./...)" ]; then \
-		exit 1; \
-	fi; \
+	$(GOLINT) -set_exit_status ./...
 
 .PHONY: vet
 vet:
