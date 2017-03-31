@@ -234,7 +234,7 @@ func TestUnmarshalYASTSelectorInvalidPath(t *testing.T) {
 
 	c, v = prepareTestYAST(YASTTestSelectorInvalidPathElementType, YASTSelectorTestAttrs, YASTSelectorTestContent, t)
 	_, err = c.unmarshalSelector(v)
-	assertError(err, "Expected string, value or attribute", t)
+	assertError(err, "Expected string, value, attribute or selector", t)
 
 	c, v = prepareTestYAST(YASTTestSelectorInvalidPathElementMap, YASTSelectorTestAttrs, YASTSelectorTestContent, t)
 	_, err = c.unmarshalSelector(v)
@@ -246,7 +246,7 @@ func TestUnmarshalYASTSelectorInvalidPath(t *testing.T) {
 
 	c, v = prepareTestYAST(YASTTestSelectorInvalidPathElementSpec, YASTSelectorTestAttrs, YASTSelectorTestContent, t)
 	_, err = c.unmarshalSelector(v)
-	assertError(err, "Expected value or attribute specificator", t)
+	assertError(err, "Expected value, attribute or selector specificator", t)
 
 	c, v = prepareTestYAST(YASTTestSelectorInvalidPathElementValue, YASTSelectorTestAttrs, YASTSelectorTestContent, t)
 	_, err = c.unmarshalSelector(v)

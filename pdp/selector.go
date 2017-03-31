@@ -16,6 +16,7 @@ type SelectorType struct {
 	Path     []AttributeDesignatorType
 	Content  interface{}
 
+	ContentName string
 	DisplayPath []string
 }
 

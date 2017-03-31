@@ -38,6 +38,20 @@ func (ctx *yastCtx) unmarshalSelectorPathAttributeElement(v interface{}) (string
 	return fmt.Sprintf("%s(%q)", yastTagAttribute, ID), AttributeDesignatorType{a}, nil
 }
 
+func (ctx *yastCtx) unmarshalSelectorPathSelectorElement(v interface{}) (string, ExpressionType, error) {
+	s, err := ctx.unmarshalSelector(v)
+	if err != nil {
+		return "", nil, err
+	}
+
+	if s.DataType != DataTypeString && s.DataType != DataTypeDomain {
+		return "", nil, ctx.errorf("Expected only %s or %s but got %s selector",
+			DataTypeNames[DataTypeString], DataTypeNames[DataTypeDomain], DataTypeNames[s.DataType])
+	}
+
+	return fmt.Sprintf("%s(%s:%s)", yastTagSelector, s.ContentName, strings.Join(s.DisplayPath, "/")), s, nil
+}
+
 func (ctx *yastCtx) unmarshalSelectorPathStructuredElement(m map[interface{}]interface{}) (string, ExpressionType, error) {
 	k, v, err := ctx.getSingleMapPair(m, "value or attribute map")
 	if err != nil {
@@ -55,18 +69,21 @@ func (ctx *yastCtx) unmarshalSelectorPathStructuredElement(m map[interface{}]int
 
 	case yastTagAttribute:
 		return ctx.unmarshalSelectorPathAttributeElement(v)
+
+	case yastTagSelector:
+		return ctx.unmarshalSelectorPathSelectorElement(v)
 	}
 
-	return "", nil, ctx.errorf("Expected value or attribute specificator but got %s", s)
+	return "", nil, ctx.errorf("Expected value, attribute or selector specificator but got %s", s)
 }
 
 func (ctx *yastCtx) unmarshalSelectorPathElement(v interface{}, i int) (string, ExpressionType, error) {
 	ctx.pushNodeSpec("%d", i+1)
 	defer ctx.popNodeSpec()
 
-	s, err := ctx.validateString(v, "string, value or attribute")
+	s, err := ctx.validateString(v, "string, value, attribute or selector")
 	if err != nil {
-		m, err := ctx.validateMap(v, "string, value or attribute")
+		m, err := ctx.validateMap(v, "string, value, attribute or selector")
 		if err != nil {
 			return "", nil, err
 		}
@@ -161,7 +178,7 @@ func (ctx *yastCtx) unmarshalSelector(v interface{}) (*SelectorType, error) {
 
 	c, p, dp := prepareSelectorContent(rawCtx, rawPath, t)
 
-	sel = &SelectorType{t, p, c, dp}
+	sel = &SelectorType{t, p, c, ID, dp}
 	pathMap[strPath] = sel
 
 	return sel, nil
