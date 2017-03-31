@@ -1,36 +1,104 @@
 package pdp
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
-func (ctx *yastCtx) unmarshalSelectorPath(m map[interface{}]interface{}) (string, []interface{}, error) {
-	path, err := ctx.extractString(m, yastTagPath, "selector path")
+func (ctx *yastCtx) unmarshalSelectorPathValueElement(v interface{}) (string, ExpressionType, error) {
+	a, err := ctx.unmarshalValue(v)
 	if err != nil {
 		return "", nil, err
 	}
 
-	p := make([]interface{}, 0)
-	for i, item := range strings.Split(path, "/") {
-		ID := strings.TrimPrefix(item, "$")
-		if ID != item {
-			a, ok := ctx.attrs[ID]
-			if !ok {
-				return path, nil, ctx.errorf("Unknown attribute ID %s for %d element of selector path", ID, i+1)
-			}
-
-			if a.DataType != DataTypeString && a.DataType != DataTypeDomain {
-				return path, nil, ctx.errorf("Expected only %s or %s for %d element of selector path but got %s "+
-					"attribute %s",
-					DataTypeNames[DataTypeString], DataTypeNames[DataTypeDomain], i+1, DataTypeNames[a.DataType], ID)
-			}
-
-			p = append(p, AttributeDesignatorType{a})
-			continue
-		}
-
-		p = append(p, item)
+	if a.DataType != DataTypeString {
+		return "", nil, ctx.errorf("Expected only %s but got %s value",
+			DataTypeNames[DataTypeString], DataTypeNames[a.DataType])
 	}
 
-	return path, p, nil
+	return fmt.Sprintf("%q", a.Value.(string)), a, nil
+}
+
+func (ctx *yastCtx) unmarshalSelectorPathAttributeElement(v interface{}) (string, ExpressionType, error) {
+	ID, err := ctx.validateString(v, "attribute ID")
+	if err != nil {
+		return "", nil, err
+	}
+
+	a, ok := ctx.attrs[ID]
+	if !ok {
+		return "", nil, ctx.errorf("Unknown attribute ID %s", ID)
+	}
+
+	if a.DataType != DataTypeString && a.DataType != DataTypeDomain {
+		return "", nil, ctx.errorf("Expected only %s or %s but got %s attribute %s",
+			DataTypeNames[DataTypeString], DataTypeNames[DataTypeDomain], DataTypeNames[a.DataType], ID)
+	}
+
+	return fmt.Sprintf("%s(%q)", yastTagAttribute, ID), AttributeDesignatorType{a}, nil
+}
+
+func (ctx *yastCtx) unmarshalSelectorPathStructuredElement(m map[interface{}]interface{}) (string, ExpressionType, error) {
+	k, v, err := ctx.getSingleMapPair(m, "value or attribute map")
+	if err != nil {
+		return "", nil, err
+	}
+
+	s, err := ctx.validateString(k, "specificator")
+	if err != nil {
+		return "", nil, err
+	}
+
+	switch s {
+	case yastTagValue:
+		return ctx.unmarshalSelectorPathValueElement(v)
+
+	case yastTagAttribute:
+		return ctx.unmarshalSelectorPathAttributeElement(v)
+	}
+
+	return "", nil, ctx.errorf("Expected value or attribute specificator but got %s", s)
+}
+
+func (ctx *yastCtx) unmarshalSelectorPathElement(v interface{}, i int) (string, ExpressionType, error) {
+	ctx.pushNodeSpec("%d", i+1)
+	defer ctx.popNodeSpec()
+
+	s, err := ctx.validateString(v, "string, value or attribute")
+	if err != nil {
+		m, err := ctx.validateMap(v, "string, value or attribute")
+		if err != nil {
+			return "", nil, err
+		}
+
+		return ctx.unmarshalSelectorPathStructuredElement(m)
+	}
+
+	return fmt.Sprintf("%q", s), AttributeValueType{DataTypeString, s}, nil
+}
+
+func (ctx *yastCtx) unmarshalSelectorPath(m map[interface{}]interface{}) (string, []ExpressionType, error) {
+	v, err := ctx.extractList(m, yastTagPath, "selector path")
+	if err != nil {
+		return "", nil, err
+	}
+
+	ctx.pushNodeSpec(yastTagPath)
+	defer ctx.popNodeSpec()
+
+	path := make([]string, len(v))
+	p := make([]ExpressionType, len(v))
+	for i, item := range v {
+		s, a, err := ctx.unmarshalSelectorPathElement(item, i)
+		if err != nil {
+			return "", nil, err
+		}
+
+		path[i] = s
+		p[i] = a
+	}
+
+	return strings.Join(path, "/"), p, nil
 }
 
 func (ctx *yastCtx) unmarshalSelectorContent(m map[interface{}]interface{}) (string, interface{}, error) {

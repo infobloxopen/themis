@@ -1,6 +1,10 @@
 package pdp
 
-import "testing"
+import (
+	"gopkg.in/yaml.v2"
+	"strings"
+	"testing"
+)
 
 const YASTTestPolicy = `# Test policy
 attributes:
@@ -87,7 +91,8 @@ policies:
             map:
               selector:
                 type: String
-                path: $d
+                path:
+                  - attr: d
                 content: domains_to_rules
 
   alg: FirstApplicableEffect`
@@ -102,6 +107,31 @@ func TestUnmarshalYAST(t *testing.T) {
 	} else {
 		if p == nil {
 			t.Errorf("Expected policy but got nothing")
+		}
+	}
+}
+
+func prepareTestYAST(s string, attrs map[string]AttributeType, includes map[string]interface{}, t *testing.T) (yastCtx, interface{}) {
+	c := newYASTCtx("")
+	c.attrs = attrs
+	c.includes = includes
+
+	var v interface{}
+	err := yaml.Unmarshal([]byte(s), &v)
+	if err != nil {
+		t.Fatalf("Invalid YAST: %s", err)
+	}
+
+	return c, v
+}
+
+func assertError(err error, msg string, t *testing.T) {
+	if err == nil {
+		t.Errorf("Didn't get error as expected")
+	} else {
+		s := err.Error()
+		if !strings.Contains(s, msg) {
+			t.Errorf("Expected \"%s\" error but got:\n%#v\n\n%s\n", msg, err, err)
 		}
 	}
 }

@@ -12,6 +12,10 @@ type yastCtx struct {
 	selectors map[string]map[string]*SelectorType
 }
 
+func newYASTCtx(dir string) yastCtx {
+	return yastCtx{nodeSpec: []string{}, dataDir: dir}
+}
+
 func (ctx *yastCtx) pushNodeSpec(format string, a ...interface{}) {
 	ctx.nodeSpec = append(ctx.nodeSpec, fmt.Sprintf(format, a...))
 }
@@ -88,6 +92,15 @@ func (ctx yastCtx) validateList(v interface{}, desc string) ([]interface{}, erro
 	}
 
 	return r, nil
+}
+
+func (ctx yastCtx) extractList(m map[interface{}]interface{}, k, desc string) ([]interface{}, error) {
+	v, ok := m[k]
+	if !ok {
+		return nil, ctx.errorf("Missing %s", desc)
+	}
+
+	return ctx.validateList(v, desc)
 }
 
 func (ctx yastCtx) extractContentByItem(v interface{}) (interface{}, error) {

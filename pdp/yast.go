@@ -49,9 +49,7 @@ func UnmarshalYAST(in []byte, dir string, ext map[string]interface{}) (Evaluable
 		return nil, err
 	}
 
-	c := yastCtx{}
-	c.nodeSpec = make([]string, 0)
-	c.dataDir = dir
+	c := newYASTCtx(dir)
 
 	if len(m) > 3 {
 		return nil, c.makeRootError(m)
