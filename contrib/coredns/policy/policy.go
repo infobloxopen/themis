@@ -52,7 +52,7 @@ type PolicyMiddleware struct {
 }
 
 type Response struct {
-	Permit   bool   `pdp:"effect"`
+	Permit   bool   `pdp:"Effect"`
 	Redirect net.IP `pdp:"redirect_to"`
 }
 
