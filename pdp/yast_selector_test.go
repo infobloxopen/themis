@@ -16,6 +16,11 @@ path:
       content: example
   - "0"
   - attr: d
+  - selector:
+      type: String
+      path:
+        - test
+      content: t
 content: c`
 
 	YASTTestSelectorDisplayPath = "\"test\"/attr(\"s\")/\"example\"/\"0\"/attr(\"d\")"
@@ -124,7 +129,7 @@ path:
   - attr: a
 content: c`
 
-	YASTTestSelectorInvalidContent = `# Test selector
+	YASTTestSelectorInvalidContent = `# Test selector invalid content
 type: String
 path:
   - test
@@ -135,7 +140,7 @@ path:
   - attr: d
 content: 0`
 
-	YASTTestSelectorUnknownContent = `# Test selector
+	YASTTestSelectorUnknownContent = `# Test selector unknown content
 type: String
 path:
   - test
@@ -145,6 +150,37 @@ path:
       content: example
   - attr: d
 content: x`
+
+	YASTTestSelectorInvalidSubselector = `# Test selector invalid subselector
+type: String
+path:
+  - test
+  - attr: s
+  - val:
+      type: String
+      content: example
+  - attr: d
+  - selector:
+      path:
+        - test
+      content: t
+content: c`
+
+	YASTTestSelectorInvalidSubselectorType = `# Test selector invalid subselector type
+type: String
+path:
+  - test
+  - attr: s
+  - val:
+      type: String
+      content: example
+  - attr: d
+  - selector:
+      type: boolean
+      path:
+        - test
+      content: t
+content: c`
 )
 
 var (
@@ -172,7 +208,9 @@ var (
 							"mail.example.net": "sixth"},
 						"unreacheable"},
 					"test": "unreacheable"}},
-			"example": "unreacheable"}}
+			"example": "unreacheable"},
+		"t": map[string]interface{}{
+			"test": "example"}}
 )
 
 func TestUnmarshalYASTSelector(t *testing.T) {
@@ -302,4 +340,14 @@ func TestUnmarshalYASTSelectorDuplicate(t *testing.T) {
 	if first != second {
 		t.Errorf("Expected the same selector as a result of parsing the same data got different (%p != %p)", first, second)
 	}
+}
+
+func TestUnmarshalYASTSelectorInvalidSubselector(t *testing.T) {
+	c, v := prepareTestYAST(YASTTestSelectorInvalidSubselector, YASTSelectorTestAttrs, YASTSelectorTestContent, t)
+	_, err := c.unmarshalSelector(v)
+	assertError(err, "Missing type", t)
+
+	c, v = prepareTestYAST(YASTTestSelectorInvalidSubselectorType,  YASTSelectorTestAttrs, YASTSelectorTestContent, t)
+	_, err = c.unmarshalSelector(v)
+	assertError(err, "Expected only string or domain", t)
 }
