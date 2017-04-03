@@ -13,11 +13,15 @@ type missingSelectorValue struct {
 
 type SelectorType struct {
 	DataType int
-	Path     []AttributeDesignatorType
+	Path     []ExpressionType
 	Content  interface{}
 
 	ContentName string
 	DisplayPath []string
+}
+
+func (s SelectorType) describe() string {
+	return fmt.Sprintf("%s(%q:%s)", yastTagSelector, s.ContentName, strings.Join(s.DisplayPath, "/"))
 }
 
 func (s SelectorType) getResultType() int {
@@ -386,7 +390,7 @@ func (s SelectorType) calculate(ctx *Context) (AttributeValueType, error) {
 		v, err = item.calculate(ctx)
 		if err != nil {
 			return AttributeValueType{},
-				fmt.Errorf("Error on calculating %s at /%s: %v", item.Attribute.ID, strings.Join(path, "/"), err)
+				fmt.Errorf("Error on calculating %s at /%s: %v", item.describe(), strings.Join(path, "/"), err)
 		}
 
 		var idx string
@@ -394,16 +398,16 @@ func (s SelectorType) calculate(ctx *Context) (AttributeValueType, error) {
 		default:
 			return AttributeValueType{},
 				fmt.Errorf("Expected string or domain as %s at /%s but got %s",
-					item.Attribute.ID, strings.Join(path, "/"), DataTypeNames[v.DataType])
+					item.describe(), strings.Join(path, "/"), DataTypeNames[v.DataType])
 
 		case DataTypeString:
-			idx, err = ExtractStringValue(v, fmt.Sprintf("%s at /%s", item.Attribute.ID, strings.Join(path, "/")))
+			idx, err = ExtractStringValue(v, fmt.Sprintf("%s at /%s", item.describe(), strings.Join(path, "/")))
 			if err != nil {
 				return AttributeValueType{}, err
 			}
 
 		case DataTypeDomain:
-			idx, err = ExtractDomainValue(v, fmt.Sprintf("%s at /%s", item.Attribute.ID, strings.Join(path, "/")))
+			idx, err = ExtractDomainValue(v, fmt.Sprintf("%s at /%s", item.describe(), strings.Join(path, "/")))
 			if err != nil {
 				return AttributeValueType{}, err
 			}
@@ -449,7 +453,7 @@ func (s SelectorType) calculate(ctx *Context) (AttributeValueType, error) {
 	return v, nil
 }
 
-func duckToSelectorContentbyAttribute(a AttributeDesignatorType, c interface{}, rawPath []ExpressionType, t int, reprPath []string) interface{} {
+func duckToSelectorContentbyExpression(a ExpressionType, c interface{}, rawPath []ExpressionType, t int, reprPath []string) interface{} {
 	m, ok := c.(map[string]interface{})
 	if !ok {
 		return fmt.Errorf("Expected map at /%s but got %T", strings.Join(reprPath, "/"), c)
@@ -505,8 +509,14 @@ func duckToSelectorContent(rawCtx interface{}, rawPath []ExpressionType, t int, 
 
 	for i, item := range rawPath {
 		switch v := item.(type) {
+		default:
+			return fmt.Errorf("Expected value or attribute after /%s but got %T", strings.Join(reprPath, "/"), v)
+
+		case *SelectorType:
+			return duckToSelectorContentbyExpression(v, c, rawPath[i+1:], t, reprPath)
+
 		case AttributeDesignatorType:
-			return duckToSelectorContentbyAttribute(v, c, rawPath[i+1:], t, reprPath)
+			return duckToSelectorContentbyExpression(v, c, rawPath[i+1:], t, reprPath)
 
 		case AttributeValueType:
 			s := v.Value.(string)
@@ -547,18 +557,25 @@ func duckToSelectorContent(rawCtx interface{}, rawPath []ExpressionType, t int, 
 	return v
 }
 
-func prepareSelectorPath(raw []ExpressionType) ([]AttributeDesignatorType, []string) {
-	path := []AttributeDesignatorType{}
+func prepareSelectorPath(raw []ExpressionType) ([]ExpressionType, []string) {
+	path := []ExpressionType{}
 	displayPath := []string{}
 	displayPathItem := []string{}
 
 	for _, item := range raw {
+		displayPathItem = append(displayPathItem, item.describe())
+
 		switch v := item.(type) {
 		case AttributeValueType:
-			displayPathItem = append(displayPathItem, fmt.Sprintf("%q", v.Value.(string)))
+			break
 
 		case AttributeDesignatorType:
-			displayPathItem = append(displayPathItem, fmt.Sprintf("%s(%q)", yastTagAttribute, v.Attribute.ID))
+			displayPath = append(displayPath, strings.Join(displayPathItem, "/"))
+			displayPathItem = []string{}
+
+			path = append(path, v)
+
+		case *SelectorType:
 			displayPath = append(displayPath, strings.Join(displayPathItem, "/"))
 			displayPathItem = []string{}
 
@@ -566,10 +583,14 @@ func prepareSelectorPath(raw []ExpressionType) ([]AttributeDesignatorType, []str
 		}
 	}
 
+	if len(displayPathItem) > 0 {
+		displayPath = append(displayPath, strings.Join(displayPathItem, "/"))
+	}
+
 	return path, displayPath
 }
 
-func prepareSelectorContent(rawCtx interface{}, rawPath []ExpressionType, t int) (interface{}, []AttributeDesignatorType, []string) {
+func prepareSelectorContent(rawCtx interface{}, rawPath []ExpressionType, t int) (interface{}, []ExpressionType, []string) {
 	ctx := duckToSelectorContent(rawCtx, rawPath, t, []string{})
 	path, displayPath := prepareSelectorPath(rawPath)
 

@@ -23,7 +23,7 @@ path:
       content: t
 content: c`
 
-	YASTTestSelectorDisplayPath = "\"test\"/attr(\"s\")/\"example\"/\"0\"/attr(\"d\")"
+	YASTTestSelectorDisplayPath = "\"test\"/attr(s)/\"example\"/\"0\"/attr(d)/selector(\"t\":\"test\")"
 
 	YASTTestInvalidSelector = `# Test invalid selector
 - 0
@@ -195,17 +195,23 @@ var (
 				"test": map[string]interface{}{
 					"example": []interface{}{
 						map[string]interface{}{
-							"example.com":   "first",
-							"www.test.com":  "second",
-							"wiki.test.com": "third"},
+							"example.com": map[string]interface{}{
+								"example": "first"},
+							"www.test.com": map[string]interface{}{
+								"example": "second"},
+							"wiki.test.com": map[string]interface{}{
+								"example": "third"}},
 						"unreacheable"},
 					"test": "unreacheable"},
 				"example": map[string]interface{}{
 					"example": []interface{}{
 						map[string]interface{}{
-							"test.net":         "fourth",
-							"www.example.net":  "fifth",
-							"mail.example.net": "sixth"},
+							"test.net": map[string]interface{}{
+								"example": "fourth"},
+							"www.example.net": map[string]interface{}{
+								"example": "fifth"},
+							"mail.example.net": map[string]interface{}{
+								"example": "sixth"}},
 						"unreacheable"},
 					"test": "unreacheable"}},
 			"example": "unreacheable"},
@@ -347,7 +353,7 @@ func TestUnmarshalYASTSelectorInvalidSubselector(t *testing.T) {
 	_, err := c.unmarshalSelector(v)
 	assertError(err, "Missing type", t)
 
-	c, v = prepareTestYAST(YASTTestSelectorInvalidSubselectorType,  YASTSelectorTestAttrs, YASTSelectorTestContent, t)
+	c, v = prepareTestYAST(YASTTestSelectorInvalidSubselectorType, YASTSelectorTestAttrs, YASTSelectorTestContent, t)
 	_, err = c.unmarshalSelector(v)
 	assertError(err, "Expected only string or domain", t)
 }

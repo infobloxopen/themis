@@ -5,62 +5,62 @@ import (
 	"strings"
 )
 
-func (ctx *yastCtx) unmarshalSelectorPathValueElement(v interface{}) (string, ExpressionType, error) {
+func (ctx *yastCtx) unmarshalSelectorPathValueElement(v interface{}) (ExpressionType, error) {
 	a, err := ctx.unmarshalValue(v)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	if a.DataType != DataTypeString {
-		return "", nil, ctx.errorf("Expected only %s but got %s value",
+		return nil, ctx.errorf("Expected only %s but got %s value",
 			DataTypeNames[DataTypeString], DataTypeNames[a.DataType])
 	}
 
-	return fmt.Sprintf("%q", a.Value.(string)), a, nil
+	return a, nil
 }
 
-func (ctx *yastCtx) unmarshalSelectorPathAttributeElement(v interface{}) (string, ExpressionType, error) {
+func (ctx *yastCtx) unmarshalSelectorPathAttributeElement(v interface{}) (ExpressionType, error) {
 	ID, err := ctx.validateString(v, "attribute ID")
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	a, ok := ctx.attrs[ID]
 	if !ok {
-		return "", nil, ctx.errorf("Unknown attribute ID %s", ID)
+		return nil, ctx.errorf("Unknown attribute ID %s", ID)
 	}
 
 	if a.DataType != DataTypeString && a.DataType != DataTypeDomain {
-		return "", nil, ctx.errorf("Expected only %s or %s but got %s attribute %s",
+		return nil, ctx.errorf("Expected only %s or %s but got %s attribute %s",
 			DataTypeNames[DataTypeString], DataTypeNames[DataTypeDomain], DataTypeNames[a.DataType], ID)
 	}
 
-	return fmt.Sprintf("%s(%q)", yastTagAttribute, ID), AttributeDesignatorType{a}, nil
+	return AttributeDesignatorType{a}, nil
 }
 
-func (ctx *yastCtx) unmarshalSelectorPathSelectorElement(v interface{}) (string, ExpressionType, error) {
+func (ctx *yastCtx) unmarshalSelectorPathSelectorElement(v interface{}) (ExpressionType, error) {
 	s, err := ctx.unmarshalSelector(v)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	if s.DataType != DataTypeString && s.DataType != DataTypeDomain {
-		return "", nil, ctx.errorf("Expected only %s or %s but got %s selector",
+		return nil, ctx.errorf("Expected only %s or %s but got %s selector",
 			DataTypeNames[DataTypeString], DataTypeNames[DataTypeDomain], DataTypeNames[s.DataType])
 	}
 
-	return fmt.Sprintf("%s(%s:%s)", yastTagSelector, s.ContentName, strings.Join(s.DisplayPath, "/")), s, nil
+	return s, nil
 }
 
-func (ctx *yastCtx) unmarshalSelectorPathStructuredElement(m map[interface{}]interface{}) (string, ExpressionType, error) {
+func (ctx *yastCtx) unmarshalSelectorPathStructuredElement(m map[interface{}]interface{}) (ExpressionType, error) {
 	k, v, err := ctx.getSingleMapPair(m, "value or attribute map")
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	s, err := ctx.validateString(k, "specificator")
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	switch s {
@@ -74,7 +74,7 @@ func (ctx *yastCtx) unmarshalSelectorPathStructuredElement(m map[interface{}]int
 		return ctx.unmarshalSelectorPathSelectorElement(v)
 	}
 
-	return "", nil, ctx.errorf("Expected value, attribute or selector specificator but got %s", s)
+	return nil, ctx.errorf("Expected value, attribute or selector specificator but got %s", s)
 }
 
 func (ctx *yastCtx) unmarshalSelectorPathElement(v interface{}, i int) (string, ExpressionType, error) {
@@ -88,7 +88,14 @@ func (ctx *yastCtx) unmarshalSelectorPathElement(v interface{}, i int) (string, 
 			return "", nil, err
 		}
 
-		return ctx.unmarshalSelectorPathStructuredElement(m)
+		e, err := ctx.unmarshalSelectorPathStructuredElement(m)
+
+		desc := ""
+		if e != nil {
+			desc = e.describe()
+		}
+
+		return desc, e, err
 	}
 
 	return fmt.Sprintf("%q", s), AttributeValueType{DataTypeString, s}, nil

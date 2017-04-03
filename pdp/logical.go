@@ -14,6 +14,10 @@ type FunctionBooleanAndType struct {
 	Args []ExpressionType
 }
 
+func (f FunctionBooleanNotType) describe() string {
+	return fmt.Sprintf("%s(%s)", yastExpressionNot, yastTagDataTypeBoolean)
+}
+
 func (f FunctionBooleanNotType) getResultType() int {
 	return DataTypeBoolean
 }
@@ -35,6 +39,10 @@ func (f FunctionBooleanNotType) calculate(ctx *Context) (AttributeValueType, err
 	v.Value = !a
 
 	return v, nil
+}
+
+func (f FunctionBooleanOrType) describe() string {
+	return fmt.Sprintf("%s(%s, %s, ...)", yastExpressionOr, yastTagDataTypeBoolean, yastTagDataTypeBoolean)
 }
 
 func (f FunctionBooleanOrType) getResultType() int {
@@ -66,6 +74,10 @@ func (f FunctionBooleanOrType) calculate(ctx *Context) (AttributeValueType, erro
 	v.Value = false
 
 	return v, nil
+}
+
+func (f FunctionBooleanAndType) describe() string {
+	return fmt.Sprintf("%s(%s, %s, ...)", yastExpressionAnd, yastTagDataTypeBoolean, yastTagDataTypeBoolean)
 }
 
 func (f FunctionBooleanAndType) getResultType() int {

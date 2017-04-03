@@ -40,6 +40,12 @@ const (
 	yastTagDenyOverridesAlg         = "denyoverrides"
 	yastTagMapperAlg                = "mapper"
 	yastTagDefaultAlg               = yastTagFirstApplicableEffectAlg
+
+	yastExpressionEqual    = "equal"
+	yastExpressionContains = "contains"
+	yastExpressionNot      = "not"
+	yastExpressionOr       = "or"
+	yastExpressionAnd      = "and"
 )
 
 func UnmarshalYAST(in []byte, dir string, ext map[string]interface{}) (EvaluableType, error) {

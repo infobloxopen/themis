@@ -8,10 +8,10 @@ import (
 type twoArgumentsFunctionType func(first ExpressionType, second ExpressionType) ExpressionType
 
 var targetCompatibleExpressions map[string]map[int]map[int]twoArgumentsFunctionType = map[string]map[int]map[int]twoArgumentsFunctionType{
-	"equal": map[int]map[int]twoArgumentsFunctionType{
+	yastExpressionEqual: map[int]map[int]twoArgumentsFunctionType{
 		DataTypeString: map[int]twoArgumentsFunctionType{
 			DataTypeString: makeFunctionStringEqual}},
-	"contains": map[int]map[int]twoArgumentsFunctionType{
+	yastExpressionContains: map[int]map[int]twoArgumentsFunctionType{
 		DataTypeString: map[int]twoArgumentsFunctionType{
 			DataTypeString: makeFunctionStringContains},
 		DataTypeNetwork: map[int]twoArgumentsFunctionType{

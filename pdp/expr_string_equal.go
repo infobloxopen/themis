@@ -1,8 +1,14 @@
 package pdp
 
+import "fmt"
+
 type FunctionStringEqualType struct {
 	First  ExpressionType
 	Second ExpressionType
+}
+
+func (f FunctionStringEqualType) describe() string {
+	return fmt.Sprintf("%s(%s, %s)", yastExpressionEqual, yastTagDataTypeString, yastTagDataTypeString)
 }
 
 func (f FunctionStringEqualType) getResultType() int {
