@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"strings"
 	log "github.com/Sirupsen/logrus"
+	"strings"
 
 	ot "github.com/opentracing/opentracing-go"
 	zipkin "github.com/openzipkin/zipkin-go-opentracing"

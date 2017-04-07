@@ -246,7 +246,7 @@ func (s *Server) Validate(server_ctx context.Context, in *pb.Request) (*pb.Respo
 	s.Lock.RUnlock()
 
 	if p == nil {
-		log.Error("No Policy or policy set defined");
+		log.Error("No Policy or policy set defined")
 		return serviceReply(pdp.EffectIndeterminate, "No policy or policy set defined", nil), nil
 	}
 
