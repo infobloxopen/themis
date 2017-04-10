@@ -3,6 +3,7 @@ package pdp
 import (
 	"fmt"
 	"net"
+	"strings"
 )
 
 const (
@@ -49,6 +50,76 @@ type AttributeValueType struct {
 	Value    interface{}
 }
 
+func (v AttributeValueType) describe() string {
+	switch v.DataType {
+	case DataTypeUndefined:
+		return yastTagDataTypeUndefined
+
+	case DataTypeBoolean:
+		return fmt.Sprintf("%v", v.Value)
+
+	case DataTypeString:
+		return fmt.Sprintf("%q", v.Value)
+
+	case DataTypeAddress:
+		return v.Value.(net.IP).String()
+
+	case DataTypeNetwork:
+		n := v.Value.(net.IPNet)
+		return n.String()
+
+	case DataTypeDomain:
+		return fmt.Sprintf("%q", v.Value)
+
+	case DataTypeSetOfStrings:
+		items := []string{}
+		i := 0
+		for s := range v.Value.(map[string]bool) {
+			if i > 1 {
+				items = append(items, "...")
+				break
+			}
+
+			items = append(items, s)
+			i++
+		}
+
+		return fmt.Sprintf("[%s]", strings.Join(items, ", "))
+
+	case DataTypeSetOfNetworks:
+		items := []string{}
+		i := 0
+		for _, n := range v.Value.([]net.IPNet) {
+			if i > 1 {
+				items = append(items, "...")
+				break
+			}
+
+			items = append(items, n.String())
+			i++
+		}
+
+		return fmt.Sprintf("[%s]", strings.Join(items, ", "))
+
+	case DataTypeSetOfDomains:
+		items := []string{}
+		i := 0
+		for d := range v.Value.(*SetOfSubdomains).Iterate() {
+			if i > 1 {
+				items = append(items, "...")
+				break
+			}
+
+			items = append(items, d.Domain)
+			i++
+		}
+
+		return fmt.Sprintf("[%s]", strings.Join(items, ", "))
+	}
+
+	return fmt.Sprintf("<unknown value type %d>", DataTypeSetOfDomains)
+}
+
 func (v AttributeValueType) getResultType() int {
 	return v.DataType
 }
@@ -64,6 +135,10 @@ type AttributeAssignmentExpressionType struct {
 
 type AttributeDesignatorType struct {
 	Attribute AttributeType
+}
+
+func (d AttributeDesignatorType) describe() string {
+	return fmt.Sprintf("%s(%s)", yastTagAttribute, d.Attribute.ID)
 }
 
 func (d AttributeDesignatorType) getResultType() int {

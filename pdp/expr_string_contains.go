@@ -1,10 +1,17 @@
 package pdp
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type FunctionStringContainsType struct {
 	Template ExpressionType
 	Value    ExpressionType
+}
+
+func (f FunctionStringContainsType) describe() string {
+	return fmt.Sprintf("%s.%s(%s)", yastTagDataTypeString, yastExpressionContains, yastTagDataTypeString)
 }
 
 func (f FunctionStringContainsType) getResultType() int {

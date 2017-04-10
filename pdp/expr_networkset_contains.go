@@ -1,8 +1,14 @@
 package pdp
 
+import "fmt"
+
 type FunctionSetOfNetworksContainsAddressType struct {
 	Set   ExpressionType
 	Value ExpressionType
+}
+
+func (f FunctionSetOfNetworksContainsAddressType) describe() string {
+	return fmt.Sprintf("\"%s\".%s(%s)", yastTagDataTypeSetOfNetworks, yastExpressionContains, yastTagDataTypeAddress)
 }
 
 func (f FunctionSetOfNetworksContainsAddressType) getResultType() int {

@@ -12,6 +12,11 @@ type SetOfSubdomains struct {
 	Sub   map[string]*SetOfSubdomains
 }
 
+type LeafItem struct {
+	Domain string
+	Leaf   interface{}
+}
+
 func AdjustDomainName(s string) (string, error) {
 	return idna.ToASCII(strings.ToLower(norm.NFC.String(s)))
 }
@@ -74,4 +79,27 @@ func (s SetOfSubdomains) Get(d string) (interface{}, bool) {
 func (s SetOfSubdomains) Contains(d string) bool {
 	_, ok := s.Get(d)
 	return ok
+}
+
+func (s *SetOfSubdomains) iterate(domain []string, ch chan LeafItem) {
+	if s.Final {
+		ch <- LeafItem{strings.Join(domain, "."), s.Leaf}
+		return
+	}
+
+	for name, subdomain := range s.Sub {
+		subdomain.iterate(append(domain, name), ch)
+	}
+}
+
+func (s *SetOfSubdomains) Iterate() chan LeafItem {
+	ch := make(chan LeafItem)
+
+	go func() {
+		defer close(ch)
+
+		s.iterate([]string{}, ch)
+	}()
+
+	return ch
 }
