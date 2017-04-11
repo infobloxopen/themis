@@ -12,13 +12,17 @@ type SetOfSubdomains struct {
 	Sub   map[string]*SetOfSubdomains
 }
 
-type LeafItem struct {
+type DomainLeafItem struct {
 	Domain string
 	Leaf   interface{}
 }
 
 func AdjustDomainName(s string) (string, error) {
 	return idna.ToASCII(strings.ToLower(norm.NFC.String(s)))
+}
+
+func NewSetOfSubdomains() *SetOfSubdomains {
+	return &SetOfSubdomains{false, nil, make(map[string]*SetOfSubdomains)}
 }
 
 func (s *SetOfSubdomains) addToSetOfDomains(d string, v interface{}) {
@@ -81,9 +85,9 @@ func (s SetOfSubdomains) Contains(d string) bool {
 	return ok
 }
 
-func (s *SetOfSubdomains) iterate(domain []string, ch chan LeafItem) {
+func (s *SetOfSubdomains) iterate(domain []string, ch chan DomainLeafItem) {
 	if s.Final {
-		ch <- LeafItem{strings.Join(domain, "."), s.Leaf}
+		ch <- DomainLeafItem{strings.Join(domain, "."), s.Leaf}
 		return
 	}
 
@@ -92,8 +96,8 @@ func (s *SetOfSubdomains) iterate(domain []string, ch chan LeafItem) {
 	}
 }
 
-func (s *SetOfSubdomains) Iterate() chan LeafItem {
-	ch := make(chan LeafItem)
+func (s *SetOfSubdomains) Iterate() chan DomainLeafItem {
+	ch := make(chan DomainLeafItem)
 
 	go func() {
 		defer close(ch)

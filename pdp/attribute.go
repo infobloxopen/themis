@@ -89,13 +89,13 @@ func (v AttributeValueType) describe() string {
 	case DataTypeSetOfNetworks:
 		items := []string{}
 		i := 0
-		for _, n := range v.Value.([]net.IPNet) {
+		for n := range v.Value.(*SetOfNetworks).Iterate() {
 			if i > 1 {
 				items = append(items, "...")
 				break
 			}
 
-			items = append(items, n.String())
+			items = append(items, n.Network.String())
 			i++
 		}
 
@@ -203,20 +203,20 @@ func ExtractSetOfStringsValue(v AttributeValueType, desc string) (map[string]boo
 	return v.Value.(map[string]bool), nil
 }
 
-func ExtractSetOfNetworksValue(v AttributeValueType, desc string) ([]net.IPNet, error) {
+func ExtractSetOfNetworksValue(v AttributeValueType, desc string) (*SetOfNetworks, error) {
 	if v.DataType != DataTypeSetOfNetworks {
 		return nil, fmt.Errorf("Expected %s as %s but got %s",
 			DataTypeNames[DataTypeSetOfNetworks], desc, DataTypeNames[v.DataType])
 	}
 
-	return v.Value.([]net.IPNet), nil
+	return v.Value.(*SetOfNetworks), nil
 }
 
-func ExtractSetOfDomainsValue(v AttributeValueType, desc string) (SetOfSubdomains, error) {
+func ExtractSetOfDomainsValue(v AttributeValueType, desc string) (*SetOfSubdomains, error) {
 	if v.DataType != DataTypeSetOfDomains {
-		return SetOfSubdomains{}, fmt.Errorf("Expected %s as %s but got %s",
+		return nil, fmt.Errorf("Expected %s as %s but got %s",
 			DataTypeNames[DataTypeSetOfDomains], desc, DataTypeNames[v.DataType])
 	}
 
-	return v.Value.(SetOfSubdomains), nil
+	return v.Value.(*SetOfSubdomains), nil
 }

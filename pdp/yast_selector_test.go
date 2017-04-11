@@ -25,6 +25,13 @@ content: c`
 
 	YASTTestSelectorDisplayPath = "\"test\"/attr(s)/\"example\"/\"0\"/attr(d)/selector(\"t\":\"test\")"
 
+	YASTTestSelectorWithNetworks = `# Test selector with networks
+type: String
+path:
+  - attr: a
+  - attr: "n"
+content: c`
+
 	YASTTestInvalidSelector = `# Test invalid selector
 - 0
 - 1
@@ -108,7 +115,7 @@ type: String
 path:
   - val:
       type: network
-      content: 127.0.0.0/8
+      content: 127.0.0.1/8
 content: c`
 
 	YASTTestSelectorInvalidPathElementAttr = `# Test selector invalid path element attribute
@@ -126,7 +133,7 @@ content: c`
 	YASTTestSelectorInvalidPathElementAttrType = `# Test selector invalid path element attribute type
 type: String
 path:
-  - attr: a
+  - attr: set
 content: c`
 
 	YASTTestSelectorInvalidContent = `# Test selector invalid content
@@ -185,9 +192,11 @@ content: c`
 
 var (
 	YASTSelectorTestAttrs = map[string]AttributeType{
-		"s": AttributeType{ID: "s", DataType: DataTypeString},
-		"d": AttributeType{ID: "d", DataType: DataTypeDomain},
-		"a": AttributeType{ID: "a", DataType: DataTypeAddress}}
+		"s":   AttributeType{ID: "s", DataType: DataTypeString},
+		"d":   AttributeType{ID: "d", DataType: DataTypeDomain},
+		"a":   AttributeType{ID: "a", DataType: DataTypeAddress},
+		"n":   AttributeType{ID: "n", DataType: DataTypeNetwork},
+		"set": AttributeType{ID: "set", DataType: DataTypeSetOfNetworks}}
 
 	YASTSelectorTestContent = map[string]interface{}{
 		"c": map[string]interface{}{
@@ -217,6 +226,18 @@ var (
 			"example": "unreacheable"},
 		"t": map[string]interface{}{
 			"test": "example"}}
+
+	YASTSelectorTestContentWithNetworks = map[string]interface{}{
+		"c": map[string]interface{}{
+			"10.0.0.1/8": map[string]interface{}{
+				"10.0.0.1/16": "first",
+				"10.1.0.1/16": "second"},
+			"192.168.0.1/16": map[string]interface{}{
+				"192.168.0.1/24": "third",
+				"192.168.1.0/24": "fourth"},
+			"127.0.0.1/8": map[string]interface{}{
+				"127.0.0.1/24": "fifth",
+				"127.0.1.1/24": "sixth"}}}
 )
 
 func TestUnmarshalYASTSelector(t *testing.T) {
@@ -244,6 +265,19 @@ func TestUnmarshalYASTSelector(t *testing.T) {
 	path := strings.Join(s.DisplayPath, "/")
 	if path != YASTTestSelectorDisplayPath {
 		t.Errorf("Expected %s display path but got %s", YASTTestSelectorDisplayPath, path)
+	}
+}
+
+func TestUnmarshalYASTSelectorWithNetwork(t *testing.T) {
+	c, v := prepareTestYAST(YASTTestSelectorWithNetworks, YASTSelectorTestAttrs, YASTSelectorTestContentWithNetworks, t)
+
+	s, err := c.unmarshalSelector(v)
+	if err != nil {
+		t.Fatalf("Expected no errors but got:\n%#v\n\n%s\n", err, err)
+	}
+
+	if s == nil {
+		t.Fatalf("Expected selector but got nothing")
 	}
 }
 

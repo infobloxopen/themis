@@ -2,6 +2,7 @@ package pdp
 
 import (
 	"fmt"
+	"net"
 	"strings"
 	"testing"
 )
@@ -48,6 +49,50 @@ func TestSelector(t *testing.T) {
 	}
 }
 
+func TestSelectorWithNetworks(t *testing.T) {
+	c, v := prepareTestYAST(YASTTestSelectorWithNetworks, YASTSelectorTestAttrs, YASTSelectorTestContentWithNetworks, t)
+
+	s, err := c.unmarshalSelector(v)
+	if err != nil {
+		t.Fatalf("Expected no errors but got:\n%#v\n\n%s\n", err, err)
+	}
+
+	if s == nil {
+		t.Fatalf("Expected selector but got nothing")
+	}
+
+	errors := assertContentHasMissesOrErrors(s.Content)
+	if len(errors) > 0 {
+		for i, err := range errors {
+			t.Errorf("%d - %s", i+1, err)
+		}
+	}
+
+	ctx := NewContext()
+	ctx.StoreAttribute("a", DataTypeAddress, net.ParseIP("10.0.5.17"))
+	_, n, _ := net.ParseCIDR("10.0.5.17/16")
+	ctx.StoreAttribute("n", DataTypeNetwork, *n)
+
+	a, err := s.calculate(&ctx)
+	if err != nil {
+		t.Errorf("Expected no errors but got:\n%#v\n\n%s\n", err, err)
+	} else {
+		assertStringValue(a, "first", t)
+	}
+
+	ctx = NewContext()
+	ctx.StoreAttribute("a", DataTypeAddress, net.ParseIP("127.0.5.17"))
+	_, n, _ = net.ParseCIDR("127.0.0.17/16")
+	ctx.StoreAttribute("n", DataTypeNetwork, *n)
+
+	a, err = s.calculate(&ctx)
+	if err != nil {
+		t.Errorf("Expected no errors but got:\n%#v\n\n%s\n", err, err)
+	} else {
+		assertStringValue(a, "fifth", t)
+	}
+}
+
 func assertContentHasMissesOrErrors(v interface{}) []error {
 	return assertContentElementHasMissesOrErrors(v, []string{}, []error{})
 }
@@ -68,6 +113,9 @@ func assertContentElementHasMissesOrErrors(v interface{}, path []string, errors 
 
 	case *SetOfSubdomains:
 		return assertContentSetOfSubDomainsHasMissesOrErrors(v, path, errors)
+
+	case *SetOfNetworks:
+		return assertContentSetOfNetworksHasMissesOrErrors(v, path, errors)
 
 	case AttributeValueType:
 		return errors
@@ -95,6 +143,14 @@ func assertContentArrayHasMissesOrErrors(a []interface{}, path []string, errors 
 func assertContentSetOfSubDomainsHasMissesOrErrors(s *SetOfSubdomains, path []string, errors []error) []error {
 	for v := range s.Iterate() {
 		errors = assertContentElementHasMissesOrErrors(v.Leaf, append(path, v.Domain), errors)
+	}
+
+	return errors
+}
+
+func assertContentSetOfNetworksHasMissesOrErrors(s *SetOfNetworks, path []string, errors []error) []error {
+	for v := range s.Iterate() {
+		errors = assertContentElementHasMissesOrErrors(v.Leaf, append(path, fmt.Sprintf("\"%s\"", v.Network.String())), errors)
 	}
 
 	return errors
