@@ -129,9 +129,11 @@ func calculateErrorPolicy(policy EvaluableType, ctx *Context, err error) Respons
 func MapperPCA(policySet *PolicySetType, ctx *Context) ResponseType {
 	v, err := policySet.argument.calculate(ctx)
 	if err != nil {
-		_, ok := err.(MissingValueError)
-		if ok && policySet.defaultPolicy != nil {
-			return policySet.defaultPolicy.Calculate(ctx)
+		switch err.(type) {
+		case MissingValueError, *MissingValueError:
+			if policySet.defaultPolicy != nil {
+				return policySet.defaultPolicy.Calculate(ctx)
+			}
 		}
 
 		return calculateErrorPolicy(policySet.errorPolicy, ctx, err)

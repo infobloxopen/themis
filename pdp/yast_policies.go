@@ -28,7 +28,8 @@ func unmarshalMapperRCAParams(ctx *yastCtx, p *PolicyType, m map[interface{}]int
 
 	p.rulesMap = make(map[string]*RuleType)
 	for _, r := range p.Rules {
-		p.rulesMap[r.ID] = &r
+		tmp := r
+		p.rulesMap[r.ID] = &tmp
 	}
 
 	var defRule *RuleType = nil

@@ -130,9 +130,11 @@ func calculateErrorRule(rule *RuleType, ctx *Context, err error) ResponseType {
 func MapperRCA(policy *PolicyType, ctx *Context) ResponseType {
 	v, err := policy.argument.calculate(ctx)
 	if err != nil {
-		_, ok := err.(MissingValueError)
-		if ok && policy.defaultRule != nil {
-			return policy.defaultRule.calculate(ctx)
+		switch err.(type) {
+		case MissingValueError, *MissingValueError:
+			if policy.defaultRule != nil {
+				return policy.defaultRule.calculate(ctx)
+			}
 		}
 
 		return calculateErrorRule(policy.errorRule, ctx, err)
