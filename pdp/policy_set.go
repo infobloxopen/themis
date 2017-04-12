@@ -1,8 +1,6 @@
 package pdp
 
-import "fmt"
-
-type PolicyCombiningAlgType func(policySet *PolicySetType, ctx *Context) ResponseType
+type PolicyCombiningAlgType func(policies []EvaluableType, params interface{}, ctx *Context) ResponseType
 
 var PolicyCombiningAlgMap map[string]PolicyCombiningAlgType = map[string]PolicyCombiningAlgType{
 	yastTagFirstApplicableEffectAlg: FirstApplicableEffectPCA,
@@ -15,11 +13,7 @@ type PolicySetType struct {
 	Policies           []EvaluableType
 	Obligations        []AttributeAssignmentExpressionType
 	PolicyCombiningAlg PolicyCombiningAlgType
-
-	argument      ExpressionType
-	policiesMap   map[string]EvaluableType
-	defaultPolicy EvaluableType
-	errorPolicy   EvaluableType
+	AlgParams          interface{}
 }
 
 func (p PolicySetType) getID() string {
@@ -29,14 +23,14 @@ func (p PolicySetType) getID() string {
 func (p PolicySetType) Calculate(ctx *Context) ResponseType {
 	match, err := p.Target.calculate(ctx)
 	if err != nil {
-		return combineEffectAndStatus(err, p.ID, p.PolicyCombiningAlg(&p, ctx))
+		return combineEffectAndStatus(err, p.ID, p.PolicyCombiningAlg(p.Policies, p.AlgParams, ctx))
 	}
 
 	if !match {
 		return ResponseType{EffectNotApplicable, "Ok", nil}
 	}
 
-	r := p.PolicyCombiningAlg(&p, ctx)
+	r := p.PolicyCombiningAlg(p.Policies, p.AlgParams, ctx)
 	if r.Effect == EffectDeny || r.Effect == EffectPermit {
 		r.Obligations = append(r.Obligations, p.Obligations...)
 	}
@@ -44,8 +38,8 @@ func (p PolicySetType) Calculate(ctx *Context) ResponseType {
 	return r
 }
 
-func FirstApplicableEffectPCA(policySet *PolicySetType, ctx *Context) ResponseType {
-	for _, p := range policySet.Policies {
+func FirstApplicableEffectPCA(policies []EvaluableType, params interface{}, ctx *Context) ResponseType {
+	for _, p := range policies {
 		r := p.Calculate(ctx)
 		if r.Effect != EffectNotApplicable {
 			return r
@@ -55,7 +49,7 @@ func FirstApplicableEffectPCA(policySet *PolicySetType, ctx *Context) ResponseTy
 	return ResponseType{EffectNotApplicable, "Ok", nil}
 }
 
-func DenyOverridesPCA(policySet *PolicySetType, ctx *Context) ResponseType {
+func DenyOverridesPCA(policies []EvaluableType, params interface{}, ctx *Context) ResponseType {
 	status := ""
 	obligations := make([]AttributeAssignmentExpressionType, 0)
 
@@ -65,7 +59,7 @@ func DenyOverridesPCA(policySet *PolicySetType, ctx *Context) ResponseType {
 
 	permits := 0
 
-	for _, p := range policySet.Policies {
+	for _, p := range policies {
 		r := p.Calculate(ctx)
 		if r.Effect == EffectDeny {
 			return r
@@ -113,44 +107,6 @@ func DenyOverridesPCA(policySet *PolicySetType, ctx *Context) ResponseType {
 
 	if indetP > 0 {
 		return ResponseType{EffectIndeterminateP, status, nil}
-	}
-
-	return ResponseType{EffectNotApplicable, "Ok", nil}
-}
-
-func calculateErrorPolicy(policy EvaluableType, ctx *Context, err error) ResponseType {
-	if policy != nil {
-		return policy.Calculate(ctx)
-	}
-
-	return ResponseType{EffectIndeterminate, fmt.Sprintf("Mapper Policy Combining Algorithm: %s", err), nil}
-}
-
-func MapperPCA(policySet *PolicySetType, ctx *Context) ResponseType {
-	v, err := policySet.argument.calculate(ctx)
-	if err != nil {
-		switch err.(type) {
-		case MissingValueError, *MissingValueError:
-			if policySet.defaultPolicy != nil {
-				return policySet.defaultPolicy.Calculate(ctx)
-			}
-		}
-
-		return calculateErrorPolicy(policySet.errorPolicy, ctx, err)
-	}
-
-	ID, err := ExtractStringValue(v, "argument")
-	if err != nil {
-		return calculateErrorPolicy(policySet.errorPolicy, ctx, err)
-	}
-
-	policy, ok := policySet.policiesMap[ID]
-	if ok {
-		return policy.Calculate(ctx)
-	}
-
-	if policySet.defaultPolicy != nil {
-		return policySet.defaultPolicy.Calculate(ctx)
 	}
 
 	return ResponseType{EffectNotApplicable, "Ok", nil}

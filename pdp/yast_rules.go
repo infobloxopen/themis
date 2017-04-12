@@ -120,7 +120,7 @@ func (ctx *yastCtx) unmarshalRules(v interface{}) ([]RuleType, error) {
 	return r, nil
 }
 
-func (ctx *yastCtx) unmarshalRuleCombiningAlg(m map[interface{}]interface{}) (string, RuleCombiningAlgType, map[interface{}]interface{}, error) {
+func (ctx *yastCtx) extractRuleCombiningAlg(m map[interface{}]interface{}) (string, RuleCombiningAlgType, map[interface{}]interface{}, error) {
 	s, algMap, err := ctx.extractStringOrMapDef(m, yastTagAlg, yastTagDefaultAlg, nil, "rule combining algorithm")
 	if err != nil {
 		return "", nil, nil, err
