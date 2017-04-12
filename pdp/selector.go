@@ -110,8 +110,8 @@ func castItemToSetOfStringsSelectorType(item interface{}, i int, path string) (s
 	return s, nil
 }
 
-func castArrayToSetOfStringsSelectorType(v []interface{}, path string) (map[string]bool, error) {
-	strs := make(map[string]bool)
+func castArrayToSetOfStringsSelectorType(v []interface{}, path string) (map[string]int, error) {
+	strs := make(map[string]int)
 
 	for i, item := range v {
 		s, err := castItemToSetOfStringsSelectorType(item, i, path)
@@ -119,17 +119,19 @@ func castArrayToSetOfStringsSelectorType(v []interface{}, path string) (map[stri
 			return nil, err
 		}
 
-		strs[s] = true
+		strs[s] = i
 	}
 
 	return strs, nil
 }
 
-func castMapToSetOfStringsSelectorType(m map[string]interface{}, path string) (map[string]bool, error) {
-	strs := make(map[string]bool)
+func castMapToSetOfStringsSelectorType(m map[string]interface{}, path string) (map[string]int, error) {
+	strs := make(map[string]int)
 
+	i := 0
 	for k := range m {
-		strs[k] = true
+		strs[k] = i
+		i++
 	}
 
 	return strs, nil
@@ -335,7 +337,7 @@ func castToSelectorType(v interface{}, t int, path string) (AttributeValueType, 
 func castMissingSelectorValue(t int, err error) (AttributeValueType, error) {
 	switch t {
 	case DataTypeSetOfStrings:
-		return AttributeValueType{DataTypeSetOfStrings, make(map[string]bool)}, nil
+		return AttributeValueType{DataTypeSetOfStrings, make(map[string]int)}, nil
 
 	case DataTypeSetOfNetworks:
 		return AttributeValueType{DataTypeSetOfNetworks, NewSetOfNetworks()}, nil

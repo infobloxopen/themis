@@ -19,10 +19,10 @@ func calculateErrorRule(rule *RuleType, ctx *Context, err error) ResponseType {
 	return ResponseType{EffectIndeterminate, fmt.Sprintf("Mapper Rule Combining Algorithm: %s", err), nil}
 }
 
-func getSetOfIDs(v AttributeValueType) (map[string]bool, error) {
+func getSetOfIDs(v AttributeValueType) ([]string, error) {
 	ID, err := ExtractStringValue(v, "argument")
 	if err == nil {
-		return map[string]bool{ID: true}, nil
+		return []string{ID}, nil
 	}
 
 	IDs, err := ExtractSetOfStringsValue(v, "argument")
@@ -31,7 +31,7 @@ func getSetOfIDs(v AttributeValueType) (map[string]bool, error) {
 			DataTypeNames[DataTypeString], DataTypeNames[DataTypeSetOfStrings], DataTypeNames[v.DataType])
 	}
 
-	return IDs, nil
+	return sortSetOfStrings(IDs), nil
 }
 
 func getRulesMap(rules []RuleType, params *MapperRCAParams) map[string]*RuleType {
@@ -48,9 +48,9 @@ func getRulesMap(rules []RuleType, params *MapperRCAParams) map[string]*RuleType
 	return m
 }
 
-func collectSubRules(IDs map[string]bool, m map[string]*RuleType) []RuleType {
+func collectSubRules(IDs []string, m map[string]*RuleType) []RuleType {
 	rules := []RuleType{}
-	for ID := range IDs {
+	for _, ID := range IDs {
 		rule, ok := m[ID]
 		if ok {
 			rules = append(rules, *rule)

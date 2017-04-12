@@ -73,15 +73,13 @@ func (v AttributeValueType) describe() string {
 
 	case DataTypeSetOfStrings:
 		items := []string{}
-		i := 0
-		for s := range v.Value.(map[string]bool) {
+		for i, s := range sortSetOfStrings(v.Value.(map[string]int)) {
 			if i > 1 {
 				items = append(items, "...")
 				break
 			}
 
 			items = append(items, s)
-			i++
 		}
 
 		return fmt.Sprintf("[%s]", strings.Join(items, ", "))
@@ -194,13 +192,13 @@ func ExtractDomainValue(v AttributeValueType, desc string) (string, error) {
 	return v.Value.(string), nil
 }
 
-func ExtractSetOfStringsValue(v AttributeValueType, desc string) (map[string]bool, error) {
+func ExtractSetOfStringsValue(v AttributeValueType, desc string) (map[string]int, error) {
 	if v.DataType != DataTypeSetOfStrings {
 		return nil, fmt.Errorf("Expected %s as %s but got %s",
 			DataTypeNames[DataTypeSetOfStrings], desc, DataTypeNames[v.DataType])
 	}
 
-	return v.Value.(map[string]bool), nil
+	return v.Value.(map[string]int), nil
 }
 
 func ExtractSetOfNetworksValue(v AttributeValueType, desc string) (*SetOfNetworks, error) {

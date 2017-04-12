@@ -47,8 +47,8 @@ func TestPolicyWithNestedMappers(t *testing.T) {
 			t.Errorf("Expected result but got nothing")
 		} else {
 			ctx := NewContext()
-			ctx.StoreAttribute("x", DataTypeSetOfStrings, map[string]bool{"Permit": true, "Default": true})
-			ctx.StoreAttribute("y", DataTypeSetOfStrings, map[string]bool{"Permit": true})
+			ctx.StoreAttribute("x", DataTypeSetOfStrings, map[string]int{"Permit": 0, "Default": 1})
+			ctx.StoreAttribute("y", DataTypeSetOfStrings, map[string]int{"Permit": 0})
 
 			r := p.Calculate(&ctx)
 			if r.Effect != EffectPermit {
@@ -67,7 +67,7 @@ func TestPolicyWithNestedMappers(t *testing.T) {
 			t.Errorf("Expected result but got nothing")
 		} else {
 			ctx := NewContext()
-			ctx.StoreAttribute("x", DataTypeSetOfStrings, map[string]bool{"Permit": true, "Default": true})
+			ctx.StoreAttribute("x", DataTypeSetOfStrings, map[string]int{"Permit": 0, "Default": 1})
 			ctx.StoreAttribute("y", DataTypeString, "Permit")
 
 			r := p.Calculate(&ctx)

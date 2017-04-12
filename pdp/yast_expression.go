@@ -71,7 +71,7 @@ func (ctx yastCtx) unmarshalDomainValue(v interface{}) (*AttributeValueType, err
 	return &AttributeValueType{DataTypeDomain, d}, nil
 }
 
-func (ctx *yastCtx) unmarshalSetOfStringsValueItem(v interface{}, i int, set *map[string]bool) error {
+func (ctx *yastCtx) unmarshalSetOfStringsValueItem(v interface{}, i int, set map[string]int) error {
 	ctx.pushNodeSpec("%d", i+1)
 	defer ctx.popNodeSpec()
 
@@ -80,7 +80,7 @@ func (ctx *yastCtx) unmarshalSetOfStringsValueItem(v interface{}, i int, set *ma
 		return err
 	}
 
-	(*set)[s] = true
+	set[s] = i
 	return nil
 }
 
@@ -90,9 +90,9 @@ func (ctx *yastCtx) unmarshalSetOfStringsImmediateValue(v interface{}) (*Attribu
 		return nil, nil
 	}
 
-	set := make(map[string]bool)
+	set := make(map[string]int)
 	for i, item := range items {
-		err = ctx.unmarshalSetOfStringsValueItem(item, i, &set)
+		err = ctx.unmarshalSetOfStringsValueItem(item, i, set)
 		if err != nil {
 			return nil, err
 		}

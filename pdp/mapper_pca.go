@@ -32,9 +32,9 @@ func getPoliciesMap(policies []EvaluableType, params *MapperPCAParams) map[strin
 	return m
 }
 
-func collectSubPolicies(IDs map[string]bool, m map[string]EvaluableType) []EvaluableType {
+func collectSubPolicies(IDs []string, m map[string]EvaluableType) []EvaluableType {
 	policies := []EvaluableType{}
-	for ID := range IDs {
+	for _, ID := range IDs {
 		policy, ok := m[ID]
 		if ok {
 			policies = append(policies, policy)
