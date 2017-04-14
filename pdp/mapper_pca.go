@@ -65,8 +65,13 @@ func MapperPCA(policies []EvaluableType, params interface{}, ctx *Context) Respo
 			return calculateErrorPolicy(mapperParams.ErrorPolicy, ctx, err)
 		}
 
-		return mapperParams.SubAlg(collectSubPolicies(IDs, getPoliciesMap(policies, &mapperParams)),
+		r := mapperParams.SubAlg(collectSubPolicies(IDs, getPoliciesMap(policies, &mapperParams)),
 			mapperParams.AlgParams, ctx)
+		if r.Effect == EffectNotApplicable && mapperParams.DefaultPolicy != nil {
+			return mapperParams.DefaultPolicy.Calculate(ctx)
+		}
+
+		return r
 	}
 
 	ID, err := ExtractStringValue(v, "argument")

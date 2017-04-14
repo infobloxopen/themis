@@ -81,7 +81,12 @@ func MapperRCA(rules []RuleType, params interface{}, ctx *Context) ResponseType 
 			return calculateErrorRule(mapperParams.ErrorRule, ctx, err)
 		}
 
-		return mapperParams.SubAlg(collectSubRules(IDs, getRulesMap(rules, &mapperParams)), mapperParams.AlgParams, ctx)
+		r := mapperParams.SubAlg(collectSubRules(IDs, getRulesMap(rules, &mapperParams)), mapperParams.AlgParams, ctx)
+		if r.Effect == EffectNotApplicable && mapperParams.DefaultRule != nil {
+			return mapperParams.DefaultRule.calculate(ctx)
+		}
+
+		return r
 	}
 
 	ID, err := ExtractStringValue(v, "argument")
