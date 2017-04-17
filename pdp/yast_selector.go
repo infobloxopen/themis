@@ -30,7 +30,10 @@ func (ctx *yastCtx) unmarshalSelectorPathAttributeElement(v interface{}) (Expres
 		return nil, ctx.errorf("Unknown attribute ID %s", ID)
 	}
 
-	if a.DataType != DataTypeString && a.DataType != DataTypeDomain {
+	if a.DataType != DataTypeString &&
+		a.DataType != DataTypeDomain &&
+		a.DataType != DataTypeAddress &&
+		a.DataType != DataTypeNetwork {
 		return nil, ctx.errorf("Expected only %s or %s but got %s attribute %s",
 			DataTypeNames[DataTypeString], DataTypeNames[DataTypeDomain], DataTypeNames[a.DataType], ID)
 	}
@@ -44,7 +47,10 @@ func (ctx *yastCtx) unmarshalSelectorPathSelectorElement(v interface{}) (Express
 		return nil, err
 	}
 
-	if s.DataType != DataTypeString && s.DataType != DataTypeDomain {
+	if s.DataType != DataTypeString &&
+		s.DataType != DataTypeDomain &&
+		s.DataType != DataTypeAddress &&
+		s.DataType != DataTypeNetwork {
 		return nil, ctx.errorf("Expected only %s or %s but got %s selector",
 			DataTypeNames[DataTypeString], DataTypeNames[DataTypeDomain], DataTypeNames[s.DataType])
 	}

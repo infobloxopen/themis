@@ -7,12 +7,13 @@ import (
 )
 
 type SetOfSubdomains struct {
-	Final bool
-	Leaf  interface{}
-	Sub   map[string]*SetOfSubdomains
+	branches map[string]*SetOfSubdomains
+
+	hasValue bool
+	value    interface{}
 }
 
-type LeafItem struct {
+type DomainLeafItem struct {
 	Domain string
 	Leaf   interface{}
 }
@@ -21,59 +22,58 @@ func AdjustDomainName(s string) (string, error) {
 	return idna.ToASCII(strings.ToLower(norm.NFC.String(s)))
 }
 
-func (s *SetOfSubdomains) addToSetOfDomains(d string, v interface{}) {
-	if len(d) < 1 {
-		s.Final = true
-		return
-	}
+func NewSetOfSubdomains() *SetOfSubdomains {
+	return &SetOfSubdomains{branches: make(map[string]*SetOfSubdomains)}
+}
 
-	labels := strings.Split(d, ".")
-
+func (s *SetOfSubdomains) insert(d string, v interface{}) {
 	node := s
-	for i := len(labels) - 1; i >= 0; i-- {
-		label := labels[i]
 
-		nextNode, ok := node.Sub[label]
-		if !ok {
-			nextNode = &SetOfSubdomains{false, nil, make(map[string]*SetOfSubdomains)}
-			node.Sub[label] = nextNode
+	if len(d) > 0 {
+		labels := strings.Split(d, ".")
+
+		for i := len(labels) - 1; i >= 0; i-- {
+			label := labels[i]
+
+			next, ok := node.branches[label]
+			if !ok {
+				next = NewSetOfSubdomains()
+				node.branches[label] = next
+			}
+
+			node = next
 		}
-
-		node = nextNode
 	}
 
-	node.Final = true
-	node.Leaf = v
+	node.hasValue = true
+	node.value = v
 }
 
 func (s SetOfSubdomains) Get(d string) (interface{}, bool) {
-	if s.Final {
-		return s.Leaf, true
-	}
-
-	if len(d) < 1 {
-		return nil, false
-	}
-
-	labels := strings.Split(d, ".")
-
 	node := &s
-	for i := len(labels) - 1; i >= 0; i-- {
-		label := labels[i]
+	hasValue := node.hasValue
+	value := node.value
 
-		nextNode, ok := node.Sub[label]
-		if !ok {
-			return nil, false
+	if len(d) > 0 {
+		labels := strings.Split(d, ".")
+
+		for i := len(labels) - 1; i >= 0; i-- {
+			label := labels[i]
+
+			next, ok := node.branches[label]
+			if !ok {
+				break
+			}
+
+			node = next
+			if node.hasValue {
+				hasValue = true
+				value = node.value
+			}
 		}
-
-		if nextNode.Final {
-			return nextNode.Leaf, true
-		}
-
-		node = nextNode
 	}
 
-	return nil, false
+	return value, hasValue
 }
 
 func (s SetOfSubdomains) Contains(d string) bool {
@@ -81,19 +81,23 @@ func (s SetOfSubdomains) Contains(d string) bool {
 	return ok
 }
 
-func (s *SetOfSubdomains) iterate(domain []string, ch chan LeafItem) {
-	if s.Final {
-		ch <- LeafItem{strings.Join(domain, "."), s.Leaf}
-		return
+func (s *SetOfSubdomains) iterate(path []string, ch chan DomainLeafItem) {
+	if s.hasValue {
+		name := make([]string, len(path))
+		for i, item := range path {
+			name[len(path) - i - 1] = item
+		}
+
+		ch <- DomainLeafItem{strings.Join(name, "."), s.value}
 	}
 
-	for name, subdomain := range s.Sub {
-		subdomain.iterate(append(domain, name), ch)
+	for name, subdomain := range s.branches {
+		subdomain.iterate(append(path, name), ch)
 	}
 }
 
-func (s *SetOfSubdomains) Iterate() chan LeafItem {
-	ch := make(chan LeafItem)
+func (s *SetOfSubdomains) Iterate() chan DomainLeafItem {
+	ch := make(chan DomainLeafItem)
 
 	go func() {
 		defer close(ch)

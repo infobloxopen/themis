@@ -123,7 +123,8 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 	state := request.Request{W: w, Req: r}
 
 	// need to process OPT to get customer id
-	var attrs []*pb.Attribute
+	attrs := []*pb.Attribute{&pb.Attribute{Id: "type", Type: "string", Value: "query"}}
+
 	if len(r.Question) > 0 {
 		q := r.Question[0]
 		attrs = append(attrs, &pb.Attribute{Id: "domain_name", Type: "domain", Value: strings.TrimRight(q.Name, ".")})

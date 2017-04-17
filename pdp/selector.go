@@ -110,8 +110,8 @@ func castItemToSetOfStringsSelectorType(item interface{}, i int, path string) (s
 	return s, nil
 }
 
-func castArrayToSetOfStringsSelectorType(v []interface{}, path string) (map[string]bool, error) {
-	strs := make(map[string]bool)
+func castArrayToSetOfStringsSelectorType(v []interface{}, path string) (map[string]int, error) {
+	strs := make(map[string]int)
 
 	for i, item := range v {
 		s, err := castItemToSetOfStringsSelectorType(item, i, path)
@@ -119,17 +119,19 @@ func castArrayToSetOfStringsSelectorType(v []interface{}, path string) (map[stri
 			return nil, err
 		}
 
-		strs[s] = true
+		strs[s] = i
 	}
 
 	return strs, nil
 }
 
-func castMapToSetOfStringsSelectorType(m map[string]interface{}, path string) (map[string]bool, error) {
-	strs := make(map[string]bool)
+func castMapToSetOfStringsSelectorType(m map[string]interface{}, path string) (map[string]int, error) {
+	strs := make(map[string]int)
 
+	i := 0
 	for k := range m {
-		strs[k] = true
+		strs[k] = i
+		i++
 	}
 
 	return strs, nil
@@ -158,24 +160,24 @@ func castToSetOfStringsSelectorType(v interface{}, path string) (AttributeValueT
 		fmt.Errorf("Can't cast %T at /%s to %s", v, path, DataTypeNames[DataTypeSetOfStrings])
 }
 
-func castItemToSetOfNetworksSelectorType(item interface{}, i int, path string) (net.IPNet, error) {
+func castItemToSetOfNetworksSelectorType(item interface{}, i int, path string) (*net.IPNet, error) {
 	s, ok := item.(string)
 	if !ok {
-		return net.IPNet{}, fmt.Errorf("Can't cast %d item of type %T at /%s to %s",
+		return nil, fmt.Errorf("Can't cast %d item of type %T at /%s to %s",
 			i, item, path, DataTypeNames[DataTypeNetwork])
 	}
 
-	_, n, err := net.ParseCIDR(s)
+	n, err := MakeNetwork(s)
 	if err != nil {
-		return net.IPNet{}, fmt.Errorf("Can't cast %d item %#v at /%s to %s: %v",
-			i, s, path, DataTypeNames[DataTypeNetwork], err)
+		return nil, fmt.Errorf("Can't cast %d item %#v at /%s to %s: %v",
+			i, item, path, DataTypeNames[DataTypeNetwork], err)
 	}
 
-	return *n, nil
+	return n, nil
 }
 
-func castArrayToSetOfNetworksSelectorType(v []interface{}, path string) ([]net.IPNet, error) {
-	nets := make([]net.IPNet, 0)
+func castArrayToSetOfNetworksSelectorType(v []interface{}, path string) (*SetOfNetworks, error) {
+	nets := NewSetOfNetworks()
 
 	for i, item := range v {
 		n, err := castItemToSetOfNetworksSelectorType(item, i, path)
@@ -183,24 +185,24 @@ func castArrayToSetOfNetworksSelectorType(v []interface{}, path string) ([]net.I
 			return nil, err
 		}
 
-		nets = append(nets, n)
+		nets.addToSetOfNetworks(n, true)
 	}
 
 	return nets, nil
 }
 
-func castKeyToSetOfNetworksSelectorType(k string, path string) (net.IPNet, error) {
-	_, n, err := net.ParseCIDR(k)
+func castKeyToSetOfNetworksSelectorType(k string, path string) (*net.IPNet, error) {
+	n, err := MakeNetwork(k)
 	if err != nil {
-		return net.IPNet{}, fmt.Errorf("Can't cast %#v at /%s to %s: %v",
+		return nil, fmt.Errorf("Can't cast %#v at /%s to %s: %v",
 			k, path, DataTypeNames[DataTypeNetwork], err)
 	}
 
-	return *n, nil
+	return n, nil
 }
 
-func castMapToSetOfNetworksSelectorType(m map[string]interface{}, path string) ([]net.IPNet, error) {
-	nets := make([]net.IPNet, 0)
+func castMapToSetOfNetworksSelectorType(m map[string]interface{}, path string) (*SetOfNetworks, error) {
+	nets := NewSetOfNetworks()
 
 	for k := range m {
 		n, err := castKeyToSetOfNetworksSelectorType(k, path)
@@ -208,7 +210,7 @@ func castMapToSetOfNetworksSelectorType(m map[string]interface{}, path string) (
 			return nil, err
 		}
 
-		nets = append(nets, n)
+		nets.addToSetOfNetworks(n, true)
 	}
 
 	return nets, nil
@@ -237,8 +239,8 @@ func castToSetOfNetworksSelectorType(v interface{}, path string) (AttributeValue
 		fmt.Errorf("Can't cast %T at /%s to %s", v, path, DataTypeNames[DataTypeSetOfNetworks])
 }
 
-func castArrayToSetOfDomainsSelectorType(v []interface{}, path string) (SetOfSubdomains, error) {
-	set := SetOfSubdomains{false, nil, make(map[string]*SetOfSubdomains)}
+func castArrayToSetOfDomainsSelectorType(v []interface{}, path string) (*SetOfSubdomains, error) {
+	set := NewSetOfSubdomains()
 
 	for i, item := range v {
 		s, ok := item.(string)
@@ -253,14 +255,14 @@ func castArrayToSetOfDomainsSelectorType(v []interface{}, path string) (SetOfSub
 				i, item, path, DataTypeNames[DataTypeDomain], err)
 		}
 
-		set.addToSetOfDomains(d, nil)
+		set.insert(d, i)
 	}
 
 	return set, nil
 }
 
-func castMapToSetOfDomainsSelectorType(m map[string]interface{}, path string) (SetOfSubdomains, error) {
-	set := SetOfSubdomains{false, nil, make(map[string]*SetOfSubdomains)}
+func castMapToSetOfDomainsSelectorType(m map[string]interface{}, path string) (*SetOfSubdomains, error) {
+	set := NewSetOfSubdomains()
 
 	for k := range m {
 		d, err := AdjustDomainName(k)
@@ -269,7 +271,7 @@ func castMapToSetOfDomainsSelectorType(m map[string]interface{}, path string) (S
 				k, path, DataTypeNames[DataTypeDomain], err)
 		}
 
-		set.addToSetOfDomains(d, nil)
+		set.insert(d, nil)
 	}
 
 	return set, nil
@@ -335,13 +337,13 @@ func castToSelectorType(v interface{}, t int, path string) (AttributeValueType, 
 func castMissingSelectorValue(t int, err error) (AttributeValueType, error) {
 	switch t {
 	case DataTypeSetOfStrings:
-		return AttributeValueType{DataTypeSetOfStrings, make(map[string]bool)}, nil
+		return AttributeValueType{DataTypeSetOfStrings, make(map[string]int)}, nil
 
 	case DataTypeSetOfNetworks:
-		return AttributeValueType{DataTypeSetOfNetworks, make([]net.IPNet, 0)}, nil
+		return AttributeValueType{DataTypeSetOfNetworks, NewSetOfNetworks()}, nil
 
 	case DataTypeSetOfDomains:
-		return AttributeValueType{DataTypeSetOfDomains, SetOfSubdomains{false, nil, make(map[string]*SetOfSubdomains)}}, nil
+		return AttributeValueType{DataTypeSetOfDomains, NewSetOfSubdomains()}, nil
 	}
 
 	return AttributeValueType{}, err
@@ -349,7 +351,7 @@ func castMissingSelectorValue(t int, err error) (AttributeValueType, error) {
 
 func dispatchContentByType(c interface{}, path []string) (interface{}, AttributeValueType, bool, error) {
 	switch v := c.(type) {
-	case *SetOfSubdomains, map[string]interface{}:
+	case *SetOfSubdomains, *SetOfNetworks, map[string]interface{}:
 		return v, AttributeValueType{}, false, nil
 
 	case AttributeValueType:
@@ -393,27 +395,29 @@ func (s SelectorType) calculate(ctx *Context) (AttributeValueType, error) {
 				fmt.Errorf("Error on calculating %s at /%s: %v", item.describe(), strings.Join(path, "/"), err)
 		}
 
-		var idx string
+		var idx interface{}
 		switch v.DataType {
 		default:
 			return AttributeValueType{},
-				fmt.Errorf("Expected string or domain as %s at /%s but got %s",
+				fmt.Errorf("Expected string, domain, address or network as %s at /%s but got %s",
 					item.describe(), strings.Join(path, "/"), DataTypeNames[v.DataType])
 
 		case DataTypeString:
 			idx, err = ExtractStringValue(v, fmt.Sprintf("%s at /%s", item.describe(), strings.Join(path, "/")))
-			if err != nil {
-				return AttributeValueType{}, err
-			}
 
 		case DataTypeDomain:
 			idx, err = ExtractDomainValue(v, fmt.Sprintf("%s at /%s", item.describe(), strings.Join(path, "/")))
-			if err != nil {
-				return AttributeValueType{}, err
-			}
+
+		case DataTypeAddress:
+			idx, err = ExtractAddressValue(v, fmt.Sprintf("%s at /%s", item.describe(), strings.Join(path, "/")))
+
+		case DataTypeNetwork:
+			idx, err = ExtractNetworkValue(v, fmt.Sprintf("%s at /%s", item.describe(), strings.Join(path, "/")))
 		}
 
-		path[len(path)-1] = fmt.Sprintf("%s(%s)", path[len(path)-1], idx)
+		if err != nil {
+			return AttributeValueType{}, err
+		}
 
 		var (
 			c  interface{}
@@ -423,21 +427,32 @@ func (s SelectorType) calculate(ctx *Context) (AttributeValueType, error) {
 		switch m := m.(type) {
 		default:
 			return AttributeValueType{},
-				fmt.Errorf("Expected map or domain set at /%s but got %T (%#v)", strings.Join(path, "/"), m, m)
+				fmt.Errorf("Expected map, domain set or network set at /%s but got %T (%#v)", strings.Join(path, "/"), m, m)
 
 		case map[string]interface{}:
-			c, ok = m[idx]
-			if !ok {
-				err := fmt.Errorf("No value at /%s", strings.Join(path, "/"))
-				return castMissingSelectorValue(s.DataType, &MissingValueError{err})
-			}
-
+			path[len(path)-1] = fmt.Sprintf("%s(%s)", path[len(path)-1], idx)
+			c, ok = m[idx.(string)]
 		case *SetOfSubdomains:
-			c, ok = m.Get(idx)
-			if !ok {
-				err := fmt.Errorf("No value at /%s", strings.Join(path, "/"))
-				return castMissingSelectorValue(s.DataType, &MissingValueError{err})
+			path[len(path)-1] = fmt.Sprintf("%s(%s)", path[len(path)-1], idx)
+			c, ok = m.Get(idx.(string))
+
+		case *SetOfNetworks:
+			switch idx := idx.(type) {
+			case net.IP:
+				path[len(path)-1] = fmt.Sprintf("%s(%s)", path[len(path)-1], idx.String())
+				c = m.GetByAddr(idx)
+				ok = c != nil
+
+			case net.IPNet:
+				path[len(path)-1] = fmt.Sprintf("%s(%s)", path[len(path)-1], idx.String())
+				c = m.GetByNet(&idx)
+				ok = c != nil
 			}
+		}
+
+		if !ok {
+			err := fmt.Errorf("No value at /%s", strings.Join(path, "/"))
+			return castMissingSelectorValue(s.DataType, &MissingValueError{err})
 		}
 
 		m, v, miss, err = dispatchContentByType(c, path)
@@ -453,29 +468,64 @@ func (s SelectorType) calculate(ctx *Context) (AttributeValueType, error) {
 	return v, nil
 }
 
+func duckToStringSetSelectorContent(m map[string]interface{}, rawPath []ExpressionType, t int, reprPath []string) interface{} {
+	s := make(map[string]interface{})
+	for k, v := range m {
+		subReprPath := append(reprPath, fmt.Sprintf("%q", k))
+		s[k] = duckToSelectorContent(v, rawPath, t, subReprPath)
+	}
+
+	return s
+}
+
+func duckToDomainsSetSelectorContent(m map[string]interface{}, rawPath []ExpressionType, t int, reprPath []string) interface{} {
+	s := NewSetOfSubdomains()
+	for k, v := range m {
+		subReprPath := append(reprPath, fmt.Sprintf("%s(%q)", DataTypeNames[DataTypeDomain], k))
+		d, err := AdjustDomainName(k)
+		if err != nil {
+			return fmt.Errorf("Can't cast %#v at /%s to %s: %v",
+				k, strings.Join(reprPath, "/"), DataTypeNames[DataTypeDomain], err)
+		}
+
+		s.insert(d, duckToSelectorContent(v, rawPath, t, subReprPath))
+	}
+
+	return s
+}
+
+func duckToNetworkSetSelectorContent(m map[string]interface{}, rawPath []ExpressionType, t int, reprPath []string) interface{} {
+	s := NewSetOfNetworks()
+	for k, v := range m {
+		subReprPath := append(reprPath, fmt.Sprintf("%s(%q)", DataTypeNames[DataTypeNetwork], k))
+		n, err := MakeNetwork(k)
+		if err != nil {
+			return fmt.Errorf("Can't cast %#v at /%s to %s: %v",
+				k, strings.Join(reprPath, "/"), DataTypeNames[DataTypeNetwork], err)
+		}
+
+		s.addToSetOfNetworks(n, duckToSelectorContent(v, rawPath, t, subReprPath))
+	}
+
+	return s
+}
+
 func duckToSelectorContentbyExpression(a ExpressionType, c interface{}, rawPath []ExpressionType, t int, reprPath []string) interface{} {
 	m, ok := c.(map[string]interface{})
 	if !ok {
 		return fmt.Errorf("Expected map at /%s but got %T", strings.Join(reprPath, "/"), c)
 	}
 
-	if a.getResultType() == DataTypeDomain {
-		s := &SetOfSubdomains{false, nil, make(map[string]*SetOfSubdomains)}
-		for k, v := range m {
-			subReprPath := append(reprPath, fmt.Sprintf("%s(%q)", DataTypeNames[DataTypeDomain], k))
-			s.addToSetOfDomains(k, duckToSelectorContent(v, rawPath, t, subReprPath))
-		}
+	switch a.getResultType() {
+	case DataTypeDomain:
+		return duckToDomainsSetSelectorContent(m, rawPath, t, reprPath)
 
-		return s
+	case DataTypeAddress, DataTypeNetwork:
+		return duckToNetworkSetSelectorContent(m, rawPath, t, reprPath)
 	}
 
-	r := make(map[string]interface{})
-	for k, v := range m {
-		subReprPath := append(reprPath, fmt.Sprintf("%q", k))
-		r[k] = duckToSelectorContent(v, rawPath, t, subReprPath)
-	}
+	return duckToStringSetSelectorContent(m, rawPath, t, reprPath)
 
-	return r
 }
 
 func fetchFromSelectorContentArray(c []interface{}, s string, reprPath []string) interface{} {

@@ -1,67 +1,121 @@
 package pdp
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
-type paramUnmarshalerRCAType func(ctx *yastCtx, p *PolicyType, m map[interface{}]interface{}) error
-type paramUnmarshalerPCAType func(ctx *yastCtx, p *PolicySetType, m map[interface{}]interface{}) error
+type paramUnmarshalerRCAType func(ctx *yastCtx, p *PolicyType, root bool, m map[interface{}]interface{}) (interface{}, error)
+type paramUnmarshalerPCAType func(ctx *yastCtx, p *PolicySetType, root bool, m map[interface{}]interface{}) (interface{}, error)
 
-var paramUnmarshalersRCA = map[string]paramUnmarshalerRCAType{yastTagMapperAlg: unmarshalMapperRCAParams}
-var paramUnmarshalersPCA = map[string]paramUnmarshalerPCAType{yastTagMapperAlg: unmarshalMapperPCAParams}
+var paramUnmarshalersRCA = map[string]paramUnmarshalerRCAType{}
+var paramUnmarshalersPCA = map[string]paramUnmarshalerPCAType{}
 
-func unmarshalMapperRCAParams(ctx *yastCtx, p *PolicyType, m map[interface{}]interface{}) error {
+func init() {
+	paramUnmarshalersRCA[yastTagMapperAlg] = unmarshalMapperRCAParams
+	paramUnmarshalersPCA[yastTagMapperAlg] = unmarshalMapperPCAParams
+}
+
+func (ctx *yastCtx) findSpecialRule(m map[interface{}]interface{}, tag string, rules map[string]*RuleType) (*RuleType, error) {
+	v, ok := m[tag]
+	if !ok {
+		return nil, nil
+	}
+
+	ID, err := ctx.validateString(v, fmt.Sprintf("%s rule ID", tag))
+	if err != nil {
+		return nil, err
+	}
+
+	rule, ok := rules[ID]
+	if !ok {
+		return nil, ctx.errorf("Unknown rule ID %s (expected rule defined in current policy)", ID)
+	}
+
+	return rule, nil
+}
+
+func (ctx *yastCtx) unmarshalRuleCombiningAlg(p *PolicyType, root bool, m map[interface{}]interface{}) (RuleCombiningAlgType, interface{}, error) {
+	algID, alg, params, err := ctx.extractRuleCombiningAlg(m)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	paramsUnmarshaler, ok := paramUnmarshalersRCA[algID]
+	if !ok {
+		return alg, nil, nil
+	}
+
+	ctx.pushNodeSpec("%q", algID)
+	defer ctx.popNodeSpec()
+
+	if params == nil {
+		return alg, nil, ctx.errorf("Missing parameters for %q rule combining algorithm", algID)
+	}
+
+	algParams, err := paramsUnmarshaler(ctx, p, root, params)
+	if err != nil {
+		return alg, nil, err
+	}
+
+	return alg, algParams, nil
+}
+
+func unmarshalMapperRCAParams(ctx *yastCtx, p *PolicyType, root bool, m map[interface{}]interface{}) (interface{}, error) {
 	v, ok := m[yastTagMap]
 	if !ok {
-		return ctx.errorf("Missing map")
+		return nil, ctx.errorf("Missing map")
 	}
 
 	expr, err := ctx.unmarshalExpression(v)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	exprType := expr.getResultType()
-	if exprType != DataTypeString {
-		return ctx.errorf("Expected %q expression but got %q", DataTypeNames[DataTypeString], DataTypeNames[exprType])
-	}
 
-	p.argument = expr
+	params := MapperRCAParams{Argument: expr}
 
-	p.rulesMap = make(map[string]*RuleType)
+	rulesMap := make(map[string]*RuleType)
 	for _, r := range p.Rules {
-		p.rulesMap[r.ID] = &r
+		tmp := r
+		rulesMap[r.ID] = &tmp
 	}
 
-	var defRule *RuleType = nil
-	v, ok = m[yastTagDefault]
+	if root {
+		params.RulesMap = rulesMap
+	}
+
+	params.DefaultRule, err = ctx.findSpecialRule(m, yastTagDefault, rulesMap)
+	if err != nil {
+		return params, err
+	}
+
+	params.ErrorRule, err = ctx.findSpecialRule(m, yastTagError, rulesMap)
+	if err != nil {
+		return params, err
+	}
+
+	_, ok = m[yastTagAlg]
 	if ok {
-		ID, err := ctx.validateString(v, "default rule ID")
+		subAlg, subAlgParams, err := ctx.unmarshalRuleCombiningAlg(p, false, m)
 		if err != nil {
-			return err
+			return params, err
 		}
 
-		defRule, ok = p.rulesMap[ID]
-		if !ok {
-			return ctx.errorf("Unknown rule ID %s (expected rule defined in current policy)", ID)
+		params.SubAlg = subAlg
+		params.AlgParams = subAlgParams
+
+		if exprType != DataTypeString && exprType != DataTypeSetOfStrings {
+			return params, ctx.errorf("Expected %q or %q expression but got %q", DataTypeNames[DataTypeString], DataTypeNames[DataTypeSetOfStrings], DataTypeNames[exprType])
+		}
+	} else {
+		if exprType != DataTypeString {
+			return params, ctx.errorf("Expected %q expression but got %q", DataTypeNames[DataTypeString], DataTypeNames[exprType])
 		}
 	}
-	p.defaultRule = defRule
 
-	var errRule *RuleType = nil
-	v, ok = m[yastTagError]
-	if ok {
-		ID, err := ctx.validateString(v, "error rule ID")
-		if err != nil {
-			return err
-		}
-
-		errRule, ok = p.rulesMap[ID]
-		if !ok {
-			return ctx.errorf("Unknown rule ID %s (expected rule defined in current policy)", ID)
-		}
-	}
-	p.errorRule = errRule
-
-	return nil
+	return params, nil
 }
 
 func (ctx *yastCtx) unmarshalPolicy(m map[interface{}]interface{}, items interface{}) (PolicyType, error) {
@@ -85,27 +139,17 @@ func (ctx *yastCtx) unmarshalPolicy(m map[interface{}]interface{}, items interfa
 		return pol, err
 	}
 
-	algID, alg, params, err := ctx.unmarshalRuleCombiningAlg(m)
+	pol.ID = ID
+	pol.Target = t
+	pol.Rules = r
+
+	alg, params, err := ctx.unmarshalRuleCombiningAlg(&pol, true, m)
 	if err != nil {
 		return pol, err
 	}
 
-	pol.ID = ID
-	pol.Target = t
-	pol.Rules = r
 	pol.RuleCombiningAlg = alg
-
-	paramsUnmarshaler, ok := paramUnmarshalersRCA[algID]
-	if ok {
-		if params == nil {
-			return pol, ctx.errorf("Missing parameters for %q rule combining algorithm", algID)
-		}
-
-		err = paramsUnmarshaler(ctx, &pol, params)
-		if err != nil {
-			return pol, err
-		}
-	}
+	pol.AlgParams = params
 
 	return pol, nil
 }
@@ -142,7 +186,7 @@ func (ctx *yastCtx) unmarshalPolicies(item interface{}) ([]EvaluableType, error)
 	return r, nil
 }
 
-func (ctx *yastCtx) unmarshalPolicyCombiningAlg(m map[interface{}]interface{}) (string, PolicyCombiningAlgType, map[interface{}]interface{}, error) {
+func (ctx *yastCtx) extractPolicyCombiningAlg(m map[interface{}]interface{}) (string, PolicyCombiningAlgType, map[interface{}]interface{}, error) {
 	s, algMap, err := ctx.extractStringOrMapDef(m, yastTagAlg, yastTagDefaultAlg, nil, "policy combining algorithm")
 	if err != nil {
 		return "", nil, nil, err
@@ -164,60 +208,105 @@ func (ctx *yastCtx) unmarshalPolicyCombiningAlg(m map[interface{}]interface{}) (
 	return ID, a, algMap, nil
 }
 
-func unmarshalMapperPCAParams(ctx *yastCtx, p *PolicySetType, m map[interface{}]interface{}) error {
+func (ctx *yastCtx) findSpecialPolicy(m map[interface{}]interface{}, tag string, policies map[string]EvaluableType) (EvaluableType, error) {
+	v, ok := m[tag]
+	if !ok {
+		return nil, nil
+	}
+
+	ID, err := ctx.validateString(v, fmt.Sprintf("%s policy or set ID", tag))
+	if err != nil {
+		return nil, err
+	}
+
+	policy, ok := policies[ID]
+	if !ok {
+		return nil, ctx.errorf("Unknown policy or set ID %s (expected item defined in current set)", ID)
+	}
+
+	return policy, nil
+}
+
+func (ctx *yastCtx) unmarshalPolicyCombiningAlg(p *PolicySetType, root bool, m map[interface{}]interface{}) (PolicyCombiningAlgType, interface{}, error) {
+	algID, alg, params, err := ctx.extractPolicyCombiningAlg(m)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	paramsUnmarshaler, ok := paramUnmarshalersPCA[algID]
+	if !ok {
+		return alg, nil, nil
+	}
+
+	ctx.pushNodeSpec("%q", algID)
+	defer ctx.popNodeSpec()
+
+	if params == nil {
+		return alg, nil, ctx.errorf("Missing parameters for %q policies combining algorithm", algID)
+	}
+
+	algParams, err := paramsUnmarshaler(ctx, p, root, params)
+	if err != nil {
+		return alg, nil, err
+	}
+
+	return alg, algParams, nil
+}
+
+func unmarshalMapperPCAParams(ctx *yastCtx, p *PolicySetType, root bool, m map[interface{}]interface{}) (interface{}, error) {
 	v, ok := m[yastTagMap]
 	if !ok {
-		return ctx.errorf("Missing map")
+		return nil, ctx.errorf("Missing map")
 	}
 
 	expr, err := ctx.unmarshalExpression(v)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	exprType := expr.getResultType()
-	if exprType != DataTypeString {
-		return ctx.errorf("Expected %q expression but got %q", DataTypeNames[DataTypeString], DataTypeNames[exprType])
-	}
 
-	p.argument = expr
+	params := MapperPCAParams{Argument: expr}
 
-	p.policiesMap = make(map[string]EvaluableType)
+	policiesMap := make(map[string]EvaluableType)
 	for _, e := range p.Policies {
-		p.policiesMap[e.getID()] = e
+		policiesMap[e.getID()] = e
 	}
 
-	var defPolicy EvaluableType = nil
-	v, ok = m[yastTagDefault]
+	if root {
+		params.PoliciesMap = policiesMap
+	}
+
+	params.DefaultPolicy, err = ctx.findSpecialPolicy(m, yastTagDefault, policiesMap)
+	if err != nil {
+		return nil, err
+	}
+
+	params.ErrorPolicy, err = ctx.findSpecialPolicy(m, yastTagError, policiesMap)
+	if err != nil {
+		return nil, err
+	}
+
+	_, ok = m[yastTagAlg]
 	if ok {
-		ID, err := ctx.validateString(v, "default policy or set ID")
+		subAlg, subAlgParams, err := ctx.unmarshalPolicyCombiningAlg(p, false, m)
 		if err != nil {
-			return err
+			return params, nil
 		}
 
-		defPolicy, ok = p.policiesMap[ID]
-		if !ok {
-			return ctx.errorf("Unknown policy or set ID %s (expected item defined in current set)", ID)
+		params.SubAlg = subAlg
+		params.AlgParams = subAlgParams
+
+		if exprType != DataTypeString && exprType != DataTypeSetOfStrings {
+			return nil, ctx.errorf("Expected %q or %q expression but got %q", DataTypeNames[DataTypeString], DataTypeNames[DataTypeSetOfStrings], DataTypeNames[exprType])
+		}
+	} else {
+		if exprType != DataTypeString {
+			return nil, ctx.errorf("Expected %q expression but got %q", DataTypeNames[DataTypeString], DataTypeNames[exprType])
 		}
 	}
-	p.defaultPolicy = defPolicy
 
-	var errPolicy EvaluableType = nil
-	v, ok = m[yastTagError]
-	if ok {
-		ID, err := ctx.validateString(v, "error policy or set ID")
-		if err != nil {
-			return err
-		}
-
-		errPolicy, ok = p.policiesMap[ID]
-		if !ok {
-			return ctx.errorf("Unknown policy or set ID %s (expected item defined in current set)", ID)
-		}
-	}
-	p.errorPolicy = errPolicy
-
-	return nil
+	return params, nil
 }
 
 func (ctx *yastCtx) unmarshalPolicySet(m map[interface{}]interface{}, items interface{}) (PolicySetType, error) {
@@ -241,27 +330,17 @@ func (ctx *yastCtx) unmarshalPolicySet(m map[interface{}]interface{}, items inte
 		return pol, err
 	}
 
-	algID, alg, params, err := ctx.unmarshalPolicyCombiningAlg(m)
+	pol.ID = ID
+	pol.Target = t
+	pol.Policies = p
+
+	alg, algParams, err := ctx.unmarshalPolicyCombiningAlg(&pol, true, m)
 	if err != nil {
 		return pol, err
 	}
 
-	pol.ID = ID
-	pol.Target = t
-	pol.Policies = p
 	pol.PolicyCombiningAlg = alg
-
-	paramsUnmarshaler, ok := paramUnmarshalersPCA[algID]
-	if ok {
-		if params == nil {
-			return pol, ctx.errorf("Missing parameters for %q policies combining algorithm", algID)
-		}
-
-		err = paramsUnmarshaler(ctx, &pol, params)
-		if err != nil {
-			return pol, err
-		}
-	}
+	pol.AlgParams = algParams
 
 	return pol, nil
 }

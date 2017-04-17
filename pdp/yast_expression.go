@@ -71,7 +71,7 @@ func (ctx yastCtx) unmarshalDomainValue(v interface{}) (*AttributeValueType, err
 	return &AttributeValueType{DataTypeDomain, d}, nil
 }
 
-func (ctx *yastCtx) unmarshalSetOfStringsValueItem(v interface{}, i int, set *map[string]bool) error {
+func (ctx *yastCtx) unmarshalSetOfStringsValueItem(v interface{}, i int, set map[string]int) error {
 	ctx.pushNodeSpec("%d", i+1)
 	defer ctx.popNodeSpec()
 
@@ -80,7 +80,7 @@ func (ctx *yastCtx) unmarshalSetOfStringsValueItem(v interface{}, i int, set *ma
 		return err
 	}
 
-	(*set)[s] = true
+	set[s] = i
 	return nil
 }
 
@@ -90,9 +90,9 @@ func (ctx *yastCtx) unmarshalSetOfStringsImmediateValue(v interface{}) (*Attribu
 		return nil, nil
 	}
 
-	set := make(map[string]bool)
+	set := make(map[string]int)
 	for i, item := range items {
-		err = ctx.unmarshalSetOfStringsValueItem(item, i, &set)
+		err = ctx.unmarshalSetOfStringsValueItem(item, i, set)
 		if err != nil {
 			return nil, err
 		}
@@ -132,21 +132,26 @@ func (ctx *yastCtx) unmarshalSetOfStringsValue(v interface{}) (*AttributeValueTy
 	return nil, ctx.errorf("Expected value of set of strings type or content id but got %v", v)
 }
 
-func (ctx *yastCtx) unmarshalSetOfNetworksValueItem(v interface{}, i int, set []net.IPNet) ([]net.IPNet, error) {
+func (ctx *yastCtx) unmarshalSetOfNetworksValueItem(v interface{}, i int, set *SetOfNetworks) error {
 	ctx.pushNodeSpec("%d", i+1)
 	defer ctx.popNodeSpec()
 
 	s, err := ctx.validateString(v, "element of set of networks")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	_, n, err := net.ParseCIDR(s)
+	n, err := MakeNetwork(s)
 	if err != nil {
-		return nil, ctx.errorf("Expected value of network type but got %#v (%v)", s, err)
+		if err == ErrorIPv6NotImplemented {
+			return ctx.errorf("Got IPv6 value %#v but it isn't supported", s)
+		}
+
+		return ctx.errorf("Expected value of network type but got %#v (%v)", s, err)
 	}
 
-	return append(set, *n), nil
+	set.addToSetOfNetworks(n, true)
+	return nil
 }
 
 func (ctx *yastCtx) unmarshalSetOfNetworksImmediateValue(v interface{}) (*AttributeValueType, error) {
@@ -155,9 +160,9 @@ func (ctx *yastCtx) unmarshalSetOfNetworksImmediateValue(v interface{}) (*Attrib
 		return nil, nil
 	}
 
-	set := make([]net.IPNet, 0)
+	set := NewSetOfNetworks()
 	for i, item := range items {
-		set, err = ctx.unmarshalSetOfNetworksValueItem(item, i, set)
+		err = ctx.unmarshalSetOfNetworksValueItem(item, i, set)
 		if err != nil {
 			return nil, err
 		}
@@ -211,7 +216,7 @@ func (ctx *yastCtx) unmarshalSetOfDomainsValueItem(v interface{}, i int, set *Se
 		return ctx.errorf("Expected value of domain type but got %#v (%v)", s, err)
 	}
 
-	set.addToSetOfDomains(d, nil)
+	set.insert(d, i)
 
 	return nil
 }
@@ -222,9 +227,9 @@ func (ctx *yastCtx) unmarshalSetOfDomainsImmediateValue(v interface{}) (*Attribu
 		return nil, nil
 	}
 
-	set := SetOfSubdomains{false, nil, make(map[string]*SetOfSubdomains)}
+	set := NewSetOfSubdomains()
 	for i, item := range items {
-		err = ctx.unmarshalSetOfDomainsValueItem(item, i, &set)
+		err = ctx.unmarshalSetOfDomainsValueItem(item, i, set)
 		if err != nil {
 			return nil, err
 		}

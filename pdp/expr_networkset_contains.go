@@ -39,11 +39,9 @@ func (f FunctionSetOfNetworksContainsAddressType) calculate(ctx *Context) (Attri
 	}
 
 	v.DataType = DataTypeBoolean
-	for _, n := range s {
-		if n.Contains(a) {
-			v.Value = true
-			return v, nil
-		}
+	if s.Contains(a) {
+		v.Value = true
+		return v, nil
 	}
 
 	v.Value = false
