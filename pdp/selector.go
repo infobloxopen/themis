@@ -255,7 +255,7 @@ func castArrayToSetOfDomainsSelectorType(v []interface{}, path string) (*SetOfSu
 				i, item, path, DataTypeNames[DataTypeDomain], err)
 		}
 
-		set.addToSetOfDomains(d, nil)
+		set.insert(d, i)
 	}
 
 	return set, nil
@@ -271,7 +271,7 @@ func castMapToSetOfDomainsSelectorType(m map[string]interface{}, path string) (*
 				k, path, DataTypeNames[DataTypeDomain], err)
 		}
 
-		set.addToSetOfDomains(d, nil)
+		set.insert(d, nil)
 	}
 
 	return set, nil
@@ -343,7 +343,7 @@ func castMissingSelectorValue(t int, err error) (AttributeValueType, error) {
 		return AttributeValueType{DataTypeSetOfNetworks, NewSetOfNetworks()}, nil
 
 	case DataTypeSetOfDomains:
-		return AttributeValueType{DataTypeSetOfDomains, SetOfSubdomains{false, nil, make(map[string]*SetOfSubdomains)}}, nil
+		return AttributeValueType{DataTypeSetOfDomains, NewSetOfSubdomains()}, nil
 	}
 
 	return AttributeValueType{}, err
@@ -488,7 +488,7 @@ func duckToDomainsSetSelectorContent(m map[string]interface{}, rawPath []Express
 				k, strings.Join(reprPath, "/"), DataTypeNames[DataTypeDomain], err)
 		}
 
-		s.addToSetOfDomains(d, duckToSelectorContent(v, rawPath, t, subReprPath))
+		s.insert(d, duckToSelectorContent(v, rawPath, t, subReprPath))
 	}
 
 	return s

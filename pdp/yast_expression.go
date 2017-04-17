@@ -216,7 +216,7 @@ func (ctx *yastCtx) unmarshalSetOfDomainsValueItem(v interface{}, i int, set *Se
 		return ctx.errorf("Expected value of domain type but got %#v (%v)", s, err)
 	}
 
-	set.addToSetOfDomains(d, nil)
+	set.insert(d, i)
 
 	return nil
 }
@@ -227,9 +227,9 @@ func (ctx *yastCtx) unmarshalSetOfDomainsImmediateValue(v interface{}) (*Attribu
 		return nil, nil
 	}
 
-	set := SetOfSubdomains{false, nil, make(map[string]*SetOfSubdomains)}
+	set := NewSetOfSubdomains()
 	for i, item := range items {
-		err = ctx.unmarshalSetOfDomainsValueItem(item, i, &set)
+		err = ctx.unmarshalSetOfDomainsValueItem(item, i, set)
 		if err != nil {
 			return nil, err
 		}
