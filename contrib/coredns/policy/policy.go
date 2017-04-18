@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/coredns/coredns/middleware"
-	"github.com/coredns/coredns/middleware/trace"
+	"github.com/coredns/coredns/middleware/pkg/trace"
 	"github.com/coredns/coredns/request"
 
 	pb "github.com/infobloxopen/policy-box/pdp-service"
