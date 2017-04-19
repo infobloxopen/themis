@@ -16,8 +16,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	pdp.LoadPolicies(config.Policy) 
-
+	pdp.LoadPolicies(config.Policy)
 
 	if pdp.ListenRequests(config.ServiceEP) != nil {
 		log.Error("Failed to Listen to Requests.")
@@ -25,6 +24,10 @@ func main() {
 	}
 	if pdp.ListenControl(config.ControlEP) != nil {
 		log.Error("Failed to Listen to Control Packets.")
+		os.Exit(1)
+	}
+	if pdp.ListenHealthCheck(config.HealthEP) != nil {
+		log.Error("Failed to Listen to Health Check.")
 		os.Exit(1)
 	}
 

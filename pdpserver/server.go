@@ -18,8 +18,10 @@ import (
 
 	"github.com/infobloxopen/policy-box/pdp"
 
-	ot "github.com/opentracing/opentracing-go"
 	"errors"
+	ot "github.com/opentracing/opentracing-go"
+	"io"
+	"net/http"
 )
 
 type Transport struct {
@@ -34,6 +36,7 @@ type Server struct {
 
 	Requests Transport
 	Control  Transport
+	Health   Transport
 
 	Updates *Queue
 }
@@ -83,14 +86,35 @@ func (s *Server) ListenControl(addr string) error {
 	return nil
 }
 
+func (s *Server) ListenHealthCheck(addr string) error {
+	log.WithField("address", addr).Info("Opening health check port")
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open health check port")
+		return err
+	}
+
+	s.Health.Interface = ln
+	return nil
+}
+
 func (s *Server) Serve(tracer ot.Tracer) {
-	go func()  {
+	go func() {
 		log.Info("Creating control protocol handler")
 		s.Control.Protocol = grpc.NewServer()
 		pbc.RegisterPDPControlServer(s.Control.Protocol, s)
 
 		log.Info("Serving control requests")
 		s.Control.Protocol.Serve(s.Control.Interface)
+	}()
+
+	healthMux := http.NewServeMux()
+	healthMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		log.Info("Health check responding with 300")
+		io.WriteString(w, "OK")
+	})
+	go func() {
+		http.Serve(s.Health.Interface, healthMux)
 	}()
 
 	log.Info("Creating service protocol handler")
