@@ -20,6 +20,7 @@ import (
 	ot "github.com/opentracing/opentracing-go"
 
 	"golang.org/x/net/context"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -52,7 +53,7 @@ type PolicyMiddleware struct {
 }
 
 type Response struct {
-	Permit   bool   `pdp:"effect"`
+	Permit   bool   `pdp:"Effect"`
 	Redirect net.IP `pdp:"redirect_to"`
 }
 
@@ -119,11 +120,39 @@ func (p *PolicyMiddleware) getEDNS0Attrs(r *dns.Msg) ([]*pb.Attribute, bool) {
 	return attrs, foundSourceIP
 }
 
+// This function validates the middleware response
+// Inputs is *PolicyMiddle, *Response and error
+// Output is DNS status and error
+func ValidateMiddlewareResponse(p *PolicyMiddleware, w dns.ResponseWriter, r *dns.Msg,response *Response, status int, err error) (int, error) {
+
+	if err != nil {
+		log.Printf("[ERROR] Policy validation failed due to error %s\n", err)
+		return dns.RcodeServerFailure, err
+	}
+
+	if response.Permit == true && response.Redirect == nil {
+		log.Printf("[INFO] Permitting request")
+		return status, nil
+	}
+
+	if response.Redirect != nil {
+		log.Printf("[INFO] Redirecting request")
+		return p.redirect(response.Redirect.String(), w, r)
+	}
+
+	if response.Permit == false {
+		log.Printf("[ERROR] Policy response validation failed due to error %s\n", err)
+		return dns.RcodeRefused, errors.New("[ERROR] Request not permitted")
+	}
+	return dns.RcodeRefused, nil
+}
+
 func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	state := request.Request{W: w, Req: r}
 
 	// need to process OPT to get customer id
-	var attrs []*pb.Attribute
+	attrs := []*pb.Attribute{&pb.Attribute{Id: "type", Type: "string", Value: "query"}}
+
 	if len(r.Question) > 0 {
 		q := r.Question[0]
 		attrs = append(attrs, &pb.Attribute{Id: "domain_name", Type: "domain", Value: strings.TrimRight(q.Name, ".")})
@@ -149,7 +178,29 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 	}
 
 	if response.Permit {
-		return middleware.NextOrFailure(p.Name(), p.Next, ctx, w, r)
+		status,err := middleware.NextOrFailure(p.Name(), p.Next, ctx, w, r)
+		if err != nil {
+			return status, err
+		}
+
+		responseattrs := []*pb.Attribute{&pb.Attribute{Id: "type", Type: "string", Value: "response"}}
+		if len(r.Question) > 0 {
+			q := r.Question[0]
+			responseattrs = append(attrs, &pb.Attribute{Id: "domain_name", Type: "domain", Value: strings.TrimRight(q.Name, ".")})
+
+		}
+		if foundSourceIP {
+			responseattrs = append(attrs, &pb.Attribute{Id: "proxy_source_ip", Type: "address", Value: state.IP()})
+		} else {
+			responseattrs = append(attrs, &pb.Attribute{Id: "source_ip", Type: "address", Value: state.IP()})
+		}
+		responseattrs = append(attrs, &pb.Attribute{Id: "policy_id", Type: "string", Value: "Dummy"})
+
+		var response Response
+		err = p.pdp.Validate(ctx, pb.Request{Attributes: responseattrs}, &response)
+
+		return ValidateMiddlewareResponse(p, w, r, &response, status, err)
+
 	}
 
 	if response.Redirect != nil {
