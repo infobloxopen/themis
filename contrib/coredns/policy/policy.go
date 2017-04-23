@@ -119,6 +119,52 @@ func (p *PolicyMiddleware) getEDNS0Attrs(r *dns.Msg) ([]*pb.Attribute, bool) {
 	return attrs, foundSourceIP
 }
 
+
+type LocalResponseWriter struct {
+	dns.ResponseWriter
+	Rcode int
+	Len int
+	Msg   *dns.Msg
+	localAddr  net.Addr
+	remoteAddr net.Addr
+}
+
+func New(w dns.ResponseWriter) *LocalResponseWriter {
+
+	var addr string = ""
+	l := &net.IPAddr{IP: net.ParseIP(addr)}
+	r := &net.IPAddr{IP: net.ParseIP(addr)}
+	return &LocalResponseWriter{
+		ResponseWriter: w,
+		Rcode:          0,
+		Msg:            nil,
+		localAddr: l,
+		remoteAddr: r,
+
+	}
+}
+
+func (r *LocalResponseWriter) WriteMsg(res *dns.Msg) error {
+	r.Rcode = res.Rcode
+	// We may get called multiple times (axfr for instance).
+	// Save the last message, but add the sizes.
+	r.Len += res.Len()
+	r.Msg = res
+	return r.ResponseWriter.WriteMsg(res)
+}
+
+// Write is a wrapper that records the length of the message that gets written.
+func (r *LocalResponseWriter) Write(buf []byte) (int, error) {
+	n, err := r.ResponseWriter.Write(buf)
+	if err == nil {
+		r.Len += n
+	}
+	return n, err
+}
+
+
+
+
 func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	state := request.Request{W: w, Req: r}
 
@@ -150,7 +196,54 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 	}
 
 	if response.Permit {
-		return middleware.NextOrFailure(p.Name(), p.Next, ctx, w, r)
+
+		lr := new(LocalResponseWriter)
+		lr.localAddr = w.LocalAddr()
+		lr.remoteAddr = w.RemoteAddr()
+		lr.Msg = r
+
+		upstreamResult := new(dns.Msg)
+		upstreamResult = r
+		status,err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lr, upstreamResult)
+		if err != nil {
+			return status, err
+		}
+
+		state := request.Request{W: lr, Req: upstreamResult}
+
+		rr := upstreamResult.Answer[0]
+		switch state.Family() {
+		case 1:
+			attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: rr.(*dns.A).A.String()})
+		case 2:
+			attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: rr.(*dns.AAAA).AAAA.String()})
+
+		}
+
+		attrs[0].Value = "response"
+
+		var response Response
+		err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &response)
+
+		if err != nil {
+			log.Printf("[ERROR] Policy validation failed due to error %s\n", err)
+			return dns.RcodeServerFailure, err
+		}
+
+		if response.Permit == true && response.Redirect == nil {
+			w.WriteMsg(upstreamResult)
+			return status, nil
+		}
+
+		if response.Redirect != nil {
+			log.Printf("[INFO] Redirecting request")
+			return p.redirect(response.Redirect.String(), w, r)
+		}
+
+		if response.Permit == false {
+			return dns.RcodeRefused, fmt.Errorf("[ERROR] Request not permitted")
+		}
+		return dns.RcodeRefused, nil
 	}
 
 	if response.Redirect != nil {
