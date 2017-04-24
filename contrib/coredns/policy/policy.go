@@ -122,21 +122,25 @@ func (p *PolicyMiddleware) getEDNS0Attrs(r *dns.Msg) ([]*pb.Attribute, bool) {
 
 type NewLocalResponseWriter struct {
 	dns.ResponseWriter
-	Msg   *dns.Msg
+	localAddr  net.Addr
+	remoteAddr net.Addr
+	Msg        *dns.Msg
 }
 
-func (r *NewLocalResponseWriter) WriteMsg(res *dns.Msg) error {
-	r.Msg = res
-	return nil
-}
 
 func (r *NewLocalResponseWriter) Write(b []byte) (int, error) {
+	r.Msg = new(dns.Msg)
 	return len(b), r.Msg.Unpack(b)
 }
 
-// Hijack implements dns.Hijacker. It simply wraps the underlying
-// ResponseWriter's Hijack method if there is one, or returns an error.
-func (r *NewLocalResponseWriter) Hijack() { r.ResponseWriter.Hijack(); return }
+// These methods implement the dns.ResponseWriter interface from Go DNS.
+func (r *NewLocalResponseWriter) Close() error              { return nil }
+func (r *NewLocalResponseWriter) TsigStatus() error         { return nil }
+func (r *NewLocalResponseWriter) TsigTimersOnly(b bool)     { return }
+func (r *NewLocalResponseWriter) Hijack()                   { return }
+func (r *NewLocalResponseWriter) LocalAddr() net.Addr       { return r.localAddr }
+func (r *NewLocalResponseWriter) RemoteAddr() net.Addr      { return r.remoteAddr }
+func (r *NewLocalResponseWriter) WriteMsg(m *dns.Msg) error { r.Msg = m; return nil }
 
 
 func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
