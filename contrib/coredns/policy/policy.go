@@ -120,49 +120,23 @@ func (p *PolicyMiddleware) getEDNS0Attrs(r *dns.Msg) ([]*pb.Attribute, bool) {
 }
 
 
-type LocalResponseWriter struct {
+type NewLocalResponseWriter struct {
 	dns.ResponseWriter
-	Rcode int
-	Len int
 	Msg   *dns.Msg
-	localAddr  net.Addr
-	remoteAddr net.Addr
 }
 
-func New(w dns.ResponseWriter) *LocalResponseWriter {
-
-	var addr string = ""
-	l := &net.IPAddr{IP: net.ParseIP(addr)}
-	r := &net.IPAddr{IP: net.ParseIP(addr)}
-	return &LocalResponseWriter{
-		ResponseWriter: w,
-		Rcode:          0,
-		Msg:            nil,
-		localAddr: l,
-		remoteAddr: r,
-
-	}
-}
-
-func (r *LocalResponseWriter) WriteMsg(res *dns.Msg) error {
-	r.Rcode = res.Rcode
-	// We may get called multiple times (axfr for instance).
-	// Save the last message, but add the sizes.
-	r.Len += res.Len()
+func (r *NewLocalResponseWriter) WriteMsg(res *dns.Msg) error {
 	r.Msg = res
-	return r.ResponseWriter.WriteMsg(res)
+	return nil
 }
 
-// Write is a wrapper that records the length of the message that gets written.
-func (r *LocalResponseWriter) Write(buf []byte) (int, error) {
-	n, err := r.ResponseWriter.Write(buf)
-	if err == nil {
-		r.Len += n
-	}
-	return n, err
+func (r *NewLocalResponseWriter) Write(b []byte) (int, error) {
+	return len(b), r.Msg.Unpack(b)
 }
 
-
+// Hijack implements dns.Hijacker. It simply wraps the underlying
+// ResponseWriter's Hijack method if there is one, or returns an error.
+func (r *NewLocalResponseWriter) Hijack() { r.ResponseWriter.Hijack(); return }
 
 
 func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
@@ -196,22 +170,15 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 	}
 
 	if response.Permit {
-
-		lr := new(LocalResponseWriter)
-		lr.localAddr = w.LocalAddr()
-		lr.remoteAddr = w.RemoteAddr()
-		lr.Msg = r
-
-		upstreamResult := new(dns.Msg)
-		upstreamResult = r
-		status,err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lr, upstreamResult)
+		lr := new(NewLocalResponseWriter)
+		status,err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lr, r)
 		if err != nil {
 			return status, err
 		}
 
-		state := request.Request{W: lr, Req: upstreamResult}
+		state := request.Request{W: lr, Req: lr.Msg}
 
-		rr := upstreamResult.Answer[0]
+		rr := lr.Msg.Answer[0]
 		switch state.Family() {
 		case 1:
 			attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: rr.(*dns.A).A.String()})
@@ -231,7 +198,7 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 		}
 
 		if response.Permit == true && response.Redirect == nil {
-			w.WriteMsg(upstreamResult)
+			w.WriteMsg(r)
 			return status, nil
 		}
 
