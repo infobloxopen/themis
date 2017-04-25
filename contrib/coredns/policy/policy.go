@@ -51,7 +51,7 @@ type PolicyMiddleware struct {
 	ErrorFunc func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
 }
 
-type Response struct {
+type  Response struct {
 	Permit   bool   `pdp:"Effect"`
 	Redirect net.IP `pdp:"redirect_to"`
 }
@@ -121,7 +121,6 @@ func (p *PolicyMiddleware) getEDNS0Attrs(r *dns.Msg) ([]*pb.Attribute, bool) {
 
 
 type NewLocalResponseWriter struct {
-	dns.ResponseWriter
 	localAddr  net.Addr
 	remoteAddr net.Addr
 	Msg        *dns.Msg
@@ -173,46 +172,45 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 		return dns.RcodeServerFailure, err
 	}
 
-	if response.Permit {
-		lr := new(NewLocalResponseWriter)
-		status,err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lr, r)
+	if response.Permit == true {
+		lw := new(NewLocalResponseWriter)
+		status,err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lw, r)
 		if err != nil {
 			return status, err
 		}
 
-		state := request.Request{W: lr, Req: lr.Msg}
-
-		rr := lr.Msg.Answer[0]
-		switch state.Family() {
-		case 1:
-			attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: rr.(*dns.A).A.String()})
-		case 2:
-			attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: rr.(*dns.AAAA).AAAA.String()})
-
-		}
-
 		attrs[0].Value = "response"
-
-		var response Response
-		err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &response)
-
-		if err != nil {
-			log.Printf("[ERROR] Policy validation failed due to error %s\n", err)
-			return dns.RcodeServerFailure, err
+		for _, rr := range lw.Msg.Answer {
+			switch rr.Header().Rrtype {
+			case dns.TypeA, dns.TypeAAAA:
+				if a, ok := rr.(*dns.A); ok {
+					attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: a.A.String()})
+				} else if a, ok := rr.(*dns.AAAA); ok {
+					attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: a.AAAA.String()})
+				}
+			default:
+			}
 		}
+		attrs = append(attrs, &pb.Attribute{Id: "policy_id", Type: "string", Value: ""})
 
-		if response.Permit == true && response.Redirect == nil {
-			w.WriteMsg(r)
-			return status, nil
-		}
+		var lresponse Response
 
-		if response.Redirect != nil {
-			log.Printf("[INFO] Redirecting request")
-			return p.redirect(response.Redirect.String(), w, r)
-		}
+		err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &lresponse)
 
-		if response.Permit == false {
-			return dns.RcodeRefused, fmt.Errorf("[ERROR] Request not permitted")
+		if err == nil {
+			if lresponse.Permit == true && lresponse.Redirect == nil {
+				w.WriteMsg(lw.Msg)
+				return status, nil
+			}
+
+			if lresponse.Redirect != nil {
+				log.Printf("[INFO] Redirecting request")
+				return p.redirect(lresponse.Redirect.String(), lw, lw.Msg)
+			}
+
+			if lresponse.Permit == false {
+				return dns.RcodeRefused, fmt.Errorf("[ERROR] Request not permitted")
+			}
 		}
 		return dns.RcodeRefused, nil
 	}
