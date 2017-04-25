@@ -1,3 +1,4 @@
+
 POLICYBOX=github.com/infobloxopen/policy-box
 TESTABLE=pdp pep
 BUILDABLE=$(TESTABLE) papcli pdp-control pdpctrl-client pdpserver pdp-service pepcli
@@ -5,7 +6,7 @@ BUILDABLE=$(TESTABLE) papcli pdp-control pdpctrl-client pdpserver pdp-service pe
 BUILD_VERBOSE=-v
 TEST_VERBOSE=-v
 
-all: build
+all: check
 
 .PHONY: deps
 deps:
@@ -25,7 +26,7 @@ fmt:
 		(echo "please format Go code with 'gofmt -s -w'" && false)
 
 .PHONY: check
-check: build
+check: fmt build
 
 .PHONY: test
 test: check

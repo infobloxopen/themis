@@ -41,8 +41,8 @@ policies:
 
 var (
 	PolicySetTestAttrs = map[string]AttributeType{
-		"x": AttributeType{ID: "x", DataType: DataTypeSetOfStrings},
-		"y": AttributeType{ID: "y", DataType: DataTypeString}}
+		"x": {ID: "x", DataType: DataTypeSetOfStrings},
+		"y": {ID: "y", DataType: DataTypeString}}
 )
 
 func TestPolicySetWithNestedMappers(t *testing.T) {

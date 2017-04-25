@@ -41,9 +41,9 @@ func LoadRequests(name string) (*Requests, error) {
 	return r, yaml.Unmarshal(b, r)
 }
 
-func (r *Requests) Parse(count int) (chan Request) {
+func (r *Requests) Parse(count int) chan Request {
 	ch := make(chan Request)
-	go func () {
+	go func() {
 		defer close(ch)
 
 		length := len(r.Requests)
@@ -59,14 +59,14 @@ func (r *Requests) Parse(count int) (chan Request) {
 			for name, value := range req {
 				attr, err := makeAttribute(name, value, r.Attributes)
 				if err != nil {
-					ch <- Request{Index: i+1, Position: j+1, Error: err}
+					ch <- Request{Index: i + 1, Position: j + 1, Error: err}
 					return
 				}
 
 				attrs = append(attrs, attr)
 			}
 
-			ch <- Request{Index: i+1, Position: j+1, Request: &pb.Request{attrs}}
+			ch <- Request{Index: i + 1, Position: j + 1, Request: &pb.Request{attrs}}
 		}
 	}()
 
@@ -107,10 +107,10 @@ type attributeMarshaller func(value interface{}) (string, error)
 
 var marshallers = map[string]attributeMarshaller{
 	booleanAttribute: booleanMarshaller,
-	stringAttribute: stringMarshaller,
+	stringAttribute:  stringMarshaller,
 	addressAttribute: addressMarshaller,
 	networkAttribute: networkMarshaller,
-	domainAttribute: domainMarshaller}
+	domainAttribute:  domainMarshaller}
 
 func makeAttribute(name string, value interface{}, symbols map[string]string) (*pb.Attribute, error) {
 	t, ok := symbols[name]

@@ -52,9 +52,9 @@ func TestDomainTreeIterate(t *testing.T) {
 
 	assertMapStringIntEqual(domains, map[string]int{
 		"test.example.com": 0,
-		"example.com": 1,
-		"test.net": 2,
-		"www.example.biz": 2}, t)
+		"example.com":      1,
+		"test.net":         2,
+		"www.example.biz":  2}, t)
 }
 
 func TestDomainTreeAdjustDomainName(t *testing.T) {
