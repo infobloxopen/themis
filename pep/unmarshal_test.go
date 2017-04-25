@@ -52,55 +52,55 @@ type TestInvalidResponseStruct5 struct {
 
 var (
 	TestObligations = []*pb.Attribute{
-		&pb.Attribute{"Bool", "boolean", "true"},
-		&pb.Attribute{"String", "string", "test"},
-		&pb.Attribute{"Address", "address", "1.2.3.4"},
-		&pb.Attribute{"Network", "network", "1.2.3.4/32"}}
+		{"Bool", "boolean", "true"},
+		{"String", "string", "test"},
+		{"Address", "address", "1.2.3.4"},
+		{"Network", "network", "1.2.3.4/32"}}
 
 	TestTaggedObligations = []*pb.Attribute{
-		&pb.Attribute{"Bool2", "boolean", "false"},
-		&pb.Attribute{"flag", "boolean", "true"},
-		&pb.Attribute{"d", "domain", "example.com"},
-		&pb.Attribute{"Address", "address", "1.2.3.4"},
-		&pb.Attribute{"net", "network", "1.2.3.4/32"}}
+		{"Bool2", "boolean", "false"},
+		{"flag", "boolean", "true"},
+		{"d", "domain", "example.com"},
+		{"Address", "address", "1.2.3.4"},
+		{"net", "network", "1.2.3.4/32"}}
 
 	TestInvalidObligations1 = []*pb.Attribute{
-		&pb.Attribute{"Bool", "boolean", "unknown"},
-		&pb.Attribute{"String", "string", "test"},
-		&pb.Attribute{"Address", "address", "1.2.3.4"},
-		&pb.Attribute{"Network", "network", "1.2.3.4/32"}}
+		{"Bool", "boolean", "unknown"},
+		{"String", "string", "test"},
+		{"Address", "address", "1.2.3.4"},
+		{"Network", "network", "1.2.3.4/32"}}
 
 	TestInvalidObligations2 = []*pb.Attribute{
-		&pb.Attribute{"Bool", "boolean", "false"},
-		&pb.Attribute{"String", "string", "test"},
-		&pb.Attribute{"Address", "address", "1.2:3.4"},
-		&pb.Attribute{"Network", "network", "1.2.3.4/32"}}
+		{"Bool", "boolean", "false"},
+		{"String", "string", "test"},
+		{"Address", "address", "1.2:3.4"},
+		{"Network", "network", "1.2.3.4/32"}}
 
 	TestInvalidObligations3 = []*pb.Attribute{
-		&pb.Attribute{"Bool", "boolean", "false"},
-		&pb.Attribute{"String", "string", "test"},
-		&pb.Attribute{"Address", "address", "1.2.3.4"},
-		&pb.Attribute{"Network", "network", "1.2.3.4/77"}}
+		{"Bool", "boolean", "false"},
+		{"String", "string", "test"},
+		{"Address", "address", "1.2.3.4"},
+		{"Network", "network", "1.2.3.4/77"}}
 
 	TestInvalidObligations4 = []*pb.Attribute{
-		&pb.Attribute{"Bool", "boolean", "false"},
-		&pb.Attribute{"String", "long", "test"},
-		&pb.Attribute{"Address", "address", "1.2.3.4"},
-		&pb.Attribute{"Network", "network", "1.2.3.4/77"}}
+		{"Bool", "boolean", "false"},
+		{"String", "long", "test"},
+		{"Address", "address", "1.2.3.4"},
+		{"Network", "network", "1.2.3.4/77"}}
 
 	TestInvalidObligations5 = []*pb.Attribute{
-		&pb.Attribute{"Bool2", "boolean", "false"},
-		&pb.Attribute{"flag", "long", "true"},
-		&pb.Attribute{"d", "domain", "example.com"},
-		&pb.Attribute{"Address", "address", "1.2.3.4"},
-		&pb.Attribute{"net", "network", "1.2.3.4/32"}}
+		{"Bool2", "boolean", "false"},
+		{"flag", "long", "true"},
+		{"d", "domain", "example.com"},
+		{"Address", "address", "1.2.3.4"},
+		{"net", "network", "1.2.3.4/32"}}
 
 	TestInvalidObligations6 = []*pb.Attribute{
-		&pb.Attribute{"Bool2", "boolean", "false"},
-		&pb.Attribute{"flag", "network", "true"},
-		&pb.Attribute{"d", "domain", "example.com"},
-		&pb.Attribute{"Address", "address", "1.2.3.4"},
-		&pb.Attribute{"net", "network", "1.2.3.4/32"}}
+		{"Bool2", "boolean", "false"},
+		{"flag", "network", "true"},
+		{"d", "domain", "example.com"},
+		{"Address", "address", "1.2.3.4"},
+		{"net", "network", "1.2.3.4/32"}}
 )
 
 func TestUnmarshalUntaggedStruct(t *testing.T) {

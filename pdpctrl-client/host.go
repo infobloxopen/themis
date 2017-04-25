@@ -5,8 +5,8 @@ package pdpctrl_client
 import (
 	"time"
 
-	"google.golang.org/grpc"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 
 	pb "github.com/infobloxopen/policy-box/pdp-control"
 )
@@ -66,10 +66,10 @@ func (h *Host) uploadIncludes(includes map[string][]byte, log Logger) []int32 {
 
 		for offset := 0; offset < len(b); offset += h.chunk {
 			var c []byte
-			if len(b) < offset + h.chunk {
+			if len(b) < offset+h.chunk {
 				c = b[offset:]
 			} else {
-				c = b[offset:offset+h.chunk]
+				c = b[offset : offset+h.chunk]
 			}
 
 			if err := stream.Send(&pb.Chunk{string(c)}); err != nil {
@@ -122,10 +122,10 @@ func (h *Host) uploadPolicy(policy []byte, IDs []int32, log Logger) {
 
 	for offset := 0; offset < len(policy); offset += h.chunk {
 		var c []byte
-		if len(policy) < offset + h.chunk {
+		if len(policy) < offset+h.chunk {
 			c = policy[offset:]
 		} else {
-			c = policy[offset:offset+h.chunk]
+			c = policy[offset : offset+h.chunk]
 		}
 
 		if err := stream.Send(&pb.Chunk{string(c)}); err != nil {

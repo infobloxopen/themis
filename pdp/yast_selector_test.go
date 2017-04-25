@@ -192,11 +192,11 @@ content: c`
 
 var (
 	YASTSelectorTestAttrs = map[string]AttributeType{
-		"s":   AttributeType{ID: "s", DataType: DataTypeString},
-		"d":   AttributeType{ID: "d", DataType: DataTypeDomain},
-		"a":   AttributeType{ID: "a", DataType: DataTypeAddress},
-		"n":   AttributeType{ID: "n", DataType: DataTypeNetwork},
-		"set": AttributeType{ID: "set", DataType: DataTypeSetOfNetworks}}
+		"s":   {ID: "s", DataType: DataTypeString},
+		"d":   {ID: "d", DataType: DataTypeDomain},
+		"a":   {ID: "a", DataType: DataTypeAddress},
+		"n":   {ID: "n", DataType: DataTypeNetwork},
+		"set": {ID: "set", DataType: DataTypeSetOfNetworks}}
 
 	YASTSelectorTestContent = map[string]interface{}{
 		"c": map[string]interface{}{
