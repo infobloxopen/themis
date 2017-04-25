@@ -14,8 +14,8 @@ import (
 )
 
 var (
-    ErrorConnected    = fmt.Errorf("Connection has been already established")
-    ErrorNotConnected = fmt.Errorf("No connection")
+	ErrorConnected    = fmt.Errorf("Connection has been already established")
+	ErrorNotConnected = fmt.Errorf("No connection")
 )
 
 type Client struct {

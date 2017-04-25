@@ -51,7 +51,7 @@ func read(policy string, includes StringSet) ([]byte, map[string][]byte, error) 
 
 func getIncludeId(name string) string {
 	base := filepath.Base(name)
-	return base[0:len(base)-len(filepath.Ext(base))]
+	return base[0 : len(base)-len(filepath.Ext(base))]
 }
 
 func readInclude(name string) (string, []byte, error) {

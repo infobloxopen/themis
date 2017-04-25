@@ -70,8 +70,8 @@ rules:
 
 var (
 	YASTPoliciesTestAttrs = map[string]AttributeType{
-		"x": AttributeType{ID: "x", DataType: DataTypeSetOfStrings},
-		"y": AttributeType{ID: "y", DataType: DataTypeSetOfStrings}}
+		"x": {ID: "x", DataType: DataTypeSetOfStrings},
+		"y": {ID: "y", DataType: DataTypeSetOfStrings}}
 
 	YASTPoliciesTestContent = map[string]interface{}{}
 )

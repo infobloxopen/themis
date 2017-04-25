@@ -85,7 +85,7 @@ func (s *SetOfSubdomains) iterate(path []string, ch chan DomainLeafItem) {
 	if s.hasValue {
 		name := make([]string, len(path))
 		for i, item := range path {
-			name[len(path) - i - 1] = item
+			name[len(path)-i-1] = item
 		}
 
 		ch <- DomainLeafItem{strings.Join(name, "."), s.value}

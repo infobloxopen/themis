@@ -48,17 +48,17 @@ type TestInvalidStruct3 struct {
 
 var (
 	TestAttributes = []*pb.Attribute{
-		&pb.Attribute{"Bool", "boolean", "true"},
-		&pb.Attribute{"String", "string", "test"},
-		&pb.Attribute{"Address", "address", "1.2.3.4"},
-		&pb.Attribute{"Network", "network", "1.2.3.4/32"}}
+		{"Bool", "boolean", "true"},
+		{"String", "string", "test"},
+		{"Address", "address", "1.2.3.4"},
+		{"Network", "network", "1.2.3.4/32"}}
 
 	TestTaggedAttributes = []*pb.Attribute{
-		&pb.Attribute{"Bool2", "boolean", "false"},
-		&pb.Attribute{"flag", "boolean", "true"},
-		&pb.Attribute{"d", "domain", "example.com"},
-		&pb.Attribute{"Address", "address", "1.2.3.4"},
-		&pb.Attribute{"net", "network", "1.2.3.4/32"}}
+		{"Bool2", "boolean", "false"},
+		{"flag", "boolean", "true"},
+		{"d", "domain", "example.com"},
+		{"Address", "address", "1.2.3.4"},
+		{"net", "network", "1.2.3.4/32"}}
 )
 
 func TestMarshalUntaggedStruct(t *testing.T) {
