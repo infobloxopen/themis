@@ -167,11 +167,11 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 	err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &lresponse)
 
 	if err != nil {
-		return dns.RcodeRefused, nil
+		return dns.RcodeRefused, err
 	}
 
 	if !lresponse.Permit {
-		return dns.RcodeRefused, fmt.Errorf("[ERROR] Request not permitted")
+		return dns.RcodeRefused, nil
 	}
 	if lresponse.Redirect != nil {
 		return p.redirect(lresponse.Redirect.String(), lw, lw.Msg)
