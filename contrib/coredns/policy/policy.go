@@ -51,7 +51,7 @@ type PolicyMiddleware struct {
 	ErrorFunc func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
 }
 
-type  Response struct {
+type Response struct {
 	Permit   bool   `pdp:"Effect"`
 	Redirect net.IP `pdp:"redirect_to"`
 }
@@ -119,13 +119,11 @@ func (p *PolicyMiddleware) getEDNS0Attrs(r *dns.Msg) ([]*pb.Attribute, bool) {
 	return attrs, foundSourceIP
 }
 
-
 type NewLocalResponseWriter struct {
 	localAddr  net.Addr
 	remoteAddr net.Addr
 	Msg        *dns.Msg
 }
-
 
 func (r *NewLocalResponseWriter) Write(b []byte) (int, error) {
 	r.Msg = new(dns.Msg)
@@ -140,7 +138,6 @@ func (r *NewLocalResponseWriter) Hijack()                   { return }
 func (r *NewLocalResponseWriter) LocalAddr() net.Addr       { return r.localAddr }
 func (r *NewLocalResponseWriter) RemoteAddr() net.Addr      { return r.remoteAddr }
 func (r *NewLocalResponseWriter) WriteMsg(m *dns.Msg) error { r.Msg = m; return nil }
-
 
 func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	state := request.Request{W: w, Req: r}
@@ -172,9 +169,9 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 		return dns.RcodeServerFailure, err
 	}
 
-	if response.Permit == true {
+	if response.Permit {
 		lw := new(NewLocalResponseWriter)
-		status,err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lw, r)
+		status, err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lw, r)
 		if err != nil {
 			return status, err
 		}
@@ -191,7 +188,7 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 			default:
 			}
 		}
-		attrs = append(attrs, &pb.Attribute{Id: "policy_id", Type: "string", Value: ""})
+		attrs = append(attrs, &pb.Attribute{Id: "policy_id", Type: "string", Value: "SECURITY_POLICY_1790"})
 
 		var lresponse Response
 
