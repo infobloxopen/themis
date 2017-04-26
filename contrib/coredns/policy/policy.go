@@ -139,6 +139,50 @@ func (r *NewLocalResponseWriter) LocalAddr() net.Addr       { return r.localAddr
 func (r *NewLocalResponseWriter) RemoteAddr() net.Addr      { return r.remoteAddr }
 func (r *NewLocalResponseWriter) WriteMsg(m *dns.Msg) error { r.Msg = m; return nil }
 
+// This function validates the response from middleware
+// Inputs are - context.Context, dns.ResponseWriter, *dns.Msg
+// Outputs are - int, error
+func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, attrs []*pb.Attribute) (int, error) {
+	lw := new(NewLocalResponseWriter)
+	status, err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lw, r)
+	if err != nil {
+		return status, err
+	}
+
+	attrs[0].Value = "response"
+	for _, rr := range lw.Msg.Answer {
+		switch rr.Header().Rrtype {
+		case dns.TypeA, dns.TypeAAAA:
+			if a, ok := rr.(*dns.A); ok {
+				attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: a.A.String()})
+			} else if a, ok := rr.(*dns.AAAA); ok {
+				attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: a.AAAA.String()})
+			}
+		default:
+		}
+	}
+
+	// Dummy security policy
+	attrs = append(attrs, &pb.Attribute{Id: "policy_id", Type: "string", Value: "SECURITY_POLICY_1790"})
+	var lresponse Response
+	err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &lresponse)
+
+	if err == nil {
+		if lresponse.Permit == false {
+			return dns.RcodeRefused, fmt.Errorf("[ERROR] Request not permitted")
+		} else {
+			if lresponse.Redirect != nil {
+				return p.redirect(lresponse.Redirect.String(), lw, lw.Msg)
+			} else {
+				w.WriteMsg(lw.Msg)
+				return status, nil
+			}
+		}
+
+	}
+	return dns.RcodeRefused, nil
+}
+
 func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	state := request.Request{W: w, Req: r}
 
@@ -170,46 +214,7 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 	}
 
 	if response.Permit {
-		lw := new(NewLocalResponseWriter)
-		status, err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lw, r)
-		if err != nil {
-			return status, err
-		}
-
-		attrs[0].Value = "response"
-		for _, rr := range lw.Msg.Answer {
-			switch rr.Header().Rrtype {
-			case dns.TypeA, dns.TypeAAAA:
-				if a, ok := rr.(*dns.A); ok {
-					attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: a.A.String()})
-				} else if a, ok := rr.(*dns.AAAA); ok {
-					attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: a.AAAA.String()})
-				}
-			default:
-			}
-		}
-		attrs = append(attrs, &pb.Attribute{Id: "policy_id", Type: "string", Value: "SECURITY_POLICY_1790"})
-
-		var lresponse Response
-
-		err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &lresponse)
-
-		if err == nil {
-			if lresponse.Permit == true && lresponse.Redirect == nil {
-				w.WriteMsg(lw.Msg)
-				return status, nil
-			}
-
-			if lresponse.Redirect != nil {
-				log.Printf("[INFO] Redirecting request")
-				return p.redirect(lresponse.Redirect.String(), lw, lw.Msg)
-			}
-
-			if lresponse.Permit == false {
-				return dns.RcodeRefused, fmt.Errorf("[ERROR] Request not permitted")
-			}
-		}
-		return dns.RcodeRefused, nil
+		return p.handlePermit(ctx, w, r, attrs)
 	}
 
 	if response.Redirect != nil {
