@@ -140,9 +140,9 @@ func (r *NewLocalResponseWriter) RemoteAddr() net.Addr      { return r.remoteAdd
 func (r *NewLocalResponseWriter) WriteMsg(m *dns.Msg) error { r.Msg = m; return nil }
 
 // This function validates the response from middleware
-// Inputs are - context.Context, dns.ResponseWriter, *dns.Msg
+// Inputs are - context.Context, dns.ResponseWriter, *dns.Msg, policy_id, attrs
 // Outputs are - int, error
-func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, attrs []*pb.Attribute) (int, error) {
+func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, policy_id string, attrs []*pb.Attribute) (int, error) {
 	lw := new(NewLocalResponseWriter)
 	status, err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lw, r)
 	if err != nil {
@@ -162,25 +162,22 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 		}
 	}
 
-	// Dummy security policy
-	attrs = append(attrs, &pb.Attribute{Id: "policy_id", Type: "string", Value: "SECURITY_POLICY_1790"})
+	attrs = append(attrs, &pb.Attribute{Id: "policy_id", Type: "string", Value: policy_id})
 	var lresponse Response
 	err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &lresponse)
 
-	if err == nil {
-		if lresponse.Permit == false {
-			return dns.RcodeRefused, fmt.Errorf("[ERROR] Request not permitted")
-		} else {
-			if lresponse.Redirect != nil {
-				return p.redirect(lresponse.Redirect.String(), lw, lw.Msg)
-			} else {
-				w.WriteMsg(lw.Msg)
-				return status, nil
-			}
-		}
-
+	if err != nil {
+		return dns.RcodeRefused, nil
 	}
-	return dns.RcodeRefused, nil
+
+	if !lresponse.Permit {
+		return dns.RcodeRefused, fmt.Errorf("[ERROR] Request not permitted")
+	}
+	if lresponse.Redirect != nil {
+		return p.redirect(lresponse.Redirect.String(), lw, lw.Msg)
+	}
+	w.WriteMsg(lw.Msg)
+	return status, nil
 }
 
 func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
@@ -214,7 +211,7 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 	}
 
 	if response.Permit {
-		return p.handlePermit(ctx, w, r, attrs)
+		return p.handlePermit(ctx, w, r, "SECURITY_POLICY_1790", attrs)
 	}
 
 	if response.Redirect != nil {
