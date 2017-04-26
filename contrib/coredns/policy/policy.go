@@ -167,7 +167,7 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 	err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &lresponse)
 
 	if err != nil {
-		return dns.RcodeRefused, err
+		return dns.RcodeServerFailure, err
 	}
 
 	if !lresponse.Permit {
