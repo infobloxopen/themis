@@ -22,7 +22,13 @@ var (
 	ErrorNotConnected = fmt.Errorf("No connection")
 )
 
-type Client struct {
+type Client interface {
+	Connect() error
+	Close()
+	Validate(ctx context.Context, in, out interface{}) error
+}
+
+type pdpClient struct {
 	addr     string
 	balancer grpc.Balancer
 	conn     *grpc.ClientConn
@@ -30,18 +36,18 @@ type Client struct {
 	tracer   ot.Tracer
 }
 
-func NewBalancedClient(addrs []string, tracer ot.Tracer) *Client {
-	c := &Client{addr: "pdp", tracer: tracer}
+func NewBalancedClient(addrs []string, tracer ot.Tracer) Client {
+	c := &pdpClient{addr: "pdp", tracer: tracer}
 	r := newStaticResolver("pdp", addrs...)
 	c.balancer = grpc.RoundRobin(r)
 	return c
 }
 
-func NewClient(addr string, tracer ot.Tracer) *Client {
-	return &Client{addr: addr, tracer: tracer}
+func NewClient(addr string, tracer ot.Tracer) Client {
+	return &pdpClient{addr: addr, tracer: tracer}
 }
 
-func (c *Client) Connect() error {
+func (c *pdpClient) Connect() error {
 	if c.conn != nil {
 		return ErrorConnected
 	}
@@ -70,7 +76,7 @@ func (c *Client) Connect() error {
 	return nil
 }
 
-func (c *Client) Close() {
+func (c *pdpClient) Close() {
 	if c.conn != nil {
 		c.conn.Close()
 		c.conn = nil
@@ -79,7 +85,7 @@ func (c *Client) Close() {
 	c.client = nil
 }
 
-func (c *Client) Validate(ctx context.Context, in, out interface{}) error {
+func (c *pdpClient) Validate(ctx context.Context, in, out interface{}) error {
 	if c.client == nil {
 		return ErrorNotConnected
 	}
@@ -95,6 +101,20 @@ func (c *Client) Validate(ctx context.Context, in, out interface{}) error {
 	}
 
 	return fillResponse(res, out)
+}
+
+type TestClient struct {
+	NextResponse *pb.Response
+}
+
+func NewTestClient() *TestClient {
+	return &TestClient{}
+}
+
+func (c *TestClient) Connect() error { return nil }
+func (c *TestClient) Close()         {}
+func (c *TestClient) Validate(ctx context.Context, in, out interface{}) error {
+	return fillResponse(c.NextResponse, out)
 }
 
 func makeRequest(v interface{}) (pb.Request, error) {
