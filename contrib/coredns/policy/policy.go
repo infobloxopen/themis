@@ -150,9 +150,6 @@ func (r *NewLocalResponseWriter) LocalAddr() net.Addr       { return r.localAddr
 func (r *NewLocalResponseWriter) RemoteAddr() net.Addr      { return r.remoteAddr }
 func (r *NewLocalResponseWriter) WriteMsg(m *dns.Msg) error { r.Msg = m; return nil }
 
-// This function validates the response from middleware
-// Inputs are - context.Context, dns.ResponseWriter, *dns.Msg, policy_id, attrs
-// Outputs are - int, error
 func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, attrs []*pb.Attribute) (int, error) {
 	lw := new(NewLocalResponseWriter)
 	status, err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lw, r)
