@@ -23,10 +23,6 @@ import (
 )
 
 const (
-	PolicyIdFieldName = "policy_id"
-)
-
-const (
 	EDNS0_MAP_DATA_TYPE_BYTES = iota
 	EDNS0_MAP_DATA_TYPE_HEX   = iota
 	EDNS0_MAP_DATA_TYPE_IP    = iota
@@ -62,9 +58,9 @@ type Attribute struct {
 }
 
 type Response struct {
-	Permit     bool   `pdp:"Effect"`
-	Redirect   net.IP `pdp:"redirect_to"`
-	Obligation []*Attribute
+	Permit   bool   `pdp:"Effect"`
+	Redirect net.IP `pdp:"redirect_to"`
+	PolicyId string `pdp:"policy_id"`
 }
 
 func (p *PolicyMiddleware) Connect() error {
@@ -218,12 +214,7 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 	}
 
 	if response.Permit {
-		for _, rattrs := range response.Obligation {
-			if rattrs.Id == PolicyIdFieldName {
-				attrs = append(attrs, &pb.Attribute{Id: PolicyIdFieldName, Type: "string", Value: rattrs.Value})
-				break
-			}
-		}
+		attrs = append(attrs, &pb.Attribute{Id: "policy_id", Type: "string", Value: response.PolicyId})
 		return p.handlePermit(ctx, w, r, attrs)
 	}
 
