@@ -23,6 +23,10 @@ import (
 )
 
 const (
+	PolicyIdFieldName = "policy_id"
+)
+
+const (
 	EDNS0_MAP_DATA_TYPE_BYTES = iota
 	EDNS0_MAP_DATA_TYPE_HEX   = iota
 	EDNS0_MAP_DATA_TYPE_IP    = iota
@@ -51,9 +55,16 @@ type PolicyMiddleware struct {
 	ErrorFunc func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
 }
 
+type Attribute struct {
+	Id    string
+	Type  string
+	Value string
+}
+
 type Response struct {
-	Permit   bool   `pdp:"Effect"`
-	Redirect net.IP `pdp:"redirect_to"`
+	Permit     bool   `pdp:"Effect"`
+	Redirect   net.IP `pdp:"redirect_to"`
+	Obligation []*Attribute
 }
 
 func (p *PolicyMiddleware) Connect() error {
@@ -142,7 +153,7 @@ func (r *NewLocalResponseWriter) WriteMsg(m *dns.Msg) error { r.Msg = m; return 
 // This function validates the response from middleware
 // Inputs are - context.Context, dns.ResponseWriter, *dns.Msg, policy_id, attrs
 // Outputs are - int, error
-func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, policy_id string, attrs []*pb.Attribute) (int, error) {
+func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, attrs []*pb.Attribute) (int, error) {
 	lw := new(NewLocalResponseWriter)
 	status, err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lw, r)
 	if err != nil {
@@ -162,7 +173,6 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 		}
 	}
 
-	attrs = append(attrs, &pb.Attribute{Id: "policy_id", Type: "string", Value: policy_id})
 	var lresponse Response
 	err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &lresponse)
 
@@ -211,7 +221,13 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 	}
 
 	if response.Permit {
-		return p.handlePermit(ctx, w, r, "SECURITY_POLICY_1790", attrs)
+		for _, rattrs := range response.Obligation {
+			if rattrs.Id == PolicyIdFieldName {
+				attrs = append(attrs, &pb.Attribute{Id: PolicyIdFieldName, Type: "string", Value: rattrs.Value})
+				break
+			}
+		}
+		return p.handlePermit(ctx, w, r, attrs)
 	}
 
 	if response.Redirect != nil {
