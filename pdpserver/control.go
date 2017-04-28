@@ -7,9 +7,9 @@ import (
 	"golang.org/x/net/context"
 	"io"
 
-	pb "github.com/infobloxopen/policy-box/pdp-control"
+	pb "github.com/infobloxopen/themis/pdp-control"
 
-	"github.com/infobloxopen/policy-box/pdp"
+	"github.com/infobloxopen/themis/pdp"
 )
 
 func collect(stream pb.PDPControl_UploadServer) ([]byte, error) {

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	pb "github.com/infobloxopen/policy-box/pdp-service"
+	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
 type DummyStruct struct {

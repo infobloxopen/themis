@@ -12,8 +12,8 @@ import (
 	"github.com/coredns/coredns/middleware/pkg/trace"
 	"github.com/coredns/coredns/request"
 
-	pb "github.com/infobloxopen/policy-box/pdp-service"
-	"github.com/infobloxopen/policy-box/pep"
+	pb "github.com/infobloxopen/themis/pdp-service"
+	"github.com/infobloxopen/themis/pep"
 
 	"github.com/miekg/dns"
 

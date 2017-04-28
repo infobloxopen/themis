@@ -1,4 +1,4 @@
-POLICYBOX=github.com/infobloxopen/policy-box
+THEMIS=github.com/infobloxopen/themis
 TESTABLE=pdp pep
 BUILDABLE=$(TESTABLE) papcli pdp-control pdpctrl-client pdpserver pdp-service pepcli
 
@@ -30,13 +30,13 @@ check: fmt build
 .PHONY: test
 test: check
 	for i in $(TESTABLE); do \
-	 go test $(TEST_VERBOSE) $(POLICYBOX)/$$i; \
+	 go test $(TEST_VERBOSE) $(THEMIS)/$$i; \
 	done
 
 .PHONY: coverage
 coverage: check
 	rm -f coverage.txt
 	for i in $(TESTABLE); do \
-	 go test $(TEST_VERBOSE) -race -coverprofile=cover.out -covermode=atomic $(POLICYBOX)/$$i; \
+	 go test $(TEST_VERBOSE) -race -coverprofile=cover.out -covermode=atomic $(THEMIS)/$$i; \
 	 cat cover.out >> coverage.txt ; \
 	done

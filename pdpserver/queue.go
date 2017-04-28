@@ -5,7 +5,7 @@ import (
 	"math"
 	"sync"
 
-	"github.com/infobloxopen/policy-box/pdp"
+	"github.com/infobloxopen/themis/pdp"
 )
 
 type Content struct {

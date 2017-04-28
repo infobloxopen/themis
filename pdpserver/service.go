@@ -9,9 +9,9 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	pb "github.com/infobloxopen/policy-box/pdp-service"
+	pb "github.com/infobloxopen/themis/pdp-service"
 
-	"github.com/infobloxopen/policy-box/pdp"
+	"github.com/infobloxopen/themis/pdp"
 )
 
 type AttrMarshaller func(v pdp.AttributeValueType) (string, error)
