@@ -51,9 +51,16 @@ type PolicyMiddleware struct {
 	ErrorFunc func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
 }
 
+type Attribute struct {
+	Id    string
+	Type  string
+	Value string
+}
+
 type Response struct {
 	Permit   bool   `pdp:"Effect"`
 	Redirect net.IP `pdp:"redirect_to"`
+	PolicyId string `pdp:"policy_id"`
 }
 
 func (p *PolicyMiddleware) Connect() error {
@@ -119,6 +126,63 @@ func (p *PolicyMiddleware) getEDNS0Attrs(r *dns.Msg) ([]*pb.Attribute, bool) {
 	return attrs, foundSourceIP
 }
 
+type NewLocalResponseWriter struct {
+	localAddr  net.Addr
+	remoteAddr net.Addr
+	Msg        *dns.Msg
+}
+
+func (r *NewLocalResponseWriter) Write(b []byte) (int, error) {
+	r.Msg = new(dns.Msg)
+	return len(b), r.Msg.Unpack(b)
+}
+
+// These methods implement the dns.ResponseWriter interface from Go DNS.
+func (r *NewLocalResponseWriter) Close() error              { return nil }
+func (r *NewLocalResponseWriter) TsigStatus() error         { return nil }
+func (r *NewLocalResponseWriter) TsigTimersOnly(b bool)     { return }
+func (r *NewLocalResponseWriter) Hijack()                   { return }
+func (r *NewLocalResponseWriter) LocalAddr() net.Addr       { return r.localAddr }
+func (r *NewLocalResponseWriter) RemoteAddr() net.Addr      { return r.remoteAddr }
+func (r *NewLocalResponseWriter) WriteMsg(m *dns.Msg) error { r.Msg = m; return nil }
+
+func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, attrs []*pb.Attribute) (int, error) {
+	lw := new(NewLocalResponseWriter)
+	status, err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lw, r)
+	if err != nil {
+		return status, err
+	}
+
+	attrs[0].Value = "response"
+	for _, rr := range lw.Msg.Answer {
+		switch rr.Header().Rrtype {
+		case dns.TypeA, dns.TypeAAAA:
+			if a, ok := rr.(*dns.A); ok {
+				attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: a.A.String()})
+			} else if a, ok := rr.(*dns.AAAA); ok {
+				attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: a.AAAA.String()})
+			}
+		default:
+		}
+	}
+
+	var lresponse Response
+	err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &lresponse)
+
+	if err != nil {
+		return dns.RcodeServerFailure, err
+	}
+
+	if !lresponse.Permit {
+		return dns.RcodeRefused, nil
+	}
+	if lresponse.Redirect != nil {
+		return p.redirect(lresponse.Redirect.String(), lw, lw.Msg)
+	}
+	w.WriteMsg(lw.Msg)
+	return status, nil
+}
+
 func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	state := request.Request{W: w, Req: r}
 
@@ -150,7 +214,8 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 	}
 
 	if response.Permit {
-		return middleware.NextOrFailure(p.Name(), p.Next, ctx, w, r)
+		attrs = append(attrs, &pb.Attribute{Id: "policy_id", Type: "string", Value: response.PolicyId})
+		return p.handlePermit(ctx, w, r, attrs)
 	}
 
 	if response.Redirect != nil {
