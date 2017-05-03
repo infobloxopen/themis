@@ -7,14 +7,8 @@ TEST_VERBOSE=-v
 
 all: check
 
-.PHONY: deps
-deps:
-	for i in $(BUILDABLE); do \
-		(echo $$i; cd $$i; go get $(BUILD_VERBOSE)) \
-	done
-
 .PHONY: build
-build: deps
+build:
 	for i in $(BUILDABLE); do \
 		(echo $$i; cd $$i; go build $(BUILD_VERBOSE)) \
 	done
