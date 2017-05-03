@@ -22,3 +22,8 @@ _testmain.go
 *.exe
 *.test
 *.prof
+
+# Binary files
+papcli/papcli
+pdpserver/pdpserver
+pepcli/pepcli

@@ -47,7 +47,7 @@ type PolicyMiddleware struct {
 	EDNS0Map  []edns0Map
 	Trace     middleware.Handler
 	Next      middleware.Handler
-	pdp       *pep.Client
+	pdp       pep.Client
 	ErrorFunc func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
 }
 
