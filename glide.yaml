@@ -42,7 +42,3 @@ import:
   - naming
 - package: gopkg.in/yaml.v2
   version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
-testImport:
-- package: github.com/infobloxopen/policy-box
-  subpackages:
-  - pdp-service

@@ -1,5 +1,5 @@
-hash: 958f5033c7b2503d8ba89a659b121ffa44c65642ea7a7d0376934364457bf9b7
-updated: 2017-05-03T18:25:41.724721716+03:00
+hash: 64a5323534d42db1ea81bd67312acfe3a05760400f2bf66eff8bfb84723b41b6
+updated: 2017-05-03T19:45:14.230591493+03:00
 imports:
 - name: github.com/apache/thrift
   version: 19baeefd8c38d62085891d7956349601f79448b3
@@ -155,8 +155,4 @@ imports:
   - transport
 - name: gopkg.in/yaml.v2
   version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
-testImports:
-- name: github.com/infobloxopen/policy-box
-  version: 9b1944f4b195d0173e7b69371d1daae642a5170b
-  subpackages:
-  - pdp-service
+testImports: []
