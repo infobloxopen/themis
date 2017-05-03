@@ -2,7 +2,7 @@ package policy
 
 import (
 	"context"
-	pb "github.com/infobloxopen/policy-box/pdp-service"
+	pb "github.com/infobloxopen/themis/pdp-service"
 	"github.com/miekg/dns"
 	"testing"
 )
