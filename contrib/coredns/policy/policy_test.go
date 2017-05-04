@@ -26,7 +26,7 @@ func (f TestMiddlewareHandler) ServeDNS(ctx context.Context, w dns.ResponseWrite
 	var rr6 dns.RR
 	rr6 = new(dns.AAAA)
 	rr6.(*dns.AAAA).Hdr = dns.RR_Header{Name: "example.com", Rrtype: dns.TypeAAAA, Class: dns.ClassINET}
-	rr6.(*dns.AAAA).AAAA = net.ParseIP("::1").To16()
+	rr6.(*dns.AAAA).AAAA = net.ParseIP("21DA:D3:0:2F3B:2AA:FF:FE28:9C5A").To16()
 	r.Answer = []dns.RR{rr4, rr6}
 
 	w.WriteMsg(r)
