@@ -19,6 +19,16 @@ type TestMiddlewareHandler struct {
 }
 
 func (f TestMiddlewareHandler) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+	var rr4 dns.RR
+	rr4 = new(dns.A)
+	rr4.(*dns.A).Hdr = dns.RR_Header{Name: "example.com", Rrtype: dns.TypeA, Class: dns.ClassINET}
+	rr4.(*dns.A).A = net.ParseIP("10.10.10.10").To4()
+	var rr6 dns.RR
+	rr6 = new(dns.AAAA)
+	rr6.(*dns.AAAA).Hdr = dns.RR_Header{Name: "example.com", Rrtype: dns.TypeAAAA, Class: dns.ClassINET}
+	rr6.(*dns.AAAA).AAAA = net.ParseIP("21DA:D3:0:2F3B:2AA:FF:FE28:9C5A").To16()
+	r.Answer = []dns.RR{rr4, rr6}
+
 	w.WriteMsg(r)
 	return f.status, f.err
 }
@@ -123,23 +133,16 @@ func TestHandlePermit(t *testing.T) {
 		},
 	}
 
-	r := new(NewLocalResponseWriter)
+	w := new(NewLocalResponseWriter)
 	TestMiddleware := TestMiddlewareHandler{}
 	p := new(PolicyMiddleware)
 	c := pep.NewTestClient()
 	p.pdp = c
 
-	m := new(dns.Msg)
-	m.SetReply(m)
-	m.SetQuestion("example.com.", dns.TypeANY)
+	r := new(dns.Msg)
+	r.SetReply(r)
+	r.SetQuestion("www.example.com.", dns.TypeANY)
 	ctx := context.Background()
-
-	var rr dns.RR
-	rr = new(dns.A)
-	rr.(*dns.A).Hdr = dns.RR_Header{Name: "example.com", Rrtype: dns.TypeA, Class: dns.ClassINET}
-	rr.(*dns.A).A = net.ParseIP("10.10.10.10").To4()
-	m.Answer = []dns.RR{rr}
-	r.WriteMsg(m)
 
 	attrs := []*pdp.Attribute{{Id: "type", Type: "string", Value: "query"}}
 	attrs = append(attrs, &pdp.Attribute{Id: "domain_name", Type: "domain", Value: strings.TrimRight("www.example.com", ".")})
@@ -150,7 +153,7 @@ func TestHandlePermit(t *testing.T) {
 		p.Next = middleware.Handler(TestMiddleware)
 
 		c.NextResponse = ut.c.ValidationResultMiddlewareResponse
-		status, err := p.handlePermit(ctx, r, m, attrs)
+		status, err := p.handlePermit(ctx, w, r, attrs)
 		if !reflect.DeepEqual(err, ut.expectedErr) {
 			t.Errorf("Expected err to be %q but it was %q", ut.expectedErr, err)
 		}
