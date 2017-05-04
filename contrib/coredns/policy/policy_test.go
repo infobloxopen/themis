@@ -1,23 +1,21 @@
 package policy
 
-
 import (
-	"strings"
-	"net"
+	"fmt"
+	"github.com/coredns/coredns/middleware"
 	pdp "github.com/infobloxopen/themis/pdp-service"
 	pep "github.com/infobloxopen/themis/pep"
 	"github.com/miekg/dns"
-	"testing"
-	"reflect"
-	"github.com/coredns/coredns/middleware"
 	"golang.org/x/net/context"
-	"fmt"
+	"net"
+	"reflect"
+	"strings"
+	"testing"
 )
-
 
 type TestMiddlewareHandler struct {
 	status int
-	err error
+	err    error
 }
 
 func (f TestMiddlewareHandler) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
@@ -26,114 +24,110 @@ func (f TestMiddlewareHandler) ServeDNS(ctx context.Context, w dns.ResponseWrite
 }
 func (f TestMiddlewareHandler) Name() string { return "handlerfunc" }
 
-type  TestCaseInfo struct {
-	MiddlewareErr				error
-	MiddlewareStatus			int
-	ValidationResultMiddlewareResponse 	*pdp.Response
+type TestCaseInfo struct {
+	MiddlewareErr                      error
+	MiddlewareStatus                   int
+	ValidationResultMiddlewareResponse *pdp.Response
 }
 
 func TestHandlePermit(t *testing.T) {
 
 	cases := []struct {
-			c 		TestCaseInfo
-			expectedStatus  int
-			expectedErr   	error
-
+		c              TestCaseInfo
+		expectedStatus int
+		expectedErr    error
 	}{
 		{
 			c: TestCaseInfo{
-				MiddlewareErr: fmt.Errorf("Error"),
-				MiddlewareStatus: dns.RcodeServerFailure,
+				MiddlewareErr:                      fmt.Errorf("Error"),
+				MiddlewareStatus:                   dns.RcodeServerFailure,
 				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_DENY},
 			},
 			expectedStatus: dns.RcodeServerFailure,
-			expectedErr: fmt.Errorf("Error"),
+			expectedErr:    fmt.Errorf("Error"),
 		},
 		{
 			c: TestCaseInfo{
-				MiddlewareErr: fmt.Errorf("Error"),
+				MiddlewareErr:                      fmt.Errorf("Error"),
+				MiddlewareStatus:                   dns.RcodeSuccess,
+				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_DENY},
+			},
+			expectedStatus: dns.RcodeSuccess,
+			expectedErr:    fmt.Errorf("Error"),
+		},
+		{
+			c: TestCaseInfo{
+				MiddlewareErr:                      nil,
+				MiddlewareStatus:                   dns.RcodeServerFailure,
+				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_DENY},
+			},
+			expectedStatus: dns.RcodeRefused,
+			expectedErr:    nil,
+		},
+		{
+			c: TestCaseInfo{
+				MiddlewareErr:                      nil,
+				MiddlewareStatus:                   dns.RcodeRefused,
+				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_PERMIT},
+			},
+			expectedStatus: dns.RcodeRefused,
+			expectedErr:    nil,
+		},
+		{
+			c: TestCaseInfo{
+				MiddlewareErr:                      nil,
+				MiddlewareStatus:                   dns.RcodeSuccess,
+				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_PERMIT},
+			},
+			expectedStatus: dns.RcodeSuccess,
+			expectedErr:    nil,
+		},
+		{
+			c: TestCaseInfo{
+				MiddlewareErr:                      nil,
+				MiddlewareStatus:                   dns.RcodeServerFailure,
+				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_PERMIT},
+			},
+			expectedStatus: dns.RcodeServerFailure,
+			expectedErr:    nil,
+		},
+		{
+			c: TestCaseInfo{
+				MiddlewareErr:    nil,
 				MiddlewareStatus: dns.RcodeSuccess,
-				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_DENY},
+				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_PERMIT,
+					Obligation: []*pdp.Attribute{{"redirect_to", "address", "221.228.88.194"}}},
 			},
 			expectedStatus: dns.RcodeSuccess,
-			expectedErr: fmt.Errorf("Error"),
+			expectedErr:    nil,
 		},
 		{
 			c: TestCaseInfo{
-				MiddlewareErr: nil,
+				MiddlewareErr:    nil,
 				MiddlewareStatus: dns.RcodeServerFailure,
-				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_DENY},
-			},
-			expectedStatus: dns.RcodeRefused,
-			expectedErr: nil,
-		},
-		{
-			c: TestCaseInfo{
-				MiddlewareErr: nil,
-				MiddlewareStatus: dns.RcodeRefused,
-				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_PERMIT},
-			},
-			expectedStatus: dns.RcodeRefused,
-			expectedErr: nil,
-		},
-		{
-			c: TestCaseInfo{
-				MiddlewareErr:                      nil,
-				MiddlewareStatus:                   dns.RcodeSuccess,
-				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_PERMIT},
-			},
-			expectedStatus: dns.RcodeSuccess,
-			expectedErr: nil,
-		},
-		{
-			c: TestCaseInfo{
-				MiddlewareErr:                      nil,
-				MiddlewareStatus:                   dns.RcodeServerFailure,
-				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_PERMIT},
-			},
-			expectedStatus: dns.RcodeServerFailure,
-			expectedErr: nil,
-		},
-		{
-			c: TestCaseInfo{
-				MiddlewareErr:                      nil,
-				MiddlewareStatus:                   dns.RcodeSuccess,
 				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_PERMIT,
 					Obligation: []*pdp.Attribute{{"redirect_to", "address", "221.228.88.194"}}},
 			},
 			expectedStatus: dns.RcodeSuccess,
-			expectedErr: nil,
+			expectedErr:    nil,
 		},
 		{
 			c: TestCaseInfo{
-				MiddlewareErr:                      nil,
-				MiddlewareStatus:                   dns.RcodeServerFailure,
+				MiddlewareErr:    nil,
+				MiddlewareStatus: dns.RcodeBadCookie,
 				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_PERMIT,
 					Obligation: []*pdp.Attribute{{"redirect_to", "address", "221.228.88.194"}}},
 			},
 			expectedStatus: dns.RcodeSuccess,
-			expectedErr: nil,
+			expectedErr:    nil,
 		},
-		{
-			c: TestCaseInfo{
-				MiddlewareErr:                      nil,
-				MiddlewareStatus:                   dns.RcodeBadCookie,
-				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_PERMIT,
-					Obligation: []*pdp.Attribute{{"redirect_to", "address", "221.228.88.194"}}},
-			},
-			expectedStatus: dns.RcodeSuccess,
-			expectedErr: nil,
-		},
-
 	}
-
 
 	r := new(NewLocalResponseWriter)
 	TestMiddleware := TestMiddlewareHandler{}
 	p := new(PolicyMiddleware)
 	c := pep.NewTestClient()
 	p.pdp = c
-
 
 	m := new(dns.Msg)
 	m.SetReply(m)
