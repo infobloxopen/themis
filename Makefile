@@ -1,5 +1,5 @@
 THEMIS=github.com/infobloxopen/themis
-TESTABLE=pdp pep
+TESTABLE=pdp pep contrib/coredns/policy
 BUILDABLE=$(TESTABLE) papcli pdp-control pdpctrl-client pdpserver pdp-service pepcli
 
 BUILD_VERBOSE=-v
