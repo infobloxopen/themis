@@ -141,8 +141,8 @@ func TestHandlePermit(t *testing.T) {
 	m.Answer = []dns.RR{rr}
 	r.WriteMsg(m)
 
-	attrs := []*pdp.Attribute{&pdp.Attribute{Id: "type", Type: "string", Value: "query"}}
-	attrs = append(attrs, &pdp.Attribute{Id: "domain_name", Type: "domain", Value: strings.TrimRight("www.fail.com", ".")})
+	attrs := []*pdp.Attribute{{Id: "type", Type: "string", Value: "query"}}
+	attrs = append(attrs, &pdp.Attribute{Id: "domain_name", Type: "domain", Value: strings.TrimRight("www.example.com", ".")})
 
 	for _, ut := range cases {
 		TestMiddleware.err = ut.c.MiddlewareErr
