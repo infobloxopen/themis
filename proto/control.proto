@@ -11,12 +11,15 @@ service PDPControl {
 message Item {
   enum DataType {
     POLICIES = 0;
-    CONTENT  = 1;
+    CONTENT = 1;
+    POLICIES_PATCH = 2;
+    CONTENT_PATCH = 3;
   }
-           DataType type     = 1;
-           int32    dataId   = 2;
-           string   id       = 3;
-  repeated int32    includes = 4;
+  DataType type = 1;
+  string version = 2;
+  int32 dataId = 3;
+  string id = 4;
+  repeated int32 includes = 5;
 }
 
 message Chunk {
@@ -29,10 +32,11 @@ message Update {
 
 message Response {
   enum Status {
-    ACK   = 0;
+    ACK = 0;
     ERROR = 1;
+    VERSION = 2;
   }
-  Status status  = 1;
-  int32 id       = 2;
+  Status status = 1;
+  int32 id = 2;
   string details = 3;
 }

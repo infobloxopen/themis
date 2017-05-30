@@ -3,6 +3,7 @@ package pdpctrl_client
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-control && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/control.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-control && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-control"
 
 import (
+	"errors"
 	"time"
 
 	"golang.org/x/net/context"
@@ -11,37 +12,48 @@ import (
 	pb "github.com/infobloxopen/themis/pdp-control"
 )
 
+type Logger interface {
+	Infof(format string, a ...interface{})
+	Errorf(format string, a ...interface{})
+}
+
 type Host struct {
 	address string
 	chunk   int
 
 	conn   *grpc.ClientConn
-	client *pb.PDPControlClient
+	client pb.PDPControlClient
 
 	ready  bool
 	policy int32
+
+	log Logger
 }
 
-func NewHost(addr string, chunk int) *Host {
-	return &Host{addr, chunk, nil, nil, false, -1}
+func NewHost(addr string, chunk int, log Logger) *Host {
+	return &Host{
+		address: addr,
+		chunk:   chunk,
+		policy:  -1,
+		log:     log,
+	}
 }
 
-func (h *Host) connect(timeout time.Duration, log Logger) error {
-	log.Infof("Connecting to %s...", h.address)
+func (h *Host) Connect(timeout time.Duration) error {
+	h.log.Infof("Connecting to %s...", h.address)
 	conn, err := grpc.Dial(h.address, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(timeout))
 	if err != nil {
-		log.Errorf("Can't connect to %s: %v. Skipping...", h.address, err)
+		h.log.Errorf("Can't connect to %s: %v. Skipping...", h.address, err)
 		return err
 	}
 
 	h.conn = conn
+	h.client = pb.NewPDPControlClient(h.conn)
 
-	client := pb.NewPDPControlClient(h.conn)
-	h.client = &client
 	return nil
 }
 
-func (h *Host) close() {
+func (h *Host) Close() {
 	if h.conn != nil {
 		h.conn.Close()
 	}
@@ -49,19 +61,31 @@ func (h *Host) close() {
 	h.client = nil
 }
 
-func (h *Host) uploadIncludes(includes map[string][]byte, log Logger) []int32 {
+func (h *Host) Process(patch bool, version string, includes map[string][]byte, policy []byte) error {
+	if err := h.upload(patch, version, includes, policy); err != nil {
+		return err
+	}
+
+	if err := h.apply(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (h *Host) uploadIncludes(patch bool, version string, includes map[string][]byte) ([]int32, error) {
 	if h.client == nil {
-		return nil
+		return nil, nil
 	}
 
 	IDs := []int32{}
 	for ID, b := range includes {
-		log.Infof("Uploading %q content to %s...", ID, h.address)
+		h.log.Infof("Uploading %q content to %s...", ID, h.address)
 
-		stream, err := (*h.client).Upload(context.Background())
+		stream, err := h.client.Upload(context.Background())
 		if err != nil {
-			log.Errorf("Can't start content uploading: %v. Skipping the host...", err)
-			return nil
+			h.log.Errorf("Can't start content uploading: %v. Skipping the host...", err)
+			return nil, err
 		}
 
 		for offset := 0; offset < len(b); offset += h.chunk {
@@ -73,51 +97,64 @@ func (h *Host) uploadIncludes(includes map[string][]byte, log Logger) []int32 {
 			}
 
 			if err := stream.Send(&pb.Chunk{string(c)}); err != nil {
-				log.Errorf("Can't upload %d bytes starting %d: %v. Skipping the host...", len(c), offset, err)
-				return nil
+				h.log.Errorf("Can't upload %d bytes starting %d: %v. Skipping the host...", len(c), offset, err)
+				return nil, err
 			}
 		}
 
 		r, err := stream.CloseAndRecv()
 		if err != nil {
-			log.Errorf("Can't finish content uploading: %v. Skipping the host...", err)
-			return nil
+			h.log.Errorf("Can't finish content uploading: %v. Skipping the host...", err)
+			return nil, err
 		}
 
 		if r.Status != pb.Response_ACK {
-			log.Errorf("Error while loading content to the host: %s. Skipping the host...", r.Details)
-			return nil
+			h.log.Errorf("Error while loading content to the host: %s. Skipping the host...", r.Details)
+			return nil, errors.New(r.Details)
 		}
 
-		item := pb.Item{pb.Item_CONTENT, r.Id, ID, nil}
-		r, err = (*h.client).Parse(context.Background(), &item)
+		var dtype pb.Item_DataType
+		if patch {
+			dtype = pb.Item_CONTENT_PATCH
+		} else {
+			dtype = pb.Item_CONTENT
+		}
+
+		item := &pb.Item{
+			Type:    dtype,
+			Version: version,
+			DataId:  r.Id,
+			Id:      ID,
+		}
+
+		r, err = h.client.Parse(context.Background(), item)
 		if err != nil {
-			log.Errorf("Can't parse uploaded content: %v. Skipping the host...", err)
-			return nil
+			h.log.Errorf("Can't parse uploaded content: %v. Skipping the host...", err)
+			return nil, err
 		}
 
 		if r.Status != pb.Response_ACK {
-			log.Errorf("Error while parsing uploaded content: %s. Skipping the host...", r.Details)
-			return nil
+			h.log.Errorf("Error while parsing uploaded content: %s. Skipping the host...", r.Details)
+			return nil, errors.New(r.Details)
 		}
 
 		IDs = append(IDs, r.Id)
 	}
 
-	return IDs
+	return IDs, nil
 }
 
-func (h *Host) uploadPolicy(policy []byte, IDs []int32, log Logger) {
+func (h *Host) uploadPolicy(patch bool, version string, policy []byte, IDs []int32) error {
 	if IDs == nil {
-		return
+		return nil
 	}
 
-	log.Infof("Uploading policy to %s...", h.address)
+	h.log.Infof("Uploading policy to %s...", h.address)
 
-	stream, err := (*h.client).Upload(context.Background())
+	stream, err := h.client.Upload(context.Background())
 	if err != nil {
-		log.Errorf("Can't start policy uploading: %v. Skipping the host...", err)
-		return
+		h.log.Errorf("Can't start policy uploading: %v. Skipping the host...", err)
+		return err
 	}
 
 	for offset := 0; offset < len(policy); offset += h.chunk {
@@ -129,60 +166,86 @@ func (h *Host) uploadPolicy(policy []byte, IDs []int32, log Logger) {
 		}
 
 		if err := stream.Send(&pb.Chunk{string(c)}); err != nil {
-			log.Errorf("Can't upload %d bytes starting %d: %v. Skipping the host...", len(c), offset, err)
-			return
+			h.log.Errorf("Can't upload %d bytes starting %d: %v. Skipping the host...", len(c), offset, err)
+			return err
 		}
 	}
 
 	r, err := stream.CloseAndRecv()
 	if err != nil {
-		log.Errorf("Can't finish policy uploading: %v. Skipping the host...", err)
-		return
+		h.log.Errorf("Can't finish policy uploading: %v. Skipping the host...", err)
+		return err
 	}
 
 	if r.Status != pb.Response_ACK {
-		log.Errorf("Error while loading policy to the host: %s. Skipping the host...", r.Details)
-		return
+		h.log.Errorf("Error while loading policy to the host: %s. Skipping the host...", r.Details)
+		return errors.New(r.Details)
 	}
 
-	item := pb.Item{pb.Item_POLICIES, r.Id, "", IDs}
-	r, err = (*h.client).Parse(context.Background(), &item)
+	var dtype pb.Item_DataType
+	if patch {
+		dtype = pb.Item_POLICIES_PATCH
+	} else {
+		dtype = pb.Item_POLICIES
+	}
+
+	item := &pb.Item{
+		Type:     dtype,
+		Version:  version,
+		DataId:   r.Id,
+		Includes: IDs,
+	}
+
+	r, err = h.client.Parse(context.Background(), item)
 	if err != nil {
-		log.Errorf("Can't parse policy: %v. Skipping host...", err)
-		return
+		h.log.Errorf("Can't parse policy: %v. Skipping host...", err)
+		return err
 	}
 
 	if r.Status != pb.Response_ACK {
-		log.Errorf("Error while parsing policy at the host %s. Skipping the host...", r.Details)
-		return
+		h.log.Errorf("Error while parsing policy at the host %s. Skipping the host...", r.Details)
+		return errors.New(r.Details)
 	}
 
 	h.policy = r.Id
 	h.ready = true
+
+	return nil
 }
 
-func (h *Host) upload(includes map[string][]byte, policy []byte, log Logger) {
-	h.uploadPolicy(policy, h.uploadIncludes(includes, log), log)
-}
-
-func (h *Host) apply(log Logger) {
-	if !h.ready {
-		return
+func (h *Host) upload(patch bool, version string, includes map[string][]byte, policy []byte) error {
+	ids, err := h.uploadIncludes(patch, version, includes)
+	if err != nil {
+		return err
 	}
 
-	log.Infof("Applying policy to host %s...", h.address)
+	if err := h.uploadPolicy(patch, version, policy, ids); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (h *Host) apply() error {
+	if !h.ready {
+		return nil
+	}
+
+	h.log.Infof("Applying policy to host %s...", h.address)
 
 	update := pb.Update{h.policy}
-	r, err := (*h.client).Apply(context.Background(), &update)
+	r, err := h.client.Apply(context.Background(), &update)
 	if err != nil {
-		log.Errorf("Can't apply policy: %v", err)
-		return
+		h.log.Errorf("Can't apply policy: %v", err)
+		return err
 	}
 
 	if r.Status != pb.Response_ACK {
-		log.Errorf("Error while applying policy to the host %s", r.Details)
-		return
+		h.log.Errorf("Error while applying policy to the host %s", r.Details)
+		return errors.New(r.Details)
 	}
 
-	log.Infof("Policy has been applied.")
+	h.log.Infof("Policy has been applied.")
+
+	return nil
 }

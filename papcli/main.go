@@ -17,14 +17,23 @@ func main() {
 		panic(err)
 	}
 
-	cluster := pdpctrl.NewCluster(config.Addresses, config.Chunk, log.StandardLogger())
-	err = cluster.Connect(config.Timeout)
-	if err != nil {
-		panic(err)
-	}
-	defer cluster.Close()
+	hosts := []*pdpctrl.Host{}
 
-	cluster.Process(includes, policy)
+	for _, addr := range config.Addresses {
+		h := pdpctrl.NewHost(addr, config.Chunk, log.StandardLogger())
+		if err := h.Connect(config.Timeout); err != nil {
+			panic(err)
+		}
+
+		hosts = append(hosts, h)
+		defer h.Close()
+	}
+
+	for _, h := range hosts {
+		if err := h.Process(false, "", includes, policy); err != nil {
+			log.Errorf("Faile to process PDP data: %v", err)
+		}
+	}
 }
 
 func read(policy string, includes StringSet) ([]byte, map[string][]byte, error) {
