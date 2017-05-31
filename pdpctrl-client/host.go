@@ -4,6 +4,7 @@ package pdpctrl_client
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"golang.org/x/net/context"
@@ -28,6 +29,14 @@ type Host struct {
 	policy int32
 
 	log Logger
+}
+
+type VersionError struct {
+	version string
+}
+
+func (e * VersionError) Error() string {
+	return e.version
 }
 
 func NewHost(addr string, chunk int, log Logger) *Host {
@@ -133,12 +142,18 @@ func (h *Host) uploadIncludes(patch bool, version string, includes map[string][]
 			return nil, err
 		}
 
-		if r.Status != pb.Response_ACK {
+		switch r.Status {
+		case pb.Response_ACK:
+			IDs = append(IDs, r.Id)
+		case pb.Response_VERSION_ERROR:
+			h.log.Errorf("Incorrect %s data version. Current version is %s", version, r.Details)
+			return nil, &VersionError{version: r.Details}
+		case pb.Response_ERROR:
 			h.log.Errorf("Error while parsing uploaded content: %s. Skipping the host...", r.Details)
 			return nil, errors.New(r.Details)
+		default:
+			return nil, fmt.Errorf("Unexpected %s response status", r.Details)
 		}
-
-		IDs = append(IDs, r.Id)
 	}
 
 	return IDs, nil

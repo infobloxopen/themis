@@ -31,7 +31,7 @@ func main() {
 
 	for _, h := range hosts {
 		if err := h.Process(false, "", includes, policy); err != nil {
-			log.Errorf("Faile to process PDP data: %v", err)
+			log.Errorf("Failed to process PDP data: %v", err)
 		}
 	}
 }

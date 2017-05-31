@@ -34,7 +34,7 @@ message Response {
   enum Status {
     ACK = 0;
     ERROR = 1;
-    VERSION = 2;
+    VERSION_ERROR = 2;
   }
   Status status = 1;
   int32 id = 2;
