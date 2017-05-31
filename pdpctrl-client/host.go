@@ -35,7 +35,7 @@ type VersionError struct {
 	version string
 }
 
-func (e * VersionError) Error() string {
+func (e *VersionError) Error() string {
 	return e.version
 }
 
