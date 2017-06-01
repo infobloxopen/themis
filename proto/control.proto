@@ -12,14 +12,13 @@ message Item {
   enum DataType {
     POLICIES = 0;
     CONTENT = 1;
-    POLICIES_PATCH = 2;
-    CONTENT_PATCH = 3;
   }
   DataType type = 1;
-  string version = 2;
-  int32 dataId = 3;
-  string id = 4;
-  repeated int32 includes = 5;
+  string fromVersion = 2;
+  string toVersion = 3;
+  int32 dataId = 4;
+  string id = 5;
+  repeated int32 includes = 6;
 }
 
 message Chunk {

@@ -4,7 +4,6 @@ package pdpctrl_client
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"golang.org/x/net/context"
@@ -25,10 +24,16 @@ type Host struct {
 	conn   *grpc.ClientConn
 	client pb.PDPControlClient
 
-	ready  bool
-	policy int32
-
 	log Logger
+}
+
+type DataBucket struct {
+	ID int32
+
+	FromVersion, ToVersion string
+
+	Policies []byte
+	Includes map[string][]byte
 }
 
 type VersionError struct {
@@ -43,7 +48,6 @@ func NewHost(addr string, chunk int, log Logger) *Host {
 	return &Host{
 		address: addr,
 		chunk:   chunk,
-		policy:  -1,
 		log:     log,
 	}
 }
@@ -70,197 +74,136 @@ func (h *Host) Close() {
 	h.client = nil
 }
 
-func (h *Host) Process(patch bool, version string, includes map[string][]byte, policy []byte) error {
-	if err := h.upload(patch, version, includes, policy); err != nil {
+func (h *Host) Upload(bucket *DataBucket) error {
+	h.log.Infof("Uploading PDP data to host %s...", h.address)
+
+	iids, err := h.uploadIncludes(bucket)
+	if err != nil {
 		return err
 	}
 
-	if err := h.apply(); err != nil {
+	if err := h.uploadPolicies(bucket, iids); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (h *Host) uploadIncludes(patch bool, version string, includes map[string][]byte) ([]int32, error) {
-	if h.client == nil {
-		return nil, nil
-	}
+func (h *Host) Apply(bucketId int32) error {
+	h.log.Infof("Applying policies to host %s...", h.address)
 
-	IDs := []int32{}
-	for ID, b := range includes {
-		h.log.Infof("Uploading %q content to %s...", ID, h.address)
-
-		stream, err := h.client.Upload(context.Background())
-		if err != nil {
-			h.log.Errorf("Can't start content uploading: %v. Skipping the host...", err)
-			return nil, err
-		}
-
-		for offset := 0; offset < len(b); offset += h.chunk {
-			var c []byte
-			if len(b) < offset+h.chunk {
-				c = b[offset:]
-			} else {
-				c = b[offset : offset+h.chunk]
-			}
-
-			if err := stream.Send(&pb.Chunk{string(c)}); err != nil {
-				h.log.Errorf("Can't upload %d bytes starting %d: %v. Skipping the host...", len(c), offset, err)
-				return nil, err
-			}
-		}
-
-		r, err := stream.CloseAndRecv()
-		if err != nil {
-			h.log.Errorf("Can't finish content uploading: %v. Skipping the host...", err)
-			return nil, err
-		}
-
-		if r.Status != pb.Response_ACK {
-			h.log.Errorf("Error while loading content to the host: %s. Skipping the host...", r.Details)
-			return nil, errors.New(r.Details)
-		}
-
-		var dtype pb.Item_DataType
-		if patch {
-			dtype = pb.Item_CONTENT_PATCH
-		} else {
-			dtype = pb.Item_CONTENT
-		}
-
-		item := &pb.Item{
-			Type:    dtype,
-			Version: version,
-			DataId:  r.Id,
-			Id:      ID,
-		}
-
-		r, err = h.client.Parse(context.Background(), item)
-		if err != nil {
-			h.log.Errorf("Can't parse uploaded content: %v. Skipping the host...", err)
-			return nil, err
-		}
-
-		switch r.Status {
-		case pb.Response_ACK:
-			IDs = append(IDs, r.Id)
-		case pb.Response_VERSION_ERROR:
-			h.log.Errorf("Incorrect %s data version. Current version is %s", version, r.Details)
-			return nil, &VersionError{version: r.Details}
-		case pb.Response_ERROR:
-			h.log.Errorf("Error while parsing uploaded content: %s. Skipping the host...", r.Details)
-			return nil, errors.New(r.Details)
-		default:
-			return nil, fmt.Errorf("Unexpected %s response status", r.Details)
-		}
-	}
-
-	return IDs, nil
-}
-
-func (h *Host) uploadPolicy(patch bool, version string, policy []byte, IDs []int32) error {
-	if IDs == nil {
-		return nil
-	}
-
-	h.log.Infof("Uploading policy to %s...", h.address)
-
-	stream, err := h.client.Upload(context.Background())
+	r, err := h.client.Apply(context.Background(), &pb.Update{bucketId})
 	if err != nil {
-		h.log.Errorf("Can't start policy uploading: %v. Skipping the host...", err)
 		return err
 	}
 
-	for offset := 0; offset < len(policy); offset += h.chunk {
+	if r.Status != pb.Response_ACK {
+		return errors.New(r.Details)
+	}
+
+	return nil
+}
+
+func (h *Host) uploadData(data []byte) (int32, error) {
+	stream, err := h.client.Upload(context.Background())
+	if err != nil {
+		return 0, nil
+	}
+
+	for offset := 0; offset < len(data); offset += h.chunk {
 		var c []byte
-		if len(policy) < offset+h.chunk {
-			c = policy[offset:]
+		if len(data) < offset+h.chunk {
+			c = data[offset:]
 		} else {
-			c = policy[offset : offset+h.chunk]
+			c = data[offset : offset+h.chunk]
 		}
 
 		if err := stream.Send(&pb.Chunk{string(c)}); err != nil {
-			h.log.Errorf("Can't upload %d bytes starting %d: %v. Skipping the host...", len(c), offset, err)
-			return err
+			h.log.Errorf("Can't upload %d bytes starting %d: %v", len(c), offset, err)
+			return 0, err
 		}
 	}
 
 	r, err := stream.CloseAndRecv()
 	if err != nil {
-		h.log.Errorf("Can't finish policy uploading: %v. Skipping the host...", err)
-		return err
+		return 0, err
 	}
 
 	if r.Status != pb.Response_ACK {
-		h.log.Errorf("Error while loading policy to the host: %s. Skipping the host...", r.Details)
-		return errors.New(r.Details)
+		return 0, errors.New(r.Details)
 	}
 
-	var dtype pb.Item_DataType
-	if patch {
-		dtype = pb.Item_POLICIES_PATCH
-	} else {
-		dtype = pb.Item_POLICIES
+	return r.Id, nil
+}
+
+func (h *Host) uploadIncludes(bucket *DataBucket) ([]int32, error) {
+	rids := []int32{}
+
+	for id, data := range bucket.Includes {
+		h.log.Infof("Uploading %q content to %s...", id, h.address)
+
+		rid, err := h.uploadData(data)
+		if err != nil {
+			h.log.Errorf("Failed to upload %q content: %v", id, err)
+			return nil, err
+		}
+
+		item := &pb.Item{
+			Type:        pb.Item_CONTENT,
+			FromVersion: bucket.FromVersion,
+			ToVersion:   bucket.ToVersion,
+			DataId:      rid,
+			Id:          id,
+		}
+
+		r, err := h.client.Parse(context.Background(), item)
+		if err != nil {
+			h.log.Errorf("Failed to parse uploaded content %q: %v", id, err)
+			return nil, err
+		}
+
+		if r.Status == pb.Response_ACK {
+			rids = append(rids, r.Id)
+		} else if r.Status == pb.Response_VERSION_ERROR {
+			return nil, &VersionError{version: r.Details}
+		} else {
+			return nil, errors.New(r.Details)
+		}
+	}
+
+	return rids, nil
+}
+
+func (h *Host) uploadPolicies(bucket *DataBucket, iids []int32) error {
+	h.log.Infof("Uploading policies to %s...", h.address)
+
+	rid, err := h.uploadData(bucket.Policies)
+	if err != nil {
+		h.log.Errorf("Failed to upload policies: %v", err)
+		return err
 	}
 
 	item := &pb.Item{
-		Type:     dtype,
-		Version:  version,
-		DataId:   r.Id,
-		Includes: IDs,
+		Type:        pb.Item_POLICIES,
+		FromVersion: bucket.FromVersion,
+		ToVersion:   bucket.ToVersion,
+		DataId:      rid,
+		Includes:    iids,
 	}
 
-	r, err = h.client.Parse(context.Background(), item)
+	r, err := h.client.Parse(context.Background(), item)
 	if err != nil {
 		h.log.Errorf("Can't parse policy: %v. Skipping host...", err)
 		return err
 	}
 
-	if r.Status != pb.Response_ACK {
-		h.log.Errorf("Error while parsing policy at the host %s. Skipping the host...", r.Details)
+	if r.Status == pb.Response_VERSION_ERROR {
+		return &VersionError{version: r.Details}
+	} else if r.Status != pb.Response_ACK {
 		return errors.New(r.Details)
 	}
 
-	h.policy = r.Id
-	h.ready = true
-
-	return nil
-}
-
-func (h *Host) upload(patch bool, version string, includes map[string][]byte, policy []byte) error {
-	ids, err := h.uploadIncludes(patch, version, includes)
-	if err != nil {
-		return err
-	}
-
-	if err := h.uploadPolicy(patch, version, policy, ids); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (h *Host) apply() error {
-	if !h.ready {
-		return nil
-	}
-
-	h.log.Infof("Applying policy to host %s...", h.address)
-
-	update := pb.Update{h.policy}
-	r, err := h.client.Apply(context.Background(), &update)
-	if err != nil {
-		h.log.Errorf("Can't apply policy: %v", err)
-		return err
-	}
-
-	if r.Status != pb.Response_ACK {
-		h.log.Errorf("Error while applying policy to the host %s", r.Details)
-		return errors.New(r.Details)
-	}
-
-	h.log.Infof("Policy has been applied.")
+	bucket.ID = r.Id
 
 	return nil
 }

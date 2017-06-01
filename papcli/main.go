@@ -12,7 +12,7 @@ import (
 func main() {
 	log.SetLevel(log.InfoLevel)
 
-	policy, includes, err := read(config.Policy, config.Includes)
+	policies, includes, err := read(config.Policy, config.Includes)
 	if err != nil {
 		panic(err)
 	}
@@ -29,9 +29,26 @@ func main() {
 		defer h.Close()
 	}
 
-	for _, h := range hosts {
-		if err := h.Process(false, "", includes, policy); err != nil {
-			log.Errorf("Failed to process PDP data: %v", err)
+	bids := make([]int32, len(hosts))
+	for i, h := range hosts {
+		b := &pdpctrl.DataBucket{
+			Policies: policies,
+			Includes: includes,
+		}
+
+		if err := h.Upload(b); err != nil {
+			log.Errorf("Failed to upload PDP data: %v", err)
+			bids[i] = -1
+		} else {
+			bids[i] = b.ID
+		}
+	}
+
+	for i, h := range hosts {
+		if bids[i] != -1 {
+			if err := h.Apply(bids[i]); err != nil {
+				log.Errorf("Failed to apply PDP data: %v", err)
+			}
 		}
 	}
 }
