@@ -5,8 +5,9 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	log "github.com/Sirupsen/logrus"
 	pdpctrl "github.com/infobloxopen/themis/pdpctrl-client"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 func main() {
@@ -17,10 +18,10 @@ func main() {
 		panic(err)
 	}
 
-	hosts := []*pdpctrl.Host{}
+	hosts := []*pdpctrl.Client{}
 
 	for _, addr := range config.Addresses {
-		h := pdpctrl.NewHost(addr, config.Chunk, log.StandardLogger())
+		h := pdpctrl.NewClient(addr, config.Chunk)
 		if err := h.Connect(config.Timeout); err != nil {
 			panic(err)
 		}
@@ -28,6 +29,8 @@ func main() {
 		hosts = append(hosts, h)
 		defer h.Close()
 	}
+
+	log.Infof("Uploading data to PDP servers...")
 
 	bids := make([]int32, len(hosts))
 	for i, h := range hosts {
@@ -37,17 +40,19 @@ func main() {
 		}
 
 		if err := h.Upload(b); err != nil {
-			log.Errorf("Failed to upload PDP data: %v", err)
+			log.Errorf("Failed to upload data: %v", err)
 			bids[i] = -1
 		} else {
 			bids[i] = b.ID
 		}
 	}
 
+	log.Infof("Applying data on PDP servers...")
+
 	for i, h := range hosts {
 		if bids[i] != -1 {
 			if err := h.Apply(bids[i]); err != nil {
-				log.Errorf("Failed to apply PDP data: %v", err)
+				log.Errorf("Failed to apply data: %v", err)
 			}
 		}
 	}
