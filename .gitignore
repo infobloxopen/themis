@@ -27,3 +27,7 @@ _testmain.go
 papcli/papcli
 pdpserver/pdpserver
 pepcli/pepcli
+
+# Coverage files
+coverage.txt
+cover.out

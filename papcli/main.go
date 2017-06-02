@@ -5,26 +5,57 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	log "github.com/Sirupsen/logrus"
 	pdpctrl "github.com/infobloxopen/themis/pdpctrl-client"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 func main() {
 	log.SetLevel(log.InfoLevel)
 
-	policy, includes, err := read(config.Policy, config.Includes)
+	policies, includes, err := read(config.Policy, config.Includes)
 	if err != nil {
 		panic(err)
 	}
 
-	cluster := pdpctrl.NewCluster(config.Addresses, config.Chunk, log.StandardLogger())
-	err = cluster.Connect(config.Timeout)
-	if err != nil {
-		panic(err)
-	}
-	defer cluster.Close()
+	hosts := []*pdpctrl.Client{}
 
-	cluster.Process(includes, policy)
+	for _, addr := range config.Addresses {
+		h := pdpctrl.NewClient(addr, config.Chunk)
+		if err := h.Connect(config.Timeout); err != nil {
+			panic(err)
+		}
+
+		hosts = append(hosts, h)
+		defer h.Close()
+	}
+
+	log.Infof("Uploading data to PDP servers...")
+
+	bids := make([]int32, len(hosts))
+	for i, h := range hosts {
+		b := &pdpctrl.DataBucket{
+			Policies: policies,
+			Includes: includes,
+		}
+
+		if err := h.Upload(b); err != nil {
+			log.Errorf("Failed to upload data: %v", err)
+			bids[i] = -1
+		} else {
+			bids[i] = b.ID
+		}
+	}
+
+	log.Infof("Applying data on PDP servers...")
+
+	for i, h := range hosts {
+		if bids[i] != -1 {
+			if err := h.Apply(bids[i]); err != nil {
+				log.Errorf("Failed to apply data: %v", err)
+			}
+		}
+	}
 }
 
 func read(policy string, includes StringSet) ([]byte, map[string][]byte, error) {

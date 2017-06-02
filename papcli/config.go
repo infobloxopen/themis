@@ -11,7 +11,7 @@ type Config struct {
 	Addresses StringSet
 	Includes  StringSet
 	Timeout   time.Duration
-	Chunk     int
+	ChunkSize int
 }
 
 type StringSet []string
@@ -32,7 +32,7 @@ func init() {
 	flag.Var(&config.Addresses, "s", "server(s) to upload policy to")
 	flag.Var(&config.Includes, "i", "included content to upload")
 	flag.DurationVar(&config.Timeout, "t", 5*time.Second, "connection timeout")
-	flag.IntVar(&config.Chunk, "c", 64*1024, "size of chunk for splitting uploads")
+	flag.IntVar(&config.ChunkSize, "c", 64*1024, "size of chunk for splitting uploads")
 
 	flag.Parse()
 }
