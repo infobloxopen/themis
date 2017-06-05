@@ -21,7 +21,7 @@ func main() {
 	hosts := []*pdpctrl.Client{}
 
 	for _, addr := range config.Addresses {
-		h := pdpctrl.NewClient(addr, config.Chunk)
+		h := pdpctrl.NewClient(addr, config.ChunkSize)
 		if err := h.Connect(config.Timeout); err != nil {
 			panic(err)
 		}
@@ -35,8 +35,10 @@ func main() {
 	bids := make([]int32, len(hosts))
 	for i, h := range hosts {
 		b := &pdpctrl.DataBucket{
-			Policies: policies,
-			Includes: includes,
+			FromVersion: config.FromVersion,
+			ToVersion:   config.ToVersion,
+			Policies:    policies,
+			Includes:    includes,
 		}
 
 		if err := h.Upload(b); err != nil {

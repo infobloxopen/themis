@@ -13,6 +13,12 @@ type Content struct {
 	Data interface{}
 }
 
+type Policies struct {
+	Version  string
+	Data     pdp.EvaluableType
+	Includes map[string]interface{}
+}
+
 type Queue struct {
 	Lock          *sync.Mutex
 	AutoIncrement int32
@@ -81,15 +87,15 @@ func (q *Queue) Replace(id int32, v interface{}) error {
 	return nil
 }
 
-func (q *Queue) rawGetPolicies(id int32) (pdp.EvaluableType, error) {
+func (q *Queue) rawGetPolicies(id int32) (Policies, error) {
 	v, ok := q.Items[id]
 	if !ok {
-		return nil, fmt.Errorf("No policies with id %d has been uploaded", id)
+		return Policies{}, fmt.Errorf("No policies with id %d has been uploaded", id)
 	}
 
-	p, ok := v.(pdp.EvaluableType)
+	p, ok := v.(Policies)
 	if !ok {
-		return nil, fmt.Errorf("Expected policy or policy set with id %d but got %T", id, v)
+		return Policies{}, fmt.Errorf("Expected policy or policy set with id %d but got %T", id, v)
 	}
 
 	return p, nil

@@ -30,9 +30,12 @@ type Transport struct {
 }
 
 type Server struct {
-	Path   string
-	Policy pdp.EvaluableType
-	Lock   *sync.RWMutex
+	Path string
+	Lock *sync.RWMutex
+
+	Version  string
+	Policy   pdp.EvaluableType
+	Includes map[string]interface{}
 
 	Requests Transport
 	Control  Transport
