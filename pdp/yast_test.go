@@ -101,7 +101,8 @@ var YASTTestContent map[string]interface{} = map[string]interface{}{
 	"domains_to_rules": map[interface{}]interface{}{"test.com": "Rule #1.1.1"}}
 
 func TestUnmarshalYAST(t *testing.T) {
-	p, err := UnmarshalYAST([]byte(YASTTestPolicy), "", YASTTestContent)
+	ctx := NewYASTCtx("")
+	p, err := ctx.UnmarshalYAST([]byte(YASTTestPolicy), YASTTestContent)
 	if err != nil {
 		t.Errorf("Expected no errors but got:\n%#v\n\n%s\n", err, err)
 	} else {
@@ -111,8 +112,8 @@ func TestUnmarshalYAST(t *testing.T) {
 	}
 }
 
-func prepareTestYAST(s string, attrs map[string]AttributeType, includes map[string]interface{}, t *testing.T) (yastCtx, interface{}) {
-	c := newYASTCtx("")
+func prepareTestYAST(s string, attrs map[string]AttributeType, includes map[string]interface{}, t *testing.T) (YastCtx, interface{}) {
+	c := NewYASTCtx("")
 	c.attrs = attrs
 	c.includes = includes
 

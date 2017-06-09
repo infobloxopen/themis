@@ -106,12 +106,12 @@ func TestUnmarshalYASTPolicySetWithNestedMappers(t *testing.T) {
 		t.Errorf("Expected filled policies map (with %d policies) but got %d", len(set.Policies), len(params.PoliciesMap))
 	}
 
-	ID := params.DefaultPolicy.getID()
+	ID := params.DefaultPolicy.GetID()
 	if ID != "Default" {
 		t.Errorf("Expected %q policy as default but got %q", "Default", ID)
 	}
 
-	ID = params.ErrorPolicy.getID()
+	ID = params.ErrorPolicy.GetID()
 	if ID != "Error" {
 		t.Errorf("Expected %q policy as \"on error\" policy but got %q", "Error", ID)
 	}
@@ -130,11 +130,11 @@ func TestUnmarshalYASTPolicySetWithNestedMappers(t *testing.T) {
 	}
 
 	if subParams.DefaultPolicy != nil {
-		t.Errorf("Expected no default policy but got %q", subParams.DefaultPolicy.getID())
+		t.Errorf("Expected no default policy but got %q", subParams.DefaultPolicy.GetID())
 	}
 
 	if subParams.ErrorPolicy != nil {
-		t.Errorf("Expected no \"on error\" policy but got %q", subParams.ErrorPolicy.getID())
+		t.Errorf("Expected no \"on error\" policy but got %q", subParams.ErrorPolicy.GetID())
 	}
 }
 

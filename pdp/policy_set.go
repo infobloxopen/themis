@@ -16,7 +16,7 @@ type PolicySetType struct {
 	AlgParams          interface{}
 }
 
-func (p PolicySetType) getID() string {
+func (p PolicySetType) GetID() string {
 	return p.ID
 }
 

@@ -48,34 +48,32 @@ const (
 	yastExpressionAnd      = "and"
 )
 
-func UnmarshalYAST(in []byte, dir string, ext map[string]interface{}) (EvaluableType, error) {
+func (ctx *YastCtx) UnmarshalYAST(in []byte, ext map[string]interface{}) (EvaluableType, error) {
 	m := make(map[interface{}]interface{})
 	err := yaml.Unmarshal(in, &m)
 	if err != nil {
 		return nil, err
 	}
 
-	c := newYASTCtx(dir)
-
 	if len(m) > 3 {
-		return nil, c.makeRootError(m)
+		return nil, ctx.makeRootError(m)
 	}
 
-	err = c.unmarshalAttributeDeclarations(m)
+	err = ctx.unmarshalAttributeDeclarations(m)
 	if err != nil {
 		return nil, err
 	}
 
-	err = c.unmarshalIncludes(m, ext)
+	err = ctx.unmarshalIncludes(m, ext)
 	if err != nil {
 		return nil, err
 	}
 
 	if v, ok := m[yastTagPolicies]; ok {
-		c.pushNodeSpec(yastTagPolicies)
-		defer c.popNodeSpec()
+		ctx.pushNodeSpec(yastTagPolicies)
+		defer ctx.popNodeSpec()
 
-		p, err := c.unmarshalItem(v)
+		p, err := ctx.unmarshalItem(v)
 		if err != nil {
 			return nil, err
 		}
@@ -83,11 +81,11 @@ func UnmarshalYAST(in []byte, dir string, ext map[string]interface{}) (Evaluable
 		return p, nil
 	}
 
-	return nil, c.makeRootError(m)
+	return nil, ctx.makeRootError(m)
 }
 
-func UnmarshalYASTFromFile(name string, dir string) (EvaluableType, error) {
-	f, err := findAndOpenFile(name, dir)
+func (ctx *YastCtx) UnmarshalYASTFromFile(name string) (EvaluableType, error) {
+	f, err := findAndOpenFile(name, ctx.dataDir)
 	if err != nil {
 		return nil, err
 	}
@@ -97,5 +95,5 @@ func UnmarshalYASTFromFile(name string, dir string) (EvaluableType, error) {
 		return nil, err
 	}
 
-	return UnmarshalYAST(b, dir, nil)
+	return ctx.UnmarshalYAST(b, nil)
 }

@@ -3,13 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"golang.org/x/net/context"
 	"io"
 
 	pb "github.com/infobloxopen/themis/pdp-control"
 
-	"github.com/infobloxopen/themis/pdp"
+	log "github.com/Sirupsen/logrus"
+	"golang.org/x/net/context"
 )
 
 func collect(stream pb.PDPControl_UploadServer) ([]byte, error) {
@@ -74,7 +73,7 @@ func (s *Server) DispatchPolicies(in *pb.Item) (interface{}, *pb.Response) {
 		return nil, controlFail("%v", err)
 	}
 
-	item, err := pdp.UnmarshalYAST(data, s.Path, ext)
+	item, err := s.ctx.UnmarshalYAST(data, ext)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"id":      in.DataId,
@@ -157,6 +156,8 @@ func (s *Server) DispatchContentPatch(in *pb.Item) (interface{}, *pb.Response) {
 func (s *Server) DispatchUpdate(in *pb.Item) (interface{}, *pb.Response) {
 	switch in.Type {
 	case pb.Item_POLICIES:
+		s.ctx.Reset()
+
 		if in.FromVersion != "" {
 			return s.DispatchPoliciesPatch(in)
 		} else {
@@ -212,9 +213,11 @@ func (s *Server) Apply(server_ctx context.Context, in *pb.Update) (*pb.Response,
 	}
 
 	s.Lock.Lock()
+
 	s.Policy = p.Data
 	s.Includes = p.Includes
 	s.Version = p.Version
+
 	s.Lock.Unlock()
 
 	log.WithFields(log.Fields{

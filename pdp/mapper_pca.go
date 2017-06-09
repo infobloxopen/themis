@@ -26,7 +26,7 @@ func getPoliciesMap(policies []EvaluableType, params *MapperPCAParams) map[strin
 
 	m := make(map[string]EvaluableType)
 	for _, policy := range policies {
-		m[policy.getID()] = policy
+		m[policy.GetID()] = policy
 	}
 
 	return m
@@ -86,7 +86,7 @@ func MapperPCA(policies []EvaluableType, params interface{}, ctx *Context) Respo
 		}
 	} else {
 		for _, policy := range policies {
-			if policy.getID() == ID {
+			if policy.GetID() == ID {
 				return policy.Calculate(ctx)
 			}
 		}

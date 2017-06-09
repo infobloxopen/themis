@@ -1,6 +1,6 @@
 package pdp
 
-func (ctx *yastCtx) unmarshalObligationItem(v interface{}, i int, exprs []AttributeAssignmentExpressionType) ([]AttributeAssignmentExpressionType, error) {
+func (ctx *YastCtx) unmarshalObligationItem(v interface{}, i int, exprs []AttributeAssignmentExpressionType) ([]AttributeAssignmentExpressionType, error) {
 	ctx.pushNodeSpec("%d", i+1)
 	defer ctx.popNodeSpec()
 
@@ -35,7 +35,7 @@ func (ctx *yastCtx) unmarshalObligationItem(v interface{}, i int, exprs []Attrib
 	return append(exprs, AttributeAssignmentExpressionType{AttributeType{ID, e.DataType}, *e}), nil
 }
 
-func (ctx *yastCtx) unmarshalObligation(m map[interface{}]interface{}) ([]AttributeAssignmentExpressionType, error) {
+func (ctx *YastCtx) unmarshalObligation(m map[interface{}]interface{}) ([]AttributeAssignmentExpressionType, error) {
 	root, ok := m[yastTagObligation]
 	if !ok {
 		return []AttributeAssignmentExpressionType{}, nil

@@ -20,7 +20,7 @@ var expressionArgumentCheckers map[string][]argumentChecker = map[string][]argum
 	yastExpressionOr:  {checkerFunctionBooleanOr},
 	yastExpressionAnd: {checkerFunctionBooleanAnd}}
 
-func (ctx yastCtx) unmarshalStringValue(v interface{}) (*AttributeValueType, error) {
+func (ctx YastCtx) unmarshalStringValue(v interface{}) (*AttributeValueType, error) {
 	s, err := ctx.validateString(v, "value of string type")
 	if err != nil {
 		return nil, err
@@ -29,7 +29,7 @@ func (ctx yastCtx) unmarshalStringValue(v interface{}) (*AttributeValueType, err
 	return &AttributeValueType{DataTypeString, s}, nil
 }
 
-func (ctx yastCtx) unmarshalAddressValue(v interface{}) (*AttributeValueType, error) {
+func (ctx YastCtx) unmarshalAddressValue(v interface{}) (*AttributeValueType, error) {
 	s, err := ctx.validateString(v, "value of address type")
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func (ctx yastCtx) unmarshalAddressValue(v interface{}) (*AttributeValueType, er
 	return &AttributeValueType{DataTypeAddress, a}, nil
 }
 
-func (ctx yastCtx) unmarshalNetworkValue(v interface{}) (*AttributeValueType, error) {
+func (ctx YastCtx) unmarshalNetworkValue(v interface{}) (*AttributeValueType, error) {
 	s, err := ctx.validateString(v, "value of network type")
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func (ctx yastCtx) unmarshalNetworkValue(v interface{}) (*AttributeValueType, er
 	return &AttributeValueType{DataTypeNetwork, *n}, nil
 }
 
-func (ctx yastCtx) unmarshalDomainValue(v interface{}) (*AttributeValueType, error) {
+func (ctx YastCtx) unmarshalDomainValue(v interface{}) (*AttributeValueType, error) {
 	s, err := ctx.validateString(v, "value of domain type")
 	if err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func (ctx yastCtx) unmarshalDomainValue(v interface{}) (*AttributeValueType, err
 	return &AttributeValueType{DataTypeDomain, d}, nil
 }
 
-func (ctx *yastCtx) unmarshalSetOfStringsValueItem(v interface{}, i int, set map[string]int) error {
+func (ctx *YastCtx) unmarshalSetOfStringsValueItem(v interface{}, i int, set map[string]int) error {
 	ctx.pushNodeSpec("%d", i+1)
 	defer ctx.popNodeSpec()
 
@@ -84,7 +84,7 @@ func (ctx *yastCtx) unmarshalSetOfStringsValueItem(v interface{}, i int, set map
 	return nil
 }
 
-func (ctx *yastCtx) unmarshalSetOfStringsImmediateValue(v interface{}) (*AttributeValueType, error) {
+func (ctx *YastCtx) unmarshalSetOfStringsImmediateValue(v interface{}) (*AttributeValueType, error) {
 	items, err := ctx.validateList(v, "")
 	if err != nil {
 		return nil, nil
@@ -101,7 +101,7 @@ func (ctx *yastCtx) unmarshalSetOfStringsImmediateValue(v interface{}) (*Attribu
 	return &AttributeValueType{DataTypeSetOfStrings, set}, nil
 }
 
-func (ctx *yastCtx) unmarshalSetOfStringsValueFromContent(v interface{}) (*AttributeValueType, error) {
+func (ctx *YastCtx) unmarshalSetOfStringsValueFromContent(v interface{}) (*AttributeValueType, error) {
 	set, err := ctx.extractContentByItem(v)
 	if err != nil || set == nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (ctx *yastCtx) unmarshalSetOfStringsValueFromContent(v interface{}) (*Attri
 	return ctx.unmarshalSetOfStringsImmediateValue(set)
 }
 
-func (ctx *yastCtx) unmarshalSetOfStringsValue(v interface{}) (*AttributeValueType, error) {
+func (ctx *YastCtx) unmarshalSetOfStringsValue(v interface{}) (*AttributeValueType, error) {
 	val, err := ctx.unmarshalSetOfStringsImmediateValue(v)
 	if err != nil {
 		return nil, err
@@ -132,7 +132,7 @@ func (ctx *yastCtx) unmarshalSetOfStringsValue(v interface{}) (*AttributeValueTy
 	return nil, ctx.errorf("Expected value of set of strings type or content id but got %v", v)
 }
 
-func (ctx *yastCtx) unmarshalSetOfNetworksValueItem(v interface{}, i int, set *SetOfNetworks) error {
+func (ctx *YastCtx) unmarshalSetOfNetworksValueItem(v interface{}, i int, set *SetOfNetworks) error {
 	ctx.pushNodeSpec("%d", i+1)
 	defer ctx.popNodeSpec()
 
@@ -154,7 +154,7 @@ func (ctx *yastCtx) unmarshalSetOfNetworksValueItem(v interface{}, i int, set *S
 	return nil
 }
 
-func (ctx *yastCtx) unmarshalSetOfNetworksImmediateValue(v interface{}) (*AttributeValueType, error) {
+func (ctx *YastCtx) unmarshalSetOfNetworksImmediateValue(v interface{}) (*AttributeValueType, error) {
 	items, err := ctx.validateList(v, "")
 	if err != nil {
 		return nil, nil
@@ -171,7 +171,7 @@ func (ctx *yastCtx) unmarshalSetOfNetworksImmediateValue(v interface{}) (*Attrib
 	return &AttributeValueType{DataTypeSetOfNetworks, set}, nil
 }
 
-func (ctx *yastCtx) unmarshalSetOfNetworksValueFromContent(v interface{}) (*AttributeValueType, error) {
+func (ctx *YastCtx) unmarshalSetOfNetworksValueFromContent(v interface{}) (*AttributeValueType, error) {
 	set, err := ctx.extractContentByItem(v)
 	if err != nil || set == nil {
 		return nil, err
@@ -180,7 +180,7 @@ func (ctx *yastCtx) unmarshalSetOfNetworksValueFromContent(v interface{}) (*Attr
 	return ctx.unmarshalSetOfNetworksImmediateValue(set)
 }
 
-func (ctx *yastCtx) unmarshalSetOfNetworksValue(v interface{}) (*AttributeValueType, error) {
+func (ctx *YastCtx) unmarshalSetOfNetworksValue(v interface{}) (*AttributeValueType, error) {
 	val, err := ctx.unmarshalSetOfNetworksImmediateValue(v)
 	if err != nil {
 		return nil, err
@@ -202,7 +202,7 @@ func (ctx *yastCtx) unmarshalSetOfNetworksValue(v interface{}) (*AttributeValueT
 	return nil, ctx.errorf("Expected value of set of networks type or content id but got %v", v)
 }
 
-func (ctx *yastCtx) unmarshalSetOfDomainsValueItem(v interface{}, i int, set *SetOfSubdomains) error {
+func (ctx *YastCtx) unmarshalSetOfDomainsValueItem(v interface{}, i int, set *SetOfSubdomains) error {
 	ctx.pushNodeSpec("%d", i+1)
 	defer ctx.popNodeSpec()
 
@@ -221,7 +221,7 @@ func (ctx *yastCtx) unmarshalSetOfDomainsValueItem(v interface{}, i int, set *Se
 	return nil
 }
 
-func (ctx *yastCtx) unmarshalSetOfDomainsImmediateValue(v interface{}) (*AttributeValueType, error) {
+func (ctx *YastCtx) unmarshalSetOfDomainsImmediateValue(v interface{}) (*AttributeValueType, error) {
 	items, err := ctx.validateList(v, "")
 	if err != nil {
 		return nil, nil
@@ -238,7 +238,7 @@ func (ctx *yastCtx) unmarshalSetOfDomainsImmediateValue(v interface{}) (*Attribu
 	return &AttributeValueType{DataTypeSetOfDomains, set}, nil
 }
 
-func (ctx *yastCtx) unmarshalSetOfDomainsValueFromContent(v interface{}) (*AttributeValueType, error) {
+func (ctx *YastCtx) unmarshalSetOfDomainsValueFromContent(v interface{}) (*AttributeValueType, error) {
 	set, err := ctx.extractContentByItem(v)
 	if err != nil || set == nil {
 		return nil, err
@@ -247,7 +247,7 @@ func (ctx *yastCtx) unmarshalSetOfDomainsValueFromContent(v interface{}) (*Attri
 	return ctx.unmarshalSetOfDomainsImmediateValue(set)
 }
 
-func (ctx *yastCtx) unmarshalSetOfDomainsValue(v interface{}) (*AttributeValueType, error) {
+func (ctx *YastCtx) unmarshalSetOfDomainsValue(v interface{}) (*AttributeValueType, error) {
 	val, err := ctx.unmarshalSetOfDomainsImmediateValue(v)
 	if err != nil {
 		return nil, err
@@ -269,7 +269,7 @@ func (ctx *yastCtx) unmarshalSetOfDomainsValue(v interface{}) (*AttributeValueTy
 	return nil, ctx.errorf("Expected value of set of domains type or content id but got %v", v)
 }
 
-func (ctx *yastCtx) unmarshalValueByType(t int, v interface{}) (*AttributeValueType, error) {
+func (ctx *YastCtx) unmarshalValueByType(t int, v interface{}) (*AttributeValueType, error) {
 	if t == DataTypeUndefined {
 		return nil, ctx.errorf("Not allowed type %#v", DataTypeNames[t])
 	}
@@ -300,7 +300,7 @@ func (ctx *yastCtx) unmarshalValueByType(t int, v interface{}) (*AttributeValueT
 	return nil, ctx.errorf("Parsing for type %s hasn't been implemented yet", DataTypeNames[t])
 }
 
-func (ctx *yastCtx) unmarshalValue(v interface{}) (AttributeValueType, error) {
+func (ctx *YastCtx) unmarshalValue(v interface{}) (AttributeValueType, error) {
 	ctx.pushNodeSpec(yastTagValue)
 	defer ctx.popNodeSpec()
 
@@ -332,7 +332,7 @@ func (ctx *yastCtx) unmarshalValue(v interface{}) (AttributeValueType, error) {
 	return *val, nil
 }
 
-func (ctx *yastCtx) unmarshalArgument(v interface{}, i int, exprs []ExpressionType) ([]ExpressionType, error) {
+func (ctx *YastCtx) unmarshalArgument(v interface{}, i int, exprs []ExpressionType) ([]ExpressionType, error) {
 	ctx.pushNodeSpec("%d", i+1)
 	defer ctx.popNodeSpec()
 
@@ -344,7 +344,7 @@ func (ctx *yastCtx) unmarshalArgument(v interface{}, i int, exprs []ExpressionTy
 	return append(exprs, e), nil
 }
 
-func (ctx *yastCtx) unmarshalArguments(v interface{}) ([]ExpressionType, error) {
+func (ctx *YastCtx) unmarshalArguments(v interface{}) ([]ExpressionType, error) {
 	items, err := ctx.validateList(v, "arguments")
 	if err != nil {
 		return nil, err
@@ -364,7 +364,7 @@ func (ctx *yastCtx) unmarshalArguments(v interface{}) ([]ExpressionType, error) 
 	return exprs, nil
 }
 
-func (ctx *yastCtx) unmarshalExpression(expr interface{}) (ExpressionType, error) {
+func (ctx *YastCtx) unmarshalExpression(expr interface{}) (ExpressionType, error) {
 	e, err := ctx.validateMap(expr, "expression")
 	if err != nil {
 		return nil, err

@@ -23,7 +23,7 @@ var targetCompatibleExpressions map[string]map[int]map[int]twoArgumentsFunctionT
 		DataTypeSetOfDomains: {
 			DataTypeDomain: makeFunctionSetOfDomainsContains}}}
 
-func (ctx *yastCtx) getAdjustedArgument(v interface{}, val ExpressionType, attr *AttributeDesignatorType) (ExpressionType, *AttributeDesignatorType, error) {
+func (ctx *YastCtx) getAdjustedArgument(v interface{}, val ExpressionType, attr *AttributeDesignatorType) (ExpressionType, *AttributeDesignatorType, error) {
 	a, err := ctx.unmarshalExpression(v)
 	if err != nil {
 		return nil, nil, err
@@ -55,7 +55,7 @@ func (ctx *yastCtx) getAdjustedArgument(v interface{}, val ExpressionType, attr 
 	return nil, nil, ctx.errorf("Expected one immediate value and one attribute got %T", a)
 }
 
-func (ctx *yastCtx) getAdjustedArgumentPair(items interface{}) (ExpressionType, AttributeDesignatorType, error) {
+func (ctx *YastCtx) getAdjustedArgumentPair(items interface{}) (ExpressionType, AttributeDesignatorType, error) {
 	args, err := ctx.validateList(items, "target function arguments")
 	if len(args) != 2 {
 		return AttributeValueType{}, AttributeDesignatorType{},
@@ -75,7 +75,7 @@ func (ctx *yastCtx) getAdjustedArgumentPair(items interface{}) (ExpressionType, 
 	return first, *second, nil
 }
 
-func (ctx *yastCtx) unmarshalTargetMatchExpression(item interface{}) (MatchType, error) {
+func (ctx *YastCtx) unmarshalTargetMatchExpression(item interface{}) (MatchType, error) {
 	e, err := ctx.validateMap(item, "target match expression")
 	if err != nil {
 		return MatchType{}, err
@@ -120,7 +120,7 @@ func (ctx *yastCtx) unmarshalTargetMatchExpression(item interface{}) (MatchType,
 	return MatchType{maker(first, second)}, nil
 }
 
-func (ctx *yastCtx) unmarshalTargetAllOfItem(v interface{}, i int, matches []MatchType) ([]MatchType, error) {
+func (ctx *YastCtx) unmarshalTargetAllOfItem(v interface{}, i int, matches []MatchType) ([]MatchType, error) {
 	ctx.pushNodeSpec("%d", i+1)
 	defer ctx.popNodeSpec()
 
@@ -132,7 +132,7 @@ func (ctx *yastCtx) unmarshalTargetAllOfItem(v interface{}, i int, matches []Mat
 	return append(matches, m), nil
 }
 
-func (ctx *yastCtx) unmarshalTargetAllOf(item interface{}) (AllOfType, error) {
+func (ctx *YastCtx) unmarshalTargetAllOf(item interface{}) (AllOfType, error) {
 	e, err := ctx.validateMap(item, "target expression")
 	if err != nil {
 		return AllOfType{}, err
@@ -177,7 +177,7 @@ func (ctx *yastCtx) unmarshalTargetAllOf(item interface{}) (AllOfType, error) {
 	return AllOfType{[]MatchType{m}}, nil
 }
 
-func (ctx *yastCtx) unmarshalTargetAnyOfItem(v interface{}, i int, allOfs []AllOfType) ([]AllOfType, error) {
+func (ctx *YastCtx) unmarshalTargetAnyOfItem(v interface{}, i int, allOfs []AllOfType) ([]AllOfType, error) {
 	ctx.pushNodeSpec("%d", i+1)
 	defer ctx.popNodeSpec()
 
@@ -189,7 +189,7 @@ func (ctx *yastCtx) unmarshalTargetAnyOfItem(v interface{}, i int, allOfs []AllO
 	return append(allOfs, a), nil
 }
 
-func (ctx *yastCtx) unmarshalTargetAnyOf(item interface{}) (AnyOfType, error) {
+func (ctx *YastCtx) unmarshalTargetAnyOf(item interface{}) (AnyOfType, error) {
 	e, err := ctx.validateMap(item, "target expression")
 	if err != nil {
 		return AnyOfType{}, err
@@ -234,7 +234,7 @@ func (ctx *yastCtx) unmarshalTargetAnyOf(item interface{}) (AnyOfType, error) {
 	return AnyOfType{[]AllOfType{{[]MatchType{m}}}}, nil
 }
 
-func (ctx *yastCtx) unmarshalTargetItem(v interface{}, i int, anyOfs []AnyOfType) ([]AnyOfType, error) {
+func (ctx *YastCtx) unmarshalTargetItem(v interface{}, i int, anyOfs []AnyOfType) ([]AnyOfType, error) {
 	ctx.pushNodeSpec("%d", i+1)
 	defer ctx.popNodeSpec()
 
@@ -246,7 +246,7 @@ func (ctx *yastCtx) unmarshalTargetItem(v interface{}, i int, anyOfs []AnyOfType
 	return append(anyOfs, a), nil
 }
 
-func (ctx *yastCtx) unmarshalTarget(m map[interface{}]interface{}) (TargetType, error) {
+func (ctx *YastCtx) unmarshalTarget(m map[interface{}]interface{}) (TargetType, error) {
 	tree, ok := m[yastTagTarget]
 	if !ok {
 		return TargetType{}, nil

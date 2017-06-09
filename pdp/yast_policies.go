@@ -5,8 +5,8 @@ import (
 	"strings"
 )
 
-type paramUnmarshalerRCAType func(ctx *yastCtx, p *PolicyType, root bool, m map[interface{}]interface{}) (interface{}, error)
-type paramUnmarshalerPCAType func(ctx *yastCtx, p *PolicySetType, root bool, m map[interface{}]interface{}) (interface{}, error)
+type paramUnmarshalerRCAType func(ctx *YastCtx, p *PolicyType, root bool, m map[interface{}]interface{}) (interface{}, error)
+type paramUnmarshalerPCAType func(ctx *YastCtx, p *PolicySetType, root bool, m map[interface{}]interface{}) (interface{}, error)
 
 var paramUnmarshalersRCA = map[string]paramUnmarshalerRCAType{}
 var paramUnmarshalersPCA = map[string]paramUnmarshalerPCAType{}
@@ -16,7 +16,7 @@ func init() {
 	paramUnmarshalersPCA[yastTagMapperAlg] = unmarshalMapperPCAParams
 }
 
-func (ctx *yastCtx) findSpecialRule(m map[interface{}]interface{}, tag string, rules map[string]*RuleType) (*RuleType, error) {
+func (ctx *YastCtx) findSpecialRule(m map[interface{}]interface{}, tag string, rules map[string]*RuleType) (*RuleType, error) {
 	v, ok := m[tag]
 	if !ok {
 		return nil, nil
@@ -35,7 +35,7 @@ func (ctx *yastCtx) findSpecialRule(m map[interface{}]interface{}, tag string, r
 	return rule, nil
 }
 
-func (ctx *yastCtx) unmarshalRuleCombiningAlg(p *PolicyType, root bool, m map[interface{}]interface{}) (RuleCombiningAlgType, interface{}, error) {
+func (ctx *YastCtx) unmarshalRuleCombiningAlg(p *PolicyType, root bool, m map[interface{}]interface{}) (RuleCombiningAlgType, interface{}, error) {
 	algID, alg, params, err := ctx.extractRuleCombiningAlg(m)
 	if err != nil {
 		return nil, nil, err
@@ -61,7 +61,7 @@ func (ctx *yastCtx) unmarshalRuleCombiningAlg(p *PolicyType, root bool, m map[in
 	return alg, algParams, nil
 }
 
-func unmarshalMapperRCAParams(ctx *yastCtx, p *PolicyType, root bool, m map[interface{}]interface{}) (interface{}, error) {
+func unmarshalMapperRCAParams(ctx *YastCtx, p *PolicyType, root bool, m map[interface{}]interface{}) (interface{}, error) {
 	v, ok := m[yastTagMap]
 	if !ok {
 		return nil, ctx.errorf("Missing map")
@@ -118,7 +118,7 @@ func unmarshalMapperRCAParams(ctx *yastCtx, p *PolicyType, root bool, m map[inte
 	return params, nil
 }
 
-func (ctx *yastCtx) unmarshalPolicy(m map[interface{}]interface{}, items interface{}) (PolicyType, error) {
+func (ctx *YastCtx) unmarshalPolicy(m map[interface{}]interface{}, items interface{}) (PolicyType, error) {
 	pol := PolicyType{}
 
 	ID, err := ctx.extractString(m, yastTagID, "policy id")
@@ -154,7 +154,7 @@ func (ctx *yastCtx) unmarshalPolicy(m map[interface{}]interface{}, items interfa
 	return pol, nil
 }
 
-func (ctx *yastCtx) unmarshalPoliciesItem(v interface{}, i int, items []EvaluableType) ([]EvaluableType, error) {
+func (ctx *YastCtx) unmarshalPoliciesItem(v interface{}, i int, items []EvaluableType) ([]EvaluableType, error) {
 	ctx.pushNodeSpec("%d", i+1)
 	defer ctx.popNodeSpec()
 
@@ -166,7 +166,7 @@ func (ctx *yastCtx) unmarshalPoliciesItem(v interface{}, i int, items []Evaluabl
 	return append(items, p), nil
 }
 
-func (ctx *yastCtx) unmarshalPolicies(item interface{}) ([]EvaluableType, error) {
+func (ctx *YastCtx) unmarshalPolicies(item interface{}) ([]EvaluableType, error) {
 	ctx.pushNodeSpec(yastTagPolicies)
 	defer ctx.popNodeSpec()
 
@@ -186,7 +186,7 @@ func (ctx *yastCtx) unmarshalPolicies(item interface{}) ([]EvaluableType, error)
 	return r, nil
 }
 
-func (ctx *yastCtx) extractPolicyCombiningAlg(m map[interface{}]interface{}) (string, PolicyCombiningAlgType, map[interface{}]interface{}, error) {
+func (ctx *YastCtx) extractPolicyCombiningAlg(m map[interface{}]interface{}) (string, PolicyCombiningAlgType, map[interface{}]interface{}, error) {
 	s, algMap, err := ctx.extractStringOrMapDef(m, yastTagAlg, yastTagDefaultAlg, nil, "policy combining algorithm")
 	if err != nil {
 		return "", nil, nil, err
@@ -208,7 +208,7 @@ func (ctx *yastCtx) extractPolicyCombiningAlg(m map[interface{}]interface{}) (st
 	return ID, a, algMap, nil
 }
 
-func (ctx *yastCtx) findSpecialPolicy(m map[interface{}]interface{}, tag string, policies map[string]EvaluableType) (EvaluableType, error) {
+func (ctx *YastCtx) findSpecialPolicy(m map[interface{}]interface{}, tag string, policies map[string]EvaluableType) (EvaluableType, error) {
 	v, ok := m[tag]
 	if !ok {
 		return nil, nil
@@ -227,7 +227,7 @@ func (ctx *yastCtx) findSpecialPolicy(m map[interface{}]interface{}, tag string,
 	return policy, nil
 }
 
-func (ctx *yastCtx) unmarshalPolicyCombiningAlg(p *PolicySetType, root bool, m map[interface{}]interface{}) (PolicyCombiningAlgType, interface{}, error) {
+func (ctx *YastCtx) unmarshalPolicyCombiningAlg(p *PolicySetType, root bool, m map[interface{}]interface{}) (PolicyCombiningAlgType, interface{}, error) {
 	algID, alg, params, err := ctx.extractPolicyCombiningAlg(m)
 	if err != nil {
 		return nil, nil, err
@@ -253,7 +253,7 @@ func (ctx *yastCtx) unmarshalPolicyCombiningAlg(p *PolicySetType, root bool, m m
 	return alg, algParams, nil
 }
 
-func unmarshalMapperPCAParams(ctx *yastCtx, p *PolicySetType, root bool, m map[interface{}]interface{}) (interface{}, error) {
+func unmarshalMapperPCAParams(ctx *YastCtx, p *PolicySetType, root bool, m map[interface{}]interface{}) (interface{}, error) {
 	v, ok := m[yastTagMap]
 	if !ok {
 		return nil, ctx.errorf("Missing map")
@@ -270,7 +270,7 @@ func unmarshalMapperPCAParams(ctx *yastCtx, p *PolicySetType, root bool, m map[i
 
 	policiesMap := make(map[string]EvaluableType)
 	for _, e := range p.Policies {
-		policiesMap[e.getID()] = e
+		policiesMap[e.GetID()] = e
 	}
 
 	if root {
@@ -309,7 +309,7 @@ func unmarshalMapperPCAParams(ctx *yastCtx, p *PolicySetType, root bool, m map[i
 	return params, nil
 }
 
-func (ctx *yastCtx) unmarshalPolicySet(m map[interface{}]interface{}, items interface{}) (PolicySetType, error) {
+func (ctx *YastCtx) unmarshalPolicySet(m map[interface{}]interface{}, items interface{}) (PolicySetType, error) {
 	pol := PolicySetType{}
 
 	ID, err := ctx.extractString(m, yastTagID, "policy set id")
@@ -345,7 +345,7 @@ func (ctx *yastCtx) unmarshalPolicySet(m map[interface{}]interface{}, items inte
 	return pol, nil
 }
 
-func (ctx *yastCtx) unmarshalItem(v interface{}) (EvaluableType, error) {
+func (ctx *YastCtx) unmarshalItem(v interface{}) (EvaluableType, error) {
 	r, err := ctx.validateMap(v, "policy or policy set")
 	if err != nil {
 		return nil, err

@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-type yastCtx struct {
+type YastCtx struct {
 	nodeSpec  []string
 	dataDir   string
 	attrs     map[string]AttributeType
@@ -12,15 +12,21 @@ type yastCtx struct {
 	selectors map[string]map[string]*SelectorType
 }
 
-func newYASTCtx(dir string) yastCtx {
-	return yastCtx{nodeSpec: []string{}, dataDir: dir}
+func NewYASTCtx(dir string) YastCtx {
+	return YastCtx{nodeSpec: []string{}, dataDir: dir}
 }
 
-func (ctx *yastCtx) pushNodeSpec(format string, a ...interface{}) {
+func (ctx *YastCtx) Reset() {
+	ctx.nodeSpec = []string{}
+	ctx.includes = nil
+	ctx.selectors = nil
+}
+
+func (ctx *YastCtx) pushNodeSpec(format string, a ...interface{}) {
 	ctx.nodeSpec = append(ctx.nodeSpec, fmt.Sprintf(format, a...))
 }
 
-func (ctx *yastCtx) popNodeSpec() {
+func (ctx *YastCtx) popNodeSpec() {
 	if len(ctx.nodeSpec) < 1 {
 		return
 	}
@@ -28,7 +34,7 @@ func (ctx *yastCtx) popNodeSpec() {
 	ctx.nodeSpec = ctx.nodeSpec[:len(ctx.nodeSpec)-1]
 }
 
-func (ctx yastCtx) validateString(v interface{}, desc string) (string, error) {
+func (ctx YastCtx) validateString(v interface{}, desc string) (string, error) {
 	r, ok := v.(string)
 	if !ok {
 		return "", ctx.errorf("Expected %s but got %T", desc, v)
@@ -37,7 +43,7 @@ func (ctx yastCtx) validateString(v interface{}, desc string) (string, error) {
 	return r, nil
 }
 
-func (ctx yastCtx) extractStringDef(m map[interface{}]interface{}, k string, def string, desc string) (string, error) {
+func (ctx YastCtx) extractStringDef(m map[interface{}]interface{}, k string, def string, desc string) (string, error) {
 	v, ok := m[k]
 	if !ok {
 		return def, nil
@@ -46,7 +52,7 @@ func (ctx yastCtx) extractStringDef(m map[interface{}]interface{}, k string, def
 	return ctx.validateString(v, desc)
 }
 
-func (ctx yastCtx) extractString(m map[interface{}]interface{}, k string, desc string) (string, error) {
+func (ctx YastCtx) extractString(m map[interface{}]interface{}, k string, desc string) (string, error) {
 	v, ok := m[k]
 	if !ok {
 		return "", ctx.errorf("Missing %s", desc)
@@ -55,7 +61,7 @@ func (ctx yastCtx) extractString(m map[interface{}]interface{}, k string, desc s
 	return ctx.validateString(v, desc)
 }
 
-func (ctx yastCtx) validateMap(v interface{}, desc string) (map[interface{}]interface{}, error) {
+func (ctx YastCtx) validateMap(v interface{}, desc string) (map[interface{}]interface{}, error) {
 	r, ok := v.(map[interface{}]interface{})
 	if !ok {
 		return nil, ctx.errorf("Expected %s but got %T", desc, v)
@@ -64,7 +70,7 @@ func (ctx yastCtx) validateMap(v interface{}, desc string) (map[interface{}]inte
 	return r, nil
 }
 
-func (ctx yastCtx) extractMap(m map[interface{}]interface{}, k string, desc string) (map[interface{}]interface{}, error) {
+func (ctx YastCtx) extractMap(m map[interface{}]interface{}, k string, desc string) (map[interface{}]interface{}, error) {
 	v, ok := m[k]
 	if !ok {
 		return nil, nil
@@ -73,7 +79,7 @@ func (ctx yastCtx) extractMap(m map[interface{}]interface{}, k string, desc stri
 	return ctx.validateMap(v, desc)
 }
 
-func (ctx yastCtx) getSingleMapPair(m map[interface{}]interface{}, desc string) (interface{}, interface{}, error) {
+func (ctx YastCtx) getSingleMapPair(m map[interface{}]interface{}, desc string) (interface{}, interface{}, error) {
 	if len(m) > 1 {
 		return nil, nil, ctx.errorf("Expected only one entry in %s got %d", desc, len(m))
 	}
@@ -85,7 +91,7 @@ func (ctx yastCtx) getSingleMapPair(m map[interface{}]interface{}, desc string) 
 	return nil, nil, ctx.errorf("Expected at least one entry in %s got %d", desc, len(m))
 }
 
-func (ctx yastCtx) validateList(v interface{}, desc string) ([]interface{}, error) {
+func (ctx YastCtx) validateList(v interface{}, desc string) ([]interface{}, error) {
 	r, ok := v.([]interface{})
 	if !ok {
 		return nil, ctx.errorf("Expected %s but got %T", desc, v)
@@ -94,7 +100,7 @@ func (ctx yastCtx) validateList(v interface{}, desc string) ([]interface{}, erro
 	return r, nil
 }
 
-func (ctx yastCtx) extractList(m map[interface{}]interface{}, k, desc string) ([]interface{}, error) {
+func (ctx YastCtx) extractList(m map[interface{}]interface{}, k, desc string) ([]interface{}, error) {
 	v, ok := m[k]
 	if !ok {
 		return nil, ctx.errorf("Missing %s", desc)
@@ -103,7 +109,7 @@ func (ctx yastCtx) extractList(m map[interface{}]interface{}, k, desc string) ([
 	return ctx.validateList(v, desc)
 }
 
-func (ctx yastCtx) extractContentByItem(v interface{}) (interface{}, error) {
+func (ctx YastCtx) extractContentByItem(v interface{}) (interface{}, error) {
 	ID, err := ctx.validateString(v, "")
 	if err != nil {
 		return nil, nil
@@ -117,7 +123,7 @@ func (ctx yastCtx) extractContentByItem(v interface{}) (interface{}, error) {
 	return c, nil
 }
 
-func (ctx yastCtx) extractStringOrMapDef(m map[interface{}]interface{}, k, defStr string, defMap map[interface{}]interface{}, desc string) (string, map[interface{}]interface{}, error) {
+func (ctx YastCtx) extractStringOrMapDef(m map[interface{}]interface{}, k, defStr string, defMap map[interface{}]interface{}, desc string) (string, map[interface{}]interface{}, error) {
 	v, ok := m[k]
 	if !ok {
 		return defStr, defMap, nil
