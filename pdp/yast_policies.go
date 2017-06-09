@@ -345,6 +345,10 @@ func (ctx *YastCtx) unmarshalPolicySet(m map[interface{}]interface{}, items inte
 	return pol, nil
 }
 
+func (ctx *YastCtx) UnmarshalEvaluable(v interface{}) (EvaluableType, error) {
+	return ctx.unmarshalItem(v)
+}
+
 func (ctx *YastCtx) unmarshalItem(v interface{}) (EvaluableType, error) {
 	r, err := ctx.validateMap(v, "policy or policy set")
 	if err != nil {

@@ -42,6 +42,15 @@ func (ctx *YastCtx) unmarshalCondition(m map[interface{}]interface{}) (Expressio
 	return e, nil
 }
 
+func (ctx *YastCtx) UnmarshalRule(v interface{}) (RuleType, error) {
+	m, err := ctx.validateMap(v, "policy rule")
+	if err != nil {
+		return RuleType{}, err
+	}
+
+	return ctx.unmarshalRule(m)
+}
+
 func (ctx *YastCtx) unmarshalRule(m map[interface{}]interface{}) (RuleType, error) {
 	r := RuleType{}
 
