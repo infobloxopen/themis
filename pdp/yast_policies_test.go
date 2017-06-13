@@ -88,7 +88,7 @@ func TestUnmarshalYASTPolicySetWithNestedMappers(t *testing.T) {
 		t.Fatalf("Expected result but got nothing")
 	}
 
-	set, ok := p.(PolicySetType)
+	set, ok := p.(*PolicySetType)
 	if !ok {
 		t.Fatalf("Expected policy set but got %T", p)
 	}
@@ -150,7 +150,7 @@ func TestUnmarshalYASTPolicyWithNestedMappers(t *testing.T) {
 		t.Fatalf("Expected result but got nothing")
 	}
 
-	pol, ok := p.(PolicyType)
+	pol, ok := p.(*PolicyType)
 	if !ok {
 		t.Fatalf("Expected policy but got %T", p)
 	}

@@ -34,7 +34,7 @@ func getSetOfIDs(v AttributeValueType) ([]string, error) {
 	return sortSetOfStrings(IDs), nil
 }
 
-func getRulesMap(rules []RuleType, params *MapperRCAParams) map[string]*RuleType {
+func getRulesMap(rules []*RuleType, params *MapperRCAParams) map[string]*RuleType {
 	if params.RulesMap != nil {
 		return params.RulesMap
 	}
@@ -42,25 +42,25 @@ func getRulesMap(rules []RuleType, params *MapperRCAParams) map[string]*RuleType
 	m := make(map[string]*RuleType)
 	for _, rule := range rules {
 		tmp := rule
-		m[rule.ID] = &tmp
+		m[rule.ID] = tmp
 	}
 
 	return m
 }
 
-func collectSubRules(IDs []string, m map[string]*RuleType) []RuleType {
-	rules := []RuleType{}
+func collectSubRules(IDs []string, m map[string]*RuleType) []*RuleType {
+	rules := []*RuleType{}
 	for _, ID := range IDs {
 		rule, ok := m[ID]
 		if ok {
-			rules = append(rules, *rule)
+			rules = append(rules, rule)
 		}
 	}
 
 	return rules
 }
 
-func MapperRCA(rules []RuleType, params interface{}, ctx *Context) ResponseType {
+func MapperRCA(rules []*RuleType, params interface{}, ctx *Context) ResponseType {
 	mapperParams := params.(MapperRCAParams)
 
 	v, err := mapperParams.Argument.calculate(ctx)

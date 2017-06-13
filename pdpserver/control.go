@@ -39,6 +39,10 @@ func controlFail(format string, args ...interface{}) *pb.Response {
 	return &pb.Response{pb.Response_ERROR, -1, fmt.Sprintf(format, args...)}
 }
 
+func versionError(version string) *pb.Response {
+	return &pb.Response{pb.Response_VERSION_ERROR, -1, version}
+}
+
 func (s *Server) Upload(stream pb.PDPControl_UploadServer) error {
 	log.Info("Got new data stream")
 
@@ -99,7 +103,7 @@ func (s *Server) DispatchPoliciesPatch(in *pb.Item) (interface{}, *pb.Response) 
 		return nil, controlFail("%v", err)
 	}
 
-	item, err := s.makePatchedPolicies(data, ext)
+	item, err := s.copyAndPatchPolicies(data, ext)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"id":      in.DataId,
@@ -140,7 +144,7 @@ func (s *Server) DispatchContentPatch(in *pb.Item) (interface{}, *pb.Response) {
 		return nil, controlFail("%v", err)
 	}
 
-	item, err := s.makePatchedContent(data, in.Id)
+	item, err := s.patchContent(data, in.Id)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"id":      in.DataId,
@@ -159,12 +163,20 @@ func (s *Server) DispatchUpdate(in *pb.Item) (interface{}, *pb.Response) {
 		s.ctx.Reset()
 
 		if in.FromVersion != "" {
+			if in.FromVersion != s.Version {
+				return nil, versionError(s.Version)
+			}
+
 			return s.DispatchPoliciesPatch(in)
 		} else {
 			return s.DispatchPolicies(in)
 		}
 	case pb.Item_CONTENT:
 		if in.FromVersion != "" {
+			if in.FromVersion != s.Version {
+				return nil, versionError(s.Version)
+			}
+
 			return s.DispatchContentPatch(in)
 		} else {
 			return s.DispatchContent(in)

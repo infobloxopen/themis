@@ -79,7 +79,7 @@ func unmarshalMapperRCAParams(ctx *YastCtx, p *PolicyType, root bool, m map[inte
 	rulesMap := make(map[string]*RuleType)
 	for _, r := range p.Rules {
 		tmp := r
-		rulesMap[r.ID] = &tmp
+		rulesMap[r.ID] = tmp
 	}
 
 	if root {
@@ -118,12 +118,12 @@ func unmarshalMapperRCAParams(ctx *YastCtx, p *PolicyType, root bool, m map[inte
 	return params, nil
 }
 
-func (ctx *YastCtx) unmarshalPolicy(m map[interface{}]interface{}, items interface{}) (PolicyType, error) {
-	pol := PolicyType{}
+func (ctx *YastCtx) unmarshalPolicy(m map[interface{}]interface{}, items interface{}) (*PolicyType, error) {
+	pol := &PolicyType{}
 
 	ID, err := ctx.extractString(m, yastTagID, "policy id")
 	if err != nil {
-		return pol, err
+		return nil, err
 	}
 
 	ctx.pushNodeSpec("%#v", ID)
@@ -131,21 +131,21 @@ func (ctx *YastCtx) unmarshalPolicy(m map[interface{}]interface{}, items interfa
 
 	t, err := ctx.unmarshalTarget(m)
 	if err != nil {
-		return pol, err
+		return nil, err
 	}
 
 	r, err := ctx.unmarshalRules(items)
 	if err != nil {
-		return pol, err
+		return nil, err
 	}
 
 	pol.ID = ID
 	pol.Target = t
 	pol.Rules = r
 
-	alg, params, err := ctx.unmarshalRuleCombiningAlg(&pol, true, m)
+	alg, params, err := ctx.unmarshalRuleCombiningAlg(pol, true, m)
 	if err != nil {
-		return pol, err
+		return nil, err
 	}
 
 	pol.RuleCombiningAlg = alg
@@ -309,12 +309,12 @@ func unmarshalMapperPCAParams(ctx *YastCtx, p *PolicySetType, root bool, m map[i
 	return params, nil
 }
 
-func (ctx *YastCtx) unmarshalPolicySet(m map[interface{}]interface{}, items interface{}) (PolicySetType, error) {
-	pol := PolicySetType{}
+func (ctx *YastCtx) unmarshalPolicySet(m map[interface{}]interface{}, items interface{}) (*PolicySetType, error) {
+	pol := &PolicySetType{}
 
 	ID, err := ctx.extractString(m, yastTagID, "policy set id")
 	if err != nil {
-		return pol, err
+		return nil, err
 	}
 
 	ctx.pushNodeSpec("%#v", ID)
@@ -322,21 +322,21 @@ func (ctx *YastCtx) unmarshalPolicySet(m map[interface{}]interface{}, items inte
 
 	t, err := ctx.unmarshalTarget(m)
 	if err != nil {
-		return pol, err
+		return nil, err
 	}
 
 	p, err := ctx.unmarshalPolicies(items)
 	if err != nil {
-		return pol, err
+		return nil, err
 	}
 
 	pol.ID = ID
 	pol.Target = t
 	pol.Policies = p
 
-	alg, algParams, err := ctx.unmarshalPolicyCombiningAlg(&pol, true, m)
+	alg, algParams, err := ctx.unmarshalPolicyCombiningAlg(pol, true, m)
 	if err != nil {
-		return pol, err
+		return nil, err
 	}
 
 	pol.PolicyCombiningAlg = alg

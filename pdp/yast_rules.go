@@ -42,21 +42,21 @@ func (ctx *YastCtx) unmarshalCondition(m map[interface{}]interface{}) (Expressio
 	return e, nil
 }
 
-func (ctx *YastCtx) UnmarshalRule(v interface{}) (RuleType, error) {
+func (ctx *YastCtx) UnmarshalRule(v interface{}) (*RuleType, error) {
 	m, err := ctx.validateMap(v, "policy rule")
 	if err != nil {
-		return RuleType{}, err
+		return nil, err
 	}
 
 	return ctx.unmarshalRule(m)
 }
 
-func (ctx *YastCtx) unmarshalRule(m map[interface{}]interface{}) (RuleType, error) {
-	r := RuleType{}
+func (ctx *YastCtx) unmarshalRule(m map[interface{}]interface{}) (*RuleType, error) {
+	r := &RuleType{}
 
 	ID, err := ctx.extractString(m, yastTagID, "rule id")
 	if err != nil {
-		return r, err
+		return nil, err
 	}
 
 	ctx.pushNodeSpec("%#v", ID)
@@ -64,22 +64,22 @@ func (ctx *YastCtx) unmarshalRule(m map[interface{}]interface{}) (RuleType, erro
 
 	t, err := ctx.unmarshalTarget(m)
 	if err != nil {
-		return r, err
+		return nil, err
 	}
 
 	c, err := ctx.unmarshalCondition(m)
 	if err != nil {
-		return r, err
+		return nil, err
 	}
 
 	o, err := ctx.unmarshalObligation(m)
 	if err != nil {
-		return r, err
+		return nil, err
 	}
 
 	e, err := ctx.unmarshalRuleEffect(m)
 	if err != nil {
-		return r, err
+		return nil, err
 	}
 
 	r.ID = ID
@@ -91,7 +91,7 @@ func (ctx *YastCtx) unmarshalRule(m map[interface{}]interface{}) (RuleType, erro
 	return r, nil
 }
 
-func (ctx *YastCtx) unmarshalRulesItem(v interface{}, i int, rules []RuleType) ([]RuleType, error) {
+func (ctx *YastCtx) unmarshalRulesItem(v interface{}, i int, rules []*RuleType) ([]*RuleType, error) {
 	ctx.pushNodeSpec("%d", i+1)
 	defer ctx.popNodeSpec()
 
@@ -108,11 +108,11 @@ func (ctx *YastCtx) unmarshalRulesItem(v interface{}, i int, rules []RuleType) (
 	return append(rules, r), nil
 }
 
-func (ctx *YastCtx) unmarshalRules(v interface{}) ([]RuleType, error) {
+func (ctx *YastCtx) unmarshalRules(v interface{}) ([]*RuleType, error) {
 	ctx.pushNodeSpec(yastTagRules)
 	defer ctx.popNodeSpec()
 
-	r := make([]RuleType, 0)
+	r := make([]*RuleType, 0)
 
 	items, err := ctx.validateList(v, "policy rules")
 	if err != nil {
