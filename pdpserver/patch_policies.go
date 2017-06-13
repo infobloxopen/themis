@@ -5,13 +5,13 @@ import (
 
 	"github.com/infobloxopen/themis/pdp"
 
+	log "github.com/Sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
 const (
-	PatchOpAdd    = "ADD"
-	PatchOpAppend = "APPEND"
-	PatchOpDelete = "DELETE"
+	PatchOpAdd    = "add"
+	PatchOpDelete = "delete"
 )
 
 type PatchItem struct {
@@ -113,11 +113,11 @@ func (s *Server) applyPoliciesPatchItem(ctx *policiesPatchCtx) error {
 		nid := pi.getID()
 
 		if ok, _, onext = findPoliciesItem(nid, ctx.ocur); !ok {
-			return fmt.Errorf("Cannot find '%v' next item in original content", pi.Path[:pi.pathIndex])
+			return fmt.Errorf("Cannot find '%v' next item in original content", pi.Path[:pi.pathIndex+1])
 		}
 
 		if ok, i, next = findPoliciesItem(nid, ctx.cur); !ok {
-			return fmt.Errorf("Cannot find '%v' next item in patched content", pi.Path[:pi.pathIndex])
+			return fmt.Errorf("Cannot find '%v' next item in patched content", pi.Path[:pi.pathIndex+1])
 		}
 
 		if onext == next {
@@ -132,7 +132,7 @@ func (s *Server) applyPoliciesPatchItem(ctx *policiesPatchCtx) error {
 	}
 
 	switch pi.Op {
-	case PatchOpAppend:
+	case PatchOpAdd:
 		switch item := ctx.cur.(type) {
 		case *pdp.PolicySetType:
 			e, err := s.ctx.UnmarshalEvaluable(pi.Entity)
@@ -198,6 +198,8 @@ func (s *Server) copyAndPatchPolicies(data []byte, content map[string]interface{
 
 	cpyPolicy := copyPoliciesItem(s.Policy, nil, 0)
 	for _, pi := range patches {
+		log.Debugf("Applying patch operation to policies: %+v", pi)
+
 		ctx := &policiesPatchCtx{
 			ocur: s.Policy,
 			cur:  cpyPolicy,

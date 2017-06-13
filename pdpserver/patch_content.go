@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 type contentPatchCtx struct {
@@ -141,6 +143,8 @@ func (s *Server) patchContent(data []byte, id string) (interface{}, error) {
 
 	content := s.Includes[id]
 	for _, pi := range patches {
+		log.Debugf("Applying patch operation to '%s' content: %+v", id, pi)
+
 		ctx := &contentPatchCtx{
 			cid:  id,
 			cur:  content,
