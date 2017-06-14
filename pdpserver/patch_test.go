@@ -47,7 +47,9 @@ policies:
           selector:
             type: String
             path:
-              - PATH1
+              - ID1
+              - ID12
+              - ID123
               - attr: addr_attr1
             content: content2
       policies:
@@ -66,14 +68,18 @@ policies:
 `
 
 var originalContent = map[string]interface{}{
-	"content1": map[interface{}]interface{}{
+	"content1": map[string]interface{}{
 		"c1_key1": "c1_val1",
 		"c1_key2": "c1_val2",
 	},
-	"content2": map[interface{}]map[interface{}]interface{}{
-		"PATH1": {
-			"9.9.9.9/32": "c2_val1",
-			"1.1.1.1/16": "c2_val2",
+	"content2": map[string]interface{}{
+		"ID1": map[string]interface{}{
+			"ID12": map[string]interface{}{
+				"ID123": map[string]interface{}{
+					"9.9.9.9/32": "c2_val1",
+					"1.1.1.1/16": "c2_val2",
+				},
+			},
 		},
 	},
 }
@@ -107,16 +113,15 @@ const content1Patch1 = `
 
 const content2Patch1 = `
 [{"op": "add",
-  "path": ["PATH1", "9.9.9.9/32"],
+  "path": ["ID1", "ID12", "ID123", "9.9.9.9/32"],
   "entity": "c2_newval1"},
 
  {"op": "add",
-  "path": ["PATH1"],
-  "entity": {"2.2.2.2/32": "c1_val3"}},
+  "path": ["ID1", "ID12", "ID123", "2.2.2.2/32"],
+  "entity": "c1_val3"},
 
- {"op": "add",
-  "path": ["PATH3"],
-  "entity": {"2.2.2.2/32": "c1_val3"}}
+ {"op": "delete",
+  "path": ["ID1", "ID12", "ID123", "1.1.1.1/16"]}
 ]
 `
 
@@ -181,7 +186,7 @@ func TestContentPatches(t *testing.T) {
 		t.Fatalf("Expected no errors but got:\n%#v\n\n%s\n", err, err)
 	}
 
-	content1 := c1.(map[interface{}]interface{})
+	content1 := c1.(map[string]interface{})
 	if len(content1) != 2 {
 		t.Fatalf("Expected %d items in patched 'content1' but got %d", 2, len(content1))
 	}
@@ -191,8 +196,9 @@ func TestContentPatches(t *testing.T) {
 		t.Fatalf("Expected no errors but got:\n%#v\n\n%s\n", err, err)
 	}
 
-	content2 := c2.(map[interface{}]map[interface{}]interface{})
-	if len(content2) != 2 {
-		t.Fatalf("Expected %d items in patched 'content1' but got %d", 2, len(content2))
+	content2 := c2.(map[string]interface{})
+	id123 := content2["ID1"].(map[string]interface{})["ID12"].(map[string]interface{})["ID123"].(map[string]interface{})
+	if len(id123) != 2 {
+		t.Fatalf("Expected %d items in patched 'content1/ID1/ID12/ID123' but got %d", 2, len(id123))
 	}
 }

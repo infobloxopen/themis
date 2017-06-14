@@ -18,27 +18,6 @@ type contentPatchCtx struct {
 	pi *PatchItem
 }
 
-func unmarshalContentEntity(e interface{}) interface{} {
-	switch e := e.(type) {
-	case map[interface{}]interface{}, []string, string:
-		return e
-	case map[string]interface{}:
-		cpy := make(map[interface{}]interface{}, len(e))
-		for k, v := range e {
-			cpy[k] = v
-		}
-		return cpy
-	case []interface{}:
-		cpy := make([]string, len(e), len(e))
-		for i, v := range e {
-			cpy[i] = v.(string)
-		}
-		return cpy
-	default:
-		panic(fmt.Sprintf("Unsupported content entity type '%T'", e))
-	}
-}
-
 func (s *Server) applyContentPatchItem(ctx *contentPatchCtx) error {
 	pi := ctx.pi
 	id := pi.getID()
@@ -49,84 +28,58 @@ func (s *Server) applyContentPatchItem(ctx *contentPatchCtx) error {
 			ok   bool
 		)
 
-		switch curmap := ctx.cur.(type) {
-		case map[interface{}]map[interface{}]interface{}:
-			if next, ok = curmap[id]; !ok {
-				return fmt.Errorf("Cannot find '%v' next item in '%s' content", pi.Path[:pi.pathIndex], ctx.cid)
-			}
-
-			ctx.prev = ctx.cur
-			ctx.cur = next
-
-		case map[interface{}]interface{}:
-			if next, ok = curmap[id]; !ok {
-				return fmt.Errorf("Cannot find '%v' next item in '%' content", pi.Path[:pi.pathIndex], ctx.cid)
-			}
-
-			ctx.prev = ctx.cur
-			ctx.cur = next
-		default:
+		curmap, ok := ctx.cur.(map[string]interface{})
+		if !ok {
 			return fmt.Errorf("Unsupported content item type '%T'", curmap)
 		}
+
+		next, ok = curmap[id]
+		if !ok {
+			return fmt.Errorf("Cannot find '%v' next item in '%s' content", pi.Path[:pi.pathIndex], ctx.cid)
+		}
+
+		ctx.prev = ctx.cur
+		ctx.cur = next
 
 		return s.applyContentPatchItem(ctx)
 	}
 
 	switch pi.Op {
 	case PatchOpAdd:
-		switch item := ctx.cur.(type) {
-		case map[interface{}]map[interface{}]interface{}:
-			entity, ok := unmarshalContentEntity(pi.Entity).(map[interface{}]interface{})
-			if !ok {
-				return fmt.Errorf("Cannot add '%T' item to '%T' item for '%s' content.", pi.Entity, item, ctx.cid)
-			}
-
-			item[id] = entity
-		case map[interface{}]interface{}:
-			item[id] = unmarshalContentEntity(pi.Entity)
+		switch cur := ctx.cur.(type) {
+		case map[string]interface{}:
+			cur[id] = pi.Entity
 		default:
-			return fmt.Errorf("Operation '%s' is unsupported for type '%T'", pi.Op, item)
+			return fmt.Errorf("Operation '%s' is unsupported for type '%T'", pi.Op, cur)
 		}
 	case PatchOpDelete:
-		switch item := ctx.cur.(type) {
-		case map[interface{}]map[interface{}]interface{}:
-			if _, ok := item[id]; !ok {
+		switch cur := ctx.cur.(type) {
+		case map[string]interface{}:
+			if _, ok := cur[id]; !ok {
 				return fmt.Errorf("Cannot delete '%s' item from '%s' content. Item does not exist", pi.Path, ctx.cid)
 			}
-			delete(item, id)
-		case map[interface{}]interface{}:
-			if _, ok := item[id]; !ok {
-				return fmt.Errorf("Cannot delete '%s' item from '%s' content. Item does not exist", pi.Path, ctx.cid)
-			}
-			delete(item, id)
+			delete(cur, id)
 		case []string:
 			var (
 				i int
 				v string
 			)
 
-			for i, v = range item {
+			for i, v = range cur {
 				if v == id {
 					break
 				}
 			}
 
-			if i == len(item) {
+			if i == len(cur) {
 				return fmt.Errorf("Cannot delete '%s' item from '%s' content. Item does not exist", pi.Path, ctx.cid)
 			}
 
-			item = append(item[:i], item[i+1:]...)
+			cur = append(cur[:i], cur[i+1:]...)
 
-			pmap := ctx.prev.(map[interface{}]interface{})
+			pmap := ctx.prev.(map[string]interface{})
 			pid := pi.Path[len(pi.Path)-2]
-			pmap[pid] = item
-		case string:
-			pmap := ctx.prev.(map[interface{}]interface{})
-			if _, ok := pmap[id]; !ok {
-				return fmt.Errorf("Cannot delete '%s' item from '%s' content. Item does not exist", pi.Path, ctx.cid)
-			}
-
-			delete(pmap, id)
+			pmap[pid] = cur
 		}
 	default:
 		return fmt.Errorf("Unsupported '%s' patch operation for content", pi.Op)
