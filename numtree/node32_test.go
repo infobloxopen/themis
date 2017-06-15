@@ -10,123 +10,212 @@ import (
 func TestInsert32(t *testing.T) {
 	var r *Node32
 
-	r, _ = r.Insert(0, 32, "test")
+	r = r.Insert(0, 32, "test")
 	assertTree32(r, TestTree32WithSingleNodeInserted,
 		"32-tree with single node inserted", t)
 
 	r = nil
-	r, _ = r.Insert(0xAAAAAAAA, 18, "bottom")
-	r, _ = r.Insert(0xAAAAAAAA, 9, "top")
+	r = r.Insert(0xAAAAAAAA, 18, "bottom")
+	r = r.Insert(0xAAAAAAAA, 9, "top")
 	assertTree32(r, TestTree32WithTopAfterBottomToLeftNodesInserted,
 		"32-tree with top after bottom to left nodes inserted", t)
 
 	r = nil
-	r, _ = r.Insert(0xAAAAAAAA, 18, "bottom")
-	r, _ = r.Insert(0xAAAAAAAA, 10, "top")
+	r = r.Insert(0xAAAAAAAA, 18, "bottom")
+	r = r.Insert(0xAAAAAAAA, 10, "top")
 	assertTree32(r, TestTree32WithTopAfterBottomToRightNodesInserted,
 		"32-tree with top after bottom to right nodes inserted", t)
 
 	r = nil
-	r, _ = r.Insert(0xAAAAAAAA, 18, "bottom")
-	r, _ = r.Insert(0xABAAAAAA, 10, "top")
+	r = r.Insert(0xAAAAAAAA, 18, "bottom")
+	r = r.Insert(0xABAAAAAA, 10, "top")
 	assertTree32(r, TestTree32WithTopAfterBottomAndAdditionalNotLeafNodesInserted,
 		"32-tree with top after bottom and addtional not leaf nodes inserted", t)
 
 	r = nil
-	r, _ = r.Insert(0xAAAAAAAA, 18, "bottom")
-	oldR, _ := r.Insert(0xABAAAAAA, 10, "top")
-	newR, _ := oldR.Insert(0xABAAAAAA, 7, "root")
+	r = r.Insert(0xAAAAAAAA, 18, "bottom")
+	oldR := r.Insert(0xABAAAAAA, 10, "top")
+	newR := oldR.Insert(0xABAAAAAA, 7, "root")
 	assertTree32(oldR, TestTree32WithOldTopReplacingTopAfterBottomNodesInserted,
 		"32-tree with old top replacing top after bottom nodes inserted", t)
 	assertTree32(newR, TestTree32WithNewTopReplacingTopAfterBottomNodesInserted,
 		"32-tree with new top replacing top after bottom nodes inserted", t)
 
 	r = nil
-	r, _ = r.Insert(0xAAAAAAAA, 9, "top")
-	r, _ = r.Insert(0xAAAAAAAA, 18, "bottom")
+	r = r.Insert(0xAAAAAAAA, 9, "top")
+	r = r.Insert(0xAAAAAAAA, 18, "bottom")
 	assertTree32(r, TestTree32WithTopBeforeBottomToLeftNodesInserted,
 		"32-tree with top before bottom to left nodes inserted", t)
 
 	r = nil
-	r, _ = r.Insert(0xAAAAAAAA, 10, "top")
-	r, _ = r.Insert(0xAAAAAAAA, 18, "bottom")
+	r = r.Insert(0xAAAAAAAA, 10, "top")
+	r = r.Insert(0xAAAAAAAA, 18, "bottom")
 	assertTree32(r, TestTree32WithTopBeforeBottomToRightNodesInserted,
 		"32-tree with top before bottom to right nodes inserted", t)
 
 	r = nil
-	r, _ = r.Insert(0xAAAAAAAA, 7, "L1")
-	r, _ = r.Insert(0xABAAAAAA, 9, "L2")
-	r, _ = r.Insert(0xAAAAAAAA, 18, "L3")
-	r, _ = r.Insert(0xAABAAAAA, 19, "L4")
+	r = r.Insert(0xAAAAAAAA, 7, "L1")
+	r = r.Insert(0xABAAAAAA, 9, "L2")
+	r = r.Insert(0xAAAAAAAA, 18, "L3")
+	r = r.Insert(0xAABAAAAA, 19, "L4")
 	assertTree32(r, TestTree32WithTopBeforeBottomSeveralLevelNodesInserted,
 		"32-tree with top before bottom several level nodes inserted", t)
 
 	r = nil
+	r = r.Insert(0, -10, nil)
+	assertTree32(r, TestTree32WithNegativeNumberOfBits,
+		"32-tree with negative number of significant bits", t)
+
+	r = nil
+	r = r.Insert(0, 33, nil)
+	assertTree32(r, TestTree32WithTooBigNumberOfBits,
+		"32-tree with too big number of significant bits", t)
+
+	r = nil
 	for i := uint32(0); i < 256; i++ {
-		r, _ = r.Insert(i, 32, fmt.Sprintf("%02x", i))
+		r = r.Insert(i, 32, fmt.Sprintf("%02x", i))
 	}
 	assertTree32(r, TestTree32BigTreeInsertions,
 		"32-tree big tree", t)
 
 	r = nil
 	for i := uint32(0); i < 256; i++ {
-		r, _ = r.Insert(inv32[i]<<24, 32, fmt.Sprintf("%02x", inv32[i]))
+		r = r.Insert(inv32[i]<<24, 32, fmt.Sprintf("%02x", inv32[i]))
 	}
 	assertTree32(r, TestTree32BigTreeInvertedInsertions,
 		"32-tree big tree with inverted keys", t)
+}
 
-	r = nil
-	_, err := r.Insert(0, -10, nil)
-	if err == nil {
-		t.Errorf("Expected error while insert node with -10 significant bits")
-	}
+func TestEnumerate32(t *testing.T) {
+	var r *Node32
 
-	r = nil
-	_, err = r.Insert(0, 33, nil)
-	if err == nil {
-		t.Errorf("Expected error while insert node with 33 significant bits")
-	}
+	ch := r.Enumerate()
+	assertSequence32(ch, t, "32-tree empty tree")
+
+	r = r.Insert(0xAAAAAAAA, 7, "L1")
+	r = r.Insert(0xA8AAAAAA, 9, "L2.1")
+	r = r.Insert(0xABAAAAAA, 9, "L2.2")
+	r = r.Insert(0xAAAAAAAA, 18, "L3")
+	r = r.Insert(0xAAABAAAA, 24, "L5")
+	r = r.Insert(0xAABAAAAA, 19, "L4")
+	ch = r.Enumerate()
+	assertSequence32(ch, t, "32-tree for enumeration",
+		"0xa8aaaaaa/9: \"L2.1\"",
+		"0xaaaaaaaa/18: \"L3\"",
+		"0xaaabaaaa/24: \"L5\"",
+		"0xaabaaaaa/19: \"L4\"",
+		"0xaaaaaaaa/7: \"L1\"",
+		"0xabaaaaaa/9: \"L2.2\"")
 }
 
 func TestGet32(t *testing.T) {
 	var r *Node32
-	r, _ = r.Insert(0xAAAAAAAA, 7, "L1")
-	r, _ = r.Insert(0xA8AAAAAA, 9, "L2.1")
-	r, _ = r.Insert(0xABAAAAAA, 9, "L2.2")
-	r, _ = r.Insert(0xAAAAAAAA, 18, "L3")
-	r, _ = r.Insert(0xAABAAAAA, 19, "L4")
 
-	v, ok := r.Get(0, -1)
+	v, ok := r.Get(0, 0)
 	assertTreeGet(v, ok, nil,
-		"32-bit tree get with negative significant bits", t)
+		"32-bit empty tree", t)
+
+	r = r.Insert(0xAAAAAAAA, 7, "L1")
+	r = r.Insert(0xA8AAAAAA, 9, "L2.1")
+	r = r.Insert(0xABAAAAAA, 9, "L2.2")
+	r = r.Insert(0xAAAAAAAA, 18, "L3")
+	r = r.Insert(0xAABAAAAA, 19, "L4")
+
+	v, ok = r.Get(0, -1)
+	assertTreeGet(v, ok, nil,
+		"32-tree get with negative significant bits", t)
 
 	v, ok = r.Get(0xAAAAAAAA, 35)
 	assertTreeGet(v, ok, wrapStr("L3"),
-		"32-bit tree get with overflow significant bits number", t)
+		"32-tree get with overflow significant bits number", t)
 
 	v, ok = r.Get(0xAAAAAAAA, 5)
 	assertTreeGet(v, ok, nil,
-		"32-bit tree get with small significant bits number", t)
+		"32-tree get with small significant bits number", t)
 
 	v, ok = r.Get(0xAAAAAAAA, 7)
 	assertTreeGet(v, ok, wrapStr("L1"),
-		"32-bit tree get with exact match to top node", t)
+		"32-tree get with exact match to top node", t)
 
 	v, ok = r.Get(0xBAAAAAAA, 7)
 	assertTreeGet(v, ok, nil,
-		"32-bit tree get with exact not match to top node", t)
+		"32-tree get with exact not match to top node", t)
 
 	v, ok = r.Get(0xAABAAACA, 32)
 	assertTreeGet(v, ok, wrapStr("L4"),
-		"32-bit tree get with contains match to child node", t)
+		"32-tree get with contains match to child node", t)
 
 	v, ok = r.Get(0xABAAAAAA, 9)
 	assertTreeGet(v, ok, wrapStr("L2.2"),
-		"32-bit tree get with exact match to child node", t)
+		"32-tree get with exact match to child node", t)
 
 	v, ok = r.Get(0xA80AAAAA, 11)
 	assertTreeGet(v, ok, nil,
-		"32-bit tree get with contains match to non-leaf node", t)
+		"32-tree get with contains match to non-leaf node", t)
+}
+
+func TestDelete32(t *testing.T) {
+	var (
+		r  *Node32
+		ok bool
+	)
+
+	r, ok = r.Delete(0, 32)
+	assertTree32Delete(r, ok, "", "32-bit empty tree", t)
+
+	r = nil
+	r = r.Insert(0xAAAAAAAA, 18, "test")
+	r, ok = r.Delete(0xAAAAAAAA, 9)
+	assertTree32Delete(r, ok, TestTree32EmptyTree,
+		"32-tree with contained node", t)
+
+	r = nil
+	r = r.Insert(0xAAAAAAAA, 18, "test")
+	r, ok = r.Delete(0xBBBBBBBB, 9)
+	assertTree32Delete(r, ok, "", "32-tree with not contained node", t)
+
+	r = nil
+	r = r.Insert(0xAAAAAAAA, 9, "test")
+	r = r.Insert(0xAAAAAAAA, 18, "test")
+	r, ok = r.Delete(0xBBBBBBBB, 10)
+	assertTree32Delete(r, ok, "", "32-tree with not containing node", t)
+
+	r, ok = r.Delete(0xAAEAAAAA, 10)
+	assertTree32Delete(r, ok, "", "32-tree with empty branch", t)
+
+	r, ok = r.Delete(0xAAABBBBB, 16)
+	assertTree32Delete(r, ok, "", "32-tree with not contained branch", t)
+
+	r, ok = r.Delete(0xAAAAAAAA, 16)
+	assertTree32Delete(r, ok, TestTree32WithDeletedChildNode,
+		"32-tree with deleted child node", t)
+
+	r, ok = r.Delete(0, -10)
+	assertTree32Delete(r, ok, TestTree32EmptyTree,
+		"32-tree with deleted all nodes by negative number of significant bits", t)
+
+	r = nil
+	r = r.Insert(0xAAAAAAAA, 9, "test")
+	r = r.Insert(0xAAAAAAAA, 32, "test")
+	r, ok = r.Delete(0xAAAAAAAA, 35)
+	assertTree32Delete(r, ok, TestTree32WithDeletedChildNode,
+		"32-tree with deleted child node by too big number of significant bits", t)
+
+	r = nil
+	r = r.Insert(0xAAAAAAAA, 7, "L1")
+	r = r.Insert(0xA8AAAAAA, 9, "L2.1")
+	r = r.Insert(0xABAAAAAA, 9, "L2.2")
+	r = r.Insert(0xAAAAAAAA, 18, "L3")
+	r = r.Insert(0xAAABAAAA, 24, "L5")
+	r = r.Insert(0xAABAAAAA, 19, "L4")
+
+	r, ok = r.Delete(0xAABAAAAA, 19)
+	assertTree32Delete(r, ok, TestTree32WithDeletedChildAndNonLeafNodes,
+		"32-tree with deleted child and non-leaf node", t)
+
+	r, ok = r.Delete(0xAAAAAAAA, 18)
+	assertTree32Delete(r, ok, TestTree32WithDeletedTwoChildrenAndNonLeafNodes,
+		"32-tree with deleted two children and non-leaf nodes", t)
 }
 
 func TestClz32(t *testing.T) {
@@ -177,9 +266,39 @@ func TestClz32(t *testing.T) {
 }
 
 func assertTree32(r *Node32, e, desc string, t *testing.T) {
+	assertStringLists(difflib.SplitLines(r.Dot()), difflib.SplitLines(e), desc, t)
+}
+
+func assertSequence32(ch chan *Node32, t *testing.T, desc string, e ...string) {
+	items := []string{}
+	for n := range ch {
+		if n == nil {
+			items = append(items, fmt.Sprintf("%q\n", n))
+			continue
+		}
+
+		s, ok := n.Value.(string)
+		if ok {
+			s = fmt.Sprintf("%q", s)
+		} else {
+			s = fmt.Sprintf("%#v (non-string type %T)", n.Value, n.Value)
+		}
+
+		items = append(items, fmt.Sprintf("0x%08x/%d: %s\n", n.Key, n.Bits, s))
+	}
+
+	eItems := make([]string, len(e))
+	for i, item := range e {
+		eItems[i] = item + "\n"
+	}
+
+	assertStringLists(items, eItems, desc, t)
+}
+
+func assertStringLists(v, e []string, desc string, t *testing.T) {
 	ctx := difflib.ContextDiff{
-		A:        difflib.SplitLines(e),
-		B:        difflib.SplitLines(r.Dot()),
+		A:        e,
+		B:        v,
 		FromFile: "Expected",
 		ToFile:   "Got"}
 
@@ -222,6 +341,19 @@ func assertTreeGet(v interface{}, ok bool, e *string, desc string, t *testing.T)
 	}
 }
 
+func assertTree32Delete(r *Node32, ok bool, e string, desc string, t *testing.T) {
+	if len(e) > 0 {
+		if !ok {
+			t.Errorf("Expected something to be deleted from %s but it isn't and got old root:\n%s\n", desc, r.Dot())
+			return
+		}
+
+		assertTree32(r, e, desc, t)
+	} else if ok {
+		t.Errorf("Expected nothing to be deleted from %s but it is and got new root:\n%s\n", desc, r.Dot())
+	}
+}
+
 func assertClz32(x uint32, c uint8, t *testing.T) {
 	r := clz32(x)
 	if r != c {
@@ -236,69 +368,79 @@ N0 [label="k: 00000000, b: 32, v: \"\"test\"\""]
 `
 
 	TestTree32WithTopAfterBottomToLeftNodesInserted = `digraph d {
-N0 [label="k: aa800000, b: 9, v: \"\"top\"\""]
+N0 [label="k: aaaaaaaa, b: 9, v: \"\"top\"\""]
 N0 -> { N1 N2 }
-N1 [label="k: aaaa8000, b: 18, v: \"\"bottom\"\""]
+N1 [label="k: aaaaaaaa, b: 18, v: \"\"bottom\"\""]
 N2 [label="nil"]
 }
 `
 
 	TestTree32WithTopAfterBottomToRightNodesInserted = `digraph d {
-N0 [label="k: aa800000, b: 10, v: \"\"top\"\""]
+N0 [label="k: aaaaaaaa, b: 10, v: \"\"top\"\""]
 N0 -> { N1 N2 }
 N1 [label="nil"]
-N2 [label="k: aaaa8000, b: 18, v: \"\"bottom\"\""]
+N2 [label="k: aaaaaaaa, b: 18, v: \"\"bottom\"\""]
 }
 `
 
 	TestTree32WithTopAfterBottomAndAdditionalNotLeafNodesInserted = `digraph d {
 N0 [label="k: aa000000, b: 7"]
 N0 -> { N1 N2 }
-N1 [label="k: aaaa8000, b: 18, v: \"\"bottom\"\""]
-N2 [label="k: ab800000, b: 10, v: \"\"top\"\""]
+N1 [label="k: aaaaaaaa, b: 18, v: \"\"bottom\"\""]
+N2 [label="k: abaaaaaa, b: 10, v: \"\"top\"\""]
 }
 `
 
 	TestTree32WithOldTopReplacingTopAfterBottomNodesInserted = `digraph d {
 N0 [label="k: aa000000, b: 7"]
 N0 -> { N1 N2 }
-N1 [label="k: aaaa8000, b: 18, v: \"\"bottom\"\""]
-N2 [label="k: ab800000, b: 10, v: \"\"top\"\""]
+N1 [label="k: aaaaaaaa, b: 18, v: \"\"bottom\"\""]
+N2 [label="k: abaaaaaa, b: 10, v: \"\"top\"\""]
 }
 `
 
 	TestTree32WithNewTopReplacingTopAfterBottomNodesInserted = `digraph d {
-N0 [label="k: aa000000, b: 7, v: \"\"root\"\""]
+N0 [label="k: abaaaaaa, b: 7, v: \"\"root\"\""]
 N0 -> { N1 N2 }
-N1 [label="k: aaaa8000, b: 18, v: \"\"bottom\"\""]
-N2 [label="k: ab800000, b: 10, v: \"\"top\"\""]
+N1 [label="k: aaaaaaaa, b: 18, v: \"\"bottom\"\""]
+N2 [label="k: abaaaaaa, b: 10, v: \"\"top\"\""]
 }
 `
 
 	TestTree32WithTopBeforeBottomToLeftNodesInserted = `digraph d {
-N0 [label="k: aa800000, b: 9, v: \"\"top\"\""]
+N0 [label="k: aaaaaaaa, b: 9, v: \"\"top\"\""]
 N0 -> { N1 N2 }
-N1 [label="k: aaaa8000, b: 18, v: \"\"bottom\"\""]
+N1 [label="k: aaaaaaaa, b: 18, v: \"\"bottom\"\""]
 N2 [label="nil"]
 }
 `
 
 	TestTree32WithTopBeforeBottomToRightNodesInserted = `digraph d {
-N0 [label="k: aa800000, b: 10, v: \"\"top\"\""]
+N0 [label="k: aaaaaaaa, b: 10, v: \"\"top\"\""]
 N0 -> { N1 N2 }
 N1 [label="nil"]
-N2 [label="k: aaaa8000, b: 18, v: \"\"bottom\"\""]
+N2 [label="k: aaaaaaaa, b: 18, v: \"\"bottom\"\""]
 }
 `
 
 	TestTree32WithTopBeforeBottomSeveralLevelNodesInserted = `digraph d {
-N0 [label="k: aa000000, b: 7, v: \"\"L1\"\""]
+N0 [label="k: aaaaaaaa, b: 7, v: \"\"L1\"\""]
 N0 -> { N1 N2 }
 N1 [label="k: aaa00000, b: 11"]
 N1 -> { N3 N4 }
-N2 [label="k: ab800000, b: 9, v: \"\"L2\"\""]
-N3 [label="k: aaaa8000, b: 18, v: \"\"L3\"\""]
-N4 [label="k: aabaa000, b: 19, v: \"\"L4\"\""]
+N2 [label="k: abaaaaaa, b: 9, v: \"\"L2\"\""]
+N3 [label="k: aaaaaaaa, b: 18, v: \"\"L3\"\""]
+N4 [label="k: aabaaaaa, b: 19, v: \"\"L4\"\""]
+}
+`
+
+	TestTree32WithNegativeNumberOfBits = `digraph d {
+N0 [label="k: 00000000, b: 0, v: \"<nil>\""]
+}
+`
+
+	TestTree32WithTooBigNumberOfBits = `digraph d {
+N0 [label="k: 00000000, b: 32, v: \"<nil>\""]
 }
 `
 
@@ -1839,6 +1981,41 @@ N507 [label="k: fc000000, b: 32, v: \"\"fc\"\""]
 N508 [label="k: fd000000, b: 32, v: \"\"fd\"\""]
 N509 [label="k: fe000000, b: 32, v: \"\"fe\"\""]
 N510 [label="k: ff000000, b: 32, v: \"\"ff\"\""]
+}
+`
+
+	TestTree32EmptyTree = `digraph d {
+N0 [label="nil"]
+}
+`
+
+	TestTree32WithDeletedChildNode = `digraph d {
+N0 [label="k: aaaaaaaa, b: 9, v: \"\"test\"\""]
+}
+`
+
+	TestTree32WithDeletedChildAndNonLeafNodes = `digraph d {
+N0 [label="k: a8000000, b: 6"]
+N0 -> { N1 N2 }
+N1 [label="k: a8aaaaaa, b: 9, v: \"\"L2.1\"\""]
+N2 [label="k: aaaaaaaa, b: 7, v: \"\"L1\"\""]
+N2 -> { N3 N4 }
+N3 [label="k: aaaa0000, b: 15"]
+N3 -> { N5 N6 }
+N4 [label="k: abaaaaaa, b: 9, v: \"\"L2.2\"\""]
+N5 [label="k: aaaaaaaa, b: 18, v: \"\"L3\"\""]
+N6 [label="k: aaabaaaa, b: 24, v: \"\"L5\"\""]
+}
+`
+
+	TestTree32WithDeletedTwoChildrenAndNonLeafNodes = `digraph d {
+N0 [label="k: a8000000, b: 6"]
+N0 -> { N1 N2 }
+N1 [label="k: a8aaaaaa, b: 9, v: \"\"L2.1\"\""]
+N2 [label="k: aaaaaaaa, b: 7, v: \"\"L1\"\""]
+N2 -> { N3 N4 }
+N3 [label="k: aaabaaaa, b: 24, v: \"\"L5\"\""]
+N4 [label="k: abaaaaaa, b: 9, v: \"\"L2.2\"\""]
 }
 `
 )

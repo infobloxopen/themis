@@ -1,16 +1,10 @@
 package numtree
 
-import (
-	"errors"
-	"fmt"
-)
+import "fmt"
 
 const key64BitSize = 64
 
-// ErrBits64OutOfRange is the error returned when number of significant bits out of interval [0, 64].
 var (
-	ErrBits64OutOfRange = errors.New("number of significant bits is out of range (expected 0 <= n < 64)")
-
 	masks64 = []uint64{
 		0x0000000000000000, 0x8000000000000000, 0xc000000000000000, 0xe000000000000000,
 		0xf000000000000000, 0xf800000000000000, 0xfc00000000000000, 0xfe00000000000000,
@@ -68,16 +62,39 @@ func (n *Node64) Dot() string {
 }
 
 // Insert puts new leaf to radix tree and returns pointer to new root. The method uses copy on write strategy so old root doesn't see the change.
-func (n *Node64) Insert(key uint64, bits int, value interface{}) (*Node64, error) {
-	if bits < 0 || bits > key64BitSize {
-		return nil, ErrBits64OutOfRange
+func (n *Node64) Insert(key uint64, bits int, value interface{}) *Node64 {
+	if bits < 0 {
+		bits = 0
+	} else if bits > key64BitSize {
+		bits = key64BitSize
 	}
 
-	return n.insert(newNode64(key&masks64[bits], uint8(bits), true, value)), nil
+	return n.insert(newNode64(key, uint8(bits), true, value))
+}
+
+// Enumerate returns channel which is populated by nodes in order of their keys.
+func (n *Node64) Enumerate() chan *Node64 {
+	ch := make(chan *Node64)
+
+	go func() {
+		defer close(ch)
+
+		if n == nil {
+			return
+		}
+
+		n.enumerate(ch)
+	}()
+
+	return ch
 }
 
 // Get locates node which key is equal to or "contains" the key passed as argument.
 func (n *Node64) Get(key uint64, bits int) (interface{}, bool) {
+	if n == nil {
+		return n, false
+	}
+
 	if bits < 0 {
 		bits = 0
 	} else if bits > key64BitSize {
@@ -90,6 +107,21 @@ func (n *Node64) Get(key uint64, bits int) (interface{}, bool) {
 	}
 
 	return r.Value, true
+}
+
+// Delete removes subtree which is contained by given key. The method uses copy on write strategy.
+func (n *Node64) Delete(key uint64, bits int) (*Node64, bool) {
+	if n == nil {
+		return n, false
+	}
+
+	if bits < 0 {
+		bits = 0
+	} else if bits > key64BitSize {
+		bits = key64BitSize
+	}
+
+	return n.del(key, uint8(bits))
 }
 
 func (n *Node64) dotString() string {
@@ -139,8 +171,22 @@ func (n *Node64) insert(c *Node64) *Node64 {
 	return m
 }
 
+func (n *Node64) enumerate(ch chan *Node64) {
+	if n.chld[0] != nil {
+		n.chld[0].enumerate(ch)
+	}
+
+	if n.Leaf {
+		ch <- n
+	}
+
+	if n.chld[1] != nil {
+		n.chld[1].enumerate(ch)
+	}
+}
+
 func (n *Node64) get(key uint64, bits uint8) *Node64 {
-	if n == nil || n.Bits > bits {
+	if n.Bits > bits {
 		return nil
 	}
 
@@ -166,6 +212,41 @@ func (n *Node64) get(key uint64, bits uint8) *Node64 {
 	}
 
 	return nil
+}
+
+func (n *Node64) del(key uint64, bits uint8) (*Node64, bool) {
+	if bits <= n.Bits {
+		if (n.Key^key)&masks64[bits] == 0 {
+			return nil, true
+		}
+
+		return n, false
+	}
+
+	if (n.Key^key)&masks64[n.Bits] != 0 {
+		return n, false
+	}
+
+	branch := (key >> (key64BitSize - 1 - n.Bits)) & 1
+	c := n.chld[branch]
+	if c == nil {
+		return n, false
+	}
+
+	c, ok := c.del(key, bits)
+	if !ok {
+		return n, false
+	}
+
+	if c == nil && !n.Leaf {
+		return n.chld[1-branch], true
+	}
+
+	m := newNode64(n.Key, n.Bits, n.Leaf, n.Value)
+	m.chld = n.chld
+
+	m.chld[branch] = c
+	return m, true
 }
 
 func newNode64(key uint64, bits uint8, leaf bool, value interface{}) *Node64 {

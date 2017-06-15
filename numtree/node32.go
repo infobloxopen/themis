@@ -1,16 +1,10 @@
 package numtree
 
-import (
-	"errors"
-	"fmt"
-)
+import "fmt"
 
 const key32BitSize = 32
 
-// ErrBits32OutOfRange is the error returned when number of significant bits out of interval [0, 32].
 var (
-	ErrBits32OutOfRange = errors.New("number of significant bits is out of range (expected 0 <= n < 32)")
-
 	masks32 = []uint32{
 		0x00000000, 0x80000000, 0xc0000000, 0xe0000000,
 		0xf0000000, 0xf8000000, 0xfc000000, 0xfe000000,
@@ -62,28 +56,72 @@ func (n *Node32) Dot() string {
 }
 
 // Insert puts new leaf to radix tree and returns pointer to new root. The method uses copy on write strategy so old root doesn't see the change.
-func (n *Node32) Insert(key uint32, bits int, value interface{}) (*Node32, error) {
-	if bits < 0 || bits > key32BitSize {
-		return nil, ErrBits32OutOfRange
-	}
-
-	return n.insert(newNode32(key&masks32[bits], uint8(bits), true, value)), nil
-}
-
-// Get locates node which key is equal to or "contains" the key passed as argument.
-func (n *Node32) Get(key uint32, bits int) (interface{}, bool) {
+func (n *Node32) Insert(key uint32, bits int, value interface{}) *Node32 {
 	if bits < 0 {
 		bits = 0
 	} else if bits > key32BitSize {
 		bits = key32BitSize
 	}
 
-	r := n.get(key&masks32[bits], uint8(bits))
+	return n.insert(newNode32(key, uint8(bits), true, value))
+}
+
+// Enumerate returns channel which is populated by nodes with data in order of their keys.
+func (n *Node32) Enumerate() chan *Node32 {
+	ch := make(chan *Node32)
+
+	go func() {
+		defer close(ch)
+
+		// If tree is empty -
+		if n == nil {
+			// return nothing.
+			return
+		}
+
+		n.enumerate(ch)
+	}()
+
+	return ch
+}
+
+// Get locates node which key is equal to or "contains" the key passed as argument.
+func (n *Node32) Get(key uint32, bits int) (interface{}, bool) {
+	// If tree is empty -
+	if n == nil {
+		// report nothing.
+		return n, false
+	}
+
+	if bits < 0 {
+		bits = 0
+	} else if bits > key32BitSize {
+		bits = key32BitSize
+	}
+
+	r := n.get(key, uint8(bits))
 	if r == nil {
 		return nil, false
 	}
 
 	return r.Value, true
+}
+
+// Delete removes subtree which is contained by given key. The method uses copy on write strategy.
+func (n *Node32) Delete(key uint32, bits int) (*Node32, bool) {
+	// If tree is empty -
+	if n == nil {
+		// report nothing.
+		return n, false
+	}
+
+	if bits < 0 {
+		bits = 0
+	} else if bits > key32BitSize {
+		bits = key32BitSize
+	}
+
+	return n.del(key, uint8(bits))
 }
 
 func (n *Node32) dotString() string {
@@ -154,9 +192,24 @@ func (n *Node32) insert(c *Node32) *Node32 {
 	return m
 }
 
+func (n *Node32) enumerate(ch chan *Node32) {
+	// Implemented by depth-first search.
+	if n.chld[0] != nil {
+		n.chld[0].enumerate(ch)
+	}
+
+	if n.Leaf {
+		ch <- n
+	}
+
+	if n.chld[1] != nil {
+		n.chld[1].enumerate(ch)
+	}
+}
+
 func (n *Node32) get(key uint32, bits uint8) *Node32 {
 	// If tree is empty or current key can't be contained in root node -
-	if n == nil || n.Bits > bits {
+	if n.Bits > bits {
 		// report nothing.
 		return nil
 	}
@@ -188,6 +241,53 @@ func (n *Node32) get(key uint32, bits uint8) *Node32 {
 	}
 
 	return nil
+}
+
+func (n *Node32) del(key uint32, bits uint8) (*Node32, bool) {
+	// If key can contain current tree node -
+	if bits <= n.Bits {
+		// report empty new tree and put deletion mark if it contains indeed.
+		if (n.Key^key)&masks32[bits] == 0 {
+			return nil, true
+		}
+
+		return n, false
+	}
+
+	// If key can be contained by current tree node -
+	if (n.Key^key)&masks32[n.Bits] != 0 {
+		// but it isn't report nothing.
+		return n, false
+	}
+
+	// Otherwise jump to branch by key bit right after NSB of current tree node
+	branch := (key >> (key32BitSize - 1 - n.Bits)) & 1
+	c := n.chld[branch]
+	if c == nil {
+		// report nothing if the branch is empty.
+		return n, false
+	}
+
+	// Try to remove from subtree
+	c, ok := c.del(key, bits)
+	if !ok {
+		// and report nothing if nothing has been deleted.
+		return n, false
+	}
+
+	// If child of non-leaf node has been completely deleted -
+	if c == nil && !n.Leaf {
+		// drop the node.
+		return n.chld[1-branch], true
+	}
+
+	// If deletion happens inside the branch then copy current node.
+	m := newNode32(n.Key, n.Bits, n.Leaf, n.Value)
+	m.chld = n.chld
+
+	// Replace changed child with new one and return new root with deletion mark set.
+	m.chld[branch] = c
+	return m, true
 }
 
 func newNode32(key uint32, bits uint8, leaf bool, value interface{}) *Node32 {

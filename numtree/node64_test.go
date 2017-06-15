@@ -10,123 +10,212 @@ import (
 func TestInsert64(t *testing.T) {
 	var r *Node64
 
-	r, _ = r.Insert(0, 64, "test")
+	r = r.Insert(0, 64, "test")
 	assertTree64(r, TestTree64WithSingleNodeInserted,
 		"64-tree with single node inserted", t)
 
 	r = nil
-	r, _ = r.Insert(0xAAAAAAAA00000000, 18, "bottom")
-	r, _ = r.Insert(0xAAAAAAAA00000000, 9, "top")
+	r = r.Insert(0xAAAAAAAA00000000, 18, "bottom")
+	r = r.Insert(0xAAAAAAAA00000000, 9, "top")
 	assertTree64(r, TestTree64WithTopAfterBottomToLeftNodesInserted,
 		"64-tree with top after bottom to left nodes inserted", t)
 
 	r = nil
-	r, _ = r.Insert(0xAAAAAAAA00000000, 18, "bottom")
-	r, _ = r.Insert(0xAAAAAAAA00000000, 10, "top")
+	r = r.Insert(0xAAAAAAAA00000000, 18, "bottom")
+	r = r.Insert(0xAAAAAAAA00000000, 10, "top")
 	assertTree64(r, TestTree64WithTopAfterBottomToRightNodesInserted,
 		"64-tree with top after bottom to right nodes inserted", t)
 
 	r = nil
-	r, _ = r.Insert(0xAAAAAAAA00000000, 18, "bottom")
-	r, _ = r.Insert(0xABAAAAAA00000000, 10, "top")
+	r = r.Insert(0xAAAAAAAA00000000, 18, "bottom")
+	r = r.Insert(0xABAAAAAA00000000, 10, "top")
 	assertTree64(r, TestTree64WithTopAfterBottomAndAdditionalNotLeafNodesInserted,
 		"64-tree with top after bottom and addtional not leaf nodes inserted", t)
 
 	r = nil
-	r, _ = r.Insert(0xAAAAAAAA00000000, 18, "bottom")
-	oldR, _ := r.Insert(0xABAAAAAA00000000, 10, "top")
-	newR, _ := oldR.Insert(0xABAAAAAA00000000, 7, "root")
+	r = r.Insert(0xAAAAAAAA00000000, 18, "bottom")
+	oldR := r.Insert(0xABAAAAAA00000000, 10, "top")
+	newR := oldR.Insert(0xABAAAAAA00000000, 7, "root")
 	assertTree64(oldR, TestTree64WithOldTopReplacingTopAfterBottomNodesInserted,
 		"64-tree with old top replacing top after bottom nodes inserted", t)
 	assertTree64(newR, TestTree64WithNewTopReplacingTopAfterBottomNodesInserted,
 		"64-tree with new top replacing top after bottom nodes inserted", t)
 
 	r = nil
-	r, _ = r.Insert(0xAAAAAAAA00000000, 9, "top")
-	r, _ = r.Insert(0xAAAAAAAA00000000, 18, "bottom")
+	r = r.Insert(0xAAAAAAAA00000000, 9, "top")
+	r = r.Insert(0xAAAAAAAA00000000, 18, "bottom")
 	assertTree64(r, TestTree64WithTopBeforeBottomToLeftNodesInserted,
 		"64-tree with top before bottom to left nodes inserted", t)
 
 	r = nil
-	r, _ = r.Insert(0xAAAAAAAA00000000, 10, "top")
-	r, _ = r.Insert(0xAAAAAAAA00000000, 18, "bottom")
+	r = r.Insert(0xAAAAAAAA00000000, 10, "top")
+	r = r.Insert(0xAAAAAAAA00000000, 18, "bottom")
 	assertTree64(r, TestTree64WithTopBeforeBottomToRightNodesInserted,
 		"64-tree with top before bottom to right nodes inserted", t)
 
 	r = nil
-	r, _ = r.Insert(0xAAAAAAA00000000, 7, "L1")
-	r, _ = r.Insert(0xABAAAAA00000000, 9, "L2")
-	r, _ = r.Insert(0xAAAAAAA00000000, 18, "L3")
-	r, _ = r.Insert(0xAABAAAA00000000, 19, "L4")
+	r = r.Insert(0xAAAAAAA00000000, 7, "L1")
+	r = r.Insert(0xABAAAAA00000000, 9, "L2")
+	r = r.Insert(0xAAAAAAA00000000, 18, "L3")
+	r = r.Insert(0xAABAAAA00000000, 19, "L4")
 	assertTree64(r, TestTree64WithTopBeforeBottomSeveralLevelNodesInserted,
 		"64-tree with top before bottom several level nodes inserted", t)
 
 	r = nil
+	r = r.Insert(0, -10, nil)
+	assertTree64(r, TestTree64WithNegativeNumberOfBits,
+		"64-tree with negative number of significant bits", t)
+
+	r = nil
+	r = r.Insert(0, 65, nil)
+	assertTree64(r, TestTree64WithTooBigNumberOfBits,
+		"64-tree with too big number of significant bits", t)
+
+	r = nil
 	for i := uint64(0); i < 256; i++ {
-		r, _ = r.Insert(i, 64, fmt.Sprintf("%02x", i))
+		r = r.Insert(i, 64, fmt.Sprintf("%02x", i))
 	}
 	assertTree64(r, TestTree64BigTreeInsertions,
 		"64-tree big tree", t)
 
 	r = nil
 	for i := uint64(0); i < 256; i++ {
-		r, _ = r.Insert(inv64[i]<<56, 64, fmt.Sprintf("%02x", inv64[i]))
+		r = r.Insert(inv64[i]<<56, 64, fmt.Sprintf("%02x", inv64[i]))
 	}
 	assertTree64(r, TestTree64BigTreeInvertedInsertions,
 		"64-tree big tree with inverted keys", t)
+}
 
-	r = nil
-	_, err := r.Insert(0, -10, nil)
-	if err == nil {
-		t.Errorf("Expected error while insert node with -10 significant bits")
-	}
+func TestEnumerate64(t *testing.T) {
+	var r *Node64
 
-	r = nil
-	_, err = r.Insert(0, 65, nil)
-	if err == nil {
-		t.Errorf("Expected error while insert node with 65 significant bits")
-	}
+	ch := r.Enumerate()
+	assertSequence64(ch, t, "64-tree empty tree")
+
+	r = r.Insert(0xAAAAAAAA00000000, 7, "L1")
+	r = r.Insert(0xA8AAAAAA00000000, 9, "L2.1")
+	r = r.Insert(0xABAAAAAA00000000, 9, "L2.2")
+	r = r.Insert(0xAAAAAAAA00000000, 18, "L3")
+	r = r.Insert(0xAAABAAAA00000000, 24, "L5")
+	r = r.Insert(0xAABAAAAA00000000, 19, "L4")
+	ch = r.Enumerate()
+	assertSequence64(ch, t, "64-tree for enumeration",
+		"0xa8aaaaaa00000000/9: \"L2.1\"",
+		"0xaaaaaaaa00000000/18: \"L3\"",
+		"0xaaabaaaa00000000/24: \"L5\"",
+		"0xaabaaaaa00000000/19: \"L4\"",
+		"0xaaaaaaaa00000000/7: \"L1\"",
+		"0xabaaaaaa00000000/9: \"L2.2\"")
 }
 
 func TestGet64(t *testing.T) {
 	var r *Node64
-	r, _ = r.Insert(0xAAAAAAAA00000000, 7, "L1")
-	r, _ = r.Insert(0xA8AAAAAA00000000, 9, "L2.1")
-	r, _ = r.Insert(0xABAAAAAA00000000, 9, "L2.2")
-	r, _ = r.Insert(0xAAAAAAAA00000000, 18, "L3")
-	r, _ = r.Insert(0xAABAAAAA00000000, 19, "L4")
 
-	v, ok := r.Get(0, -1)
+	v, ok := r.Get(0, 0)
 	assertTreeGet(v, ok, nil,
-		"32-bit tree get with negative significant bits", t)
+		"64-bit empty tree", t)
+
+	r = r.Insert(0xAAAAAAAA00000000, 7, "L1")
+	r = r.Insert(0xA8AAAAAA00000000, 9, "L2.1")
+	r = r.Insert(0xABAAAAAA00000000, 9, "L2.2")
+	r = r.Insert(0xAAAAAAAA00000000, 18, "L3")
+	r = r.Insert(0xAABAAAAA00000000, 19, "L4")
+
+	v, ok = r.Get(0, -1)
+	assertTreeGet(v, ok, nil,
+		"64-tree get with negative significant bits", t)
 
 	v, ok = r.Get(0xAAAAAAAA00000000, 67)
 	assertTreeGet(v, ok, wrapStr("L3"),
-		"32-bit tree get with overflow significant bits number", t)
+		"64-tree get with overflow significant bits number", t)
 
 	v, ok = r.Get(0xAAAAAAAA00000000, 5)
 	assertTreeGet(v, ok, nil,
-		"32-bit tree get with small significant bits number", t)
+		"64-tree get with small significant bits number", t)
 
 	v, ok = r.Get(0xAAAAAAAA00000000, 7)
 	assertTreeGet(v, ok, wrapStr("L1"),
-		"32-bit tree get with exact match to top node", t)
+		"64-tree get with exact match to top node", t)
 
 	v, ok = r.Get(0xBAAAAAAA00000000, 7)
 	assertTreeGet(v, ok, nil,
-		"32-bit tree get with exact not match to top node", t)
+		"64-tree get with exact not match to top node", t)
 
 	v, ok = r.Get(0xAABAAACA00000000, 64)
 	assertTreeGet(v, ok, wrapStr("L4"),
-		"32-bit tree get with contains match to child node", t)
+		"64-tree get with contains match to child node", t)
 
 	v, ok = r.Get(0xABAAAAAA00000000, 9)
 	assertTreeGet(v, ok, wrapStr("L2.2"),
-		"32-bit tree get with exact match to child node", t)
+		"64-tree get with exact match to child node", t)
 
 	v, ok = r.Get(0xA80AAAAA00000000, 11)
 	assertTreeGet(v, ok, nil,
-		"32-bit tree get with contains match to non-leaf node", t)
+		"64-tree get with contains match to non-leaf node", t)
+}
+
+func TestDelete64(t *testing.T) {
+	var (
+		r  *Node64
+		ok bool
+	)
+
+	r, ok = r.Delete(0, 64)
+	assertTree64Delete(r, ok, "", "64-bit empty tree", t)
+
+	r = nil
+	r = r.Insert(0xAAAAAAAA00000000, 18, "test")
+	r, ok = r.Delete(0xAAAAAAAA00000000, 9)
+	assertTree64Delete(r, ok, TestTree64EmptyTree,
+		"64-tree with contained node", t)
+
+	r = nil
+	r = r.Insert(0xAAAAAAAA00000000, 18, "test")
+	r, ok = r.Delete(0xBBBBBBBB00000000, 9)
+	assertTree64Delete(r, ok, "", "64-tree with not contained node", t)
+
+	r = nil
+	r = r.Insert(0xAAAAAAAA00000000, 9, "test")
+	r = r.Insert(0xAAAAAAAA00000000, 18, "test")
+	r, ok = r.Delete(0xBBBBBBBB00000000, 10)
+	assertTree64Delete(r, ok, "", "64-tree with not containing node", t)
+
+	r, ok = r.Delete(0xAAEAAAAA00000000, 10)
+	assertTree64Delete(r, ok, "", "64-tree with empty branch", t)
+
+	r, ok = r.Delete(0xAAABBBBB00000000, 16)
+	assertTree64Delete(r, ok, "", "64-tree with not contained branch", t)
+
+	r, ok = r.Delete(0xAAAAAAAA00000000, 16)
+	assertTree64Delete(r, ok, TestTree64WithDeletedChildNode,
+		"64-tree with deleted child node", t)
+
+	r, ok = r.Delete(0, -10)
+	assertTree64Delete(r, ok, TestTree64EmptyTree,
+		"64-tree with deleted all nodes by negative number of significant bits", t)
+
+	r = nil
+	r = r.Insert(0xAAAAAAAA00000000, 9, "test")
+	r = r.Insert(0xAAAAAAAA00000000, 64, "test")
+	r, ok = r.Delete(0xAAAAAAAA00000000, 65)
+	assertTree64Delete(r, ok, TestTree64WithDeletedChildNode,
+		"64-tree with deleted child node by too big number of significant bits", t)
+
+	r = nil
+	r = r.Insert(0xAAAAAAAA00000000, 7, "L1")
+	r = r.Insert(0xA8AAAAAA00000000, 9, "L2.1")
+	r = r.Insert(0xABAAAAAA00000000, 9, "L2.2")
+	r = r.Insert(0xAAAAAAAA00000000, 18, "L3")
+	r = r.Insert(0xAAABAAAA00000000, 24, "L5")
+	r = r.Insert(0xAABAAAAA00000000, 19, "L4")
+
+	r, ok = r.Delete(0xAABAAAAA00000000, 19)
+	assertTree64Delete(r, ok, TestTree64WithDeletedChildAndNonLeafNodes,
+		"64-tree with deleted child and non-leaf node", t)
+
+	r, ok = r.Delete(0xAAAAAAAA00000000, 18)
+	assertTree64Delete(r, ok, TestTree64WithDeletedTwoChildrenAndNonLeafNodes,
+		"64-tree with deleted two children and non-leaf nodes", t)
 }
 
 func TestClz64(t *testing.T) {
@@ -217,19 +306,45 @@ func TestClz64(t *testing.T) {
 }
 
 func assertTree64(r *Node64, e, desc string, t *testing.T) {
-	ctx := difflib.ContextDiff{
-		A:        difflib.SplitLines(e),
-		B:        difflib.SplitLines(r.Dot()),
-		FromFile: "Expected",
-		ToFile:   "Got"}
+	assertStringLists(difflib.SplitLines(r.Dot()), difflib.SplitLines(e), desc, t)
+}
 
-	diff, err := difflib.GetContextDiffString(ctx)
-	if err != nil {
-		panic(fmt.Errorf("Can't compare \"%s\": %s", desc, err))
+func assertSequence64(ch chan *Node64, t *testing.T, desc string, e ...string) {
+	items := []string{}
+	for n := range ch {
+		if n == nil {
+			items = append(items, fmt.Sprintf("%q\n", n))
+			continue
+		}
+
+		s, ok := n.Value.(string)
+		if ok {
+			s = fmt.Sprintf("%q", s)
+		} else {
+			s = fmt.Sprintf("%#v (non-string type %T)", n.Value, n.Value)
+		}
+
+		items = append(items, fmt.Sprintf("0x%016x/%d: %s\n", n.Key, n.Bits, s))
 	}
 
-	if len(diff) > 0 {
-		t.Errorf("\"%s\" doesn't match:\n%s", desc, diff)
+	eItems := make([]string, len(e))
+	for i, item := range e {
+		eItems[i] = item + "\n"
+	}
+
+	assertStringLists(items, eItems, desc, t)
+}
+
+func assertTree64Delete(r *Node64, ok bool, e string, desc string, t *testing.T) {
+	if len(e) > 0 {
+		if !ok {
+			t.Errorf("Expected something to be deleted from %s but it isn't and got old root:\n%s\n", desc, r.Dot())
+			return
+		}
+
+		assertTree64(r, e, desc, t)
+	} else if ok {
+		t.Errorf("Expected nothing to be deleted from %s but it is and got new root:\n%s\n", desc, r.Dot())
 	}
 }
 
@@ -247,72 +362,82 @@ N0 [label="k: 0000000000000000, b: 64, v: \"\"test\"\""]
 `
 
 	TestTree64WithTopAfterBottomToLeftNodesInserted = `digraph d {
-N0 [label="k: aa80000000000000, b: 9, v: \"\"top\"\""]
+N0 [label="k: aaaaaaaa00000000, b: 9, v: \"\"top\"\""]
 N0 -> { N1 N2 }
-N1 [label="k: aaaa800000000000, b: 18, v: \"\"bottom\"\""]
+N1 [label="k: aaaaaaaa00000000, b: 18, v: \"\"bottom\"\""]
 N2 [label="nil"]
 }
 `
 
 	TestTree64WithTopAfterBottomToRightNodesInserted = `digraph d {
-N0 [label="k: aa80000000000000, b: 10, v: \"\"top\"\""]
+N0 [label="k: aaaaaaaa00000000, b: 10, v: \"\"top\"\""]
 N0 -> { N1 N2 }
 N1 [label="nil"]
-N2 [label="k: aaaa800000000000, b: 18, v: \"\"bottom\"\""]
+N2 [label="k: aaaaaaaa00000000, b: 18, v: \"\"bottom\"\""]
 }
 `
 
 	TestTree64WithTopAfterBottomAndAdditionalNotLeafNodesInserted = `digraph d {
 N0 [label="k: aa00000000000000, b: 7"]
 N0 -> { N1 N2 }
-N1 [label="k: aaaa800000000000, b: 18, v: \"\"bottom\"\""]
-N2 [label="k: ab80000000000000, b: 10, v: \"\"top\"\""]
+N1 [label="k: aaaaaaaa00000000, b: 18, v: \"\"bottom\"\""]
+N2 [label="k: abaaaaaa00000000, b: 10, v: \"\"top\"\""]
 }
 `
 
 	TestTree64WithOldTopReplacingTopAfterBottomNodesInserted = `digraph d {
 N0 [label="k: aa00000000000000, b: 7"]
 N0 -> { N1 N2 }
-N1 [label="k: aaaa800000000000, b: 18, v: \"\"bottom\"\""]
-N2 [label="k: ab80000000000000, b: 10, v: \"\"top\"\""]
+N1 [label="k: aaaaaaaa00000000, b: 18, v: \"\"bottom\"\""]
+N2 [label="k: abaaaaaa00000000, b: 10, v: \"\"top\"\""]
 }
 `
 
 	TestTree64WithNewTopReplacingTopAfterBottomNodesInserted = `digraph d {
-N0 [label="k: aa00000000000000, b: 7, v: \"\"root\"\""]
+N0 [label="k: abaaaaaa00000000, b: 7, v: \"\"root\"\""]
 N0 -> { N1 N2 }
-N1 [label="k: aaaa800000000000, b: 18, v: \"\"bottom\"\""]
-N2 [label="k: ab80000000000000, b: 10, v: \"\"top\"\""]
+N1 [label="k: aaaaaaaa00000000, b: 18, v: \"\"bottom\"\""]
+N2 [label="k: abaaaaaa00000000, b: 10, v: \"\"top\"\""]
 }
 `
 
 	TestTree64WithTopBeforeBottomToLeftNodesInserted = `digraph d {
-N0 [label="k: aa80000000000000, b: 9, v: \"\"top\"\""]
+N0 [label="k: aaaaaaaa00000000, b: 9, v: \"\"top\"\""]
 N0 -> { N1 N2 }
-N1 [label="k: aaaa800000000000, b: 18, v: \"\"bottom\"\""]
+N1 [label="k: aaaaaaaa00000000, b: 18, v: \"\"bottom\"\""]
 N2 [label="nil"]
 }
 `
 
 	TestTree64WithTopBeforeBottomToRightNodesInserted = `digraph d {
-N0 [label="k: aa80000000000000, b: 10, v: \"\"top\"\""]
+N0 [label="k: aaaaaaaa00000000, b: 10, v: \"\"top\"\""]
 N0 -> { N1 N2 }
 N1 [label="nil"]
-N2 [label="k: aaaa800000000000, b: 18, v: \"\"bottom\"\""]
+N2 [label="k: aaaaaaaa00000000, b: 18, v: \"\"bottom\"\""]
 }
 `
 
 	TestTree64WithTopBeforeBottomSeveralLevelNodesInserted = `digraph d {
-N0 [label="k: 0a00000000000000, b: 7, v: \"\"L1\"\""]
+N0 [label="k: 0aaaaaaa00000000, b: 7, v: \"\"L1\"\""]
 N0 -> { N1 N2 }
-N1 [label="k: 0a80000000000000, b: 9, v: \"\"L2\"\""]
+N1 [label="k: 0abaaaaa00000000, b: 9, v: \"\"L2\"\""]
 N1 -> { N3 N4 }
 N2 [label="nil"]
 N3 [label="k: 0aaa000000000000, b: 15"]
 N3 -> { N5 N6 }
 N4 [label="nil"]
-N5 [label="k: 0aaa800000000000, b: 18, v: \"\"L3\"\""]
-N6 [label="k: 0aaba00000000000, b: 19, v: \"\"L4\"\""]
+N5 [label="k: 0aaaaaaa00000000, b: 18, v: \"\"L3\"\""]
+N6 [label="k: 0aabaaaa00000000, b: 19, v: \"\"L4\"\""]
+}
+`
+
+	TestTree64WithNegativeNumberOfBits = `digraph d {
+N0 [label="k: 0000000000000000, b: 0, v: \"<nil>\""]
+}
+`
+
+	TestTree64WithTooBigNumberOfBits = `digraph d {
+N0 [label="k: 0000000000000000, b: 64, v: \"<nil>\""]
 }
 `
 
@@ -1853,6 +1978,41 @@ N507 [label="k: fc00000000000000, b: 64, v: \"\"fc\"\""]
 N508 [label="k: fd00000000000000, b: 64, v: \"\"fd\"\""]
 N509 [label="k: fe00000000000000, b: 64, v: \"\"fe\"\""]
 N510 [label="k: ff00000000000000, b: 64, v: \"\"ff\"\""]
+}
+`
+
+	TestTree64EmptyTree = `digraph d {
+N0 [label="nil"]
+}
+`
+
+	TestTree64WithDeletedChildNode = `digraph d {
+N0 [label="k: aaaaaaaa00000000, b: 9, v: \"\"test\"\""]
+}
+`
+
+	TestTree64WithDeletedChildAndNonLeafNodes = `digraph d {
+N0 [label="k: a800000000000000, b: 6"]
+N0 -> { N1 N2 }
+N1 [label="k: a8aaaaaa00000000, b: 9, v: \"\"L2.1\"\""]
+N2 [label="k: aaaaaaaa00000000, b: 7, v: \"\"L1\"\""]
+N2 -> { N3 N4 }
+N3 [label="k: aaaa000000000000, b: 15"]
+N3 -> { N5 N6 }
+N4 [label="k: abaaaaaa00000000, b: 9, v: \"\"L2.2\"\""]
+N5 [label="k: aaaaaaaa00000000, b: 18, v: \"\"L3\"\""]
+N6 [label="k: aaabaaaa00000000, b: 24, v: \"\"L5\"\""]
+}
+`
+
+	TestTree64WithDeletedTwoChildrenAndNonLeafNodes = `digraph d {
+N0 [label="k: a800000000000000, b: 6"]
+N0 -> { N1 N2 }
+N1 [label="k: a8aaaaaa00000000, b: 9, v: \"\"L2.1\"\""]
+N2 [label="k: aaaaaaaa00000000, b: 7, v: \"\"L1\"\""]
+N2 -> { N3 N4 }
+N3 [label="k: aaabaaaa00000000, b: 24, v: \"\"L5\"\""]
+N4 [label="k: abaaaaaa00000000, b: 9, v: \"\"L2.2\"\""]
 }
 `
 )
