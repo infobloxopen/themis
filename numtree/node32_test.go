@@ -108,11 +108,11 @@ func TestEnumerate32(t *testing.T) {
 		"0xabaaaaaa/9: \"L2.2\"")
 }
 
-func TestGet32(t *testing.T) {
+func TestMatch32(t *testing.T) {
 	var r *Node32
 
-	v, ok := r.Get(0, 0)
-	assertTreeGet(v, ok, nil,
+	v, ok := r.Match(0, 0)
+	assertTreeMatch(v, ok, nil,
 		"32-bit empty tree", t)
 
 	r = r.Insert(0xAAAAAAAA, 7, "L1")
@@ -121,37 +121,83 @@ func TestGet32(t *testing.T) {
 	r = r.Insert(0xAAAAAAAA, 18, "L3")
 	r = r.Insert(0xAABAAAAA, 19, "L4")
 
-	v, ok = r.Get(0, -1)
-	assertTreeGet(v, ok, nil,
-		"32-tree get with negative significant bits", t)
+	v, ok = r.Match(0, -1)
+	assertTreeMatch(v, ok, nil,
+		"32-tree match with negative significant bits", t)
 
-	v, ok = r.Get(0xAAAAAAAA, 35)
-	assertTreeGet(v, ok, wrapStr("L3"),
-		"32-tree get with overflow significant bits number", t)
+	v, ok = r.Match(0xAAAAAAAA, 35)
+	assertTreeMatch(v, ok, wrapStr("L3"),
+		"32-tree match with overflow significant bits number", t)
 
-	v, ok = r.Get(0xAAAAAAAA, 5)
-	assertTreeGet(v, ok, nil,
-		"32-tree get with small significant bits number", t)
+	v, ok = r.Match(0xAAAAAAAA, 5)
+	assertTreeMatch(v, ok, nil,
+		"32-tree match with small significant bits number", t)
 
-	v, ok = r.Get(0xAAAAAAAA, 7)
-	assertTreeGet(v, ok, wrapStr("L1"),
-		"32-tree get with exact match to top node", t)
+	v, ok = r.Match(0xA8AAAAAA, 9)
+	assertTreeMatch(v, ok, wrapStr("L2.1"),
+		"32-tree match with exact match to a node", t)
 
-	v, ok = r.Get(0xBAAAAAAA, 7)
-	assertTreeGet(v, ok, nil,
-		"32-tree get with exact not match to top node", t)
+	v, ok = r.Match(0xA9AAAAAA, 9)
+	assertTreeMatch(v, ok, nil,
+		"32-tree match with exact not match to a node", t)
 
-	v, ok = r.Get(0xAABAAACA, 32)
-	assertTreeGet(v, ok, wrapStr("L4"),
-		"32-tree get with contains match to child node", t)
+	v, ok = r.Match(0xAABAAACA, 32)
+	assertTreeMatch(v, ok, wrapStr("L4"),
+		"32-tree match with contains match to child node", t)
 
-	v, ok = r.Get(0xABAAAAAA, 9)
-	assertTreeGet(v, ok, wrapStr("L2.2"),
-		"32-tree get with exact match to child node", t)
+	v, ok = r.Match(0xABAAAAAA, 9)
+	assertTreeMatch(v, ok, wrapStr("L2.2"),
+		"32-tree match with exact match to child node", t)
 
-	v, ok = r.Get(0xA80AAAAA, 11)
-	assertTreeGet(v, ok, nil,
-		"32-tree get with contains match to non-leaf node", t)
+	v, ok = r.Match(0xA80AAAAA, 11)
+	assertTreeMatch(v, ok, nil,
+		"32-tree match with contains match to non-leaf node", t)
+}
+
+func TestExactMatch32(t *testing.T) {
+	var r *Node32
+
+	v, ok := r.ExactMatch(0, 0)
+	assertTreeMatch(v, ok, nil,
+		"32-bit empty tree", t)
+
+	r = r.Insert(0xAAAAAAAA, 7, "L1")
+	r = r.Insert(0xA8AAAAAA, 9, "L2.1")
+	r = r.Insert(0xABAAAAAA, 9, "L2.2")
+	r = r.Insert(0xAAAAAAAA, 18, "L3")
+	r = r.Insert(0xAABAAAAA, 19, "L4")
+
+	v, ok = r.ExactMatch(0, -1)
+	assertTreeMatch(v, ok, nil,
+		"32-tree exact match with negative significant bits", t)
+
+	v, ok = r.ExactMatch(0xAAAAAAAA, 35)
+	assertTreeMatch(v, ok, nil,
+		"32-tree exact match with overflow significant bits number", t)
+
+	v, ok = r.ExactMatch(0xAAAAAAAA, 5)
+	assertTreeMatch(v, ok, nil,
+		"32-tree exact match with small significant bits number", t)
+
+	v, ok = r.ExactMatch(0xA8AAAAAA, 9)
+	assertTreeMatch(v, ok, wrapStr("L2.1"),
+		"32-tree exact match with exact match to a node", t)
+
+	v, ok = r.ExactMatch(0xA9AAAAAA, 9)
+	assertTreeMatch(v, ok, nil,
+		"32-tree exact match with exact not match to a node", t)
+
+	v, ok = r.ExactMatch(0xAABAAACA, 32)
+	assertTreeMatch(v, ok, nil,
+		"32-tree exact match with contains not match to child node", t)
+
+	v, ok = r.ExactMatch(0xABAAAAAA, 9)
+	assertTreeMatch(v, ok, wrapStr("L2.2"),
+		"32-tree match with exact match to child node", t)
+
+	v, ok = r.ExactMatch(0xA80AAAAA, 11)
+	assertTreeMatch(v, ok, nil,
+		"32-tree match with contains match to non-leaf node", t)
 }
 
 func TestDelete32(t *testing.T) {
@@ -273,7 +319,7 @@ func assertSequence32(ch chan *Node32, t *testing.T, desc string, e ...string) {
 	items := []string{}
 	for n := range ch {
 		if n == nil {
-			items = append(items, fmt.Sprintf("%q\n", n))
+			items = append(items, fmt.Sprintf("%#v\n", n))
 			continue
 		}
 
@@ -316,7 +362,7 @@ func wrapStr(s string) *string {
 	return &s
 }
 
-func assertTreeGet(v interface{}, ok bool, e *string, desc string, t *testing.T) {
+func assertTreeMatch(v interface{}, ok bool, e *string, desc string, t *testing.T) {
 	if e == nil {
 		if ok {
 			t.Errorf("Expected no result for %s but got ok: true, value: %#v", desc, v)

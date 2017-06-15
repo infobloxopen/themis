@@ -89,8 +89,8 @@ func (n *Node64) Enumerate() chan *Node64 {
 	return ch
 }
 
-// Get locates node which key is equal to or "contains" the key passed as argument.
-func (n *Node64) Get(key uint64, bits int) (interface{}, bool) {
+// Match locates node which key is equal to or "contains" the key passed as argument.
+func (n *Node64) Match(key uint64, bits int) (interface{}, bool) {
 	if n == nil {
 		return n, false
 	}
@@ -101,7 +101,27 @@ func (n *Node64) Get(key uint64, bits int) (interface{}, bool) {
 		bits = key64BitSize
 	}
 
-	r := n.get(key, uint8(bits))
+	r := n.match(key, uint8(bits))
+	if r == nil {
+		return nil, false
+	}
+
+	return r.Value, true
+}
+
+// ExactMatch locates node which exactly matches given key.
+func (n *Node64) ExactMatch(key uint64, bits int) (interface{}, bool) {
+	if n == nil {
+		return n, false
+	}
+
+	if bits < 0 {
+		bits = 0
+	} else if bits > key64BitSize {
+		bits = key64BitSize
+	}
+
+	r := n.exactMatch(key, uint8(bits))
 	if r == nil {
 		return nil, false
 	}
@@ -185,30 +205,61 @@ func (n *Node64) enumerate(ch chan *Node64) {
 	}
 }
 
-func (n *Node64) get(key uint64, bits uint8) *Node64 {
+func (n *Node64) match(key uint64, bits uint8) *Node64 {
 	if n.Bits > bits {
 		return nil
 	}
 
-	mask := masks64[n.Bits]
 	if n.Bits == bits {
-		if n.Leaf && (n.Key^key)&mask == 0 {
+		if n.Leaf && (n.Key^key)&masks64[n.Bits] == 0 {
 			return n
 		}
 
 		return nil
 	}
 
+	if (n.Key^key)&masks64[n.Bits] != 0 {
+		return nil
+	}
+
 	c := n.chld[(key>>(key64BitSize-1-n.Bits))&1]
 	if c != nil {
-		r := c.get(key, bits)
+		r := c.match(key, bits)
 		if r != nil {
 			return r
 		}
 	}
 
-	if n.Leaf && (n.Key^key)&mask == 0 {
+	if n.Leaf {
 		return n
+	}
+
+	return nil
+}
+
+func (n *Node64) exactMatch(key uint64, bits uint8) *Node64 {
+	if n.Bits > bits {
+		return nil
+	}
+
+	if n.Bits == bits {
+		if n.Leaf && (n.Key^key)&masks64[n.Bits] == 0 {
+			return n
+		}
+
+		return nil
+	}
+
+	if (n.Key^key)&masks64[n.Bits] != 0 {
+		return nil
+	}
+
+	c := n.chld[(key>>(key64BitSize-1-n.Bits))&1]
+	if c != nil {
+		r := c.exactMatch(key, bits)
+		if r != nil {
+			return r
+		}
 	}
 
 	return nil

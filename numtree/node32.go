@@ -57,6 +57,7 @@ func (n *Node32) Dot() string {
 
 // Insert puts new leaf to radix tree and returns pointer to new root. The method uses copy on write strategy so old root doesn't see the change.
 func (n *Node32) Insert(key uint32, bits int, value interface{}) *Node32 {
+	// Adjust bits.
 	if bits < 0 {
 		bits = 0
 	} else if bits > key32BitSize {
@@ -85,21 +86,45 @@ func (n *Node32) Enumerate() chan *Node32 {
 	return ch
 }
 
-// Get locates node which key is equal to or "contains" the key passed as argument.
-func (n *Node32) Get(key uint32, bits int) (interface{}, bool) {
+// Match locates node which key is equal to or "contains" the key passed as argument.
+func (n *Node32) Match(key uint32, bits int) (interface{}, bool) {
 	// If tree is empty -
 	if n == nil {
 		// report nothing.
 		return n, false
 	}
 
+	// Adjust bits.
 	if bits < 0 {
 		bits = 0
 	} else if bits > key32BitSize {
 		bits = key32BitSize
 	}
 
-	r := n.get(key, uint8(bits))
+	r := n.match(key, uint8(bits))
+	if r == nil {
+		return nil, false
+	}
+
+	return r.Value, true
+}
+
+// ExactMatch locates node which exactly matches given key.
+func (n *Node32) ExactMatch(key uint32, bits int) (interface{}, bool) {
+	// If tree is empty -
+	if n == nil {
+		// report nothing.
+		return n, false
+	}
+
+	// Adjust bits.
+	if bits < 0 {
+		bits = 0
+	} else if bits > key32BitSize {
+		bits = key32BitSize
+	}
+
+	r := n.exactMatch(key, uint8(bits))
 	if r == nil {
 		return nil, false
 	}
@@ -115,6 +140,7 @@ func (n *Node32) Delete(key uint32, bits int) (*Node32, bool) {
 		return n, false
 	}
 
+	// Adjust bits.
 	if bits < 0 {
 		bits = 0
 	} else if bits > key32BitSize {
@@ -207,21 +233,26 @@ func (n *Node32) enumerate(ch chan *Node32) {
 	}
 }
 
-func (n *Node32) get(key uint32, bits uint8) *Node32 {
-	// If tree is empty or current key can't be contained in root node -
+func (n *Node32) match(key uint32, bits uint8) *Node32 {
+	// If can't be contained in current root node -
 	if n.Bits > bits {
 		// report nothing.
 		return nil
 	}
 
-	mask := masks32[n.Bits]
 	// If NSB of current tree node is the same as key has -
 	if n.Bits == bits {
 		// return current node only if it contains data (leaf node) and masked keys are equal.
-		if n.Leaf && (n.Key^key)&mask == 0 {
+		if n.Leaf && (n.Key^key)&masks32[n.Bits] == 0 {
 			return n
 		}
 
+		return nil
+	}
+
+	// If key can be contained by current tree node -
+	if (n.Key^key)&masks32[n.Bits] != 0 {
+		// but it isn't report nothing.
 		return nil
 	}
 
@@ -229,15 +260,51 @@ func (n *Node32) get(key uint32, bits uint8) *Node32 {
 	c := n.chld[(key>>(key32BitSize-1-n.Bits))&1]
 	if c != nil {
 		// and check if child on the branch has anything.
-		r := c.get(key, bits)
+		r := c.match(key, bits)
 		if r != nil {
 			return r
 		}
 	}
 
-	// If nothing matches check if current node contains the key given.
-	if n.Leaf && (n.Key^key)&mask == 0 {
+	// If nothing matches check if current node contains any data.
+	if n.Leaf {
 		return n
+	}
+
+	return nil
+}
+
+func (n *Node32) exactMatch(key uint32, bits uint8) *Node32 {
+	// If can't be contained in current root node -
+	if n.Bits > bits {
+		// report nothing.
+		return nil
+	}
+
+	// If NSB of current tree node is the same as key has -
+	if n.Bits == bits {
+		// return current node only if it contains data (leaf node) and masked keys are equal.
+		if n.Leaf && (n.Key^key)&masks32[n.Bits] == 0 {
+			return n
+		}
+
+		return nil
+	}
+
+	// If key can be contained by current tree node -
+	if (n.Key^key)&masks32[n.Bits] != 0 {
+		// but it isn't report nothing.
+		return nil
+	}
+
+	// Otherwise jump to branch by key bit right after NSB of current tree node
+	c := n.chld[(key>>(key32BitSize-1-n.Bits))&1]
+	if c != nil {
+		// and check if child on the branch has anything.
+		r := c.exactMatch(key, bits)
+		if r != nil {
+			return r
+		}
 	}
 
 	return nil

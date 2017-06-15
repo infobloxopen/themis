@@ -108,11 +108,11 @@ func TestEnumerate64(t *testing.T) {
 		"0xabaaaaaa00000000/9: \"L2.2\"")
 }
 
-func TestGet64(t *testing.T) {
+func TestMatch64(t *testing.T) {
 	var r *Node64
 
-	v, ok := r.Get(0, 0)
-	assertTreeGet(v, ok, nil,
+	v, ok := r.Match(0, 0)
+	assertTreeMatch(v, ok, nil,
 		"64-bit empty tree", t)
 
 	r = r.Insert(0xAAAAAAAA00000000, 7, "L1")
@@ -121,37 +121,83 @@ func TestGet64(t *testing.T) {
 	r = r.Insert(0xAAAAAAAA00000000, 18, "L3")
 	r = r.Insert(0xAABAAAAA00000000, 19, "L4")
 
-	v, ok = r.Get(0, -1)
-	assertTreeGet(v, ok, nil,
-		"64-tree get with negative significant bits", t)
+	v, ok = r.Match(0, -1)
+	assertTreeMatch(v, ok, nil,
+		"64-tree match with negative significant bits", t)
 
-	v, ok = r.Get(0xAAAAAAAA00000000, 67)
-	assertTreeGet(v, ok, wrapStr("L3"),
-		"64-tree get with overflow significant bits number", t)
+	v, ok = r.Match(0xAAAAAAAA00000000, 67)
+	assertTreeMatch(v, ok, wrapStr("L3"),
+		"64-tree match with overflow significant bits number", t)
 
-	v, ok = r.Get(0xAAAAAAAA00000000, 5)
-	assertTreeGet(v, ok, nil,
-		"64-tree get with small significant bits number", t)
+	v, ok = r.Match(0xAAAAAAAA00000000, 5)
+	assertTreeMatch(v, ok, nil,
+		"64-tree match with small significant bits number", t)
 
-	v, ok = r.Get(0xAAAAAAAA00000000, 7)
-	assertTreeGet(v, ok, wrapStr("L1"),
-		"64-tree get with exact match to top node", t)
+	v, ok = r.Match(0xA8AAAAAA00000000, 9)
+	assertTreeMatch(v, ok, wrapStr("L2.1"),
+		"64-tree match with exact match to a node", t)
 
-	v, ok = r.Get(0xBAAAAAAA00000000, 7)
-	assertTreeGet(v, ok, nil,
-		"64-tree get with exact not match to top node", t)
+	v, ok = r.Match(0xA9AAAAAA00000000, 9)
+	assertTreeMatch(v, ok, nil,
+		"64-tree match with exact not match to a node", t)
 
-	v, ok = r.Get(0xAABAAACA00000000, 64)
-	assertTreeGet(v, ok, wrapStr("L4"),
-		"64-tree get with contains match to child node", t)
+	v, ok = r.Match(0xAABAAACA00000000, 64)
+	assertTreeMatch(v, ok, wrapStr("L4"),
+		"64-tree match with contains match to child node", t)
 
-	v, ok = r.Get(0xABAAAAAA00000000, 9)
-	assertTreeGet(v, ok, wrapStr("L2.2"),
-		"64-tree get with exact match to child node", t)
+	v, ok = r.Match(0xABAAAAAA00000000, 9)
+	assertTreeMatch(v, ok, wrapStr("L2.2"),
+		"64-tree match with exact match to child node", t)
 
-	v, ok = r.Get(0xA80AAAAA00000000, 11)
-	assertTreeGet(v, ok, nil,
-		"64-tree get with contains match to non-leaf node", t)
+	v, ok = r.Match(0xA80AAAAA00000000, 11)
+	assertTreeMatch(v, ok, nil,
+		"64-tree match with contains match to non-leaf node", t)
+}
+
+func TestExactMatch64(t *testing.T) {
+	var r *Node64
+
+	v, ok := r.ExactMatch(0, 0)
+	assertTreeMatch(v, ok, nil,
+		"64-bit empty tree", t)
+
+	r = r.Insert(0xAAAAAAAA00000000, 7, "L1")
+	r = r.Insert(0xA8AAAAAA00000000, 9, "L2.1")
+	r = r.Insert(0xABAAAAAA00000000, 9, "L2.2")
+	r = r.Insert(0xAAAAAAAA00000000, 18, "L3")
+	r = r.Insert(0xAABAAAAA00000000, 19, "L4")
+
+	v, ok = r.ExactMatch(0, -1)
+	assertTreeMatch(v, ok, nil,
+		"64-tree exact match with negative significant bits", t)
+
+	v, ok = r.ExactMatch(0xAAAAAAAA00000000, 65)
+	assertTreeMatch(v, ok, nil,
+		"64-tree exact match with overflow significant bits number", t)
+
+	v, ok = r.ExactMatch(0xAAAAAAAA00000000, 5)
+	assertTreeMatch(v, ok, nil,
+		"64-tree exact match with small significant bits number", t)
+
+	v, ok = r.ExactMatch(0xA8AAAAAA00000000, 9)
+	assertTreeMatch(v, ok, wrapStr("L2.1"),
+		"64-tree exact match with exact match to a node", t)
+
+	v, ok = r.ExactMatch(0xA9AAAAAA00000000, 9)
+	assertTreeMatch(v, ok, nil,
+		"64-tree exact match with exact not match to a node", t)
+
+	v, ok = r.ExactMatch(0xAABAAACA00000000, 64)
+	assertTreeMatch(v, ok, nil,
+		"64-tree exact match with contains not match to child node", t)
+
+	v, ok = r.ExactMatch(0xABAAAAAA00000000, 9)
+	assertTreeMatch(v, ok, wrapStr("L2.2"),
+		"64-tree match with exact match to child node", t)
+
+	v, ok = r.ExactMatch(0xA80AAAAA00000000, 11)
+	assertTreeMatch(v, ok, nil,
+		"64-tree match with contains match to non-leaf node", t)
 }
 
 func TestDelete64(t *testing.T) {
@@ -313,7 +359,7 @@ func assertSequence64(ch chan *Node64, t *testing.T, desc string, e ...string) {
 	items := []string{}
 	for n := range ch {
 		if n == nil {
-			items = append(items, fmt.Sprintf("%q\n", n))
+			items = append(items, fmt.Sprintf("%#v\n", n))
 			continue
 		}
 
