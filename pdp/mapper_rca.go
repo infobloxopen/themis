@@ -61,7 +61,7 @@ func collectSubRules(IDs []string, m map[string]*RuleType) []*RuleType {
 }
 
 func MapperRCA(rules []*RuleType, params interface{}, ctx *Context) ResponseType {
-	mapperParams := params.(MapperRCAParams)
+	mapperParams := params.(*MapperRCAParams)
 
 	v, err := mapperParams.Argument.calculate(ctx)
 	if err != nil {
@@ -81,7 +81,7 @@ func MapperRCA(rules []*RuleType, params interface{}, ctx *Context) ResponseType
 			return calculateErrorRule(mapperParams.ErrorRule, ctx, err)
 		}
 
-		r := mapperParams.SubAlg(collectSubRules(IDs, getRulesMap(rules, &mapperParams)), mapperParams.AlgParams, ctx)
+		r := mapperParams.SubAlg(collectSubRules(IDs, getRulesMap(rules, mapperParams)), mapperParams.AlgParams, ctx)
 		if r.Effect == EffectNotApplicable && mapperParams.DefaultRule != nil {
 			return mapperParams.DefaultRule.calculate(ctx)
 		}

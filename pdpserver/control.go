@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-control"
 
 	log "github.com/Sirupsen/logrus"
@@ -224,13 +225,14 @@ func (s *Server) Apply(server_ctx context.Context, in *pb.Update) (*pb.Response,
 		return controlFail("%v", err), nil
 	}
 
-	s.Lock.Lock()
+	s.Lock()
 
 	s.Policy = p.Data
 	s.Includes = p.Includes
 	s.Version = p.Version
+	s.AffectedPolicies = map[string]pdp.ContentPolicyIndexItem{}
 
-	s.Lock.Unlock()
+	s.Unlock()
 
 	log.WithFields(log.Fields{
 		"id":      in.Id,

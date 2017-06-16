@@ -2,7 +2,13 @@ package pdp
 
 import (
 	"fmt"
+	"strings"
 )
+
+type ContentPolicyIndexItem struct {
+	Path        []string
+	SelectorMap map[interface{}]interface{}
+}
 
 type YastCtx struct {
 	nodeSpec  []string
@@ -10,16 +16,133 @@ type YastCtx struct {
 	attrs     map[string]AttributeType
 	includes  map[string]interface{}
 	selectors map[string]map[string]*SelectorType
+
+	policyContentIdx   map[string]string
+	contentPoliciesIdx map[string]map[string]ContentPolicyIndexItem
+	policyIds          []string
 }
 
 func NewYASTCtx(dir string) YastCtx {
-	return YastCtx{nodeSpec: []string{}, dataDir: dir}
+	return YastCtx{
+		nodeSpec:           []string{},
+		policyIds:          []string{},
+		policyContentIdx:   map[string]string{},
+		contentPoliciesIdx: map[string]map[string]ContentPolicyIndexItem{},
+		dataDir:            dir,
+	}
 }
 
 func (ctx *YastCtx) Reset() {
 	ctx.nodeSpec = []string{}
 	ctx.includes = nil
 	ctx.selectors = nil
+	ctx.policyIds = []string{}
+}
+
+func (ctx *YastCtx) SetContent(c map[string]interface{}) {
+	ctx.includes = c
+}
+
+func (ctx *YastCtx) RemovePolicyFromContentIndex() {
+	if len(ctx.policyIds) == 0 {
+		return
+	}
+
+	// Remove policy(set) and all sub-policies(sets) from the index.
+	pkey := ctx.policyIndexKey()
+	for pk, ck := range ctx.policyContentIdx {
+		if strings.HasPrefix(pk, pkey) {
+			if pmap, ok := ctx.contentPoliciesIdx[ck]; ok {
+				delete(pmap, pk)
+				if len(pmap) == 0 {
+					delete(ctx.contentPoliciesIdx, ck)
+				}
+			}
+			delete(ctx.policyContentIdx, pk)
+		}
+	}
+}
+
+func (ctx *YastCtx) addPolicyToContentIndex(ckey string, smap map[interface{}]interface{}) {
+	pkey := ctx.policyIndexKey()
+	pids := make([]string, len(ctx.policyIds), len(ctx.policyIds))
+	copy(pids, ctx.policyIds)
+	ctx.policyContentIdx[pkey] = ckey
+	ii := ContentPolicyIndexItem{Path: pids, SelectorMap: smap}
+	pmap, ok := ctx.contentPoliciesIdx[ckey]
+	if ok {
+		pmap[pkey] = ii
+	} else {
+		pmap = map[string]ContentPolicyIndexItem{pkey: ii}
+	}
+	ctx.contentPoliciesIdx[ckey] = pmap
+}
+
+func (ctx *YastCtx) policyIndexKey() string {
+	return strings.Join(ctx.policyIds, "/")
+}
+
+func (ctx *YastCtx) PoliciesFromContentIndex(cpath []string) map[string]ContentPolicyIndexItem {
+	parts := make([]string, len(cpath))
+	for i, v := range cpath {
+		parts[i] = fmt.Sprintf("%q", v)
+	}
+	ckey := strings.Join(parts, "/")
+	if pmap, ok := ctx.contentPoliciesIdx[ckey]; ok {
+		return pmap
+	}
+	return map[string]ContentPolicyIndexItem{}
+}
+
+func (ctx *YastCtx) PushPolicyID(id string) {
+	ctx.policyIds = append(ctx.policyIds, id)
+}
+
+func (ctx *YastCtx) PopPolicyID() {
+	if len(ctx.policyIds) < 1 {
+		return
+	}
+
+	ctx.policyIds = ctx.policyIds[:len(ctx.policyIds)-1]
+}
+
+func (ctx *YastCtx) UpdateEvaluableTypeContent(e EvaluableType, meta interface{}) error {
+	switch p := e.(type) {
+	case *PolicySetType:
+		if mpca, ok := p.AlgParams.(*MapperPCAParams); ok {
+			if s, ok := mpca.Argument.(*SelectorType); !ok {
+				return ctx.errorf("Expected %T but got %T", s, mpca.Argument)
+			}
+
+			s, err := ctx.unmarshalSelector(meta)
+			if err != nil {
+				return err
+			}
+
+			mpca.Argument = s
+		} else {
+			return ctx.errorf("Expected %T but got %T", mpca, p.AlgParams)
+		}
+	case *PolicyType:
+		if mrca, ok := p.AlgParams.(*MapperRCAParams); ok {
+			if s, ok := mrca.Argument.(*SelectorType); !ok {
+				return ctx.errorf("Expected %T but got %T", s, mrca.Argument)
+			}
+
+			s, err := ctx.unmarshalSelector(meta)
+			if err != nil {
+				return err
+			}
+
+			mrca.Argument = s
+		} else {
+			return ctx.errorf("Expected %T but got %T", mrca, p.AlgParams)
+		}
+	default:
+		return ctx.errorf("Unsupported evaluable type %T", p)
+	}
+
+	return nil
 }
 
 func (ctx *YastCtx) pushNodeSpec(format string, a ...interface{}) {

@@ -30,7 +30,7 @@ type Transport struct {
 }
 
 type Server struct {
-	Lock *sync.RWMutex
+	sync.RWMutex
 
 	Version    string
 	Policy     pdp.EvaluableType
@@ -43,11 +43,16 @@ type Server struct {
 
 	Updates *Queue
 
+	AffectedPolicies map[string]pdp.ContentPolicyIndexItem
+
 	ctx pdp.YastCtx
 }
 
 func NewServer(path string) *Server {
-	return &Server{Lock: &sync.RWMutex{}, Updates: NewQueue(), ctx: pdp.NewYASTCtx(path)}
+	return &Server{
+		Updates:          NewQueue(),
+		AffectedPolicies: map[string]pdp.ContentPolicyIndexItem{},
+		ctx:              pdp.NewYASTCtx(path)}
 }
 
 func (s *Server) LoadPolicies(path string) error {

@@ -74,7 +74,7 @@ func unmarshalMapperRCAParams(ctx *YastCtx, p *PolicyType, root bool, m map[inte
 
 	exprType := expr.getResultType()
 
-	params := MapperRCAParams{Argument: expr}
+	params := &MapperRCAParams{Argument: expr}
 
 	rulesMap := make(map[string]*RuleType)
 	for _, r := range p.Rules {
@@ -125,6 +125,9 @@ func (ctx *YastCtx) unmarshalPolicy(m map[interface{}]interface{}, items interfa
 	if err != nil {
 		return nil, err
 	}
+
+	ctx.PushPolicyID(ID)
+	defer ctx.PopPolicyID()
 
 	ctx.pushNodeSpec("%#v", ID)
 	defer ctx.popNodeSpec()
@@ -266,7 +269,7 @@ func unmarshalMapperPCAParams(ctx *YastCtx, p *PolicySetType, root bool, m map[i
 
 	exprType := expr.getResultType()
 
-	params := MapperPCAParams{Argument: expr}
+	params := &MapperPCAParams{Argument: expr}
 
 	policiesMap := make(map[string]EvaluableType)
 	for _, e := range p.Policies {
@@ -316,6 +319,9 @@ func (ctx *YastCtx) unmarshalPolicySet(m map[interface{}]interface{}, items inte
 	if err != nil {
 		return nil, err
 	}
+
+	ctx.PushPolicyID(ID)
+	defer ctx.PopPolicyID()
 
 	ctx.pushNodeSpec("%#v", ID)
 	defer ctx.popNodeSpec()

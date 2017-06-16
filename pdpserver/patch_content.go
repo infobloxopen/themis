@@ -18,9 +18,22 @@ type contentPatchCtx struct {
 	pi *PatchItem
 }
 
+func (s *Server) trackAffectedPolicies(ctx *contentPatchCtx) {
+	contentPath := []string{ctx.cid}
+	if len(ctx.pi.Path) > 0 {
+		contentPath = append(contentPath, ctx.pi.Path[:ctx.pi.pathIndex]...)
+	}
+	pmap := s.ctx.PoliciesFromContentIndex(contentPath)
+	for k, v := range pmap {
+		s.AffectedPolicies[k] = v
+	}
+}
+
 func (s *Server) applyContentPatchItem(ctx *contentPatchCtx) error {
 	pi := ctx.pi
 	id := pi.getID()
+
+	s.trackAffectedPolicies(ctx)
 
 	if pi.nextID() {
 		var (
@@ -49,6 +62,18 @@ func (s *Server) applyContentPatchItem(ctx *contentPatchCtx) error {
 		switch cur := ctx.cur.(type) {
 		case map[string]interface{}:
 			cur[id] = pi.Entity
+		case []string:
+			e, ok := pi.Entity.(string)
+			if !ok {
+				return fmt.Errorf("Cannot add '%T' item to list of strings of '%s' content", pi.Entity, ctx.cid)
+			}
+
+			cur = append(cur, e)
+			if ctx.prev != nil {
+				pmap := ctx.prev.(map[string]interface{})
+				pid := pi.Path[len(pi.Path)-1]
+				pmap[pid] = cur
+			}
 		default:
 			return fmt.Errorf("Operation '%s' is unsupported for type '%T'", pi.Op, cur)
 		}
@@ -58,6 +83,7 @@ func (s *Server) applyContentPatchItem(ctx *contentPatchCtx) error {
 			if _, ok := cur[id]; !ok {
 				return fmt.Errorf("Cannot delete '%s' item from '%s' content. Item does not exist", pi.Path, ctx.cid)
 			}
+
 			delete(cur, id)
 		case []string:
 			var (
@@ -76,10 +102,11 @@ func (s *Server) applyContentPatchItem(ctx *contentPatchCtx) error {
 			}
 
 			cur = append(cur[:i], cur[i+1:]...)
-
-			pmap := ctx.prev.(map[string]interface{})
-			pid := pi.Path[len(pi.Path)-2]
-			pmap[pid] = cur
+			if ctx.prev != nil {
+				pmap := ctx.prev.(map[string]interface{})
+				pid := pi.Path[len(pi.Path)-2]
+				pmap[pid] = cur
+			}
 		}
 	default:
 		return fmt.Errorf("Unsupported '%s' patch operation for content", pi.Op)

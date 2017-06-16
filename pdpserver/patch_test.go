@@ -125,14 +125,23 @@ const content2Patch1 = `
 ]
 `
 
-func TestPiliciesPatches(t *testing.T) {
+func testServer(ctx *pdp.YastCtx, p pdp.EvaluableType, inc map[string]interface{}) *Server {
+	return &Server{
+		Policy:           p,
+		Includes:         inc,
+		AffectedPolicies: map[string]pdp.ContentPolicyIndexItem{},
+		ctx:              *ctx,
+	}
+}
+
+func TestPoliciesPatches(t *testing.T) {
 	ctx := pdp.NewYASTCtx("")
 	p, err := ctx.UnmarshalYAST([]byte(originalPolicies), originalContent)
 	if err != nil {
 		t.Fatalf("Expected no errors but got:\n%#v\n\n%s\n", err, err)
 	}
 
-	s := &Server{Policy: p, Includes: originalContent, ctx: ctx}
+	s := testServer(&ctx, p, originalContent)
 
 	pp, err := s.copyAndPatchPolicies([]byte(policiesPatch1), originalContent)
 	if err != nil {
@@ -172,14 +181,14 @@ func TestPiliciesPatches(t *testing.T) {
 	}
 }
 
-func TestContentPatches(t *testing.T) {
+func _TestContentPatches(t *testing.T) {
 	ctx := pdp.NewYASTCtx("")
 	p, err := ctx.UnmarshalYAST([]byte(originalPolicies), originalContent)
 	if err != nil {
 		t.Fatalf("Expected no errors but got:\n%#v\n\n%s\n", err, err)
 	}
 
-	s := &Server{Policy: p, Includes: originalContent, ctx: ctx}
+	s := testServer(&ctx, p, originalContent)
 
 	c1, err := s.patchContent([]byte(content1Patch1), "content1")
 	if err != nil {
@@ -200,5 +209,47 @@ func TestContentPatches(t *testing.T) {
 	id123 := content2["ID1"].(map[string]interface{})["ID12"].(map[string]interface{})["ID123"].(map[string]interface{})
 	if len(id123) != 2 {
 		t.Fatalf("Expected %d items in patched 'content1/ID1/ID12/ID123' but got %d", 2, len(id123))
+	}
+}
+
+const policiesPatch2 = `
+- op: add
+  path:
+    - root
+  entity:
+    id: P3
+    alg:
+      id: Mapper
+      map:
+        selector:
+          type: String
+          path:
+            - attr: str_attr1
+          content: content1
+    policies:
+      - id: P3P1
+        alg: FirstApplicableEffect
+        rules:
+          - id: P3P1R1
+            effect: Permit
+      - id: P3P2
+        alg: FirstApplicableEffect
+        rules:
+          - id: P3P2R1
+            effect: Permit
+`
+
+func TestSelectorUpdatesOnContentPatches(t *testing.T) {
+	ctx := pdp.NewYASTCtx("")
+	p, err := ctx.UnmarshalYAST([]byte(originalPolicies), originalContent)
+	if err != nil {
+		t.Fatalf("Expected no errors but got:\n%#v\n\n%s\n", err, err)
+	}
+
+	s := testServer(&ctx, p, originalContent)
+
+	_, err = s.copyAndPatchPolicies([]byte(policiesPatch2), originalContent)
+	if err != nil {
+		t.Fatalf("Expected no errors but got:\n%#v\n\n%s\n", err, err)
 	}
 }

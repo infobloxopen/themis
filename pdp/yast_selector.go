@@ -107,10 +107,10 @@ func (ctx *YastCtx) unmarshalSelectorPathElement(v interface{}, i int) (string, 
 	return fmt.Sprintf("%q", s), AttributeValueType{DataTypeString, s}, nil
 }
 
-func (ctx *YastCtx) unmarshalSelectorPath(m map[interface{}]interface{}) (string, []ExpressionType, error) {
+func (ctx *YastCtx) unmarshalSelectorPath(m map[interface{}]interface{}) ([]string, []ExpressionType, error) {
 	v, err := ctx.extractList(m, yastTagPath, "selector path")
 	if err != nil {
-		return "", nil, err
+		return nil, nil, err
 	}
 
 	ctx.pushNodeSpec(yastTagPath)
@@ -121,14 +121,14 @@ func (ctx *YastCtx) unmarshalSelectorPath(m map[interface{}]interface{}) (string
 	for i, item := range v {
 		s, a, err := ctx.unmarshalSelectorPathElement(item, i)
 		if err != nil {
-			return "", nil, err
+			return nil, nil, err
 		}
 
 		path[i] = s
 		p[i] = a
 	}
 
-	return strings.Join(path, "/"), p, nil
+	return path, p, nil
 }
 
 func (ctx *YastCtx) unmarshalSelectorContent(m map[interface{}]interface{}) (string, interface{}, error) {
@@ -143,6 +143,16 @@ func (ctx *YastCtx) unmarshalSelectorContent(m map[interface{}]interface{}) (str
 	}
 
 	return ID, c, nil
+}
+
+func (ctx *YastCtx) contentIndexKey(cid string, path []string) string {
+	if len(path) <= 1 {
+		return fmt.Sprintf("%q", cid)
+	} else {
+		path = path[:len(path)-1]
+		path = append([]string{fmt.Sprintf("%q", cid)}, path...)
+	}
+	return strings.Join(path, "/")
 }
 
 func (ctx *YastCtx) unmarshalSelector(v interface{}) (*SelectorType, error) {
@@ -169,6 +179,8 @@ func (ctx *YastCtx) unmarshalSelector(v interface{}) (*SelectorType, error) {
 		return nil, err
 	}
 
+	selKey := strings.Join(strPath, "/")
+
 	ID, rawCtx, err := ctx.unmarshalSelectorContent(m)
 	if err != nil {
 		return nil, err
@@ -184,7 +196,10 @@ func (ctx *YastCtx) unmarshalSelector(v interface{}) (*SelectorType, error) {
 		ctx.selectors[ID] = pathMap
 	}
 
-	sel, ok := pathMap[strPath]
+	ckey := ctx.contentIndexKey(ID, strPath)
+	ctx.addPolicyToContentIndex(ckey, m)
+
+	sel, ok := pathMap[selKey]
 	if ok {
 		return sel, nil
 	}
@@ -192,7 +207,7 @@ func (ctx *YastCtx) unmarshalSelector(v interface{}) (*SelectorType, error) {
 	c, p, dp := prepareSelectorContent(rawCtx, rawPath, t)
 
 	sel = &SelectorType{t, p, c, ID, dp}
-	pathMap[strPath] = sel
+	pathMap[selKey] = sel
 
 	return sel, nil
 }
