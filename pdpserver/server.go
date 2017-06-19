@@ -45,14 +45,14 @@ type Server struct {
 
 	AffectedPolicies map[string]pdp.ContentPolicyIndexItem
 
-	ctx pdp.YastCtx
+	Ctx pdp.YastCtx
 }
 
 func NewServer(path string) *Server {
 	return &Server{
 		Updates:          NewQueue(),
 		AffectedPolicies: map[string]pdp.ContentPolicyIndexItem{},
-		ctx:              pdp.NewYASTCtx(path)}
+		Ctx:              pdp.NewYASTCtx(path)}
 }
 
 func (s *Server) LoadPolicies(path string) error {
@@ -62,7 +62,7 @@ func (s *Server) LoadPolicies(path string) error {
 	}
 
 	log.WithField("policy", path).Info("Loading policy")
-	p, err := s.ctx.UnmarshalYASTFromFile(path)
+	p, err := s.Ctx.UnmarshalYASTFromFile(path)
 	if err != nil {
 		log.WithFields(log.Fields{"policy": path, "error": err}).Error("Failed load policy")
 		return err

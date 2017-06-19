@@ -82,6 +82,12 @@ func (ctx *YastCtx) policyIndexKey() string {
 	return strings.Join(ctx.policyIds, "/")
 }
 
+func (ctx *YastCtx) IsPolicyInContentIndex(path []string) bool {
+	key := strings.Join(path, "/")
+	_, ok := ctx.policyContentIdx[key]
+	return ok
+}
+
 func (ctx *YastCtx) PoliciesFromContentIndex(cpath []string) map[string]ContentPolicyIndexItem {
 	parts := make([]string, len(cpath))
 	for i, v := range cpath {
@@ -119,7 +125,9 @@ func (ctx *YastCtx) UpdateEvaluableTypeContent(e EvaluableType, meta interface{}
 				return err
 			}
 
-			mpca.Argument = s
+			mpcacpy := *mpca
+			mpcacpy.Argument = s
+			p.AlgParams = &mpcacpy
 		} else {
 			return ctx.errorf("Expected %T but got %T", mpca, p.AlgParams)
 		}
@@ -134,7 +142,9 @@ func (ctx *YastCtx) UpdateEvaluableTypeContent(e EvaluableType, meta interface{}
 				return err
 			}
 
-			mrca.Argument = s
+			mrcacpy := *mrca
+			mrcacpy.Argument = s
+			p.AlgParams = mrcacpy
 		} else {
 			return ctx.errorf("Expected %T but got %T", mrca, p.AlgParams)
 		}

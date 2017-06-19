@@ -78,7 +78,7 @@ func (s *Server) DispatchPolicies(in *pb.Item) (interface{}, *pb.Response) {
 		return nil, controlFail("%v", err)
 	}
 
-	item, err := s.ctx.UnmarshalYAST(data, ext)
+	item, err := s.Ctx.UnmarshalYAST(data, ext)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"id":      in.DataId,
@@ -161,7 +161,7 @@ func (s *Server) DispatchContentPatch(in *pb.Item) (interface{}, *pb.Response) {
 func (s *Server) DispatchUpdate(in *pb.Item) (interface{}, *pb.Response) {
 	switch in.Type {
 	case pb.Item_POLICIES:
-		s.ctx.Reset()
+		s.Ctx.Reset()
 
 		if in.FromVersion != "" {
 			if in.FromVersion != s.Version {

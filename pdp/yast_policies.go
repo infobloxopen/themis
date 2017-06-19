@@ -78,8 +78,7 @@ func unmarshalMapperRCAParams(ctx *YastCtx, p *PolicyType, root bool, m map[inte
 
 	rulesMap := make(map[string]*RuleType)
 	for _, r := range p.Rules {
-		tmp := r
-		rulesMap[r.ID] = tmp
+		rulesMap[r.ID] = r
 	}
 
 	if root {

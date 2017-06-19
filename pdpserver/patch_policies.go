@@ -50,6 +50,11 @@ type policiesPatchCtx struct {
 	pi *PatchItem
 }
 
+func (ctx *policiesPatchCtx) errorf(format string, args ...interface{}) error {
+	msg := fmt.Sprintf(format, args...)
+	return fmt.Errorf("Failed to apply [%s:%v]: %s", ctx.pi.Op, ctx.pi.Path, msg)
+}
+
 func copyPoliciesItem(item interface{}, parent interface{}, i int) interface{} {
 	switch item := item.(type) {
 	case *pdp.PolicySetType:
@@ -108,8 +113,8 @@ func (s *Server) applyPoliciesPatchItem(ctx *policiesPatchCtx) error {
 	id := pi.getID()
 
 	if _, ok := ctx.cur.(pdp.EvaluableType); ok {
-		s.ctx.PushPolicyID(id)
-		defer s.ctx.PopPolicyID()
+		s.Ctx.PushPolicyID(id)
+		defer s.Ctx.PopPolicyID()
 	}
 
 	if pi.nextID() {
@@ -122,11 +127,11 @@ func (s *Server) applyPoliciesPatchItem(ctx *policiesPatchCtx) error {
 		nid := pi.getID()
 
 		if ok, _, onext = findPoliciesItem(nid, ctx.ocur); !ok {
-			return fmt.Errorf("Cannot find '%v' next item in original content", pi.Path[:pi.pathIndex+1])
+			return ctx.errorf("Cannot find '%v' next item in original content", pi.Path[:pi.pathIndex+1])
 		}
 
 		if ok, i, next = findPoliciesItem(nid, ctx.cur); !ok {
-			return fmt.Errorf("Cannot find '%v' next item in patched content", pi.Path[:pi.pathIndex+1])
+			return ctx.errorf("Cannot find '%v' next item in patched content", pi.Path[:pi.pathIndex+1])
 		}
 
 		if onext == next {
@@ -144,25 +149,25 @@ func (s *Server) applyPoliciesPatchItem(ctx *policiesPatchCtx) error {
 	case PatchOpAdd:
 		switch item := ctx.cur.(type) {
 		case *pdp.PolicySetType:
-			s.ctx.RemovePolicyFromContentIndex()
+			s.Ctx.RemovePolicyFromContentIndex()
 
-			e, err := s.ctx.UnmarshalEvaluable(pi.Entity)
+			e, err := s.Ctx.UnmarshalEvaluable(pi.Entity)
 			if err != nil {
 				return err
 			}
 
 			item.Policies = append(item.Policies, e)
 		case *pdp.PolicyType:
-			s.ctx.RemovePolicyFromContentIndex()
+			s.Ctx.RemovePolicyFromContentIndex()
 
-			r, err := s.ctx.UnmarshalRule(pi.Entity)
+			r, err := s.Ctx.UnmarshalRule(pi.Entity)
 			if err != nil {
 				return err
 			}
 
 			item.Rules = append(item.Rules, r)
 		default:
-			return fmt.Errorf("Operation '%s' is unsupported for type '%T'", pi.Op, item)
+			return ctx.errorf("Operation is unsupported for type '%T'", item)
 		}
 	case PatchOpDelete:
 		switch item := ctx.cur.(type) {
@@ -171,10 +176,10 @@ func (s *Server) applyPoliciesPatchItem(ctx *policiesPatchCtx) error {
 
 			ok, i, _ := findPoliciesItem(id, ppset)
 			if !ok {
-				return fmt.Errorf("Cannot delete '%v' policy set from patched policy set. Policy set does not exist", pi.Path)
+				return ctx.errorf("Cannot delete policy set from patched policy set. Policy set does not exist")
 			}
 
-			s.ctx.RemovePolicyFromContentIndex()
+			s.Ctx.RemovePolicyFromContentIndex()
 
 			ppset.Policies = append(ppset.Policies[:i], ppset.Policies[i+1:]...)
 		case *pdp.PolicyType:
@@ -182,10 +187,10 @@ func (s *Server) applyPoliciesPatchItem(ctx *policiesPatchCtx) error {
 
 			ok, i, _ := findPoliciesItem(id, ppset)
 			if !ok {
-				return fmt.Errorf("Cannot delete '%v' policy from patched policy set. Policy does not exist", pi.Path)
+				return ctx.errorf("Cannot delete policy from patched policy set. Policy does not exist")
 			}
 
-			s.ctx.RemovePolicyFromContentIndex()
+			s.Ctx.RemovePolicyFromContentIndex()
 
 			ppset.Policies = append(ppset.Policies[:i], ppset.Policies[i+1:]...)
 		case *pdp.RuleType:
@@ -193,24 +198,24 @@ func (s *Server) applyPoliciesPatchItem(ctx *policiesPatchCtx) error {
 
 			ok, i, _ := findPoliciesItem(id, pp)
 			if !ok {
-				return fmt.Errorf("Cannot delete '%v' rule from patched policy. Rule does not exist", pi.Path)
+				return ctx.errorf("Cannot delete rule from patched policy. Rule does not exist")
 			}
 
 			pp.Rules = append(pp.Rules[:i], pp.Rules[i+1:]...)
 		default:
-			return fmt.Errorf("Operation '%s' is unsupported for type '%T'", pi.Op, item)
+			return ctx.errorf("Operation is unsupported for type '%T'", item)
 		}
 	case PatchOpRefresh:
 		switch item := ctx.cur.(type) {
 		case pdp.EvaluableType:
-			if err := s.ctx.UpdateEvaluableTypeContent(item, pi.Entity); err != nil {
+			if err := s.Ctx.UpdateEvaluableTypeContent(item, pi.Entity); err != nil {
 				return err
 			}
 		default:
-			return fmt.Errorf("Operation '%s' is unsupported for type '%T'", pi.Op, item)
+			return ctx.errorf("Operation is unsupported for type '%T'", item)
 		}
 	default:
-		return fmt.Errorf("Unsupported '%s' patch operation for policies", pi.Op)
+		return ctx.errorf("Unsupported patch operation for policies")
 	}
 
 	return nil
@@ -231,8 +236,7 @@ func (s *Server) copyAndPatchPolicies(data []byte, content map[string]interface{
 		return nil, err
 	}
 
-	s.ctx.SetContent(content)
-	patches = append(patches, s.makePoliciesRefreshPatches()...)
+	s.Ctx.SetContent(content)
 	cpyPolicy := copyPoliciesItem(s.Policy, nil, 0)
 	for _, pi := range patches {
 		log.Debugf("Applying patch operation to policies: %+v", pi)
@@ -246,6 +250,23 @@ func (s *Server) copyAndPatchPolicies(data []byte, content map[string]interface{
 
 		if err := s.applyPoliciesPatchItem(ctx); err != nil {
 			return nil, err
+		}
+	}
+
+	for _, pi := range s.makePoliciesRefreshPatches() {
+		if s.Ctx.IsPolicyInContentIndex(pi.Path) {
+			log.Debugf("Update policies content: %+v", pi)
+
+			ctx := &policiesPatchCtx{
+				ocur: s.Policy,
+				cur:  cpyPolicy,
+				prev: nil,
+				pi:   &pi,
+			}
+
+			if err := s.applyPoliciesPatchItem(ctx); err != nil {
+				return nil, err
+			}
 		}
 	}
 

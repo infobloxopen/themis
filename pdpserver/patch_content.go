@@ -18,12 +18,17 @@ type contentPatchCtx struct {
 	pi *PatchItem
 }
 
+func (ctx *contentPatchCtx) errorf(format string, args ...interface{}) error {
+	msg := fmt.Sprintf(format, args...)
+	return fmt.Errorf("Failed to apply [%s:%v] for content '%s': %s", ctx.pi.Op, ctx.pi.Path, ctx.cid, msg)
+}
+
 func (s *Server) trackAffectedPolicies(ctx *contentPatchCtx) {
 	contentPath := []string{ctx.cid}
 	if len(ctx.pi.Path) > 0 {
 		contentPath = append(contentPath, ctx.pi.Path[:ctx.pi.pathIndex]...)
 	}
-	pmap := s.ctx.PoliciesFromContentIndex(contentPath)
+	pmap := s.Ctx.PoliciesFromContentIndex(contentPath)
 	for k, v := range pmap {
 		s.AffectedPolicies[k] = v
 	}
@@ -43,12 +48,12 @@ func (s *Server) applyContentPatchItem(ctx *contentPatchCtx) error {
 
 		curmap, ok := ctx.cur.(map[string]interface{})
 		if !ok {
-			return fmt.Errorf("Unsupported content item type '%T'", curmap)
+			return ctx.errorf("Unsupported content item type '%T'", curmap)
 		}
 
 		next, ok = curmap[id]
 		if !ok {
-			return fmt.Errorf("Cannot find '%v' next item in '%s' content", pi.Path[:pi.pathIndex], ctx.cid)
+			return ctx.errorf("Cannot find '%v' next item", pi.Path[:pi.pathIndex])
 		}
 
 		ctx.prev = ctx.cur
@@ -62,10 +67,10 @@ func (s *Server) applyContentPatchItem(ctx *contentPatchCtx) error {
 		switch cur := ctx.cur.(type) {
 		case map[string]interface{}:
 			cur[id] = pi.Entity
-		case []string:
+		case []interface{}:
 			e, ok := pi.Entity.(string)
 			if !ok {
-				return fmt.Errorf("Cannot add '%T' item to list of strings of '%s' content", pi.Entity, ctx.cid)
+				return ctx.errorf("Cannot add '%T' item to list of strings", pi.Entity)
 			}
 
 			cur = append(cur, e)
@@ -75,20 +80,20 @@ func (s *Server) applyContentPatchItem(ctx *contentPatchCtx) error {
 				pmap[pid] = cur
 			}
 		default:
-			return fmt.Errorf("Operation '%s' is unsupported for type '%T'", pi.Op, cur)
+			return ctx.errorf("Operation is unsupported for type '%T'", cur)
 		}
 	case PatchOpDelete:
 		switch cur := ctx.cur.(type) {
 		case map[string]interface{}:
 			if _, ok := cur[id]; !ok {
-				return fmt.Errorf("Cannot delete '%s' item from '%s' content. Item does not exist", pi.Path, ctx.cid)
+				return ctx.errorf("Cannot delete item. Item does not exist")
 			}
 
 			delete(cur, id)
-		case []string:
+		case []interface{}:
 			var (
 				i int
-				v string
+				v interface{}
 			)
 
 			for i, v = range cur {
@@ -98,7 +103,7 @@ func (s *Server) applyContentPatchItem(ctx *contentPatchCtx) error {
 			}
 
 			if i == len(cur) {
-				return fmt.Errorf("Cannot delete '%s' item from '%s' content. Item does not exist", pi.Path, ctx.cid)
+				return ctx.errorf("Cannot delete item. Item does not exist")
 			}
 
 			cur = append(cur[:i], cur[i+1:]...)
@@ -109,7 +114,7 @@ func (s *Server) applyContentPatchItem(ctx *contentPatchCtx) error {
 			}
 		}
 	default:
-		return fmt.Errorf("Unsupported '%s' patch operation for content", pi.Op)
+		return ctx.errorf("Unsupported patch operation for content")
 	}
 
 	return nil

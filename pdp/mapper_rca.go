@@ -41,8 +41,7 @@ func getRulesMap(rules []*RuleType, params *MapperRCAParams) map[string]*RuleTyp
 
 	m := make(map[string]*RuleType)
 	for _, rule := range rules {
-		tmp := rule
-		m[rule.ID] = tmp
+		m[rule.ID] = rule
 	}
 
 	return m
