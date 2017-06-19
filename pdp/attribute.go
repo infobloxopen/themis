@@ -16,6 +16,7 @@ const (
 	DataTypeSetOfStrings
 	DataTypeSetOfNetworks
 	DataTypeSetOfDomains
+	DataTypeListOfStrings
 )
 
 var DataTypeNames map[int]string = map[int]string{
@@ -27,7 +28,8 @@ var DataTypeNames map[int]string = map[int]string{
 	DataTypeDomain:        yastTagDataTypeDomain,
 	DataTypeSetOfStrings:  yastTagDataTypeSetOfStrings,
 	DataTypeSetOfNetworks: yastTagDataTypeSetOfNetworks,
-	DataTypeSetOfDomains:  yastTagDataTypeSetOfDomains}
+	DataTypeSetOfDomains:  yastTagDataTypeSetOfDomains,
+	DataTypeListOfStrings: yastTagDataTypeListOfStrings}
 
 var DataTypeIDs map[string]int = map[string]int{
 	yastTagDataTypeUndefined:     DataTypeUndefined,
@@ -38,7 +40,8 @@ var DataTypeIDs map[string]int = map[string]int{
 	yastTagDataTypeDomain:        DataTypeDomain,
 	yastTagDataTypeSetOfStrings:  DataTypeSetOfStrings,
 	yastTagDataTypeSetOfNetworks: DataTypeSetOfNetworks,
-	yastTagDataTypeSetOfDomains:  DataTypeSetOfDomains}
+	yastTagDataTypeSetOfDomains:  DataTypeSetOfDomains,
+	yastTagDataTypeListOfStrings: DataTypeListOfStrings}
 
 type AttributeType struct {
 	ID       string
@@ -113,9 +116,13 @@ func (v AttributeValueType) describe() string {
 		}
 
 		return fmt.Sprintf("[%s]", strings.Join(items, ", "))
+
+	case DataTypeListOfStrings:
+		return fmt.Sprintf("[%s]", strings.Join(v.Value.([]string), ", "))
+
 	}
 
-	return fmt.Sprintf("<unknown value type %d>", DataTypeSetOfDomains)
+	return fmt.Sprintf("<unknown value type %d>", v.DataType)
 }
 
 func (v AttributeValueType) getResultType() int {
@@ -217,4 +224,13 @@ func ExtractSetOfDomainsValue(v AttributeValueType, desc string) (*SetOfSubdomai
 	}
 
 	return v.Value.(*SetOfSubdomains), nil
+}
+
+func ExtractListOfStringsValue(v AttributeValueType, desc string) ([]string, error) {
+	if v.DataType != DataTypeListOfStrings {
+		return nil, fmt.Errorf("Expected %s as %s but got %s",
+			DataTypeNames[DataTypeListOfStrings], desc, DataTypeNames[v.DataType])
+	}
+
+	return v.Value.([]string), nil
 }

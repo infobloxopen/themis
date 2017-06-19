@@ -35,6 +35,7 @@ const (
 	yastTagDataTypeSetOfStrings  = "set of strings"
 	yastTagDataTypeSetOfNetworks = "set of networks"
 	yastTagDataTypeSetOfDomains  = "set of domains"
+	yastTagDataTypeListOfStrings = "list of strings"
 
 	yastTagFirstApplicableEffectAlg = "firstapplicableeffect"
 	yastTagDenyOverridesAlg         = "denyoverrides"

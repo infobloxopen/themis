@@ -100,7 +100,7 @@ func castToDomainSelectorType(v interface{}, path string) (AttributeValueType, e
 	return AttributeValueType{DataTypeDomain, d}, nil
 }
 
-func castItemToSetOfStringsSelectorType(item interface{}, i int, path string) (string, error) {
+func castItemToCollectionOfStringsSelectorType(item interface{}, i int, path string) (string, error) {
 	s, ok := item.(string)
 	if !ok {
 		return "", fmt.Errorf("Can't cast %d item of type %T at /%s to %s",
@@ -114,7 +114,7 @@ func castArrayToSetOfStringsSelectorType(v []interface{}, path string) (map[stri
 	strs := make(map[string]int)
 
 	for i, item := range v {
-		s, err := castItemToSetOfStringsSelectorType(item, i, path)
+		s, err := castItemToCollectionOfStringsSelectorType(item, i, path)
 		if err != nil {
 			return nil, err
 		}
@@ -300,6 +300,36 @@ func castToSetOfDomainsSelectorType(v interface{}, path string) (AttributeValueT
 		fmt.Errorf("Can't cast %T at /%s to %s", v, path, DataTypeNames[DataTypeSetOfDomains])
 }
 
+func castArrayToListOfStringsSelectorType(v []interface{}, path string) ([]string, error) {
+	strs := []string{}
+
+	for i, item := range v {
+		s, err := castItemToCollectionOfStringsSelectorType(item, i, path)
+		if err != nil {
+			return nil, err
+		}
+
+		strs = append(strs, s)
+	}
+
+	return strs, nil
+}
+
+func castToListOfStringsSelectorType(v interface{}, path string) (AttributeValueType, error) {
+	switch items := v.(type) {
+	case []interface{}:
+		strs, err := castArrayToListOfStringsSelectorType(items, path)
+		if err != nil {
+			return AttributeValueType{}, err
+		}
+
+		return AttributeValueType{DataTypeListOfStrings, strs}, nil
+	}
+
+	return AttributeValueType{},
+		fmt.Errorf("Can't cast %T at /%s to %s", v, path, DataTypeNames[DataTypeListOfStrings])
+}
+
 func castToSelectorType(v interface{}, t int, path string) (AttributeValueType, error) {
 	switch t {
 	case DataTypeUndefined:
@@ -328,6 +358,9 @@ func castToSelectorType(v interface{}, t int, path string) (AttributeValueType, 
 
 	case DataTypeSetOfDomains:
 		return castToSetOfDomainsSelectorType(v, path)
+
+	case DataTypeListOfStrings:
+		return castToListOfStringsSelectorType(v, path)
 	}
 
 	return AttributeValueType{},
@@ -344,6 +377,9 @@ func castMissingSelectorValue(t int, err error) (AttributeValueType, error) {
 
 	case DataTypeSetOfDomains:
 		return AttributeValueType{DataTypeSetOfDomains, NewSetOfSubdomains()}, nil
+
+	case DataTypeListOfStrings:
+		return AttributeValueType{DataTypeListOfStrings, []string{}}, nil
 	}
 
 	return AttributeValueType{}, err

@@ -188,6 +188,15 @@ path:
         - test
       content: t
 content: c`
+
+	YASTTestSelectorToListOfStrings = `# Test selector which returs list of strings
+type: List of Strings
+path:
+  - test
+  - attr: s
+content: l`
+
+	YASTTestSelectorToListOfStringsDisplayPath = "\"test\"/attr(s)"
 )
 
 var (
@@ -225,7 +234,11 @@ var (
 					"test": "unreacheable"}},
 			"example": "unreacheable"},
 		"t": map[string]interface{}{
-			"test": "example"}}
+			"test": "example"},
+		"l": map[string]interface{}{
+			"test": map[string]interface{}{
+				"test":    []interface{}{"one", "two", "three"},
+				"example": []interface{}{"1", "2", "3"}}}}
 
 	YASTSelectorTestContentWithNetworks = map[string]interface{}{
 		"c": map[string]interface{}{
@@ -390,4 +403,32 @@ func TestUnmarshalYASTSelectorInvalidSubselector(t *testing.T) {
 	c, v = prepareTestYAST(YASTTestSelectorInvalidSubselectorType, YASTSelectorTestAttrs, YASTSelectorTestContent, t)
 	_, err = c.unmarshalSelector(v)
 	assertError(err, "Expected only string or domain", t)
+}
+
+func TestUnmarshalYASTSelectorToListOfStrings(t *testing.T) {
+	c, v := prepareTestYAST(YASTTestSelectorToListOfStrings, YASTSelectorTestAttrs, YASTSelectorTestContent, t)
+
+	s, err := c.unmarshalSelector(v)
+	if err != nil {
+		t.Fatalf("Expected no errors but got:\n%#v\n\n%s\n", err, err)
+	}
+
+	if s == nil {
+		t.Fatalf("Expected selector but got nothing")
+	}
+
+	if s.DataType != DataTypeListOfStrings {
+		dataType, ok := DataTypeNames[s.DataType]
+		if ok {
+			t.Errorf("Expected %s (%d) type but got %s (%d)",
+				DataTypeNames[DataTypeListOfStrings], DataTypeString, dataType, s.DataType)
+		} else {
+			t.Errorf("Expected %s (%d) type but got %d", DataTypeNames[DataTypeListOfStrings], DataTypeString, s.DataType)
+		}
+	}
+
+	path := strings.Join(s.DisplayPath, "/")
+	if path != YASTTestSelectorToListOfStringsDisplayPath {
+		t.Errorf("Expected %s display path but got %s", YASTTestSelectorToListOfStringsDisplayPath, path)
+	}
 }
