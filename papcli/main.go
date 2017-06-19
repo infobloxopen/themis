@@ -21,7 +21,7 @@ func main() {
 	hosts := []*pdpctrl.Client{}
 
 	for _, addr := range config.Addresses {
-		h := pdpctrl.NewClient(addr, config.Chunk)
+		h := pdpctrl.NewClient(addr, config.ChunkSize)
 		if err := h.Connect(config.Timeout); err != nil {
 			panic(err)
 		}
