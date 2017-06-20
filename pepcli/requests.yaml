@@ -1,0 +1,13 @@
+attributes:
+  source_ip: address
+  domain_name: domain
+  address: address
+
+requests:
+  - type: query
+    source_ip: 172.28.34.5
+    domain_name: google.com
+
+  - type: response
+    policy_id: SECURITY_POLICY_6
+    address: 192.168.0.1

@@ -49,7 +49,7 @@ func (ctx *YastCtx) RemovePolicyFromContentIndex() {
 	}
 
 	// Remove policy(set) and all sub-policies(sets) from the index.
-	pkey := ctx.policyIndexKey()
+	pkey := ctx.PolicyIndexKey(ctx.policyIds)
 	for pk, ck := range ctx.policyContentIdx {
 		if strings.HasPrefix(pk, pkey) {
 			if pmap, ok := ctx.contentPoliciesIdx[ck]; ok {
@@ -64,7 +64,7 @@ func (ctx *YastCtx) RemovePolicyFromContentIndex() {
 }
 
 func (ctx *YastCtx) addPolicyToContentIndex(ckey string, smap map[interface{}]interface{}) {
-	pkey := ctx.policyIndexKey()
+	pkey := ctx.PolicyIndexKey(ctx.policyIds)
 	pids := make([]string, len(ctx.policyIds), len(ctx.policyIds))
 	copy(pids, ctx.policyIds)
 	ctx.policyContentIdx[pkey] = ckey
@@ -78,14 +78,8 @@ func (ctx *YastCtx) addPolicyToContentIndex(ckey string, smap map[interface{}]in
 	ctx.contentPoliciesIdx[ckey] = pmap
 }
 
-func (ctx *YastCtx) policyIndexKey() string {
-	return strings.Join(ctx.policyIds, "/")
-}
-
-func (ctx *YastCtx) IsPolicyInContentIndex(path []string) bool {
-	key := strings.Join(path, "/")
-	_, ok := ctx.policyContentIdx[key]
-	return ok
+func (ctx *YastCtx) PolicyIndexKey(path []string) string {
+	return strings.Join(path, "/")
 }
 
 func (ctx *YastCtx) PoliciesFromContentIndex(cpath []string) map[string]ContentPolicyIndexItem {
@@ -125,9 +119,7 @@ func (ctx *YastCtx) UpdateEvaluableTypeContent(e EvaluableType, meta interface{}
 				return err
 			}
 
-			mpcacpy := *mpca
-			mpcacpy.Argument = s
-			p.AlgParams = &mpcacpy
+			mpca.Argument = s
 		} else {
 			return ctx.errorf("Expected %T but got %T", mpca, p.AlgParams)
 		}
@@ -142,9 +134,7 @@ func (ctx *YastCtx) UpdateEvaluableTypeContent(e EvaluableType, meta interface{}
 				return err
 			}
 
-			mrcacpy := *mrca
-			mrcacpy.Argument = s
-			p.AlgParams = mrcacpy
+			mrca.Argument = s
 		} else {
 			return ctx.errorf("Expected %T but got %T", mrca, p.AlgParams)
 		}

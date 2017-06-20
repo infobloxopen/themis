@@ -55,24 +55,57 @@ func (ctx *policiesPatchCtx) errorf(format string, args ...interface{}) error {
 	return fmt.Errorf("Failed to apply [%s:%v]: %s", ctx.pi.Op, ctx.pi.Path, msg)
 }
 
+func (s *Server) untrackAffectedPolicies(path []string) {
+	k := s.Ctx.PolicyIndexKey(path)
+	delete(s.AffectedPolicies, k)
+}
+
 func copyPoliciesItem(item interface{}, parent interface{}, i int) interface{} {
 	switch item := item.(type) {
 	case *pdp.PolicySetType:
 		cpy := *item
 		cpy.Policies = make([]pdp.EvaluableType, len(item.Policies), len(item.Policies))
 		copy(cpy.Policies, item.Policies)
+		if item.AlgParams != nil {
+			m := item.AlgParams.(*pdp.MapperPCAParams)
+			mcpy := *m
+			cpy.AlgParams = &mcpy
+		}
 		if parent != nil {
 			ppset := parent.(*pdp.PolicySetType)
 			ppset.Policies[i] = &cpy
+			if ppset.AlgParams != nil {
+				pm := ppset.AlgParams.(*pdp.MapperPCAParams)
+				if pm.DefaultPolicy != nil && pm.DefaultPolicy.GetID() == cpy.ID {
+					pm.DefaultPolicy = &cpy
+				}
+				if _, ok := pm.PoliciesMap[cpy.ID]; ok {
+					pm.PoliciesMap[cpy.ID] = &cpy
+				}
+			}
 		}
 		return &cpy
 	case *pdp.PolicyType:
 		cpy := *item
 		cpy.Rules = make([]*pdp.RuleType, len(item.Rules), len(item.Rules))
 		copy(cpy.Rules, item.Rules)
+		if item.AlgParams != nil {
+			m := item.AlgParams.(*pdp.MapperRCAParams)
+			mcpy := *m
+			cpy.AlgParams = &mcpy
+		}
 		if parent != nil {
 			ppset := parent.(*pdp.PolicySetType)
 			ppset.Policies[i] = &cpy
+			if ppset.AlgParams != nil {
+				pm := ppset.AlgParams.(*pdp.MapperPCAParams)
+				if pm.DefaultPolicy != nil && pm.DefaultPolicy.GetID() == cpy.ID {
+					pm.DefaultPolicy = &cpy
+				}
+				if _, ok := pm.PoliciesMap[cpy.ID]; ok {
+					pm.PoliciesMap[cpy.ID] = &cpy
+				}
+			}
 		}
 		return &cpy
 	case *pdp.RuleType:
@@ -80,6 +113,15 @@ func copyPoliciesItem(item interface{}, parent interface{}, i int) interface{} {
 		if parent != nil {
 			pp := parent.(*pdp.PolicyType)
 			pp.Rules[i] = &cpy
+			if pp.AlgParams != nil {
+				pm := pp.AlgParams.(*pdp.MapperRCAParams)
+				if pm.DefaultRule != nil && pm.DefaultRule.ID == cpy.ID {
+					pm.DefaultRule = &cpy
+				}
+				if _, ok := pm.RulesMap[cpy.ID]; ok {
+					pm.RulesMap[cpy.ID] = &cpy
+				}
+			}
 		}
 		return &cpy
 	default:
@@ -156,10 +198,10 @@ func (s *Server) applyPoliciesPatchItem(ctx *policiesPatchCtx) error {
 				return err
 			}
 
+			s.untrackAffectedPolicies(append(pi.Path, e.GetID()))
+
 			item.Policies = append(item.Policies, e)
 		case *pdp.PolicyType:
-			s.Ctx.RemovePolicyFromContentIndex()
-
 			r, err := s.Ctx.UnmarshalRule(pi.Entity)
 			if err != nil {
 				return err
@@ -180,6 +222,7 @@ func (s *Server) applyPoliciesPatchItem(ctx *policiesPatchCtx) error {
 			}
 
 			s.Ctx.RemovePolicyFromContentIndex()
+			s.untrackAffectedPolicies(pi.Path)
 
 			ppset.Policies = append(ppset.Policies[:i], ppset.Policies[i+1:]...)
 		case *pdp.PolicyType:
@@ -191,6 +234,7 @@ func (s *Server) applyPoliciesPatchItem(ctx *policiesPatchCtx) error {
 			}
 
 			s.Ctx.RemovePolicyFromContentIndex()
+			s.untrackAffectedPolicies(pi.Path)
 
 			ppset.Policies = append(ppset.Policies[:i], ppset.Policies[i+1:]...)
 		case *pdp.RuleType:
@@ -254,19 +298,17 @@ func (s *Server) copyAndPatchPolicies(data []byte, content map[string]interface{
 	}
 
 	for _, pi := range s.makePoliciesRefreshPatches() {
-		if s.Ctx.IsPolicyInContentIndex(pi.Path) {
-			log.Debugf("Update policies content: %+v", pi)
+		log.Debugf("Update policies content: %+v", pi)
 
-			ctx := &policiesPatchCtx{
-				ocur: s.Policy,
-				cur:  cpyPolicy,
-				prev: nil,
-				pi:   &pi,
-			}
+		ctx := &policiesPatchCtx{
+			ocur: s.Policy,
+			cur:  cpyPolicy,
+			prev: nil,
+			pi:   &pi,
+		}
 
-			if err := s.applyPoliciesPatchItem(ctx); err != nil {
-				return nil, err
-			}
+		if err := s.applyPoliciesPatchItem(ctx); err != nil {
+			return nil, err
 		}
 	}
 
