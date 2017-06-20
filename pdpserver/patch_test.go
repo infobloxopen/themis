@@ -524,6 +524,9 @@ func TestPoliciesAndContentPatches(t *testing.T) {
 		t.Fatalf("Expected no errors but got:\n%#v\n\n%s\n", err, err)
 	}
 
+	s.Ctx.Reset()
+	s.Ctx.SetContent(content)
+
 	_, err = s.copyAndPatchPolicies([]byte(policiesPatch2), content)
 	if err != nil {
 		t.Fatalf("Expected no errors but got:\n%#v\n\n%s\n", err, err)
