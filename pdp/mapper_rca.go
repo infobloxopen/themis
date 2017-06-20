@@ -25,13 +25,18 @@ func getSetOfIDs(v AttributeValueType) ([]string, error) {
 		return []string{ID}, nil
 	}
 
-	IDs, err := ExtractSetOfStringsValue(v, "argument")
-	if err != nil {
-		return nil, fmt.Errorf("Expected %s or %s as argument but got %s",
-			DataTypeNames[DataTypeString], DataTypeNames[DataTypeSetOfStrings], DataTypeNames[v.DataType])
+	setIDs, err := ExtractSetOfStringsValue(v, "argument")
+	if err == nil {
+		return sortSetOfStrings(setIDs), nil
 	}
 
-	return sortSetOfStrings(IDs), nil
+	listIDs, err := ExtractListOfStringsValue(v, "argument")
+	if err == nil {
+		return listIDs, nil
+	}
+
+	return nil, fmt.Errorf("Expected %s, %s or %s as argument but got %s",
+		DataTypeNames[DataTypeString], DataTypeNames[DataTypeSetOfStrings], DataTypeNames[DataTypeListOfStrings], DataTypeNames[v.DataType])
 }
 
 func getRulesMap(rules []*RuleType, params *MapperRCAParams) map[string]*RuleType {

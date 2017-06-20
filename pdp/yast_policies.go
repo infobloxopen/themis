@@ -105,8 +105,8 @@ func unmarshalMapperRCAParams(ctx *YastCtx, p *PolicyType, root bool, m map[inte
 		params.SubAlg = subAlg
 		params.AlgParams = subAlgParams
 
-		if exprType != DataTypeString && exprType != DataTypeSetOfStrings {
-			return params, ctx.errorf("Expected %q or %q expression but got %q", DataTypeNames[DataTypeString], DataTypeNames[DataTypeSetOfStrings], DataTypeNames[exprType])
+		if exprType != DataTypeString && exprType != DataTypeSetOfStrings && exprType != DataTypeListOfStrings {
+			return params, ctx.errorf("Expected %q, %q or %q expression but got %q", DataTypeNames[DataTypeString], DataTypeNames[DataTypeSetOfStrings], DataTypeNames[DataTypeListOfStrings], DataTypeNames[exprType])
 		}
 	} else {
 		if exprType != DataTypeString {
@@ -299,8 +299,8 @@ func unmarshalMapperPCAParams(ctx *YastCtx, p *PolicySetType, root bool, m map[i
 		params.SubAlg = subAlg
 		params.AlgParams = subAlgParams
 
-		if exprType != DataTypeString && exprType != DataTypeSetOfStrings {
-			return nil, ctx.errorf("Expected %q or %q expression but got %q", DataTypeNames[DataTypeString], DataTypeNames[DataTypeSetOfStrings], DataTypeNames[exprType])
+		if exprType != DataTypeString && exprType != DataTypeSetOfStrings && exprType != DataTypeListOfStrings {
+			return nil, ctx.errorf("Expected %q, %q or %q expression but got %q", DataTypeNames[DataTypeString], DataTypeNames[DataTypeSetOfStrings], DataTypeNames[DataTypeListOfStrings], DataTypeNames[exprType])
 		}
 	} else {
 		if exprType != DataTypeString {

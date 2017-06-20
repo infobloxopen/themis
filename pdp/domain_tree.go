@@ -1,9 +1,9 @@
 package pdp
 
 import (
-	"golang.org/x/net/idna"
-	"golang.org/x/text/unicode/norm"
 	"strings"
+
+	"golang.org/x/net/idna"
 )
 
 type SetOfSubdomains struct {
@@ -18,8 +18,10 @@ type DomainLeafItem struct {
 	Leaf   interface{}
 }
 
+var globalIdnaInstance = idna.New(idna.MapForLookup())
+
 func AdjustDomainName(s string) (string, error) {
-	return idna.ToASCII(strings.ToLower(norm.NFC.String(s)))
+	return globalIdnaInstance.ToASCII(s)
 }
 
 func NewSetOfSubdomains() *SetOfSubdomains {

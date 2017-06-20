@@ -269,6 +269,66 @@ func (ctx *YastCtx) unmarshalSetOfDomainsValue(v interface{}) (*AttributeValueTy
 	return nil, ctx.errorf("Expected value of set of domains type or content id but got %v", v)
 }
 
+func (ctx *YastCtx) unmarshalListOfStringsValueItem(v interface{}, i int, list []string) ([]string, error) {
+	ctx.pushNodeSpec("%d", i+1)
+	defer ctx.popNodeSpec()
+
+	s, err := ctx.validateString(v, "element of set of strings")
+	if err != nil {
+		return list, err
+	}
+
+	return append(list, s), nil
+}
+
+func (ctx *YastCtx) unmarshalListOfStringsImmediateValue(v interface{}) (*AttributeValueType, error) {
+	items, err := ctx.validateList(v, "")
+	if err != nil {
+		return nil, nil
+	}
+
+	list := []string{}
+	for i, item := range items {
+		list, err = ctx.unmarshalListOfStringsValueItem(item, i, list)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &AttributeValueType{DataTypeListOfStrings, list}, nil
+}
+
+func (ctx *YastCtx) unmarshalListOfStringsValueFromContent(v interface{}) (*AttributeValueType, error) {
+	set, err := ctx.extractContentByItem(v)
+	if err != nil || set == nil {
+		return nil, err
+	}
+
+	return ctx.unmarshalListOfStringsImmediateValue(set)
+}
+
+func (ctx *YastCtx) unmarshalListOfStringsValue(v interface{}) (*AttributeValueType, error) {
+	val, err := ctx.unmarshalListOfStringsImmediateValue(v)
+	if err != nil {
+		return nil, err
+	}
+
+	if val != nil {
+		return val, nil
+	}
+
+	val, err = ctx.unmarshalListOfStringsValueFromContent(v)
+	if err != nil {
+		return nil, err
+	}
+
+	if val != nil {
+		return val, nil
+	}
+
+	return nil, ctx.errorf("Expected value of list of strings type or content id but got %v", v)
+}
+
 func (ctx *YastCtx) unmarshalValueByType(t int, v interface{}) (*AttributeValueType, error) {
 	if t == DataTypeUndefined {
 		return nil, ctx.errorf("Not allowed type %#v", DataTypeNames[t])
@@ -295,6 +355,9 @@ func (ctx *YastCtx) unmarshalValueByType(t int, v interface{}) (*AttributeValueT
 
 	case DataTypeSetOfDomains:
 		return ctx.unmarshalSetOfDomainsValue(v)
+
+	case DataTypeListOfStrings:
+		return ctx.unmarshalListOfStringsValue(v)
 	}
 
 	return nil, ctx.errorf("Parsing for type %s hasn't been implemented yet", DataTypeNames[t])
