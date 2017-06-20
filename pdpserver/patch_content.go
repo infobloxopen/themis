@@ -48,7 +48,7 @@ func (s *Server) applyContentPatchItem(ctx *contentPatchCtx) error {
 
 		curmap, ok := ctx.cur.(map[string]interface{})
 		if !ok {
-			return ctx.errorf("Unsupported content item type '%T'", curmap)
+			return ctx.errorf("Unsupported content item type '%T'", ctx.cur)
 		}
 
 		next, ok = curmap[id]

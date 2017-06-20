@@ -60,52 +60,61 @@ func (s *Server) untrackAffectedPolicies(path []string) {
 	delete(s.AffectedPolicies, k)
 }
 
+func copyAndUpdateAlg(e pdp.EvaluableType) {
+	switch e := e.(type) {
+	case *pdp.PolicySetType:
+		if e.AlgParams != nil {
+			m := e.AlgParams.(*pdp.MapperPCAParams)
+			mcpy := *m
+			pmap := make(map[string]pdp.EvaluableType)
+			for _, p := range e.Policies {
+				pmap[p.GetID()] = p
+				if mcpy.DefaultPolicy != nil && mcpy.DefaultPolicy.GetID() == p.GetID() {
+					mcpy.DefaultPolicy = p
+				}
+			}
+			mcpy.PoliciesMap = pmap
+			e.AlgParams = &mcpy
+		}
+	case *pdp.PolicyType:
+		if e.AlgParams != nil {
+			m := e.AlgParams.(*pdp.MapperRCAParams)
+			mcpy := *m
+			rmap := make(map[string]*pdp.RuleType)
+			for _, r := range e.Rules {
+				rmap[r.ID] = r
+				if mcpy.DefaultRule != nil && mcpy.DefaultRule.ID == r.ID {
+					mcpy.DefaultRule = r
+				}
+			}
+			mcpy.RulesMap = rmap
+			e.AlgParams = &mcpy
+		}
+	default:
+		panic(fmt.Sprintf("Unsupported policies item type '%T'", e))
+	}
+}
+
 func copyPoliciesItem(item interface{}, parent interface{}, i int) interface{} {
 	switch item := item.(type) {
 	case *pdp.PolicySetType:
 		cpy := *item
 		cpy.Policies = make([]pdp.EvaluableType, len(item.Policies), len(item.Policies))
 		copy(cpy.Policies, item.Policies)
-		if item.AlgParams != nil {
-			m := item.AlgParams.(*pdp.MapperPCAParams)
-			mcpy := *m
-			cpy.AlgParams = &mcpy
-		}
 		if parent != nil {
 			ppset := parent.(*pdp.PolicySetType)
 			ppset.Policies[i] = &cpy
-			if ppset.AlgParams != nil {
-				pm := ppset.AlgParams.(*pdp.MapperPCAParams)
-				if pm.DefaultPolicy != nil && pm.DefaultPolicy.GetID() == cpy.ID {
-					pm.DefaultPolicy = &cpy
-				}
-				if _, ok := pm.PoliciesMap[cpy.ID]; ok {
-					pm.PoliciesMap[cpy.ID] = &cpy
-				}
-			}
+			copyAndUpdateAlg(ppset)
 		}
 		return &cpy
 	case *pdp.PolicyType:
 		cpy := *item
 		cpy.Rules = make([]*pdp.RuleType, len(item.Rules), len(item.Rules))
 		copy(cpy.Rules, item.Rules)
-		if item.AlgParams != nil {
-			m := item.AlgParams.(*pdp.MapperRCAParams)
-			mcpy := *m
-			cpy.AlgParams = &mcpy
-		}
 		if parent != nil {
 			ppset := parent.(*pdp.PolicySetType)
 			ppset.Policies[i] = &cpy
-			if ppset.AlgParams != nil {
-				pm := ppset.AlgParams.(*pdp.MapperPCAParams)
-				if pm.DefaultPolicy != nil && pm.DefaultPolicy.GetID() == cpy.ID {
-					pm.DefaultPolicy = &cpy
-				}
-				if _, ok := pm.PoliciesMap[cpy.ID]; ok {
-					pm.PoliciesMap[cpy.ID] = &cpy
-				}
-			}
+			copyAndUpdateAlg(ppset)
 		}
 		return &cpy
 	case *pdp.RuleType:
@@ -113,15 +122,7 @@ func copyPoliciesItem(item interface{}, parent interface{}, i int) interface{} {
 		if parent != nil {
 			pp := parent.(*pdp.PolicyType)
 			pp.Rules[i] = &cpy
-			if pp.AlgParams != nil {
-				pm := pp.AlgParams.(*pdp.MapperRCAParams)
-				if pm.DefaultRule != nil && pm.DefaultRule.ID == cpy.ID {
-					pm.DefaultRule = &cpy
-				}
-				if _, ok := pm.RulesMap[cpy.ID]; ok {
-					pm.RulesMap[cpy.ID] = &cpy
-				}
-			}
+			copyAndUpdateAlg(pp)
 		}
 		return &cpy
 	default:
@@ -168,8 +169,9 @@ func (s *Server) applyPoliciesPatchItem(ctx *policiesPatchCtx) error {
 
 		nid := pi.getID()
 
-		if ok, _, onext = findPoliciesItem(nid, ctx.ocur); !ok {
-			return ctx.errorf("Cannot find '%v' next item in original content", pi.Path[:pi.pathIndex+1])
+		// Patch into patch is allowed.
+		if ctx.ocur != nil {
+			_, _, onext = findPoliciesItem(nid, ctx.ocur)
 		}
 
 		if ok, i, next = findPoliciesItem(nid, ctx.cur); !ok {
@@ -201,6 +203,7 @@ func (s *Server) applyPoliciesPatchItem(ctx *policiesPatchCtx) error {
 			s.untrackAffectedPolicies(append(pi.Path, e.GetID()))
 
 			item.Policies = append(item.Policies, e)
+			copyAndUpdateAlg(item)
 		case *pdp.PolicyType:
 			r, err := s.Ctx.UnmarshalRule(pi.Entity)
 			if err != nil {
@@ -208,6 +211,7 @@ func (s *Server) applyPoliciesPatchItem(ctx *policiesPatchCtx) error {
 			}
 
 			item.Rules = append(item.Rules, r)
+			copyAndUpdateAlg(item)
 		default:
 			return ctx.errorf("Operation is unsupported for type '%T'", item)
 		}
@@ -225,6 +229,7 @@ func (s *Server) applyPoliciesPatchItem(ctx *policiesPatchCtx) error {
 			s.untrackAffectedPolicies(pi.Path)
 
 			ppset.Policies = append(ppset.Policies[:i], ppset.Policies[i+1:]...)
+			copyAndUpdateAlg(ppset)
 		case *pdp.PolicyType:
 			ppset := ctx.prev.(*pdp.PolicySetType)
 
@@ -237,6 +242,7 @@ func (s *Server) applyPoliciesPatchItem(ctx *policiesPatchCtx) error {
 			s.untrackAffectedPolicies(pi.Path)
 
 			ppset.Policies = append(ppset.Policies[:i], ppset.Policies[i+1:]...)
+			copyAndUpdateAlg(ppset)
 		case *pdp.RuleType:
 			pp := ctx.prev.(*pdp.PolicyType)
 
@@ -246,12 +252,14 @@ func (s *Server) applyPoliciesPatchItem(ctx *policiesPatchCtx) error {
 			}
 
 			pp.Rules = append(pp.Rules[:i], pp.Rules[i+1:]...)
+			copyAndUpdateAlg(pp)
 		default:
 			return ctx.errorf("Operation is unsupported for type '%T'", item)
 		}
 	case PatchOpRefresh:
 		switch item := ctx.cur.(type) {
 		case pdp.EvaluableType:
+			copyAndUpdateAlg(item)
 			if err := s.Ctx.UpdateEvaluableTypeContent(item, pi.Entity); err != nil {
 				return err
 			}

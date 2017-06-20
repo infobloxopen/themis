@@ -104,6 +104,12 @@ func (s *Server) DispatchPoliciesPatch(in *pb.Item) (interface{}, *pb.Response) 
 		return nil, controlFail("%v", err)
 	}
 
+	for k, v := range s.Includes {
+		if _, ok := ext[k]; !ok {
+			ext[k] = v
+		}
+	}
+
 	item, err := s.copyAndPatchPolicies(data, ext)
 	if err != nil {
 		log.WithFields(log.Fields{
