@@ -174,7 +174,7 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 	}
 
 	if !lresponse.Permit {
-		return dns.RcodeRefused, nil
+		return dns.RcodeNameError, nil
 	}
 	if lresponse.Redirect != nil {
 		return p.redirect(lresponse.Redirect.String(), lw, lw.Msg)
@@ -222,7 +222,7 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 		return p.redirect(response.Redirect.String(), w, r)
 	}
 
-	return dns.RcodeRefused, nil
+	return dns.RcodeNameError, nil
 }
 
 // Name implements the Handler interface
