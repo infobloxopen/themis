@@ -16,11 +16,11 @@ type PolicySetType struct {
 	AlgParams          interface{}
 }
 
-func (p PolicySetType) getID() string {
+func (p *PolicySetType) GetID() string {
 	return p.ID
 }
 
-func (p PolicySetType) Calculate(ctx *Context) ResponseType {
+func (p *PolicySetType) Calculate(ctx *Context) ResponseType {
 	match, err := p.Target.calculate(ctx)
 	if err != nil {
 		return combineEffectAndStatus(err, p.ID, p.PolicyCombiningAlg(p.Policies, p.AlgParams, ctx))

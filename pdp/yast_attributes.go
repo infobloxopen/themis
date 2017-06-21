@@ -2,7 +2,7 @@ package pdp
 
 import "strings"
 
-func (ctx *yastCtx) unmarshalAttributeDeclaration(k interface{}, v interface{}) error {
+func (ctx *YastCtx) unmarshalAttributeDeclaration(k interface{}, v interface{}) error {
 	ID, err := ctx.validateString(k, "attribute id")
 	if err != nil {
 		return err
@@ -25,7 +25,7 @@ func (ctx *yastCtx) unmarshalAttributeDeclaration(k interface{}, v interface{}) 
 	return nil
 }
 
-func (ctx *yastCtx) unmarshalAttributeDeclarations(m map[interface{}]interface{}) error {
+func (ctx *YastCtx) unmarshalAttributeDeclarations(m map[interface{}]interface{}) error {
 	ctx.attrs = make(map[string]AttributeType)
 
 	attrs, err := ctx.extractMap(m, yastTagAttributes, "attribute declarations")

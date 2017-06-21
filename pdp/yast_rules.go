@@ -2,7 +2,7 @@ package pdp
 
 import "strings"
 
-func (ctx *yastCtx) unmarshalRuleEffect(m map[interface{}]interface{}) (int, error) {
+func (ctx *YastCtx) unmarshalRuleEffect(m map[interface{}]interface{}) (int, error) {
 	s, err := ctx.extractString(m, yastTagEffect, "rule effect")
 	if err != nil {
 		return EffectIndeterminate, err
@@ -19,7 +19,7 @@ func (ctx *yastCtx) unmarshalRuleEffect(m map[interface{}]interface{}) (int, err
 	return e, nil
 }
 
-func (ctx *yastCtx) unmarshalCondition(m map[interface{}]interface{}) (ExpressionType, error) {
+func (ctx *YastCtx) unmarshalCondition(m map[interface{}]interface{}) (ExpressionType, error) {
 	v, ok := m[yastTagCondition]
 	if !ok {
 		return nil, nil
@@ -42,12 +42,21 @@ func (ctx *yastCtx) unmarshalCondition(m map[interface{}]interface{}) (Expressio
 	return e, nil
 }
 
-func (ctx *yastCtx) unmarshalRule(m map[interface{}]interface{}) (RuleType, error) {
-	r := RuleType{}
+func (ctx *YastCtx) UnmarshalRule(v interface{}) (*RuleType, error) {
+	m, err := ctx.validateMap(v, "policy rule")
+	if err != nil {
+		return nil, err
+	}
+
+	return ctx.unmarshalRule(m)
+}
+
+func (ctx *YastCtx) unmarshalRule(m map[interface{}]interface{}) (*RuleType, error) {
+	r := &RuleType{}
 
 	ID, err := ctx.extractString(m, yastTagID, "rule id")
 	if err != nil {
-		return r, err
+		return nil, err
 	}
 
 	ctx.pushNodeSpec("%#v", ID)
@@ -55,22 +64,22 @@ func (ctx *yastCtx) unmarshalRule(m map[interface{}]interface{}) (RuleType, erro
 
 	t, err := ctx.unmarshalTarget(m)
 	if err != nil {
-		return r, err
+		return nil, err
 	}
 
 	c, err := ctx.unmarshalCondition(m)
 	if err != nil {
-		return r, err
+		return nil, err
 	}
 
 	o, err := ctx.unmarshalObligation(m)
 	if err != nil {
-		return r, err
+		return nil, err
 	}
 
 	e, err := ctx.unmarshalRuleEffect(m)
 	if err != nil {
-		return r, err
+		return nil, err
 	}
 
 	r.ID = ID
@@ -82,7 +91,7 @@ func (ctx *yastCtx) unmarshalRule(m map[interface{}]interface{}) (RuleType, erro
 	return r, nil
 }
 
-func (ctx *yastCtx) unmarshalRulesItem(v interface{}, i int, rules []RuleType) ([]RuleType, error) {
+func (ctx *YastCtx) unmarshalRulesItem(v interface{}, i int, rules []*RuleType) ([]*RuleType, error) {
 	ctx.pushNodeSpec("%d", i+1)
 	defer ctx.popNodeSpec()
 
@@ -99,11 +108,11 @@ func (ctx *yastCtx) unmarshalRulesItem(v interface{}, i int, rules []RuleType) (
 	return append(rules, r), nil
 }
 
-func (ctx *yastCtx) unmarshalRules(v interface{}) ([]RuleType, error) {
+func (ctx *YastCtx) unmarshalRules(v interface{}) ([]*RuleType, error) {
 	ctx.pushNodeSpec(yastTagRules)
 	defer ctx.popNodeSpec()
 
-	r := make([]RuleType, 0)
+	r := make([]*RuleType, 0)
 
 	items, err := ctx.validateList(v, "policy rules")
 	if err != nil {
@@ -120,7 +129,7 @@ func (ctx *yastCtx) unmarshalRules(v interface{}) ([]RuleType, error) {
 	return r, nil
 }
 
-func (ctx *yastCtx) extractRuleCombiningAlg(m map[interface{}]interface{}) (string, RuleCombiningAlgType, map[interface{}]interface{}, error) {
+func (ctx *YastCtx) extractRuleCombiningAlg(m map[interface{}]interface{}) (string, RuleCombiningAlgType, map[interface{}]interface{}, error) {
 	s, algMap, err := ctx.extractStringOrMapDef(m, yastTagAlg, yastTagDefaultAlg, nil, "rule combining algorithm")
 	if err != nil {
 		return "", nil, nil, err

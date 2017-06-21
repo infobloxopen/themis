@@ -39,34 +39,33 @@ func getSetOfIDs(v AttributeValueType) ([]string, error) {
 		DataTypeNames[DataTypeString], DataTypeNames[DataTypeSetOfStrings], DataTypeNames[DataTypeListOfStrings], DataTypeNames[v.DataType])
 }
 
-func getRulesMap(rules []RuleType, params *MapperRCAParams) map[string]*RuleType {
+func getRulesMap(rules []*RuleType, params *MapperRCAParams) map[string]*RuleType {
 	if params.RulesMap != nil {
 		return params.RulesMap
 	}
 
 	m := make(map[string]*RuleType)
 	for _, rule := range rules {
-		tmp := rule
-		m[rule.ID] = &tmp
+		m[rule.ID] = rule
 	}
 
 	return m
 }
 
-func collectSubRules(IDs []string, m map[string]*RuleType) []RuleType {
-	rules := []RuleType{}
+func collectSubRules(IDs []string, m map[string]*RuleType) []*RuleType {
+	rules := []*RuleType{}
 	for _, ID := range IDs {
 		rule, ok := m[ID]
 		if ok {
-			rules = append(rules, *rule)
+			rules = append(rules, rule)
 		}
 	}
 
 	return rules
 }
 
-func MapperRCA(rules []RuleType, params interface{}, ctx *Context) ResponseType {
-	mapperParams := params.(MapperRCAParams)
+func MapperRCA(rules []*RuleType, params interface{}, ctx *Context) ResponseType {
+	mapperParams := params.(*MapperRCAParams)
 
 	v, err := mapperParams.Argument.calculate(ctx)
 	if err != nil {
@@ -86,7 +85,7 @@ func MapperRCA(rules []RuleType, params interface{}, ctx *Context) ResponseType 
 			return calculateErrorRule(mapperParams.ErrorRule, ctx, err)
 		}
 
-		r := mapperParams.SubAlg(collectSubRules(IDs, getRulesMap(rules, &mapperParams)), mapperParams.AlgParams, ctx)
+		r := mapperParams.SubAlg(collectSubRules(IDs, getRulesMap(rules, mapperParams)), mapperParams.AlgParams, ctx)
 		if r.Effect == EffectNotApplicable && mapperParams.DefaultRule != nil {
 			return mapperParams.DefaultRule.calculate(ctx)
 		}

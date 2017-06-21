@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func (ctx *yastCtx) unmarshalSelectorPathValueElement(v interface{}) (ExpressionType, error) {
+func (ctx *YastCtx) unmarshalSelectorPathValueElement(v interface{}) (ExpressionType, error) {
 	a, err := ctx.unmarshalValue(v)
 	if err != nil {
 		return nil, err
@@ -19,7 +19,7 @@ func (ctx *yastCtx) unmarshalSelectorPathValueElement(v interface{}) (Expression
 	return a, nil
 }
 
-func (ctx *yastCtx) unmarshalSelectorPathAttributeElement(v interface{}) (ExpressionType, error) {
+func (ctx *YastCtx) unmarshalSelectorPathAttributeElement(v interface{}) (ExpressionType, error) {
 	ID, err := ctx.validateString(v, "attribute ID")
 	if err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func (ctx *yastCtx) unmarshalSelectorPathAttributeElement(v interface{}) (Expres
 	return AttributeDesignatorType{a}, nil
 }
 
-func (ctx *yastCtx) unmarshalSelectorPathSelectorElement(v interface{}) (ExpressionType, error) {
+func (ctx *YastCtx) unmarshalSelectorPathSelectorElement(v interface{}) (ExpressionType, error) {
 	s, err := ctx.unmarshalSelector(v)
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func (ctx *yastCtx) unmarshalSelectorPathSelectorElement(v interface{}) (Express
 	return s, nil
 }
 
-func (ctx *yastCtx) unmarshalSelectorPathStructuredElement(m map[interface{}]interface{}) (ExpressionType, error) {
+func (ctx *YastCtx) unmarshalSelectorPathStructuredElement(m map[interface{}]interface{}) (ExpressionType, error) {
 	k, v, err := ctx.getSingleMapPair(m, "value or attribute map")
 	if err != nil {
 		return nil, err
@@ -83,7 +83,7 @@ func (ctx *yastCtx) unmarshalSelectorPathStructuredElement(m map[interface{}]int
 	return nil, ctx.errorf("Expected value, attribute or selector specificator but got %s", s)
 }
 
-func (ctx *yastCtx) unmarshalSelectorPathElement(v interface{}, i int) (string, ExpressionType, error) {
+func (ctx *YastCtx) unmarshalSelectorPathElement(v interface{}, i int) (string, ExpressionType, error) {
 	ctx.pushNodeSpec("%d", i+1)
 	defer ctx.popNodeSpec()
 
@@ -107,10 +107,10 @@ func (ctx *yastCtx) unmarshalSelectorPathElement(v interface{}, i int) (string, 
 	return fmt.Sprintf("%q", s), AttributeValueType{DataTypeString, s}, nil
 }
 
-func (ctx *yastCtx) unmarshalSelectorPath(m map[interface{}]interface{}) (string, []ExpressionType, error) {
+func (ctx *YastCtx) unmarshalSelectorPath(m map[interface{}]interface{}) ([]string, []ExpressionType, error) {
 	v, err := ctx.extractList(m, yastTagPath, "selector path")
 	if err != nil {
-		return "", nil, err
+		return nil, nil, err
 	}
 
 	ctx.pushNodeSpec(yastTagPath)
@@ -121,17 +121,17 @@ func (ctx *yastCtx) unmarshalSelectorPath(m map[interface{}]interface{}) (string
 	for i, item := range v {
 		s, a, err := ctx.unmarshalSelectorPathElement(item, i)
 		if err != nil {
-			return "", nil, err
+			return nil, nil, err
 		}
 
 		path[i] = s
 		p[i] = a
 	}
 
-	return strings.Join(path, "/"), p, nil
+	return path, p, nil
 }
 
-func (ctx *yastCtx) unmarshalSelectorContent(m map[interface{}]interface{}) (string, interface{}, error) {
+func (ctx *YastCtx) unmarshalSelectorContent(m map[interface{}]interface{}) (string, interface{}, error) {
 	ID, err := ctx.extractString(m, yastTagContent, "selector content id")
 	if err != nil {
 		return "", nil, err
@@ -145,7 +145,17 @@ func (ctx *yastCtx) unmarshalSelectorContent(m map[interface{}]interface{}) (str
 	return ID, c, nil
 }
 
-func (ctx *yastCtx) unmarshalSelector(v interface{}) (*SelectorType, error) {
+func (ctx *YastCtx) contentIndexKey(cid string, path []string) string {
+	if len(path) <= 1 {
+		return fmt.Sprintf("%q", cid)
+	} else {
+		path = path[:len(path)-1]
+		path = append([]string{fmt.Sprintf("%q", cid)}, path...)
+	}
+	return strings.Join(path, "/")
+}
+
+func (ctx *YastCtx) unmarshalSelector(v interface{}) (*SelectorType, error) {
 	ctx.pushNodeSpec(yastTagSelector)
 	defer ctx.popNodeSpec()
 
@@ -169,6 +179,8 @@ func (ctx *yastCtx) unmarshalSelector(v interface{}) (*SelectorType, error) {
 		return nil, err
 	}
 
+	selKey := strings.Join(strPath, "/")
+
 	ID, rawCtx, err := ctx.unmarshalSelectorContent(m)
 	if err != nil {
 		return nil, err
@@ -184,7 +196,10 @@ func (ctx *yastCtx) unmarshalSelector(v interface{}) (*SelectorType, error) {
 		ctx.selectors[ID] = pathMap
 	}
 
-	sel, ok := pathMap[strPath]
+	ckey := ctx.contentIndexKey(ID, strPath)
+	ctx.addPolicyToContentIndex(ckey, m)
+
+	sel, ok := pathMap[selKey]
 	if ok {
 		return sel, nil
 	}
@@ -192,7 +207,7 @@ func (ctx *yastCtx) unmarshalSelector(v interface{}) (*SelectorType, error) {
 	c, p, dp := prepareSelectorContent(rawCtx, rawPath, t)
 
 	sel = &SelectorType{t, p, c, ID, dp}
-	pathMap[strPath] = sel
+	pathMap[selKey] = sel
 
 	return sel, nil
 }

@@ -88,7 +88,7 @@ func TestUnmarshalYASTPolicySetWithNestedMappers(t *testing.T) {
 		t.Fatalf("Expected result but got nothing")
 	}
 
-	set, ok := p.(PolicySetType)
+	set, ok := p.(*PolicySetType)
 	if !ok {
 		t.Fatalf("Expected policy set but got %T", p)
 	}
@@ -97,7 +97,7 @@ func TestUnmarshalYASTPolicySetWithNestedMappers(t *testing.T) {
 		t.Fatalf("Expected algorithm parameters but got nothing")
 	}
 
-	params, ok := set.AlgParams.(MapperPCAParams)
+	params, ok := set.AlgParams.(*MapperPCAParams)
 	if !ok {
 		t.Fatalf("Expected mapper algorithm parameters but got %T", set.AlgParams)
 	}
@@ -106,12 +106,12 @@ func TestUnmarshalYASTPolicySetWithNestedMappers(t *testing.T) {
 		t.Errorf("Expected filled policies map (with %d policies) but got %d", len(set.Policies), len(params.PoliciesMap))
 	}
 
-	ID := params.DefaultPolicy.getID()
+	ID := params.DefaultPolicy.GetID()
 	if ID != "Default" {
 		t.Errorf("Expected %q policy as default but got %q", "Default", ID)
 	}
 
-	ID = params.ErrorPolicy.getID()
+	ID = params.ErrorPolicy.GetID()
 	if ID != "Error" {
 		t.Errorf("Expected %q policy as \"on error\" policy but got %q", "Error", ID)
 	}
@@ -120,7 +120,7 @@ func TestUnmarshalYASTPolicySetWithNestedMappers(t *testing.T) {
 		t.Fatalf("Expected subalgorithm parameters but got nothing")
 	}
 
-	subParams, ok := params.AlgParams.(MapperPCAParams)
+	subParams, ok := params.AlgParams.(*MapperPCAParams)
 	if !ok {
 		t.Fatalf("Expected mapper subalgorithm parameters but got %T", params.AlgParams)
 	}
@@ -130,11 +130,11 @@ func TestUnmarshalYASTPolicySetWithNestedMappers(t *testing.T) {
 	}
 
 	if subParams.DefaultPolicy != nil {
-		t.Errorf("Expected no default policy but got %q", subParams.DefaultPolicy.getID())
+		t.Errorf("Expected no default policy but got %q", subParams.DefaultPolicy.GetID())
 	}
 
 	if subParams.ErrorPolicy != nil {
-		t.Errorf("Expected no \"on error\" policy but got %q", subParams.ErrorPolicy.getID())
+		t.Errorf("Expected no \"on error\" policy but got %q", subParams.ErrorPolicy.GetID())
 	}
 }
 
@@ -150,7 +150,7 @@ func TestUnmarshalYASTPolicyWithNestedMappers(t *testing.T) {
 		t.Fatalf("Expected result but got nothing")
 	}
 
-	pol, ok := p.(PolicyType)
+	pol, ok := p.(*PolicyType)
 	if !ok {
 		t.Fatalf("Expected policy but got %T", p)
 	}
@@ -159,7 +159,7 @@ func TestUnmarshalYASTPolicyWithNestedMappers(t *testing.T) {
 		t.Fatalf("Expected algorithm parameters but got nothing")
 	}
 
-	params, ok := pol.AlgParams.(MapperRCAParams)
+	params, ok := pol.AlgParams.(*MapperRCAParams)
 	if !ok {
 		t.Fatalf("Expected mapper algorithm parameters but got %T", pol.AlgParams)
 	}
@@ -182,7 +182,7 @@ func TestUnmarshalYASTPolicyWithNestedMappers(t *testing.T) {
 		t.Fatalf("Expected subalgorithm parameters but got nothing")
 	}
 
-	subParams, ok := params.AlgParams.(MapperRCAParams)
+	subParams, ok := params.AlgParams.(*MapperRCAParams)
 	if !ok {
 		t.Fatalf("Expected mapper subalgorithm parameters but got %T", params.AlgParams)
 	}

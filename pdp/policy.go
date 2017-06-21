@@ -1,6 +1,6 @@
 package pdp
 
-type RuleCombiningAlgType func(rules []RuleType, params interface{}, ctx *Context) ResponseType
+type RuleCombiningAlgType func(rules []*RuleType, params interface{}, ctx *Context) ResponseType
 
 var RuleCombiningAlgMap = map[string]RuleCombiningAlgType{
 	yastTagFirstApplicableEffectAlg: FirstApplicableEffectRCA,
@@ -10,17 +10,17 @@ var RuleCombiningAlgMap = map[string]RuleCombiningAlgType{
 type PolicyType struct {
 	ID               string
 	Target           TargetType
-	Rules            []RuleType
+	Rules            []*RuleType
 	Obligations      []AttributeAssignmentExpressionType
 	RuleCombiningAlg RuleCombiningAlgType
 	AlgParams        interface{}
 }
 
-func (p PolicyType) getID() string {
+func (p *PolicyType) GetID() string {
 	return p.ID
 }
 
-func (p PolicyType) Calculate(ctx *Context) ResponseType {
+func (p *PolicyType) Calculate(ctx *Context) ResponseType {
 	match, err := p.Target.calculate(ctx)
 	if err != nil {
 		return combineEffectAndStatus(err, p.ID, p.RuleCombiningAlg(p.Rules, p.AlgParams, ctx))
@@ -38,7 +38,7 @@ func (p PolicyType) Calculate(ctx *Context) ResponseType {
 	return r
 }
 
-func FirstApplicableEffectRCA(rules []RuleType, params interface{}, ctx *Context) ResponseType {
+func FirstApplicableEffectRCA(rules []*RuleType, params interface{}, ctx *Context) ResponseType {
 	for _, rule := range rules {
 		r := rule.calculate(ctx)
 		if r.Effect != EffectNotApplicable {
@@ -49,7 +49,7 @@ func FirstApplicableEffectRCA(rules []RuleType, params interface{}, ctx *Context
 	return ResponseType{EffectNotApplicable, "Ok", nil}
 }
 
-func DenyOverridesRCA(rules []RuleType, params interface{}, ctx *Context) ResponseType {
+func DenyOverridesRCA(rules []*RuleType, params interface{}, ctx *Context) ResponseType {
 	status := ""
 	obligations := make([]AttributeAssignmentExpressionType, 0)
 

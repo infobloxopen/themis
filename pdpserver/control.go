@@ -3,13 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"golang.org/x/net/context"
 	"io"
 
+	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-control"
 
-	"github.com/infobloxopen/themis/pdp"
+	log "github.com/Sirupsen/logrus"
+	"golang.org/x/net/context"
 )
 
 func collect(stream pb.PDPControl_UploadServer) ([]byte, error) {
@@ -38,6 +38,10 @@ func controlAck(id int32) *pb.Response {
 
 func controlFail(format string, args ...interface{}) *pb.Response {
 	return &pb.Response{pb.Response_ERROR, -1, fmt.Sprintf(format, args...)}
+}
+
+func versionError(version string) *pb.Response {
+	return &pb.Response{pb.Response_VERSION_ERROR, -1, version}
 }
 
 func (s *Server) Upload(stream pb.PDPControl_UploadServer) error {
@@ -74,16 +78,49 @@ func (s *Server) DispatchPolicies(in *pb.Item) (interface{}, *pb.Response) {
 		return nil, controlFail("%v", err)
 	}
 
-	item, err := pdp.UnmarshalYAST(data, s.Path, ext)
+	item, err := s.Ctx.UnmarshalYAST(data, ext)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"id":   in.DataId,
-			"type": pb.Item_DataType_name[int32(in.Type)],
+			"id":      in.DataId,
+			"type":    pb.Item_DataType_name[int32(in.Type)],
+			"version": in.ToVersion,
 		}).Error("Failed to parse the uploaded data as the desired type")
 		return nil, controlFail("%v", err)
 	}
 
-	return item, nil
+	return Policies{in.ToVersion, item, ext}, nil
+}
+
+func (s *Server) DispatchPoliciesPatch(in *pb.Item) (interface{}, *pb.Response) {
+	data, err := s.Updates.Get(in.DataId)
+	if err != nil {
+		log.WithField("id", in.DataId).Error("Failed to get specified data")
+		return nil, controlFail("%v", err)
+	}
+
+	ext, err := s.Updates.GetIncludes(in.Includes)
+	if err != nil {
+		log.WithField("id", in.DataId).Error("Failed to collect specified includes")
+		return nil, controlFail("%v", err)
+	}
+
+	for k, v := range s.Includes {
+		if _, ok := ext[k]; !ok {
+			ext[k] = v
+		}
+	}
+
+	item, err := s.copyAndPatchPolicies(data, ext)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"id":      in.DataId,
+			"type":    pb.Item_DataType_name[int32(in.Type)],
+			"version": in.ToVersion,
+		}).Error("Failed to parse the uploaded data patch as the desired type")
+		return nil, controlFail("%v", err)
+	}
+
+	return Policies{in.ToVersion, item, ext}, nil
 }
 
 func (s *Server) DispatchContent(in *pb.Item) (interface{}, *pb.Response) {
@@ -97,9 +134,30 @@ func (s *Server) DispatchContent(in *pb.Item) (interface{}, *pb.Response) {
 	err = json.Unmarshal(data, &item)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"id":   in.DataId,
-			"type": pb.Item_DataType_name[int32(in.Type)],
+			"id":      in.DataId,
+			"type":    pb.Item_DataType_name[int32(in.Type)],
+			"version": in.ToVersion,
 		}).Error("Failed to parse the uploaded data as the desired type")
+		return nil, controlFail("%v", err)
+	}
+
+	return Content{in.Id, item}, nil
+}
+
+func (s *Server) DispatchContentPatch(in *pb.Item) (interface{}, *pb.Response) {
+	data, err := s.Updates.Get(in.DataId)
+	if err != nil {
+		log.WithField("id", in.DataId).Error("Failed to get specified data")
+		return nil, controlFail("%v", err)
+	}
+
+	item, err := s.patchContent(data, in.Id)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"id":      in.DataId,
+			"type":    pb.Item_DataType_name[int32(in.Type)],
+			"version": in.ToVersion,
+		}).Error("Failed to parse the uploaded data patch as the desired type")
 		return nil, controlFail("%v", err)
 	}
 
@@ -109,10 +167,27 @@ func (s *Server) DispatchContent(in *pb.Item) (interface{}, *pb.Response) {
 func (s *Server) DispatchUpdate(in *pb.Item) (interface{}, *pb.Response) {
 	switch in.Type {
 	case pb.Item_POLICIES:
-		return s.DispatchPolicies(in)
+		s.Ctx.Reset()
 
+		if in.FromVersion != "" {
+			if in.FromVersion != s.Version {
+				return nil, versionError(s.Version)
+			}
+
+			return s.DispatchPoliciesPatch(in)
+		} else {
+			return s.DispatchPolicies(in)
+		}
 	case pb.Item_CONTENT:
-		return s.DispatchContent(in)
+		if in.FromVersion != "" {
+			if in.FromVersion != s.Version {
+				return nil, versionError(s.Version)
+			}
+
+			return s.DispatchContentPatch(in)
+		} else {
+			return s.DispatchContent(in)
+		}
 	}
 
 	log.WithField("type", in.Type).Error("Unexpected policies or content")
@@ -156,10 +231,19 @@ func (s *Server) Apply(server_ctx context.Context, in *pb.Update) (*pb.Response,
 		return controlFail("%v", err), nil
 	}
 
-	s.Lock.Lock()
-	s.Policy = p
-	s.Lock.Unlock()
-	log.WithField("id", in.Id).Info("Policies with the id has been applied")
+	s.Lock()
+
+	s.Policy = p.Data
+	s.Includes = p.Includes
+	s.Version = p.Version
+	s.AffectedPolicies = map[string]pdp.ContentPolicyIndexItem{}
+
+	s.Unlock()
+
+	log.WithFields(log.Fields{
+		"id":      in.Id,
+		"version": s.Version,
+	}).Info("Policies have been applied")
 
 	delete(s.Updates.Items, in.Id)
 	if s.Updates.rawResetAutoIncrement() {

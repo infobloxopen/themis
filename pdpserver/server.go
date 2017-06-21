@@ -30,19 +30,29 @@ type Transport struct {
 }
 
 type Server struct {
-	Path   string
-	Policy pdp.EvaluableType
-	Lock   *sync.RWMutex
+	sync.RWMutex
+
+	Version    string
+	Policy     pdp.EvaluableType
+	Attributes map[string]pdp.AttributeType
+	Includes   map[string]interface{}
 
 	Requests Transport
 	Control  Transport
 	Health   Transport
 
 	Updates *Queue
+
+	AffectedPolicies map[string]pdp.ContentPolicyIndexItem
+
+	Ctx pdp.YastCtx
 }
 
 func NewServer(path string) *Server {
-	return &Server{Path: path, Lock: &sync.RWMutex{}, Updates: NewQueue()}
+	return &Server{
+		Updates:          NewQueue(),
+		AffectedPolicies: map[string]pdp.ContentPolicyIndexItem{},
+		Ctx:              pdp.NewYASTCtx(path)}
 }
 
 func (s *Server) LoadPolicies(path string) error {
@@ -52,13 +62,14 @@ func (s *Server) LoadPolicies(path string) error {
 	}
 
 	log.WithField("policy", path).Info("Loading policy")
-	p, err := pdp.UnmarshalYASTFromFile(path, s.Path)
+	p, err := s.Ctx.UnmarshalYASTFromFile(path)
 	if err != nil {
 		log.WithFields(log.Fields{"policy": path, "error": err}).Error("Failed load policy")
 		return err
 	}
 
 	s.Policy = p
+
 	return nil
 }
 

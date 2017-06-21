@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 )
 
-func (ctx *yastCtx) loadJSONFile(path string) (interface{}, error) {
+func (ctx *YastCtx) loadJSONFile(path string) (interface{}, error) {
 	f, err := findAndOpenFile(path, ctx.dataDir)
 	if err != nil {
 		return nil, ctx.errorf("opening file %s: %v", path, err)
@@ -33,7 +33,7 @@ func (ctx *yastCtx) loadJSONFile(path string) (interface{}, error) {
 	return nil, ctx.errorf("unmarshaling file %s to object: %v, to array: %v", path, mErr, aErr)
 }
 
-func (ctx *yastCtx) unmarshalInclude(k interface{}, v interface{}) error {
+func (ctx *YastCtx) unmarshalInclude(k interface{}, v interface{}) error {
 	ID, err := ctx.validateString(k, "include id")
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func (ctx *yastCtx) unmarshalInclude(k interface{}, v interface{}) error {
 	return nil
 }
 
-func (ctx *yastCtx) unmarshalIncludes(m map[interface{}]interface{}, ext map[string]interface{}) error {
+func (ctx *YastCtx) unmarshalIncludes(m map[interface{}]interface{}, ext map[string]interface{}) error {
 	if ext == nil {
 		ctx.includes = make(map[string]interface{})
 	} else {

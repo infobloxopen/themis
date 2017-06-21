@@ -241,9 +241,9 @@ func (s *Server) Validate(server_ctx context.Context, in *pb.Request) (*pb.Respo
 	log.Info("Validating context")
 	log.WithFields(log.Fields{"context": ctx}).Debug()
 
-	s.Lock.RLock()
+	s.RLock()
 	p := s.Policy
-	s.Lock.RUnlock()
+	s.RUnlock()
 
 	if p == nil {
 		log.Error("No Policy or policy set defined")

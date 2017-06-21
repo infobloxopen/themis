@@ -3,7 +3,7 @@ package pdp
 import "testing"
 
 func TestUnmarshalExpressionValueByType(t *testing.T) {
-	ctx := newYASTCtx("")
+	ctx := NewYASTCtx("")
 	ctx.includes = map[string]interface{}{
 		"ListOfStrings": []interface{}{"test", "example", "end"}}
 
