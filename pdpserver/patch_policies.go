@@ -193,11 +193,18 @@ func (s *Server) applyPoliciesPatchItem(ctx *policiesPatchCtx) error {
 	case PatchOpAdd:
 		switch item := ctx.cur.(type) {
 		case *pdp.PolicySetType:
+			id, err := s.Ctx.UnmarshalEvaluableID(pi.Entity)
+			if err != nil {
+				return ctx.errorf("%v", err)
+			}
+
+			s.Ctx.PushPolicyID(id)
 			s.Ctx.RemovePolicyFromContentIndex()
+			s.Ctx.PopPolicyID()
 
 			e, err := s.Ctx.UnmarshalEvaluable(pi.Entity)
 			if err != nil {
-				return err
+				return ctx.errorf("%v", err)
 			}
 
 			s.untrackAffectedPolicies(append(pi.Path, e.GetID()))
@@ -207,7 +214,7 @@ func (s *Server) applyPoliciesPatchItem(ctx *policiesPatchCtx) error {
 		case *pdp.PolicyType:
 			r, err := s.Ctx.UnmarshalRule(pi.Entity)
 			if err != nil {
-				return err
+				return ctx.errorf("%v", err)
 			}
 
 			item.Rules = append(item.Rules, r)
