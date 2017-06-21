@@ -2,15 +2,16 @@ package policy
 
 import (
 	"fmt"
+	"net"
+	"reflect"
+	"strings"
+	"testing"
+
 	"github.com/coredns/coredns/middleware"
 	pdp "github.com/infobloxopen/themis/pdp-service"
 	pep "github.com/infobloxopen/themis/pep"
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
-	"net"
-	"reflect"
-	"strings"
-	"testing"
 )
 
 type TestMiddlewareHandler struct {
@@ -71,16 +72,16 @@ func TestHandlePermit(t *testing.T) {
 				MiddlewareStatus:                   dns.RcodeServerFailure,
 				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_DENY},
 			},
-			expectedStatus: dns.RcodeRefused,
+			expectedStatus: dns.RcodeNameError,
 			expectedErr:    nil,
 		},
 		{
 			c: TestCaseInfo{
 				MiddlewareErr:                      nil,
-				MiddlewareStatus:                   dns.RcodeRefused,
+				MiddlewareStatus:                   dns.RcodeNameError,
 				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_PERMIT},
 			},
-			expectedStatus: dns.RcodeRefused,
+			expectedStatus: dns.RcodeNameError,
 			expectedErr:    nil,
 		},
 		{
