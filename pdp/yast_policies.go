@@ -354,6 +354,20 @@ func (ctx *YastCtx) UnmarshalEvaluable(v interface{}) (EvaluableType, error) {
 	return ctx.unmarshalItem(v)
 }
 
+func (ctx *YastCtx) UnmarshalEvaluableID(v interface{}) (string, error) {
+	m, err := ctx.validateMap(v, "policy or policy set")
+	if err != nil {
+		return "", err
+	}
+
+	id, err := ctx.extractString(m, yastTagID, "policy or policy set id")
+	if err != nil {
+		return "", err
+	}
+
+	return id, nil
+}
+
 func (ctx *YastCtx) unmarshalItem(v interface{}) (EvaluableType, error) {
 	r, err := ctx.validateMap(v, "policy or policy set")
 	if err != nil {
