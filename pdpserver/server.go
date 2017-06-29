@@ -121,7 +121,7 @@ func (s *Server) Serve(tracer ot.Tracer) {
 
 	healthMux := http.NewServeMux()
 	healthMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		log.Info("Health check responding with 300")
+		log.Info("Health check responding with OK")
 		io.WriteString(w, "OK")
 	})
 	go func() {

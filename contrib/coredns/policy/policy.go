@@ -59,7 +59,7 @@ type Attribute struct {
 
 type Response struct {
 	Permit   bool   `pdp:"Effect"`
-	Redirect net.IP `pdp:"redirect_to"`
+	Redirect string `pdp:"redirect_to"`
 	PolicyId string `pdp:"policy_id"`
 }
 
@@ -176,8 +176,8 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 	if !lresponse.Permit {
 		return dns.RcodeNameError, nil
 	}
-	if lresponse.Redirect != nil {
-		return p.redirect(lresponse.Redirect.String(), lw, lw.Msg)
+	if lresponse.Redirect != "" {
+		return p.redirect(lresponse.Redirect, lw, lw.Msg)
 	}
 	w.WriteMsg(lw.Msg)
 	return status, nil
@@ -218,8 +218,8 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 		return p.handlePermit(ctx, w, r, attrs)
 	}
 
-	if response.Redirect != nil {
-		return p.redirect(response.Redirect.String(), w, r)
+	if response.Redirect != "" {
+		return p.redirect(response.Redirect, w, r)
 	}
 
 	return dns.RcodeNameError, nil
@@ -237,16 +237,33 @@ func (p *PolicyMiddleware) redirect(redirect_to string, w dns.ResponseWriter, r 
 	a.Authoritative = true
 
 	var rr dns.RR
+	cname := false
 
 	switch state.Family() {
 	case 1:
-		rr = new(dns.A)
-		rr.(*dns.A).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeA, Class: state.QClass()}
-		rr.(*dns.A).A = net.ParseIP(redirect_to).To4()
+		ipv4 := net.ParseIP(redirect_to).To4()
+		if ipv4 != nil {
+			rr = new(dns.A)
+			rr.(*dns.A).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeA, Class: state.QClass()}
+			rr.(*dns.A).A = ipv4
+		} else {
+			cname = true
+		}
 	case 2:
-		rr = new(dns.AAAA)
-		rr.(*dns.AAAA).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeAAAA, Class: state.QClass()}
-		rr.(*dns.AAAA).AAAA = net.ParseIP(redirect_to)
+		ipv6 := net.ParseIP(redirect_to).To16()
+		if ipv6 != nil {
+			rr = new(dns.AAAA)
+			rr.(*dns.AAAA).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeAAAA, Class: state.QClass()}
+			rr.(*dns.AAAA).AAAA = ipv6
+		} else {
+			cname = true
+		}
+	}
+
+	if cname {
+		rr = new(dns.CNAME)
+		rr.(*dns.CNAME).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeCNAME, Class: state.QClass()}
+		rr.(*dns.CNAME).Target = redirect_to
 	}
 
 	a.Answer = []dns.RR{rr}
