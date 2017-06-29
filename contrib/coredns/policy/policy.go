@@ -59,7 +59,7 @@ type Attribute struct {
 
 type Response struct {
 	Permit   bool   `pdp:"Effect"`
-	Redirect net.IP `pdp:"redirect_to"`
+	Redirect string `pdp:"redirect_to"`
 	PolicyId string `pdp:"policy_id"`
 }
 
@@ -176,8 +176,8 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 	if !lresponse.Permit {
 		return dns.RcodeNameError, nil
 	}
-	if lresponse.Redirect != nil {
-		return p.redirect(lresponse.Redirect.String(), lw, lw.Msg)
+	if lresponse.Redirect != "" {
+		return p.redirect(lresponse.Redirect, lw, lw.Msg)
 	}
 	w.WriteMsg(lw.Msg)
 	return status, nil
@@ -218,8 +218,8 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 		return p.handlePermit(ctx, w, r, attrs)
 	}
 
-	if response.Redirect != nil {
-		return p.redirect(response.Redirect.String(), w, r)
+	if response.Redirect != "" {
+		return p.redirect(response.Redirect, w, r)
 	}
 
 	return dns.RcodeNameError, nil
