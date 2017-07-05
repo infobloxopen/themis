@@ -177,7 +177,7 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 		return dns.RcodeNameError, nil
 	}
 	if lresponse.Redirect != "" {
-		return p.redirect(lresponse.Redirect, lw, lw.Msg)
+		return p.redirect(lresponse.Redirect, lw, lw.Msg, ctx)
 	}
 	w.WriteMsg(lw.Msg)
 	return status, nil
@@ -219,7 +219,7 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 	}
 
 	if response.Redirect != "" {
-		return p.redirect(response.Redirect, w, r)
+		return p.redirect(response.Redirect, w, r, ctx)
 	}
 
 	return dns.RcodeNameError, nil
@@ -228,7 +228,7 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 // Name implements the Handler interface
 func (p *PolicyMiddleware) Name() string { return "policy" }
 
-func (p *PolicyMiddleware) redirect(redirect_to string, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+func (p *PolicyMiddleware) redirect(redirect_to string, w dns.ResponseWriter, r *dns.Msg, ctx context.Context) (int, error) {
 	state := request.Request{W: w, Req: r}
 
 	a := new(dns.Msg)
@@ -261,12 +261,33 @@ func (p *PolicyMiddleware) redirect(redirect_to string, w dns.ResponseWriter, r 
 	}
 
 	if cname {
+		redirect_to = strings.TrimSuffix(redirect_to, ".") + "."
 		rr = new(dns.CNAME)
 		rr.(*dns.CNAME).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeCNAME, Class: state.QClass()}
 		rr.(*dns.CNAME).Target = redirect_to
 	}
 
 	a.Answer = []dns.RR{rr}
+
+	if cname {
+		msg := &dns.Msg{
+			Question: []dns.Question{
+				dns.Question{
+					Name:   redirect_to,
+					Qtype:  state.QType(),
+					Qclass: state.QClass(),
+				},
+			},
+		}
+
+		lw := new(NewLocalResponseWriter)
+		status, err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lw, msg)
+		if err != nil {
+			return status, err
+		}
+
+		a.Answer = append(a.Answer, lw.Msg.Answer...)
+	}
 
 	state.SizeAndDo(a)
 	w.WriteMsg(a)
