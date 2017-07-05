@@ -104,16 +104,41 @@ func (c *pdpClient) Validate(ctx context.Context, in, out interface{}) error {
 }
 
 type TestClient struct {
-	NextResponse *pb.Response
+	NextResponse   *pb.Response
+	NextResponseIP *pb.Response
+	ErrResponse    error
+	ErrResponseIP  error
 }
 
 func NewTestClient() *TestClient {
 	return &TestClient{}
 }
 
+func NewTestClientInit(nextResponse *pb.Response, nextResponseIP *pb.Response,
+	errResponse error, errResponseIP error) *TestClient {
+	return &TestClient{nextResponse, nextResponseIP, errResponse, errResponseIP}
+}
+
 func (c *TestClient) Connect() error { return nil }
 func (c *TestClient) Close()         {}
 func (c *TestClient) Validate(ctx context.Context, in, out interface{}) error {
+	if in != nil {
+		p := in.(pb.Request)
+		for _, a := range p.Attributes {
+			if a.Id == "address" {
+				if c.ErrResponseIP != nil {
+					return c.ErrResponseIP
+				}
+				if c.NextResponseIP != nil {
+					return fillResponse(c.NextResponseIP, out)
+				}
+				continue
+			}
+		}
+	}
+	if c.ErrResponse != nil {
+		return c.ErrResponse
+	}
 	return fillResponse(c.NextResponse, out)
 }
 

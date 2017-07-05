@@ -2,166 +2,190 @@ package policy
 
 import (
 	"fmt"
-	"net"
-	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/coredns/coredns/middleware"
+	"github.com/coredns/coredns/middleware/pkg/dnsrecorder"
+	"github.com/coredns/coredns/middleware/test"
+
 	pdp "github.com/infobloxopen/themis/pdp-service"
 	pep "github.com/infobloxopen/themis/pep"
+
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
 )
 
-type TestMiddlewareHandler struct {
-	status int
-	err    error
-}
+var (
+	fakePdpError      = fmt.Errorf("Fake PDP error")
+	fakeResolverError = fmt.Errorf("Fake Resolver error")
+)
 
-func (f TestMiddlewareHandler) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
-	var rr4 dns.RR
-	rr4 = new(dns.A)
-	rr4.(*dns.A).Hdr = dns.RR_Header{Name: "example.com", Rrtype: dns.TypeA, Class: dns.ClassINET}
-	rr4.(*dns.A).A = net.ParseIP("10.10.10.10").To4()
-	var rr6 dns.RR
-	rr6 = new(dns.AAAA)
-	rr6.(*dns.AAAA).Hdr = dns.RR_Header{Name: "example.com", Rrtype: dns.TypeAAAA, Class: dns.ClassINET}
-	rr6.(*dns.AAAA).AAAA = net.ParseIP("21DA:D3:0:2F3B:2AA:FF:FE28:9C5A").To16()
-	r.Answer = []dns.RR{rr4, rr6}
+func TestPolicy(t *testing.T) {
+	pm := PolicyMiddleware{Next: handler()}
 
-	w.WriteMsg(r)
-	return f.status, f.err
-}
-func (f TestMiddlewareHandler) Name() string { return "handlerfunc" }
-
-type TestCaseInfo struct {
-	MiddlewareErr                      error
-	MiddlewareStatus                   int
-	ValidationResultMiddlewareResponse *pdp.Response
-}
-
-func TestHandlePermit(t *testing.T) {
-
-	cases := []struct {
-		c              TestCaseInfo
-		expectedStatus int
-		expectedErr    error
+	tests := []struct {
+		query      string
+		queryType  uint16
+		response   *pdp.Response
+		responseIP *pdp.Response
+		errResp    error
+		errRespIP  error
+		status     int
+		err        error
 	}{
 		{
-			c: TestCaseInfo{
-				MiddlewareErr:                      fmt.Errorf("Error"),
-				MiddlewareStatus:                   dns.RcodeServerFailure,
-				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_DENY},
-			},
-			expectedStatus: dns.RcodeServerFailure,
-			expectedErr:    fmt.Errorf("Error"),
+			query:     "test.com.",
+			queryType: dns.TypeA,
+			errResp:   fakePdpError,
+			status:    dns.RcodeServerFailure,
+			err:       fakePdpError,
 		},
 		{
-			c: TestCaseInfo{
-				MiddlewareErr:                      fmt.Errorf("Error"),
-				MiddlewareStatus:                   dns.RcodeSuccess,
-				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_DENY},
-			},
-			expectedStatus: dns.RcodeSuccess,
-			expectedErr:    fmt.Errorf("Error"),
+			query:     "test.com.",
+			queryType: dns.TypeA,
+			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
+			errRespIP: fakePdpError,
+			status:    dns.RcodeServerFailure,
+			err:       fakePdpError,
 		},
 		{
-			c: TestCaseInfo{
-				MiddlewareErr:                      nil,
-				MiddlewareStatus:                   dns.RcodeServerFailure,
-				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_DENY},
-			},
-			expectedStatus: dns.RcodeNameError,
-			expectedErr:    nil,
+			query:     "test.com.",
+			queryType: dns.TypeA,
+			response:  &pdp.Response{Effect: pdp.Response_DENY},
+			status:    dns.RcodeNameError,
+			err:       nil,
 		},
 		{
-			c: TestCaseInfo{
-				MiddlewareErr:                      nil,
-				MiddlewareStatus:                   dns.RcodeNameError,
-				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_PERMIT},
-			},
-			expectedStatus: dns.RcodeNameError,
-			expectedErr:    nil,
+			query:      "test.com.",
+			queryType:  dns.TypeA,
+			response:   &pdp.Response{Effect: pdp.Response_PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.Response_PERMIT},
+			status:     dns.RcodeSuccess,
+			err:        nil,
 		},
 		{
-			c: TestCaseInfo{
-				MiddlewareErr:                      nil,
-				MiddlewareStatus:                   dns.RcodeSuccess,
-				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_PERMIT},
-			},
-			expectedStatus: dns.RcodeSuccess,
-			expectedErr:    nil,
+			query:      "test.com.",
+			queryType:  dns.TypeA,
+			response:   &pdp.Response{Effect: pdp.Response_PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.Response_DENY},
+			status:     dns.RcodeNameError,
+			err:        nil,
 		},
 		{
-			c: TestCaseInfo{
-				MiddlewareErr:                      nil,
-				MiddlewareStatus:                   dns.RcodeServerFailure,
-				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_PERMIT},
-			},
-			expectedStatus: dns.RcodeServerFailure,
-			expectedErr:    nil,
+			query:     "test.com.",
+			queryType: dns.TypeA,
+			response: &pdp.Response{Effect: pdp.Response_DENY,
+				Obligation: []*pdp.Attribute{{"redirect_to", "string", "221.228.88.194"}}},
+			status: dns.RcodeSuccess,
+			err:    nil,
 		},
 		{
-			c: TestCaseInfo{
-				MiddlewareErr:    nil,
-				MiddlewareStatus: dns.RcodeSuccess,
-				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_PERMIT,
-					Obligation: []*pdp.Attribute{{"redirect_to", "string", "221.228.88.194"}}},
-			},
-			expectedStatus: dns.RcodeSuccess,
-			expectedErr:    nil,
+			query:     "test.com.",
+			queryType: dns.TypeA,
+			response: &pdp.Response{Effect: pdp.Response_DENY,
+				Obligation: []*pdp.Attribute{{"redirect_to", "string", "redirect.biz"}}},
+			status: dns.RcodeSuccess,
+			err:    nil,
 		},
 		{
-			c: TestCaseInfo{
-				MiddlewareErr:    nil,
-				MiddlewareStatus: dns.RcodeServerFailure,
-				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_PERMIT,
-					Obligation: []*pdp.Attribute{{"redirect_to", "string", "221.228.88.194"}}},
-			},
-			expectedStatus: dns.RcodeSuccess,
-			expectedErr:    nil,
+			query:     "test.com.",
+			queryType: dns.TypeA,
+			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.Response_DENY,
+				Obligation: []*pdp.Attribute{{"redirect_to", "string", "221.228.88.194"}}},
+			status: dns.RcodeSuccess,
+			err:    nil,
 		},
 		{
-			c: TestCaseInfo{
-				MiddlewareErr:    nil,
-				MiddlewareStatus: dns.RcodeBadCookie,
-				ValidationResultMiddlewareResponse: &pdp.Response{Effect: pdp.Response_PERMIT,
-					Obligation: []*pdp.Attribute{{"redirect_to", "string", "221.228.88.194"}}},
-			},
-			expectedStatus: dns.RcodeSuccess,
-			expectedErr:    nil,
+			query:     "test.com.",
+			queryType: dns.TypeA,
+			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.Response_DENY,
+				Obligation: []*pdp.Attribute{{"redirect_to", "string", "redirect.biz"}}},
+			status: dns.RcodeSuccess,
+			err:    nil,
+		},
+		{
+			query:     "test.com.",
+			queryType: dns.TypeA,
+			response: &pdp.Response{Effect: pdp.Response_DENY,
+				Obligation: []*pdp.Attribute{{"redirect_to", "string", "test.net"}}},
+			status: dns.RcodeServerFailure,
+			err:    fakeResolverError,
+		},
+		{
+			query:     "test.net.",
+			queryType: dns.TypeA,
+			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
+			status:    dns.RcodeServerFailure,
+			err:       fakeResolverError,
+		},
+		{
+			query:     "test.org.",
+			queryType: dns.TypeAAAA,
+			response:  &pdp.Response{Effect: pdp.Response_DENY},
+			status:    dns.RcodeNameError,
+			err:       nil,
+		},
+		{
+			query:     "test.org.",
+			queryType: dns.TypeAAAA,
+			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
+			status:    dns.RcodeSuccess,
+			err:       nil,
+		},
+		{
+			query:     "test.org.",
+			queryType: dns.TypeAAAA,
+			response: &pdp.Response{Effect: pdp.Response_DENY,
+				Obligation: []*pdp.Attribute{{"redirect_to", "string", "redirect.net"}}},
+			status: dns.RcodeSuccess,
+			err:    nil,
 		},
 	}
 
-	w := new(NewLocalResponseWriter)
-	TestMiddleware := TestMiddlewareHandler{}
-	p := new(PolicyMiddleware)
-	c := pep.NewTestClient()
-	p.pdp = c
+	rec := dnsrecorder.New(&test.ResponseWriter{})
 
-	r := new(dns.Msg)
-	r.SetReply(r)
-	r.SetQuestion("www.example.com.", dns.TypeANY)
-	ctx := context.Background()
+	for _, test := range tests {
+		req := new(dns.Msg)
+		req.SetQuestion(test.query, test.queryType)
+		pm.pdp = pep.NewTestClientInit(test.response, test.responseIP, test.errResp, test.errRespIP)
 
-	attrs := []*pdp.Attribute{{Id: "type", Type: "string", Value: "query"}}
-	attrs = append(attrs, &pdp.Attribute{Id: "domain_name", Type: "domain", Value: strings.TrimRight("www.example.com", ".")})
-
-	for _, ut := range cases {
-		TestMiddleware.err = ut.c.MiddlewareErr
-		TestMiddleware.status = ut.c.MiddlewareStatus
-		p.Next = middleware.Handler(TestMiddleware)
-
-		c.NextResponse = ut.c.ValidationResultMiddlewareResponse
-		status, err := p.handlePermit(ctx, w, r, attrs)
-		if !reflect.DeepEqual(err, ut.expectedErr) {
-			t.Errorf("Expected err to be %q but it was %q", ut.expectedErr, err)
+		status, err := pm.ServeDNS(context.TODO(), rec, req)
+		if test.status != status {
+			t.Errorf("Expected status %q but got %q\n", test.status, status)
 		}
-
-		if ut.expectedStatus != status {
-			t.Errorf("Expected status %q but got %q", ut.expectedStatus, status)
+		if test.err != err {
+			t.Errorf("Expected error %v but got %v\n", test.err, err)
 		}
 	}
 
+}
+
+func handler() middleware.Handler {
+	return middleware.HandlerFunc(func(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+		q := r.Question[0].Name
+		switch q {
+		case "test.com.":
+			r.Answer = []dns.RR{
+				test.A("test.com.		600	IN	A			10.240.0.1"),
+			}
+		case "test.org.":
+			r.Answer = []dns.RR{
+				test.AAAA("test.org.	600	IN	AAAA		21DA:D3:0:2F3B:2AA:FF:FE28:9C5A"),
+			}
+		case "redirect.biz.":
+			r.Answer = []dns.RR{
+				test.A("redirect.biz.	600	IN	A			221.228.88.194"),
+			}
+		case "redirect.net.":
+			r.Answer = []dns.RR{
+				test.AAAA("redirect.net.	600	IN	AAAA		2001:db8:0:200:0:0:0:7"),
+			}
+		default:
+			return dns.RcodeServerFailure, fakeResolverError
+		}
+		w.WriteMsg(r)
+		return dns.RcodeSuccess, nil
+	})
 }

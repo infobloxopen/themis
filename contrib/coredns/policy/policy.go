@@ -168,19 +168,21 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 
 	var lresponse Response
 	err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &lresponse)
-
 	if err != nil {
+		log.Printf("[ERROR] Policy validation failed due to error %s\n", err)
 		return dns.RcodeServerFailure, err
 	}
 
-	if !lresponse.Permit {
-		return dns.RcodeNameError, nil
+	if lresponse.Permit {
+		w.WriteMsg(lw.Msg)
+		return status, nil
 	}
+
 	if lresponse.Redirect != "" {
 		return p.redirect(lresponse.Redirect, lw, lw.Msg, ctx)
 	}
-	w.WriteMsg(lw.Msg)
-	return status, nil
+
+	return dns.RcodeNameError, nil
 }
 
 func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
@@ -270,15 +272,8 @@ func (p *PolicyMiddleware) redirect(redirect_to string, w dns.ResponseWriter, r 
 	a.Answer = []dns.RR{rr}
 
 	if cname {
-		msg := &dns.Msg{
-			Question: []dns.Question{
-				dns.Question{
-					Name:   redirect_to,
-					Qtype:  state.QType(),
-					Qclass: state.QClass(),
-				},
-			},
-		}
+		msg := new(dns.Msg)
+		msg.SetQuestion(redirect_to, state.QType())
 
 		lw := new(NewLocalResponseWriter)
 		status, err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lw, msg)
