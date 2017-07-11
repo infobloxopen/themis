@@ -68,19 +68,29 @@ func policyParse(c *caddy.Controller) (*PolicyMiddleware, error) {
 					return nil, c.ArgErr()
 				case "edns0":
 					args := c.RemainingArgs()
-					if len(args) < 2 || (len(args) != 4 && len(args) != 2) {
-						return nil, fmt.Errorf("Invalid edns0 directive. Usage: edns0 <code> <name> [ <dataType> <destType> ]. Valid dataTypes are hex (default), bytes, ip. Valid destTypes depend on PDP (default string).")
-					}
-					dataType := "hex"
-					destType := "string"
-					if len(args) == 4 {
-						dataType = args[2]
-						destType = args[3]
-					}
-
-					err := mw.AddEDNS0Map(args[0], args[1], dataType, destType)
-					if err != nil {
-						return nil, fmt.Errorf("Could not add EDNS0 map for %s: %s", args[0], err)
+					// Usage: edns0 <code> <name> [ <dataType> <destType> ] [ <stringOffset> <stringSize> ].
+					// Valid dataTypes are hex (default), bytes, ip.
+					// Valid destTypes depend on PDP (default string).
+					argsLen := len(args)
+					if argsLen == 2 || argsLen == 4 || argsLen == 6 {
+						dataType := "hex"
+						destType := "string"
+						stringOffset := "0"
+						stringSize := "0"
+						if argsLen > 2 {
+							dataType = args[2]
+							destType = args[3]
+						}
+						if argsLen == 6 && destType == "string" {
+							stringOffset = args[4]
+							stringSize = args[5]
+						}
+						err := mw.AddEDNS0Map(args[0], args[1], dataType, destType, stringOffset, stringSize)
+						if err != nil {
+							return nil, fmt.Errorf("Could not add EDNS0 map for %s: %s", args[0], err)
+						}
+					} else {
+						return nil, fmt.Errorf("Invalid edns0 directive")
 					}
 				}
 			}
