@@ -204,15 +204,15 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 		for _, entry := range edns {
 			if entry.Id == "client_id" {
 				clientIDok = true
-				customerID = entry.Value[0:16]
+				customerID = entry.Value[0:32]
 			}
 			if entry.Id == "customer_id" {
 				customerIDok = true
 			}
 		}
-		// append 'customer_id' attribute (first 16 bytes of "client_id") if not exists
+		// append 'customer_id' attribute (first 32 symbols of "client_id") if not exists
 		if !customerIDok && clientIDok {
-			attrs = append(attrs, &pb.Attribute{Id: "customer_id", Type: "hex", Value: customerID})
+			attrs = append(attrs, &pb.Attribute{Id: "customer_id", Type: "string", Value: customerID})
 		}
 		// append original EDNS attributes
 		attrs = append(attrs, edns...)
