@@ -85,11 +85,11 @@ func (p *PolicyMiddleware) AddEDNS0Map(code, name, dataType, destType,
 	}
 	offset, err := strconv.Atoi(stringOffset)
 	if err != nil {
-		return fmt.Errorf("Could not parse EDNS0 code: %s", err)
+		return fmt.Errorf("Could not parse EDNS0 string offset: %s", err)
 	}
 	size, err := strconv.Atoi(stringSize)
 	if err != nil {
-		return fmt.Errorf("Could not parse EDNS0 code: %s", err)
+		return fmt.Errorf("Could not parse EDNS0 string size: %s", err)
 	}
 	ednsType, ok := stringToEDNS0MapType[dataType]
 	if !ok {
