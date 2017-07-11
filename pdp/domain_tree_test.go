@@ -84,6 +84,22 @@ func TestDomainTreeAdjustDomainName(t *testing.T) {
 	if err == nil {
 		t.Errorf("Expected error for domain \"%s\" but got converted to \"%s\"", raw, domain)
 	}
+
+	raw = "dom@in.com"
+	domain, err = AdjustDomainName(raw)
+	if err == nil {
+		t.Errorf("Expected error for domain \"%s\" but got converted to \"%s\"", raw, domain)
+	}
+
+	raw = "mof_web.lowestprices.at"
+	domain, err = AdjustDomainName(raw)
+	if err != nil {
+		t.Errorf("Don't expect error for \"%s\" adjustment but got %s", raw, err)
+	} else {
+		if domain != raw {
+			t.Errorf("Expected ajusted domain \"%s\" but got \"%s\"", raw, domain)
+		}
+	}
 }
 
 func assertDomainTreeNoValue(tree *SetOfSubdomains, key string, t *testing.T) {
