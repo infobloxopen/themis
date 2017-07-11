@@ -188,7 +188,6 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	state := request.Request{W: w, Req: r}
 
-	// need to process OPT to get customer id
 	attrs := []*pb.Attribute{{Id: "type", Type: "string", Value: "query"}}
 
 	if len(r.Question) > 0 {
@@ -199,6 +198,23 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 
 	edns, foundSourceIP := p.getEDNS0Attrs(r)
 	if len(edns) > 0 {
+		clientIDok := false
+		customerIDok := false
+		customerID := ""
+		for _, entry := range edns {
+			if entry.Id == "client_id" {
+				clientIDok = true
+				customerID = entry.Value[0:16]
+			}
+			if entry.Id == "customer_id" {
+				customerIDok = true
+			}
+		}
+		// append 'customer_id' attribute (first 16 bytes of "client_id") if not exists
+		if !customerIDok && clientIDok {
+			attrs = append(attrs, &pb.Attribute{Id: "customer_id", Type: "hex", Value: customerID})
+		}
+		// append original EDNS attributes
 		attrs = append(attrs, edns...)
 	}
 
