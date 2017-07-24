@@ -1,39 +1,15 @@
 package pdp
 
-import "fmt"
-
-type MapperPCAParams struct {
-	Argument      ExpressionType
-	PoliciesMap   map[string]EvaluableType
-	DefaultPolicy EvaluableType
-	ErrorPolicy   EvaluableType
-	SubAlg        PolicyCombiningAlgType
-	AlgParams     interface{}
+type mapperPCA struct {
+	argument  expression
+	policies  map[string]Evaluable
+	def       Evaluable
+	err       Evaluable
+	algorithm policyCombiningAlg
 }
 
-func calculateErrorPolicy(policy EvaluableType, ctx *Context, err error) ResponseType {
-	if policy != nil {
-		return policy.Calculate(ctx)
-	}
-
-	return ResponseType{EffectIndeterminate, fmt.Sprintf("Mapper Policy Combining Algorithm: %s", err), nil}
-}
-
-func getPoliciesMap(policies []EvaluableType, params *MapperPCAParams) map[string]EvaluableType {
-	if params.PoliciesMap != nil {
-		return params.PoliciesMap
-	}
-
-	m := make(map[string]EvaluableType)
-	for _, policy := range policies {
-		m[policy.GetID()] = policy
-	}
-
-	return m
-}
-
-func collectSubPolicies(IDs []string, m map[string]EvaluableType) []EvaluableType {
-	policies := []EvaluableType{}
+func collectSubPolicies(IDs []string, m map[string]Evaluable) []Evaluable {
+	policies := []Evaluable{}
 	for _, ID := range IDs {
 		policy, ok := m[ID]
 		if ok {
@@ -44,43 +20,65 @@ func collectSubPolicies(IDs []string, m map[string]EvaluableType) []EvaluableTyp
 	return policies
 }
 
-func MapperPCA(policies []EvaluableType, params interface{}, ctx *Context) ResponseType {
-	mapperParams := params.(*MapperPCAParams)
+func (a mapperPCA) describe() string {
+	return "mapper"
+}
 
-	v, err := mapperParams.Argument.calculate(ctx)
+func (a mapperPCA) calculateErrorPolicy(ctx *Context, err error) Response {
+	if a.err != nil {
+		return a.err.Calculate(ctx)
+	}
+
+	return Response{EffectIndeterminate, bindError(err, a.describe()), nil}
+}
+
+func (a mapperPCA) getPoliciesMap(policies []Evaluable) map[string]Evaluable {
+	if a.policies != nil {
+		return a.policies
+	}
+
+	m := make(map[string]Evaluable)
+	for _, policy := range policies {
+		m[policy.GetID()] = policy
+	}
+
+	return m
+}
+
+func (a mapperPCA) execute(policies []Evaluable, ctx *Context) Response {
+	v, err := a.argument.calculate(ctx)
 	if err != nil {
 		switch err.(type) {
-		case MissingValueError, *MissingValueError:
-			if mapperParams.DefaultPolicy != nil {
-				return mapperParams.DefaultPolicy.Calculate(ctx)
+		case *missingValueError:
+			if a.def != nil {
+				return a.def.Calculate(ctx)
 			}
 		}
 
-		return calculateErrorPolicy(mapperParams.ErrorPolicy, ctx, err)
+		return a.calculateErrorPolicy(ctx, err)
 	}
 
-	if mapperParams.SubAlg != nil {
+	if a.algorithm != nil {
 		IDs, err := getSetOfIDs(v)
 		if err != nil {
-			return calculateErrorPolicy(mapperParams.ErrorPolicy, ctx, err)
+			return a.calculateErrorPolicy(ctx, err)
 		}
 
-		r := mapperParams.SubAlg(collectSubPolicies(IDs, getPoliciesMap(policies, mapperParams)),
-			mapperParams.AlgParams, ctx)
-		if r.Effect == EffectNotApplicable && mapperParams.DefaultPolicy != nil {
-			return mapperParams.DefaultPolicy.Calculate(ctx)
+		r := a.algorithm.execute(collectSubPolicies(IDs, a.getPoliciesMap(policies)), ctx)
+		if r.Effect == EffectNotApplicable && a.def != nil {
+			return a.def.Calculate(ctx)
 		}
 
 		return r
 	}
 
-	ID, err := ExtractStringValue(v, "argument")
+	ID, err := v.str()
 	if err != nil {
-		return calculateErrorPolicy(mapperParams.ErrorPolicy, ctx, err)
+		return a.calculateErrorPolicy(ctx, err)
 	}
 
-	if mapperParams.PoliciesMap != nil {
-		policy, ok := mapperParams.PoliciesMap[ID]
+	if a.policies != nil {
+		policy, ok := a.policies[ID]
 		if ok {
 			return policy.Calculate(ctx)
 		}
@@ -92,9 +90,9 @@ func MapperPCA(policies []EvaluableType, params interface{}, ctx *Context) Respo
 		}
 	}
 
-	if mapperParams.DefaultPolicy != nil {
-		return mapperParams.DefaultPolicy.Calculate(ctx)
+	if a.def != nil {
+		return a.def.Calculate(ctx)
 	}
 
-	return ResponseType{EffectNotApplicable, "Ok", nil}
+	return Response{EffectNotApplicable, nil, nil}
 }

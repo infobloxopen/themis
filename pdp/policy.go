@@ -1,44 +1,57 @@
 package pdp
 
-type RuleCombiningAlgType func(rules []*RuleType, params interface{}, ctx *Context) ResponseType
+import "fmt"
 
-var RuleCombiningAlgMap = map[string]RuleCombiningAlgType{
-	yastTagFirstApplicableEffectAlg: FirstApplicableEffectRCA,
-	yastTagDenyOverridesAlg:         DenyOverridesRCA,
-	yastTagMapperAlg:                MapperRCA}
-
-type PolicyType struct {
-	ID               string
-	Target           TargetType
-	Rules            []*RuleType
-	Obligations      []AttributeAssignmentExpressionType
-	RuleCombiningAlg RuleCombiningAlgType
-	AlgParams        interface{}
+type ruleCombiningAlg interface {
+	execute(rules []*rule, ctx *Context) Response
 }
 
-func (p *PolicyType) GetID() string {
-	return p.ID
+type Policy struct {
+	id          string
+	target      target
+	rules       []*rule
+	obligations []attributeAssignmentExpression
+	algorithm   ruleCombiningAlg
 }
 
-func (p *PolicyType) Calculate(ctx *Context) ResponseType {
-	match, err := p.Target.calculate(ctx)
+func (p *Policy) describe() string {
+	return fmt.Sprintf("policy %q", p.id)
+}
+
+func (p *Policy) GetID() string {
+	return p.id
+}
+
+func (p *Policy) Calculate(ctx *Context) Response {
+	match, err := p.target.calculate(ctx)
 	if err != nil {
-		return combineEffectAndStatus(err, p.ID, p.RuleCombiningAlg(p.Rules, p.AlgParams, ctx))
+		r := combineEffectAndStatus(err, p.algorithm.execute(p.rules, ctx))
+		if r.status != nil {
+			r.status = bindError(r.status, p.describe())
+		}
+		return r
 	}
 
 	if !match {
-		return ResponseType{EffectNotApplicable, "Ok", nil}
+		return Response{EffectNotApplicable, nil, nil}
 	}
 
-	r := p.RuleCombiningAlg(p.Rules, p.AlgParams, ctx)
+	r := p.algorithm.execute(p.rules, ctx)
 	if r.Effect == EffectDeny || r.Effect == EffectPermit {
-		r.Obligations = append(r.Obligations, p.Obligations...)
+		r.obligations = append(r.obligations, p.obligations...)
+	}
+
+	if r.status != nil {
+		r.status = bindError(r.status, p.describe())
 	}
 
 	return r
 }
 
-func FirstApplicableEffectRCA(rules []*RuleType, params interface{}, ctx *Context) ResponseType {
+type firstApplicableEffectRCA struct {
+}
+
+func (a firstApplicableEffectRCA) execute(rules []*rule, ctx *Context) Response {
 	for _, rule := range rules {
 		r := rule.calculate(ctx)
 		if r.Effect != EffectNotApplicable {
@@ -46,12 +59,19 @@ func FirstApplicableEffectRCA(rules []*RuleType, params interface{}, ctx *Contex
 		}
 	}
 
-	return ResponseType{EffectNotApplicable, "Ok", nil}
+	return Response{EffectNotApplicable, nil, nil}
 }
 
-func DenyOverridesRCA(rules []*RuleType, params interface{}, ctx *Context) ResponseType {
-	status := ""
-	obligations := make([]AttributeAssignmentExpressionType, 0)
+type denyOverridesRCA struct {
+}
+
+func (a denyOverridesRCA) describe() string {
+	return "deny overrides"
+}
+
+func (a denyOverridesRCA) execute(rules []*rule, ctx *Context) Response {
+	errs := []error{}
+	obligations := make([]attributeAssignmentExpression, 0)
 
 	indetD := 0
 	indetP := 0
@@ -62,13 +82,13 @@ func DenyOverridesRCA(rules []*RuleType, params interface{}, ctx *Context) Respo
 	for _, rule := range rules {
 		r := rule.calculate(ctx)
 		if r.Effect == EffectDeny {
-			obligations = append(obligations, r.Obligations...)
+			obligations = append(obligations, r.obligations...)
 			return r
 		}
 
 		if r.Effect == EffectPermit {
-			permits += 1
-			obligations = append(obligations, r.Obligations...)
+			permits++
+			obligations = append(obligations, r.obligations...)
 			continue
 		}
 
@@ -77,38 +97,41 @@ func DenyOverridesRCA(rules []*RuleType, params interface{}, ctx *Context) Respo
 		}
 
 		if r.Effect == EffectIndeterminateD {
-			indetD += 1
+			indetD++
 		} else {
 			if r.Effect == EffectIndeterminateP {
-				indetP += 1
+				indetP++
 			} else {
-				indetDP += 1
+				indetDP++
 			}
 
 		}
 
-		if len(status) > 0 {
-			status += ", "
-		}
+		errs = append(errs, r.status)
+	}
 
-		status += r.Status
+	var err boundError
+	if len(errs) > 1 {
+		err = mewMultiError(errs, a.describe())
+	} else if len(errs) > 0 {
+		err = bindError(errs[0], a.describe())
 	}
 
 	if indetDP > 0 || (indetD > 0 && (indetP > 0 || permits > 0)) {
-		return ResponseType{EffectIndeterminateDP, status, nil}
+		return Response{EffectIndeterminateDP, err, nil}
 	}
 
 	if indetD > 0 {
-		return ResponseType{EffectIndeterminateD, status, nil}
+		return Response{EffectIndeterminateD, err, nil}
 	}
 
 	if permits > 0 {
-		return ResponseType{EffectPermit, "Ok", obligations}
+		return Response{EffectPermit, nil, obligations}
 	}
 
 	if indetP > 0 {
-		return ResponseType{EffectIndeterminateP, status, nil}
+		return Response{EffectIndeterminateP, err, nil}
 	}
 
-	return ResponseType{EffectNotApplicable, "Ok", nil}
+	return Response{EffectNotApplicable, nil, nil}
 }

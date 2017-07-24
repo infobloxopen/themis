@@ -1,35 +1,43 @@
 package pdp
 
-type MatchType struct {
-	Match ExpressionType
+type match struct {
+	m expression
 }
 
-type AllOfType struct {
-	Matches []MatchType
+type allOf struct {
+	m []match
 }
 
-type AnyOfType struct {
-	AllOf []AllOfType
+type anyOf struct {
+	a []allOf
 }
 
-type TargetType struct {
-	AnyOf []AnyOfType
+type target struct {
+	a []anyOf
 }
 
-func (m MatchType) calculate(ctx *Context) (bool, error) {
-	v, err := m.Match.calculate(ctx)
+func (m match) describe() string {
+	return "match"
+}
+
+func (m match) calculate(ctx *Context) (bool, error) {
+	v, err := ctx.calculateBooleanExpression(m.m)
 	if err != nil {
-		return false, err
+		return false, bindError(err, m.describe())
 	}
 
-	return ExtractBooleanValue(v, "a result of match expression")
+	return v, nil
 }
 
-func (a AllOfType) calculate(ctx *Context) (bool, error) {
-	for _, e := range a.Matches {
+func (a allOf) describe() string {
+	return "all"
+}
+
+func (a allOf) calculate(ctx *Context) (bool, error) {
+	for _, e := range a.m {
 		v, err := e.calculate(ctx)
 		if err != nil {
-			return true, err
+			return true, bindError(err, a.describe())
 		}
 
 		if !v {
@@ -40,11 +48,15 @@ func (a AllOfType) calculate(ctx *Context) (bool, error) {
 	return true, nil
 }
 
-func (a AnyOfType) calculate(ctx *Context) (bool, error) {
-	for _, e := range a.AllOf {
+func (a anyOf) describe() string {
+	return "any"
+}
+
+func (a anyOf) calculate(ctx *Context) (bool, error) {
+	for _, e := range a.a {
 		v, err := e.calculate(ctx)
 		if err != nil {
-			return false, err
+			return false, bindError(err, a.describe())
 		}
 
 		if v {
@@ -55,11 +67,15 @@ func (a AnyOfType) calculate(ctx *Context) (bool, error) {
 	return false, nil
 }
 
-func (t TargetType) calculate(ctx *Context) (bool, error) {
-	for _, e := range t.AnyOf {
+func (t target) describe() string {
+	return "target"
+}
+
+func (t target) calculate(ctx *Context) (bool, boundError) {
+	for _, e := range t.a {
 		v, err := e.calculate(ctx)
 		if err != nil {
-			return true, err
+			return true, bindError(err, t.describe())
 		}
 
 		if !v {
@@ -68,4 +84,32 @@ func (t TargetType) calculate(ctx *Context) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func makeMatchStatus(err boundError, effect int) Response {
+	if effect == EffectDeny {
+		return Response{EffectIndeterminateD, err, nil}
+	}
+
+	return Response{EffectIndeterminateP, err, nil}
+}
+
+func combineEffectAndStatus(err boundError, r Response) Response {
+	if r.status != nil {
+		err = newNoSrcMultiError(err, r.status)
+	}
+
+	if r.Effect == EffectNotApplicable {
+		return Response{EffectNotApplicable, err, nil}
+	}
+
+	if r.Effect == EffectDeny || r.Effect == EffectIndeterminateD {
+		return Response{EffectIndeterminateD, err, nil}
+	}
+
+	if r.Effect == EffectPermit || r.Effect == EffectIndeterminateP {
+		return Response{EffectIndeterminateP, err, nil}
+	}
+
+	return Response{EffectIndeterminateDP, err, nil}
 }

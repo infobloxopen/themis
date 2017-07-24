@@ -1,109 +1,123 @@
 package pdp
 
-import "fmt"
+import (
+	"net"
 
-const (
-	EffectDeny   = iota
-	EffectPermit = iota
-
-	EffectNotApplicable = iota
-
-	EffectIndeterminate   = iota
-	EffectIndeterminateD  = iota
-	EffectIndeterminateP  = iota
-	EffectIndeterminateDP = iota
+	"github.com/infobloxopen/go-trees/domaintree"
+	"github.com/infobloxopen/go-trees/iptree"
+	"github.com/infobloxopen/go-trees/strtree"
 )
 
-var EffectNames map[int]string = map[int]string{
-	EffectDeny:            "Deny",
-	EffectPermit:          "Permit",
-	EffectNotApplicable:   "NotApplicable",
-	EffectIndeterminate:   "Indeterminate",
-	EffectIndeterminateD:  "Indeterminate{D}",
-	EffectIndeterminateP:  "Indeterminate{P}",
-	EffectIndeterminateDP: "Indeterminate{DP}"}
+const (
+	EffectDeny = iota
+	EffectPermit
 
-var EffectIDs map[string]int = map[string]int{
-	"deny":   EffectDeny,
-	"permit": EffectPermit}
+	EffectNotApplicable
+
+	EffectIndeterminate
+	EffectIndeterminateD
+	EffectIndeterminateP
+	EffectIndeterminateDP
+)
+
+var effectNames = []string{
+	"Deny",
+	"Permit",
+	"NotApplicable",
+	"Indeterminate",
+	"Indeterminate{D}",
+	"Indeterminate{P}",
+	"Indeterminate{DP}"}
 
 type Context struct {
-	Attributes map[string]map[int]AttributeValueType
+	a map[string]map[int]attributeValue
+	c *strtree.Tree
 }
 
-func NewContext() Context {
-	return Context{make(map[string]map[int]AttributeValueType)}
-}
-
-func (c *Context) StoreRawAttribute(ID string, dataType int, a AttributeValueType) {
-	t, ok := c.Attributes[ID]
-	if ok {
-		t[dataType] = a
-		return
+func (c *Context) getAttribute(a attribute) (attributeValue, error) {
+	t, ok := c.a[a.id]
+	if !ok {
+		return attributeValue{}, a.newMissingError()
 	}
 
-	c.Attributes[ID] = map[int]AttributeValueType{dataType: a}
-}
-
-func (c *Context) StoreAttribute(ID string, dataType int, v interface{}) {
-	c.StoreRawAttribute(ID, dataType, AttributeValueType{dataType, v})
-}
-
-func (c *Context) GetAttribute(attr AttributeType) (AttributeValueType, error) {
-	t, ok := c.Attributes[attr.ID]
+	v, ok := t[a.t]
 	if !ok {
-		return AttributeValueType{}, fmt.Errorf("Missing attribute %s (%s)", attr.ID, DataTypeNames[attr.DataType])
-	}
-
-	v, ok := t[attr.DataType]
-	if !ok {
-		return AttributeValueType{}, fmt.Errorf("Missing attribute %s (%s)", attr.ID, DataTypeNames[attr.DataType])
+		return attributeValue{}, a.newMissingError()
 	}
 
 	return v, nil
 }
 
-func (c *Context) CalculateObligations(obligations []AttributeAssignmentExpressionType, ctx *Context) error {
-	for _, obligation := range obligations {
-		v, err := obligation.Expression.calculate(ctx)
-		if err != nil {
-			return err
-		}
-
-		c.StoreRawAttribute(obligation.Attribute.ID, obligation.Attribute.DataType, v)
+func (c *Context) calculateBooleanExpression(e expression) (bool, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return false, err
 	}
 
-	return nil
+	return v.boolean()
 }
 
-type ResponseType struct {
+func (c *Context) calculateStringExpression(e expression) (string, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return "", err
+	}
+
+	return v.str()
+}
+
+func (c *Context) calculateAddressExpression(e expression) (net.IP, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return v.address()
+}
+
+func (c *Context) calculateDomainExpression(e expression) (string, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return "", err
+	}
+
+	return v.domain()
+}
+
+func (c *Context) calculateNetworkExpression(e expression) (*net.IPNet, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return v.network()
+}
+
+func (c *Context) calculateSetOfNetworksExpression(e expression) (*iptree.Tree, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return v.setOfNetworks()
+}
+
+func (c *Context) calculateSetOfDomainsExpression(e expression) (*domaintree.Node, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return v.setOfDomains()
+}
+
+type Response struct {
 	Effect      int
-	Status      string
-	Obligations []AttributeAssignmentExpressionType
+	status      boundError
+	obligations []attributeAssignmentExpression
 }
 
-type EvaluableType interface {
+type Evaluable interface {
 	GetID() string
-	Calculate(ctx *Context) ResponseType
-}
-
-func combineEffectAndStatus(err error, ID string, r ResponseType) ResponseType {
-	s := fmt.Sprintf("Match (%s): %s", ID, err)
-	if r.Status != "Ok" {
-		s = fmt.Sprintf("%s (%s)", s, r.Status)
-	}
-
-	if r.Effect == EffectNotApplicable {
-		return ResponseType{EffectNotApplicable, s, nil}
-	}
-
-	if r.Effect == EffectDeny || r.Effect == EffectIndeterminateD {
-		return ResponseType{EffectIndeterminateD, s, nil}
-	}
-
-	if r.Effect == EffectPermit || r.Effect == EffectIndeterminateP {
-		return ResponseType{EffectIndeterminateP, s, nil}
-	}
-
-	return ResponseType{EffectIndeterminateDP, s, nil}
+	Calculate(ctx *Context) Response
 }

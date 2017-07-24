@@ -2,200 +2,161 @@ package pdp
 
 import "testing"
 
-const (
-	TestAlgPolicySet = `# Test policy set
-id: Test
-alg:
-  id: Mapper
-  map:
-    attr: x
+func TestPolicySet(t *testing.T) {
+	c := &Context{
+		a: map[string]map[int]attributeValue{
+			"missing-type": {
+				typeBoolean: makeBooleanValue(false)},
+			"test-string": {
+				typeString: makeStringValue("test")},
+			"example-string": {
+				typeString: makeStringValue("example")}}}
 
-  alg:
-    id: Mapper
-    map:
-      attr: "y"
+	testID := "Test Policy"
 
-  error: Error
-  default: Default
-
-policies:
-  - id: Default
-    alg: FirstApplicableEffect
-    rules:
-      - id: Default
-        effect: Deny
-
-  - id: Error
-    alg: FirstApplicableEffect
-    rules:
-      - id: Default
-        effect: Deny
-
-  - id: Permit
-    alg: FirstApplicableEffect
-    rules:
-      - id: Default
-        effect: Permit
-`
-
-	TestAlgPolicySetListOfStringsSelector = `# Test policy set with list of string selector in mapper
-id: Test
-alg:
-  id: Mapper
-  map:
-    selector:
-      type: List of Strings
-      path:
-        - test
-        - attr: "y"
-      content: test
-  alg: FirstApplicableEffect
-
-  error: Error
-  default: Default
-
-policies:
-  - id: Default
-    alg: FirstApplicableEffect
-    rules:
-      - id: Default
-        effect: Deny
-
-  - id: Error
-    alg: FirstApplicableEffect
-    rules:
-      - id: Default
-        effect: Deny
-
-  - id: Permit-One
-    alg: FirstApplicableEffect
-    rules:
-      - id: Default
-        effect: Permit
-        obligations:
-          - z: One
-
-  - id: Permit-Two
-    alg: FirstApplicableEffect
-    rules:
-      - id: Default
-        effect: Permit
-        obligations:
-          - z: Two
-`
-)
-
-var (
-	PolicySetTestAttrs = map[string]AttributeType{
-		"x": {ID: "x", DataType: DataTypeSetOfStrings},
-		"y": {ID: "y", DataType: DataTypeString},
-		"z": {ID: "z", DataType: DataTypeString}}
-
-	YASTSelectorTestContentWithListOfStrings = map[string]interface{}{
-		"test": map[string]interface{}{
-			"test": map[string]interface{}{
-				"test":    []interface{}{"Permit-One", "Permit-Two"},
-				"example": []interface{}{"Permit-Two", "Permit-One"}}}}
-)
-
-func TestPolicySetWithNestedMappers(t *testing.T) {
-	c, v := prepareTestYAST(YASTTestAlgPolicySet, YASTPoliciesTestAttrs, YASTPoliciesTestContent, t)
-
-	p, err := c.unmarshalItem(v)
-	if err != nil {
-		t.Errorf("Expected no errors but got:\n%#v\n\n%s\n", err, err)
-	} else {
-		if p == nil {
-			t.Errorf("Expected result but got nothing")
-		} else {
-			ctx := NewContext()
-			ctx.StoreAttribute("x", DataTypeSetOfStrings, map[string]int{"Permit": 0, "Default": 1})
-			ctx.StoreAttribute("y", DataTypeSetOfStrings, map[string]int{"Permit": 0})
-
-			r := p.Calculate(&ctx)
-			if r.Effect != EffectPermit {
-				t.Errorf("Expected %s effect but got %s", EffectNames[EffectPermit], EffectNames[r.Effect])
-			}
-		}
+	p := PolicySet{
+		id:        testID,
+		algorithm: firstApplicableEffectPCA{}}
+	ID := p.GetID()
+	if ID != testID {
+		t.Errorf("Expected policy set ID %q but got %q", testID, ID)
 	}
 
-	c, v = prepareTestYAST(TestAlgPolicySet, PolicySetTestAttrs, YASTPoliciesTestContent, t)
-
-	p, err = c.unmarshalItem(v)
-	if err != nil {
-		t.Errorf("Expected no errors but got:\n%#v\n\n%s\n", err, err)
-	} else {
-		if p == nil {
-			t.Errorf("Expected result but got nothing")
-		} else {
-			ctx := NewContext()
-			ctx.StoreAttribute("x", DataTypeSetOfStrings, map[string]int{"Permit": 0, "Default": 1})
-			ctx.StoreAttribute("y", DataTypeString, "Permit")
-
-			r := p.Calculate(&ctx)
-			if r.Effect != EffectPermit {
-				t.Errorf("Expected %s effect but got %s", EffectNames[EffectPermit], EffectNames[r.Effect])
-			}
-		}
-	}
-}
-
-func TestPolicySetWithSelectorOnListOfStringsMapper(t *testing.T) {
-	c, v := prepareTestYAST(TestAlgPolicySetListOfStringsSelector, PolicySetTestAttrs, YASTSelectorTestContentWithListOfStrings, t)
-
-	p, err := c.unmarshalItem(v)
-	if err != nil {
-		t.Errorf("Expected no errors but got:\n%#v\n\n%s\n", err, err)
-	} else {
-		if p == nil {
-			t.Errorf("Expected result but got nothing")
-		} else {
-			ctx := NewContext()
-			ctx.StoreAttribute("y", DataTypeString, "test")
-
-			r := p.Calculate(&ctx)
-			if r.Effect != EffectPermit {
-				t.Errorf("Expected %s effect but got %s", EffectNames[EffectPermit], EffectNames[r.Effect])
-			}
-
-			assertStringObligation(r, "z", "One", t)
-
-			ctx = NewContext()
-			ctx.StoreAttribute("y", DataTypeString, "example")
-
-			r = p.Calculate(&ctx)
-			if r.Effect != EffectPermit {
-				t.Errorf("Expected %s effect but got %s", EffectNames[EffectPermit], EffectNames[r.Effect])
-			}
-
-			assertStringObligation(r, "z", "Two", t)
-		}
-	}
-}
-
-func assertStringObligation(r ResponseType, ID, value string, t *testing.T) {
-	if len(r.Obligations) != 1 {
-		t.Errorf("Expected one obligation but got %d", len(r.Obligations))
-		return
+	r := p.Calculate(c)
+	if r.Effect != EffectNotApplicable {
+		t.Errorf("Expected %q for empty policy set but got %q",
+			effectNames[EffectNotApplicable], effectNames[r.Effect])
 	}
 
-	o := r.Obligations[0]
-	if o.Attribute.ID != ID {
-		t.Errorf("Expected obligation for %q attribute but got %q", ID, o.Attribute.ID)
+	p = PolicySet{
+		id:        testID,
+		target:    makeSimpleStringTarget("missing", "test"),
+		algorithm: firstApplicableEffectPCA{}}
+
+	r = p.Calculate(c)
+	if r.Effect != EffectNotApplicable {
+		t.Errorf("Expected %q for policy set with FirstApplicableEffectPCA and not found attribute but got %q",
+			effectNames[EffectNotApplicable], effectNames[r.Effect])
 	}
 
-	v, ok := o.Expression.(AttributeValueType)
+	_, ok := r.status.(*missingAttributeError)
 	if !ok {
-		t.Errorf("Expected attribute value as obligation expression but got %s",
-			o.Expression.describe())
-	} else {
-		s, err := ExtractStringValue(v, "obligation value")
-		if err != nil {
-			t.Errorf("Expected no errors but got:\n%#v\n\n%s\n", err, err)
-		} else {
-			if s != value {
-				t.Errorf("Expected %q as obligation value but got %q", value, s)
-			}
-		}
+		t.Errorf("Expected missing attribute status for policy set with FirstApplicableEffectPCA and "+
+			"not found attribute but got %T (%s)", r.status, r.status)
+	}
+
+	p = PolicySet{
+		id:        testID,
+		target:    makeSimpleStringTarget("missing-type", "test"),
+		algorithm: firstApplicableEffectPCA{}}
+
+	r = p.Calculate(c)
+	if r.Effect != EffectNotApplicable {
+		t.Errorf("Expected %q for policy set with FirstApplicableEffectPCA and attribute with wrong type but got %q",
+			effectNames[EffectNotApplicable], effectNames[r.Effect])
+	}
+
+	_, ok = r.status.(*missingAttributeError)
+	if !ok {
+		t.Errorf("Expected missing attribute status for policy with FirstApplicableEffectPCA and "+
+			"attribute with wrong type but got %T (%s)", r.status, r.status)
+	}
+
+	p = PolicySet{
+		id:        testID,
+		target:    makeSimpleStringTarget("example-string", "test"),
+		algorithm: firstApplicableEffectPCA{}}
+
+	r = p.Calculate(c)
+	if r.Effect != EffectNotApplicable {
+		t.Errorf("Expected %q for policy set with FirstApplicableEffectPCA and "+
+			"attribute with not maching value but got %q",
+			effectNames[EffectNotApplicable], effectNames[r.Effect])
+	}
+
+	if r.status != nil {
+		t.Errorf("Expected no error status for policy set with FirstApplicableEffectPCA and "+
+			"attribute with not maching value but got %T (%s)", r.status, r.status)
+	}
+
+	p = PolicySet{
+		id:     testID,
+		target: makeSimpleStringTarget("test-string", "test"),
+		policies: []Evaluable{
+			&Policy{
+				rules:     []*rule{{effect: EffectPermit}},
+				algorithm: firstApplicableEffectRCA{}}},
+		obligations: makeSingleStringObligation("obligation", "test"),
+		algorithm:   firstApplicableEffectPCA{}}
+
+	r = p.Calculate(c)
+	if r.Effect != EffectPermit {
+		t.Errorf("Expected %q for policy with rule and obligations but got %q",
+			effectNames[EffectPermit], effectNames[r.Effect])
+	}
+
+	if r.status != nil {
+		t.Errorf("Expected no error status for policy rule and obligations but got %T (%s)",
+			r.status, r.status)
+	}
+
+	defaultPolicy := &Policy{
+		id:        "Default",
+		rules:     []*rule{{effect: EffectDeny}},
+		algorithm: firstApplicableEffectRCA{}}
+	errorPolicy := &Policy{
+		id:        "Error",
+		rules:     []*rule{{effect: EffectDeny}},
+		algorithm: firstApplicableEffectRCA{}}
+	permitPolicy := &Policy{
+		id:        "Permit",
+		rules:     []*rule{{effect: EffectPermit}},
+		algorithm: firstApplicableEffectRCA{}}
+	p = PolicySet{
+		id:       testID,
+		policies: []Evaluable{defaultPolicy, errorPolicy, permitPolicy},
+		algorithm: mapperPCA{
+			argument: attributeDesignator{
+				a: attribute{id: "x", t: typeSetOfStrings}},
+			policies: map[string]Evaluable{
+				"Default": defaultPolicy,
+				"Error":   errorPolicy,
+				"Permit":  permitPolicy},
+			def: defaultPolicy,
+			err: errorPolicy,
+			algorithm: mapperPCA{
+				argument: attributeDesignator{a: attribute{id: "y", t: typeString}}}}}
+
+	c = &Context{
+		a: map[string]map[int]attributeValue{
+			"x": {typeSetOfStrings: makeSetOfStringsValue(newStrTree("Permit", "Default"))},
+			"y": {typeString: makeStringValue("Permit")}}}
+
+	r = p.Calculate(c)
+	if r.Effect != EffectPermit {
+		t.Errorf("Expected %q for policy with rule and obligations but got %q",
+			effectNames[EffectPermit], effectNames[r.Effect])
+	}
+
+	if r.status != nil {
+		t.Errorf("Expected no error status for policy rule and obligations but got %T (%s)",
+			r.status, r.status)
+	}
+
+	c = &Context{
+		a: map[string]map[int]attributeValue{
+			"x": {typeSetOfStrings: makeSetOfStringsValue(newStrTree("Permit", "Default"))},
+			"y": {typeSetOfStrings: makeSetOfStringsValue(newStrTree("Permit", "Default"))}}}
+
+	r = p.Calculate(c)
+	if r.Effect != EffectIndeterminate {
+		t.Errorf("Expected %q for policy with rule and obligations but got %q",
+			effectNames[EffectIndeterminate], effectNames[r.Effect])
+	}
+
+	_, ok = r.status.(*missingAttributeError)
+	if !ok {
+		t.Errorf("Expected missing attribute status for policy with rule and obligations but got %T (%s)",
+			r.status, r.status)
 	}
 }

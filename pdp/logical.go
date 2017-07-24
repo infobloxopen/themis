@@ -2,159 +2,65 @@ package pdp
 
 import "fmt"
 
-type FunctionBooleanNotType struct {
-	Arg ExpressionType
+type functionBooleanNot struct {
+	arg expression
 }
 
-type FunctionBooleanOrType struct {
-	Args []ExpressionType
+type functionBooleanOr struct {
+	args []expression
 }
 
-type FunctionBooleanAndType struct {
-	Args []ExpressionType
+type functionBooleanAnd struct {
+	args []expression
 }
 
-func (f FunctionBooleanNotType) describe() string {
-	return fmt.Sprintf("%s(%s)", yastExpressionNot, yastTagDataTypeBoolean)
+func (f functionBooleanNot) describe() string {
+	return "not"
 }
 
-func (f FunctionBooleanNotType) getResultType() int {
-	return DataTypeBoolean
-}
-
-func (f FunctionBooleanNotType) calculate(ctx *Context) (AttributeValueType, error) {
-	v := AttributeValueType{}
-
-	r, err := f.Arg.calculate(ctx)
+func (f functionBooleanNot) calculate(ctx *Context) (attributeValue, error) {
+	a, err := ctx.calculateBooleanExpression(f.arg)
 	if err != nil {
-		return v, err
+		return undefinedValue, bindError(err, f.describe())
 	}
 
-	a, err := ExtractBooleanValue(r, "argument")
-	if err != nil {
-		return v, err
-	}
-
-	v.DataType = DataTypeBoolean
-	v.Value = !a
-
-	return v, nil
+	return makeBooleanValue(!a), nil
 }
 
-func (f FunctionBooleanOrType) describe() string {
-	return fmt.Sprintf("%s(%s, %s, ...)", yastExpressionOr, yastTagDataTypeBoolean, yastTagDataTypeBoolean)
+func (f functionBooleanOr) describe() string {
+	return "or"
 }
 
-func (f FunctionBooleanOrType) getResultType() int {
-	return DataTypeBoolean
-}
-
-func (f FunctionBooleanOrType) calculate(ctx *Context) (AttributeValueType, error) {
-	v := AttributeValueType{}
-
-	for i, arg := range f.Args {
-		r, err := arg.calculate(ctx)
+func (f functionBooleanOr) calculate(ctx *Context) (attributeValue, error) {
+	for i, arg := range f.args {
+		a, err := ctx.calculateBooleanExpression(arg)
 		if err != nil {
-			return v, err
-		}
-
-		a, err := ExtractBooleanValue(r, fmt.Sprintf("argument %d", i))
-		if err != nil {
-			return v, err
+			return undefinedValue, bindError(bindError(err, fmt.Sprintf("argument %d", i)), f.describe())
 		}
 
 		if a {
-			v.DataType = DataTypeBoolean
-			v.Value = true
-			return v, nil
+			return makeBooleanValue(true), nil
 		}
 	}
 
-	v.DataType = DataTypeBoolean
-	v.Value = false
-
-	return v, nil
+	return makeBooleanValue(false), nil
 }
 
-func (f FunctionBooleanAndType) describe() string {
-	return fmt.Sprintf("%s(%s, %s, ...)", yastExpressionAnd, yastTagDataTypeBoolean, yastTagDataTypeBoolean)
+func (f functionBooleanAnd) describe() string {
+	return "and"
 }
 
-func (f FunctionBooleanAndType) getResultType() int {
-	return DataTypeBoolean
-}
-
-func (f FunctionBooleanAndType) calculate(ctx *Context) (AttributeValueType, error) {
-	v := AttributeValueType{}
-
-	for i, arg := range f.Args {
-		r, err := arg.calculate(ctx)
+func (f functionBooleanAnd) calculate(ctx *Context) (attributeValue, error) {
+	for i, arg := range f.args {
+		a, err := ctx.calculateBooleanExpression(arg)
 		if err != nil {
-			return v, err
-		}
-
-		a, err := ExtractBooleanValue(r, fmt.Sprintf("argument %d", i))
-		if err != nil {
-			return v, err
+			return undefinedValue, bindError(bindError(err, fmt.Sprintf("argument %d", i)), f.describe())
 		}
 
 		if !a {
-			v.DataType = DataTypeBoolean
-			v.Value = false
-			return v, nil
+			return makeBooleanValue(false), nil
 		}
 	}
 
-	v.DataType = DataTypeBoolean
-	v.Value = true
-
-	return v, nil
-}
-
-func makeFunctionBooleanNotComm(args []ExpressionType) ExpressionType {
-	return FunctionBooleanNotType{args[0]}
-}
-
-func checkerFunctionBooleanNot(args []ExpressionType) anyArgumentsFunctionType {
-	if len(args) == 1 && args[0].getResultType() == DataTypeBoolean {
-		return makeFunctionBooleanNotComm
-	}
-
-	return nil
-}
-
-func makeFunctionBooleanOrComm(args []ExpressionType) ExpressionType {
-	return FunctionBooleanOrType{args}
-}
-
-func checkerFunctionBooleanOr(args []ExpressionType) anyArgumentsFunctionType {
-	if len(args) < 2 {
-		return nil
-	}
-
-	for _, a := range args {
-		if a.getResultType() != DataTypeBoolean {
-			return nil
-		}
-	}
-
-	return makeFunctionBooleanOrComm
-}
-
-func makeFunctionBooleanAndComm(args []ExpressionType) ExpressionType {
-	return FunctionBooleanAndType{args}
-}
-
-func checkerFunctionBooleanAnd(args []ExpressionType) anyArgumentsFunctionType {
-	if len(args) < 2 {
-		return nil
-	}
-
-	for _, a := range args {
-		if a.getResultType() != DataTypeBoolean {
-			return nil
-		}
-	}
-
-	return makeFunctionBooleanAndComm
+	return makeBooleanValue(true), nil
 }

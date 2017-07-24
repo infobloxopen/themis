@@ -1,60 +1,24 @@
 package pdp
 
-import "fmt"
-
-type FunctionNetworkContainsAddressType struct {
-	Network ExpressionType
-	Address ExpressionType
+type functionNetworkContainsAddress struct {
+	network expression
+	address expression
 }
 
-func (f FunctionNetworkContainsAddressType) describe() string {
-	return fmt.Sprintf("%s.%s(%s)", yastTagDataTypeNetwork, yastExpressionContains, yastTagDataTypeAddress)
+func (f functionNetworkContainsAddress) describe() string {
+	return "contains"
 }
 
-func (f FunctionNetworkContainsAddressType) getResultType() int {
-	return DataTypeBoolean
-}
-
-func (f FunctionNetworkContainsAddressType) calculate(ctx *Context) (AttributeValueType, error) {
-	v := AttributeValueType{}
-
-	network, err := f.Network.calculate(ctx)
+func (f functionNetworkContainsAddress) calculate(ctx *Context) (attributeValue, error) {
+	n, err := ctx.calculateNetworkExpression(f.network)
 	if err != nil {
-		return v, err
+		return undefinedValue, bindError(err, f.describe())
 	}
 
-	n, err := ExtractNetworkValue(network, "first argument")
+	a, err := ctx.calculateAddressExpression(f.address)
 	if err != nil {
-		return v, err
+		return undefinedValue, bindError(err, f.describe())
 	}
 
-	address, err := f.Address.calculate(ctx)
-	if err != nil {
-		return v, err
-	}
-
-	a, err := ExtractAddressValue(address, "second argument")
-	if err != nil {
-		return v, err
-	}
-
-	v.DataType = DataTypeBoolean
-	v.Value = n.Contains(a)
-
-	return v, nil
-}
-func makeFunctionNetworkContainsAddress(first ExpressionType, second ExpressionType) ExpressionType {
-	return FunctionNetworkContainsAddressType{first, second}
-}
-
-func makeFunctionNetworkContainsAddressComm(args []ExpressionType) ExpressionType {
-	return makeFunctionNetworkContainsAddress(args[0], args[1])
-}
-
-func checkerFunctionNetworkContainsAddress(args []ExpressionType) anyArgumentsFunctionType {
-	if len(args) == 2 && args[0].getResultType() == DataTypeNetwork && args[1].getResultType() == DataTypeAddress {
-		return makeFunctionNetworkContainsAddressComm
-	}
-
-	return nil
+	return makeBooleanValue(n.Contains(a)), nil
 }

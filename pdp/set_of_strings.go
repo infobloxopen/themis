@@ -1,8 +1,12 @@
 package pdp
 
-import "sort"
+import (
+	"sort"
 
-func sortSetOfStrings(v map[string]int) []string {
+	"github.com/infobloxopen/go-trees/strtree"
+)
+
+func sortSetOfStrings(v *strtree.Tree) []string {
 	pairs := newPairList(v)
 	sort.Sort(pairs)
 
@@ -21,12 +25,10 @@ type pair struct {
 
 type pairList []pair
 
-func newPairList(v map[string]int) pairList {
-	pairs := make(pairList, len(v))
-	i := 0
-	for k, v := range v {
-		pairs[i] = pair{k, v}
-		i++
+func newPairList(v *strtree.Tree) pairList {
+	pairs := make(pairList, 0)
+	for p := range v.Enumerate() {
+		pairs = append(pairs, pair{p.Key, p.Value.(int)})
 	}
 
 	return pairs
