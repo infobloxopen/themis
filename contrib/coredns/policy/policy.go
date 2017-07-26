@@ -35,10 +35,12 @@ var stringToEDNS0MapType = map[string]uint16{
 }
 
 type edns0Map struct {
-	code     uint16
-	name     string
-	dataType uint16
-	destType string
+	code         uint16
+	name         string
+	dataType     uint16
+	destType     string
+	stringOffset int
+	stringSize   int
 }
 
 type PolicyMiddleware struct {
@@ -75,16 +77,25 @@ func (p *PolicyMiddleware) Connect() error {
 	return p.pdp.Connect()
 }
 
-func (p *PolicyMiddleware) AddEDNS0Map(code, name, dataType, destType string) error {
+func (p *PolicyMiddleware) AddEDNS0Map(code, name, dataType, destType,
+	stringOffset, stringSize string) error {
 	c, err := strconv.ParseUint(code, 0, 16)
 	if err != nil {
 		return fmt.Errorf("Could not parse EDNS0 code: %s", err)
+	}
+	offset, err := strconv.Atoi(stringOffset)
+	if err != nil {
+		return fmt.Errorf("Could not parse EDNS0 string offset: %s", err)
+	}
+	size, err := strconv.Atoi(stringSize)
+	if err != nil {
+		return fmt.Errorf("Could not parse EDNS0 string size: %s", err)
 	}
 	ednsType, ok := stringToEDNS0MapType[dataType]
 	if !ok {
 		return fmt.Errorf("Invalid dataType for EDNS0 map: %s", dataType)
 	}
-	p.EDNS0Map = append(p.EDNS0Map, edns0Map{uint16(c), name, ednsType, destType})
+	p.EDNS0Map = append(p.EDNS0Map, edns0Map{uint16(c), name, ednsType, destType, offset, size})
 	return nil
 }
 
@@ -97,16 +108,17 @@ func (p *PolicyMiddleware) getEDNS0Attrs(r *dns.Msg) ([]*pb.Attribute, bool) {
 		return nil, false
 	}
 
-	for _, s := range o.Option {
-		switch e := s.(type) {
-		case *dns.EDNS0_NSID:
-			// do stuff with e.Nsid
-		case *dns.EDNS0_SUBNET:
-			// access e.Family, e.Address, etc.
-		case *dns.EDNS0_LOCAL:
-			for _, m := range p.EDNS0Map {
+	for _, m := range p.EDNS0Map {
+		value := ""
+	LOOP:
+		for _, s := range o.Option {
+			switch e := s.(type) {
+			case *dns.EDNS0_NSID:
+				// do stuff with e.Nsid
+			case *dns.EDNS0_SUBNET:
+				// access e.Family, e.Address, etc.
+			case *dns.EDNS0_LOCAL:
 				if m.code == e.Code {
-					var value string
 					switch m.dataType {
 					case EDNS0_MAP_DATA_TYPE_BYTES:
 						value = string(e.Data)
@@ -116,12 +128,17 @@ func (p *PolicyMiddleware) getEDNS0Attrs(r *dns.Msg) ([]*pb.Attribute, bool) {
 						ip := net.IP(e.Data)
 						value = ip.String()
 					}
+					from := m.stringOffset
+					to := m.stringOffset + m.stringSize
+					if to > 0 && to <= len(value) && from < to {
+						value = value[from:to]
+					}
 					foundSourceIP = foundSourceIP || (m.name == "source_ip")
-					attrs = append(attrs, &pb.Attribute{Id: m.name, Type: m.destType, Value: value})
-					break
+					break LOOP
 				}
 			}
 		}
+		attrs = append(attrs, &pb.Attribute{Id: m.name, Type: m.destType, Value: value})
 	}
 	return attrs, foundSourceIP
 }
