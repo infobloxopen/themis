@@ -3,35 +3,67 @@ package pdp
 import "fmt"
 
 type functionBooleanNot struct {
-	arg expression
+	arg Expression
 }
 
 type functionBooleanOr struct {
-	args []expression
+	args []Expression
 }
 
 type functionBooleanAnd struct {
-	args []expression
+	args []Expression
+}
+
+func makeFunctionBooleanNot(args []Expression) Expression {
+	if len(args) != 1 {
+		panic(fmt.Errorf("Boolean function \"not\" needs exactly one argument but got %d", len(args)))
+	}
+
+	return functionBooleanNot{arg: args[0]}
+}
+
+func (f functionBooleanNot) GetResultType() int {
+	return TypeBoolean
 }
 
 func (f functionBooleanNot) describe() string {
 	return "not"
 }
 
-func (f functionBooleanNot) calculate(ctx *Context) (attributeValue, error) {
+func (f functionBooleanNot) calculate(ctx *Context) (AttributeValue, error) {
 	a, err := ctx.calculateBooleanExpression(f.arg)
 	if err != nil {
 		return undefinedValue, bindError(err, f.describe())
 	}
 
-	return makeBooleanValue(!a), nil
+	return MakeBooleanValue(!a), nil
+}
+
+func functionBooleanNotValidator(args []Expression) functionMaker {
+	if len(args) != 1 || args[0].GetResultType() != TypeBoolean {
+		return nil
+	}
+
+	return makeFunctionBooleanNot
+}
+
+func makeFunctionBooleanOr(args []Expression) Expression {
+	if len(args) < 1 {
+		panic(fmt.Errorf("Boolean function \"or\" needs at least one argument but got %d", len(args)))
+	}
+
+	return functionBooleanOr{args: args}
+}
+
+func (f functionBooleanOr) GetResultType() int {
+	return TypeBoolean
 }
 
 func (f functionBooleanOr) describe() string {
 	return "or"
 }
 
-func (f functionBooleanOr) calculate(ctx *Context) (attributeValue, error) {
+func (f functionBooleanOr) calculate(ctx *Context) (AttributeValue, error) {
 	for i, arg := range f.args {
 		a, err := ctx.calculateBooleanExpression(arg)
 		if err != nil {
@@ -39,18 +71,44 @@ func (f functionBooleanOr) calculate(ctx *Context) (attributeValue, error) {
 		}
 
 		if a {
-			return makeBooleanValue(true), nil
+			return MakeBooleanValue(true), nil
 		}
 	}
 
-	return makeBooleanValue(false), nil
+	return MakeBooleanValue(false), nil
+}
+
+func functionBooleanOrValidator(args []Expression) functionMaker {
+	if len(args) < 1 {
+		return nil
+	}
+
+	for _, arg := range args {
+		if arg.GetResultType() != TypeBoolean {
+			return nil
+		}
+	}
+
+	return makeFunctionBooleanOr
+}
+
+func makeFunctionBooleanAnd(args []Expression) Expression {
+	if len(args) < 1 {
+		panic(fmt.Errorf("Boolean function \"and\" needs at least one argument but got %d", len(args)))
+	}
+
+	return functionBooleanAnd{args: args}
+}
+
+func (f functionBooleanAnd) GetResultType() int {
+	return TypeBoolean
 }
 
 func (f functionBooleanAnd) describe() string {
 	return "and"
 }
 
-func (f functionBooleanAnd) calculate(ctx *Context) (attributeValue, error) {
+func (f functionBooleanAnd) calculate(ctx *Context) (AttributeValue, error) {
 	for i, arg := range f.args {
 		a, err := ctx.calculateBooleanExpression(arg)
 		if err != nil {
@@ -58,9 +116,23 @@ func (f functionBooleanAnd) calculate(ctx *Context) (attributeValue, error) {
 		}
 
 		if !a {
-			return makeBooleanValue(false), nil
+			return MakeBooleanValue(false), nil
 		}
 	}
 
-	return makeBooleanValue(true), nil
+	return MakeBooleanValue(true), nil
+}
+
+func functionBooleanAndValidator(args []Expression) functionMaker {
+	if len(args) < 1 {
+		return nil
+	}
+
+	for _, arg := range args {
+		if arg.GetResultType() != TypeBoolean {
+			return nil
+		}
+	}
+
+	return makeFunctionBooleanAnd
 }

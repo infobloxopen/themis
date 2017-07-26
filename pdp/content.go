@@ -15,8 +15,8 @@ type contentItem struct {
 }
 
 type contentSubItem interface {
-	getValue(t int) (attributeValue, error)
-	next(key attributeValue) (contentSubItem, error)
+	getValue(t int) (AttributeValue, error)
+	next(key AttributeValue) (contentSubItem, error)
 }
 
 type contentStringMap struct {
@@ -27,11 +27,11 @@ func (m contentStringMap) describe() string {
 	return "string map"
 }
 
-func (m contentStringMap) getValue(t int) (attributeValue, error) {
+func (m contentStringMap) getValue(t int) (AttributeValue, error) {
 	return undefinedValue, newFinalContentSubitemError(m.describe())
 }
 
-func (m contentStringMap) next(key attributeValue) (contentSubItem, error) {
+func (m contentStringMap) next(key AttributeValue) (contentSubItem, error) {
 	s, err := key.str()
 	if err != nil {
 		return nil, err
@@ -58,11 +58,11 @@ func (m contentNetworkMap) describe() string {
 	return "network map"
 }
 
-func (m contentNetworkMap) getValue(t int) (attributeValue, error) {
+func (m contentNetworkMap) getValue(t int) (AttributeValue, error) {
 	return undefinedValue, newFinalContentSubitemError(m.describe())
 }
 
-func (m contentNetworkMap) next(key attributeValue) (contentSubItem, error) {
+func (m contentNetworkMap) next(key AttributeValue) (contentSubItem, error) {
 	a, err := key.address()
 	if err != nil {
 		return nil, err
@@ -89,11 +89,11 @@ func (m contentDomainMap) describe() string {
 	return "domain map"
 }
 
-func (m contentDomainMap) getValue(t int) (attributeValue, error) {
+func (m contentDomainMap) getValue(t int) (AttributeValue, error) {
 	return undefinedValue, newFinalContentSubitemError(m.describe())
 }
 
-func (m contentDomainMap) next(key attributeValue) (contentSubItem, error) {
+func (m contentDomainMap) next(key AttributeValue) (contentSubItem, error) {
 	d, err := key.domain()
 	if err != nil {
 		return nil, err
@@ -120,42 +120,42 @@ func (v contentValue) describe() string {
 	return fmt.Sprintf("value")
 }
 
-func (v contentValue) getValue(t int) (attributeValue, error) {
+func (v contentValue) getValue(t int) (AttributeValue, error) {
 	switch t {
-	case typeUndefined:
+	case TypeUndefined:
 		panic(fmt.Errorf("Can't convert to value of undefined type"))
 
-	case typeBoolean:
-		return makeBooleanValue(v.value.(bool)), nil
+	case TypeBoolean:
+		return MakeBooleanValue(v.value.(bool)), nil
 
-	case typeString:
-		return makeStringValue(v.value.(string)), nil
+	case TypeString:
+		return MakeStringValue(v.value.(string)), nil
 
-	case typeAddress:
-		return makeAddressValue(v.value.(net.IP)), nil
+	case TypeAddress:
+		return MakeAddressValue(v.value.(net.IP)), nil
 
-	case typeNetwork:
-		return makeNetworkValue(v.value.(*net.IPNet)), nil
+	case TypeNetwork:
+		return MakeNetworkValue(v.value.(*net.IPNet)), nil
 
-	case typeDomain:
-		return makeDomainValue(v.value.(string)), nil
+	case TypeDomain:
+		return MakeDomainValue(v.value.(string)), nil
 
-	case typeSetOfStrings:
-		return makeSetOfStringsValue(v.value.(*strtree.Tree)), nil
+	case TypeSetOfStrings:
+		return MakeSetOfStringsValue(v.value.(*strtree.Tree)), nil
 
-	case typeSetOfNetworks:
-		return makeSetOfNetworksValue(v.value.(*iptree.Tree)), nil
+	case TypeSetOfNetworks:
+		return MakeSetOfNetworksValue(v.value.(*iptree.Tree)), nil
 
-	case typeSetOfDomains:
-		return makeSetOfDomainsValue(v.value.(*domaintree.Node)), nil
+	case TypeSetOfDomains:
+		return MakeSetOfDomainsValue(v.value.(*domaintree.Node)), nil
 
-	case typeListOfStrings:
-		return makeListOfStringsValue(v.value.([]string)), nil
+	case TypeListOfStrings:
+		return MakeListOfStringsValue(v.value.([]string)), nil
 	}
 
 	panic(fmt.Errorf("Can't convert to value of unknown type with index %d", t))
 }
 
-func (v contentValue) next(key attributeValue) (contentSubItem, error) {
+func (v contentValue) next(key AttributeValue) (contentSubItem, error) {
 	return nil, newMapContentSubitemError(v.describe())
 }

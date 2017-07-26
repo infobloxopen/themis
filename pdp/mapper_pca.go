@@ -1,23 +1,86 @@
 package pdp
 
+import (
+	"fmt"
+
+	"github.com/infobloxopen/go-trees/strtree"
+)
+
 type mapperPCA struct {
-	argument  expression
-	policies  map[string]Evaluable
+	argument  Expression
+	policies  *strtree.Tree
 	def       Evaluable
 	err       Evaluable
 	algorithm policyCombiningAlg
 }
 
-func collectSubPolicies(IDs []string, m map[string]Evaluable) []Evaluable {
+type MapperPCAParams struct {
+	Argument  Expression
+	DefOk     bool
+	Def       string
+	ErrOk     bool
+	Err       string
+	Algorithm policyCombiningAlg
+}
+
+func collectSubPolicies(IDs []string, m *strtree.Tree) []Evaluable {
 	policies := []Evaluable{}
 	for _, ID := range IDs {
-		policy, ok := m[ID]
+		policy, ok := m.Get(ID)
 		if ok {
-			policies = append(policies, policy)
+			policies = append(policies, policy.(Evaluable))
 		}
 	}
 
 	return policies
+}
+
+func makeMapperPCA(policies []Evaluable, params interface{}) policyCombiningAlg {
+	mapperParams, ok := params.(MapperPCAParams)
+	if !ok {
+		panic(fmt.Errorf("Mapper policy combining algorithm maker expected MapperPCAParams structure as params "+
+			"but got %T", params))
+	}
+
+	var (
+		m   *strtree.Tree
+		def Evaluable
+		err Evaluable
+	)
+
+	if policies != nil {
+		m = strtree.NewTree()
+		count := 0
+		for _, p := range policies {
+			if pid, ok := p.GetID(); ok {
+				m.InplaceInsert(pid, p)
+				count++
+			}
+		}
+
+		if count > 0 {
+			if mapperParams.DefOk {
+				if v, ok := m.Get(mapperParams.Def); ok {
+					def = v.(Evaluable)
+				}
+			}
+
+			if mapperParams.ErrOk {
+				if v, ok := m.Get(mapperParams.Err); ok {
+					err = v.(Evaluable)
+				}
+			}
+		} else {
+			m = nil
+		}
+	}
+
+	return mapperPCA{
+		argument:  mapperParams.Argument,
+		policies:  m,
+		def:       def,
+		err:       err,
+		algorithm: mapperParams.Algorithm}
 }
 
 func (a mapperPCA) describe() string {
@@ -32,17 +95,25 @@ func (a mapperPCA) calculateErrorPolicy(ctx *Context, err error) Response {
 	return Response{EffectIndeterminate, bindError(err, a.describe()), nil}
 }
 
-func (a mapperPCA) getPoliciesMap(policies []Evaluable) map[string]Evaluable {
+func (a mapperPCA) getPoliciesMap(policies []Evaluable) *strtree.Tree {
 	if a.policies != nil {
 		return a.policies
 	}
 
-	m := make(map[string]Evaluable)
-	for _, policy := range policies {
-		m[policy.GetID()] = policy
+	r := strtree.NewTree()
+	count := 0
+	for _, p := range policies {
+		if pid, ok := p.GetID(); ok {
+			r.InplaceInsert(pid, p)
+			count++
+		}
 	}
 
-	return m
+	if count > 0 {
+		return r
+	}
+
+	return nil
 }
 
 func (a mapperPCA) execute(policies []Evaluable, ctx *Context) Response {
@@ -78,13 +149,13 @@ func (a mapperPCA) execute(policies []Evaluable, ctx *Context) Response {
 	}
 
 	if a.policies != nil {
-		policy, ok := a.policies[ID]
+		policy, ok := a.policies.Get(ID)
 		if ok {
-			return policy.Calculate(ctx)
+			return policy.(Evaluable).Calculate(ctx)
 		}
 	} else {
 		for _, policy := range policies {
-			if policy.GetID() == ID {
+			if PID, ok := policy.GetID(); ok && PID == ID {
 				return policy.Calculate(ctx)
 			}
 		}

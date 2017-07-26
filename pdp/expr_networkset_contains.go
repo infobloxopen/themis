@@ -1,15 +1,36 @@
 package pdp
 
+import "fmt"
+
 type functionSetOfNetworksContainsAddress struct {
-	set   expression
-	value expression
+	set   Expression
+	value Expression
+}
+
+func makeFunctionSetOfNetworksContainsAddress(set, value Expression) Expression {
+	return functionSetOfNetworksContainsAddress{
+		set:   set,
+		value: value}
+}
+
+func makeFunctionSetOfNetworksContainsAddressAlt(args []Expression) Expression {
+	if len(args) != 2 {
+		panic(fmt.Errorf("Set Of Networks function \"contains\" (Address) needs exactly two arguments but got %d",
+			len(args)))
+	}
+
+	return makeFunctionSetOfNetworksContainsAddress(args[0], args[1])
+}
+
+func (f functionSetOfNetworksContainsAddress) GetResultType() int {
+	return TypeBoolean
 }
 
 func (f functionSetOfNetworksContainsAddress) describe() string {
 	return "contains"
 }
 
-func (f functionSetOfNetworksContainsAddress) calculate(ctx *Context) (attributeValue, error) {
+func (f functionSetOfNetworksContainsAddress) calculate(ctx *Context) (AttributeValue, error) {
 	set, err := ctx.calculateSetOfNetworksExpression(f.set)
 	if err != nil {
 		return undefinedValue, bindError(err, f.describe())
@@ -21,5 +42,13 @@ func (f functionSetOfNetworksContainsAddress) calculate(ctx *Context) (attribute
 	}
 
 	_, ok := set.GetByIP(a)
-	return makeBooleanValue(ok), nil
+	return MakeBooleanValue(ok), nil
+}
+
+func functionSetOfNetworksContainsAddressValidator(args []Expression) functionMaker {
+	if len(args) != 2 || args[0].GetResultType() != TypeSetOfNetworks || args[1].GetResultType() != TypeAddress {
+		return nil
+	}
+
+	return makeFunctionSetOfNetworksContainsAddressAlt
 }

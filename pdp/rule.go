@@ -2,12 +2,13 @@ package pdp
 
 import "fmt"
 
-type rule struct {
+type Rule struct {
 	id          string
-	target      target
-	condition   expression
+	hidden      bool
+	target      Target
+	condition   Expression
 	effect      int
-	obligations []attributeAssignmentExpression
+	obligations []AttributeAssignmentExpression
 }
 
 func makeConditionStatus(err boundError, effect int) Response {
@@ -18,11 +19,29 @@ func makeConditionStatus(err boundError, effect int) Response {
 	return Response{EffectIndeterminateP, err, nil}
 }
 
-func (r rule) describe() string {
-	return fmt.Sprintf("rule %q", r.id)
+func NewRule(ID string, hidden bool, target Target, condition Expression, effect int, obligations []AttributeAssignmentExpression) *Rule {
+	return &Rule{
+		id:          ID,
+		hidden:      hidden,
+		target:      target,
+		condition:   condition,
+		effect:      effect,
+		obligations: obligations}
 }
 
-func (r rule) calculate(ctx *Context) Response {
+func (r Rule) describe() string {
+	if !r.hidden {
+		return fmt.Sprintf("rule %q", r.id)
+	}
+
+	return "hidden rule"
+}
+
+func (r Rule) GetID() (string, bool) {
+	return r.id, !r.hidden
+}
+
+func (r Rule) calculate(ctx *Context) Response {
 	match, boundErr := r.target.calculate(ctx)
 	if boundErr != nil {
 		return makeMatchStatus(bindError(boundErr, r.describe()), r.effect)

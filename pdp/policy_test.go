@@ -4,21 +4,23 @@ import "testing"
 
 func TestPolicy(t *testing.T) {
 	c := &Context{
-		a: map[string]map[int]attributeValue{
+		a: map[string]map[int]AttributeValue{
 			"missing-type": {
-				typeBoolean: makeBooleanValue(false)},
+				TypeBoolean: MakeBooleanValue(false)},
 			"test-string": {
-				typeString: makeStringValue("test")},
+				TypeString: MakeStringValue("test")},
 			"example-string": {
-				typeString: makeStringValue("example")}}}
+				TypeString: MakeStringValue("example")}}}
 
 	testID := "Test Policy"
 
 	p := Policy{
 		id:        testID,
 		algorithm: firstApplicableEffectRCA{}}
-	ID := p.GetID()
-	if ID != testID {
+	ID, ok := p.GetID()
+	if !ok {
+		t.Errorf("Expected policy ID %q but got hidden policy", testID)
+	} else if ID != testID {
 		t.Errorf("Expected policy ID %q but got %q", testID, ID)
 	}
 
@@ -39,7 +41,7 @@ func TestPolicy(t *testing.T) {
 			effectNames[EffectNotApplicable], effectNames[r.Effect])
 	}
 
-	_, ok := r.status.(*missingAttributeError)
+	_, ok = r.status.(*missingAttributeError)
 	if !ok {
 		t.Errorf("Expected missing attribute status for policy with FirstApplicableEffectRCA and "+
 			"not found attribute but got %T (%s)", r.status, r.status)
@@ -81,7 +83,7 @@ func TestPolicy(t *testing.T) {
 	p = Policy{
 		id:          testID,
 		target:      makeSimpleStringTarget("test-string", "test"),
-		rules:       []*rule{{effect: EffectPermit}},
+		rules:       []*Rule{{effect: EffectPermit}},
 		obligations: makeSingleStringObligation("obligation", "test"),
 		algorithm:   firstApplicableEffectRCA{}}
 
@@ -100,33 +102,34 @@ func TestPolicy(t *testing.T) {
 		t.Errorf("Expected single obligation for with rule and obligations but got %#v", r.obligations)
 	}
 
-	defaultRule := &rule{
+	defaultRule := &Rule{
 		id:     "Default",
 		effect: EffectDeny}
-	errorRule := &rule{
+	errorRule := &Rule{
 		id:     "Error",
 		effect: EffectDeny}
-	permitRule := &rule{
+	permitRule := &Rule{
 		id:     "Permit",
 		effect: EffectPermit}
 	p = Policy{
 		id:    testID,
-		rules: []*rule{defaultRule, errorRule, permitRule},
-		algorithm: mapperRCA{
-			argument: attributeDesignator{a: attribute{id: "x", t: typeSetOfStrings}},
-			rules: map[string]*rule{
-				"Default": defaultRule,
-				"Error":   errorRule,
-				"Permit":  permitRule},
-			def: defaultRule,
-			err: errorRule,
-			algorithm: mapperRCA{
-				argument: attributeDesignator{a: attribute{id: "y", t: typeString}}}}}
+		rules: []*Rule{defaultRule, errorRule, permitRule},
+		algorithm: makeMapperRCA(
+			[]*Rule{defaultRule, errorRule, permitRule},
+			MapperRCAParams{
+				Argument:  AttributeDesignator{a: Attribute{id: "x", t: TypeSetOfStrings}},
+				DefOk:     true,
+				Def:       "Default",
+				ErrOk:     true,
+				Err:       "Error",
+				Algorithm: makeMapperRCA(
+					nil,
+					MapperRCAParams{Argument: AttributeDesignator{a: Attribute{id: "y", t: TypeString}}})})}
 
 	c = &Context{
-		a: map[string]map[int]attributeValue{
-			"x": {typeSetOfStrings: makeSetOfStringsValue(newStrTree("Permit", "Default"))},
-			"y": {typeString: makeStringValue("Permit")}}}
+		a: map[string]map[int]AttributeValue{
+			"x": {TypeSetOfStrings: MakeSetOfStringsValue(newStrTree("Permit", "Default"))},
+			"y": {TypeString: MakeStringValue("Permit")}}}
 
 	r = p.Calculate(c)
 	if r.Effect != EffectPermit {
@@ -140,9 +143,9 @@ func TestPolicy(t *testing.T) {
 	}
 
 	c = &Context{
-		a: map[string]map[int]attributeValue{
-			"x": {typeSetOfStrings: makeSetOfStringsValue(newStrTree("Permit", "Default"))},
-			"y": {typeSetOfStrings: makeSetOfStringsValue(newStrTree("Permit", "Default"))}}}
+		a: map[string]map[int]AttributeValue{
+			"x": {TypeSetOfStrings: MakeSetOfStringsValue(newStrTree("Permit", "Default"))},
+			"y": {TypeSetOfStrings: MakeSetOfStringsValue(newStrTree("Permit", "Default"))}}}
 
 	r = p.Calculate(c)
 	if r.Effect != EffectIndeterminate {
@@ -157,16 +160,16 @@ func TestPolicy(t *testing.T) {
 	}
 }
 
-func makeSimpleStringTarget(ID, value string) target {
-	return target{a: []anyOf{{a: []allOf{{m: []match{{
+func makeSimpleStringTarget(ID, value string) Target {
+	return Target{a: []AnyOf{{a: []AllOf{{m: []Match{{
 		m: functionStringEqual{
-			first:  attributeDesignator{a: attribute{id: ID, t: typeString}},
-			second: makeStringValue(value)}}}}}}}}
+			first:  AttributeDesignator{a: Attribute{id: ID, t: TypeString}},
+			second: MakeStringValue(value)}}}}}}}}
 }
 
-func makeSingleStringObligation(ID, value string) []attributeAssignmentExpression {
-	return []attributeAssignmentExpression{
+func makeSingleStringObligation(ID, value string) []AttributeAssignmentExpression {
+	return []AttributeAssignmentExpression{
 		{
-			a: attribute{id: ID, t: typeString},
-			e: makeStringValue(value)}}
+			a: Attribute{id: ID, t: TypeString},
+			e: MakeStringValue(value)}}
 }

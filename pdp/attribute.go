@@ -3,7 +3,10 @@ package pdp
 import (
 	"fmt"
 	"net"
+	"regexp"
 	"strings"
+
+	"golang.org/x/net/idna"
 
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
@@ -11,19 +14,19 @@ import (
 )
 
 const (
-	typeUndefined = iota
-	typeBoolean
-	typeString
-	typeAddress
-	typeNetwork
-	typeDomain
-	typeSetOfStrings
-	typeSetOfNetworks
-	typeSetOfDomains
-	typeListOfStrings
+	TypeUndefined = iota
+	TypeBoolean
+	TypeString
+	TypeAddress
+	TypeNetwork
+	TypeDomain
+	TypeSetOfStrings
+	TypeSetOfNetworks
+	TypeSetOfDomains
+	TypeListOfStrings
 )
 
-var typeNames = []string{
+var TypeNames = []string{
 	"Undefined",
 	"Boolean",
 	"String",
@@ -35,101 +38,125 @@ var typeNames = []string{
 	"Set of Domains",
 	"List of Strings"}
 
-var undefinedValue = attributeValue{}
+var TypeIDs = map[string]int{
+	"undefined":       TypeUndefined,
+	"boolean":         TypeBoolean,
+	"string":          TypeString,
+	"address":         TypeAddress,
+	"network":         TypeNetwork,
+	"domain":          TypeDomain,
+	"set of strings":  TypeSetOfStrings,
+	"set of networks": TypeSetOfNetworks,
+	"set of domains":  TypeSetOfDomains,
+	"list of strings": TypeListOfStrings}
 
-type attribute struct {
+var undefinedValue = AttributeValue{}
+
+type Attribute struct {
 	id string
 	t  int
 }
 
-func (a attribute) describe() string {
-	return fmt.Sprintf("attr(%s.%s)", a.id, typeNames[a.t])
+func MakeAttribute(ID string, t int) Attribute {
+	return Attribute{id: ID, t: t}
 }
 
-func (a attribute) newMissingError() error {
+func (a Attribute) GetType() int {
+	return a.t
+}
+
+func (a Attribute) describe() string {
+	return fmt.Sprintf("attr(%s.%s)", a.id, TypeNames[a.t])
+}
+
+func (a Attribute) newMissingError() error {
 	return newMissingAttributeError(a.describe())
 }
 
-type attributeValue struct {
+type AttributeValue struct {
 	t int
 	v interface{}
 }
 
-func makeBooleanValue(v bool) attributeValue {
-	return attributeValue{
-		t: typeBoolean,
+func MakeBooleanValue(v bool) AttributeValue {
+	return AttributeValue{
+		t: TypeBoolean,
 		v: v}
 }
 
-func makeStringValue(v string) attributeValue {
-	return attributeValue{
-		t: typeString,
+func MakeStringValue(v string) AttributeValue {
+	return AttributeValue{
+		t: TypeString,
 		v: v}
 }
 
-func makeAddressValue(v net.IP) attributeValue {
-	return attributeValue{
-		t: typeAddress,
+func MakeAddressValue(v net.IP) AttributeValue {
+	return AttributeValue{
+		t: TypeAddress,
 		v: v}
 }
 
-func makeNetworkValue(v *net.IPNet) attributeValue {
-	return attributeValue{
-		t: typeAddress,
+func MakeNetworkValue(v *net.IPNet) AttributeValue {
+	return AttributeValue{
+		t: TypeAddress,
 		v: v}
 }
 
-func makeDomainValue(v string) attributeValue {
-	return attributeValue{
-		t: typeDomain,
+func MakeDomainValue(v string) AttributeValue {
+	return AttributeValue{
+		t: TypeDomain,
 		v: v}
 }
 
-func makeSetOfStringsValue(v *strtree.Tree) attributeValue {
-	return attributeValue{
-		t: typeSetOfStrings,
+func MakeSetOfStringsValue(v *strtree.Tree) AttributeValue {
+	return AttributeValue{
+		t: TypeSetOfStrings,
 		v: v}
 }
 
-func makeSetOfNetworksValue(v *iptree.Tree) attributeValue {
-	return attributeValue{
-		t: typeSetOfNetworks,
+func MakeSetOfNetworksValue(v *iptree.Tree) AttributeValue {
+	return AttributeValue{
+		t: TypeSetOfNetworks,
 		v: v}
 }
 
-func makeSetOfDomainsValue(v *domaintree.Node) attributeValue {
-	return attributeValue{
-		t: typeSetOfDomains,
+func MakeSetOfDomainsValue(v *domaintree.Node) AttributeValue {
+	return AttributeValue{
+		t: TypeSetOfDomains,
 		v: v}
 }
 
-func makeListOfStringsValue(v []string) attributeValue {
-	return attributeValue{
-		t: typeListOfStrings,
+func MakeListOfStringsValue(v []string) AttributeValue {
+	return AttributeValue{
+		t: TypeListOfStrings,
 		v: v}
 }
 
-func (v attributeValue) describe() string {
+func (v AttributeValue) GetResultType() int {
+	return v.t
+}
+
+func (v AttributeValue) describe() string {
 	switch v.t {
-	case typeUndefined:
+	case TypeUndefined:
 		return "val(undefined)"
 
-	case typeBoolean:
+	case TypeBoolean:
 		return fmt.Sprintf("%v", v.v.(bool))
 
-	case typeString:
+	case TypeString:
 		return fmt.Sprintf("%q", v.v.(string))
 
-	case typeAddress:
+	case TypeAddress:
 		return v.v.(net.IP).String()
 
-	case typeNetwork:
+	case TypeNetwork:
 		return v.v.(*net.IPNet).String()
 
-	case typeDomain:
+	case TypeDomain:
 		return fmt.Sprintf("domain(%s)", v.v.(string))
 
-	case typeSetOfStrings:
+	case TypeSetOfStrings:
 		s := []string{}
 		for p := range v.v.(*strtree.Tree).Enumerate() {
 			s = append(s, fmt.Sprintf("%q", p.Key))
@@ -141,7 +168,7 @@ func (v attributeValue) describe() string {
 
 		return fmt.Sprintf("set(%s)", strings.Join(s, ", "))
 
-	case typeSetOfNetworks:
+	case TypeSetOfNetworks:
 		s := []string{}
 		for p := range v.v.(*iptree.Tree).Enumerate() {
 			s = append(s, p.Key.String())
@@ -153,7 +180,7 @@ func (v attributeValue) describe() string {
 
 		return fmt.Sprintf("set(%s)", strings.Join(s, ", "))
 
-	case typeSetOfDomains:
+	case TypeSetOfDomains:
 		s := []string{}
 		for p := range v.v.(*domaintree.Node).Enumerate() {
 			s = append(s, fmt.Sprintf("%q", p.Key))
@@ -165,7 +192,7 @@ func (v attributeValue) describe() string {
 
 		return fmt.Sprintf("domains(%s)", strings.Join(s, ", "))
 
-	case typeListOfStrings:
+	case TypeListOfStrings:
 		s := []string{}
 		for _, item := range v.v.([]string) {
 			s = append(s, fmt.Sprintf("%q", item))
@@ -181,11 +208,7 @@ func (v attributeValue) describe() string {
 	return "val(unknown type)"
 }
 
-func (v attributeValue) typeHRName() string {
-	return typeNames[v.t]
-}
-
-func (v attributeValue) typeCheck(t int) error {
+func (v AttributeValue) typeCheck(t int) error {
 	if v.t != t {
 		return newAttributeValueTypeError(t, v.t, v.describe())
 	}
@@ -193,8 +216,8 @@ func (v attributeValue) typeCheck(t int) error {
 	return nil
 }
 
-func (v attributeValue) boolean() (bool, error) {
-	err := v.typeCheck(typeBoolean)
+func (v AttributeValue) boolean() (bool, error) {
+	err := v.typeCheck(TypeBoolean)
 	if err != nil {
 		return false, err
 	}
@@ -202,8 +225,8 @@ func (v attributeValue) boolean() (bool, error) {
 	return v.v.(bool), nil
 }
 
-func (v attributeValue) str() (string, error) {
-	err := v.typeCheck(typeString)
+func (v AttributeValue) str() (string, error) {
+	err := v.typeCheck(TypeString)
 	if err != nil {
 		return "", err
 	}
@@ -211,8 +234,8 @@ func (v attributeValue) str() (string, error) {
 	return v.v.(string), nil
 }
 
-func (v attributeValue) address() (net.IP, error) {
-	err := v.typeCheck(typeAddress)
+func (v AttributeValue) address() (net.IP, error) {
+	err := v.typeCheck(TypeAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -220,8 +243,8 @@ func (v attributeValue) address() (net.IP, error) {
 	return v.v.(net.IP), nil
 }
 
-func (v attributeValue) network() (*net.IPNet, error) {
-	err := v.typeCheck(typeNetwork)
+func (v AttributeValue) network() (*net.IPNet, error) {
+	err := v.typeCheck(TypeNetwork)
 	if err != nil {
 		return nil, err
 	}
@@ -229,8 +252,8 @@ func (v attributeValue) network() (*net.IPNet, error) {
 	return v.v.(*net.IPNet), nil
 }
 
-func (v attributeValue) domain() (string, error) {
-	err := v.typeCheck(typeDomain)
+func (v AttributeValue) domain() (string, error) {
+	err := v.typeCheck(TypeDomain)
 	if err != nil {
 		return "", err
 	}
@@ -238,8 +261,8 @@ func (v attributeValue) domain() (string, error) {
 	return v.v.(string), nil
 }
 
-func (v attributeValue) setOfStrings() (*strtree.Tree, error) {
-	err := v.typeCheck(typeSetOfStrings)
+func (v AttributeValue) setOfStrings() (*strtree.Tree, error) {
+	err := v.typeCheck(TypeSetOfStrings)
 	if err != nil {
 		return nil, err
 	}
@@ -247,8 +270,8 @@ func (v attributeValue) setOfStrings() (*strtree.Tree, error) {
 	return v.v.(*strtree.Tree), nil
 }
 
-func (v attributeValue) setOfNetworks() (*iptree.Tree, error) {
-	err := v.typeCheck(typeSetOfNetworks)
+func (v AttributeValue) setOfNetworks() (*iptree.Tree, error) {
+	err := v.typeCheck(TypeSetOfNetworks)
 	if err != nil {
 		return nil, err
 	}
@@ -256,8 +279,8 @@ func (v attributeValue) setOfNetworks() (*iptree.Tree, error) {
 	return v.v.(*iptree.Tree), nil
 }
 
-func (v attributeValue) setOfDomains() (*domaintree.Node, error) {
-	err := v.typeCheck(typeSetOfDomains)
+func (v AttributeValue) setOfDomains() (*domaintree.Node, error) {
+	err := v.typeCheck(TypeSetOfDomains)
 	if err != nil {
 		return nil, err
 	}
@@ -265,8 +288,8 @@ func (v attributeValue) setOfDomains() (*domaintree.Node, error) {
 	return v.v.(*domaintree.Node), nil
 }
 
-func (v attributeValue) listOfStrings() ([]string, error) {
-	err := v.typeCheck(typeListOfStrings)
+func (v AttributeValue) listOfStrings() ([]string, error) {
+	err := v.typeCheck(TypeListOfStrings)
 	if err != nil {
 		return nil, err
 	}
@@ -274,28 +297,47 @@ func (v attributeValue) listOfStrings() ([]string, error) {
 	return v.v.([]string), nil
 }
 
-func (v attributeValue) calculate(ctx *Context) (attributeValue, error) {
+func (v AttributeValue) calculate(ctx *Context) (AttributeValue, error) {
 	return v, nil
 }
 
-type attributeAssignmentExpression struct {
-	a attribute
-	e expression
+type AttributeAssignmentExpression struct {
+	a Attribute
+	e Expression
 }
 
-type attributeDesignator struct {
-	a attribute
+func MakeAttributeAssignmentExpression(a Attribute, e Expression) AttributeAssignmentExpression {
+	return AttributeAssignmentExpression{
+		a: a,
+		e: e}
 }
 
-func (d attributeDesignator) calculate(ctx *Context) (attributeValue, error) {
+type AttributeDesignator struct {
+	a Attribute
+}
+
+func MakeAttributeDesignator(a Attribute) AttributeDesignator {
+	return AttributeDesignator{a}
+}
+
+func (d AttributeDesignator) GetResultType() int {
+	return d.a.t
+}
+
+func (d AttributeDesignator) calculate(ctx *Context) (AttributeValue, error) {
 	return ctx.getAttribute(d.a)
 }
 
-func newStrTree(args ...string) *strtree.Tree {
-	t := strtree.NewTree()
-	for i, s := range args {
-		t.InplaceInsert(s, i)
-	}
+var domainRegexp = regexp.MustCompile("^[-._a-z0-9]+$")
 
-	return t
+func AdjustDomainName(s string) (string, error) {
+	tmp, err := idna.Punycode.ToASCII(s)
+	if err != nil {
+		return "", fmt.Errorf("Cannot convert domain [%s]", s)
+	}
+	ret := strings.ToLower(tmp)
+	if !domainRegexp.MatchString(ret) {
+		return "", fmt.Errorf("Cannot validate domain [%s]", s)
+	}
+	return ret, nil
 }

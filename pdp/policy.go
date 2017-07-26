@@ -3,23 +3,52 @@ package pdp
 import "fmt"
 
 type ruleCombiningAlg interface {
-	execute(rules []*rule, ctx *Context) Response
+	execute(rules []*Rule, ctx *Context) Response
 }
+
+type RuleCombiningAlgMaker func(rules []*Rule, params interface{}) ruleCombiningAlg
+
+var (
+	firstApplicableEffectRCAInstance = firstApplicableEffectRCA{}
+	denyOverridesRCAInstance         = denyOverridesRCA{}
+
+	RuleCombiningAlgs = map[string]RuleCombiningAlgMaker{
+		"firstapplicableeffect": makeFirstApplicableEffectRCA,
+		"denyoverrides":         makeDenyOverridesRCA}
+
+	RuleCombiningParamAlgs = map[string]RuleCombiningAlgMaker{
+		"mapper": makeMapperRCA}
+)
 
 type Policy struct {
 	id          string
-	target      target
-	rules       []*rule
-	obligations []attributeAssignmentExpression
+	hidden      bool
+	target      Target
+	rules       []*Rule
+	obligations []AttributeAssignmentExpression
 	algorithm   ruleCombiningAlg
 }
 
-func (p *Policy) describe() string {
-	return fmt.Sprintf("policy %q", p.id)
+func NewPolicy(ID string, hidden bool, target Target, rules []*Rule, makeRCA RuleCombiningAlgMaker, params interface{}, obligations []AttributeAssignmentExpression) *Policy {
+	return &Policy{
+		id:          ID,
+		hidden:      hidden,
+		target:      target,
+		rules:       rules,
+		obligations: obligations,
+		algorithm:   makeRCA(rules, params)}
 }
 
-func (p *Policy) GetID() string {
-	return p.id
+func (p *Policy) describe() string {
+	if pid, ok := p.GetID(); ok {
+		return fmt.Sprintf("policy %q", pid)
+	}
+
+	return "hidden policy"
+}
+
+func (p *Policy) GetID() (string, bool) {
+	return p.id, !p.hidden
 }
 
 func (p *Policy) Calculate(ctx *Context) Response {
@@ -51,7 +80,11 @@ func (p *Policy) Calculate(ctx *Context) Response {
 type firstApplicableEffectRCA struct {
 }
 
-func (a firstApplicableEffectRCA) execute(rules []*rule, ctx *Context) Response {
+func makeFirstApplicableEffectRCA(rules []*Rule, params interface{}) ruleCombiningAlg {
+	return firstApplicableEffectRCAInstance
+}
+
+func (a firstApplicableEffectRCA) execute(rules []*Rule, ctx *Context) Response {
 	for _, rule := range rules {
 		r := rule.calculate(ctx)
 		if r.Effect != EffectNotApplicable {
@@ -65,13 +98,17 @@ func (a firstApplicableEffectRCA) execute(rules []*rule, ctx *Context) Response 
 type denyOverridesRCA struct {
 }
 
+func makeDenyOverridesRCA(rules []*Rule, params interface{}) ruleCombiningAlg {
+	return denyOverridesRCAInstance
+}
+
 func (a denyOverridesRCA) describe() string {
 	return "deny overrides"
 }
 
-func (a denyOverridesRCA) execute(rules []*rule, ctx *Context) Response {
+func (a denyOverridesRCA) execute(rules []*Rule, ctx *Context) Response {
 	errs := []error{}
-	obligations := make([]attributeAssignmentExpression, 0)
+	obligations := make([]AttributeAssignmentExpression, 0)
 
 	indetD := 0
 	indetP := 0

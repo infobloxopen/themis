@@ -20,35 +20,41 @@ const (
 	EffectIndeterminateDP
 )
 
-var effectNames = []string{
-	"Deny",
-	"Permit",
-	"NotApplicable",
-	"Indeterminate",
-	"Indeterminate{D}",
-	"Indeterminate{P}",
-	"Indeterminate{DP}"}
+var (
+	effectNames = []string{
+		"Deny",
+		"Permit",
+		"NotApplicable",
+		"Indeterminate",
+		"Indeterminate{D}",
+		"Indeterminate{P}",
+		"Indeterminate{DP}"}
+
+	EffectIDs = map[string]int{
+		"deny":   EffectDeny,
+		"permit": EffectPermit}
+)
 
 type Context struct {
-	a map[string]map[int]attributeValue
+	a map[string]map[int]AttributeValue
 	c *strtree.Tree
 }
 
-func (c *Context) getAttribute(a attribute) (attributeValue, error) {
+func (c *Context) getAttribute(a Attribute) (AttributeValue, error) {
 	t, ok := c.a[a.id]
 	if !ok {
-		return attributeValue{}, a.newMissingError()
+		return AttributeValue{}, a.newMissingError()
 	}
 
 	v, ok := t[a.t]
 	if !ok {
-		return attributeValue{}, a.newMissingError()
+		return AttributeValue{}, a.newMissingError()
 	}
 
 	return v, nil
 }
 
-func (c *Context) calculateBooleanExpression(e expression) (bool, error) {
+func (c *Context) calculateBooleanExpression(e Expression) (bool, error) {
 	v, err := e.calculate(c)
 	if err != nil {
 		return false, err
@@ -57,7 +63,7 @@ func (c *Context) calculateBooleanExpression(e expression) (bool, error) {
 	return v.boolean()
 }
 
-func (c *Context) calculateStringExpression(e expression) (string, error) {
+func (c *Context) calculateStringExpression(e Expression) (string, error) {
 	v, err := e.calculate(c)
 	if err != nil {
 		return "", err
@@ -66,7 +72,7 @@ func (c *Context) calculateStringExpression(e expression) (string, error) {
 	return v.str()
 }
 
-func (c *Context) calculateAddressExpression(e expression) (net.IP, error) {
+func (c *Context) calculateAddressExpression(e Expression) (net.IP, error) {
 	v, err := e.calculate(c)
 	if err != nil {
 		return nil, err
@@ -75,7 +81,7 @@ func (c *Context) calculateAddressExpression(e expression) (net.IP, error) {
 	return v.address()
 }
 
-func (c *Context) calculateDomainExpression(e expression) (string, error) {
+func (c *Context) calculateDomainExpression(e Expression) (string, error) {
 	v, err := e.calculate(c)
 	if err != nil {
 		return "", err
@@ -84,7 +90,7 @@ func (c *Context) calculateDomainExpression(e expression) (string, error) {
 	return v.domain()
 }
 
-func (c *Context) calculateNetworkExpression(e expression) (*net.IPNet, error) {
+func (c *Context) calculateNetworkExpression(e Expression) (*net.IPNet, error) {
 	v, err := e.calculate(c)
 	if err != nil {
 		return nil, err
@@ -93,7 +99,16 @@ func (c *Context) calculateNetworkExpression(e expression) (*net.IPNet, error) {
 	return v.network()
 }
 
-func (c *Context) calculateSetOfNetworksExpression(e expression) (*iptree.Tree, error) {
+func (c *Context) calculateSetOfStringsExpression(e Expression) (*strtree.Tree, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return v.setOfStrings()
+}
+
+func (c *Context) calculateSetOfNetworksExpression(e Expression) (*iptree.Tree, error) {
 	v, err := e.calculate(c)
 	if err != nil {
 		return nil, err
@@ -102,7 +117,7 @@ func (c *Context) calculateSetOfNetworksExpression(e expression) (*iptree.Tree, 
 	return v.setOfNetworks()
 }
 
-func (c *Context) calculateSetOfDomainsExpression(e expression) (*domaintree.Node, error) {
+func (c *Context) calculateSetOfDomainsExpression(e Expression) (*domaintree.Node, error) {
 	v, err := e.calculate(c)
 	if err != nil {
 		return nil, err
@@ -114,10 +129,10 @@ func (c *Context) calculateSetOfDomainsExpression(e expression) (*domaintree.Nod
 type Response struct {
 	Effect      int
 	status      boundError
-	obligations []attributeAssignmentExpression
+	obligations []AttributeAssignmentExpression
 }
 
 type Evaluable interface {
-	GetID() string
+	GetID() (string, bool)
 	Calculate(ctx *Context) Response
 }

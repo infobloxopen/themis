@@ -1,15 +1,35 @@
 package pdp
 
+import "fmt"
+
 type functionSetOfDomainsContains struct {
-	set   expression
-	value expression
+	set   Expression
+	value Expression
+}
+
+func makeFunctionSetOfDomainsContains(set, value Expression) Expression {
+	return functionSetOfDomainsContains{
+		set:   set,
+		value: value}
+}
+
+func makeFunctionSetOfDomainsContainsAlt(args []Expression) Expression {
+	if len(args) != 2 {
+		panic(fmt.Errorf("Set Of Domains function \"contains\" needs exactly two arguments but got %d", len(args)))
+	}
+
+	return makeFunctionSetOfDomainsContains(args[0], args[1])
+}
+
+func (f functionSetOfDomainsContains) GetResultType() int {
+	return TypeBoolean
 }
 
 func (f functionSetOfDomainsContains) describe() string {
 	return "contains"
 }
 
-func (f functionSetOfDomainsContains) calculate(ctx *Context) (attributeValue, error) {
+func (f functionSetOfDomainsContains) calculate(ctx *Context) (AttributeValue, error) {
 	set, err := ctx.calculateSetOfDomainsExpression(f.set)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())
@@ -21,5 +41,13 @@ func (f functionSetOfDomainsContains) calculate(ctx *Context) (attributeValue, e
 	}
 
 	_, ok := set.Get(value)
-	return makeBooleanValue(ok), nil
+	return MakeBooleanValue(ok), nil
+}
+
+func functionSetOfDomainsContainsValidator(args []Expression) functionMaker {
+	if len(args) != 2 || args[0].GetResultType() != TypeSetOfDomains || args[1].GetResultType() != TypeDomain {
+		return nil
+	}
+
+	return makeFunctionSetOfDomainsContainsAlt
 }

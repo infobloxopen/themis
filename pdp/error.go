@@ -16,6 +16,7 @@ const (
 	mapperArgumentTypeErrorID
 	missingContentErrorID
 	missingContentItemErrorID
+	invalidContentItemErrorID
 	finalContentSubitemErrorID
 	mapContentSubitemErrorID
 )
@@ -125,7 +126,7 @@ func newAttributeValueTypeError(e, t int, src string) error {
 }
 
 func (e *attributeValueTypeError) Error() string {
-	return e.errorf("Expected %s value but got %s", typeNames[e.e], typeNames[e.t])
+	return e.errorf("Expected %s value but got %s", TypeNames[e.e], TypeNames[e.t])
 }
 
 type missingValueError struct {
@@ -149,8 +150,8 @@ func newMapperArgumentTypeError(t int) error {
 
 func (e *mapperArgumentTypeError) Error() string {
 	return fmt.Sprintf("Expected %s, %s or %s as argument but got %s",
-		typeNames[typeString], typeNames[typeSetOfStrings], typeNames[typeListOfStrings],
-		typeNames[e.t])
+		TypeNames[TypeString], TypeNames[TypeSetOfStrings], TypeNames[TypeListOfStrings],
+		TypeNames[e.t])
 }
 
 type missingContentError struct {
@@ -181,6 +182,25 @@ func newMissingContentItemError(src string) error {
 
 func (e *missingContentItemError) Error() string {
 	return e.errorf("Missing content item")
+}
+
+type invalidContentItemError struct {
+	errorLink
+	e int
+	t int
+}
+
+func newInvalidContentItemError(e, t int, src string) error {
+	return &invalidContentItemError{
+		errorLink: errorLink{
+			id:   invalidContentItemErrorID,
+			path: []string{src}},
+		e: e,
+		t: t}
+}
+
+func (e *invalidContentItemError) Error() string {
+	return e.errorf("Invalid conent item type. Expected %q but got %q", TypeNames[e.e], TypeNames[e.t])
 }
 
 type finalContentSubitemError struct {

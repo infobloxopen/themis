@@ -3,7 +3,7 @@ package pdp
 import "testing"
 
 func TestAttribute(t *testing.T) {
-	a := attribute{id: "test", t: typeString}
+	a := Attribute{id: "test", t: TypeString}
 
 	err := a.newMissingError()
 	if err == nil {
@@ -16,7 +16,7 @@ func TestAttribute(t *testing.T) {
 	}
 }
 
-func assertStringValue(v attributeValue, err error, e string, desc string, t *testing.T) {
+func assertStringValue(v AttributeValue, err error, e string, desc string, t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error for %s but got %s", desc, err)
 		return

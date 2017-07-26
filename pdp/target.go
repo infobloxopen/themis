@@ -1,26 +1,30 @@
 package pdp
 
-type match struct {
-	m expression
+type Match struct {
+	m Expression
 }
 
-type allOf struct {
-	m []match
+type AllOf struct {
+	m []Match
 }
 
-type anyOf struct {
-	a []allOf
+type AnyOf struct {
+	a []AllOf
 }
 
-type target struct {
-	a []anyOf
+type Target struct {
+	a []AnyOf
 }
 
-func (m match) describe() string {
+func MakeMatch(e Expression) Match {
+	return Match{m: e}
+}
+
+func (m Match) describe() string {
 	return "match"
 }
 
-func (m match) calculate(ctx *Context) (bool, error) {
+func (m Match) calculate(ctx *Context) (bool, error) {
 	v, err := ctx.calculateBooleanExpression(m.m)
 	if err != nil {
 		return false, bindError(err, m.describe())
@@ -29,11 +33,15 @@ func (m match) calculate(ctx *Context) (bool, error) {
 	return v, nil
 }
 
-func (a allOf) describe() string {
+func MakeAllOf() AllOf {
+	return AllOf{m: []Match{}}
+}
+
+func (a AllOf) describe() string {
 	return "all"
 }
 
-func (a allOf) calculate(ctx *Context) (bool, error) {
+func (a AllOf) calculate(ctx *Context) (bool, error) {
 	for _, e := range a.m {
 		v, err := e.calculate(ctx)
 		if err != nil {
@@ -48,11 +56,19 @@ func (a allOf) calculate(ctx *Context) (bool, error) {
 	return true, nil
 }
 
-func (a anyOf) describe() string {
+func (a *AllOf) Append(item Match) {
+	a.m = append(a.m, item)
+}
+
+func MakeAnyOf() AnyOf {
+	return AnyOf{a: []AllOf{}}
+}
+
+func (a AnyOf) describe() string {
 	return "any"
 }
 
-func (a anyOf) calculate(ctx *Context) (bool, error) {
+func (a AnyOf) calculate(ctx *Context) (bool, error) {
 	for _, e := range a.a {
 		v, err := e.calculate(ctx)
 		if err != nil {
@@ -67,11 +83,19 @@ func (a anyOf) calculate(ctx *Context) (bool, error) {
 	return false, nil
 }
 
-func (t target) describe() string {
+func (a *AnyOf) Append(item AllOf) {
+	a.a = append(a.a, item)
+}
+
+func MakeTarget() Target {
+	return Target{a: []AnyOf{}}
+}
+
+func (t Target) describe() string {
 	return "target"
 }
 
-func (t target) calculate(ctx *Context) (bool, boundError) {
+func (t Target) calculate(ctx *Context) (bool, boundError) {
 	for _, e := range t.a {
 		v, err := e.calculate(ctx)
 		if err != nil {
@@ -84,6 +108,10 @@ func (t target) calculate(ctx *Context) (bool, boundError) {
 	}
 
 	return true, nil
+}
+
+func (t *Target) Append(item AnyOf) {
+	t.a = append(t.a, item)
 }
 
 func makeMatchStatus(err boundError, effect int) Response {
@@ -113,3 +141,21 @@ func combineEffectAndStatus(err boundError, r Response) Response {
 
 	return Response{EffectIndeterminateDP, err, nil}
 }
+
+type twoArgumentsFunctionType func(first, second Expression) Expression
+
+var TargetCompatibleExpressions = map[string]map[int]map[int]twoArgumentsFunctionType{
+	"equal": {
+		TypeString: {
+			TypeString: makeFunctionStringEqual}},
+	"contains": {
+		TypeString: {
+			TypeString: makeFunctionStringContains},
+		TypeNetwork: {
+			TypeAddress: makeFunctionNetworkContainsAddress},
+		TypeSetOfStrings: {
+			TypeString: makeFunctionSetOfStringsContains},
+		TypeSetOfNetworks: {
+			TypeAddress: makeFunctionSetOfNetworksContainsAddress},
+		TypeSetOfDomains: {
+			TypeDomain: makeFunctionSetOfDomainsContains}}}

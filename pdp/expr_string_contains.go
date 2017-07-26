@@ -1,17 +1,38 @@
 package pdp
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type functionStringContains struct {
-	str    expression
-	substr expression
+	str    Expression
+	substr Expression
+}
+
+func makeFunctionStringContains(str, substr Expression) Expression {
+	return functionStringContains{
+		str:    str,
+		substr: substr}
+}
+
+func makeFunctionStringContainsAlt(args []Expression) Expression {
+	if len(args) != 2 {
+		panic(fmt.Errorf("String function \"contains\" needs exactly two arguments but got %d", len(args)))
+	}
+
+	return makeFunctionStringContains(args[0], args[1])
+}
+
+func (f functionStringContains) GetResultType() int {
+	return TypeBoolean
 }
 
 func (f functionStringContains) describe() string {
 	return "contains"
 }
 
-func (f functionStringContains) calculate(ctx *Context) (attributeValue, error) {
+func (f functionStringContains) calculate(ctx *Context) (AttributeValue, error) {
 	str, err := ctx.calculateStringExpression(f.str)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "string argument"), f.describe())
@@ -22,5 +43,13 @@ func (f functionStringContains) calculate(ctx *Context) (attributeValue, error) 
 		return undefinedValue, bindError(bindError(err, "substring argument"), f.describe())
 	}
 
-	return makeBooleanValue(strings.Contains(str, substr)), nil
+	return MakeBooleanValue(strings.Contains(str, substr)), nil
+}
+
+func functionStringContainsValidator(args []Expression) functionMaker {
+	if len(args) != 2 || args[0].GetResultType() != TypeString || args[1].GetResultType() != TypeString {
+		return nil
+	}
+
+	return makeFunctionStringContainsAlt
 }

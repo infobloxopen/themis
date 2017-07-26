@@ -1,15 +1,35 @@
 package pdp
 
+import "fmt"
+
 type functionStringEqual struct {
-	first  expression
-	second expression
+	first  Expression
+	second Expression
+}
+
+func makeFunctionStringEqual(first, second Expression) Expression {
+	return functionStringEqual{
+		first:  first,
+		second: second}
+}
+
+func makeFunctionStringEqualAlt(args []Expression) Expression {
+	if len(args) != 2 {
+		panic(fmt.Errorf("String function \"equal\" needs exactly two arguments but got %d", len(args)))
+	}
+
+	return makeFunctionStringEqual(args[0], args[1])
+}
+
+func (f functionStringEqual) GetResultType() int {
+	return TypeBoolean
 }
 
 func (f functionStringEqual) describe() string {
 	return "equal"
 }
 
-func (f functionStringEqual) calculate(ctx *Context) (attributeValue, error) {
+func (f functionStringEqual) calculate(ctx *Context) (AttributeValue, error) {
 	first, err := ctx.calculateStringExpression(f.first)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())
@@ -20,5 +40,13 @@ func (f functionStringEqual) calculate(ctx *Context) (attributeValue, error) {
 		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 
-	return makeBooleanValue(first == second), nil
+	return MakeBooleanValue(first == second), nil
+}
+
+func functionStringEqualValidator(args []Expression) functionMaker {
+	if len(args) != 2 || args[0].GetResultType() != TypeString || args[1].GetResultType() != TypeString {
+		return nil
+	}
+
+	return makeFunctionStringEqualAlt
 }

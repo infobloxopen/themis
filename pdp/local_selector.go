@@ -7,17 +7,30 @@ import (
 	"github.com/infobloxopen/go-trees/strtree"
 )
 
-type localSelector struct {
+type LocalSelector struct {
 	content string
 	item    string
-	path    []expression
+	path    []Expression
+	t       int
 }
 
-func (s localSelector) describe() string {
+func MakeLocalSelector(content, item string, path []Expression, t int) LocalSelector {
+	return LocalSelector{
+		content: content,
+		item:    item,
+		path:    path,
+		t:       t}
+}
+
+func (s LocalSelector) GetResultType() int {
+	return s.t
+}
+
+func (s LocalSelector) describe() string {
 	return fmt.Sprintf("selector(%s.%s)", s.content, s.item)
 }
 
-func (s localSelector) calculate(ctx *Context) (attributeValue, error) {
+func (s LocalSelector) calculate(ctx *Context) (AttributeValue, error) {
 	v, ok := ctx.c.Get(s.content)
 	if !ok {
 		return undefinedValue, newMissingContentError(s.describe())
@@ -37,6 +50,10 @@ func (s localSelector) calculate(ctx *Context) (attributeValue, error) {
 	if !ok {
 		panic(fmt.Errorf("Local selector: Invalid content item %s.%s (expected ContentItem but git %T)",
 			s.content, s.item, v))
+	}
+
+	if s.t != item.t {
+		return undefinedValue, newInvalidContentItemError(s.t, item.t, s.describe())
 	}
 
 	subItem := item.r

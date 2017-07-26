@@ -6,20 +6,49 @@ type policyCombiningAlg interface {
 	execute(rules []Evaluable, ctx *Context) Response
 }
 
+type PolicyCombiningAlgMaker func(policies []Evaluable, params interface{}) policyCombiningAlg
+
+var (
+	firstApplicableEffectPCAInstance = firstApplicableEffectPCA{}
+	denyOverridesPCAInstance         = denyOverridesPCA{}
+
+	PolicyCombiningAlgs = map[string]PolicyCombiningAlgMaker{
+		"firstapplicableeffect": makeFirstApplicableEffectPCA,
+		"denyoverrides":         makeDenyOverridesPCA}
+
+	PolicyCombiningParamAlgs = map[string]PolicyCombiningAlgMaker{
+		"mapper": makeMapperPCA}
+)
+
 type PolicySet struct {
 	id          string
-	target      target
+	hidden      bool
+	target      Target
 	policies    []Evaluable
-	obligations []attributeAssignmentExpression
+	obligations []AttributeAssignmentExpression
 	algorithm   policyCombiningAlg
 }
 
-func (p *PolicySet) describe() string {
-	return fmt.Sprintf("policy %q", p.id)
+func NewPolicySet(ID string, hidden bool, target Target, policies []Evaluable, makePCA PolicyCombiningAlgMaker, params interface{}, obligations []AttributeAssignmentExpression) *PolicySet {
+	return &PolicySet{
+		id:          ID,
+		hidden:      hidden,
+		target:      target,
+		policies:    policies,
+		obligations: obligations,
+		algorithm:   makePCA(policies, params)}
 }
 
-func (p *PolicySet) GetID() string {
-	return p.id
+func (p *PolicySet) describe() string {
+	if pid, ok := p.GetID(); ok {
+		return fmt.Sprintf("policy set %q", pid)
+	}
+
+	return "hidden policy set"
+}
+
+func (p *PolicySet) GetID() (string, bool) {
+	return p.id, !p.hidden
 }
 
 func (p *PolicySet) Calculate(ctx *Context) Response {
@@ -51,6 +80,10 @@ func (p *PolicySet) Calculate(ctx *Context) Response {
 type firstApplicableEffectPCA struct {
 }
 
+func makeFirstApplicableEffectPCA(policies []Evaluable, params interface{}) policyCombiningAlg {
+	return firstApplicableEffectPCAInstance
+}
+
 func (a firstApplicableEffectPCA) execute(policies []Evaluable, ctx *Context) Response {
 	for _, p := range policies {
 		r := p.Calculate(ctx)
@@ -65,13 +98,17 @@ func (a firstApplicableEffectPCA) execute(policies []Evaluable, ctx *Context) Re
 type denyOverridesPCA struct {
 }
 
+func makeDenyOverridesPCA(policies []Evaluable, params interface{}) policyCombiningAlg {
+	return denyOverridesPCAInstance
+}
+
 func (a denyOverridesPCA) describe() string {
 	return "deny overrides"
 }
 
 func (a denyOverridesPCA) execute(policies []Evaluable, ctx *Context) Response {
 	errs := []error{}
-	obligations := make([]attributeAssignmentExpression, 0)
+	obligations := make([]AttributeAssignmentExpression, 0)
 
 	indetD := 0
 	indetP := 0

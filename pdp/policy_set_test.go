@@ -4,21 +4,23 @@ import "testing"
 
 func TestPolicySet(t *testing.T) {
 	c := &Context{
-		a: map[string]map[int]attributeValue{
+		a: map[string]map[int]AttributeValue{
 			"missing-type": {
-				typeBoolean: makeBooleanValue(false)},
+				TypeBoolean: MakeBooleanValue(false)},
 			"test-string": {
-				typeString: makeStringValue("test")},
+				TypeString: MakeStringValue("test")},
 			"example-string": {
-				typeString: makeStringValue("example")}}}
+				TypeString: MakeStringValue("example")}}}
 
 	testID := "Test Policy"
 
 	p := PolicySet{
 		id:        testID,
 		algorithm: firstApplicableEffectPCA{}}
-	ID := p.GetID()
-	if ID != testID {
+	ID, ok := p.GetID()
+	if !ok {
+		t.Errorf("Expected policy set ID %q but got hidden policy set", testID)
+	} else if ID != testID {
 		t.Errorf("Expected policy set ID %q but got %q", testID, ID)
 	}
 
@@ -39,7 +41,7 @@ func TestPolicySet(t *testing.T) {
 			effectNames[EffectNotApplicable], effectNames[r.Effect])
 	}
 
-	_, ok := r.status.(*missingAttributeError)
+	_, ok = r.status.(*missingAttributeError)
 	if !ok {
 		t.Errorf("Expected missing attribute status for policy set with FirstApplicableEffectPCA and "+
 			"not found attribute but got %T (%s)", r.status, r.status)
@@ -84,7 +86,7 @@ func TestPolicySet(t *testing.T) {
 		target: makeSimpleStringTarget("test-string", "test"),
 		policies: []Evaluable{
 			&Policy{
-				rules:     []*rule{{effect: EffectPermit}},
+				rules:     []*Rule{{effect: EffectPermit}},
 				algorithm: firstApplicableEffectRCA{}}},
 		obligations: makeSingleStringObligation("obligation", "test"),
 		algorithm:   firstApplicableEffectPCA{}}
@@ -102,35 +104,36 @@ func TestPolicySet(t *testing.T) {
 
 	defaultPolicy := &Policy{
 		id:        "Default",
-		rules:     []*rule{{effect: EffectDeny}},
+		rules:     []*Rule{{effect: EffectDeny}},
 		algorithm: firstApplicableEffectRCA{}}
 	errorPolicy := &Policy{
 		id:        "Error",
-		rules:     []*rule{{effect: EffectDeny}},
+		rules:     []*Rule{{effect: EffectDeny}},
 		algorithm: firstApplicableEffectRCA{}}
 	permitPolicy := &Policy{
 		id:        "Permit",
-		rules:     []*rule{{effect: EffectPermit}},
+		rules:     []*Rule{{effect: EffectPermit}},
 		algorithm: firstApplicableEffectRCA{}}
 	p = PolicySet{
 		id:       testID,
 		policies: []Evaluable{defaultPolicy, errorPolicy, permitPolicy},
-		algorithm: mapperPCA{
-			argument: attributeDesignator{
-				a: attribute{id: "x", t: typeSetOfStrings}},
-			policies: map[string]Evaluable{
-				"Default": defaultPolicy,
-				"Error":   errorPolicy,
-				"Permit":  permitPolicy},
-			def: defaultPolicy,
-			err: errorPolicy,
-			algorithm: mapperPCA{
-				argument: attributeDesignator{a: attribute{id: "y", t: typeString}}}}}
+		algorithm: makeMapperPCA(
+			[]Evaluable{defaultPolicy, errorPolicy, permitPolicy},
+			MapperPCAParams{
+				Argument:  AttributeDesignator{a: Attribute{id: "x", t: TypeSetOfStrings}},
+				DefOk:     true,
+				Def:       "Default",
+				ErrOk:     true,
+				Err:       "Error",
+				Algorithm: makeMapperPCA(
+					nil,
+					MapperPCAParams{
+						Argument: AttributeDesignator{a: Attribute{id: "y", t: TypeString}}})})}
 
 	c = &Context{
-		a: map[string]map[int]attributeValue{
-			"x": {typeSetOfStrings: makeSetOfStringsValue(newStrTree("Permit", "Default"))},
-			"y": {typeString: makeStringValue("Permit")}}}
+		a: map[string]map[int]AttributeValue{
+			"x": {TypeSetOfStrings: MakeSetOfStringsValue(newStrTree("Permit", "Default"))},
+			"y": {TypeString: MakeStringValue("Permit")}}}
 
 	r = p.Calculate(c)
 	if r.Effect != EffectPermit {
@@ -144,9 +147,9 @@ func TestPolicySet(t *testing.T) {
 	}
 
 	c = &Context{
-		a: map[string]map[int]attributeValue{
-			"x": {typeSetOfStrings: makeSetOfStringsValue(newStrTree("Permit", "Default"))},
-			"y": {typeSetOfStrings: makeSetOfStringsValue(newStrTree("Permit", "Default"))}}}
+		a: map[string]map[int]AttributeValue{
+			"x": {TypeSetOfStrings: MakeSetOfStringsValue(newStrTree("Permit", "Default"))},
+			"y": {TypeSetOfStrings: MakeSetOfStringsValue(newStrTree("Permit", "Default"))}}}
 
 	r = p.Calculate(c)
 	if r.Effect != EffectIndeterminate {
