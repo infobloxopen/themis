@@ -163,6 +163,14 @@ func (r *NewLocalResponseWriter) LocalAddr() net.Addr       { return r.localAddr
 func (r *NewLocalResponseWriter) RemoteAddr() net.Addr      { return r.remoteAddr }
 func (r *NewLocalResponseWriter) WriteMsg(m *dns.Msg) error { r.Msg = m; return nil }
 
+func (p *PolicyMiddleware) retNxdomain(w dns.ResponseWriter, r *dns.Msg) (int, error) {
+	msg := &dns.Msg{}
+	msg.SetReply(r)
+	msg.SetRcode(r, dns.RcodeNameError)
+	w.WriteMsg(msg)
+	return dns.RcodeNameError, nil
+}
+
 func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, attrs []*pb.Attribute) (int, error) {
 	lw := new(NewLocalResponseWriter)
 	status, err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lw, r)
@@ -199,7 +207,7 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 		return p.redirect(lresponse.Redirect, lw, lw.Msg, ctx)
 	}
 
-	return dns.RcodeNameError, nil
+	return p.retNxdomain(w, r)
 }
 
 func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
@@ -241,7 +249,7 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 		return p.redirect(response.Redirect, w, r, ctx)
 	}
 
-	return dns.RcodeNameError, nil
+	return p.retNxdomain(w, r)
 }
 
 // Name implements the Handler interface
