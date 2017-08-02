@@ -19,7 +19,7 @@ func (ctx *context) unmarshalAttributeDeclaration(k, v interface{}) boundError {
 
 	t, ok := pdp.TypeIDs[strings.ToLower(strT)]
 	if !ok {
-		return newAttributeTypeError(strT, ID)
+		return bindError(newAttributeTypeError(strT), ID)
 	}
 
 	ctx.attrs[ID] = pdp.MakeAttribute(ID, t)

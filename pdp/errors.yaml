@@ -1,0 +1,101 @@
+package: pdp
+
+import:
+  - strings
+
+errors:
+- id: externalError
+  fields:
+  - id: err
+    type: error
+  msg: "%s"
+  args:
+  - field: err
+
+- id: multiError
+  fields:
+  - id: errs
+    type: "[]error"
+  msg: "multiple errors: %s"
+  args:
+  - snippet:
+      result: msg
+      code: |
+        msgs := make([]string, len(e.errs))
+        for i, err := range e.errs {
+        	msgs[i] = err.Error()
+        }
+        msg := strings.Join(msgs, ", ")
+
+- id: missingAttributeError
+  msg: "Missing attribute"
+
+- id: missingValueError
+  msg: "Missing value"
+
+- id: attributeValueTypeError
+  fields:
+  - id: expected
+    type: int
+  - id: actual
+    type: int
+  msg: "Expected %s value but got %s"
+  args:
+  - expr: TypeNames[e.expected]
+  - expr: TypeNames[e.actual]
+
+- id: mapperArgumentTypeError
+  fields:
+  - id: actual
+    type: int
+  msg: "Expected %s, %s or %s as argument but got %s"
+  args:
+  - expr: TypeNames[TypeString]
+  - expr: TypeNames[TypeSetOfStrings]
+  - expr: TypeNames[TypeListOfStrings]
+  - expr: TypeNames[e.actual]
+
+- id: missingContentError
+  msg: "Missing content"
+
+- id: missingContentItemError
+  msg: "Missing content item"
+
+- id: invalidContentItemTypeError
+  fields:
+  - id: expected
+    type: int
+  - id: actual
+    type: int
+  msg: "Invalid conent item type. Expected %q but got %q"
+  args:
+  - expr: TypeNames[e.expected]
+  - expr: TypeNames[e.actual]
+
+- id: invalidSelectorPathError
+  fields:
+  - id: expected
+    type: "[]int"
+  - id: actual
+    type: "[]Expression"
+  msg: "Invalid selector path. Expected %s but got %s"
+  args:
+  - snippet:
+      result: expected
+      code: |
+        expStrs := make([]string, len(e.expected))
+        for i, t := range e.expected {
+        	expStrs[i] = TypeNames[t]
+        }
+        expected := strings.Join(expStrs, "/")
+  - snippet:
+      result: actual
+      code: |
+        actStrs := make([]string, len(e.actual))
+        for i, e := range e.actual {
+        	actStrs[i] = TypeNames[e.GetResultType()]
+        }
+        actual := strings.Join(actStrs, "/")
+
+- id: mapContentSubitemError
+  msg: "Not a map of the content"

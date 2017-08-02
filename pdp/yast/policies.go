@@ -339,7 +339,7 @@ func (ctx context) unmarshalItem(v interface{}, i int) (pdp.Evaluable, boundErro
 	policies, pOk := m[yastTagPolicies]
 
 	if rOk && pOk {
-		return nil, newPolicyAmbiguityError(src)
+		return nil, bindError(newPolicyAmbiguityError(), src)
 	}
 
 	if rOk {
@@ -350,7 +350,7 @@ func (ctx context) unmarshalItem(v interface{}, i int) (pdp.Evaluable, boundErro
 		return ctx.unmarshalPolicySet(m, i, ID, !ok, policies)
 	}
 
-	return nil, newPolicyMissingKeyError(src)
+	return nil, bindError(newPolicyMissingKeyError(), src)
 }
 
 func (ctx context) unmarshalRootPolicy(m map[interface{}]interface{}) (pdp.Evaluable, boundError) {

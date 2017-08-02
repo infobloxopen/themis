@@ -37,13 +37,13 @@ policies:
 `
 )
 
-func TestUnmarshalYAST(t *testing.T) {
-	_, err := UnmarshalYAST([]byte(invalidYAML))
+func TestUnmarshal(t *testing.T) {
+	_, err := Unmarshal([]byte(invalidYAML))
 	if err == nil {
 		t.Errorf("Expected error for invalid YAML but got nothing")
 	}
 
-	_, err = UnmarshalYAST([]byte(invalidRootKeysPolicy))
+	_, err = Unmarshal([]byte(invalidRootKeysPolicy))
 	if err == nil {
 		t.Errorf("Expected error for policy with invalid keys but got nothing")
 	} else {
@@ -53,7 +53,7 @@ func TestUnmarshalYAST(t *testing.T) {
 		}
 	}
 
-	v, err := UnmarshalYAST([]byte(simpleAllPermitPolicy))
+	v, err := Unmarshal([]byte(simpleAllPermitPolicy))
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {

@@ -148,7 +148,7 @@ func (a denyOverridesPCA) execute(policies []Evaluable, ctx *Context) Response {
 
 	var err boundError
 	if len(errs) > 1 {
-		err = mewMultiError(errs, a.describe())
+		err = bindError(newMultiError(errs), a.describe())
 	} else if len(errs) > 0 {
 		err = bindError(errs[0], a.describe())
 	}

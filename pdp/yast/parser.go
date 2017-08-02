@@ -33,7 +33,7 @@ const (
 	yastTagDenyOverridesAlg         = "denyoverrides"
 )
 
-func UnmarshalYAST(in []byte) (pdp.Evaluable, error) {
+func Unmarshal(in []byte) (pdp.Evaluable, error) {
 	m := make(map[interface{}]interface{})
 	err := yaml.Unmarshal(in, &m)
 	if err != nil {

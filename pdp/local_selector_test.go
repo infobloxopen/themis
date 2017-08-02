@@ -11,7 +11,7 @@ func TestLocalSelector(t *testing.T) {
 	csmt.InplaceInsert("test-key", "test-value")
 	csm := contentStringMap{csmt}
 	cit := strtree.NewTree()
-	cit.InplaceInsert("test-item", contentItem{r: csm, t: TypeString})
+	cit.InplaceInsert("test-item", ContentItem{r: csm, t: TypeString, k: []int{TypeString}})
 	ct := strtree.NewTree()
 	ct.InplaceInsert("test-content", cit)
 

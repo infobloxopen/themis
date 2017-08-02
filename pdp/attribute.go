@@ -70,7 +70,7 @@ func (a Attribute) describe() string {
 }
 
 func (a Attribute) newMissingError() error {
-	return newMissingAttributeError(a.describe())
+	return bindError(newMissingAttributeError(), a.describe())
 }
 
 type AttributeValue struct {
@@ -210,7 +210,7 @@ func (v AttributeValue) describe() string {
 
 func (v AttributeValue) typeCheck(t int) error {
 	if v.t != t {
-		return newAttributeValueTypeError(t, v.t, v.describe())
+		return bindError(newAttributeValueTypeError(t, v.t), v.describe())
 	}
 
 	return nil

@@ -124,7 +124,7 @@ func makeMatchStatus(err boundError, effect int) Response {
 
 func combineEffectAndStatus(err boundError, r Response) Response {
 	if r.status != nil {
-		err = newNoSrcMultiError(err, r.status)
+		err = newMultiError([]error{err, r.status})
 	}
 
 	if r.Effect == EffectNotApplicable {

@@ -117,11 +117,11 @@ func TestPolicy(t *testing.T) {
 		algorithm: makeMapperRCA(
 			[]*Rule{defaultRule, errorRule, permitRule},
 			MapperRCAParams{
-				Argument:  AttributeDesignator{a: Attribute{id: "x", t: TypeSetOfStrings}},
-				DefOk:     true,
-				Def:       "Default",
-				ErrOk:     true,
-				Err:       "Error",
+				Argument: AttributeDesignator{a: Attribute{id: "x", t: TypeSetOfStrings}},
+				DefOk:    true,
+				Def:      "Default",
+				ErrOk:    true,
+				Err:      "Error",
 				Algorithm: makeMapperRCA(
 					nil,
 					MapperRCAParams{Argument: AttributeDesignator{a: Attribute{id: "y", t: TypeString}}})})}

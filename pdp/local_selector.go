@@ -2,7 +2,6 @@ package pdp
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/infobloxopen/go-trees/strtree"
 )
@@ -33,7 +32,7 @@ func (s LocalSelector) describe() string {
 func (s LocalSelector) calculate(ctx *Context) (AttributeValue, error) {
 	v, ok := ctx.c.Get(s.content)
 	if !ok {
-		return undefinedValue, newMissingContentError(s.describe())
+		return undefinedValue, bindError(newMissingContentError(), s.describe())
 	}
 
 	items, ok := v.(*strtree.Tree)
@@ -43,42 +42,27 @@ func (s LocalSelector) calculate(ctx *Context) (AttributeValue, error) {
 
 	v, ok = items.Get(s.item)
 	if !ok {
-		return undefinedValue, newMissingContentItemError(s.describe())
+		return undefinedValue, bindError(newMissingContentItemError(), s.describe())
 	}
 
-	item, ok := v.(contentItem)
+	item, ok := v.(ContentItem)
 	if !ok {
-		panic(fmt.Errorf("Local selector: Invalid content item %s.%s (expected ContentItem but git %T)",
+		panic(fmt.Errorf("Local selector: Invalid content item %s.%s (expected ContentItem but got %T)",
 			s.content, s.item, v))
 	}
 
 	if s.t != item.t {
-		return undefinedValue, newInvalidContentItemError(s.t, item.t, s.describe())
+		return undefinedValue, bindError(newInvalidContentItemTypeError(s.t, item.t), s.describe())
 	}
 
-	subItem := item.r
-
-	path := []string{""}
-	for _, e := range s.path {
-		key, err := e.calculate(ctx)
-		if err != nil {
-			return undefinedValue, bindError(bindError(err, strings.Join(path, "/")), s.describe())
-		}
-
-		path = append(path, key.describe())
-
-		subItem, err = subItem.next(key)
-		if err != nil {
-			return undefinedValue, bindError(bindError(err, strings.Join(path, "/")), s.describe())
-		}
-	}
-
-	r, err := subItem.getValue(item.t)
+	r, err := item.get(s.path, ctx)
 	if err != nil {
-		if len(s.path) > 0 {
-			err = bindError(err, strings.Join(path, "/"))
-		}
 		return undefinedValue, bindError(err, s.describe())
+	}
+
+	t := r.GetResultType()
+	if t != s.t {
+		return undefinedValue, bindError(newInvalidContentItemTypeError(s.t, t), s.describe())
 	}
 
 	return r, nil

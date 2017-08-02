@@ -51,7 +51,7 @@ func (ctx context) unmarshalRule(m map[interface{}]interface{}, i int) (*pdp.Rul
 
 	effect, ok := pdp.EffectIDs[strings.ToLower(s)]
 	if !ok {
-		return nil, newUnknownEffectError(s, src)
+		return nil, bindError(newUnknownEffectError(s), src)
 	}
 
 	obls, err := ctx.unmarshalObligations(m)

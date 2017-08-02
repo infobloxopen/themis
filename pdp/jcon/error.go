@@ -1,6 +1,6 @@
-package yast
+package jcon
 
-//go:generate bash -c "(egen -i $GOPATH/src/github.com/infobloxopen/themis/pdp/yast/errors.yaml > $GOPATH/src/github.com/infobloxopen/themis/pdp/yast/errors.go) && gofmt -l -s -w $GOPATH/src/github.com/infobloxopen/themis/pdp/yast/errors.go"
+//go:generate bash -c "(egen -i $GOPATH/src/github.com/infobloxopen/themis/pdp/jcon/errors.yaml > $GOPATH/src/github.com/infobloxopen/themis/pdp/jcon/errors.go) && gofmt -l -s -w $GOPATH/src/github.com/infobloxopen/themis/pdp/jcon/errors.go"
 
 import (
 	"fmt"
@@ -31,11 +31,7 @@ type errorLink struct {
 
 func (e *errorLink) errorf(format string, args ...interface{}) string {
 	msg := fmt.Sprintf(format, args...)
-	if len(e.path) > 0 {
-		return fmt.Sprintf("#%02x (%s): %s", e.id, strings.Join(e.path, errorSourcePathSeparator), msg)
-	}
-
-	return fmt.Sprintf("#%02x: %s", e.id, msg)
+	return fmt.Sprintf("#%02x (%s): %s", e.id, strings.Join(e.path, errorSourcePathSeparator), msg)
 }
 
 func (e *errorLink) bind(src string) {

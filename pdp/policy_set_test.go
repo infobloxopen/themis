@@ -120,11 +120,11 @@ func TestPolicySet(t *testing.T) {
 		algorithm: makeMapperPCA(
 			[]Evaluable{defaultPolicy, errorPolicy, permitPolicy},
 			MapperPCAParams{
-				Argument:  AttributeDesignator{a: Attribute{id: "x", t: TypeSetOfStrings}},
-				DefOk:     true,
-				Def:       "Default",
-				ErrOk:     true,
-				Err:       "Error",
+				Argument: AttributeDesignator{a: Attribute{id: "x", t: TypeSetOfStrings}},
+				DefOk:    true,
+				Def:      "Default",
+				ErrOk:    true,
+				Err:      "Error",
 				Algorithm: makeMapperPCA(
 					nil,
 					MapperPCAParams{
