@@ -77,6 +77,162 @@ func (p *PolicySet) Calculate(ctx *Context) Response {
 	return r
 }
 
+func (p *PolicySet) Append(path []string, v interface{}) (Evaluable, error) {
+	if p.hidden {
+		return p, newHiddenPolicySetModificationError()
+	}
+
+	if len(path) > 0 {
+		ID := path[0]
+
+		child, err := p.getChild(ID)
+		if err != nil {
+			return p, bindError(err, p.id)
+		}
+
+		child, err = child.Append(path[1:], v)
+		if err != nil {
+			return p, bindError(err, p.id)
+		}
+
+		return p.putChild(child), nil
+	}
+
+	child, ok := v.(Evaluable)
+	if !ok {
+		return p, bindError(newInvalidPolicySetItemTypeError(v), p.id)
+	}
+
+	_, ok = child.GetID()
+	if !ok {
+		return p, bindError(newHiddenPolicyAppendError(), p.id)
+	}
+
+	return p.putChild(child), nil
+}
+
+func (p *PolicySet) Delete(path []string) (Evaluable, error) {
+	if p.hidden {
+		return p, newHiddenPolicySetModificationError()
+	}
+
+	if len(path) <= 0 {
+		return p, bindError(newTooShortPathPolicySetModificationError(), p.id)
+	}
+
+	ID := path[0]
+
+	if len(path) > 1 {
+		child, err := p.getChild(ID)
+		if err != nil {
+			return p, bindError(err, p.id)
+		}
+
+		child, err = child.Delete(path[1:])
+		if err != nil {
+			return p, bindError(err, p.id)
+		}
+
+		return p.putChild(child), nil
+	}
+
+	r, err := p.delChild(ID)
+	if err != nil {
+		return p, bindError(err, p.id)
+	}
+
+	return r, nil
+}
+
+func (p *PolicySet) getChild(ID string) (Evaluable, error) {
+	for _, child := range p.policies {
+		if pID, ok := child.GetID(); ok && pID == ID {
+			return child, nil
+		}
+	}
+
+	return nil, newMissingPolicySetChildError(ID)
+}
+
+func (p *PolicySet) putChild(child Evaluable) Evaluable {
+	ID, _ := child.GetID()
+
+	for i, old := range p.policies {
+		if pID, ok := old.GetID(); ok && pID == ID {
+			policies := []Evaluable{}
+			if i > 0 {
+				policies = append(policies, p.policies[:i]...)
+			}
+
+			policies = append(policies, child)
+
+			if i+1 < len(p.policies) {
+				policies = append(policies, p.policies[i+1:]...)
+			}
+
+			algorithm := p.algorithm
+			if m, ok := algorithm.(mapperPCA); ok {
+				algorithm = m.add(ID, child, old)
+			}
+
+			return &PolicySet{
+				id:          p.id,
+				target:      p.target,
+				policies:    policies,
+				obligations: p.obligations,
+				algorithm:   algorithm}
+		}
+	}
+
+	policies := p.policies
+	if policies == nil {
+		policies = []Evaluable{child}
+	} else {
+		policies = append(policies, child)
+	}
+
+	algorithm := p.algorithm
+	if m, ok := algorithm.(mapperPCA); ok {
+		algorithm = m.add(ID, child, nil)
+	}
+
+	return &PolicySet{
+		id:          p.id,
+		target:      p.target,
+		policies:    policies,
+		obligations: p.obligations,
+		algorithm:   algorithm}
+}
+
+func (p *PolicySet) delChild(ID string) (Evaluable, error) {
+	for i, old := range p.policies {
+		if pID, ok := old.GetID(); ok && pID == ID {
+			policies := []Evaluable{}
+			if i > 0 {
+				policies = append(policies, p.policies[:i]...)
+			}
+
+			if i+1 < len(p.policies) {
+				policies = append(policies, p.policies[i+1:]...)
+			}
+
+			algorithm := p.algorithm
+			if m, ok := algorithm.(mapperPCA); ok {
+				algorithm = m.del(ID, old)
+			}
+
+			return &PolicySet{
+				id:          p.id,
+				target:      p.target,
+				policies:    policies,
+				obligations: p.obligations,
+				algorithm:   algorithm}, nil
+		}
+	}
+
+	return nil, newMissingPolicySetChildError(ID)
+}
+
 type firstApplicableEffectPCA struct {
 }
 

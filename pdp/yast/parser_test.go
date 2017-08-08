@@ -3,6 +3,8 @@ package yast
 import (
 	"testing"
 
+	"github.com/satori/go.uuid"
+
 	"github.com/infobloxopen/themis/pdp"
 )
 
@@ -35,15 +37,59 @@ policies:
   rules:
   - effect: Permit
 `
+
+	simpleUpdate = `# Simple several commands update
+- op: add
+  path:
+  - path
+  - to
+  - parent policy set
+  entity:
+    id: Policy Set
+    alg: FirstApplicableEffect
+    policies:
+    - id: Permit Policy
+      alg: FirstApplicableEffect
+      rules:
+      - id: Permit Rule
+        effect: permit
+
+- op: add
+  path:
+  - path
+  - to
+  - parent policy set
+  entity:
+    id: Policy
+    alg: FirstApplicableEffect
+    rules:
+    - id: Permit Rule
+      effect: permit
+
+- op: add
+  path:
+  - path
+  - to
+  - parent policy
+  entity:
+    id: Permit Rule
+    effect: permit
+
+- op: delete
+  path:
+  - path
+  - to
+  - useless policy
+`
 )
 
 func TestUnmarshal(t *testing.T) {
-	_, err := Unmarshal([]byte(invalidYAML))
+	_, err := Unmarshal([]byte(invalidYAML), nil)
 	if err == nil {
 		t.Errorf("Expected error for invalid YAML but got nothing")
 	}
 
-	_, err = Unmarshal([]byte(invalidRootKeysPolicy))
+	_, err = Unmarshal([]byte(invalidRootKeysPolicy), nil)
 	if err == nil {
 		t.Errorf("Expected error for policy with invalid keys but got nothing")
 	} else {
@@ -53,11 +99,11 @@ func TestUnmarshal(t *testing.T) {
 		}
 	}
 
-	v, err := Unmarshal([]byte(simpleAllPermitPolicy))
+	s, err := Unmarshal([]byte(simpleAllPermitPolicy), nil)
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
-		p, ok := v.(*pdp.Policy)
+		p, ok := s.Root().(*pdp.Policy)
 		if !ok {
 			t.Errorf("Expected policy as root item in Simple All Permit Policy but got %T", p)
 		} else {
@@ -68,10 +114,17 @@ func TestUnmarshal(t *testing.T) {
 				t.Errorf("Expected %q as Simple All Permit Policy ID but got %q", "Default", PID)
 			}
 		}
-	}
 
-	r := v.Calculate(&pdp.Context{})
-	if r.Effect != pdp.EffectPermit {
-		t.Errorf("Expected permit as a response for Simple All Permit Policy but got %d", r.Effect)
+		r := s.Root().Calculate(&pdp.Context{})
+		if r.Effect != pdp.EffectPermit {
+			t.Errorf("Expected permit as a response for Simple All Permit Policy but got %d", r.Effect)
+		}
+	}
+}
+
+func TestUnmarshalUpdate(t *testing.T) {
+	_, err := UnmarshalUpdate([]byte(simpleUpdate), map[string]pdp.Attribute{}, uuid.NewV4(), uuid.NewV4())
+	if err != nil {
+		t.Errorf("Expected no error but got %T (%s)", err, err)
 	}
 }

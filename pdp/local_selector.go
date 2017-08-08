@@ -1,10 +1,6 @@
 package pdp
 
-import (
-	"fmt"
-
-	"github.com/infobloxopen/go-trees/strtree"
-)
+import "fmt"
 
 type LocalSelector struct {
 	content string
@@ -30,25 +26,9 @@ func (s LocalSelector) describe() string {
 }
 
 func (s LocalSelector) calculate(ctx *Context) (AttributeValue, error) {
-	v, ok := ctx.c.Get(s.content)
-	if !ok {
-		return undefinedValue, bindError(newMissingContentError(), s.describe())
-	}
-
-	items, ok := v.(*strtree.Tree)
-	if !ok {
-		panic(fmt.Errorf("Local selector: Invalid content %s (expected *strtree.Tree but got %T)", s.content, v))
-	}
-
-	v, ok = items.Get(s.item)
-	if !ok {
-		return undefinedValue, bindError(newMissingContentItemError(), s.describe())
-	}
-
-	item, ok := v.(ContentItem)
-	if !ok {
-		panic(fmt.Errorf("Local selector: Invalid content item %s.%s (expected ContentItem but got %T)",
-			s.content, s.item, v))
+	item, err := ctx.getContentItem(s.content, s.item)
+	if err != nil {
+		return undefinedValue, bindError(err, s.describe())
 	}
 
 	if s.t != item.t {

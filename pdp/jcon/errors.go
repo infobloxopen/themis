@@ -16,12 +16,16 @@ const (
 	objectStartDelimiterErrorID
 	objectEndDelimiterErrorID
 	objectTokenErrorID
+	rootArrayStartTokenErrorID
+	rootArrayStartDelimiterErrorID
 	arrayStartTokenErrorID
 	arrayStartDelimiterErrorID
 	arrayEndDelimiterErrorID
 	stringArrayTokenErrorID
 	objectArrayStartTokenErrorID
 	objectArrayStartDelimiterErrorID
+	objectArrayTokenErrorID
+	unexpectedObjectArrayDelimiterErrorID
 	unexpectedDelimiterErrorID
 	objectKeyErrorID
 	missingEOFErrorID
@@ -42,6 +46,12 @@ const (
 	missingContentTypeErrorID
 	invalidSequenceContentItemNodeErrorID
 	invalidMapContentItemNodeErrorID
+	unknownCommadFieldErrorID
+	duplicateCommandFieldErrorID
+	missingCommandOpErrorID
+	missingCommandPathErrorID
+	missingCommandEntityErrorID
+	unknownContentUpdateOperationErrorID
 )
 
 type externalError struct {
@@ -169,6 +179,40 @@ func (e *objectTokenError) Error() string {
 	return e.errorf("Expected %s JSON object string key or end %q but got token %T (%#v)", e.desc, e.expected, e.actual, e.actual)
 }
 
+type rootArrayStartTokenError struct {
+	errorLink
+	actual   json.Token
+	expected string
+}
+
+func newRootArrayStartTokenError(actual json.Token, expected string) *rootArrayStartTokenError {
+	return &rootArrayStartTokenError{
+		errorLink: errorLink{id: rootArrayStartTokenErrorID},
+		actual:    actual,
+		expected:  expected}
+}
+
+func (e *rootArrayStartTokenError) Error() string {
+	return e.errorf("Expected root JSON array start %q but got token %T (%#v)", e.expected, e.actual, e.actual)
+}
+
+type rootArrayStartDelimiterError struct {
+	errorLink
+	actual   json.Delim
+	expected string
+}
+
+func newRootArrayStartDelimiterError(actual json.Delim, expected string) *rootArrayStartDelimiterError {
+	return &rootArrayStartDelimiterError{
+		errorLink: errorLink{id: rootArrayStartDelimiterErrorID},
+		actual:    actual,
+		expected:  expected}
+}
+
+func (e *rootArrayStartDelimiterError) Error() string {
+	return e.errorf("Expected root JSON array start %q but got delimiter %q", e.expected, e.actual)
+}
+
 type arrayStartTokenError struct {
 	errorLink
 	actual   json.Token
@@ -285,6 +329,42 @@ func newObjectArrayStartDelimiterError(actual json.Delim, firstExpected, secondE
 
 func (e *objectArrayStartDelimiterError) Error() string {
 	return e.errorf("Expected %s JSON object or array start %q or %q but got delimiter %q", e.desc, e.firstExpected, e.secondExpected, e.actual)
+}
+
+type objectArrayTokenError struct {
+	errorLink
+	actual   json.Token
+	expected string
+	desc     string
+}
+
+func newObjectArrayTokenError(actual json.Token, expected, desc string) *objectArrayTokenError {
+	return &objectArrayTokenError{
+		errorLink: errorLink{id: objectArrayTokenErrorID},
+		actual:    actual,
+		expected:  expected,
+		desc:      desc}
+}
+
+func (e *objectArrayTokenError) Error() string {
+	return e.errorf("Expected %s JSON array object or end %q but got token %T (%#v)", e.desc, e.expected, e.actual, e.actual)
+}
+
+type unexpectedObjectArrayDelimiterError struct {
+	errorLink
+	delim string
+	desc  string
+}
+
+func newUnexpectedObjectArrayDelimiterError(delim, desc string) *unexpectedObjectArrayDelimiterError {
+	return &unexpectedObjectArrayDelimiterError{
+		errorLink: errorLink{id: unexpectedObjectArrayDelimiterErrorID},
+		delim:     delim,
+		desc:      desc}
+}
+
+func (e *unexpectedObjectArrayDelimiterError) Error() string {
+	return e.errorf("Unexpected delimiter %q for %s", e.delim, e.desc)
 }
 
 type unexpectedDelimiterError struct {
@@ -605,4 +685,88 @@ func newInvalidMapContentItemNodeError(node interface{}, desc string) *invalidMa
 
 func (e *invalidMapContentItemNodeError) Error() string {
 	return e.errorf("Expected object for %s but got %T", e.desc, e.node)
+}
+
+type unknownCommadFieldError struct {
+	errorLink
+	cmd string
+}
+
+func newUnknownCommadFieldError(cmd string) *unknownCommadFieldError {
+	return &unknownCommadFieldError{
+		errorLink: errorLink{id: unknownCommadFieldErrorID},
+		cmd:       cmd}
+}
+
+func (e *unknownCommadFieldError) Error() string {
+	return e.errorf("Unknown field %s", e.cmd)
+}
+
+type duplicateCommandFieldError struct {
+	errorLink
+	field string
+}
+
+func newDuplicateCommandFieldError(field string) *duplicateCommandFieldError {
+	return &duplicateCommandFieldError{
+		errorLink: errorLink{id: duplicateCommandFieldErrorID},
+		field:     field}
+}
+
+func (e *duplicateCommandFieldError) Error() string {
+	return e.errorf("Duplicate field %s", e.field)
+}
+
+type missingCommandOpError struct {
+	errorLink
+}
+
+func newMissingCommandOpError() *missingCommandOpError {
+	return &missingCommandOpError{
+		errorLink: errorLink{id: missingCommandOpErrorID}}
+}
+
+func (e *missingCommandOpError) Error() string {
+	return e.errorf("Missing operation")
+}
+
+type missingCommandPathError struct {
+	errorLink
+}
+
+func newMissingCommandPathError() *missingCommandPathError {
+	return &missingCommandPathError{
+		errorLink: errorLink{id: missingCommandPathErrorID}}
+}
+
+func (e *missingCommandPathError) Error() string {
+	return e.errorf("Missing path")
+}
+
+type missingCommandEntityError struct {
+	errorLink
+}
+
+func newMissingCommandEntityError() *missingCommandEntityError {
+	return &missingCommandEntityError{
+		errorLink: errorLink{id: missingCommandEntityErrorID}}
+}
+
+func (e *missingCommandEntityError) Error() string {
+	return e.errorf("Missing entity")
+}
+
+type unknownContentUpdateOperationError struct {
+	errorLink
+	op string
+}
+
+func newUnknownContentUpdateOperationError(op string) *unknownContentUpdateOperationError {
+	return &unknownContentUpdateOperationError{
+		errorLink: errorLink{id: unknownContentUpdateOperationErrorID},
+		op:        op}
+}
+
+func (e *unknownContentUpdateOperationError) Error() string {
+	return e.errorf("Unknown content update operation %q", e.op)
 }

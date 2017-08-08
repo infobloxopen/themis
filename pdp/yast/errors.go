@@ -57,6 +57,10 @@ const (
 	selectorURIErrorID
 	selectorLocationErrorID
 	unsupportedSelectorSchemeErrorID
+	entityAmbiguityErrorID
+	entityMissingKeyErrorID
+	unknownPolicyUpdateOperationErrorID
+	invalidPolicyUpdatePathElementErrorID
 )
 
 type externalError struct {
@@ -810,4 +814,64 @@ func newUnsupportedSelectorSchemeError(scheme, uri string) *unsupportedSelectorS
 
 func (e *unsupportedSelectorSchemeError) Error() string {
 	return e.errorf("Unsupported selector scheme %q (%s)", e.scheme, e.uri)
+}
+
+type entityAmbiguityError struct {
+	errorLink
+	fields []string
+}
+
+func newEntityAmbiguityError(fields []string) *entityAmbiguityError {
+	return &entityAmbiguityError{
+		errorLink: errorLink{id: entityAmbiguityErrorID},
+		fields:    fields}
+}
+
+func (e *entityAmbiguityError) Error() string {
+	return e.errorf("Expected rules (for policy), policies (for policy set) or effect (for rule) but got %s", strings.Join(e.fields, ", "))
+}
+
+type entityMissingKeyError struct {
+	errorLink
+}
+
+func newEntityMissingKeyError() *entityMissingKeyError {
+	return &entityMissingKeyError{
+		errorLink: errorLink{id: entityMissingKeyErrorID}}
+}
+
+func (e *entityMissingKeyError) Error() string {
+	return e.errorf("Expected rules (for policy), policies (for policy set) or effect (for rule) but got nothing")
+}
+
+type unknownPolicyUpdateOperationError struct {
+	errorLink
+	op string
+}
+
+func newUnknownPolicyUpdateOperationError(op string) *unknownPolicyUpdateOperationError {
+	return &unknownPolicyUpdateOperationError{
+		errorLink: errorLink{id: unknownPolicyUpdateOperationErrorID},
+		op:        op}
+}
+
+func (e *unknownPolicyUpdateOperationError) Error() string {
+	return e.errorf("Unknown policy update operation %q", e.op)
+}
+
+type invalidPolicyUpdatePathElementError struct {
+	errorLink
+	v   interface{}
+	idx int
+}
+
+func newInvalidPolicyUpdatePathElementError(v interface{}, idx int) *invalidPolicyUpdatePathElementError {
+	return &invalidPolicyUpdatePathElementError{
+		errorLink: errorLink{id: invalidPolicyUpdatePathElementErrorID},
+		v:         v,
+		idx:       idx}
+}
+
+func (e *invalidPolicyUpdatePathElementError) Error() string {
+	return e.errorf("Expected string as %d path element but got %T", e.idx, e.v)
 }

@@ -116,6 +116,52 @@ func (a mapperPCA) getPoliciesMap(policies []Evaluable) *strtree.Tree {
 	return nil
 }
 
+func (a mapperPCA) add(ID string, child, old Evaluable) policyCombiningAlg {
+	def := a.def
+	if old != nil && old == def {
+		def = child
+	}
+
+	err := a.err
+	if old != nil && old == err {
+		err = child
+	}
+
+	return mapperPCA{
+		argument:  a.argument,
+		policies:  a.policies.Insert(ID, child),
+		def:       def,
+		err:       err,
+		algorithm: a.algorithm}
+}
+
+func (a mapperPCA) del(ID string, old Evaluable) policyCombiningAlg {
+	def := a.def
+	if old != nil && old == def {
+		def = nil
+	}
+
+	err := a.err
+	if old != nil && old == err {
+		err = nil
+	}
+
+	policies := a.policies
+	if policies != nil {
+		policies, _ = a.policies.Delete(ID)
+		if policies.IsEmpty() {
+			policies = nil
+		}
+	}
+
+	return mapperPCA{
+		argument:  a.argument,
+		policies:  policies,
+		def:       def,
+		err:       err,
+		algorithm: a.algorithm}
+}
+
 func (a mapperPCA) execute(policies []Evaluable, ctx *Context) Response {
 	v, err := a.argument.calculate(ctx)
 	if err != nil {

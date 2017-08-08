@@ -135,6 +135,52 @@ func (a mapperRCA) getRulesMap(rules []*Rule) *strtree.Tree {
 	return nil
 }
 
+func (a mapperRCA) add(ID string, child, old *Rule) ruleCombiningAlg {
+	def := a.def
+	if old != nil && old == def {
+		def = child
+	}
+
+	err := a.err
+	if old != nil && old == err {
+		err = child
+	}
+
+	return mapperRCA{
+		argument:  a.argument,
+		rules:     a.rules.Insert(ID, child),
+		def:       def,
+		err:       err,
+		algorithm: a.algorithm}
+}
+
+func (a mapperRCA) del(ID string, old *Rule) ruleCombiningAlg {
+	def := a.def
+	if old != nil && old == def {
+		def = nil
+	}
+
+	err := a.err
+	if old != nil && old == err {
+		err = nil
+	}
+
+	rules := a.rules
+	if rules != nil {
+		rules, _ = a.rules.Delete(ID)
+		if rules.IsEmpty() {
+			rules = nil
+		}
+	}
+
+	return mapperRCA{
+		argument:  a.argument,
+		rules:     rules,
+		def:       def,
+		err:       err,
+		algorithm: a.algorithm}
+}
+
 func (a mapperRCA) execute(rules []*Rule, ctx *Context) Response {
 	v, err := a.argument.calculate(ctx)
 	if err != nil {

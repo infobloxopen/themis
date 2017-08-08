@@ -71,18 +71,7 @@ func (c *content) unmarshalItemsField(d *json.Decoder) error {
 
 	items := strtree.NewTree()
 	err = unmarshalObject(d, func(k string, d *json.Decoder) error {
-		err := checkObjectStart(d, "content item")
-		if err != nil {
-			return bindError(err, k)
-		}
-
-		item := &contentItem{}
-		err = unmarshalObject(d, item.unmarshal, "content item")
-		if err != nil {
-			return bindError(err, k)
-		}
-
-		v, err := item.get()
+		v, err := unmarshalContentItem(d)
 		if err != nil {
 			return bindError(err, k)
 		}

@@ -77,6 +77,129 @@ func (p *Policy) Calculate(ctx *Context) Response {
 	return r
 }
 
+func (p *Policy) Append(path []string, v interface{}) (Evaluable, error) {
+	if p.hidden {
+		return p, newHiddenPolicyModificationError()
+	}
+
+	if len(path) > 0 {
+		return p, bindError(newTooLongPathPolicyModificationError(path), p.id)
+	}
+
+	child, ok := v.(*Rule)
+	if !ok {
+		return p, bindError(newInvalidPolicyItemTypeError(v), p.id)
+	}
+
+	_, ok = child.GetID()
+	if !ok {
+		return p, bindError(newHiddenRuleAppendError(), p.id)
+	}
+
+	return p.putChild(child), nil
+}
+
+func (p *Policy) Delete(path []string) (Evaluable, error) {
+	if p.hidden {
+		return p, newHiddenPolicyModificationError()
+	}
+
+	if len(path) <= 0 {
+		return p, bindError(newTooShortPathPolicyModificationError(), p.id)
+	}
+
+	ID := path[0]
+
+	if len(path) > 1 {
+		return p, bindError(newTooLongPathPolicyModificationError(path[1:]), p.id)
+	}
+
+	r, err := p.delChild(ID)
+	if err != nil {
+		return p, bindError(err, p.id)
+	}
+
+	return r, nil
+}
+
+func (p *Policy) putChild(child *Rule) *Policy {
+	ID, _ := child.GetID()
+	for i, old := range p.rules {
+		if rID, ok := old.GetID(); ok && rID == ID {
+			rules := []*Rule{}
+			if i > 0 {
+				rules = append(rules, p.rules[:i]...)
+			}
+
+			rules = append(rules, child)
+
+			if i+1 < len(p.rules) {
+				rules = append(rules, p.rules[i+1:]...)
+			}
+
+			algorithm := p.algorithm
+			if m, ok := algorithm.(mapperRCA); ok {
+				algorithm = m.add(ID, child, old)
+			}
+
+			return &Policy{
+				id:          p.id,
+				target:      p.target,
+				rules:       rules,
+				obligations: p.obligations,
+				algorithm:   algorithm}
+		}
+	}
+
+	rules := p.rules
+	if rules == nil {
+		rules = []*Rule{child}
+	} else {
+		rules = append(rules, child)
+	}
+
+	algorithm := p.algorithm
+	if m, ok := algorithm.(mapperRCA); ok {
+		algorithm = m.add(ID, child, nil)
+	}
+
+	return &Policy{
+		id:          p.id,
+		target:      p.target,
+		rules:       rules,
+		obligations: p.obligations,
+		algorithm:   algorithm}
+}
+
+func (p *Policy) delChild(ID string) (*Policy, error) {
+	for i, old := range p.rules {
+		if rID, ok := old.GetID(); ok && rID == ID {
+			rules := []*Rule{}
+			if i > 0 {
+				rules = append(rules, p.rules[:i]...)
+			}
+
+			if i+1 < len(p.rules) {
+				rules = append(rules, p.rules[i+1:]...)
+			}
+
+			algorithm := p.algorithm
+			if m, ok := algorithm.(mapperRCA); ok {
+				algorithm = m.del(ID, old)
+			}
+
+			return &Policy{
+				id:          p.id,
+				target:      p.target,
+				rules:       rules,
+				obligations: p.obligations,
+				algorithm:   algorithm}, nil
+		}
+	}
+
+	return nil, newMissingPolicyChildError(ID)
+}
+
 type firstApplicableEffectRCA struct {
 }
 

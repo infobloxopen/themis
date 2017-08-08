@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/pmezard/go-difflib/difflib"
+	"github.com/satori/go.uuid"
 )
 
 const (
@@ -168,6 +169,67 @@ const (
     }
   }
 }`
+
+	jsonUpdateStream = `[
+  {
+    "op": "Add",
+    "path": ["test", "example"],
+    "entity": {
+      "type": "set of strings",
+      "keys": ["string", "address", "string"],
+      "data": {
+        "x": {
+          "127.0.0.1": {
+            "y": {
+              "z": false,
+              "t": null
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["test", "example", "x"]
+  }
+]`
+
+	testContentUpdate = `[
+  {
+    "op": "Add",
+    "path": [
+      "test",
+      "example"
+    ],
+    "entity": {
+      "keys": [
+        "String",
+        "Address",
+        "String"
+      ],
+      "type": "Set of Strings",
+      "data": {
+        "x": {
+          "127.0.0.1/32": {
+            "y": [
+              "z",
+              "t"
+            ]
+          }
+        }
+      }
+    }
+  },
+  {
+    "op": "Delete",
+    "path": [
+      "test",
+      "example",
+      "x"
+    ]
+  }
+]`
 )
 
 func TestUnmarshal(t *testing.T) {
@@ -189,6 +251,20 @@ func TestUnmarshal(t *testing.T) {
 		}
 
 		assertJSON(strings.Join(s, "\n"), testContentItems, "JSON content items", t)
+	}
+}
+
+func TestUnmarshalUpdate(t *testing.T) {
+	u, err := UnmarshalUpdate(strings.NewReader(jsonUpdateStream), "test", uuid.NewV4(), uuid.NewV4())
+	if err != nil {
+		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+	} else {
+		b, err := json.MarshalIndent(u, "", "  ")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		}
+
+		assertJSON(string(b), testContentUpdate, "JSON content update", t)
 	}
 }
 

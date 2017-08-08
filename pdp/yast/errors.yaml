@@ -411,3 +411,33 @@ errors:
   args:
   - field: scheme
   - field: uri
+
+- id: entityAmbiguityError
+  fields:
+  - id: fields
+    type: "[]string"
+  msg: "Expected rules (for policy), policies (for policy set) or effect (for rule) but got %s"
+  args:
+  - expr: strings.Join(e.fields, ", ")
+
+- id: entityMissingKeyError
+  msg: "Expected rules (for policy), policies (for policy set) or effect (for rule) but got nothing"
+
+- id: unknownPolicyUpdateOperationError
+  fields:
+  - id: op
+    type: string
+  msg: "Unknown policy update operation %q"
+  args:
+  - field: op
+
+- id: invalidPolicyUpdatePathElementError
+  fields:
+  - id: v
+    type: interface{}
+  - id: idx
+    type: int
+  msg: "Expected string as %d path element but got %T"
+  args:
+  - field: idx
+  - field: v

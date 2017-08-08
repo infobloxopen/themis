@@ -37,7 +37,7 @@ var (
 
 type Context struct {
 	a map[string]map[int]AttributeValue
-	c *strtree.Tree
+	c *localContentStorage
 }
 
 func (c *Context) getAttribute(a Attribute) (AttributeValue, error) {
@@ -52,6 +52,10 @@ func (c *Context) getAttribute(a Attribute) (AttributeValue, error) {
 	}
 
 	return v, nil
+}
+
+func (c *Context) getContentItem(cID, iID string) (*ContentItem, error) {
+	return c.c.get(cID, iID)
 }
 
 func (c *Context) calculateBooleanExpression(e Expression) (bool, error) {
@@ -135,4 +139,6 @@ type Response struct {
 type Evaluable interface {
 	GetID() (string, bool)
 	Calculate(ctx *Context) Response
+	Append(path []string, v interface{}) (Evaluable, error)
+	Delete(path []string) (Evaluable, error)
 }

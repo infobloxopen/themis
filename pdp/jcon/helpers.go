@@ -36,6 +36,28 @@ func checkRootObjectStart(d *json.Decoder) (bool, error) {
 	return true, nil
 }
 
+func checkRootArrayStart(d *json.Decoder) (bool, error) {
+	t, err := d.Token()
+	if err == io.EOF {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	delim, ok := t.(json.Delim)
+	if !ok {
+		return false, newRootArrayStartTokenError(t, delimArrayStart)
+	}
+
+	if delim.String() != delimArrayStart {
+		return false, newRootArrayStartDelimiterError(delim, delimArrayStart)
+	}
+
+	return true, nil
+}
+
 func checkObjectStart(d *json.Decoder, desc string) error {
 	t, err := d.Token()
 	if err != nil {
@@ -439,5 +461,39 @@ func unmarshalObject(d *json.Decoder, u func(string, *json.Decoder) error, desc 
 
 			return nil
 		}
+	}
+}
+
+func unmarshalObjectArray(d *json.Decoder, u func(*json.Decoder) error, desc string) error {
+	i := 1
+	for {
+		src := fmt.Sprintf("%d", i)
+
+		t, err := d.Token()
+		if err != nil {
+			return bindError(err, src)
+		}
+
+		delim, ok := t.(json.Delim)
+		if !ok {
+			return bindError(newObjectArrayTokenError(t, delimArrayEnd, desc), src)
+		}
+
+		s := delim.String()
+		switch s {
+		default:
+			return bindError(newUnexpectedObjectArrayDelimiterError(s, desc), src)
+
+		case delimArrayEnd:
+			return nil
+
+		case delimObjectStart:
+			err := u(d)
+			if err != nil {
+				return bindError(err, src)
+			}
+		}
+
+		i++
 	}
 }

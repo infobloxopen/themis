@@ -62,6 +62,37 @@ func (ctx context) unmarshalRule(m map[interface{}]interface{}, i int) (*pdp.Rul
 	return pdp.NewRule(ID, !ok, target, cond, effect, obls), nil
 }
 
+func (ctx context) unmarshalRuleEntity(m map[interface{}]interface{}, ID string, hidden bool, effect interface{}) (*pdp.Rule, boundError) {
+	src := makeSource("rule", ID, hidden, 0)
+
+	target, err := ctx.unmarshalTarget(m)
+	if err != nil {
+		return nil, bindError(err, src)
+	}
+
+	cond, err := ctx.unmarshalCondition(m)
+	if err != nil {
+		return nil, bindError(err, src)
+	}
+
+	s, err := ctx.validateString(effect, "effect")
+	if err != nil {
+		return nil, bindError(err, src)
+	}
+
+	eff, ok := pdp.EffectIDs[strings.ToLower(s)]
+	if !ok {
+		return nil, bindError(newUnknownEffectError(s), src)
+	}
+
+	obls, err := ctx.unmarshalObligations(m)
+	if err != nil {
+		return nil, bindError(err, src)
+	}
+
+	return pdp.NewRule(ID, !ok, target, cond, eff, obls), nil
+}
+
 func (ctx context) unmarshalRulesItem(v interface{}, i int) (*pdp.Rule, boundError) {
 	m, err := ctx.validateMap(v, "rule")
 	if err != nil {

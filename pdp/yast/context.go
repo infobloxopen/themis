@@ -11,6 +11,10 @@ func newContext() *context {
 		attrs: make(map[string]pdp.Attribute)}
 }
 
+func newContextWithAttributes(attrs map[string]pdp.Attribute) *context {
+	return &context{attrs: attrs}
+}
+
 func (ctx context) validateString(v interface{}, desc string) (string, boundError) {
 	r, ok := v.(string)
 	if !ok {

@@ -2,6 +2,7 @@ package: pdp
 
 import:
   - strings
+  - github.com/satori/go.uuid
 
 errors:
 - id: externalError
@@ -55,11 +56,140 @@ errors:
   - expr: TypeNames[TypeListOfStrings]
   - expr: TypeNames[e.actual]
 
+- id: untaggedPolicyModificationError
+  msg: "Can't modify policies with no tag"
+
+- id: missingPolicyTagError
+  msg: "Update has no previous policy tag"
+
+- id: emptyPathModificationError
+  msg: "Can't modify items by empty path"
+
+- id: invalidRootPolicyItemTypeError
+  fields:
+  - id: item
+    type: interface{}
+  msg: "Expected policy or policy set as new root policy but got %T"
+  args:
+  - field: item
+
+- id: hiddenRootPolicyAppendError
+  msg: "Can't append hidden policy to as root policy"
+
+- id: invalidRootPolicyError
+  fields:
+  - id: actual
+    type: string
+  - id: expected
+    type: string
+  msg: "Root policy is %q but got %q as first path element"
+  args:
+  - field: expected
+  - field: actual
+
+- id: hiddenPolicySetModificationError
+  msg: "Can't modify hidden policy set"
+
+- id: invalidPolicySetItemTypeError
+  fields:
+  - id: item
+    type: interface{}
+  msg: "Expected policy or policy set to append but got %T"
+  args:
+  - field: item
+
+- id: tooShortPathPolicySetModificationError
+  msg: "Path to item to delete is too short"
+
+- id: missingPolicySetChildError
+  fields:
+  - id: ID
+    type: string
+  msg: "Policy set has no child policy or policy set with id %q"
+  args:
+  - field: ID
+
+- id: hiddenPolicyAppendError
+  msg: "Can't append hidden policy or policy set"
+
+- id: policyTagsNotMatchError
+  fields:
+  - id: cntTag
+    type: "*uuid.UUID"
+  - id: updTag
+    type: "*uuid.UUID"
+  msg: "Update tag %s doesn't match policies tag %s"
+  args:
+  - expr: e.cntTag.String()
+  - expr: e.updTag.String()
+
+- id: hiddenPolicyModificationError
+  msg: "Can't modify hidden policy"
+
+- id: tooLongPathPolicyModificationError
+  fields:
+  - id: path
+    type: "[]string"
+  msg: "Trailing path \"%s\""
+  args:
+  - expr: strings.Join(e.path, "/")
+
+- id: tooShortPathPolicyModificationError
+  msg: "Path to item to delete is too short"
+
+- id: invalidPolicyItemTypeError
+  fields:
+  - id: item
+    type: interface{}
+  msg: "Expected rule to append but got %T"
+  args:
+  - field: item
+
+- id: hiddenRuleAppendError
+  msg: "Can't append hidden rule"
+
+- id: missingPolicyChildError
+  fields:
+  - id: ID
+    type: string
+  msg: "Policy has no rule with id %q"
+  args:
+  - field: ID
+
 - id: missingContentError
-  msg: "Missing content"
+  fields:
+  - id: ID
+    type: string
+  msg: "Missing content %s"
+  args:
+  - field: ID
+
+- id: invalidContentStorageItem
+  fields:
+  - id: ID
+    type: string
+  - id: v
+    type: interface{}
+  msg: "Invalid value at %s (expected *localContent but got %T)"
+  args:
+  - field: ID
+  - field: v
 
 - id: missingContentItemError
-  msg: "Missing content item"
+  fields:
+  - id: ID
+    type: string
+  msg: "Missing content item %q"
+  args:
+  - field: ID
+
+- id: invalidContentItemError
+  fields:
+  - id: v
+    type: interface{}
+  msg: "Invalid value (expected *ContentItem but got %T)"
+  args:
+  - field: v
 
 - id: invalidContentItemTypeError
   fields:
@@ -97,5 +227,153 @@ errors:
         }
         actual := strings.Join(actStrs, "/")
 
+- id: networkMapKeyValueTypeError
+  fields:
+  - id: t
+    type: int
+  msg: "Expected %s or %s as network map key but got %s"
+  args:
+  - expr: TypeNames[TypeAddress]
+  - expr: TypeNames[TypeNetwork]
+  - expr: TypeNames[e.t]
+
 - id: mapContentSubitemError
   msg: "Not a map of the content"
+
+- id: invalidContentModificationError
+  msg: "Can't modify non-mapping content item"
+
+- id: missingPathContentModificationError
+  msg: "Missing path for content item change"
+
+- id: tooLongPathContentModificationError
+  fields:
+  - id: expected
+    type: "[]int"
+  - id: actual
+    type: "[]AttributeValue"
+  msg: "Too long modification path. Expected at most %s but got %s"
+  args:
+  - snippet:
+      result: expected
+      code: |
+        expStrs := make([]string, len(e.expected))
+        for i, t := range e.expected {
+        	expStrs[i] = TypeNames[t]
+        }
+        expected := strings.Join(expStrs, "/")
+  - snippet:
+      result: actual
+      code: |
+        actStrs := make([]string, len(e.actual))
+        for i, e := range e.actual {
+        	actStrs[i] = TypeNames[e.GetResultType()]
+        }
+        actual := strings.Join(actStrs, "/")
+
+- id: invalidContentValueModificationError
+  msg: "Can't modify final content value"
+
+- id: untaggedContentModificationError
+  fields:
+  - id: ID
+    type: string
+  msg: "Can't modify content %q with no tag"
+  args:
+  - field: ID
+
+- id: missingContentTagError
+  msg: "Update has no previous content tag"
+
+- id: contentTagsNotMatchError
+  fields:
+  - id: ID
+    type: string
+  - id: cntTag
+    type: "*uuid.UUID"
+  - id: updTag
+    type: "*uuid.UUID"
+  msg: "Update tag %s doesn't match content %q tag %s"
+  args:
+  - expr: e.cntTag.String()
+  - field: ID
+  - expr: e.updTag.String()
+
+- id: unknownContentItemResultTypeError
+  fields:
+  - id: t
+    type: int
+  msg: "Unknown result type for content item: %d"
+  args:
+  - field: t
+
+- id: invalidContentItemResultTypeError
+  fields:
+  - id: t
+    type: int
+  msg: "Invalid result type for content item: %s"
+  args:
+  - expr: TypeNames[e.t]
+
+- id: invalidContentKeyTypeError
+  fields:
+  - id: t
+    type: int
+  - id: expected
+    type: map[int]bool
+  msg: "Invalid key type for content item: %s (expected %s)"
+  args:
+  - expr: TypeNames[e.t]
+  - snippet:
+      result: s
+      code: |
+        names := make([]string, len(e.expected))
+        i := 0
+        for t := range e.expected {
+                names[i] = TypeNames[t]
+                i++
+        }
+        s := strings.Join(names, ", ")
+
+- id: invalidContentStringMapError
+  fields:
+  - id: value
+    type: interface{}
+  msg: "Expected string map but got %T"
+  args:
+  - field: value
+
+- id: invalidContentNetworkMapError
+  fields:
+  - id: value
+    type: interface{}
+  msg: "Expected network map but got %T"
+  args:
+  - field: value
+
+- id: invalidContentDomainMapError
+  fields:
+  - id: value
+    type: interface{}
+  msg: "Expected domain map but got %T"
+  args:
+  - field: value
+
+- id: invalidContentValueError
+  fields:
+  - id: value
+    type: interface{}
+  msg: "Expected value but got %T"
+  args:
+  - field: value
+
+- id: invalidContentValueTypeError
+  fields:
+  - id: value
+    type: interface{}
+  - id: expected
+    type: int
+  msg: "Expected value of type %s but got %T"
+  args:
+  - expr: TypeNames[e.expected]
+  - field: value

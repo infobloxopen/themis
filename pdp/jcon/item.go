@@ -301,13 +301,13 @@ func (c *contentItem) adjustValue(v interface{}) pdp.ContentSubItem {
 	return cv
 }
 
-func (c *contentItem) get() (pdp.ContentItem, error) {
+func (c *contentItem) get() (*pdp.ContentItem, error) {
 	if !c.vOk {
-		return pdp.ContentItem{}, newMissingContentDataError()
+		return nil, newMissingContentDataError()
 	}
 
 	if !c.tOk {
-		return pdp.ContentItem{}, newMissingContentTypeError()
+		return nil, newMissingContentTypeError()
 	}
 
 	if c.vReady {
@@ -316,7 +316,7 @@ func (c *contentItem) get() (pdp.ContentItem, error) {
 
 	v, err := c.postProcess(c.v, 0)
 	if err != nil {
-		return pdp.ContentItem{}, err
+		return nil, err
 	}
 
 	if len(c.k) <= 0 {
@@ -324,4 +324,19 @@ func (c *contentItem) get() (pdp.ContentItem, error) {
 	}
 
 	return pdp.MakeContentMappingItem(c.t, c.k, c.adjustValue(v)), nil
+}
+
+func unmarshalContentItem(d *json.Decoder) (*pdp.ContentItem, error) {
+	err := checkObjectStart(d, "content item")
+	if err != nil {
+		return nil, err
+	}
+
+	item := &contentItem{}
+	err = unmarshalObject(d, item.unmarshal, "content item")
+	if err != nil {
+		return nil, err
+	}
+
+	return item.get()
 }
