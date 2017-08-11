@@ -128,7 +128,7 @@ var auth = []dns.RR{
 }
 
 func TestLookupDNSSEC(t *testing.T) {
-	zone, err := Parse(strings.NewReader(dbMiekNLSigned), testzone, "stdin")
+	zone, err := Parse(strings.NewReader(dbMiekNLSigned), testzone, "stdin", 0)
 	if err != nil {
 		t.Fatalf("Expected no error when reading zone, got %q", err)
 	}
@@ -169,8 +169,8 @@ func TestLookupDNSSEC(t *testing.T) {
 	}
 }
 
-func BenchmarkLookupDNSSEC(b *testing.B) {
-	zone, err := Parse(strings.NewReader(dbMiekNLSigned), testzone, "stdin")
+func BenchmarkFileLookupDNSSEC(b *testing.B) {
+	zone, err := Parse(strings.NewReader(dbMiekNLSigned), testzone, "stdin", 0)
 	if err != nil {
 		return
 	}

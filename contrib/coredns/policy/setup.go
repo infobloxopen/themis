@@ -45,7 +45,7 @@ func setup(c *caddy.Controller) error {
 }
 
 func policyParse(c *caddy.Controller) (*PolicyMiddleware, error) {
-	t := dnsserver.GetMiddleware(c, "trace")
+	t := dnsserver.GetConfig(c).GetHandler("trace")
 	mw := &PolicyMiddleware{Trace: t}
 
 	for c.Next() {

@@ -3,37 +3,29 @@ import:
 - package: github.com/Sirupsen/logrus
   version: 0.11.5
 - package: github.com/coredns/coredns
-  version: 4fc1318e28b21c85c117f1821c3fb34790679f0f
   subpackages:
   - core/dnsserver
   - middleware
   - middleware/pkg/trace
   - request
 - package: github.com/golang/protobuf
-  version: 2bba0603135d7d7f5cb73b2125beeda19c09f4ef
   subpackages:
   - proto
 - package: github.com/grpc-ecosystem/grpc-opentracing
-  version: ef7d6c8df7564c20c0a19ed9737f6d67990c61fa
   subpackages:
   - go/otgrpc
 - package: github.com/mholt/caddy
-  version: v0.10.0
 - package: github.com/miekg/bitradix
-  version: ba84e0d6d04d4f32ff183fdf9e63df37a3f838f5
 - package: github.com/miekg/dns
-  version: 113c7538ea6d8f429071f901bd26af59cc9676fe
 - package: github.com/opentracing/opentracing-go
   version: 1.0.1
 - package: github.com/openzipkin/zipkin-go-opentracing
   version: 0.2.3
 - package: golang.org/x/net
-  version: da118f7b8e5954f39d0d2130ab35d4bf0e3cb344
   subpackages:
   - context
   - idna
 - package: golang.org/x/text
-  version: 470f45bf29f4147d6fbd7dfd0a02a848e49f5bf4
   subpackages:
   - unicode/norm
 - package: google.golang.org/grpc
@@ -41,4 +33,3 @@ import:
   subpackages:
   - naming
 - package: gopkg.in/yaml.v2
-  version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b

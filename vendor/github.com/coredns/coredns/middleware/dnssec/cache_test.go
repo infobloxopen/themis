@@ -4,10 +4,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coredns/coredns/middleware/pkg/cache"
 	"github.com/coredns/coredns/middleware/test"
 	"github.com/coredns/coredns/request"
-
-	"github.com/hashicorp/golang-lru"
 )
 
 func TestCacheSet(t *testing.T) {
@@ -21,12 +20,12 @@ func TestCacheSet(t *testing.T) {
 		t.Fatalf("failed to parse key: %v\n", err)
 	}
 
-	cache, _ := lru.New(defaultCap)
+	c := cache.New(defaultCap)
 	m := testMsg()
 	state := request.Request{Req: m}
-	k := key(m.Answer) // calculate *before* we add the sig
-	d := New([]string{"miek.nl."}, []*DNSKEY{dnskey}, nil, cache)
-	m = d.Sign(state, "miek.nl.", time.Now().UTC())
+	k := hash(m.Answer) // calculate *before* we add the sig
+	d := New([]string{"miek.nl."}, []*DNSKEY{dnskey}, nil, c)
+	d.Sign(state, "miek.nl.", time.Now().UTC())
 
 	_, ok := d.get(k)
 	if !ok {

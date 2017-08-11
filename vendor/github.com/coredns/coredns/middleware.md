@@ -22,7 +22,7 @@ answer in case of failure.
 So CoreDNS treats:
 
 * SERVFAIL (dns.RcodeServerFailure)
-* REFUSED (dns.RecodeRefused)
+* REFUSED (dns.RcodeRefused)
 * FORMERR (dns.RcodeFormatError)
 * NOTIMP (dns.RcodeNotImplemented)
 
@@ -33,7 +33,7 @@ something has been written to the client (by the middleware).
 
 See a couple of blog posts on how to write and add middleware to CoreDNS:
 
-* <https://blog.coredns.io/#> TO BE PUBLISHED.
+* <https://blog.coredns.io/2017/03/01/how-to-add-middleware-to-coredns/>
 * <https://blog.coredns.io/2016/12/19/writing-middleware-for-coredns/>, slightly older, but useful.
 
 ## Metrics
@@ -132,3 +132,16 @@ answer for the MX query:
 % dig +nocmd @localhost +noall +ans MX compute.internal
 compute.internal.	3600	IN	MX	10 mx.compute.internal.
 ~~~
+
+## Qualifying for main repo
+
+Middleware for CoreDNS can live out-of-tree, `middleware.cfg` defaults to CoreDNS' repo but other
+repos work just as well. So when do we consider the inclusion of a new middleware in the main repo?
+
+* First, the middleware should be useful for other people. "Useful" is a subjective term. We will
+  probably need to further refine this.
+* It should be sufficiently different from other middleware to warrant inclusion.
+* Current internet standards need be supported: IPv4 and IPv6, so A and AAAA records should be
+  handled (if your middleware is in the business of dealing with address records that is).
+* It must have tests.
+* It must have a README.md for documentation.

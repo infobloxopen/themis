@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coredns/coredns/middleware/pkg/cache"
 	"github.com/coredns/coredns/middleware/test"
 	"github.com/coredns/coredns/request"
 
-	"github.com/hashicorp/golang-lru"
 	"github.com/miekg/dns"
 )
 
@@ -69,8 +69,8 @@ func TestSigningDifferentZone(t *testing.T) {
 
 	m := testMsgEx()
 	state := request.Request{Req: m}
-	cache, _ := lru.New(defaultCap)
-	d := New([]string{"example.org."}, []*DNSKEY{key}, nil, cache)
+	c := cache.New(defaultCap)
+	d := New([]string{"example.org."}, []*DNSKEY{key}, nil, c)
 	m = d.Sign(state, "example.org.", time.Now().UTC())
 	if !section(m.Answer, 1) {
 		t.Errorf("answer section should have 1 sig")
@@ -110,6 +110,20 @@ func TestZoneSigningDelegation(t *testing.T) {
 	if !section(m.Extra, 0) {
 		t.Errorf("answer section should have 0 sig")
 		t.Logf("%v\n", m)
+	}
+}
+
+func TestSigningDname(t *testing.T) {
+	d, rm1, rm2 := newDnssec(t, []string{"miek.nl."})
+	defer rm1()
+	defer rm2()
+
+	m := testMsgDname()
+	state := request.Request{Req: m}
+	// We sign *everything* we see, also the synthesized CNAME.
+	m = d.Sign(state, "miek.nl.", time.Now().UTC())
+	if !section(m.Answer, 3) {
+		t.Errorf("answer section should have 3 sig")
 	}
 }
 
@@ -157,10 +171,20 @@ func testDelegationMsg() *dns.Msg {
 	}
 }
 
+func testMsgDname() *dns.Msg {
+	return &dns.Msg{
+		Answer: []dns.RR{
+			test.CNAME("a.dname.miek.nl.	1800	IN	CNAME	a.test.miek.nl."),
+			test.A("a.test.miek.nl.	1800	IN	A	139.162.196.78"),
+			test.DNAME("dname.miek.nl.	1800	IN	DNAME	test.miek.nl."),
+		},
+	}
+}
+
 func newDnssec(t *testing.T, zones []string) (Dnssec, func(), func()) {
 	k, rm1, rm2 := newKey(t)
-	cache, _ := lru.New(defaultCap)
-	d := New(zones, []*DNSKEY{k}, nil, cache)
+	c := cache.New(defaultCap)
+	d := New(zones, []*DNSKEY{k}, nil, c)
 	return d, rm1, rm2
 }
 

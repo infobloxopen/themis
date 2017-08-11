@@ -3,8 +3,8 @@ package file
 import (
 	"fmt"
 	"log"
+	"net"
 
-	"github.com/coredns/coredns/middleware"
 	"github.com/coredns/coredns/middleware/pkg/rcode"
 	"github.com/coredns/coredns/request"
 
@@ -21,8 +21,13 @@ func (z *Zone) isNotify(state request.Request) bool {
 	if len(z.TransferFrom) == 0 {
 		return false
 	}
-	remote := middleware.Addr(state.IP()).Normalize()
-	for _, from := range z.TransferFrom {
+	// If remote IP matches we accept.
+	remote := state.IP()
+	for _, f := range z.TransferFrom {
+		from, _, err := net.SplitHostPort(f)
+		if err != nil {
+			continue
+		}
 		if from == remote {
 			return true
 		}
@@ -56,12 +61,12 @@ func notify(zone string, to []string) error {
 	return nil
 }
 
-func notifyAddr(c *dns.Client, m *dns.Msg, s string) (err error) {
-	ret := new(dns.Msg)
+func notifyAddr(c *dns.Client, m *dns.Msg, s string) error {
+	var err error
 
 	code := dns.RcodeServerFailure
 	for i := 0; i < 3; i++ {
-		ret, _, err = c.Exchange(m, s)
+		ret, _, err := c.Exchange(m, s)
 		if err != nil {
 			continue
 		}
@@ -71,7 +76,7 @@ func notifyAddr(c *dns.Client, m *dns.Msg, s string) (err error) {
 		}
 	}
 	if err != nil {
-		return fmt.Errorf("Notify for zone %q was not accepted by %q: %q", m.Question[0].Name, s, err)
+		return fmt.Errorf("notify for zone %q was not accepted by %q: %q", m.Question[0].Name, s, err)
 	}
-	return fmt.Errorf("Notify for zone %q was not accepted by %q: rcode was %q", m.Question[0].Name, s, rcode.ToString(code))
+	return fmt.Errorf("notify for zone %q was not accepted by %q: rcode was %q", m.Question[0].Name, s, rcode.ToString(code))
 }
