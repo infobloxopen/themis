@@ -35,6 +35,7 @@ type Case struct {
 	Answer []dns.RR
 	Ns     []dns.RR
 	Extra  []dns.RR
+	Error  error
 }
 
 // Msg returns a *dns.Msg embedded in c.
@@ -60,6 +61,9 @@ func AAAA(rr string) *dns.AAAA { r, _ := dns.NewRR(rr); return r.(*dns.AAAA) }
 
 // CNAME returns a CNAME record from rr. It panics on errors.
 func CNAME(rr string) *dns.CNAME { r, _ := dns.NewRR(rr); return r.(*dns.CNAME) }
+
+// DNAME returns a DNAME record from rr. It panics on errors.
+func DNAME(rr string) *dns.DNAME { r, _ := dns.NewRR(rr); return r.(*dns.DNAME) }
 
 // SRV returns a SRV record from rr. It panics on errors.
 func SRV(rr string) *dns.SRV { r, _ := dns.NewRR(rr); return r.(*dns.SRV) }

@@ -14,6 +14,7 @@
 package promhttp
 
 import (
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -23,6 +24,8 @@ import (
 )
 
 func TestMiddlewareAPI(t *testing.T) {
+	reg := prometheus.NewRegistry()
+
 	inFlightGauge := prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "in_flight_requests",
 		Help: "A gauge of requests currently being served by the wrapped handler.",
@@ -38,11 +41,22 @@ func TestMiddlewareAPI(t *testing.T) {
 
 	histVec := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "response_duration_seconds",
-			Help:    "A histogram of request latencies.",
-			Buckets: prometheus.DefBuckets,
+			Name:        "response_duration_seconds",
+			Help:        "A histogram of request latencies.",
+			Buckets:     prometheus.DefBuckets,
+			ConstLabels: prometheus.Labels{"handler": "api"},
 		},
 		[]string{"method"},
+	)
+
+	writeHeaderVec := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:        "write_header_duration_seconds",
+			Help:        "A histogram of time to first write latencies.",
+			Buckets:     prometheus.DefBuckets,
+			ConstLabels: prometheus.Labels{"handler": "api"},
+		},
+		[]string{},
 	)
 
 	responseSize := prometheus.NewHistogramVec(
@@ -58,12 +72,14 @@ func TestMiddlewareAPI(t *testing.T) {
 		w.Write([]byte("OK"))
 	})
 
-	prometheus.MustRegister(inFlightGauge, counter, histVec, responseSize)
+	reg.MustRegister(inFlightGauge, counter, histVec, responseSize, writeHeaderVec)
 
 	chain := InstrumentHandlerInFlight(inFlightGauge,
 		InstrumentHandlerCounter(counter,
 			InstrumentHandlerDuration(histVec,
-				InstrumentHandlerResponseSize(responseSize, handler),
+				InstrumentHandlerTimeToWriteHeader(writeHeaderVec,
+					InstrumentHandlerResponseSize(responseSize, handler),
+				),
 			),
 		),
 	)
@@ -71,6 +87,62 @@ func TestMiddlewareAPI(t *testing.T) {
 	r, _ := http.NewRequest("GET", "www.example.com", nil)
 	w := httptest.NewRecorder()
 	chain.ServeHTTP(w, r)
+}
+
+func TestInstrumentTimeToFirstWrite(t *testing.T) {
+	var i int
+	dobs := &responseWriterDelegator{
+		ResponseWriter: httptest.NewRecorder(),
+		observeWriteHeader: func(status int) {
+			i = status
+		},
+	}
+	d := newDelegator(dobs, nil)
+
+	d.WriteHeader(http.StatusOK)
+
+	if i != http.StatusOK {
+		t.Fatalf("failed to execute observeWriteHeader")
+	}
+}
+
+// testResponseWriter is an http.ResponseWriter that also implements
+// http.CloseNotifier, http.Flusher, and io.ReaderFrom.
+type testResponseWriter struct {
+	closeNotifyCalled, flushCalled, readFromCalled bool
+}
+
+func (t *testResponseWriter) Header() http.Header       { return nil }
+func (t *testResponseWriter) Write([]byte) (int, error) { return 0, nil }
+func (t *testResponseWriter) WriteHeader(int)           {}
+func (t *testResponseWriter) CloseNotify() <-chan bool {
+	t.closeNotifyCalled = true
+	return nil
+}
+func (t *testResponseWriter) Flush() { t.flushCalled = true }
+func (t *testResponseWriter) ReadFrom(io.Reader) (int64, error) {
+	t.readFromCalled = true
+	return 0, nil
+}
+
+func TestInterfaceUpgrade(t *testing.T) {
+	w := &testResponseWriter{}
+	d := newDelegator(w, nil)
+	d.(http.CloseNotifier).CloseNotify()
+	if !w.closeNotifyCalled {
+		t.Error("CloseNotify not called")
+	}
+	d.(http.Flusher).Flush()
+	if !w.flushCalled {
+		t.Error("Flush not called")
+	}
+	d.(io.ReaderFrom).ReadFrom(nil)
+	if !w.readFromCalled {
+		t.Error("ReadFrom not called")
+	}
+	if _, ok := d.(http.Hijacker); ok {
+		t.Error("delegator unexpectedly implements http.Hijacker")
+	}
 }
 
 func ExampleInstrumentHandlerDuration() {
@@ -87,29 +159,25 @@ func ExampleInstrumentHandlerDuration() {
 		[]string{"code", "method"},
 	)
 
-	// pushVec is partitioned by the HTTP method and uses custom buckets based on
-	// the expected request duration. It uses ConstLabels to set a handler label
-	// marking pushVec as tracking the durations for pushes.
+	// pushVec and pullVec are partitioned by the HTTP method and use custom
+	// buckets based on the expected request duration. ConstLabels are used
+	// to set a handler label to mark pushVec as tracking the durations for
+	// pushes and pullVec as tracking the durations for pulls. Note that
+	// Name, Help, and Buckets need to be the same for consistency, so we
+	// use the same HistogramOpts after just modifying the ConstLabels.
+	histogramOpts := prometheus.HistogramOpts{
+		Name:        "request_duration_seconds",
+		Help:        "A histogram of latencies for requests.",
+		Buckets:     []float64{.25, .5, 1, 2.5, 5, 10},
+		ConstLabels: prometheus.Labels{"handler": "push"},
+	}
 	pushVec := prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:        "request_duration_seconds",
-			Help:        "A histogram of latencies for requests to the push handler.",
-			Buckets:     []float64{.25, .5, 1, 2.5, 5, 10},
-			ConstLabels: prometheus.Labels{"handler": "push"},
-		},
+		histogramOpts,
 		[]string{"method"},
 	)
-
-	// pullVec is also partitioned by the HTTP method but uses custom buckets
-	// different from those for pushVec. It also has a different value for the
-	// constant "handler" label.
+	histogramOpts.ConstLabels = prometheus.Labels{"handler": "pull"}
 	pullVec := prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:        "request_duration_seconds",
-			Help:        "A histogram of latencies for requests to the pull handler.",
-			Buckets:     []float64{.005, .01, .025, .05},
-			ConstLabels: prometheus.Labels{"handler": "pull"},
-		},
+		histogramOpts,
 		[]string{"method"},
 	)
 

@@ -2,8 +2,7 @@ package file
 
 import (
 	"fmt"
-	"log"
-	"os"
+	"net"
 	"path"
 	"strings"
 	"sync"
@@ -12,7 +11,6 @@ import (
 	"github.com/coredns/coredns/middleware/proxy"
 	"github.com/coredns/coredns/request"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/miekg/dns"
 )
 
@@ -58,12 +56,13 @@ func NewZone(name, file string) *Zone {
 	return z
 }
 
-// Copy copies a zone *without* copying the zone's content. It is not a deep copy.
+// Copy copies a zone.
 func (z *Zone) Copy() *Zone {
 	z1 := NewZone(z.origin, z.file)
 	z1.TransferTo = z.TransferTo
 	z1.TransferFrom = z.TransferFrom
 	z1.Expired = z.Expired
+
 	z1.Apex = z.Apex
 	return z1
 }
@@ -116,9 +115,18 @@ func (z *Zone) Insert(r dns.RR) error {
 func (z *Zone) Delete(r dns.RR) { z.Tree.Delete(r) }
 
 // TransferAllowed checks if incoming request for transferring the zone is allowed according to the ACLs.
-func (z *Zone) TransferAllowed(req request.Request) bool {
+func (z *Zone) TransferAllowed(state request.Request) bool {
 	for _, t := range z.TransferTo {
 		if t == "*" {
+			return true
+		}
+		// If remote IP matches we accept.
+		remote := state.IP()
+		to, _, err := net.SplitHostPort(t)
+		if err != nil {
+			continue
+		}
+		if to == remote {
 			return true
 		}
 	}
@@ -149,56 +157,6 @@ func (z *Zone) All() []dns.RR {
 		records = append(z.Apex.SIGSOA, records...)
 	}
 	return append([]dns.RR{z.Apex.SOA}, records...)
-}
-
-// Reload reloads a zone when it is changed on disk. If z.NoRoload is true, no reloading will be done.
-func (z *Zone) Reload() error {
-	if z.NoReload {
-		return nil
-	}
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return err
-	}
-	err = watcher.Add(path.Dir(z.file))
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		// TODO(miek): needs to be killed on reload.
-		for {
-			select {
-			case event := <-watcher.Events:
-				if path.Clean(event.Name) == z.file {
-
-					reader, err := os.Open(z.file)
-					if err != nil {
-						log.Printf("[ERROR] Failed to open `%s' for `%s': %v", z.file, z.origin, err)
-						continue
-					}
-					zone, err := Parse(reader, z.origin, z.file)
-					if err != nil {
-						log.Printf("[ERROR] Failed to parse `%s': %v", z.origin, err)
-						continue
-					}
-
-					// copy elements we need
-					z.reloadMu.Lock()
-					z.Apex = zone.Apex
-					z.Tree = zone.Tree
-					z.reloadMu.Unlock()
-
-					log.Printf("[INFO] Successfully reloaded zone `%s'", z.origin)
-					z.Notify()
-				}
-			case <-z.ReloadShutdown:
-				watcher.Close()
-				return
-			}
-		}
-	}()
-	return nil
 }
 
 // Print prints the zone's tree to stdout.

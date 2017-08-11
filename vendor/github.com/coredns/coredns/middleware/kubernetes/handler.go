@@ -21,28 +21,32 @@ func (k Kubernetes) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 	m := new(dns.Msg)
 	m.SetReply(r)
 	m.Authoritative, m.RecursionAvailable, m.Compress = true, true, true
-
 	// Check that query matches one of the zones served by this middleware,
 	// otherwise delegate to the next in the pipeline.
 	zone := middleware.Zones(k.Zones).Matches(state.Name())
 	if zone == "" {
-		if state.Type() != "PTR" {
+		if state.QType() != dns.TypePTR {
 			return middleware.NextOrFailure(k.Name(), k.Next, ctx, w, r)
 		}
 		// If this is a PTR request, and the request is in a defined
 		// pod/service cidr range, process the request in this middleware,
 		// otherwise pass to next middleware.
-		if !k.isRequestInReverseRange(state) {
+		if !k.isRequestInReverseRange(state.Name()) {
 			return middleware.NextOrFailure(k.Name(), k.Next, ctx, w, r)
 		}
-		// Set the zone to this specific request.
+
+		// Set the zone to this specific request, as we want to handle this reverse request.
 		zone = state.Name()
 	}
 
+	state.Zone = zone
+
 	var (
-		records, extra []dns.RR
-		err            error
+		records []dns.RR
+		extra   []dns.RR
+		err     error
 	)
+
 	switch state.Type() {
 	case "A":
 		records, _, err = middleware.A(&k, zone, state, nil, middleware.Options{})
@@ -70,11 +74,11 @@ func (k Kubernetes) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 		// Do a fake A lookup, so we can distinguish between NODATA and NXDOMAIN
 		_, _, err = middleware.A(&k, zone, state, nil, middleware.Options{})
 	}
+
 	if k.IsNameError(err) {
 		if k.Fallthrough {
 			return middleware.NextOrFailure(k.Name(), k.Next, ctx, w, r)
 		}
-		// Make err nil when returning here, so we don't log spam for NXDOMAIN.
 		return middleware.BackendError(&k, zone, dns.RcodeNameError, state, nil /*debug*/, nil /* err */, middleware.Options{})
 	}
 	if err != nil {

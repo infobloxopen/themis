@@ -3,6 +3,7 @@ package cache
 import (
 	"time"
 
+	"github.com/coredns/coredns/middleware/cache/freq"
 	"github.com/coredns/coredns/middleware/pkg/response"
 	"github.com/miekg/dns"
 )
@@ -18,6 +19,8 @@ type item struct {
 
 	origTTL uint32
 	stored  time.Time
+
+	*freq.Freq
 }
 
 func newItem(m *dns.Msg, d time.Duration) *item {
@@ -43,10 +46,12 @@ func newItem(m *dns.Msg, d time.Duration) *item {
 	i.origTTL = uint32(d.Seconds())
 	i.stored = time.Now().UTC()
 
+	i.Freq = new(freq.Freq)
+
 	return i
 }
 
-// toMsg turns i into a message, it tailers the reply to m.
+// toMsg turns i into a message, it tailors the reply to m.
 // The Authoritative bit is always set to 0, because the answer is from the cache.
 func (i *item) toMsg(m *dns.Msg) *dns.Msg {
 	m1 := new(dns.Msg)
@@ -58,39 +63,35 @@ func (i *item) toMsg(m *dns.Msg) *dns.Msg {
 	m1.Rcode = i.Rcode
 	m1.Compress = true
 
-	m1.Answer = i.Answer
-	m1.Ns = i.Ns
-	m1.Extra = i.Extra
+	m1.Answer = make([]dns.RR, len(i.Answer))
+	m1.Ns = make([]dns.RR, len(i.Ns))
+	m1.Extra = make([]dns.RR, len(i.Extra))
 
-	ttl := int(i.origTTL) - int(time.Now().UTC().Sub(i.stored).Seconds())
-	setMsgTTL(m1, uint32(ttl))
-	return m1
-}
-
-func (i *item) expired(now time.Time) bool {
-	ttl := int(i.origTTL) - int(now.UTC().Sub(i.stored).Seconds())
-	return ttl < 0
-}
-
-// setMsgTTL sets the ttl on all RRs in all sections. If ttl is smaller than minTTL
-// that value is used.
-func setMsgTTL(m *dns.Msg, ttl uint32) {
+	ttl := uint32(i.ttl(time.Now()))
 	if ttl < minTTL {
 		ttl = minTTL
 	}
 
-	for _, r := range m.Answer {
-		r.Header().Ttl = ttl
+	for j, r := range i.Answer {
+		m1.Answer[j] = dns.Copy(r)
+		m1.Answer[j].Header().Ttl = ttl
 	}
-	for _, r := range m.Ns {
-		r.Header().Ttl = ttl
+	for j, r := range i.Ns {
+		m1.Ns[j] = dns.Copy(r)
+		m1.Ns[j].Header().Ttl = ttl
 	}
-	for _, r := range m.Extra {
-		if r.Header().Rrtype == dns.TypeOPT {
-			continue
+	for j, r := range i.Extra {
+		m1.Extra[j] = dns.Copy(r)
+		if m1.Extra[j].Header().Rrtype != dns.TypeOPT {
+			m1.Extra[j].Header().Ttl = ttl
 		}
-		r.Header().Ttl = ttl
 	}
+	return m1
+}
+
+func (i *item) ttl(now time.Time) int {
+	ttl := int(i.origTTL) - int(now.UTC().Sub(i.stored).Seconds())
+	return ttl
 }
 
 func minMsgTTL(m *dns.Msg, mt response.Type) time.Duration {
