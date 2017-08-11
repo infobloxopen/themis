@@ -67,7 +67,7 @@ func (f functionBooleanOr) calculate(ctx *Context) (AttributeValue, error) {
 	for i, arg := range f.args {
 		a, err := ctx.calculateBooleanExpression(arg)
 		if err != nil {
-			return undefinedValue, bindError(bindError(err, fmt.Sprintf("argument %d", i)), f.describe())
+			return undefinedValue, bindError(bindErrorf(err, "argument %d", i), f.describe())
 		}
 
 		if a {
@@ -112,7 +112,7 @@ func (f functionBooleanAnd) calculate(ctx *Context) (AttributeValue, error) {
 	for i, arg := range f.args {
 		a, err := ctx.calculateBooleanExpression(arg)
 		if err != nil {
-			return undefinedValue, bindError(bindError(err, fmt.Sprintf("argument %d", i)), f.describe())
+			return undefinedValue, bindError(bindErrorf(err, "argument %d", i), f.describe())
 		}
 
 		if !a {

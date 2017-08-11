@@ -27,7 +27,7 @@ func TestStorageNewTransaction(t *testing.T) {
 	initialTag := uuid.NewV4()
 
 	s := &PolicyStorage{tag: &initialTag}
-	tr, err := s.newTransaction(&initialTag)
+	tr, err := s.NewTransaction(&initialTag)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
 	} else if tr == nil {
@@ -35,27 +35,27 @@ func TestStorageNewTransaction(t *testing.T) {
 	}
 
 	s = &PolicyStorage{}
-	tr, err = s.newTransaction(&initialTag)
+	tr, err = s.NewTransaction(&initialTag)
 	if err == nil {
 		t.Errorf("Expected error but got transaction %#v", tr)
-	} else if _, ok := err.(*untaggedPolicyModificationError); !ok {
+	} else if _, ok := err.(*UntaggedPolicyModificationError); !ok {
 		t.Errorf("Expected *untaggedPolicyModificationError but got %T (%s)", err, err)
 	}
 
 	s = &PolicyStorage{tag: &initialTag}
-	tr, err = s.newTransaction(nil)
+	tr, err = s.NewTransaction(nil)
 	if err == nil {
 		t.Errorf("Expected error but got transaction %#v", tr)
-	} else if _, ok := err.(*missingPolicyTagError); !ok {
+	} else if _, ok := err.(*MissingPolicyTagError); !ok {
 		t.Errorf("Expected *missingPolicyTagError but got %T (%s)", err, err)
 	}
 
 	otherTag := uuid.NewV4()
 	s = &PolicyStorage{tag: &initialTag}
-	tr, err = s.newTransaction(&otherTag)
+	tr, err = s.NewTransaction(&otherTag)
 	if err == nil {
 		t.Errorf("Expected error but got transaction %#v", tr)
-	} else if _, ok := err.(*policyTagsNotMatchError); !ok {
+	} else if _, ok := err.(*PolicyTagsNotMatchError); !ok {
 		t.Errorf("Expected *policyTagsNotMatchError but got %T (%s)", err, err)
 	}
 }
@@ -65,33 +65,44 @@ func TestStorageCommitTransaction(t *testing.T) {
 	newTag := uuid.NewV4()
 
 	s := &PolicyStorage{tag: &initialTag}
-	tr, err := s.newTransaction(&initialTag)
+	tr, err := s.NewTransaction(&initialTag)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
 	} else {
-		newS, err := tr.commit(&newTag)
+		u, err := NewPolicyUpdate(initialTag, newTag)
 		if err != nil {
 			t.Errorf("Expected no error but got %s", err)
 		} else {
-			if &newS == &s {
-				t.Errorf("Expected other storage instance but got the same")
-			}
+			err := tr.Apply(u)
+			if err != nil {
+				t.Errorf("Expected no error but got %s", err)
+			} else {
+				newS, err := tr.Commit()
+				if err != nil {
+					t.Errorf("Expected no error but got %s", err)
+				} else {
+					if &newS == &s {
+						t.Errorf("Expected other storage instance but got the same")
+					}
 
-			if !uuid.Equal(*newS.tag, newTag) {
-				t.Errorf("Expected tag %s but got %s", newTag.String(), newS.tag.String())
+					if !uuid.Equal(*newS.tag, newTag) {
+						t.Errorf("Expected tag %s but got %s", newTag.String(), newS.tag.String())
+					}
+				}
 			}
 		}
 	}
 
-	tr, err = s.newTransaction(&initialTag)
+	tr, err = s.NewTransaction(&initialTag)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
 	} else {
-		s, err := tr.commit(nil)
+		tr.err = newUnknownPolicyUpdateOperationError(-1)
+		s, err := tr.Commit()
 		if err == nil {
 			t.Errorf("Expected error but got storage %#v", s)
-		} else if _, ok := err.(*missingPolicyTagError); !ok {
-			t.Errorf("Expected *missingPolicyTagError but got %T (%s)", err, err)
+		} else if _, ok := err.(*failedPolicyTransactionError); !ok {
+			t.Errorf("Expected *failedPolicyTransactionError but got %T (%s)", err, err)
 		}
 	}
 }
@@ -104,7 +115,7 @@ func TestStorageModifications(t *testing.T) {
 		policies: &Policy{
 			id:        "test",
 			algorithm: firstApplicableEffectRCA{}}}
-	tr, err := s.newTransaction(&tag)
+	tr, err := s.NewTransaction(&tag)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
 	} else {

@@ -1,258 +1,150 @@
 package main
 
 import (
-	"fmt"
-	"golang.org/x/net/context"
-	"net"
-	"strconv"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-
-	pb "github.com/infobloxopen/themis/pdp-service"
+	"golang.org/x/net/context"
 
 	"github.com/infobloxopen/themis/pdp"
+	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
-type AttrMarshaller func(v pdp.AttributeValueType) (string, error)
-type AttrUnmarshaller func(v string) (pdp.AttributeValueType, error)
+func makeEffect(effect int) (pb.Response_Effect, error) {
+	switch effect {
+	case pdp.EffectDeny:
+		return pb.Response_DENY, nil
 
-var (
-	Marshallers map[int]AttrMarshaller = map[int]AttrMarshaller{
-		pdp.DataTypeUndefined: undefinedMarshaller,
-		pdp.DataTypeBoolean:   booleanMarshaller,
-		pdp.DataTypeString:    stringMarshaller,
-		pdp.DataTypeAddress:   addressMarshaller,
-		pdp.DataTypeNetwork:   networkMarshaller,
-		pdp.DataTypeDomain:    domainMarshaller}
+	case pdp.EffectPermit:
+		return pb.Response_PERMIT, nil
 
-	Unmarshallers map[int]AttrUnmarshaller = map[int]AttrUnmarshaller{
-		pdp.DataTypeUndefined: undefinedUnmarshaller,
-		pdp.DataTypeBoolean:   booleanUnmarshaller,
-		pdp.DataTypeString:    stringUnmarshaller,
-		pdp.DataTypeAddress:   addressUnmarshaller,
-		pdp.DataTypeNetwork:   networkUnmarshaller,
-		pdp.DataTypeDomain:    domainUnmarshaller}
-)
+	case pdp.EffectNotApplicable:
+		return pb.Response_NOTAPPLICABLE, nil
 
-func undefinedMarshaller(v pdp.AttributeValueType) (string, error) {
-	return "", fmt.Errorf("Can't marshal value of undefined type into response")
-}
+	case pdp.EffectIndeterminate:
+		return pb.Response_INDETERMINATE, nil
 
-func undefinedUnmarshaller(v string) (pdp.AttributeValueType, error) {
-	return pdp.AttributeValueType{}, fmt.Errorf("Can't unmarshal undefined type")
-}
+	case pdp.EffectIndeterminateD:
+		return pb.Response_INDETERMINATED, nil
 
-func booleanMarshaller(v pdp.AttributeValueType) (string, error) {
-	return strconv.FormatBool(v.Value.(bool)), nil
-}
+	case pdp.EffectIndeterminateP:
+		return pb.Response_INDETERMINATEP, nil
 
-func booleanUnmarshaller(v string) (pdp.AttributeValueType, error) {
-	b, err := strconv.ParseBool(v)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to parse boolean in booleanUnmarshaller.")
-		return pdp.AttributeValueType{}, err
+	case pdp.EffectIndeterminateDP:
+		return pb.Response_INDETERMINATEDP, nil
 	}
 
-	return pdp.AttributeValueType{pdp.DataTypeBoolean, b}, nil
+	return pb.Response_INDETERMINATE, newUnknownEffectError(effect)
 }
 
-func stringMarshaller(v pdp.AttributeValueType) (string, error) {
-	return v.Value.(string), nil
+func makeFailEffect(effect pb.Response_Effect) (pb.Response_Effect, error) {
+	switch effect {
+	case pb.Response_DENY:
+		return pb.Response_INDETERMINATED, nil
+
+	case pb.Response_PERMIT:
+		return pb.Response_INDETERMINATEP, nil
+
+	case pb.Response_NOTAPPLICABLE, pb.Response_INDETERMINATE, pb.Response_INDETERMINATED, pb.Response_INDETERMINATEP, pb.Response_INDETERMINATEDP:
+		return effect, nil
+	}
+
+	return pb.Response_INDETERMINATE, newUnknownEffectError(int(effect))
 }
 
-func stringUnmarshaller(v string) (pdp.AttributeValueType, error) {
-	return pdp.AttributeValueType{pdp.DataTypeString, v}, nil
+func (s *Server) newContext(c *pdp.LocalContentStorage, in *pb.Request) (*pdp.Context, error) {
+	ctx, err := pdp.NewContext(c, len(in.Attributes), func(i int) (string, pdp.AttributeValue, error) {
+		a := in.Attributes[i]
+
+		t, ok := pdp.TypeIDs[strings.ToLower(a.Type)]
+		if !ok {
+			return "", pdp.AttributeValue{}, bindError(newUnknownAttributeTypeError(a.Type), a.Id)
+		}
+
+		v, err := pdp.MakeValueFromSting(t, a.Value)
+		if err != nil {
+			return "", pdp.AttributeValue{}, bindError(err, a.Id)
+		}
+
+		return a.Id, v, nil
+	})
+	if err != nil {
+		return nil, newContextCreationError(err)
+	}
+
+	return ctx, nil
 }
 
-func addressMarshaller(v pdp.AttributeValueType) (string, error) {
-	return v.Value.(net.IP).String(), nil
+func (s *Server) newAttributes(obligations []pdp.AttributeAssignmentExpression, ctx *pdp.Context) ([]*pb.Attribute, error) {
+	attrs := make([]*pb.Attribute, len(obligations))
+	for i, e := range obligations {
+		ID, t, s, err := e.Serialize(ctx)
+		if err != nil {
+			return attrs[:i], err
+		}
+
+		attrs[i] = &pb.Attribute{
+			Id:    ID,
+			Type:  t,
+			Value: s}
+	}
+
+	return attrs, nil
 }
 
-func addressUnmarshaller(v string) (pdp.AttributeValueType, error) {
-	if strings.Contains(v, ":") {
-		if strings.Contains(v, "]") {
-			v = strings.Split(v, "]")[0][1:]
-		} else if strings.Contains(v, ".") {
-			v = strings.Split(v, ":")[0]
+func (s *Server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in *pb.Request) (pb.Response_Effect, []error, []*pb.Attribute) {
+	ctx, err := s.newContext(c, in)
+	if err != nil {
+		return pb.Response_INDETERMINATE, []error{err}, nil
+	}
+
+	errs := []error{}
+
+	r := p.Root().Calculate(ctx)
+	effect, obligations, err := r.Status()
+	if err != nil {
+		errs = append(errs, newPolicyCalculationError(err))
+	}
+
+	re, err := makeEffect(effect)
+	if err != nil {
+		errs = append(errs, newEffectTranslationError(err))
+	}
+
+	if len(errs) > 0 {
+		re, err = makeFailEffect(re)
+		if err != nil {
+			errs = append(errs, newEffectCombiningError(err))
 		}
 	}
 
-	ip := net.ParseIP(v)
-	if ip == nil {
-		log.Error("Failed to pase IP in addressUnmarshaller")
-		return pdp.AttributeValueType{}, fmt.Errorf("Can't treat \"%s\" as address", v)
-	}
-
-	return pdp.AttributeValueType{pdp.DataTypeAddress, ip}, nil
-}
-
-func networkMarshaller(v pdp.AttributeValueType) (string, error) {
-	n := v.Value.(net.IPNet)
-	return n.String(), nil
-}
-
-func networkUnmarshaller(v string) (pdp.AttributeValueType, error) {
-	_, n, err := net.ParseCIDR(v)
+	attrs, err := s.newAttributes(obligations, ctx)
 	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to parse CIDR in networkUnmarshaller.")
-		return pdp.AttributeValueType{}, err
+		errs = append(errs, newObligationTranslationError(err))
 	}
 
-	return pdp.AttributeValueType{pdp.DataTypeNetwork, *n}, nil
+	return re, errs, attrs
 }
 
-func domainMarshaller(v pdp.AttributeValueType) (string, error) {
-	return v.Value.(string), nil
-}
-
-func domainUnmarshaller(v string) (pdp.AttributeValueType, error) {
-	d, err := pdp.AdjustDomainName(v)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to Adjust domain name in domainUnmarshaller.")
-		return pdp.AttributeValueType{}, err
-	}
-
-	return pdp.AttributeValueType{pdp.DataTypeDomain, d}, nil
-}
-
-func UnmarshalAttribute(attr *pb.Attribute) (int, pdp.AttributeValueType) {
-	dataType, ok := pdp.DataTypeIDs[strings.ToLower(attr.Type)]
-	if !ok {
-		log.WithFields(log.Fields{
-			"type": attr.Type,
-			"id":   attr.Id}).Error("Invalid type name")
-
-		return pdp.DataTypeUndefined, pdp.AttributeValueType{}
-	}
-
-	unmarshaller, ok := Unmarshallers[dataType]
-	if !ok {
-		log.WithFields(log.Fields{
-			"type": attr.Type,
-			"id":   attr.Id}).Error("Unmarshaling for the type from the request hasn't been implemented yet")
-
-		return pdp.DataTypeUndefined, pdp.AttributeValueType{}
-	}
-
-	v, err := unmarshaller(attr.Value)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"value": attr.Value,
-			"type":  attr.Type,
-			"id":    attr.Id,
-			"error": err}).Error("Unmarshaling error")
-
-		return pdp.DataTypeUndefined, pdp.AttributeValueType{}
-	}
-
-	return dataType, v
-}
-
-func MakeRequestContext(in *pb.Request) pdp.Context {
-	ctx := pdp.NewContext()
-	for _, attr := range in.Attributes {
-		t, v := UnmarshalAttribute(attr)
-		if t != pdp.DataTypeUndefined {
-			ctx.StoreRawAttribute(attr.Id, t, v)
-		}
-	}
-
-	return ctx
-}
-
-func MarshalAttribute(attr pdp.AttributeValueType) (string, error) {
-	marshaller, ok := Marshallers[attr.DataType]
-	if !ok {
-		return "", fmt.Errorf("Marshaling for type \"%s\" into response hasn't been implemented yet",
-			pdp.DataTypeNames[attr.DataType])
-	}
-
-	return marshaller(attr)
-}
-
-func MarshalAttributes(ctx *pdp.Context) []*pb.Attribute {
-	if ctx == nil {
-		return nil
-	}
-
-	attrs := make([]*pb.Attribute, 0)
-	for id, t := range ctx.Attributes {
-		for _, v := range t {
-			s, err := MarshalAttribute(v)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"type":  pdp.DataTypeNames[v.DataType],
-					"id":    id,
-					"error": err}).Error("Marshaling error")
-
-				continue
-			}
-
-			attrs = append(attrs, &pb.Attribute{id, pdp.DataTypeNames[v.DataType], s})
-		}
-	}
-
-	return attrs
-}
-
-func serviceReply(e int, s string, ctx *pdp.Context) *pb.Response {
-	r := &pb.Response{pb.Response_DENY, s, MarshalAttributes(ctx)}
-
-	if e == pdp.EffectPermit {
-		r.Effect = pb.Response_PERMIT
-	}
-
-	return r
-}
-
-func serviceFail(r pdp.ResponseType, format string, args ...interface{}) *pb.Response {
-	s := fmt.Sprintf(format, args...)
-
-	if r.Effect == pdp.EffectDeny || r.Effect == pdp.EffectIndeterminateD {
-		return serviceReply(pdp.EffectIndeterminateD, s, nil)
-	}
-
-	if r.Effect == pdp.EffectPermit || r.Effect == pdp.EffectIndeterminateP {
-		return serviceReply(pdp.EffectIndeterminateP, s, nil)
-	}
-
-	if r.Effect == pdp.EffectIndeterminateDP {
-		return serviceReply(pdp.EffectIndeterminateP, s, nil)
-	}
-
-	return serviceReply(pdp.EffectIndeterminate, s, nil)
-}
-
-func MakeResponse(r pdp.ResponseType, ctx *pdp.Context) *pb.Response {
-	o := pdp.NewContext()
-
-	err := o.CalculateObligations(r.Obligations, ctx)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("CalculateObligations failed.")
-		return serviceFail(r, "Obligations: %s", err)
-	}
-
-	return serviceReply(r.Effect, r.Status, &o)
-}
-
-func (s *Server) Validate(server_ctx context.Context, in *pb.Request) (*pb.Response, error) {
-	ctx := MakeRequestContext(in)
+func (s *Server) Validate(ctx context.Context, in *pb.Request) (*pb.Response, error) {
 	log.Info("Validating context")
-	log.WithFields(log.Fields{"context": ctx}).Debug()
 
 	s.RLock()
-	p := s.Policy
+	p := s.p
+	c := s.c
 	s.RUnlock()
 
-	if p == nil {
-		log.Error("No Policy or policy set defined")
-		return serviceReply(pdp.EffectIndeterminate, "No policy or policy set defined", nil), nil
+	effect, errs, attrs := s.rawValidate(p, c, in)
+
+	status := "Ok"
+	if len(errs) > 1 {
+		status = newMultiError(errs).Error()
+	} else if len(errs) > 0 {
+		status = errs[0].Error()
 	}
 
-	r := p.Calculate(&ctx)
-	log.Info("Returning response")
-	log.WithFields(log.Fields{"response": r}).Debug()
-
-	return MakeResponse(r, &ctx), nil
+	return &pb.Response{
+		Effect:     effect,
+		Reason:     status,
+		Obligation: attrs}, nil
 }

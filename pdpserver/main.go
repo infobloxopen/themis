@@ -3,13 +3,14 @@ package main
 import (
 	log "github.com/Sirupsen/logrus"
 	"os"
+	"runtime"
 )
 
 func main() {
 	InitLogging(config.Verbose)
 	log.Info("Starting PDP server")
 
-	pdp := NewServer(config.CWD)
+	pdp := NewServer()
 
 	if pdp == nil {
 		log.Error("Failed to create Server.")
@@ -17,6 +18,8 @@ func main() {
 	}
 
 	pdp.LoadPolicies(config.Policy)
+	pdp.LoadContent(config.Content)
+	runtime.GC()
 
 	if pdp.ListenRequests(config.ServiceEP) != nil {
 		log.Error("Failed to Listen to Requests.")
@@ -35,5 +38,5 @@ func main() {
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Warning("Could not initialize tracing.")
 	}
-	pdp.Serve(tracer)
+	pdp.Serve(tracer, config.ProfilerEP)
 }

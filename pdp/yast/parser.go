@@ -1,8 +1,6 @@
 package yast
 
 import (
-	"fmt"
-
 	"github.com/satori/go.uuid"
 	"gopkg.in/yaml.v2"
 
@@ -83,7 +81,7 @@ func UnmarshalUpdate(in []byte, attrs map[string]pdp.Attribute, oldTag, newTag u
 	for i, item := range a {
 		err := ctx.unmarshalCommand(item, u)
 		if err != nil {
-			return nil, bindError(err, fmt.Sprintf("%d", i))
+			return nil, bindErrorf(err, "%d", i)
 		}
 	}
 

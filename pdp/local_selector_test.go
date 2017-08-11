@@ -9,13 +9,13 @@ import (
 func TestLocalSelector(t *testing.T) {
 	csmt := strtree.NewTree()
 	csmt.InplaceInsert("test-key", "test-value")
-	csm := contentStringMap{csmt}
+	csm := MakeContentStringMap(csmt)
 	cit := strtree.NewTree()
-	cit.InplaceInsert("test-item", MakeContentMappingItem(TypeString, []int{TypeString}, csm))
+	cit.InplaceInsert("test-item", MakeContentMappingItem("test-item", TypeString, []int{TypeString}, csm))
 	ct := strtree.NewTree()
-	ct.InplaceInsert("test-content", &localContent{items: cit})
+	ct.InplaceInsert("test-content", &LocalContent{id: "test-content", items: cit})
 
-	c := &Context{c: &localContentStorage{r: ct}}
+	c := &Context{c: &LocalContentStorage{r: ct}}
 
 	sel := LocalSelector{
 		content: "test-content",

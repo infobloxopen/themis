@@ -34,6 +34,7 @@ const (
 	missingDefaultPolicyPCAErrorID
 	missingErrorPolicyPCAErrorID
 	notImplementedPCAErrorID
+	mapperArgumentTypeErrorID
 	conditionTypeErrorID
 	unknownEffectErrorID
 	noSMPItemsErrorID
@@ -442,6 +443,21 @@ func newNotImplementedPCAError(ID string) *notImplementedPCAError {
 
 func (e *notImplementedPCAError) Error() string {
 	return e.errorf("Parsing for %q policy combinig algorithm hasn't been implemented yet", e.ID)
+}
+
+type mapperArgumentTypeError struct {
+	errorLink
+	actual int
+}
+
+func newMapperArgumentTypeError(actual int) *mapperArgumentTypeError {
+	return &mapperArgumentTypeError{
+		errorLink: errorLink{id: mapperArgumentTypeErrorID},
+		actual:    actual}
+}
+
+func (e *mapperArgumentTypeError) Error() string {
+	return e.errorf("Expected %s, %s or %s as argument but got %s", pdp.TypeNames[pdp.TypeString], pdp.TypeNames[pdp.TypeSetOfStrings], pdp.TypeNames[pdp.TypeListOfStrings], pdp.TypeNames[e.actual])
 }
 
 type conditionTypeError struct {

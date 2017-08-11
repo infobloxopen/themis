@@ -24,6 +24,7 @@ _testmain.go
 *.prof
 
 # Binary files
+egen/egen
 papcli/papcli
 pdpserver/pdpserver
 pepcli/pepcli

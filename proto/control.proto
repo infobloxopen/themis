@@ -3,9 +3,8 @@ syntax = "proto3";
 package control;
 
 service PDPControl {
+  rpc Request (Item) returns (Response) {}
   rpc Upload (stream Chunk) returns (Response) {}
-  rpc Parse (Item) returns (Response) {}
-  rpc Apply (Update) returns (Response) {}
 }
 
 message Item {
@@ -14,26 +13,21 @@ message Item {
     CONTENT = 1;
   }
   DataType type = 1;
-  string fromVersion = 2;
-  string toVersion = 3;
-  int32 dataId = 4;
-  string id = 5;
-  repeated int32 includes = 6;
+  string fromTag = 2;
+  string toTag = 3;
+  string id = 4;
 }
 
 message Chunk {
-  string data = 1;
-}
-
-message Update {
   int32 id = 1;
+  string data = 2;
 }
 
 message Response {
   enum Status {
     ACK = 0;
     ERROR = 1;
-    VERSION_ERROR = 2;
+    TAG_ERROR = 2;
   }
   Status status = 1;
   int32 id = 2;

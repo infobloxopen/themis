@@ -1,10 +1,6 @@
 package pdp
 
-import (
-	"encoding/json"
-
-	"github.com/satori/go.uuid"
-)
+import "github.com/satori/go.uuid"
 
 type PolicyStorage struct {
 	tag      *uuid.UUID
@@ -29,20 +25,29 @@ func (s *PolicyStorage) Root() Evaluable {
 	return s.policies
 }
 
-func (s *PolicyStorage) newTransaction(tag *uuid.UUID) (*policyStorageTransaction, error) {
+func (s *PolicyStorage) CheckTag(tag *uuid.UUID) error {
 	if s.tag == nil {
-		return nil, newUntaggedPolicyModificationError()
+		return newUntaggedPolicyModificationError()
 	}
 
 	if tag == nil {
-		return nil, newMissingPolicyTagError()
+		return newMissingPolicyTagError()
 	}
 
 	if !uuid.Equal(*s.tag, *tag) {
-		return nil, newPolicyTagsNotMatchError(s.tag, tag)
+		return newPolicyTagsNotMatchError(s.tag, tag)
 	}
 
-	return &policyStorageTransaction{attrs: s.attrs, policies: s.policies}, nil
+	return nil
+}
+
+func (s *PolicyStorage) NewTransaction(tag *uuid.UUID) (*PolicyStorageTransaction, error) {
+	err := s.CheckTag(tag)
+	if err != nil {
+		return nil, err
+	}
+
+	return &PolicyStorageTransaction{tag: *tag, attrs: s.attrs, policies: s.policies}, nil
 }
 
 const (
@@ -83,67 +88,59 @@ type command struct {
 	entity interface{}
 }
 
-func (c *command) MarshalJSON() ([]byte, error) {
-	b := []byte("{")
-	var err error
+type PolicyStorageTransaction struct {
+	tag      uuid.UUID
+	attrs    map[string]Attribute
+	policies Evaluable
+	err      error
+}
 
-	b, err = appendJSONTag(b, "op")
-	if err != nil {
-		return nil, err
+func (t *PolicyStorageTransaction) Attributes() map[string]Attribute {
+	return t.attrs
+}
+
+func (t *PolicyStorageTransaction) applyCmd(cmd *command) error {
+	switch cmd.op {
+	case UOAdd:
+		return t.appendItem(cmd.path, cmd.entity)
+
+	case UODelete:
+		return t.del(cmd.path)
 	}
 
-	b, err = appendJSONString(b, UpdateOpNames[c.op])
-	if err != nil {
-		return nil, err
+	return newUnknownPolicyUpdateOperationError(cmd.op)
+}
+
+func (t *PolicyStorageTransaction) Apply(u *PolicyUpdate) error {
+	if t.err != nil {
+		return newFailedPolicyTransactionError(t.tag, t.err)
 	}
 
-	b = append(b, ',')
-
-	b, err = appendJSONTag(b, "path")
-	if err != nil {
-		return nil, err
+	if !uuid.Equal(t.tag, u.oldTag) {
+		return newPolicyTransactionTagsNotMatchError(t.tag, u.oldTag)
 	}
 
-	b, err = appendJSONStringArray(b, c.path)
-	if err != nil {
-		return nil, err
-	}
-
-	if c.op == UOAdd && c.entity != nil {
-		if entity, ok := c.entity.(*ContentItem); ok {
-			b = append(b, ',')
-
-			b, err = appendJSONTag(b, "entity")
-			if err != nil {
-				return nil, err
-			}
-
-			e, err := json.Marshal(entity)
-			if err != nil {
-				return nil, err
-			}
-
-			b = append(b, e...)
+	for i, cmd := range u.cmds {
+		err := t.applyCmd(cmd)
+		if err != nil {
+			t.err = err
+			return bindErrorf(err, "command %d", i)
 		}
 	}
 
-	return append(b, '}'), nil
+	t.tag = u.newTag
+	return nil
 }
 
-type policyStorageTransaction struct {
-	attrs    map[string]Attribute
-	policies Evaluable
-}
-
-func (t *policyStorageTransaction) commit(tag *uuid.UUID) (*PolicyStorage, error) {
-	if tag == nil {
-		return nil, newMissingPolicyTagError()
+func (t *PolicyStorageTransaction) Commit() (*PolicyStorage, error) {
+	if t.err != nil {
+		return nil, newFailedPolicyTransactionError(t.tag, t.err)
 	}
 
-	return &PolicyStorage{tag: tag, attrs: t.attrs, policies: t.policies}, nil
+	return &PolicyStorage{tag: &t.tag, attrs: t.attrs, policies: t.policies}, nil
 }
 
-func (t *policyStorageTransaction) appendItem(path []string, v interface{}) error {
+func (t *PolicyStorageTransaction) appendItem(path []string, v interface{}) error {
 	if len(path) <= 0 {
 		p, ok := v.(Evaluable)
 		if !ok {
@@ -173,7 +170,7 @@ func (t *policyStorageTransaction) appendItem(path []string, v interface{}) erro
 	return nil
 }
 
-func (t *policyStorageTransaction) del(path []string) error {
+func (t *PolicyStorageTransaction) del(path []string) error {
 	if len(path) <= 0 {
 		return newEmptyPathModificationError()
 	}

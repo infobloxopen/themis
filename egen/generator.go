@@ -111,7 +111,7 @@ func (e *errors) generate() {
 
 			fields := make([]string, len(item.Fields))
 			for i, field := range item.Fields {
-				fields[i] = fmt.Sprintf("%s%s %s", field.ID, strings.Repeat(" ", maxLen - len(field.ID)), field.Type)
+				fields[i] = fmt.Sprintf("%s%s %s", field.ID, strings.Repeat(" ", maxLen-len(field.ID)), field.Type)
 			}
 			fmt.Printf(multiFieldTypeTemplate, item.ID, strings.Join(fields, "\n\t"))
 
@@ -134,7 +134,7 @@ func (e *errors) generate() {
 					group = append(group, field.ID)
 				}
 
-				fields[i] = fmt.Sprintf("%s:%s %s", field.ID, strings.Repeat(" ", maxLen - len(field.ID)), field.ID)
+				fields[i] = fmt.Sprintf("%s:%s %s", field.ID, strings.Repeat(" ", maxLen-len(field.ID)), field.ID)
 			}
 
 			if len(group) > 0 {

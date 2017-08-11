@@ -198,6 +198,17 @@ errors:
   args:
   - field: ID
 
+- id: mapperArgumentTypeError
+  fields:
+  - id: actual
+    type: int
+  msg: "Expected %s, %s or %s as argument but got %s"
+  args:
+  - expr: pdp.TypeNames[pdp.TypeString]
+  - expr: pdp.TypeNames[pdp.TypeSetOfStrings]
+  - expr: pdp.TypeNames[pdp.TypeListOfStrings]
+  - expr: pdp.TypeNames[e.actual]
+
 - id: conditionTypeError
   fields:
   - id: t

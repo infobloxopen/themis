@@ -12,5 +12,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	e.generate()
+	if conf.check {
+		e.check()
+	} else {
+		e.generate()
+	}
 }

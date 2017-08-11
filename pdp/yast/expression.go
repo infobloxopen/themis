@@ -1,10 +1,6 @@
 package yast
 
-import (
-	"fmt"
-
-	"github.com/infobloxopen/themis/pdp"
-)
+import "github.com/infobloxopen/themis/pdp"
 
 func (ctx context) unmarshalAttributeDesignator(v interface{}) (pdp.AttributeDesignator, boundError) {
 	ID, err := ctx.validateString(v, "attribute ID")
@@ -30,7 +26,7 @@ func (ctx context) unmarshalArguments(v interface{}) ([]pdp.Expression, boundErr
 	for i, item := range items {
 		arg, err := ctx.unmarshalExpression(item)
 		if err != nil {
-			return nil, bindError(err, fmt.Sprintf("%d", i))
+			return nil, bindErrorf(err, "%d", i)
 		}
 
 		args[i] = arg

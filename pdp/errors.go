@@ -3,6 +3,7 @@ package pdp
 /* AUTOMATICALLY GENERATED FROM errors.yaml - DO NOT EDIT */
 
 import (
+	"fmt"
 	"github.com/satori/go.uuid"
 	"strings"
 )
@@ -12,10 +13,21 @@ const (
 	multiErrorID
 	missingAttributeErrorID
 	missingValueErrorID
+	unknownTypeStringCastErrorID
+	invalidTypeStringCastErrorID
+	notImplementedStringCastErrorID
+	invalidBooleanStringCastErrorID
+	invalidAddressStringCastErrorID
+	invalidNetworkStringCastErrorID
 	attributeValueTypeErrorID
+	duplicateAttributeValueErrorID
+	unknownTypeSerializationErrorID
+	invalidTypeSerializationErrorID
+	notImplementedSerializationErrorID
+	assignmentTypeMismatchID
 	mapperArgumentTypeErrorID
-	untaggedPolicyModificationErrorID
-	missingPolicyTagErrorID
+	UntaggedPolicyModificationErrorID
+	MissingPolicyTagErrorID
 	emptyPathModificationErrorID
 	invalidRootPolicyItemTypeErrorID
 	hiddenRootPolicyAppendErrorID
@@ -25,7 +37,10 @@ const (
 	tooShortPathPolicySetModificationErrorID
 	missingPolicySetChildErrorID
 	hiddenPolicyAppendErrorID
-	policyTagsNotMatchErrorID
+	PolicyTagsNotMatchErrorID
+	policyTransactionTagsNotMatchErrorID
+	failedPolicyTransactionErrorID
+	unknownPolicyUpdateOperationErrorID
 	hiddenPolicyModificationErrorID
 	tooLongPathPolicyModificationErrorID
 	tooShortPathPolicyModificationErrorID
@@ -44,9 +59,18 @@ const (
 	missingPathContentModificationErrorID
 	tooLongPathContentModificationErrorID
 	invalidContentValueModificationErrorID
-	untaggedContentModificationErrorID
-	missingContentTagErrorID
-	contentTagsNotMatchErrorID
+	UntaggedContentModificationErrorID
+	MissingContentTagErrorID
+	ContentTagsNotMatchErrorID
+	unknownContentUpdateOperationErrorID
+	failedContentTransactionErrorID
+	contentTransactionIDNotMatchErrorID
+	contentTransactionTagsNotMatchErrorID
+	tooShortRawPathContentModificationErrorID
+	tooLongRawPathContentModificationErrorID
+	invalidContentUpdateDataErrorID
+	invalidContentUpdateResultTypeErrorID
+	invalidContentUpdateKeysErrorID
 	unknownContentItemResultTypeErrorID
 	invalidContentItemResultTypeErrorID
 	invalidContentKeyTypeErrorID
@@ -119,6 +143,100 @@ func (e *missingValueError) Error() string {
 	return e.errorf("Missing value")
 }
 
+type unknownTypeStringCastError struct {
+	errorLink
+	t int
+}
+
+func newUnknownTypeStringCastError(t int) *unknownTypeStringCastError {
+	return &unknownTypeStringCastError{
+		errorLink: errorLink{id: unknownTypeStringCastErrorID},
+		t:         t}
+}
+
+func (e *unknownTypeStringCastError) Error() string {
+	return e.errorf("Unknown type id %d", e.t)
+}
+
+type invalidTypeStringCastError struct {
+	errorLink
+	t int
+}
+
+func newInvalidTypeStringCastError(t int) *invalidTypeStringCastError {
+	return &invalidTypeStringCastError{
+		errorLink: errorLink{id: invalidTypeStringCastErrorID},
+		t:         t}
+}
+
+func (e *invalidTypeStringCastError) Error() string {
+	return e.errorf("Can't convert string to value of %q type", TypeNames[e.t])
+}
+
+type notImplementedStringCastError struct {
+	errorLink
+	t int
+}
+
+func newNotImplementedStringCastError(t int) *notImplementedStringCastError {
+	return &notImplementedStringCastError{
+		errorLink: errorLink{id: notImplementedStringCastErrorID},
+		t:         t}
+}
+
+func (e *notImplementedStringCastError) Error() string {
+	return e.errorf("Conversion from string to value of %q type hasn't been implemented", TypeNames[e.t])
+}
+
+type invalidBooleanStringCastError struct {
+	errorLink
+	s   string
+	err error
+}
+
+func newInvalidBooleanStringCastError(s string, err error) *invalidBooleanStringCastError {
+	return &invalidBooleanStringCastError{
+		errorLink: errorLink{id: invalidBooleanStringCastErrorID},
+		s:         s,
+		err:       err}
+}
+
+func (e *invalidBooleanStringCastError) Error() string {
+	return e.errorf("Can't treat %q as boolean (%s)", e.s, e.err)
+}
+
+type invalidAddressStringCastError struct {
+	errorLink
+	s string
+}
+
+func newInvalidAddressStringCastError(s string) *invalidAddressStringCastError {
+	return &invalidAddressStringCastError{
+		errorLink: errorLink{id: invalidAddressStringCastErrorID},
+		s:         s}
+}
+
+func (e *invalidAddressStringCastError) Error() string {
+	return e.errorf("Can't treat %q as IP address", e.s)
+}
+
+type invalidNetworkStringCastError struct {
+	errorLink
+	s   string
+	err error
+}
+
+func newInvalidNetworkStringCastError(s string, err error) *invalidNetworkStringCastError {
+	return &invalidNetworkStringCastError{
+		errorLink: errorLink{id: invalidNetworkStringCastErrorID},
+		s:         s,
+		err:       err}
+}
+
+func (e *invalidNetworkStringCastError) Error() string {
+	return e.errorf("Can't treat %q as network address (%s)", e.s, e.err)
+}
+
 type attributeValueTypeError struct {
 	errorLink
 	expected int
@@ -136,6 +254,89 @@ func (e *attributeValueTypeError) Error() string {
 	return e.errorf("Expected %s value but got %s", TypeNames[e.expected], TypeNames[e.actual])
 }
 
+type duplicateAttributeValueError struct {
+	errorLink
+	ID   string
+	t    int
+	curr AttributeValue
+	prev AttributeValue
+}
+
+func newDuplicateAttributeValueError(ID string, t int, curr, prev AttributeValue) *duplicateAttributeValueError {
+	return &duplicateAttributeValueError{
+		errorLink: errorLink{id: duplicateAttributeValueErrorID},
+		ID:        ID,
+		t:         t,
+		curr:      curr,
+		prev:      prev}
+}
+
+func (e *duplicateAttributeValueError) Error() string {
+	return e.errorf("Duplicate attribute %q of type %q in request %s - %s", e.ID, TypeNames[e.t], e.curr.describe(), e.prev.describe())
+}
+
+type unknownTypeSerializationError struct {
+	errorLink
+	t int
+}
+
+func newUnknownTypeSerializationError(t int) *unknownTypeSerializationError {
+	return &unknownTypeSerializationError{
+		errorLink: errorLink{id: unknownTypeSerializationErrorID},
+		t:         t}
+}
+
+func (e *unknownTypeSerializationError) Error() string {
+	return e.errorf("Unknown type id %d", e.t)
+}
+
+type invalidTypeSerializationError struct {
+	errorLink
+	t int
+}
+
+func newInvalidTypeSerializationError(t int) *invalidTypeSerializationError {
+	return &invalidTypeSerializationError{
+		errorLink: errorLink{id: invalidTypeSerializationErrorID},
+		t:         t}
+}
+
+func (e *invalidTypeSerializationError) Error() string {
+	return e.errorf("Can't serialize value of %q type", TypeNames[e.t])
+}
+
+type notImplementedSerializationError struct {
+	errorLink
+	t int
+}
+
+func newNotImplementedSerializationError(t int) *notImplementedSerializationError {
+	return &notImplementedSerializationError{
+		errorLink: errorLink{id: notImplementedSerializationErrorID},
+		t:         t}
+}
+
+func (e *notImplementedSerializationError) Error() string {
+	return e.errorf("Serialization of %q type hasn't been implemented", TypeNames[e.t])
+}
+
+type assignmentTypeMismatch struct {
+	errorLink
+	a Attribute
+	t int
+}
+
+func newAssignmentTypeMismatch(a Attribute, t int) *assignmentTypeMismatch {
+	return &assignmentTypeMismatch{
+		errorLink: errorLink{id: assignmentTypeMismatchID},
+		a:         a,
+		t:         t}
+}
+
+func (e *assignmentTypeMismatch) Error() string {
+	return e.errorf("Can't assign %q value to attribute %q of type %q", TypeNames[e.t], e.a.id, TypeNames[e.a.t])
+}
+
 type mapperArgumentTypeError struct {
 	errorLink
 	actual int
@@ -151,29 +352,29 @@ func (e *mapperArgumentTypeError) Error() string {
 	return e.errorf("Expected %s, %s or %s as argument but got %s", TypeNames[TypeString], TypeNames[TypeSetOfStrings], TypeNames[TypeListOfStrings], TypeNames[e.actual])
 }
 
-type untaggedPolicyModificationError struct {
+type UntaggedPolicyModificationError struct {
 	errorLink
 }
 
-func newUntaggedPolicyModificationError() *untaggedPolicyModificationError {
-	return &untaggedPolicyModificationError{
-		errorLink: errorLink{id: untaggedPolicyModificationErrorID}}
+func newUntaggedPolicyModificationError() *UntaggedPolicyModificationError {
+	return &UntaggedPolicyModificationError{
+		errorLink: errorLink{id: UntaggedPolicyModificationErrorID}}
 }
 
-func (e *untaggedPolicyModificationError) Error() string {
+func (e *UntaggedPolicyModificationError) Error() string {
 	return e.errorf("Can't modify policies with no tag")
 }
 
-type missingPolicyTagError struct {
+type MissingPolicyTagError struct {
 	errorLink
 }
 
-func newMissingPolicyTagError() *missingPolicyTagError {
-	return &missingPolicyTagError{
-		errorLink: errorLink{id: missingPolicyTagErrorID}}
+func newMissingPolicyTagError() *MissingPolicyTagError {
+	return &MissingPolicyTagError{
+		errorLink: errorLink{id: MissingPolicyTagErrorID}}
 }
 
-func (e *missingPolicyTagError) Error() string {
+func (e *MissingPolicyTagError) Error() string {
 	return e.errorf("Update has no previous policy tag")
 }
 
@@ -304,21 +505,70 @@ func (e *hiddenPolicyAppendError) Error() string {
 	return e.errorf("Can't append hidden policy or policy set")
 }
 
-type policyTagsNotMatchError struct {
+type PolicyTagsNotMatchError struct {
 	errorLink
 	cntTag *uuid.UUID
 	updTag *uuid.UUID
 }
 
-func newPolicyTagsNotMatchError(cntTag, updTag *uuid.UUID) *policyTagsNotMatchError {
-	return &policyTagsNotMatchError{
-		errorLink: errorLink{id: policyTagsNotMatchErrorID},
+func newPolicyTagsNotMatchError(cntTag, updTag *uuid.UUID) *PolicyTagsNotMatchError {
+	return &PolicyTagsNotMatchError{
+		errorLink: errorLink{id: PolicyTagsNotMatchErrorID},
 		cntTag:    cntTag,
 		updTag:    updTag}
 }
 
-func (e *policyTagsNotMatchError) Error() string {
-	return e.errorf("Update tag %s doesn't match policies tag %s", e.cntTag.String(), e.updTag.String())
+func (e *PolicyTagsNotMatchError) Error() string {
+	return e.errorf("Update tag %s doesn't match policies tag %s", e.updTag.String(), e.cntTag.String())
+}
+
+type policyTransactionTagsNotMatchError struct {
+	errorLink
+	tTag uuid.UUID
+	uTag uuid.UUID
+}
+
+func newPolicyTransactionTagsNotMatchError(tTag, uTag uuid.UUID) *policyTransactionTagsNotMatchError {
+	return &policyTransactionTagsNotMatchError{
+		errorLink: errorLink{id: policyTransactionTagsNotMatchErrorID},
+		tTag:      tTag,
+		uTag:      uTag}
+}
+
+func (e *policyTransactionTagsNotMatchError) Error() string {
+	return e.errorf("Update tag %s doesn't match policies transaction tag %s", e.uTag.String(), e.tTag.String())
+}
+
+type failedPolicyTransactionError struct {
+	errorLink
+	t   uuid.UUID
+	err error
+}
+
+func newFailedPolicyTransactionError(t uuid.UUID, err error) *failedPolicyTransactionError {
+	return &failedPolicyTransactionError{
+		errorLink: errorLink{id: failedPolicyTransactionErrorID},
+		t:         t,
+		err:       err}
+}
+
+func (e *failedPolicyTransactionError) Error() string {
+	return e.errorf("Can't operate with failed transaction on policies %s. Previous failure %s", e.t, e.err)
+}
+
+type unknownPolicyUpdateOperationError struct {
+	errorLink
+	op int
+}
+
+func newUnknownPolicyUpdateOperationError(op int) *unknownPolicyUpdateOperationError {
+	return &unknownPolicyUpdateOperationError{
+		errorLink: errorLink{id: unknownPolicyUpdateOperationErrorID},
+		op:        op}
+}
+
+func (e *unknownPolicyUpdateOperationError) Error() string {
+	return e.errorf("Unknown operation %d", e.op)
 }
 
 type hiddenPolicyModificationError struct {
@@ -434,7 +684,7 @@ func newInvalidContentStorageItem(ID string, v interface{}) *invalidContentStora
 }
 
 func (e *invalidContentStorageItem) Error() string {
-	return e.errorf("Invalid value at %s (expected *localContent but got %T)", e.ID, e.v)
+	return e.errorf("Invalid value at %s (expected *LocalContent but got %T)", e.ID, e.v)
 }
 
 type missingContentItemError struct {
@@ -504,11 +754,14 @@ func (e *invalidSelectorPathError) Error() string {
 	}
 	expected := strings.Join(expStrs, "/")
 
-	actStrs := make([]string, len(e.actual))
-	for i, e := range e.actual {
-		actStrs[i] = TypeNames[e.GetResultType()]
+	actual := "nothing"
+	if len(e.actual) > 0 {
+		strs := make([]string, len(e.actual))
+		for i, e := range e.actual {
+			strs[i] = TypeNames[e.GetResultType()]
+		}
+		actual = strings.Join(strs, "/")
 	}
-	actual := strings.Join(actStrs, "/")
 
 	return e.errorf("Invalid selector path. Expected %s but got %s", expected, actual)
 }
@@ -581,19 +834,22 @@ func newTooLongPathContentModificationError(expected []int, actual []AttributeVa
 }
 
 func (e *tooLongPathContentModificationError) Error() string {
-	expStrs := make([]string, len(e.expected))
-	for i, t := range e.expected {
-		expStrs[i] = TypeNames[t]
+	expected := "no"
+	if len(e.expected) > 0 {
+		expStrs := make([]string, len(e.expected))
+		for i, t := range e.expected {
+			expStrs[i] = fmt.Sprintf("%q", TypeNames[t])
+		}
+		expected = strings.Join(expStrs, "/")
 	}
-	expected := strings.Join(expStrs, "/")
 
 	actStrs := make([]string, len(e.actual))
 	for i, e := range e.actual {
-		actStrs[i] = TypeNames[e.GetResultType()]
+		actStrs[i] = fmt.Sprintf("%q", TypeNames[e.GetResultType()])
 	}
 	actual := strings.Join(actStrs, "/")
 
-	return e.errorf("Too long modification path. Expected at most %s but got %s", expected, actual)
+	return e.errorf("Too long modification path. Expected %s path but got %s", expected, actual)
 }
 
 type invalidContentValueModificationError struct {
@@ -609,51 +865,232 @@ func (e *invalidContentValueModificationError) Error() string {
 	return e.errorf("Can't modify final content value")
 }
 
-type untaggedContentModificationError struct {
+type UntaggedContentModificationError struct {
 	errorLink
 	ID string
 }
 
-func newUntaggedContentModificationError(ID string) *untaggedContentModificationError {
-	return &untaggedContentModificationError{
-		errorLink: errorLink{id: untaggedContentModificationErrorID},
+func newUntaggedContentModificationError(ID string) *UntaggedContentModificationError {
+	return &UntaggedContentModificationError{
+		errorLink: errorLink{id: UntaggedContentModificationErrorID},
 		ID:        ID}
 }
 
-func (e *untaggedContentModificationError) Error() string {
+func (e *UntaggedContentModificationError) Error() string {
 	return e.errorf("Can't modify content %q with no tag", e.ID)
 }
 
-type missingContentTagError struct {
+type MissingContentTagError struct {
 	errorLink
 }
 
-func newMissingContentTagError() *missingContentTagError {
-	return &missingContentTagError{
-		errorLink: errorLink{id: missingContentTagErrorID}}
+func newMissingContentTagError() *MissingContentTagError {
+	return &MissingContentTagError{
+		errorLink: errorLink{id: MissingContentTagErrorID}}
 }
 
-func (e *missingContentTagError) Error() string {
+func (e *MissingContentTagError) Error() string {
 	return e.errorf("Update has no previous content tag")
 }
 
-type contentTagsNotMatchError struct {
+type ContentTagsNotMatchError struct {
 	errorLink
 	ID     string
 	cntTag *uuid.UUID
 	updTag *uuid.UUID
 }
 
-func newContentTagsNotMatchError(ID string, cntTag, updTag *uuid.UUID) *contentTagsNotMatchError {
-	return &contentTagsNotMatchError{
-		errorLink: errorLink{id: contentTagsNotMatchErrorID},
+func newContentTagsNotMatchError(ID string, cntTag, updTag *uuid.UUID) *ContentTagsNotMatchError {
+	return &ContentTagsNotMatchError{
+		errorLink: errorLink{id: ContentTagsNotMatchErrorID},
 		ID:        ID,
 		cntTag:    cntTag,
 		updTag:    updTag}
 }
 
-func (e *contentTagsNotMatchError) Error() string {
+func (e *ContentTagsNotMatchError) Error() string {
 	return e.errorf("Update tag %s doesn't match content %q tag %s", e.cntTag.String(), e.ID, e.updTag.String())
+}
+
+type unknownContentUpdateOperationError struct {
+	errorLink
+	op int
+}
+
+func newUnknownContentUpdateOperationError(op int) *unknownContentUpdateOperationError {
+	return &unknownContentUpdateOperationError{
+		errorLink: errorLink{id: unknownContentUpdateOperationErrorID},
+		op:        op}
+}
+
+func (e *unknownContentUpdateOperationError) Error() string {
+	return e.errorf("Unknown operation %d", e.op)
+}
+
+type failedContentTransactionError struct {
+	errorLink
+	id  string
+	t   uuid.UUID
+	err error
+}
+
+func newFailedContentTransactionError(id string, t uuid.UUID, err error) *failedContentTransactionError {
+	return &failedContentTransactionError{
+		errorLink: errorLink{id: failedContentTransactionErrorID},
+		id:        id,
+		t:         t,
+		err:       err}
+}
+
+func (e *failedContentTransactionError) Error() string {
+	return e.errorf("Can't operate with failed transaction on content %q tagged %s. Previous failure %s", e.id, e.t, e.err)
+}
+
+type contentTransactionIDNotMatchError struct {
+	errorLink
+	tID string
+	uID string
+}
+
+func newContentTransactionIDNotMatchError(tID, uID string) *contentTransactionIDNotMatchError {
+	return &contentTransactionIDNotMatchError{
+		errorLink: errorLink{id: contentTransactionIDNotMatchErrorID},
+		tID:       tID,
+		uID:       uID}
+}
+
+func (e *contentTransactionIDNotMatchError) Error() string {
+	return e.errorf("Update content ID %q doesn't match transaction content ID %q", e.uID, e.tID)
+}
+
+type contentTransactionTagsNotMatchError struct {
+	errorLink
+	id   string
+	tTag uuid.UUID
+	uTag uuid.UUID
+}
+
+func newContentTransactionTagsNotMatchError(id string, tTag, uTag uuid.UUID) *contentTransactionTagsNotMatchError {
+	return &contentTransactionTagsNotMatchError{
+		errorLink: errorLink{id: contentTransactionTagsNotMatchErrorID},
+		id:        id,
+		tTag:      tTag,
+		uTag:      uTag}
+}
+
+func (e *contentTransactionTagsNotMatchError) Error() string {
+	return e.errorf("Update tag %s doesn't match content %q transaction tag %s", e.uTag.String(), e.id, e.tTag.String())
+}
+
+type tooShortRawPathContentModificationError struct {
+	errorLink
+}
+
+func newTooShortRawPathContentModificationError() *tooShortRawPathContentModificationError {
+	return &tooShortRawPathContentModificationError{
+		errorLink: errorLink{id: tooShortRawPathContentModificationErrorID}}
+}
+
+func (e *tooShortRawPathContentModificationError) Error() string {
+	return e.errorf("Expected at least content item ID in path but got nothing")
+}
+
+type tooLongRawPathContentModificationError struct {
+	errorLink
+	expected []int
+	actual   []string
+}
+
+func newTooLongRawPathContentModificationError(expected []int, actual []string) *tooLongRawPathContentModificationError {
+	return &tooLongRawPathContentModificationError{
+		errorLink: errorLink{id: tooLongRawPathContentModificationErrorID},
+		expected:  expected,
+		actual:    actual}
+}
+
+func (e *tooLongRawPathContentModificationError) Error() string {
+	expected := "no"
+	if len(e.expected) > 0 {
+		expStrs := make([]string, len(e.expected))
+		for i, t := range e.expected {
+			expStrs[i] = fmt.Sprintf("%q", TypeNames[t])
+		}
+		expected = strings.Join(expStrs, "/")
+	}
+
+	actStrs := make([]string, len(e.actual))
+	for i, s := range e.actual {
+		actStrs[i] = fmt.Sprintf("%q", s)
+	}
+	actual := strings.Join(actStrs, "/")
+
+	return e.errorf("Too long modification path. Expected %s path but got %s", expected, actual)
+}
+
+type invalidContentUpdateDataError struct {
+	errorLink
+	v interface{}
+}
+
+func newInvalidContentUpdateDataError(v interface{}) *invalidContentUpdateDataError {
+	return &invalidContentUpdateDataError{
+		errorLink: errorLink{id: invalidContentUpdateDataErrorID},
+		v:         v}
+}
+
+func (e *invalidContentUpdateDataError) Error() string {
+	return e.errorf("Expected content update data but got %T", e.v)
+}
+
+type invalidContentUpdateResultTypeError struct {
+	errorLink
+	actual   int
+	expected int
+}
+
+func newInvalidContentUpdateResultTypeError(actual, expected int) *invalidContentUpdateResultTypeError {
+	return &invalidContentUpdateResultTypeError{
+		errorLink: errorLink{id: invalidContentUpdateResultTypeErrorID},
+		actual:    actual,
+		expected:  expected}
+}
+
+func (e *invalidContentUpdateResultTypeError) Error() string {
+	return e.errorf("Expected %q as a result type but got %q", TypeNames[e.expected], TypeNames[e.actual])
+}
+
+type invalidContentUpdateKeysError struct {
+	errorLink
+	start    int
+	actual   []int
+	expected []int
+}
+
+func newInvalidContentUpdateKeysError(start int, actual, expected []int) *invalidContentUpdateKeysError {
+	return &invalidContentUpdateKeysError{
+		errorLink: errorLink{id: invalidContentUpdateKeysErrorID},
+		start:     start,
+		actual:    actual,
+		expected:  expected}
+}
+
+func (e *invalidContentUpdateKeysError) Error() string {
+	enames := make([]string, len(e.expected)-e.start)
+	for i, t := range e.expected[e.start:] {
+		enames[i] = fmt.Sprintf("%q", TypeNames[t])
+	}
+	expected := strings.Join(enames, "/")
+
+	actual := "nothing"
+	if len(e.actual) > 0 {
+		anames := make([]string, len(e.actual))
+		for i, t := range e.actual {
+			anames[i] = fmt.Sprintf("%q", TypeNames[t])
+		}
+		actual = strings.Join(anames, "/")
+	}
+
+	return e.errorf("Expected %s path after position %d but got %s", expected, e.start, actual)
 }
 
 type unknownContentItemResultTypeError struct {

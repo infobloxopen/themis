@@ -37,7 +37,31 @@ var (
 
 type Context struct {
 	a map[string]map[int]AttributeValue
-	c *localContentStorage
+	c *LocalContentStorage
+}
+
+func NewContext(c *LocalContentStorage, count int, f func(i int) (string, AttributeValue, error)) (*Context, error) {
+	ctx := &Context{a: map[string]map[int]AttributeValue{}, c: c}
+
+	for i := 0; i < count; i++ {
+		ID, v, err := f(i)
+		if err != nil {
+			return nil, err
+		}
+
+		t := v.GetResultType()
+		if m, ok := ctx.a[ID]; ok {
+			if old, ok := m[t]; ok {
+				return nil, newDuplicateAttributeValueError(ID, t, v, old)
+			}
+
+			m[t] = v
+		} else {
+			ctx.a[ID] = map[int]AttributeValue{t: v}
+		}
+	}
+
+	return ctx, nil
 }
 
 func (c *Context) getAttribute(a Attribute) (AttributeValue, error) {
@@ -55,7 +79,7 @@ func (c *Context) getAttribute(a Attribute) (AttributeValue, error) {
 }
 
 func (c *Context) getContentItem(cID, iID string) (*ContentItem, error) {
-	return c.c.get(cID, iID)
+	return c.c.Get(cID, iID)
 }
 
 func (c *Context) calculateBooleanExpression(e Expression) (bool, error) {
@@ -134,6 +158,10 @@ type Response struct {
 	Effect      int
 	status      boundError
 	obligations []AttributeAssignmentExpression
+}
+
+func (r Response) Status() (int, []AttributeAssignmentExpression, error) {
+	return r.Effect, r.obligations, r.status
 }
 
 type Evaluable interface {

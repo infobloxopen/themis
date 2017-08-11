@@ -1,6 +1,7 @@
 package: pdp
 
 import:
+  - fmt
   - strings
   - github.com/satori/go.uuid
 
@@ -34,6 +35,60 @@ errors:
 - id: missingValueError
   msg: "Missing value"
 
+- id: unknownTypeStringCastError
+  fields:
+  - id: t
+    type: int
+  msg: "Unknown type id %d"
+  args:
+  - field: t
+
+- id: invalidTypeStringCastError
+  fields:
+  - id: t
+    type: int
+  msg: "Can't convert string to value of %q type"
+  args:
+  - expr: TypeNames[e.t]
+
+- id: notImplementedStringCastError
+  fields:
+  - id: t
+    type: int
+  msg: "Conversion from string to value of %q type hasn't been implemented"
+  args:
+  - expr: TypeNames[e.t]
+
+- id: invalidBooleanStringCastError
+  fields:
+  - id: s
+    type: string
+  - id: err
+    type: error
+  msg: "Can't treat %q as boolean (%s)"
+  args:
+  - field: s
+  - field: err
+
+- id: invalidAddressStringCastError
+  fields:
+  - id: s
+    type: string
+  msg: "Can't treat %q as IP address"
+  args:
+  - field: s
+
+- id: invalidNetworkStringCastError
+  fields:
+  - id: s
+    type: string
+  - id: err
+    type: error
+  msg: "Can't treat %q as network address (%s)"
+  args:
+  - field: s
+  - field: err
+
 - id: attributeValueTypeError
   fields:
   - id: expected
@@ -44,6 +99,59 @@ errors:
   args:
   - expr: TypeNames[e.expected]
   - expr: TypeNames[e.actual]
+
+- id: duplicateAttributeValueError
+  fields:
+  - id: ID
+    type: string
+  - id: t
+    type: int
+  - id: curr
+    type: AttributeValue
+  - id: prev
+    type: AttributeValue
+  msg: "Duplicate attribute %q of type %q in request %s - %s"
+  args:
+  - field: ID
+  - expr: TypeNames[e.t]
+  - expr: e.curr.describe()
+  - expr: e.prev.describe()
+
+- id: unknownTypeSerializationError
+  fields:
+  - id: t
+    type: int
+  msg: "Unknown type id %d"
+  args:
+  - field: t
+
+- id: invalidTypeSerializationError
+  fields:
+  - id: t
+    type: int
+  msg: "Can't serialize value of %q type"
+  args:
+  - expr: TypeNames[e.t]
+
+- id: notImplementedSerializationError
+  fields:
+  - id: t
+    type: int
+  msg: "Serialization of %q type hasn't been implemented"
+  args:
+  - expr: TypeNames[e.t]
+
+- id: assignmentTypeMismatch
+  fields:
+  - id: a
+    type: Attribute
+  - id: t
+    type: int
+  msg: "Can't assign %q value to attribute %q of type %q"
+  args:
+  - expr: TypeNames[e.t]
+  - expr: e.a.id
+  - expr: TypeNames[e.a.t]
 
 - id: mapperArgumentTypeError
   fields:
@@ -56,10 +164,10 @@ errors:
   - expr: TypeNames[TypeListOfStrings]
   - expr: TypeNames[e.actual]
 
-- id: untaggedPolicyModificationError
+- id: UntaggedPolicyModificationError
   msg: "Can't modify policies with no tag"
 
-- id: missingPolicyTagError
+- id: MissingPolicyTagError
   msg: "Update has no previous policy tag"
 
 - id: emptyPathModificationError
@@ -112,7 +220,7 @@ errors:
 - id: hiddenPolicyAppendError
   msg: "Can't append hidden policy or policy set"
 
-- id: policyTagsNotMatchError
+- id: PolicyTagsNotMatchError
   fields:
   - id: cntTag
     type: "*uuid.UUID"
@@ -120,8 +228,38 @@ errors:
     type: "*uuid.UUID"
   msg: "Update tag %s doesn't match policies tag %s"
   args:
-  - expr: e.cntTag.String()
   - expr: e.updTag.String()
+  - expr: e.cntTag.String()
+
+- id: policyTransactionTagsNotMatchError
+  fields:
+  - id: tTag
+    type: uuid.UUID
+  - id: uTag
+    type: uuid.UUID
+  msg: "Update tag %s doesn't match policies transaction tag %s"
+  args:
+  - expr: e.uTag.String()
+  - expr: e.tTag.String()
+
+- id: failedPolicyTransactionError
+  fields:
+  - id: t
+    type: uuid.UUID
+  - id: err
+    type: error
+  msg: "Can't operate with failed transaction on policies %s. Previous failure %s"
+  args:
+  - field: t
+  - field: err
+
+- id: unknownPolicyUpdateOperationError
+  fields:
+  - id: op
+    type: int
+  msg: "Unknown operation %d"
+  args:
+  - field: op
 
 - id: hiddenPolicyModificationError
   msg: "Can't modify hidden policy"
@@ -170,7 +308,7 @@ errors:
     type: string
   - id: v
     type: interface{}
-  msg: "Invalid value at %s (expected *localContent but got %T)"
+  msg: "Invalid value at %s (expected *LocalContent but got %T)"
   args:
   - field: ID
   - field: v
@@ -221,11 +359,14 @@ errors:
   - snippet:
       result: actual
       code: |
-        actStrs := make([]string, len(e.actual))
-        for i, e := range e.actual {
-        	actStrs[i] = TypeNames[e.GetResultType()]
+        actual := "nothing"
+        if len(e.actual) > 0 {
+        	strs := make([]string, len(e.actual))
+        	for i, e := range e.actual {
+        		strs[i] = TypeNames[e.GetResultType()]
+        	}
+        	actual = strings.Join(strs, "/")
         }
-        actual := strings.Join(actStrs, "/")
 
 - id: networkMapKeyValueTypeError
   fields:
@@ -252,29 +393,32 @@ errors:
     type: "[]int"
   - id: actual
     type: "[]AttributeValue"
-  msg: "Too long modification path. Expected at most %s but got %s"
+  msg: "Too long modification path. Expected %s path but got %s"
   args:
   - snippet:
       result: expected
       code: |
-        expStrs := make([]string, len(e.expected))
-        for i, t := range e.expected {
-        	expStrs[i] = TypeNames[t]
+        expected := "no"
+        if len(e.expected) > 0 {
+        	expStrs := make([]string, len(e.expected))
+        	for i, t := range e.expected {
+        		expStrs[i] = fmt.Sprintf("%q", TypeNames[t])
+        	}
+        	expected = strings.Join(expStrs, "/")
         }
-        expected := strings.Join(expStrs, "/")
   - snippet:
       result: actual
       code: |
         actStrs := make([]string, len(e.actual))
         for i, e := range e.actual {
-        	actStrs[i] = TypeNames[e.GetResultType()]
+        	actStrs[i] = fmt.Sprintf("%q", TypeNames[e.GetResultType()])
         }
         actual := strings.Join(actStrs, "/")
 
 - id: invalidContentValueModificationError
   msg: "Can't modify final content value"
 
-- id: untaggedContentModificationError
+- id: UntaggedContentModificationError
   fields:
   - id: ID
     type: string
@@ -282,10 +426,10 @@ errors:
   args:
   - field: ID
 
-- id: missingContentTagError
+- id: MissingContentTagError
   msg: "Update has no previous content tag"
 
-- id: contentTagsNotMatchError
+- id: ContentTagsNotMatchError
   fields:
   - id: ID
     type: string
@@ -298,6 +442,134 @@ errors:
   - expr: e.cntTag.String()
   - field: ID
   - expr: e.updTag.String()
+
+- id: unknownContentUpdateOperationError
+  fields:
+  - id: op
+    type: int
+  msg: "Unknown operation %d"
+  args:
+  - field: op
+
+- id: failedContentTransactionError
+  fields:
+  - id: id
+    type: string
+  - id: t
+    type: uuid.UUID
+  - id: err
+    type: error
+  msg: "Can't operate with failed transaction on content %q tagged %s. Previous failure %s"
+  args:
+  - field: id
+  - field: t
+  - field: err
+
+- id: contentTransactionIDNotMatchError
+  fields:
+  - id: tID
+    type: string
+  - id: uID
+    type: string
+  msg: "Update content ID %q doesn't match transaction content ID %q"
+  args:
+  - field: uID
+  - field: tID
+
+- id: contentTransactionTagsNotMatchError
+  fields:
+  - id: id
+    type: string
+  - id: tTag
+    type: uuid.UUID
+  - id: uTag
+    type: uuid.UUID
+  msg: "Update tag %s doesn't match content %q transaction tag %s"
+  args:
+  - expr: e.uTag.String()
+  - field: id
+  - expr: e.tTag.String()
+
+- id: tooShortRawPathContentModificationError
+  msg: "Expected at least content item ID in path but got nothing"
+
+- id: tooLongRawPathContentModificationError
+  fields:
+  - id: expected
+    type: "[]int"
+  - id: actual
+    type: "[]string"
+  msg: "Too long modification path. Expected %s path but got %s"
+  args:
+  - snippet:
+      result: expected
+      code: |
+        expected := "no"
+        if len(e.expected) > 0 {
+        	expStrs := make([]string, len(e.expected))
+        	for i, t := range e.expected {
+        		expStrs[i] = fmt.Sprintf("%q", TypeNames[t])
+        	}
+        	expected = strings.Join(expStrs, "/")
+        }
+  - snippet:
+      result: actual
+      code: |
+        actStrs := make([]string, len(e.actual))
+        for i, s := range e.actual {
+        	actStrs[i] = fmt.Sprintf("%q", s)
+        }
+        actual := strings.Join(actStrs, "/")
+
+- id: invalidContentUpdateDataError
+  fields:
+  - id: v
+    type: interface{}
+  msg: "Expected content update data but got %T"
+  args:
+  - field: v
+
+- id: invalidContentUpdateResultTypeError
+  fields:
+  - id: actual
+    type: int
+  - id: expected
+    type: int
+  msg: "Expected %q as a result type but got %q"
+  args:
+  - expr: TypeNames[e.expected]
+  - expr: TypeNames[e.actual]
+
+- id: invalidContentUpdateKeysError
+  fields:
+  - id: start
+    type: int
+  - id: actual
+    type: "[]int"
+  - id: expected
+    type: "[]int"
+  msg: "Expected %s path after position %d but got %s"
+  args:
+  - snippet:
+      result: expected
+      code: |
+        enames := make([]string, len(e.expected) - e.start)
+        for i, t := range e.expected[e.start:] {
+        	enames[i] = fmt.Sprintf("%q", TypeNames[t])
+        }
+        expected := strings.Join(enames, "/")
+  - field: start
+  - snippet:
+      result: actual
+      code: |
+        actual := "nothing"
+        if len(e.actual) > 0 {
+        	anames := make([]string, len(e.actual))
+        	for i, t := range e.actual {
+        		anames[i] = fmt.Sprintf("%q", TypeNames[t])
+        	}
+        	actual = strings.Join(anames, "/")
+        }
 
 - id: unknownContentItemResultTypeError
   fields:

@@ -4,20 +4,19 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/infobloxopen/go-trees/strtree"
 	"github.com/satori/go.uuid"
 
 	"github.com/infobloxopen/themis/pdp"
 )
 
-func Unmarshal(r io.Reader) (string, *strtree.Tree, error) {
+func Unmarshal(r io.Reader, tag *uuid.UUID) (*pdp.LocalContent, error) {
 	c := &content{}
 	err := c.unmarshal(json.NewDecoder(r))
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
-	return c.ID, c.items, nil
+	return pdp.NewLocalContent(c.id, tag, c.items), nil
 }
 
 func UnmarshalUpdate(r io.Reader, cID string, oldTag, newTag uuid.UUID) (*pdp.ContentUpdate, error) {

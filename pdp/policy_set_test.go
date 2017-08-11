@@ -641,7 +641,7 @@ func TestPolicySetDelete(t *testing.T) {
 	}
 }
 
-func assertMapperPCAMapKeys(a policyCombiningAlg, desc string, t *testing.T, expected ...string) {
+func assertMapperPCAMapKeys(a PolicyCombiningAlg, desc string, t *testing.T, expected ...string) {
 	if m, ok := a.(mapperPCA); ok {
 		keys := []string{}
 		for p := range m.policies.Enumerate() {

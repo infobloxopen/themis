@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"golang.org/x/net/idna"
@@ -98,7 +99,7 @@ func MakeAddressValue(v net.IP) AttributeValue {
 
 func MakeNetworkValue(v *net.IPNet) AttributeValue {
 	return AttributeValue{
-		t: TypeAddress,
+		t: TypeNetwork,
 		v: v}
 }
 
@@ -130,6 +131,48 @@ func MakeListOfStringsValue(v []string) AttributeValue {
 	return AttributeValue{
 		t: TypeListOfStrings,
 		v: v}
+}
+
+func MakeValueFromSting(t int, s string) (AttributeValue, error) {
+	switch t {
+	case TypeUndefined:
+		return undefinedValue, newInvalidTypeStringCastError(t)
+
+	case TypeSetOfStrings, TypeSetOfNetworks, TypeSetOfDomains, TypeListOfStrings:
+		return undefinedValue, newNotImplementedStringCastError(t)
+
+	case TypeBoolean:
+		b, err := strconv.ParseBool(s)
+		if err != nil {
+			return undefinedValue, newInvalidBooleanStringCastError(s, err)
+		}
+
+		return MakeBooleanValue(b), nil
+
+	case TypeString:
+		return MakeStringValue(s), nil
+
+	case TypeAddress:
+		a := net.ParseIP(s)
+		if a == nil {
+			return undefinedValue, newInvalidAddressStringCastError(s)
+		}
+
+		return MakeAddressValue(a), nil
+
+	case TypeNetwork:
+		_, n, err := net.ParseCIDR(s)
+		if err != nil {
+			return undefinedValue, newInvalidNetworkStringCastError(s, err)
+		}
+
+		return MakeNetworkValue(n), nil
+
+	case TypeDomain:
+		return MakeDomainValue(s), nil
+	}
+
+	return undefinedValue, newUnknownTypeStringCastError(t)
 }
 
 func (v AttributeValue) GetResultType() int {
@@ -301,6 +344,49 @@ func (v AttributeValue) calculate(ctx *Context) (AttributeValue, error) {
 	return v, nil
 }
 
+func (v AttributeValue) Serialize() (string, error) {
+	switch v.t {
+	case TypeUndefined:
+		return "", newInvalidTypeSerializationError(v.t)
+
+	case TypeSetOfDomains, TypeListOfStrings:
+		return "", newNotImplementedSerializationError(v.t)
+
+	case TypeBoolean:
+		return strconv.FormatBool(v.v.(bool)), nil
+
+	case TypeString:
+		return v.v.(string), nil
+
+	case TypeAddress:
+		return v.v.(net.IP).String(), nil
+
+	case TypeNetwork:
+		return v.v.(*net.IPNet).String(), nil
+
+	case TypeDomain:
+		return v.v.(string), nil
+
+	case TypeSetOfStrings:
+		s := sortSetOfStrings(v.v.(*strtree.Tree))
+		for i, item := range s {
+			s[i] = strconv.Quote(item)
+		}
+
+		return strings.Join(s, ","), nil
+
+	case TypeSetOfNetworks:
+		s := []string{}
+		for p := range v.v.(*iptree.Tree).Enumerate() {
+			s = append(s, strconv.Quote(p.Key.String()))
+		}
+
+		return strings.Join(s, ","), nil
+	}
+
+	return "", newUnknownTypeSerializationError(v.t)
+}
+
 type AttributeAssignmentExpression struct {
 	a Attribute
 	e Expression
@@ -310,6 +396,28 @@ func MakeAttributeAssignmentExpression(a Attribute, e Expression) AttributeAssig
 	return AttributeAssignmentExpression{
 		a: a,
 		e: e}
+}
+
+func (a AttributeAssignmentExpression) Serialize(ctx *Context) (string, string, string, error) {
+	ID := a.a.id
+	typeName := TypeNames[a.a.t]
+
+	v, err := a.e.calculate(ctx)
+	if err != nil {
+		return ID, typeName, "", bindErrorf(err, "assignment to %q", ID)
+	}
+
+	t := v.GetResultType()
+	if a.a.t != t {
+		return ID, typeName, "", bindErrorf(newAssignmentTypeMismatch(a.a, t), "assignment to %q", ID)
+	}
+
+	s, err := v.Serialize()
+	if err != nil {
+		return ID, typeName, "", bindErrorf(err, "assignment to %q", ID)
+	}
+
+	return ID, typeName, s, nil
 }
 
 type AttributeDesignator struct {

@@ -1,9 +1,11 @@
-package pdpctrl_client
+package pdpcc
 
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-control && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/control.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-control && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-control"
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"time"
 
 	"golang.org/x/net/context"
@@ -12,21 +14,12 @@ import (
 	pb "github.com/infobloxopen/themis/pdp-control"
 )
 
-type DataBucket struct {
-	ID int32
-
-	FromVersion, ToVersion string
-
-	Policies []byte
-	Includes map[string][]byte
+type TagError struct {
+	tag string
 }
 
-type VersionError struct {
-	version string
-}
-
-func (e *VersionError) Error() string {
-	return e.version
+func (e *TagError) Error() string {
+	return e.tag
 }
 
 type Client struct {
@@ -64,21 +57,74 @@ func (c *Client) Close() {
 	c.client = nil
 }
 
-func (c *Client) Upload(bucket *DataBucket) error {
-	iids, err := c.uploadIncludes(bucket)
+func (c *Client) RequestPoliciesUpload(fromTag, toTag string) (int32, error) {
+	return c.request(&pb.Item{
+		Type:    pb.Item_POLICIES,
+		FromTag: fromTag,
+		ToTag:   toTag})
+}
+
+func (c *Client) RequestContentUpload(id, fromTag, toTag string) (int32, error) {
+	return c.request(&pb.Item{
+		Type:    pb.Item_CONTENT,
+		FromTag: fromTag,
+		ToTag:   toTag,
+		Id:      id})
+}
+
+func (c *Client) Upload(id int32, r io.Reader) error {
+	u, err := c.client.Upload(context.Background())
 	if err != nil {
 		return err
 	}
 
-	if err := c.uploadPolicies(bucket, iids); err != nil {
-		return err
+	p := make([]byte, c.chunkSize)
+	for {
+		n, err := r.Read(p)
+		if n > 0 {
+			chunk := &pb.Chunk{
+				Id:   id,
+				Data: string(p[:n])}
+			if err := u.Send(chunk); err != nil {
+				return err
+			}
+		}
+
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			c.closeUpload(u)
+			return err
+		}
 	}
 
-	return nil
+	return c.closeUpload(u)
 }
 
-func (c *Client) Apply(bucketId int32) error {
-	r, err := c.client.Apply(context.Background(), &pb.Update{bucketId})
+func (c *Client) request(item *pb.Item) (int32, error) {
+	r, err := c.client.Request(context.Background(), item)
+	if err != nil {
+		return -1, err
+	}
+
+	switch r.Status {
+	case pb.Response_ACK:
+		return r.Id, nil
+
+	case pb.Response_ERROR:
+		return -1, errors.New(r.Details)
+
+	case pb.Response_TAG_ERROR:
+		return -1, &TagError{tag: r.Details}
+	}
+
+	return -1, fmt.Errorf("Unknown response statue: %d", r.Status)
+}
+
+func (c *Client) closeUpload(u pb.PDPControl_UploadClient) error {
+	r, err := u.CloseAndRecv()
 	if err != nil {
 		return err
 	}
@@ -86,101 +132,6 @@ func (c *Client) Apply(bucketId int32) error {
 	if r.Status != pb.Response_ACK {
 		return errors.New(r.Details)
 	}
-
-	return nil
-}
-
-func (c *Client) uploadData(data []byte) (int32, error) {
-	stream, err := c.client.Upload(context.Background())
-	if err != nil {
-		return 0, nil
-	}
-
-	for offset := 0; offset < len(data); offset += c.chunkSize {
-		var chunk []byte
-		if len(data) < offset+c.chunkSize {
-			chunk = data[offset:]
-		} else {
-			chunk = data[offset : offset+c.chunkSize]
-		}
-
-		if err := stream.Send(&pb.Chunk{string(chunk)}); err != nil {
-			return 0, err
-		}
-	}
-
-	r, err := stream.CloseAndRecv()
-	if err != nil {
-		return 0, err
-	}
-
-	if r.Status != pb.Response_ACK {
-		return 0, errors.New(r.Details)
-	}
-
-	return r.Id, nil
-}
-
-func (c *Client) uploadIncludes(bucket *DataBucket) ([]int32, error) {
-	rids := []int32{}
-
-	for id, data := range bucket.Includes {
-		rid, err := c.uploadData(data)
-		if err != nil {
-			return nil, err
-		}
-
-		item := &pb.Item{
-			Type:        pb.Item_CONTENT,
-			FromVersion: bucket.FromVersion,
-			ToVersion:   bucket.ToVersion,
-			DataId:      rid,
-			Id:          id,
-		}
-
-		r, err := c.client.Parse(context.Background(), item)
-		if err != nil {
-			return nil, err
-		}
-
-		if r.Status == pb.Response_ACK {
-			rids = append(rids, r.Id)
-		} else if r.Status == pb.Response_VERSION_ERROR {
-			return nil, &VersionError{version: r.Details}
-		} else {
-			return nil, errors.New(r.Details)
-		}
-	}
-
-	return rids, nil
-}
-
-func (c *Client) uploadPolicies(bucket *DataBucket, iids []int32) error {
-	rid, err := c.uploadData(bucket.Policies)
-	if err != nil {
-		return err
-	}
-
-	item := &pb.Item{
-		Type:        pb.Item_POLICIES,
-		FromVersion: bucket.FromVersion,
-		ToVersion:   bucket.ToVersion,
-		DataId:      rid,
-		Includes:    iids,
-	}
-
-	r, err := c.client.Parse(context.Background(), item)
-	if err != nil {
-		return err
-	}
-
-	if r.Status == pb.Response_VERSION_ERROR {
-		return &VersionError{version: r.Details}
-	} else if r.Status != pb.Response_ACK {
-		return errors.New(r.Details)
-	}
-
-	bucket.ID = r.Id
 
 	return nil
 }

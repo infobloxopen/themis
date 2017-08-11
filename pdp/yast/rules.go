@@ -1,7 +1,6 @@
 package yast
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/infobloxopen/themis/pdp"
@@ -29,7 +28,7 @@ func (ctx context) unmarshalCondition(m map[interface{}]interface{}) (pdp.Expres
 func (ctx context) unmarshalRule(m map[interface{}]interface{}, i int) (*pdp.Rule, boundError) {
 	ID, ok, err := ctx.extractStringOpt(m, yastTagID, "id")
 	if err != nil {
-		return nil, bindError(err, fmt.Sprintf("%d", i))
+		return nil, bindErrorf(err, "%d", i)
 	}
 
 	src := makeSource("rule", ID, !ok, i)
@@ -96,7 +95,7 @@ func (ctx context) unmarshalRuleEntity(m map[interface{}]interface{}, ID string,
 func (ctx context) unmarshalRulesItem(v interface{}, i int) (*pdp.Rule, boundError) {
 	m, err := ctx.validateMap(v, "rule")
 	if err != nil {
-		return nil, bindError(err, fmt.Sprintf("%d", i))
+		return nil, bindErrorf(err, "%d", i)
 	}
 
 	return ctx.unmarshalRule(m, i)

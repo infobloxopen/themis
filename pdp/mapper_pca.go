@@ -11,7 +11,7 @@ type mapperPCA struct {
 	policies  *strtree.Tree
 	def       Evaluable
 	err       Evaluable
-	algorithm policyCombiningAlg
+	algorithm PolicyCombiningAlg
 }
 
 type MapperPCAParams struct {
@@ -20,7 +20,7 @@ type MapperPCAParams struct {
 	Def       string
 	ErrOk     bool
 	Err       string
-	Algorithm policyCombiningAlg
+	Algorithm PolicyCombiningAlg
 }
 
 func collectSubPolicies(IDs []string, m *strtree.Tree) []Evaluable {
@@ -35,7 +35,7 @@ func collectSubPolicies(IDs []string, m *strtree.Tree) []Evaluable {
 	return policies
 }
 
-func makeMapperPCA(policies []Evaluable, params interface{}) policyCombiningAlg {
+func makeMapperPCA(policies []Evaluable, params interface{}) PolicyCombiningAlg {
 	mapperParams, ok := params.(MapperPCAParams)
 	if !ok {
 		panic(fmt.Errorf("Mapper policy combining algorithm maker expected MapperPCAParams structure as params "+
@@ -116,7 +116,7 @@ func (a mapperPCA) getPoliciesMap(policies []Evaluable) *strtree.Tree {
 	return nil
 }
 
-func (a mapperPCA) add(ID string, child, old Evaluable) policyCombiningAlg {
+func (a mapperPCA) add(ID string, child, old Evaluable) PolicyCombiningAlg {
 	def := a.def
 	if old != nil && old == def {
 		def = child
@@ -135,7 +135,7 @@ func (a mapperPCA) add(ID string, child, old Evaluable) policyCombiningAlg {
 		algorithm: a.algorithm}
 }
 
-func (a mapperPCA) del(ID string, old Evaluable) policyCombiningAlg {
+func (a mapperPCA) del(ID string, old Evaluable) PolicyCombiningAlg {
 	def := a.def
 	if old != nil && old == def {
 		def = nil

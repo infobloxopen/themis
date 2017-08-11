@@ -471,7 +471,7 @@ func makeSingleStringObligation(ID, value string) []AttributeAssignmentExpressio
 			e: MakeStringValue(value)}}
 }
 
-func assertMapperRCAMapKeys(a ruleCombiningAlg, desc string, t *testing.T, expected ...string) {
+func assertMapperRCAMapKeys(a RuleCombiningAlg, desc string, t *testing.T, expected ...string) {
 	if m, ok := a.(mapperRCA); ok {
 		keys := []string{}
 		for p := range m.rules.Enumerate() {

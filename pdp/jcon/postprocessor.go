@@ -35,7 +35,7 @@ func ppStringSequenceFromPairs(v []pair, desc string, f func(s string) error) er
 	for i, p := range v {
 		err := f(p.k)
 		if err != nil {
-			return bindError(err, fmt.Sprintf("%d", i+1))
+			return bindErrorf(err, "%d", i+1)
 		}
 	}
 
@@ -46,12 +46,12 @@ func ppStringSequenceFromArray(v []interface{}, desc string, f func(s string) er
 	for i, item := range v {
 		s, ok := item.(string)
 		if !ok {
-			return bindError(newStringCastError(item, desc), fmt.Sprintf("%d", i+1))
+			return bindErrorf(newStringCastError(item, desc), "%d", i+1)
 		}
 
 		err := f(s)
 		if err != nil {
-			return bindError(err, fmt.Sprintf("%d", i+1))
+			return bindErrorf(err, "%d", i+1)
 		}
 	}
 

@@ -58,7 +58,7 @@ func unmarshalCommand(d *json.Decoder, u *pdp.ContentUpdate) error {
 			}
 
 			var err error
-			entity, err = unmarshalContentItem(d)
+			entity, err = unmarshalContentItem("", d)
 			if err != nil {
 				return err
 			}

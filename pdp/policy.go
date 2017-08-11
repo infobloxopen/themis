@@ -2,11 +2,11 @@ package pdp
 
 import "fmt"
 
-type ruleCombiningAlg interface {
+type RuleCombiningAlg interface {
 	execute(rules []*Rule, ctx *Context) Response
 }
 
-type RuleCombiningAlgMaker func(rules []*Rule, params interface{}) ruleCombiningAlg
+type RuleCombiningAlgMaker func(rules []*Rule, params interface{}) RuleCombiningAlg
 
 var (
 	firstApplicableEffectRCAInstance = firstApplicableEffectRCA{}
@@ -26,7 +26,7 @@ type Policy struct {
 	target      Target
 	rules       []*Rule
 	obligations []AttributeAssignmentExpression
-	algorithm   ruleCombiningAlg
+	algorithm   RuleCombiningAlg
 }
 
 func NewPolicy(ID string, hidden bool, target Target, rules []*Rule, makeRCA RuleCombiningAlgMaker, params interface{}, obligations []AttributeAssignmentExpression) *Policy {
@@ -203,7 +203,7 @@ func (p *Policy) delChild(ID string) (*Policy, error) {
 type firstApplicableEffectRCA struct {
 }
 
-func makeFirstApplicableEffectRCA(rules []*Rule, params interface{}) ruleCombiningAlg {
+func makeFirstApplicableEffectRCA(rules []*Rule, params interface{}) RuleCombiningAlg {
 	return firstApplicableEffectRCAInstance
 }
 
@@ -221,7 +221,7 @@ func (a firstApplicableEffectRCA) execute(rules []*Rule, ctx *Context) Response 
 type denyOverridesRCA struct {
 }
 
-func makeDenyOverridesRCA(rules []*Rule, params interface{}) ruleCombiningAlg {
+func makeDenyOverridesRCA(rules []*Rule, params interface{}) RuleCombiningAlg {
 	return denyOverridesRCAInstance
 }
 

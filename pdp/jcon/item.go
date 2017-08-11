@@ -13,6 +13,8 @@ import (
 )
 
 type contentItem struct {
+	id string
+
 	k      []int
 	keysOk bool
 
@@ -311,7 +313,7 @@ func (c *contentItem) get() (*pdp.ContentItem, error) {
 	}
 
 	if c.vReady {
-		return pdp.MakeContentMappingItem(c.t, c.k, c.adjustValue(c.v)), nil
+		return pdp.MakeContentMappingItem(c.id, c.t, c.k, c.adjustValue(c.v)), nil
 	}
 
 	v, err := c.postProcess(c.v, 0)
@@ -320,19 +322,19 @@ func (c *contentItem) get() (*pdp.ContentItem, error) {
 	}
 
 	if len(c.k) <= 0 {
-		return pdp.MakeContentValueItem(c.t, v), nil
+		return pdp.MakeContentValueItem(c.id, c.t, v), nil
 	}
 
-	return pdp.MakeContentMappingItem(c.t, c.k, c.adjustValue(v)), nil
+	return pdp.MakeContentMappingItem(c.id, c.t, c.k, c.adjustValue(v)), nil
 }
 
-func unmarshalContentItem(d *json.Decoder) (*pdp.ContentItem, error) {
+func unmarshalContentItem(id string, d *json.Decoder) (*pdp.ContentItem, error) {
 	err := checkObjectStart(d, "content item")
 	if err != nil {
 		return nil, err
 	}
 
-	item := &contentItem{}
+	item := &contentItem{id: id}
 	err = unmarshalObject(d, item.unmarshal, "content item")
 	if err != nil {
 		return nil, err

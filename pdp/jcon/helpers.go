@@ -377,27 +377,27 @@ func getStringSequenceFromObject(d *json.Decoder, desc string, f func(s string) 
 	for {
 		t, err := d.Token()
 		if err != nil {
-			return bindError(err, fmt.Sprintf("%d", i))
+			return bindErrorf(err, "%d", i)
 		}
 
 		switch t := t.(type) {
 		default:
-			return bindError(newObjectTokenError(t, delimObjectEnd, desc), fmt.Sprintf("%d", i))
+			return bindErrorf(newObjectTokenError(t, delimObjectEnd, desc), "%d", i)
 
 		case string:
 			err := f(t)
 			if err != nil {
-				return bindError(err, fmt.Sprintf("%d", i))
+				return bindErrorf(err, "%d", i)
 			}
 
 			err = skipValue(d, desc)
 			if err != nil {
-				return bindError(err, fmt.Sprintf("%d", i))
+				return bindErrorf(err, "%d", i)
 			}
 
 		case json.Delim:
 			if t.String() != delimObjectEnd {
-				return bindError(newObjectEndDelimiterError(t, delimObjectEnd, desc), fmt.Sprintf("%d", i))
+				return bindErrorf(newObjectEndDelimiterError(t, delimObjectEnd, desc), "%d", i)
 			}
 
 			return nil
@@ -412,22 +412,22 @@ func getStringSequenceFromArray(d *json.Decoder, desc string, f func(s string) e
 	for {
 		t, err := d.Token()
 		if err != nil {
-			return bindError(err, fmt.Sprintf("%d", i))
+			return bindErrorf(err, "%d", i)
 		}
 
 		switch t := t.(type) {
 		default:
-			return bindError(newStringArrayTokenError(t, delimArrayEnd, desc), fmt.Sprintf("%d", i))
+			return bindErrorf(newStringArrayTokenError(t, delimArrayEnd, desc), "%d", i)
 
 		case string:
 			err := f(t)
 			if err != nil {
-				return bindError(err, fmt.Sprintf("%d", i))
+				return bindErrorf(err, "%d", i)
 			}
 
 		case json.Delim:
 			if t.String() != delimArrayEnd {
-				return bindError(newArrayEndDelimiterError(t, delimArrayEnd, desc), fmt.Sprintf("%d", i))
+				return bindErrorf(newArrayEndDelimiterError(t, delimArrayEnd, desc), "%d", i)
 			}
 
 			return nil

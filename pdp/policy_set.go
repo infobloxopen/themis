@@ -2,11 +2,11 @@ package pdp
 
 import "fmt"
 
-type policyCombiningAlg interface {
+type PolicyCombiningAlg interface {
 	execute(rules []Evaluable, ctx *Context) Response
 }
 
-type PolicyCombiningAlgMaker func(policies []Evaluable, params interface{}) policyCombiningAlg
+type PolicyCombiningAlgMaker func(policies []Evaluable, params interface{}) PolicyCombiningAlg
 
 var (
 	firstApplicableEffectPCAInstance = firstApplicableEffectPCA{}
@@ -26,7 +26,7 @@ type PolicySet struct {
 	target      Target
 	policies    []Evaluable
 	obligations []AttributeAssignmentExpression
-	algorithm   policyCombiningAlg
+	algorithm   PolicyCombiningAlg
 }
 
 func NewPolicySet(ID string, hidden bool, target Target, policies []Evaluable, makePCA PolicyCombiningAlgMaker, params interface{}, obligations []AttributeAssignmentExpression) *PolicySet {
@@ -236,7 +236,7 @@ func (p *PolicySet) delChild(ID string) (Evaluable, error) {
 type firstApplicableEffectPCA struct {
 }
 
-func makeFirstApplicableEffectPCA(policies []Evaluable, params interface{}) policyCombiningAlg {
+func makeFirstApplicableEffectPCA(policies []Evaluable, params interface{}) PolicyCombiningAlg {
 	return firstApplicableEffectPCAInstance
 }
 
@@ -254,7 +254,7 @@ func (a firstApplicableEffectPCA) execute(policies []Evaluable, ctx *Context) Re
 type denyOverridesPCA struct {
 }
 
-func makeDenyOverridesPCA(policies []Evaluable, params interface{}) policyCombiningAlg {
+func makeDenyOverridesPCA(policies []Evaluable, params interface{}) PolicyCombiningAlg {
 	return denyOverridesPCAInstance
 }
 

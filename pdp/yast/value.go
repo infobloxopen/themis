@@ -1,7 +1,6 @@
 package yast
 
 import (
-	"fmt"
 	"net"
 	"strings"
 
@@ -82,7 +81,7 @@ func (ctx context) unmarshalSetOfStringsValue(v interface{}) (pdp.AttributeValue
 	for i, item := range items {
 		err = ctx.unmarshalSetOfStringsValueItem(item, i, set)
 		if err != nil {
-			return pdp.AttributeValue{}, bindError(bindError(err, fmt.Sprintf("%d", i)), "set of strings")
+			return pdp.AttributeValue{}, bindError(bindErrorf(err, "%d", i), "set of strings")
 		}
 	}
 
@@ -115,7 +114,7 @@ func (ctx context) unmarshalSetOfNetworksValue(v interface{}) (pdp.AttributeValu
 	for i, item := range items {
 		err = ctx.unmarshalSetOfNetworksValueItem(item, i, set)
 		if err != nil {
-			return pdp.AttributeValue{}, bindError(bindError(err, fmt.Sprintf("%d", i)), "set of networks")
+			return pdp.AttributeValue{}, bindError(bindErrorf(err, "%d", i), "set of networks")
 		}
 	}
 
@@ -148,7 +147,7 @@ func (ctx context) unmarshalSetOfDomainsValue(v interface{}) (pdp.AttributeValue
 	for i, item := range items {
 		err = ctx.unmarshalSetOfDomainsValueItem(item, i, set)
 		if err != nil {
-			return pdp.AttributeValue{}, bindError(bindError(err, fmt.Sprintf("%d", i)), "set of domains")
+			return pdp.AttributeValue{}, bindError(bindErrorf(err, "%d", i), "set of domains")
 		}
 	}
 
@@ -174,7 +173,7 @@ func (ctx context) unmarshalListOfStringsValue(v interface{}) (pdp.AttributeValu
 	for i, item := range items {
 		list, err = ctx.unmarshalListOfStringsValueItem(item, list)
 		if err != nil {
-			return pdp.AttributeValue{}, bindError(bindError(err, fmt.Sprintf("%d", i)), "list of strings")
+			return pdp.AttributeValue{}, bindError(bindErrorf(err, "%d", i), "list of strings")
 		}
 	}
 

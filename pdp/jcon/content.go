@@ -4,17 +4,17 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/infobloxopen/go-trees/strtree"
+	"github.com/infobloxopen/themis/pdp"
 )
 
 type content struct {
-	ID    string
-	items *strtree.Tree
+	id    string
+	items []*pdp.ContentItem
 }
 
 func (c *content) bindError(err error) error {
-	if len(c.ID) > 0 {
-		return bindError(err, c.ID)
+	if len(c.id) > 0 {
+		return bindError(err, c.id)
 	}
 
 	return bindError(err, "content")
@@ -54,12 +54,12 @@ func (c *content) unmarshal(d *json.Decoder) error {
 }
 
 func (c *content) unmarshalIDField(d *json.Decoder) error {
-	ID, err := getString(d, "content id")
+	id, err := getString(d, "content id")
 	if err != nil {
 		return err
 	}
 
-	c.ID = ID
+	c.id = id
 	return nil
 }
 
@@ -69,14 +69,14 @@ func (c *content) unmarshalItemsField(d *json.Decoder) error {
 		return err
 	}
 
-	items := strtree.NewTree()
+	items := []*pdp.ContentItem{}
 	err = unmarshalObject(d, func(k string, d *json.Decoder) error {
-		v, err := unmarshalContentItem(d)
+		v, err := unmarshalContentItem(k, d)
 		if err != nil {
 			return bindError(err, k)
 		}
 
-		items.InplaceInsert(k, v)
+		items = append(items, v)
 
 		return nil
 	}, "content items")

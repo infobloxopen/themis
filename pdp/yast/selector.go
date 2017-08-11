@@ -1,7 +1,6 @@
 package yast
 
 import (
-	"fmt"
 	"net/url"
 	"strings"
 
@@ -30,18 +29,16 @@ func (ctx context) unmarshalSelector(v interface{}) (pdp.LocalSelector, boundErr
 			return pdp.LocalSelector{}, newSelectorLocationError(ID.Opaque, s)
 		}
 
-		src := fmt.Sprintf("selector(%s.%s)", loc[0], loc[1])
-
 		items, err := ctx.extractList(m, yastTagPath, "path")
 		if err != nil {
-			return pdp.LocalSelector{}, bindError(err, src)
+			return pdp.LocalSelector{}, bindErrorf(err, "selector(%s.%s)", loc[0], loc[1])
 		}
 
 		path := make([]pdp.Expression, len(items))
 		for i, item := range items {
 			e, err := ctx.unmarshalExpression(item)
 			if err != nil {
-				return pdp.LocalSelector{}, bindError(bindError(err, fmt.Sprintf("%d", i)), src)
+				return pdp.LocalSelector{}, bindErrorf(bindErrorf(err, "%d", i), "selector(%s.%s)", loc[0], loc[1])
 			}
 
 			path[i] = e
@@ -49,16 +46,16 @@ func (ctx context) unmarshalSelector(v interface{}) (pdp.LocalSelector, boundErr
 
 		s, err := ctx.extractString(m, yastTagType, "type")
 		if err != nil {
-			return pdp.LocalSelector{}, bindError(err, src)
+			return pdp.LocalSelector{}, bindErrorf(err, "selector(%s.%s)", loc[0], loc[1])
 		}
 
 		t, ok := pdp.TypeIDs[strings.ToLower(s)]
 		if !ok {
-			return pdp.LocalSelector{}, bindError(newUnknownTypeError(s), src)
+			return pdp.LocalSelector{}, bindErrorf(newUnknownTypeError(s), "selector(%s.%s)", loc[0], loc[1])
 		}
 
 		if t == pdp.TypeUndefined {
-			return pdp.LocalSelector{}, bindError(newInvalidTypeError(t), src)
+			return pdp.LocalSelector{}, bindErrorf(newInvalidTypeError(t), "selector(%s.%s)", loc[0], loc[1])
 		}
 
 		return pdp.MakeLocalSelector(loc[0], loc[1], path, t), nil

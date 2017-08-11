@@ -1,13 +1,12 @@
 package jcon
 
 import (
-	"encoding/json"
-	"fmt"
 	"strings"
 	"testing"
 
-	"github.com/pmezard/go-difflib/difflib"
 	"github.com/satori/go.uuid"
+
+	"github.com/infobloxopen/themis/pdp"
 )
 
 const (
@@ -60,130 +59,23 @@ const (
 				}
 			},
 			"type": "set of networks",
-			"keys": ["string", "address", "domain"]
+			"keys": ["string", "network", "domain"]
 		}
 	}
-}`
-
-	testContentItems = `"first": {
-  "keys": [
-    "String",
-    "Address",
-    "String"
-  ],
-  "type": "Set of Strings",
-  "data": {
-    "x": {
-      "127.0.0.1/32": {
-        "y": [
-          "z",
-          "t"
-        ]
-      }
-    }
-  }
-}
-"second": {
-  "keys": [
-    "String",
-    "Address",
-    "Domain"
-  ],
-  "type": "Set of Networks",
-  "data": {
-    "first": {
-      "192.0.2.0/28": {
-        "example.com": [
-          "2001:db8::/40",
-          "2001:db8:100::/40",
-          "2001:db8:200::/40"
-        ],
-        "example.net": [
-          "2001:db8:1000::/40",
-          "2001:db8:1100::/40",
-          "2001:db8:1200::/40"
-        ]
-      },
-      "192.0.2.16/28": {
-        "example.com": [
-          "2001:db8:2000::/40",
-          "2001:db8:2100::/40",
-          "2001:db8:2200::/40"
-        ],
-        "example.net": [
-          "2001:db8:3000::/40",
-          "2001:db8:3100::/40",
-          "2001:db8:3200::/40"
-        ]
-      },
-      "192.0.2.32/28": {
-        "example.com": [
-          "2001:db8:4000::/40",
-          "2001:db8:4100::/40",
-          "2001:db8:4200::/40"
-        ],
-        "example.net": [
-          "2001:db8:5000::/40",
-          "2001:db8:5100::/40",
-          "2001:db8:5200::/40"
-        ]
-      }
-    },
-    "second": {
-      "2001:db8::/36": {
-        "example.com": [
-          "2001:db8::/40",
-          "2001:db8:100::/40",
-          "2001:db8:200::/40"
-        ],
-        "example.net": [
-          "2001:db8:1000::/40",
-          "2001:db8:1100::/40",
-          "2001:db8:1200::/40"
-        ]
-      },
-      "2001:db8:1000::/36": {
-        "example.com": [
-          "2001:db8:2000::/40",
-          "2001:db8:2100::/40",
-          "2001:db8:2200::/40"
-        ],
-        "example.net": [
-          "2001:db8:3000::/40",
-          "2001:db8:3100::/40",
-          "2001:db8:3200::/40"
-        ]
-      },
-      "2001:db8:2000::/36": {
-        "example.com": [
-          "2001:db8:4000::/40",
-          "2001:db8:4100::/40",
-          "2001:db8:4200::/40"
-        ],
-        "example.net": [
-          "2001:db8:5000::/40",
-          "2001:db8:5100::/40",
-          "2001:db8:5200::/40"
-        ]
-      }
-    }
-  }
 }`
 
 	jsonUpdateStream = `[
   {
     "op": "Add",
-    "path": ["test", "example"],
+    "path": ["first", "update"],
     "entity": {
       "type": "set of strings",
-      "keys": ["string", "address", "string"],
+      "keys": ["address", "string"],
       "data": {
-        "x": {
-          "127.0.0.1": {
-            "y": {
-              "z": false,
-              "t": null
-            }
+        "127.0.0.2": {
+          "n": {
+            "p": false,
+            "q": null
           }
         }
       }
@@ -191,96 +83,195 @@ const (
   },
   {
     "op": "Delete",
-    "path": ["test", "example", "x"]
-  }
-]`
-
-	testContentUpdate = `[
-  {
-    "op": "Add",
-    "path": [
-      "test",
-      "example"
-    ],
-    "entity": {
-      "keys": [
-        "String",
-        "Address",
-        "String"
-      ],
-      "type": "Set of Strings",
-      "data": {
-        "x": {
-          "127.0.0.1/32": {
-            "y": [
-              "z",
-              "t"
-            ]
-          }
-        }
-      }
-    }
-  },
-  {
-    "op": "Delete",
-    "path": [
-      "test",
-      "example",
-      "x"
-    ]
+    "path": ["second", "second", "2001:db8:1000::/36"]
   }
 ]`
 )
 
 func TestUnmarshal(t *testing.T) {
-	id, items, err := Unmarshal(strings.NewReader(jsonStream))
+	c, err := Unmarshal(strings.NewReader(jsonStream), nil)
+	if err != nil {
+		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		return
+	}
+
+	lc, err := c.Get("missing")
+	if err == nil {
+		t.Errorf("Expected error but got local content item: %#v", lc)
+	}
+
+	lc, err = c.Get("first")
 	if err != nil {
 		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 	} else {
-		if id != "Test" {
-			t.Errorf("Expected \"Test\" as content id but got %q", id)
-		}
-
-		s := []string{}
-		for p := range items.Enumerate() {
-			b, err := json.MarshalIndent(p.Value, "", "  ")
+		addr, err := pdp.MakeValueFromSting(pdp.TypeAddress, "127.0.0.1")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{pdp.MakeStringValue("x"), addr, pdp.MakeStringValue("y")}
+			r, err := lc.Get(path, nil)
 			if err != nil {
-				t.Fatalf("Can't marshal result: %s", err)
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"z\",\"t\""
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected [%s] but got [%s]", e, s)
+				}
 			}
-			s = append(s, fmt.Sprintf("%q: %s", p.Key, string(b)))
 		}
 
-		assertJSON(strings.Join(s, "\n"), testContentItems, "JSON content items", t)
+		addr, err = pdp.MakeValueFromSting(pdp.TypeAddress, "127.0.0.2")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{pdp.MakeStringValue("x"), addr, pdp.MakeStringValue("y")}
+			r, err := lc.Get(path, nil)
+			if err == nil {
+				s, err := r.Serialize()
+				if err != nil {
+					s = err.Error()
+				}
+				t.Errorf("Expected error but got result %s", s)
+			}
+		}
+	}
+
+	lc, err = c.Get("second")
+	if err != nil {
+		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+	} else {
+		n, err := pdp.MakeValueFromSting(pdp.TypeNetwork, "192.0.2.4/30")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{pdp.MakeStringValue("first"), n, pdp.MakeDomainValue("example.com")}
+			r, err := lc.Get(path, nil)
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"2001:db8::/40\",\"2001:db8:100::/40\",\"2001:db8:200::/40\""
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected [%s] but got [%s]", e, s)
+				}
+			}
+		}
+
+		n, err = pdp.MakeValueFromSting(pdp.TypeNetwork, "2001:db8:1000:1::/64")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{pdp.MakeStringValue("second"), n, pdp.MakeDomainValue("example.net")}
+			r, err := lc.Get(path, nil)
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"2001:db8:3000::/40\",\"2001:db8:3100::/40\",\"2001:db8:3200::/40\""
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected [%s] but got [%s]", e, s)
+				}
+			}
+		}
+
+		n, err = pdp.MakeValueFromSting(pdp.TypeNetwork, "2001:db8:3000:1::/64")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{pdp.MakeStringValue("second"), n, pdp.MakeDomainValue("example.net")}
+			r, err := lc.Get(path, nil)
+			if err == nil {
+				s, err := r.Serialize()
+				if err != nil {
+					s = err.Error()
+				}
+				t.Errorf("Expected error but got result %s", s)
+			}
+		}
 	}
 }
 
 func TestUnmarshalUpdate(t *testing.T) {
-	u, err := UnmarshalUpdate(strings.NewReader(jsonUpdateStream), "test", uuid.NewV4(), uuid.NewV4())
+	tag := uuid.NewV4()
+	c, err := Unmarshal(strings.NewReader(jsonStream), &tag)
+	if err != nil {
+		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		return
+	}
+
+	u, err := UnmarshalUpdate(strings.NewReader(jsonUpdateStream), "Test", tag, uuid.NewV4())
+	if err != nil {
+		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		return
+	}
+
+	s := pdp.NewLocalContentStorage([]*pdp.LocalContent{c})
+	tr, err := s.NewTransaction("Test", &tag)
+	if err != nil {
+		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		return
+	}
+
+	err = tr.Apply(u)
+	if err != nil {
+		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		return
+	}
+
+	s, err = tr.Commit(s)
+	if err != nil {
+		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		return
+	}
+
+	lc, err := s.Get("Test", "first")
 	if err != nil {
 		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 	} else {
-		b, err := json.MarshalIndent(u, "", "  ")
+		addr, err := pdp.MakeValueFromSting(pdp.TypeAddress, "127.0.0.2")
 		if err != nil {
 			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{pdp.MakeStringValue("update"), addr, pdp.MakeStringValue("n")}
+			r, err := lc.Get(path, nil)
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"p\",\"q\""
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected [%s] but got [%s]", e, s)
+				}
+			}
 		}
-
-		assertJSON(string(b), testContentUpdate, "JSON content update", t)
 	}
-}
 
-func assertJSON(v, e string, desc string, t *testing.T) {
-	ctx := difflib.ContextDiff{
-		A:        difflib.SplitLines(e),
-		B:        difflib.SplitLines(v),
-		FromFile: "Expected",
-		ToFile:   "Got"}
-
-	diff, err := difflib.GetContextDiffString(ctx)
+	lc, err = s.Get("Test", "second")
 	if err != nil {
-		panic(fmt.Errorf("Can't compare \"%s\": %s", desc, err))
-	}
-
-	if len(diff) > 0 {
-		t.Errorf("\"%s\" doesn't match:\n%s", desc, diff)
+		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+	} else {
+		n, err := pdp.MakeValueFromSting(pdp.TypeNetwork, "2001:db8:1000:1::/64")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{pdp.MakeStringValue("second"), n, pdp.MakeDomainValue("example.com")}
+			r, err := lc.Get(path, nil)
+			if err == nil {
+				s, err := r.Serialize()
+				if err != nil {
+					s = err.Error()
+				}
+				t.Errorf("Expected error but got result %s", s)
+			}
+		}
 	}
 }

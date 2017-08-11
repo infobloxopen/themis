@@ -35,7 +35,7 @@ func (s LocalSelector) calculate(ctx *Context) (AttributeValue, error) {
 		return undefinedValue, bindError(newInvalidContentItemTypeError(s.t, item.t), s.describe())
 	}
 
-	r, err := item.get(s.path, ctx)
+	r, err := item.Get(s.path, ctx)
 	if err != nil {
 		return undefinedValue, bindError(err, s.describe())
 	}

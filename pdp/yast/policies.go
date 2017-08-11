@@ -43,6 +43,11 @@ func unmarshalMapperRuleCombiningAlgParams(ctx context, m map[interface{}]interf
 		return nil, err
 	}
 
+	t := arg.GetResultType()
+	if t != pdp.TypeString && t != pdp.TypeSetOfStrings && t != pdp.TypeListOfStrings {
+		return nil, newMapperArgumentTypeError(t)
+	}
+
 	defID, defOk, err := ctx.extractStringOpt(m, yastTagDefault, "default rule id")
 	if err != nil {
 		return nil, err
@@ -54,7 +59,7 @@ func unmarshalMapperRuleCombiningAlgParams(ctx context, m map[interface{}]interf
 		}
 	}
 
-	errID, errOk, err := ctx.extractStringOpt(m, yastTagDefault, "on error rule id")
+	errID, errOk, err := ctx.extractStringOpt(m, yastTagError, "on error rule id")
 	if err != nil {
 		return nil, err
 	}
@@ -65,9 +70,13 @@ func unmarshalMapperRuleCombiningAlgParams(ctx context, m map[interface{}]interf
 		}
 	}
 
-	maker, params, err := ctx.unmarshalRuleCombiningAlg(m, nil)
-	if err != nil {
-		return nil, err
+	var subAlg pdp.RuleCombiningAlg
+	if t == pdp.TypeSetOfStrings || t == pdp.TypeListOfStrings {
+		maker, params, err := ctx.unmarshalRuleCombiningAlg(m, nil)
+		if err != nil {
+			return nil, err
+		}
+		subAlg = maker(nil, params)
 	}
 
 	return pdp.MapperRCAParams{
@@ -76,7 +85,7 @@ func unmarshalMapperRuleCombiningAlgParams(ctx context, m map[interface{}]interf
 		Def:       defID,
 		ErrOk:     errOk,
 		Err:       errID,
-		Algorithm: maker(nil, params)}, nil
+		Algorithm: subAlg}, nil
 }
 
 func (ctx context) unmarshalRuleCombiningAlgObj(m map[interface{}]interface{}, rules []*pdp.Rule) (pdp.RuleCombiningAlgMaker, interface{}, boundError) {
@@ -173,6 +182,11 @@ func unmarshalMapperPolicyCombiningAlgParams(ctx context, m map[interface{}]inte
 		return nil, err
 	}
 
+	t := arg.GetResultType()
+	if t != pdp.TypeString && t != pdp.TypeSetOfStrings && t != pdp.TypeListOfStrings {
+		return nil, newMapperArgumentTypeError(t)
+	}
+
 	defID, defOk, err := ctx.extractStringOpt(m, yastTagDefault, "default policy id")
 	if err != nil {
 		return nil, err
@@ -184,7 +198,7 @@ func unmarshalMapperPolicyCombiningAlgParams(ctx context, m map[interface{}]inte
 		}
 	}
 
-	errID, errOk, err := ctx.extractStringOpt(m, yastTagDefault, "on error policy id")
+	errID, errOk, err := ctx.extractStringOpt(m, yastTagError, "on error policy id")
 	if err != nil {
 		return nil, err
 	}
@@ -195,9 +209,13 @@ func unmarshalMapperPolicyCombiningAlgParams(ctx context, m map[interface{}]inte
 		}
 	}
 
-	maker, params, err := ctx.unmarshalPolicyCombiningAlg(m, nil)
-	if err != nil {
-		return nil, err
+	var subAlg pdp.PolicyCombiningAlg
+	if t == pdp.TypeSetOfStrings || t == pdp.TypeListOfStrings {
+		maker, params, err := ctx.unmarshalPolicyCombiningAlg(m, nil)
+		if err != nil {
+			return nil, err
+		}
+		subAlg = maker(nil, params)
 	}
 
 	return pdp.MapperPCAParams{
@@ -206,7 +224,7 @@ func unmarshalMapperPolicyCombiningAlgParams(ctx context, m map[interface{}]inte
 		Def:       defID,
 		ErrOk:     errOk,
 		Err:       errID,
-		Algorithm: maker(nil, params)}, nil
+		Algorithm: subAlg}, nil
 }
 
 func (ctx context) unmarshalPolicyCombiningAlgObj(m map[interface{}]interface{}, policies []pdp.Evaluable) (pdp.PolicyCombiningAlgMaker, interface{}, boundError) {
@@ -318,7 +336,7 @@ func (ctx context) unmarshalItem(v interface{}, i int) (pdp.Evaluable, boundErro
 	m, err := ctx.validateMap(v, "policy or policy set")
 	if err != nil {
 		if i > 0 {
-			err = bindError(err, fmt.Sprintf("%d", i))
+			err = bindErrorf(err, "%d", i)
 		}
 
 		return nil, err
@@ -327,7 +345,7 @@ func (ctx context) unmarshalItem(v interface{}, i int) (pdp.Evaluable, boundErro
 	ID, ok, err := ctx.extractStringOpt(m, yastTagID, "policy or policy set id")
 	if err != nil {
 		if i > 0 {
-			err = bindError(err, fmt.Sprintf("%d", i))
+			err = bindErrorf(err, "%d", i)
 		}
 
 		return nil, err

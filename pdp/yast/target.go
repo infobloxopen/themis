@@ -1,7 +1,6 @@
 package yast
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/infobloxopen/themis/pdp"
@@ -136,7 +135,7 @@ func (ctx context) unmarshalTargetAnyOfItem(v interface{}) (pdp.AllOf, boundErro
 		for i, item := range items {
 			m, err := ctx.unmarshalTargetAllOfItem(item)
 			if err != nil {
-				return al, bindError(bindError(err, fmt.Sprintf("%d", i+1)), ID)
+				return al, bindError(bindErrorf(err, "%d", i+1), ID)
 			}
 
 			al.Append(m)
@@ -181,7 +180,7 @@ func (ctx context) unmarshalTargetItem(v interface{}) (pdp.AnyOf, boundError) {
 		for i, item := range items {
 			al, err := ctx.unmarshalTargetAnyOfItem(item)
 			if err != nil {
-				return an, bindError(bindError(err, fmt.Sprintf("%d", i+1)), ID)
+				return an, bindError(bindErrorf(err, "%d", i+1), ID)
 			}
 
 			an.Append(al)
@@ -216,7 +215,7 @@ func (ctx context) unmarshalTarget(m map[interface{}]interface{}) (pdp.Target, b
 	for i, item := range items {
 		a, err := ctx.unmarshalTargetItem(item)
 		if err != nil {
-			return t, bindError(bindError(err, fmt.Sprintf("%d", i+1)), "target")
+			return t, bindError(bindErrorf(err, "%d", i+1), "target")
 		}
 
 		t.Append(a)

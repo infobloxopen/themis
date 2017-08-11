@@ -1,10 +1,6 @@
 package yast
 
-import (
-	"fmt"
-
-	"github.com/infobloxopen/themis/pdp"
-)
+import "github.com/infobloxopen/themis/pdp"
 
 func (ctx context) unmarshalObligationItem(v interface{}) (pdp.AttributeAssignmentExpression, boundError) {
 	m, err := ctx.validateMap(v, "obligation")
@@ -49,7 +45,7 @@ func (ctx context) unmarshalObligations(m map[interface{}]interface{}) ([]pdp.At
 	for i, item := range items {
 		o, err := ctx.unmarshalObligationItem(item)
 		if err != nil {
-			return nil, bindError(bindError(err, fmt.Sprintf("%d", i)), "obligations")
+			return nil, bindError(bindErrorf(err, "%d", i), "obligations")
 		}
 
 		r = append(r, o)

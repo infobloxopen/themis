@@ -11,7 +11,7 @@ type mapperRCA struct {
 	rules     *strtree.Tree
 	def       *Rule
 	err       *Rule
-	algorithm ruleCombiningAlg
+	algorithm RuleCombiningAlg
 }
 
 type MapperRCAParams struct {
@@ -20,7 +20,7 @@ type MapperRCAParams struct {
 	Def       string
 	ErrOk     bool
 	Err       string
-	Algorithm ruleCombiningAlg
+	Algorithm RuleCombiningAlg
 }
 
 func getSetOfIDs(v AttributeValue) ([]string, error) {
@@ -54,7 +54,7 @@ func collectSubRules(IDs []string, m *strtree.Tree) []*Rule {
 	return rules
 }
 
-func makeMapperRCA(rules []*Rule, params interface{}) ruleCombiningAlg {
+func makeMapperRCA(rules []*Rule, params interface{}) RuleCombiningAlg {
 	mapperParams, ok := params.(MapperRCAParams)
 	if !ok {
 		panic(fmt.Errorf("Mapper rule combining algorithm maker expected MapperRCAParams structure as params "+
@@ -135,7 +135,7 @@ func (a mapperRCA) getRulesMap(rules []*Rule) *strtree.Tree {
 	return nil
 }
 
-func (a mapperRCA) add(ID string, child, old *Rule) ruleCombiningAlg {
+func (a mapperRCA) add(ID string, child, old *Rule) RuleCombiningAlg {
 	def := a.def
 	if old != nil && old == def {
 		def = child
@@ -154,7 +154,7 @@ func (a mapperRCA) add(ID string, child, old *Rule) ruleCombiningAlg {
 		algorithm: a.algorithm}
 }
 
-func (a mapperRCA) del(ID string, old *Rule) ruleCombiningAlg {
+func (a mapperRCA) del(ID string, old *Rule) RuleCombiningAlg {
 	def := a.def
 	if old != nil && old == def {
 		def = nil

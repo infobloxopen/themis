@@ -1,6 +1,6 @@
-package pdp
+package main
 
-//go:generate bash -c "(egen -i $GOPATH/src/github.com/infobloxopen/themis/pdp/errors.yaml > $GOPATH/src/github.com/infobloxopen/themis/pdp/errors.go) && gofmt -l -s -w $GOPATH/src/github.com/infobloxopen/themis/pdp/errors.go"
+//go:generate bash -c "(egen -i $GOPATH/src/github.com/infobloxopen/themis/pdpserver/errors.yaml > $GOPATH/src/github.com/infobloxopen/themis/pdpserver/errors.go) && gofmt -l -s -w $GOPATH/src/github.com/infobloxopen/themis/pdpserver/errors.go"
 
 import (
 	"fmt"

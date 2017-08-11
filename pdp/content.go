@@ -1,7 +1,6 @@
 package pdp
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"strings"
@@ -19,22 +18,32 @@ var ContentKeyTypes = map[int]bool{
 	TypeNetwork: true,
 	TypeDomain:  true}
 
-type localContentStorage struct {
+type LocalContentStorage struct {
 	r *strtree.Tree
 }
 
-func (c *localContentStorage) get(cID, iID string) (*ContentItem, error) {
-	v, ok := c.r.Get(cID)
+func NewLocalContentStorage(items []*LocalContent) *LocalContentStorage {
+	s := &LocalContentStorage{r: strtree.NewTree()}
+
+	for _, item := range items {
+		s.r.InplaceInsert(item.id, item)
+	}
+
+	return s
+}
+
+func (s *LocalContentStorage) Get(cID, iID string) (*ContentItem, error) {
+	v, ok := s.r.Get(cID)
 	if !ok {
 		return nil, newMissingContentError(cID)
 	}
 
-	cnt, ok := v.(*localContent)
+	cnt, ok := v.(*LocalContent)
 	if !ok {
 		return nil, newInvalidContentStorageItem(cID, v)
 	}
 
-	item, err := cnt.get(iID)
+	item, err := cnt.Get(iID)
 	if err != nil {
 		return nil, bindError(err, cID)
 	}
@@ -42,18 +51,22 @@ func (c *localContentStorage) get(cID, iID string) (*ContentItem, error) {
 	return item, nil
 }
 
-func (c *localContentStorage) newTransaction(cID string, tag *uuid.UUID) (*localContentStorageTransaction, error) {
-	v, ok := c.r.Get(cID)
+func (s *LocalContentStorage) Add(c *LocalContent) *LocalContentStorage {
+	return &LocalContentStorage{r: s.r.Insert(c.id, c)}
+}
+
+func (s *LocalContentStorage) GetLocalContent(cID string, tag *uuid.UUID) (*LocalContent, error) {
+	v, ok := s.r.Get(cID)
 	if !ok {
 		return nil, newMissingContentError(cID)
 	}
 
-	cnt, ok := v.(*localContent)
+	c, ok := v.(*LocalContent)
 	if !ok {
 		return nil, newInvalidContentStorageItem(cID, v)
 	}
 
-	if cnt.tag == nil {
+	if c.tag == nil {
 		return nil, newUntaggedContentModificationError(cID)
 	}
 
@@ -61,11 +74,20 @@ func (c *localContentStorage) newTransaction(cID string, tag *uuid.UUID) (*local
 		return nil, newMissingContentTagError()
 	}
 
-	if !uuid.Equal(*cnt.tag, *tag) {
-		return nil, newContentTagsNotMatchError(cID, cnt.tag, tag)
+	if !uuid.Equal(*c.tag, *tag) {
+		return nil, newContentTagsNotMatchError(cID, c.tag, tag)
 	}
 
-	return &localContentStorageTransaction{ID: cID, items: cnt.items}, nil
+	return c, nil
+}
+
+func (s *LocalContentStorage) NewTransaction(cID string, tag *uuid.UUID) (*LocalContentStorageTransaction, error) {
+	c, err := s.GetLocalContent(cID, tag)
+	if err != nil {
+		return nil, err
+	}
+
+	return &LocalContentStorageTransaction{tag: *tag, ID: cID, items: c.items}, nil
 }
 
 type ContentUpdate struct {
@@ -87,84 +109,152 @@ func (u *ContentUpdate) Append(op int, path []string, entity *ContentItem) {
 	u.cmds = append(u.cmds, &command{op: op, path: path, entity: entity})
 }
 
-func (u *ContentUpdate) MarshalJSON() ([]byte, error) {
-	b := []byte("[")
-
-	for i, cmd := range u.cmds {
-		if i > 0 {
-			b = append(b, ',')
-		}
-
-		value, err := json.Marshal(cmd)
-		if err != nil {
-			return nil, err
-		}
-
-		b = append(b, value...)
-	}
-
-	return append(b, ']'), nil
-}
-
-type localContentStorageTransaction struct {
+type LocalContentStorageTransaction struct {
+	tag   uuid.UUID
 	ID    string
 	items *strtree.Tree
+	err   error
 }
 
-func (t *localContentStorageTransaction) commit(c *localContentStorage, tag *uuid.UUID) (*localContentStorage, error) {
-	if tag == nil {
-		return nil, newMissingContentTagError()
+func (t *LocalContentStorageTransaction) applyCmd(cmd *command) error {
+	switch cmd.op {
+	case UOAdd:
+		return t.add(cmd.path, cmd.entity)
+
+	case UODelete:
+		return t.del(cmd.path)
 	}
 
-	return &localContentStorage{r: c.r.Insert(t.ID, &localContent{tag: tag, items: t.items})}, nil
+	return newUnknownContentUpdateOperationError(cmd.op)
 }
 
-func (t *localContentStorageTransaction) add(ID string, path []AttributeValue, v interface{}) error {
-	var (
-		c   *ContentItem
-		ok  bool
-		err error
-	)
+func (t *LocalContentStorageTransaction) Apply(u *ContentUpdate) error {
+	if t.err != nil {
+		return newFailedContentTransactionError(t.ID, t.tag, t.err)
+	}
 
-	if len(path) > 0 {
-		v, ok := t.items.Get(ID)
-		if !ok {
-			return bindError(newMissingContentItemError(ID), t.ID)
+	if t.ID != u.cID {
+		return newContentTransactionIDNotMatchError(t.ID, u.cID)
+	}
+
+	if !uuid.Equal(t.tag, u.oldTag) {
+		return newContentTransactionTagsNotMatchError(t.ID, t.tag, u.oldTag)
+	}
+
+	for i, cmd := range u.cmds {
+		err := t.applyCmd(cmd)
+		if err != nil {
+			t.err = err
+			return bindErrorf(err, "command %d", i)
+		}
+	}
+
+	t.tag = u.newTag
+	return nil
+}
+
+func (t *LocalContentStorageTransaction) Commit(s *LocalContentStorage) (*LocalContentStorage, error) {
+	if t.err != nil {
+		return nil, newFailedContentTransactionError(t.ID, t.tag, t.err)
+	}
+
+	c := &LocalContent{id: t.ID, tag: &t.tag, items: t.items}
+	if s == nil {
+		return NewLocalContentStorage([]*LocalContent{c}), nil
+	}
+
+	return s.Add(c), nil
+}
+
+func (t *LocalContentStorageTransaction) getItem(ID string) (*ContentItem, error) {
+	v, ok := t.items.Get(ID)
+	if !ok {
+		return nil, newMissingContentItemError(ID)
+	}
+
+	c, ok := v.(*ContentItem)
+	if !ok {
+		return nil, bindError(newInvalidContentItemError(v), ID)
+	}
+
+	return c, nil
+}
+
+func (t *LocalContentStorageTransaction) parsePath(c *ContentItem, rawPath []string) ([]AttributeValue, error) {
+	if len(rawPath) > len(c.k) {
+		return nil, newTooLongRawPathContentModificationError(c.k, rawPath)
+	}
+
+	path := make([]AttributeValue, len(rawPath))
+	for i, s := range rawPath {
+		v, err := MakeValueFromSting(c.k[i], s)
+		if err != nil {
+			return nil, bindErrorf(err, "%d", i+2)
 		}
 
-		c, ok = v.(*ContentItem)
-		if !ok {
-			return bindError(bindError(newInvalidContentItemError(v), ID), t.ID)
+		path[i] = v
+	}
+
+	return path, nil
+}
+
+func (t *LocalContentStorageTransaction) add(rawPath []string, v interface{}) error {
+	if len(rawPath) <= 0 {
+		return bindError(newTooShortRawPathContentModificationError(), t.ID)
+	}
+
+	ID := rawPath[0]
+
+	if len(rawPath) > 1 {
+		c, err := t.getItem(ID)
+		if err != nil {
+			return bindError(err, t.ID)
 		}
 
-		c, err = c.add(path, v)
+		path, err := t.parsePath(c, rawPath[1:])
+		if err != nil {
+			return bindError(err, t.ID)
+		}
+
+		c, err = c.add(ID, path, v)
 		if err != nil {
 			return bindError(bindError(err, ID), t.ID)
 		}
-	} else {
-		c, ok = v.(*ContentItem)
-		if !ok {
-			return bindError(newInvalidContentItemError(v), ID)
-		}
+
+		t.items = t.items.Insert(ID, c)
+		return nil
 	}
+
+	c, ok := v.(*ContentItem)
+	if !ok {
+		return bindError(bindError(newInvalidContentItemError(v), ID), t.ID)
+	}
+
+	c.id = ID
 
 	t.items = t.items.Insert(ID, c)
 	return nil
 }
 
-func (t *localContentStorageTransaction) del(ID string, path []AttributeValue) error {
-	if len(path) > 0 {
-		v, ok := t.items.Get(ID)
-		if !ok {
-			return bindError(newMissingContentItemError(ID), t.ID)
+func (t *LocalContentStorageTransaction) del(rawPath []string) error {
+	if len(rawPath) <= 0 {
+		return bindError(newTooShortRawPathContentModificationError(), t.ID)
+	}
+
+	ID := rawPath[0]
+
+	if len(rawPath) > 1 {
+		c, err := t.getItem(ID)
+		if err != nil {
+			return bindError(err, t.ID)
 		}
 
-		c, ok := v.(*ContentItem)
-		if !ok {
-			return bindError(bindError(newInvalidContentItemError(v), ID), t.ID)
+		path, err := t.parsePath(c, rawPath[1:])
+		if err != nil {
+			return bindError(err, t.ID)
 		}
 
-		c, err := c.del(path)
+		c, err = c.del(ID, path)
 		if err != nil {
 			return bindError(bindError(err, ID), t.ID)
 		}
@@ -182,12 +272,23 @@ func (t *localContentStorageTransaction) del(ID string, path []AttributeValue) e
 	return nil
 }
 
-type localContent struct {
+type LocalContent struct {
+	id    string
 	tag   *uuid.UUID
 	items *strtree.Tree
 }
 
-func (c *localContent) get(ID string) (*ContentItem, error) {
+func NewLocalContent(id string, tag *uuid.UUID, items []*ContentItem) *LocalContent {
+	c := &LocalContent{id: id, tag: tag, items: strtree.NewTree()}
+
+	for _, item := range items {
+		c.items.InplaceInsert(item.id, item)
+	}
+
+	return c
+}
+
+func (c *LocalContent) Get(ID string) (*ContentItem, error) {
 	v, ok := c.items.Get(ID)
 	if !ok {
 		return nil, newMissingContentItemError(ID)
@@ -202,50 +303,72 @@ func (c *localContent) get(ID string) (*ContentItem, error) {
 }
 
 type ContentItem struct {
-	r ContentSubItem
-	t int
-	k []int
+	id string
+	r  ContentSubItem
+	t  int
+	k  []int
 }
 
-func MakeContentValueItem(t int, v interface{}) *ContentItem {
+func MakeContentValueItem(id string, t int, v interface{}) *ContentItem {
 	return &ContentItem{
-		r: MakeContentValue(v),
-		t: t}
+		id: id,
+		r:  MakeContentValue(v),
+		t:  t}
 }
 
-func MakeContentMappingItem(t int, k []int, v ContentSubItem) *ContentItem {
+func MakeContentMappingItem(id string, t int, k []int, v ContentSubItem) *ContentItem {
 	return &ContentItem{
-		r: v,
-		t: t,
-		k: k}
+		id: id,
+		r:  v,
+		t:  t,
+		k:  k}
 }
 
 func (c *ContentItem) typeCheck(path []AttributeValue, v interface{}) (ContentSubItem, error) {
+	item, ok := v.(*ContentItem)
+	if !ok {
+		return nil, newInvalidContentUpdateDataError(v)
+	}
+
+	if item.t != c.t {
+		return nil, newInvalidContentUpdateResultTypeError(item.t, c.t)
+	}
+
 	if len(path) < len(c.k) {
+		if len(path)+len(item.k) != len(c.k) {
+			return nil, newInvalidContentUpdateKeysError(len(path), item.k, c.k)
+		}
+
+		for i, k := range item.k {
+			if k != c.k[len(path)+i] {
+				return nil, newInvalidContentUpdateKeysError(len(path), item.k, c.k)
+			}
+		}
+
 		switch c.k[len(path)] {
 		default:
 			return nil, newInvalidContentKeyTypeError(c.k[len(path)], ContentKeyTypes)
 
 		case TypeString:
-			if _, ok := v.(contentStringMap); !ok {
+			if _, ok := item.r.(ContentStringMap); !ok {
 				return nil, newInvalidContentStringMapError(v)
 			}
 
 		case TypeAddress, TypeNetwork:
-			if _, ok := v.(contentNetworkMap); !ok {
+			if _, ok := item.r.(ContentNetworkMap); !ok {
 				return nil, newInvalidContentNetworkMapError(v)
 			}
 
 		case TypeDomain:
-			if _, ok := v.(contentDomainMap); !ok {
+			if _, ok := item.r.(ContentDomainMap); !ok {
 				return nil, newInvalidContentDomainMapError(v)
 			}
 		}
 
-		return v.(ContentSubItem), nil
+		return item.r, nil
 	}
 
-	subItem, ok := v.(contentValue)
+	subItem, ok := item.r.(ContentValue)
 	if !ok {
 		return nil, newInvalidContentValueError(v)
 	}
@@ -306,7 +429,7 @@ func (c *ContentItem) typeCheck(path []AttributeValue, v interface{}) (ContentSu
 	return subItem, nil
 }
 
-func (c *ContentItem) add(path []AttributeValue, v interface{}) (*ContentItem, error) {
+func (c *ContentItem) add(ID string, path []AttributeValue, v interface{}) (*ContentItem, error) {
 	if len(c.k) <= 0 {
 		return c, newInvalidContentModificationError()
 	}
@@ -358,10 +481,10 @@ func (c *ContentItem) add(path []AttributeValue, v interface{}) (*ContentItem, e
 		}
 	}
 
-	return MakeContentMappingItem(c.t, c.k, m), nil
+	return MakeContentMappingItem(ID, c.t, c.k, m), nil
 }
 
-func (c *ContentItem) del(path []AttributeValue) (*ContentItem, error) {
+func (c *ContentItem) del(ID string, path []AttributeValue) (*ContentItem, error) {
 	if len(c.k) <= 0 {
 		return c, newInvalidContentModificationError()
 	}
@@ -407,58 +530,10 @@ func (c *ContentItem) del(path []AttributeValue) (*ContentItem, error) {
 		}
 	}
 
-	return MakeContentMappingItem(c.t, c.k, m), nil
+	return MakeContentMappingItem(ID, c.t, c.k, m), nil
 }
 
-func (c *ContentItem) MarshalJSON() ([]byte, error) {
-	var err error
-	b := []byte("{")
-
-	if len(c.k) > 0 {
-		b, err = appendJSONTag(b, "keys")
-		if err != nil {
-			return nil, err
-		}
-
-		keys := make([]string, len(c.k))
-		for i, k := range c.k {
-			keys[i] = TypeNames[k]
-		}
-
-		b, err = appendJSONStringArray(b, keys)
-		if err != nil {
-			return nil, err
-		}
-
-		b = append(b, ',')
-	}
-
-	b, err = appendJSONTag(b, "type")
-	if err != nil {
-		return nil, err
-	}
-
-	b, err = appendJSONString(b, TypeNames[c.t])
-	if err != nil {
-		return nil, err
-	}
-
-	b = append(b, ',')
-
-	b, err = appendJSONTag(b, "data")
-	if err != nil {
-		return nil, err
-	}
-
-	b, err = c.r.appendJSON(b, len(c.k), c.t)
-	if err != nil {
-		return nil, err
-	}
-
-	return append(b, '}'), nil
-}
-
-func (c *ContentItem) get(path []Expression, ctx *Context) (AttributeValue, error) {
+func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, error) {
 	d := len(path)
 	if d != len(c.k) {
 		return undefinedValue, newInvalidSelectorPathError(c.k, path)
@@ -502,72 +577,17 @@ type ContentSubItem interface {
 	next(key AttributeValue) (ContentSubItem, error)
 	put(key AttributeValue, v ContentSubItem) (ContentSubItem, error)
 	del(key AttributeValue) (ContentSubItem, error)
-	appendJSON(b []byte, level int, t int) ([]byte, error)
 }
 
-type contentStringMap struct {
+type ContentStringMap struct {
 	tree *strtree.Tree
 }
 
-func MakeContentStringMap(tree *strtree.Tree) contentStringMap {
-	return contentStringMap{tree: tree}
+func MakeContentStringMap(tree *strtree.Tree) ContentStringMap {
+	return ContentStringMap{tree: tree}
 }
 
-func (m contentStringMap) appendJSON(b []byte, level int, t int) ([]byte, error) {
-	var err error
-	b = append(b, '{')
-	if level > 1 {
-		i := 0
-		for p := range m.tree.Enumerate() {
-			if i > 0 {
-				b = append(b, ',')
-			}
-
-			b, err = appendJSONTag(b, p.Key)
-			if err != nil {
-				return nil, err
-			}
-
-			n, ok := p.Value.(ContentSubItem)
-			if !ok {
-				panic(fmt.Errorf("Local selector: Invalid content item map at %q. Expected ContentSubItem but got %T",
-					p.Key, p.Value))
-			}
-
-			b, err = n.appendJSON(b, level-1, t)
-			if err != nil {
-				return nil, err
-			}
-
-			i++
-		}
-
-		return append(b, '}'), nil
-	}
-
-	i := 0
-	for p := range m.tree.Enumerate() {
-		if i > 0 {
-			b = append(b, ',')
-		}
-
-		b, err = appendJSONTag(b, p.Key)
-		if err != nil {
-			return nil, err
-		}
-
-		b, err = appendJSONValue(b, p.Value, t)
-		if err != nil {
-			return nil, err
-		}
-
-		i++
-	}
-
-	return append(b, '}'), nil
-}
-
-func (m contentStringMap) getValue(key AttributeValue, t int) (AttributeValue, error) {
+func (m ContentStringMap) getValue(key AttributeValue, t int) (AttributeValue, error) {
 	s, err := key.str()
 	if err != nil {
 		return undefinedValue, err
@@ -581,7 +601,7 @@ func (m contentStringMap) getValue(key AttributeValue, t int) (AttributeValue, e
 	return MakeContentValue(v).getValue(undefinedValue, t)
 }
 
-func (m contentStringMap) next(key AttributeValue) (ContentSubItem, error) {
+func (m ContentStringMap) next(key AttributeValue) (ContentSubItem, error) {
 	s, err := key.str()
 	if err != nil {
 		return nil, err
@@ -600,20 +620,20 @@ func (m contentStringMap) next(key AttributeValue) (ContentSubItem, error) {
 	return item, nil
 }
 
-func (m contentStringMap) put(key AttributeValue, value ContentSubItem) (ContentSubItem, error) {
+func (m ContentStringMap) put(key AttributeValue, value ContentSubItem) (ContentSubItem, error) {
 	k, err := key.str()
 	if err != nil {
 		return m, err
 	}
 
-	if v, ok := value.(contentValue); ok {
+	if v, ok := value.(ContentValue); ok {
 		return MakeContentStringMap(m.tree.Insert(k, v.value)), nil
 	}
 
 	return MakeContentStringMap(m.tree.Insert(k, value)), nil
 }
 
-func (m contentStringMap) del(key AttributeValue) (ContentSubItem, error) {
+func (m ContentStringMap) del(key AttributeValue) (ContentSubItem, error) {
 	k, err := key.str()
 	if err != nil {
 		return m, err
@@ -627,69 +647,15 @@ func (m contentStringMap) del(key AttributeValue) (ContentSubItem, error) {
 	return MakeContentStringMap(t), nil
 }
 
-type contentNetworkMap struct {
+type ContentNetworkMap struct {
 	tree *iptree.Tree
 }
 
-func MakeContentNetworkMap(tree *iptree.Tree) contentNetworkMap {
-	return contentNetworkMap{tree: tree}
+func MakeContentNetworkMap(tree *iptree.Tree) ContentNetworkMap {
+	return ContentNetworkMap{tree: tree}
 }
 
-func (m contentNetworkMap) appendJSON(b []byte, level int, t int) ([]byte, error) {
-	var err error
-	b = append(b, '{')
-	if level > 1 {
-		i := 0
-		for p := range m.tree.Enumerate() {
-			if i > 0 {
-				b = append(b, ',')
-			}
-
-			b, err = appendJSONTag(b, p.Key.String())
-			if err != nil {
-				return nil, err
-			}
-
-			n, ok := p.Value.(ContentSubItem)
-			if !ok {
-				panic(fmt.Errorf("Local selector: Invalid content item map at %q. Expected ContentSubItem but got %T",
-					p.Key, p.Value))
-			}
-
-			b, err = n.appendJSON(b, level-1, t)
-			if err != nil {
-				return nil, err
-			}
-
-			i++
-		}
-
-		return append(b, '}'), nil
-	}
-
-	i := 0
-	for p := range m.tree.Enumerate() {
-		if i > 0 {
-			b = append(b, ',')
-		}
-
-		b, err = appendJSONTag(b, p.Key.String())
-		if err != nil {
-			return nil, err
-		}
-
-		b, err = appendJSONValue(b, p.Value, t)
-		if err != nil {
-			return nil, err
-		}
-
-		i++
-	}
-
-	return append(b, '}'), nil
-}
-
-func (m contentNetworkMap) getByAttribute(key AttributeValue) (interface{}, error) {
+func (m ContentNetworkMap) getByAttribute(key AttributeValue) (interface{}, error) {
 	if a, err := key.address(); err == nil {
 		if v, ok := m.tree.GetByIP(a); ok {
 			return v, nil
@@ -709,7 +675,7 @@ func (m contentNetworkMap) getByAttribute(key AttributeValue) (interface{}, erro
 	return undefinedValue, newNetworkMapKeyValueTypeError(key.GetResultType())
 }
 
-func (m contentNetworkMap) getValue(key AttributeValue, t int) (AttributeValue, error) {
+func (m ContentNetworkMap) getValue(key AttributeValue, t int) (AttributeValue, error) {
 	v, err := m.getByAttribute(key)
 	if err != nil {
 		return undefinedValue, err
@@ -718,7 +684,7 @@ func (m contentNetworkMap) getValue(key AttributeValue, t int) (AttributeValue, 
 	return MakeContentValue(v).getValue(undefinedValue, t)
 }
 
-func (m contentNetworkMap) next(key AttributeValue) (ContentSubItem, error) {
+func (m ContentNetworkMap) next(key AttributeValue) (ContentSubItem, error) {
 	v, err := m.getByAttribute(key)
 	if err != nil {
 		return nil, err
@@ -732,9 +698,9 @@ func (m contentNetworkMap) next(key AttributeValue) (ContentSubItem, error) {
 	return item, nil
 }
 
-func (m contentNetworkMap) put(key AttributeValue, value ContentSubItem) (ContentSubItem, error) {
+func (m ContentNetworkMap) put(key AttributeValue, value ContentSubItem) (ContentSubItem, error) {
 	if a, err := key.address(); err == nil {
-		if v, ok := value.(contentValue); ok {
+		if v, ok := value.(ContentValue); ok {
 			return MakeContentNetworkMap(m.tree.InsertIP(a, v.value)), nil
 		}
 
@@ -742,7 +708,7 @@ func (m contentNetworkMap) put(key AttributeValue, value ContentSubItem) (Conten
 	}
 
 	if n, err := key.network(); err == nil {
-		if v, ok := value.(contentValue); ok {
+		if v, ok := value.(ContentValue); ok {
 			return MakeContentNetworkMap(m.tree.InsertNet(n, v.value)), nil
 		}
 
@@ -752,7 +718,7 @@ func (m contentNetworkMap) put(key AttributeValue, value ContentSubItem) (Conten
 	return nil, newNetworkMapKeyValueTypeError(key.GetResultType())
 }
 
-func (m contentNetworkMap) del(key AttributeValue) (ContentSubItem, error) {
+func (m ContentNetworkMap) del(key AttributeValue) (ContentSubItem, error) {
 	if a, err := key.address(); err == nil {
 		if t, ok := m.tree.DeleteByIP(a); ok {
 			return MakeContentNetworkMap(t), nil
@@ -772,69 +738,15 @@ func (m contentNetworkMap) del(key AttributeValue) (ContentSubItem, error) {
 	return nil, newNetworkMapKeyValueTypeError(key.GetResultType())
 }
 
-type contentDomainMap struct {
+type ContentDomainMap struct {
 	tree *domaintree.Node
 }
 
-func MakeContentDomainMap(tree *domaintree.Node) contentDomainMap {
-	return contentDomainMap{tree: tree}
+func MakeContentDomainMap(tree *domaintree.Node) ContentDomainMap {
+	return ContentDomainMap{tree: tree}
 }
 
-func (m contentDomainMap) appendJSON(b []byte, level int, t int) ([]byte, error) {
-	var err error
-	b = append(b, '{')
-	if level > 1 {
-		i := 0
-		for p := range m.tree.Enumerate() {
-			if i > 0 {
-				b = append(b, ',')
-			}
-
-			b, err = appendJSONTag(b, p.Key)
-			if err != nil {
-				return nil, err
-			}
-
-			n, ok := p.Value.(ContentSubItem)
-			if !ok {
-				panic(fmt.Errorf("Local selector: Invalid content item map at %q. Expected ContentSubItem but got %T",
-					p.Key, p.Value))
-			}
-
-			b, err = n.appendJSON(b, level-1, t)
-			if err != nil {
-				return nil, err
-			}
-
-			i++
-		}
-
-		return append(b, '}'), nil
-	}
-
-	i := 0
-	for p := range m.tree.Enumerate() {
-		if i > 0 {
-			b = append(b, ',')
-		}
-
-		b, err = appendJSONTag(b, p.Key)
-		if err != nil {
-			return nil, err
-		}
-
-		b, err = appendJSONValue(b, p.Value, t)
-		if err != nil {
-			return nil, err
-		}
-
-		i++
-	}
-
-	return append(b, '}'), nil
-}
-
-func (m contentDomainMap) getValue(key AttributeValue, t int) (AttributeValue, error) {
+func (m ContentDomainMap) getValue(key AttributeValue, t int) (AttributeValue, error) {
 	d, err := key.domain()
 	if err != nil {
 		return undefinedValue, err
@@ -848,7 +760,7 @@ func (m contentDomainMap) getValue(key AttributeValue, t int) (AttributeValue, e
 	return MakeContentValue(v).getValue(undefinedValue, t)
 }
 
-func (m contentDomainMap) next(key AttributeValue) (ContentSubItem, error) {
+func (m ContentDomainMap) next(key AttributeValue) (ContentSubItem, error) {
 	d, err := key.domain()
 	if err != nil {
 		return nil, err
@@ -867,24 +779,20 @@ func (m contentDomainMap) next(key AttributeValue) (ContentSubItem, error) {
 	return item, nil
 }
 
-type contentValue struct {
-	value interface{}
-}
-
-func (m contentDomainMap) put(key AttributeValue, value ContentSubItem) (ContentSubItem, error) {
+func (m ContentDomainMap) put(key AttributeValue, value ContentSubItem) (ContentSubItem, error) {
 	d, err := key.domain()
 	if err != nil {
 		return m, err
 	}
 
-	if v, ok := value.(contentValue); ok {
+	if v, ok := value.(ContentValue); ok {
 		return MakeContentDomainMap(m.tree.Insert(d, v.value)), nil
 	}
 
 	return MakeContentDomainMap(m.tree.Insert(d, value)), nil
 }
 
-func (m contentDomainMap) del(key AttributeValue) (ContentSubItem, error) {
+func (m ContentDomainMap) del(key AttributeValue) (ContentSubItem, error) {
 	d, err := key.domain()
 	if err != nil {
 		return m, err
@@ -898,15 +806,15 @@ func (m contentDomainMap) del(key AttributeValue) (ContentSubItem, error) {
 	return MakeContentDomainMap(t), nil
 }
 
-func MakeContentValue(value interface{}) contentValue {
-	return contentValue{value: value}
+type ContentValue struct {
+	value interface{}
 }
 
-func (v contentValue) appendJSON(b []byte, level int, t int) ([]byte, error) {
-	return appendJSONValue(b, v.value, t)
+func MakeContentValue(value interface{}) ContentValue {
+	return ContentValue{value: value}
 }
 
-func (v contentValue) getValue(key AttributeValue, t int) (AttributeValue, error) {
+func (v ContentValue) getValue(key AttributeValue, t int) (AttributeValue, error) {
 	switch t {
 	case TypeUndefined:
 		panic(fmt.Errorf("Can't convert to value of undefined type"))
@@ -942,144 +850,14 @@ func (v contentValue) getValue(key AttributeValue, t int) (AttributeValue, error
 	panic(fmt.Errorf("Can't convert to value of unknown type with index %d", t))
 }
 
-func (v contentValue) next(key AttributeValue) (ContentSubItem, error) {
+func (v ContentValue) next(key AttributeValue) (ContentSubItem, error) {
 	return nil, newMapContentSubitemError()
 }
 
-func (v contentValue) put(key AttributeValue, value ContentSubItem) (ContentSubItem, error) {
+func (v ContentValue) put(key AttributeValue, value ContentSubItem) (ContentSubItem, error) {
 	return v, newInvalidContentValueModificationError()
 }
 
-func (v contentValue) del(key AttributeValue) (ContentSubItem, error) {
+func (v ContentValue) del(key AttributeValue) (ContentSubItem, error) {
 	return v, newInvalidContentValueModificationError()
-}
-
-func appendJSONTag(b []byte, tag string) ([]byte, error) {
-	t, err := json.Marshal(tag)
-	if err != nil {
-		return nil, err
-	}
-
-	return append(append(b, t...), ':'), nil
-}
-
-func appendJSONString(b []byte, s string) ([]byte, error) {
-	v, err := json.Marshal(s)
-	if err != nil {
-		return nil, err
-	}
-
-	return append(b, v...), nil
-}
-
-func appendJSONStringArray(b []byte, s []string) ([]byte, error) {
-	a, err := json.Marshal(s)
-	if err != nil {
-		return nil, err
-	}
-
-	return append(b, a...), nil
-}
-
-func appendJSONValue(b []byte, v interface{}, t int) ([]byte, error) {
-	var (
-		value []byte
-		err   error
-	)
-
-	switch t {
-	default:
-		panic(fmt.Errorf("Can't marshal to JSON of unknown type with index %d", t))
-
-	case TypeUndefined:
-		panic(fmt.Errorf("Can't marshal value of %s type to JSON", TypeNames[t]))
-
-	case TypeBoolean:
-		bVal, ok := v.(bool)
-		if !ok {
-			panic(fmt.Errorf("Can't marshal %T to JSON as %s", v, TypeNames[t]))
-		}
-
-		value, err = json.Marshal(bVal)
-
-	case TypeString:
-		s, ok := v.(string)
-		if !ok {
-			panic(fmt.Errorf("Can't marshal %T to JSON as %s", v, TypeNames[t]))
-		}
-
-		value, err = json.Marshal(s)
-
-	case TypeAddress:
-		a, ok := v.(net.IP)
-		if !ok {
-			panic(fmt.Errorf("Can't marshal %T to JSON as %s", v, TypeNames[t]))
-		}
-
-		value, err = json.Marshal(a.String())
-
-	case TypeNetwork:
-		n, ok := v.(*net.IPNet)
-		if !ok {
-			panic(fmt.Errorf("Can't marshal %T to JSON as %s", v, TypeNames[t]))
-		}
-
-		value, err = json.Marshal(n.String())
-
-	case TypeDomain:
-		d, ok := v.(string)
-		if !ok {
-			panic(fmt.Errorf("Can't marshal %T to JSON as %s", v, TypeNames[t]))
-		}
-
-		value, err = json.Marshal(d)
-
-	case TypeSetOfStrings:
-		s, ok := v.(*strtree.Tree)
-		if !ok {
-			panic(fmt.Errorf("Can't marshal %T to JSON as %s", v, TypeNames[t]))
-		}
-
-		value, err = json.Marshal(sortSetOfStrings(s))
-
-	case TypeSetOfNetworks:
-		s, ok := v.(*iptree.Tree)
-		if !ok {
-			panic(fmt.Errorf("Can't marshal %T to JSON as %s", v, TypeNames[t]))
-		}
-
-		strs := []string{}
-		for p := range s.Enumerate() {
-			strs = append(strs, p.Key.String())
-		}
-
-		value, err = json.Marshal(strs)
-
-	case TypeSetOfDomains:
-		s, ok := v.(*domaintree.Node)
-		if !ok {
-			panic(fmt.Errorf("Can't marshal %T to JSON as %s", v, TypeNames[t]))
-		}
-
-		strs := []string{}
-		for p := range s.Enumerate() {
-			strs = append(strs, p.Key)
-		}
-
-		value, err = json.Marshal(strs)
-
-	case TypeListOfStrings:
-		lst, ok := v.([]string)
-		if !ok {
-			panic(fmt.Errorf("Can't marshal %T to JSON as %s", v, TypeNames[t]))
-		}
-
-		value, err = json.Marshal(lst)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return append(b, value...), nil
 }
