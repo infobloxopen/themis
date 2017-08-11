@@ -165,10 +165,9 @@ func (r *NewLocalResponseWriter) WriteMsg(m *dns.Msg) error { r.Msg = m; return 
 
 func (p *PolicyMiddleware) retNxdomain(w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	msg := &dns.Msg{}
-	msg.SetReply(r)
 	msg.SetRcode(r, dns.RcodeNameError)
 	w.WriteMsg(msg)
-	return dns.RcodeNameError, nil
+	return msg.Rcode, nil
 }
 
 func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, attrs []*pb.Attribute) (int, error) {
@@ -191,20 +190,20 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 		}
 	}
 
-	var lresponse Response
-	err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &lresponse)
+	var response Response
+	err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &response)
 	if err != nil {
 		log.Printf("[ERROR] Policy validation failed due to error %s\n", err)
 		return dns.RcodeServerFailure, err
 	}
 
-	if lresponse.Permit {
+	if response.Permit {
 		w.WriteMsg(lw.Msg)
 		return status, nil
 	}
 
-	if lresponse.Redirect != "" {
-		return p.redirect(lresponse.Redirect, lw, lw.Msg, ctx)
+	if response.Redirect != "" {
+		return p.redirect(ctx, w, r, response.Redirect)
 	}
 
 	return p.retNxdomain(w, r)
@@ -246,7 +245,7 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 	}
 
 	if response.Redirect != "" {
-		return p.redirect(response.Redirect, w, r, ctx)
+		return p.redirect(ctx, w, r, response.Redirect)
 	}
 
 	return p.retNxdomain(w, r)
@@ -255,45 +254,30 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 // Name implements the Handler interface
 func (p *PolicyMiddleware) Name() string { return "policy" }
 
-func (p *PolicyMiddleware) redirect(redirect_to string, w dns.ResponseWriter, r *dns.Msg, ctx context.Context) (int, error) {
+func (p *PolicyMiddleware) redirect(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, redirect_to string) (int, error) {
 	state := request.Request{W: w, Req: r}
-
-	a := new(dns.Msg)
-	a.SetReply(r)
-	a.Compress = true
-	a.Authoritative = true
-
 	var rr dns.RR
 	cname := false
 
-	switch state.Family() {
-	case 1:
-		ipv4 := net.ParseIP(redirect_to).To4()
-		if ipv4 != nil {
-			rr = new(dns.A)
-			rr.(*dns.A).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeA, Class: state.QClass()}
-			rr.(*dns.A).A = ipv4
-		} else {
-			cname = true
-		}
-	case 2:
-		ipv6 := net.ParseIP(redirect_to).To16()
-		if ipv6 != nil {
-			rr = new(dns.AAAA)
-			rr.(*dns.AAAA).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeAAAA, Class: state.QClass()}
-			rr.(*dns.AAAA).AAAA = ipv6
-		} else {
-			cname = true
-		}
-	}
-
-	if cname {
+	if ipv4 := net.ParseIP(redirect_to).To4(); ipv4 != nil {
+		rr = new(dns.A)
+		rr.(*dns.A).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeA, Class: state.QClass()}
+		rr.(*dns.A).A = ipv4
+	} else if ipv6 := net.ParseIP(redirect_to).To16(); ipv6 != nil {
+		rr = new(dns.AAAA)
+		rr.(*dns.AAAA).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeAAAA, Class: state.QClass()}
+		rr.(*dns.AAAA).AAAA = ipv6
+	} else {
 		redirect_to = strings.TrimSuffix(redirect_to, ".") + "."
 		rr = new(dns.CNAME)
 		rr.(*dns.CNAME).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeCNAME, Class: state.QClass()}
 		rr.(*dns.CNAME).Target = redirect_to
+		cname = true
 	}
 
+	a := new(dns.Msg)
+	a.Compress = true
+	a.Authoritative = true
 	a.Answer = []dns.RR{rr}
 
 	if cname {
@@ -307,10 +291,13 @@ func (p *PolicyMiddleware) redirect(redirect_to string, w dns.ResponseWriter, r 
 		}
 
 		a.Answer = append(a.Answer, lw.Msg.Answer...)
+		a.SetRcode(r, status)
+	} else {
+		a.SetRcode(r, dns.RcodeSuccess)
 	}
 
 	state.SizeAndDo(a)
 	w.WriteMsg(a)
 
-	return 0, nil
+	return a.Rcode, nil
 }
