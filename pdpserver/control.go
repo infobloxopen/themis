@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"golang.org/x/net/context"
 
 	"github.com/infobloxopen/themis/pdp"
@@ -46,7 +46,7 @@ func newTag(s string) (*uuid.UUID, error) {
 		return nil, nil
 	}
 
-	t, err := uuid.FromString(s)
+	t, err := uuid.Parse(s)
 	if err != nil {
 		return nil, err
 	}

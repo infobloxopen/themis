@@ -1,7 +1,6 @@
 package dns
 
 import (
-	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
@@ -250,9 +249,6 @@ func TestClientConn(t *testing.T) {
 		t.Errorf("failed to exchange: %v", err)
 	}
 	r, err := cn.ReadMsg()
-	if err != nil {
-		t.Errorf("failed to get a valid answer: %v", err)
-	}
 	if r == nil || r.Rcode != RcodeSuccess {
 		t.Errorf("failed to get an valid answer\n%v", r)
 	}
@@ -265,9 +261,6 @@ func TestClientConn(t *testing.T) {
 	buf, err := cn.ReadMsgHeader(h)
 	if buf == nil {
 		t.Errorf("failed to get an valid answer\n%v", r)
-	}
-	if err != nil {
-		t.Errorf("failed to get a valid answer: %v", err)
 	}
 	if int(h.Bits&0xF) != RcodeSuccess {
 		t.Errorf("failed to get an valid answer in ReadMsgHeader\n%v", r)
@@ -430,7 +423,7 @@ func TestTimeout(t *testing.T) {
 
 	// Use a channel + timeout to ensure we don't get stuck if the
 	// Client Timeout is not working properly
-	done := make(chan struct{}, 2)
+	done := make(chan struct{})
 
 	timeout := time.Millisecond
 	allowable := timeout + (10 * time.Millisecond)
@@ -442,28 +435,14 @@ func TestTimeout(t *testing.T) {
 		c := &Client{Timeout: timeout}
 		_, _, err := c.Exchange(m, addrstr)
 		if err == nil {
-			t.Error("no timeout using Client.Exchange")
+			t.Error("no timeout using Client")
 		}
 		done <- struct{}{}
 	}()
 
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer cancel()
-		c := &Client{}
-		_, _, err := c.ExchangeContext(ctx, m, addrstr)
-		if err == nil {
-			t.Error("no timeout using Client.ExchangeContext")
-		}
-		done <- struct{}{}
-	}()
-
-	// Wait for both the Exchange and ExchangeContext tests to be done.
-	for i := 0; i < 2; i++ {
-		select {
-		case <-done:
-		case <-time.After(abortAfter):
-		}
+	select {
+	case <-done:
+	case <-time.After(abortAfter):
 	}
 
 	length := time.Since(start)

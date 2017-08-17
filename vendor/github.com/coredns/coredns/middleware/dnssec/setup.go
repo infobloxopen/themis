@@ -6,8 +6,8 @@ import (
 
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/middleware"
-	"github.com/coredns/coredns/middleware/pkg/cache"
 
+	"github.com/hashicorp/golang-lru"
 	"github.com/mholt/caddy"
 )
 
@@ -24,9 +24,12 @@ func setup(c *caddy.Controller) error {
 		return middleware.Error("dnssec", err)
 	}
 
-	ca := cache.New(capacity)
+	cache, err := lru.New(capacity)
+	if err != nil {
+		return err
+	}
 	dnsserver.GetConfig(c).AddMiddleware(func(next middleware.Handler) middleware.Handler {
-		return New(zones, keys, next, ca)
+		return New(zones, keys, next, cache)
 	})
 
 	// Export the capacity for the metrics. This only happens once, because this is a re-load change only.
@@ -42,34 +45,36 @@ func dnssecParse(c *caddy.Controller) ([]string, []*DNSKEY, int, error) {
 
 	capacity := defaultCap
 	for c.Next() {
-		// dnssec [zones...]
-		zones = make([]string, len(c.ServerBlockKeys))
-		copy(zones, c.ServerBlockKeys)
-		args := c.RemainingArgs()
-		if len(args) > 0 {
-			zones = args
-		}
-
-		for c.NextBlock() {
-			switch c.Val() {
-			case "key":
-				k, e := keyParse(c)
-				if e != nil {
-					return nil, nil, 0, e
-				}
-				keys = append(keys, k...)
-			case "cache_capacity":
-				if !c.NextArg() {
-					return nil, nil, 0, c.ArgErr()
-				}
-				value := c.Val()
-				cacheCap, err := strconv.Atoi(value)
-				if err != nil {
-					return nil, nil, 0, err
-				}
-				capacity = cacheCap
+		if c.Val() == "dnssec" {
+			// dnssec [zones...]
+			zones = make([]string, len(c.ServerBlockKeys))
+			copy(zones, c.ServerBlockKeys)
+			args := c.RemainingArgs()
+			if len(args) > 0 {
+				zones = args
 			}
 
+			for c.NextBlock() {
+				switch c.Val() {
+				case "key":
+					k, e := keyParse(c)
+					if e != nil {
+						return nil, nil, 0, e
+					}
+					keys = append(keys, k...)
+				case "cache_capacity":
+					if !c.NextArg() {
+						return nil, nil, 0, c.ArgErr()
+					}
+					value := c.Val()
+					cacheCap, err := strconv.Atoi(value)
+					if err != nil {
+						return nil, nil, 0, err
+					}
+					capacity = cacheCap
+				}
+
+			}
 		}
 	}
 	for i := range zones {

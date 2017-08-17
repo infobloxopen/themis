@@ -12,7 +12,6 @@ func init() {
 		ServerType: "dns",
 		Action:     setup,
 	})
-
 }
 
 func setup(c *caddy.Controller) error {
@@ -29,16 +28,13 @@ func setup(c *caddy.Controller) error {
 }
 
 func chaosParse(c *caddy.Controller) (string, map[string]bool, error) {
-	// Set here so we pick up AppName and AppVersion that get set in coremain's init().
-	chaosVersion = caddy.AppName + "-" + caddy.AppVersion
-
 	version := ""
 	authors := make(map[string]bool)
 
 	for c.Next() {
 		args := c.RemainingArgs()
 		if len(args) == 0 {
-			return chaosVersion, nil, nil
+			return defaultVersion, nil, nil
 		}
 		if len(args) == 1 {
 			return args[0], nil, nil
@@ -52,4 +48,4 @@ func chaosParse(c *caddy.Controller) (string, map[string]bool, error) {
 	return version, authors, nil
 }
 
-var chaosVersion string
+var defaultVersion = caddy.AppName + "-" + caddy.AppVersion

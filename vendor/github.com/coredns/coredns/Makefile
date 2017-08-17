@@ -7,11 +7,11 @@ all: coredns
 # Phony this to ensure we always build the binary.
 # TODO: Add .go file dependencies.
 .PHONY: coredns
-coredns: check godeps
-	CGO_ENABLED=0 go build $(BUILD_VERBOSE) -ldflags="-s -w"
+coredns: check
+	go build $(BUILD_VERBOSE) -ldflags="-s -w"
 
 .PHONY: deps
-deps: core/zmiddleware.go core/dnsserver/zdirectives.go godeps
+deps: core/zmiddleware.go core/dnsserver/zdirectives.go
 	go get -u github.com/golang/lint/golint
 
 .PHONY: check
@@ -24,13 +24,6 @@ test: check
 .PHONY: testk8s
 testk8s: check
 	go test -race $(TEST_VERBOSE) -tags=k8s -run 'TestKubernetes' ./test ./middleware/kubernetes/...
-
-.PHONY: godeps
-godeps:
-	go get github.com/mholt/caddy
-	go get github.com/miekg/dns
-	go get golang.org/x/net/context
-	go get golang.org/x/text
 
 .PHONY: coverage
 coverage: check
@@ -59,14 +52,13 @@ gen:
 .PHONY: fmt
 fmt:
 	## run go fmt
-	@test -z "$$(find . -type d | grep -vE '(/vendor|^\.$$|/.git|/.travis)' | xargs gofmt -s -l  | tee /dev/stderr)" || \
+	@test -z "$$(gofmt -s -l . | grep -v vendor/ | tee /dev/stderr)" || \
 		(echo "please format Go code with 'gofmt -s -w'" && false)
 
 .PHONY: lint
 lint: deps
 	## run go lint, suggestion only (not enforced)
-	@test -z "$$(find . -type d | grep -vE '(/vendor|^\.$$|/.git|/.travis)' | grep -vE '(^\./pb)' | xargs golint \
-		| grep -vE "context\.Context should be the first parameter of a function" | tee /dev/stderr)"
+	@test -z "$$(golint ./... | grep -v vendor/ | grep -v ".pb.go:" | grep -vE "context\.Context should be the first parameter of a function" | tee /dev/stderr)"
 
 .PHONY: distclean
 distclean: clean

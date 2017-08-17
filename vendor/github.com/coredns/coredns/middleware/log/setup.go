@@ -1,7 +1,7 @@
 package log
 
 import (
-	"fmt"
+	"io"
 	"log"
 	"os"
 
@@ -9,6 +9,7 @@ import (
 	"github.com/coredns/coredns/middleware"
 	"github.com/coredns/coredns/middleware/pkg/response"
 
+	"github.com/hashicorp/go-syslog"
 	"github.com/mholt/caddy"
 	"github.com/miekg/dns"
 )
@@ -29,10 +30,25 @@ func setup(c *caddy.Controller) error {
 	// Open the log files for writing when the server starts
 	c.OnStartup(func() error {
 		for i := 0; i < len(rules); i++ {
-			// We only support stdout
-			writer := os.Stdout
-			if rules[i].OutputFile != "stdout" {
-				return middleware.Error("log", fmt.Errorf("invalid log file: %s", rules[i].OutputFile))
+			var err error
+			var writer io.Writer
+
+			if rules[i].OutputFile == "stdout" {
+				writer = os.Stdout
+			} else if rules[i].OutputFile == "stderr" {
+				writer = os.Stderr
+			} else if rules[i].OutputFile == "syslog" {
+				writer, err = gsyslog.NewLogger(gsyslog.LOG_INFO, "LOCAL0", "coredns")
+				if err != nil {
+					return middleware.Error("log", err)
+				}
+			} else {
+				var file *os.File
+				file, err = os.OpenFile(rules[i].OutputFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+				if err != nil {
+					return middleware.Error("log", err)
+				}
+				writer = file
 			}
 
 			rules[i].Log = log.New(writer, "", 0)
@@ -62,7 +78,7 @@ func logParse(c *caddy.Controller) ([]Rule, error) {
 				Format:     DefaultLogFormat,
 			})
 		} else if len(args) == 1 {
-			// Only an output file specified.
+			// Only an output file specified
 			rules = append(rules, Rule{
 				NameScope:  ".",
 				OutputFile: args[0],

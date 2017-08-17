@@ -3,7 +3,7 @@ package pdp
 import (
 	"testing"
 
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 )
 
 func TestStorage(t *testing.T) {
@@ -24,7 +24,7 @@ func TestStorage(t *testing.T) {
 }
 
 func TestStorageNewTransaction(t *testing.T) {
-	initialTag := uuid.NewV4()
+	initialTag := uuid.New()
 
 	s := &PolicyStorage{tag: &initialTag}
 	tr, err := s.NewTransaction(&initialTag)
@@ -50,7 +50,7 @@ func TestStorageNewTransaction(t *testing.T) {
 		t.Errorf("Expected *missingPolicyTagError but got %T (%s)", err, err)
 	}
 
-	otherTag := uuid.NewV4()
+	otherTag := uuid.New()
 	s = &PolicyStorage{tag: &initialTag}
 	tr, err = s.NewTransaction(&otherTag)
 	if err == nil {
@@ -61,8 +61,8 @@ func TestStorageNewTransaction(t *testing.T) {
 }
 
 func TestStorageCommitTransaction(t *testing.T) {
-	initialTag := uuid.NewV4()
-	newTag := uuid.NewV4()
+	initialTag := uuid.New()
+	newTag := uuid.New()
 
 	s := &PolicyStorage{tag: &initialTag}
 	tr, err := s.NewTransaction(&initialTag)
@@ -85,7 +85,7 @@ func TestStorageCommitTransaction(t *testing.T) {
 						t.Errorf("Expected other storage instance but got the same")
 					}
 
-					if !uuid.Equal(*newS.tag, newTag) {
+					if newS.tag.String() != newTag.String() {
 						t.Errorf("Expected tag %s but got %s", newTag.String(), newS.tag.String())
 					}
 				}
@@ -108,7 +108,7 @@ func TestStorageCommitTransaction(t *testing.T) {
 }
 
 func TestStorageModifications(t *testing.T) {
-	tag := uuid.NewV4()
+	tag := uuid.New()
 
 	s := &PolicyStorage{
 		tag: &tag,

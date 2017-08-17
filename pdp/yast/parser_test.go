@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 
 	"github.com/infobloxopen/themis/pdp"
 )
@@ -166,7 +166,7 @@ func TestUnmarshal(t *testing.T) {
 }
 
 func TestUnmarshalUpdate(t *testing.T) {
-	tag := uuid.NewV4()
+	tag := uuid.New()
 	s, err := Unmarshal([]byte(policyToUpdate), &tag)
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
@@ -187,7 +187,7 @@ func TestUnmarshalUpdate(t *testing.T) {
 		return
 	}
 
-	u, err := UnmarshalUpdate([]byte(simpleUpdate), tr.Attributes(), tag, uuid.NewV4())
+	u, err := UnmarshalUpdate([]byte(simpleUpdate), tr.Attributes(), tag, uuid.New())
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 		return

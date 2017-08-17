@@ -38,8 +38,7 @@ file DBFILE [ZONES... ] {
 * `no_reload` by default CoreDNS will reload a zone from disk whenever it detects a change to the
   file. This option disables that behavior.
 * `upstream` defines upstream resolvers to be used resolve external names found (think CNAMEs)
-  pointing to external names. This is only really useful when CoreDNS is configured as a proxy, for
-  normal authoritative serving you don't need *or* want to use this.
+  pointing to external names.
 
 ## Examples
 

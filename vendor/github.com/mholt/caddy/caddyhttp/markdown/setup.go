@@ -44,11 +44,10 @@ func markdownParse(c *caddy.Controller) ([]*Config, error) {
 
 	for c.Next() {
 		md := &Config{
-			Renderer:      blackfriday.HtmlRenderer(0, "", ""),
-			Extensions:    make(map[string]struct{}),
-			Template:      GetDefaultTemplate(),
-			IndexFiles:    []string{},
-			TemplateFiles: make(map[string]string),
+			Renderer:   blackfriday.HtmlRenderer(0, "", ""),
+			Extensions: make(map[string]struct{}),
+			Template:   GetDefaultTemplate(),
+			IndexFiles: []string{},
 		}
 
 		// Get the path scope
@@ -116,41 +115,27 @@ func loadParams(c *caddy.Controller, mdc *Config) error {
 			fpath := filepath.ToSlash(filepath.Clean(cfg.Root + string(filepath.Separator) + tArgs[0]))
 
 			if err := SetTemplate(mdc.Template, "", fpath); err != nil {
-				return c.Errf("default template parse error: %v", err)
+				c.Errf("default template parse error: %v", err)
 			}
-
-			mdc.TemplateFiles[""] = fpath
 			return nil
 		case 2:
 			fpath := filepath.ToSlash(filepath.Clean(cfg.Root + string(filepath.Separator) + tArgs[1]))
 
 			if err := SetTemplate(mdc.Template, tArgs[0], fpath); err != nil {
-				return c.Errf("template parse error: %v", err)
+				c.Errf("template parse error: %v", err)
 			}
-
-			mdc.TemplateFiles[tArgs[0]] = fpath
 			return nil
 		}
 	case "templatedir":
 		if !c.NextArg() {
 			return c.ArgErr()
 		}
-
-		pattern := c.Val()
-		_, err := mdc.Template.ParseGlob(pattern)
+		_, err := mdc.Template.ParseGlob(c.Val())
 		if err != nil {
-			return c.Errf("template load error: %v", err)
+			c.Errf("template load error: %v", err)
 		}
 		if c.NextArg() {
 			return c.ArgErr()
-		}
-
-		paths, err := filepath.Glob(pattern)
-		if err != nil {
-			return c.Errf("glob %q failed: %v", pattern, err)
-		}
-		for _, path := range paths {
-			mdc.TemplateFiles[filepath.Base(path)] = path
 		}
 		return nil
 	default:

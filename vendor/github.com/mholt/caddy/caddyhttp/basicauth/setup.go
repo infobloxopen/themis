@@ -91,9 +91,8 @@ func basicAuthParse(c *caddy.Controller) ([]Rule, error) {
 }
 
 func passwordMatcher(username, passw, siteRoot string) (PasswordMatcher, error) {
-	htpasswdPrefix := "htpasswd="
-	if !strings.HasPrefix(passw, htpasswdPrefix) {
+	if !strings.HasPrefix(passw, "htpasswd=") {
 		return PlainMatcher(passw), nil
 	}
-	return GetHtpasswdMatcher(passw[len(htpasswdPrefix):], username, siteRoot)
+	return GetHtpasswdMatcher(passw[9:], username, siteRoot)
 }

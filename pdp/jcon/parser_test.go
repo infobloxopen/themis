@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 
 	"github.com/infobloxopen/themis/pdp"
 )
@@ -199,14 +199,14 @@ func TestUnmarshal(t *testing.T) {
 }
 
 func TestUnmarshalUpdate(t *testing.T) {
-	tag := uuid.NewV4()
+	tag := uuid.New()
 	c, err := Unmarshal(strings.NewReader(jsonStream), &tag)
 	if err != nil {
 		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		return
 	}
 
-	u, err := UnmarshalUpdate(strings.NewReader(jsonUpdateStream), "Test", tag, uuid.NewV4())
+	u, err := UnmarshalUpdate(strings.NewReader(jsonUpdateStream), "Test", tag, uuid.New())
 	if err != nil {
 		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		return

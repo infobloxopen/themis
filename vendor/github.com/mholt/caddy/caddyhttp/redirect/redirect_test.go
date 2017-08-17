@@ -2,7 +2,6 @@ package redirect
 
 import (
 	"bytes"
-	"context"
 	"crypto/tls"
 	"io/ioutil"
 	"net/http"
@@ -97,16 +96,14 @@ func TestParametersRedirect(t *testing.T) {
 
 	req, err := http.NewRequest("GET", "/a?b=c", nil)
 	if err != nil {
-		t.Fatalf("Test 1: Could not create HTTP request: %v", err)
+		t.Fatalf("Test: Could not create HTTP request: %v", err)
 	}
-	ctx := context.WithValue(req.Context(), httpserver.OriginalURLCtxKey, *req.URL)
-	req = req.WithContext(ctx)
 
 	rec := httptest.NewRecorder()
 	re.ServeHTTP(rec, req)
 
-	if got, want := rec.Header().Get("Location"), "http://example.com/a?b=c"; got != want {
-		t.Fatalf("Test 1: expected location header %s but was %s", want, got)
+	if rec.Header().Get("Location") != "http://example.com/a?b=c" {
+		t.Fatalf("Test: expected location header %q but was %q", "http://example.com/a?b=c", rec.Header().Get("Location"))
 	}
 
 	re = Redirect{
@@ -117,15 +114,13 @@ func TestParametersRedirect(t *testing.T) {
 
 	req, err = http.NewRequest("GET", "/d?e=f", nil)
 	if err != nil {
-		t.Fatalf("Test 2: Could not create HTTP request: %v", err)
+		t.Fatalf("Test: Could not create HTTP request: %v", err)
 	}
-	ctx = context.WithValue(req.Context(), httpserver.OriginalURLCtxKey, *req.URL)
-	req = req.WithContext(ctx)
 
 	re.ServeHTTP(rec, req)
 
-	if got, want := rec.Header().Get("Location"), "http://example.com/a/d?b=c&e=f"; got != want {
-		t.Fatalf("Test 2: expected location header %s but was %s", want, got)
+	if "http://example.com/a/d?b=c&e=f" != rec.Header().Get("Location") {
+		t.Fatalf("Test: expected location header %q but was %q", "http://example.com/a/d?b=c&e=f", rec.Header().Get("Location"))
 	}
 }
 

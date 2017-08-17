@@ -35,18 +35,7 @@ func (s *storeToNamespaceLister) List() (ns api.NamespaceList, err error) {
 	return ns, nil
 }
 
-type dnsController interface {
-	ServiceList() []*api.Service
-	PodIndex(string) []interface{}
-	EndpointsList() api.EndpointsList
-
-	GetNodeByName(string) (api.Node, error)
-
-	Run()
-	Stop() error
-}
-
-type dnsControl struct {
+type dnsController struct {
 	client *kubernetes.Clientset
 
 	selector *labels.Selector
@@ -69,13 +58,9 @@ type dnsControl struct {
 	stopCh   chan struct{}
 }
 
-type dnsControlOpts struct {
-	initPodCache bool
-}
-
 // newDNSController creates a controller for CoreDNS.
-func newdnsController(kubeClient *kubernetes.Clientset, resyncPeriod time.Duration, lselector *labels.Selector, opts dnsControlOpts) *dnsControl {
-	dns := dnsControl{
+func newdnsController(kubeClient *kubernetes.Clientset, resyncPeriod time.Duration, lselector *labels.Selector, initPodCache bool) *dnsController {
+	dns := dnsController{
 		client:   kubeClient,
 		selector: lselector,
 		stopCh:   make(chan struct{}),
@@ -91,7 +76,7 @@ func newdnsController(kubeClient *kubernetes.Clientset, resyncPeriod time.Durati
 		cache.ResourceEventHandlerFuncs{},
 		cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 
-	if opts.initPodCache {
+	if initPodCache {
 		dns.podLister.Indexer, dns.podController = cache.NewIndexerInformer(
 			&cache.ListWatch{
 				ListFunc:  podListFunc(dns.client, namespace, dns.selector),
@@ -301,20 +286,12 @@ func endpointsWatchFunc(c *kubernetes.Clientset, ns string, s *labels.Selector) 
 	}
 }
 
-func (dns *dnsControl) controllersInSync() bool {
-	hs := dns.svcController.HasSynced() &&
-		dns.nsController.HasSynced() &&
-		dns.epController.HasSynced()
-
-	if dns.podController != nil {
-		hs = hs && dns.podController.HasSynced()
-	}
-
-	return hs
+func (dns *dnsController) controllersInSync() bool {
+	return dns.svcController.HasSynced()
 }
 
 // Stop stops the  controller.
-func (dns *dnsControl) Stop() error {
+func (dns *dnsController) Stop() error {
 	dns.stopLock.Lock()
 	defer dns.stopLock.Unlock()
 
@@ -330,7 +307,7 @@ func (dns *dnsControl) Stop() error {
 }
 
 // Run starts the controller.
-func (dns *dnsControl) Run() {
+func (dns *dnsController) Run() {
 	go dns.svcController.Run(dns.stopCh)
 	go dns.nsController.Run(dns.stopCh)
 	go dns.epController.Run(dns.stopCh)
@@ -340,7 +317,7 @@ func (dns *dnsControl) Run() {
 	<-dns.stopCh
 }
 
-func (dns *dnsControl) NamespaceList() *api.NamespaceList {
+func (dns *dnsController) NamespaceList() *api.NamespaceList {
 	nsList, err := dns.nsLister.List()
 	if err != nil {
 		return &api.NamespaceList{}
@@ -349,7 +326,7 @@ func (dns *dnsControl) NamespaceList() *api.NamespaceList {
 	return &nsList
 }
 
-func (dns *dnsControl) ServiceList() []*api.Service {
+func (dns *dnsController) ServiceList() []*api.Service {
 	svcs, err := dns.svcLister.List(labels.Everything())
 	if err != nil {
 		return []*api.Service{}
@@ -358,33 +335,26 @@ func (dns *dnsControl) ServiceList() []*api.Service {
 	return svcs
 }
 
-func (dns *dnsControl) PodIndex(ip string) []interface{} {
-	pods, err := dns.podLister.Indexer.ByIndex(podIPIndex, ip)
+// ServicesByNamespace returns a map of:
+//
+// namespacename :: [ kubernetesService ]
+func (dns *dnsController) ServicesByNamespace() map[string][]api.Service {
+	k8sServiceList := dns.ServiceList()
+	items := make(map[string][]api.Service, len(k8sServiceList))
+	for _, i := range k8sServiceList {
+		namespace := i.Namespace
+		items[namespace] = append(items[namespace], *i)
+	}
+
+	return items
+}
+
+// ServiceInNamespace returns the Service that matches servicename in the namespace
+func (dns *dnsController) ServiceInNamespace(namespace, servicename string) *api.Service {
+	svcObj, err := dns.svcLister.Services(namespace).Get(servicename)
 	if err != nil {
+		// TODO(...): should return err here
 		return nil
 	}
-
-	return pods
-}
-
-func (dns *dnsControl) EndpointsList() api.EndpointsList {
-	epl, err := dns.epLister.List()
-	if err != nil {
-		return api.EndpointsList{}
-	}
-
-	return epl
-}
-
-func (dns *dnsControl) GetNodeByName(name string) (api.Node, error) {
-	v1node, err := dns.client.Core().Nodes().Get(name)
-	if err != nil {
-		return api.Node{}, err
-	}
-	var apinode api.Node
-	err = v1.Convert_v1_Node_To_api_Node(v1node, &apinode, nil)
-	if err != nil {
-		return api.Node{}, err
-	}
-	return apinode, nil
+	return svcObj
 }

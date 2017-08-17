@@ -1,7 +1,7 @@
 package yast
 
 import (
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"gopkg.in/yaml.v2"
 
 	"github.com/infobloxopen/themis/pdp"

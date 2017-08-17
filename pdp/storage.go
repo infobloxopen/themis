@@ -1,6 +1,6 @@
 package pdp
 
-import "github.com/satori/go.uuid"
+import "github.com/google/uuid"
 
 type PolicyStorage struct {
 	tag      *uuid.UUID
@@ -34,7 +34,7 @@ func (s *PolicyStorage) CheckTag(tag *uuid.UUID) error {
 		return newMissingPolicyTagError()
 	}
 
-	if !uuid.Equal(*s.tag, *tag) {
+	if s.tag.String() != tag.String() {
 		return newPolicyTagsNotMatchError(s.tag, tag)
 	}
 
@@ -116,7 +116,7 @@ func (t *PolicyStorageTransaction) Apply(u *PolicyUpdate) error {
 		return newFailedPolicyTransactionError(t.tag, t.err)
 	}
 
-	if !uuid.Equal(t.tag, u.oldTag) {
+	if t.tag.String() != u.oldTag.String() {
 		return newPolicyTransactionTagsNotMatchError(t.tag, u.oldTag)
 	}
 

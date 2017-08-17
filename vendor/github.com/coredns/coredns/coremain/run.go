@@ -43,16 +43,13 @@ func init() {
 	flag.StringVar(&conf, "conf", "", "Corefile to load (default \""+caddy.DefaultConfigFile+"\")")
 	flag.StringVar(&cpu, "cpu", "100%", "CPU cap")
 	flag.BoolVar(&plugins, "plugins", false, "List installed plugins")
+	flag.StringVar(&logfile, "log", "", "Process log file")
 	flag.StringVar(&caddy.PidFile, "pidfile", "", "Path to write pid file")
 	flag.BoolVar(&version, "version", false, "Show version")
 	flag.BoolVar(&dnsserver.Quiet, "quiet", false, "Quiet mode (no initialization output)")
-	flag.BoolVar(&logfile, "log", false, "Log to standard output")
 
 	caddy.RegisterCaddyfileLoader("flag", caddy.LoaderFunc(confLoader))
 	caddy.SetDefaultCaddyfileLoader("default", caddy.LoaderFunc(defaultLoader))
-
-	caddy.AppName = coreName
-	caddy.AppVersion = coreVersion
 }
 
 // Run is CoreDNS's main() function.
@@ -60,12 +57,16 @@ func Run() {
 
 	flag.Parse()
 
-	if len(flag.Args()) > 0 {
-		mustLogFatal(fmt.Errorf("extra command line arguments: %s", flag.Args()))
-	}
+	caddy.AppName = coreName
+	caddy.AppVersion = coreVersion
 
 	// Set up process log before anything bad happens
-	if logfile {
+	switch logfile {
+	case "stdout":
+		log.SetOutput(os.Stdout)
+	case "stderr":
+		log.SetOutput(os.Stderr)
+	default:
 		log.SetOutput(os.Stdout)
 	}
 	log.SetFlags(log.LstdFlags)
@@ -125,7 +126,7 @@ func confLoader(serverType string) (caddy.Input, error) {
 	}
 
 	if conf == "stdin" {
-		return caddy.CaddyfileFromPipe(os.Stdin, serverType)
+		return caddy.CaddyfileFromPipe(os.Stdin, "dns")
 	}
 
 	contents, err := ioutil.ReadFile(conf)
@@ -227,7 +228,7 @@ func setCPU(cpu string) error {
 var (
 	conf    string
 	cpu     string
-	logfile bool
+	logfile string
 	version bool
 	plugins bool
 )

@@ -32,6 +32,7 @@ func isInternalRedirect(w http.ResponseWriter) bool {
 
 // ServeHTTP implements the httpserver.Handler interface.
 func (i Internal) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
+
 	// Internal location requested? -> Not found.
 	for _, prefix := range i.Paths {
 		if httpserver.Path(r.URL.Path).Matches(prefix) {
@@ -41,7 +42,7 @@ func (i Internal) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error)
 
 	// Use internal response writer to ignore responses that will be
 	// redirected to internal locations
-	iw := internalResponseWriter{ResponseWriterWrapper: &httpserver.ResponseWriterWrapper{ResponseWriter: w}}
+	iw := internalResponseWriter{ResponseWriter: w}
 	status, err := i.Next.ServeHTTP(iw, r)
 
 	for c := 0; c < maxRedirectCount && isInternalRedirect(iw); c++ {
@@ -49,6 +50,7 @@ func (i Internal) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error)
 		// "down the chain"
 		r.URL.Path = iw.Header().Get(redirectHeader)
 		iw.ClearHeader()
+
 		status, err = i.Next.ServeHTTP(iw, r)
 	}
 
@@ -65,7 +67,7 @@ func (i Internal) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error)
 // calls to Write and WriteHeader if the response should be redirected to an
 // internal location.
 type internalResponseWriter struct {
-	*httpserver.ResponseWriterWrapper
+	http.ResponseWriter
 }
 
 // ClearHeader removes script headers that would interfere with follow up
@@ -80,7 +82,7 @@ func (w internalResponseWriter) ClearHeader() {
 // internal location.
 func (w internalResponseWriter) WriteHeader(code int) {
 	if !isInternalRedirect(w) {
-		w.ResponseWriterWrapper.WriteHeader(code)
+		w.ResponseWriter.WriteHeader(code)
 	}
 }
 
@@ -90,8 +92,5 @@ func (w internalResponseWriter) Write(b []byte) (int, error) {
 	if isInternalRedirect(w) {
 		return 0, nil
 	}
-	return w.ResponseWriterWrapper.Write(b)
+	return w.ResponseWriter.Write(b)
 }
-
-// Interface guards
-var _ httpserver.HTTPInterfaces = internalResponseWriter{}

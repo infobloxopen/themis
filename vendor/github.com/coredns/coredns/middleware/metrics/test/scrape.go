@@ -69,7 +69,7 @@ type (
 func Scrape(t *testing.T, url string) []*MetricFamily {
 	mfChan := make(chan *dto.MetricFamily, 1024)
 
-	go fetchMetricFamilies(url, mfChan)
+	go fetchMetricFamilies(t, url, mfChan)
 
 	result := []*MetricFamily{}
 	for mf := range mfChan {
@@ -177,20 +177,20 @@ func makeBuckets(m *dto.Metric) map[string]string {
 	return result
 }
 
-func fetchMetricFamilies(url string, ch chan<- *dto.MetricFamily) {
+func fetchMetricFamilies(t *testing.T, url string, ch chan<- *dto.MetricFamily) {
 	defer close(ch)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return
+		t.Fatalf("creating GET request for URL %q failed: %s", url, err)
 	}
 	req.Header.Add("Accept", acceptHeader)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return
+		t.Fatalf("executing GET request for URL %q failed: %s", url, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return
+		t.Fatalf("GET request for URL %q returned HTTP status %s", url, resp.Status)
 	}
 
 	mediatype, params, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
@@ -203,7 +203,7 @@ func fetchMetricFamilies(url string, ch chan<- *dto.MetricFamily) {
 				if err == io.EOF {
 					break
 				}
-				return
+				t.Fatalf("reading metric family protocol buffer failed: %s", err)
 			}
 			ch <- mf
 		}
@@ -214,7 +214,7 @@ func fetchMetricFamilies(url string, ch chan<- *dto.MetricFamily) {
 		var parser expfmt.TextParser
 		metricFamilies, err := parser.TextToMetricFamilies(resp.Body)
 		if err != nil {
-			return
+			t.Fatal("reading text format failed:", err)
 		}
 		for _, mf := range metricFamilies {
 			ch <- mf

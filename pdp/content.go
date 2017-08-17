@@ -5,7 +5,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
@@ -74,7 +74,7 @@ func (s *LocalContentStorage) GetLocalContent(cID string, tag *uuid.UUID) (*Loca
 		return nil, newMissingContentTagError()
 	}
 
-	if !uuid.Equal(*c.tag, *tag) {
+	if c.tag.String() != tag.String() {
 		return nil, newContentTagsNotMatchError(cID, c.tag, tag)
 	}
 
@@ -137,7 +137,7 @@ func (t *LocalContentStorageTransaction) Apply(u *ContentUpdate) error {
 		return newContentTransactionIDNotMatchError(t.ID, u.cID)
 	}
 
-	if !uuid.Equal(t.tag, u.oldTag) {
+	if t.tag.String() != u.oldTag.String() {
 		return newContentTransactionTagsNotMatchError(t.ID, t.tag, u.oldTag)
 	}
 

@@ -4,7 +4,7 @@ package pdp
 
 import (
 	"fmt"
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"strings"
 )
 

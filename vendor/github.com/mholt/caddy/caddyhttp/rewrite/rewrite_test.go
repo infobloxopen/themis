@@ -1,7 +1,6 @@
 package rewrite
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -105,14 +104,13 @@ func TestRewrite(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Test %d: Could not create HTTP request: %v", i, err)
 		}
-		ctx := context.WithValue(req.Context(), httpserver.OriginalURLCtxKey, *req.URL)
-		req = req.WithContext(ctx)
 
 		rec := httptest.NewRecorder()
 		rw.ServeHTTP(rec, req)
 
-		if got, want := rec.Body.String(), test.expectedTo; got != want {
-			t.Errorf("Test %d: Expected URL to be '%s' but was '%s'", i, want, got)
+		if rec.Body.String() != test.expectedTo {
+			t.Errorf("Test %d: Expected URL to be '%s' but was '%s'",
+				i, test.expectedTo, rec.Body.String())
 		}
 	}
 }

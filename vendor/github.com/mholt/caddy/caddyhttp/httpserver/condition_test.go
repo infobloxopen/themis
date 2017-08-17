@@ -1,7 +1,6 @@
 package httpserver
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -32,15 +31,9 @@ func TestConditions(t *testing.T) {
 		{"bab starts_with bb", false},
 		{"bab starts_with ba", true},
 		{"bab starts_with bab", true},
-		{"bab not_starts_with bb", true},
-		{"bab not_starts_with ba", false},
-		{"bab not_starts_with bab", false},
 		{"bab ends_with bb", false},
 		{"bab ends_with bab", true},
 		{"bab ends_with ab", true},
-		{"bab not_ends_with bb", true},
-		{"bab not_ends_with ab", false},
-		{"bab not_ends_with bab", false},
 		{"a match *", false},
 		{"a match a", true},
 		{"a match .*", true},
@@ -101,21 +94,16 @@ func TestConditions(t *testing.T) {
 	for i, test := range replaceTests {
 		r, err := http.NewRequest("GET", test.url, nil)
 		if err != nil {
-			t.Errorf("Test %d: failed to create request: %v", i, err)
-			continue
+			t.Error(err)
 		}
-		ctx := context.WithValue(r.Context(), OriginalURLCtxKey, *r.URL)
-		r = r.WithContext(ctx)
 		str := strings.Fields(test.condition)
 		ifCond, err := newIfCond(str[0], str[1], str[2])
 		if err != nil {
-			t.Errorf("Test %d: failed to create 'if' condition %v", i, err)
-			continue
+			t.Error(err)
 		}
 		isTrue := ifCond.True(r)
 		if isTrue != test.isTrue {
 			t.Errorf("Test %v: expected %v found %v", i, test.isTrue, isTrue)
-			continue
 		}
 	}
 }
@@ -201,7 +189,7 @@ func TestSetupIfMatcher(t *testing.T) {
 			if	a match b
 		 }`, false, IfMatcher{
 			ifs: []ifCond{
-				{a: "a", op: "match", b: "b", neg: false},
+				{a: "a", op: "match", b: "b"},
 			},
 		}},
 		{`test {
@@ -209,7 +197,7 @@ func TestSetupIfMatcher(t *testing.T) {
 			if_op or
 		 }`, false, IfMatcher{
 			ifs: []ifCond{
-				{a: "a", op: "match", b: "b", neg: false},
+				{a: "a", op: "match", b: "b"},
 			},
 			isOr: true,
 		}},
@@ -227,26 +215,26 @@ func TestSetupIfMatcher(t *testing.T) {
 		},
 		{`test {
 			if goal has go
-			if cook not_has go
+			if cook not_has go 
 		 }`, false, IfMatcher{
 			ifs: []ifCond{
-				{a: "goal", op: "has", b: "go", neg: false},
-				{a: "cook", op: "has", b: "go", neg: true},
+				{a: "goal", op: "has", b: "go"},
+				{a: "cook", op: "not_has", b: "go"},
 			},
 		}},
 		{`test {
 			if goal has go
-			if cook not_has go
+			if cook not_has go 
 			if_op and
 		 }`, false, IfMatcher{
 			ifs: []ifCond{
-				{a: "goal", op: "has", b: "go", neg: false},
-				{a: "cook", op: "has", b: "go", neg: true},
+				{a: "goal", op: "has", b: "go"},
+				{a: "cook", op: "not_has", b: "go"},
 			},
 		}},
 		{`test {
 			if goal has go
-			if cook not_has go
+			if cook not_has go 
 			if_op not
 		 }`, true, IfMatcher{},
 		},

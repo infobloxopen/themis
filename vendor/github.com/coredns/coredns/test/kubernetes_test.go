@@ -30,16 +30,6 @@ var dnsTestCases = []test.Case{
 		Answer: []dns.RR{},
 	},
 	{
-		Qname: "bogusendpoint.svc-1-a.test-1.svc.cluster.local.", Qtype: dns.TypeA,
-		Rcode:  dns.RcodeNameError,
-		Answer: []dns.RR{},
-	},
-	{
-		Qname: "bogusendpoint.headless-svc.test-1.svc.cluster.local.", Qtype: dns.TypeA,
-		Rcode:  dns.RcodeNameError,
-		Answer: []dns.RR{},
-	},
-	{
 		Qname: "svc-1-a.*.svc.cluster.local.", Qtype: dns.TypeA,
 		Rcode: dns.RcodeSuccess,
 		Answer: []dns.RR{
@@ -72,8 +62,6 @@ var dnsTestCases = []test.Case{
 			test.A("svc-c.test-1.svc.cluster.local.        303    IN      A       10.0.0.115"),
 			test.A("headless-svc.test-1.svc.cluster.local.      303    IN      A       172.17.0.5"),
 			test.A("headless-svc.test-1.svc.cluster.local.      303    IN      A       172.17.0.6"),
-			test.CNAME("ext-svc.test-1.svc.cluster.local. 0 IN	CNAME	example.net."),
-			test.A("example.net.		68974	IN	A	13.14.15.16"),
 		},
 	},
 	{
@@ -85,8 +73,6 @@ var dnsTestCases = []test.Case{
 			test.A("svc-c.test-1.svc.cluster.local.        303    IN      A       10.0.0.115"),
 			test.A("headless-svc.test-1.svc.cluster.local.      303    IN      A       172.17.0.5"),
 			test.A("headless-svc.test-1.svc.cluster.local.      303    IN      A       172.17.0.6"),
-			test.CNAME("ext-svc.test-1.svc.cluster.local. 0 IN	CNAME	example.net."),
-			test.A("example.net.		68974	IN	A	13.14.15.16"),
 		},
 	},
 	{
@@ -108,8 +94,6 @@ var dnsTestCases = []test.Case{
 			test.A("svc-c.test-1.svc.cluster.local.        303    IN      A       10.0.0.115"),
 			test.A("headless-svc.test-1.svc.cluster.local.      303    IN      A       172.17.0.5"),
 			test.A("headless-svc.test-1.svc.cluster.local.      303    IN      A       172.17.0.6"),
-			test.CNAME("ext-svc.test-1.svc.cluster.local. 0 IN	CNAME	example.net."),
-			test.A("example.net.		68974	IN	A	13.14.15.16"),
 		},
 	},
 	{
@@ -120,6 +104,7 @@ var dnsTestCases = []test.Case{
 			test.A("headless-svc.test-1.svc.cluster.local.      303    IN      A       172.17.0.6"),
 		},
 	},
+	//TODO: Fix below to all use test.SRV not test.A!
 	{
 		Qname: "*._TcP.svc-1-a.test-1.svc.cluster.local.", Qtype: dns.TypeSRV,
 		Rcode: dns.RcodeSuccess,
@@ -207,11 +192,8 @@ var dnsTestCases = []test.Case{
 	},
 	{
 		Qname: "svc-1-a.test-1.svc.cluster.local.", Qtype: dns.TypeSRV,
-		Rcode: dns.RcodeSuccess,
-		Answer: []dns.RR{
-			test.SRV("_http._tcp.svc-1-a.test-1.svc.cluster.local.      303    IN    SRV 10 100 80 svc-1-a.test-1.svc.cluster.local."),
-			test.SRV("_https._tcp.svc-1-a.test-1.svc.cluster.local.      303    IN    SRV 10 100 443 svc-1-a.test-1.svc.cluster.local."),
-		},
+		Rcode:  dns.RcodeNameError,
+		Answer: []dns.RR{},
 	},
 	{
 		Qname: "10-20-0-101.test-1.pod.cluster.local.", Qtype: dns.TypeA,
@@ -249,28 +231,6 @@ var dnsTestCases = []test.Case{
 		Rcode: dns.RcodeSuccess,
 		Answer: []dns.RR{
 			test.A("next-in-chain.              0       IN      A       192.0.2.53"),
-		},
-	},
-	{
-		Qname: "cluster.local.", Qtype: dns.TypeNS,
-		Rcode: dns.RcodeSuccess,
-		Answer: []dns.RR{
-			test.NS("cluster.local.          0       IN      NS      kubernetes.default.svc.cluster.local."),
-		},
-	},
-	{
-		Qname: "ext-svc.test-1.svc.cluster.local.", Qtype: dns.TypeA,
-		Rcode: dns.RcodeSuccess,
-		Answer: []dns.RR{
-			test.CNAME("ext-svc.test-1.svc.cluster.local. 0 IN	CNAME	example.net."),
-			test.A("example.net.		72031	IN	A	13.14.15.16"),
-		},
-	},
-	{
-		Qname: "ext-svc.test-1.svc.cluster.local.", Qtype: dns.TypeCNAME,
-		Rcode: dns.RcodeSuccess,
-		Answer: []dns.RR{
-			test.CNAME("ext-svc.test-1.svc.cluster.local. 0 IN	CNAME	example.net."),
 		},
 	},
 }
@@ -450,7 +410,7 @@ func doIntegrationTests(t *testing.T, corefile string, testCases []test.Case) {
 
 	// Work-around for timing condition that results in no-data being returned in
 	// test environment.
-	time.Sleep(3 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	for _, tc := range testCases {
 
@@ -477,59 +437,17 @@ func doIntegrationTests(t *testing.T, corefile string, testCases []test.Case) {
 	}
 }
 
-func createUpstreamServer(t *testing.T) (func(), *caddy.Instance, string) {
-	upfile, rmfile, err := TempFile(os.TempDir(), exampleNet)
-	if err != nil {
-		t.Fatalf("Could not create file for CNAME upstream lookups: %s", err)
-	}
-	upstreamServerCorefile := `.:0 {
-    file ` + upfile + ` example.net
-	erratic . {
-		drop 0
-	}
-	`
-	server, udp := createTestServer(t, upstreamServerCorefile)
-	return rmfile, server, udp
-}
-
 func TestKubernetesIntegration(t *testing.T) {
-
-	removeUpstreamConfig, upstreamServer, udp := createUpstreamServer(t)
-	defer upstreamServer.Stop()
-	defer removeUpstreamConfig()
-
 	corefile :=
 		`.:0 {
     kubernetes cluster.local 0.0.10.in-addr.arpa {
                 endpoint http://localhost:8080
 		namespaces test-1
 		pods disabled
-		upstream ` + udp + `
     }
 	erratic . {
 		drop 0
 	}
-`
-	doIntegrationTests(t, corefile, dnsTestCases)
-}
-
-func TestKubernetesIntegrationAPIProxy(t *testing.T) {
-
-	removeUpstreamConfig, upstreamServer, udp := createUpstreamServer(t)
-	defer upstreamServer.Stop()
-	defer removeUpstreamConfig()
-
-	corefile :=
-		`.:0 {
-    kubernetes cluster.local 0.0.10.in-addr.arpa {
-        endpoint http://nonexistance:8080,http://invalidip:8080,http://localhost:8080
-        namespaces test-1
-        pods disabled
-        upstream ` + udp + `
-    }
-    erratic . {
-        drop 0
-    }
 `
 	doIntegrationTests(t, corefile, dnsTestCases)
 }
@@ -564,7 +482,7 @@ func TestKubernetesIntegrationCidrReverseZone(t *testing.T) {
     kubernetes cluster.local {
                 endpoint http://localhost:8080
                 namespaces test-1
-				cidrs 10.0.0.0/24
+				cidrs 10.0.0.0/24				
     }
 	erratic . {
 		drop 0
@@ -576,10 +494,10 @@ func TestKubernetesIntegrationCidrReverseZone(t *testing.T) {
 func TestKubernetesIntegrationPartialCidrReverseZone(t *testing.T) {
 	corefile :=
 		`.:0 {
-    kubernetes  cluster.local {
+    kubernetes cluster.local {
                 endpoint http://localhost:8080
                 namespaces test-1
-		cidrs 10.0.0.96/28 10.0.0.120/32
+				cidrs 10.0.0.96/28 10.0.0.120/32
     }
 	erratic . {
 		drop 0
@@ -593,7 +511,7 @@ func TestKubernetesIntegrationAllNSExposed(t *testing.T) {
 		`.:0 {
     kubernetes cluster.local {
                 endpoint http://localhost:8080
-		cidrs 10.0.0.0/24
+				cidrs 10.0.0.0/24
     }
 `
 	doIntegrationTests(t, corefile, dnsTestCasesAllNSExposed)
@@ -605,11 +523,6 @@ func TestKubernetesIntegrationFallthrough(t *testing.T) {
 		t.Fatalf("Could not create TempFile for fallthrough: %s", err)
 	}
 	defer rmFunc()
-
-	removeUpstreamConfig, upstreamServer, udp := createUpstreamServer(t)
-	defer upstreamServer.Stop()
-	defer removeUpstreamConfig()
-
 	corefile :=
 		`.:0 {
     file ` + dbfile + ` cluster.local
@@ -617,7 +530,6 @@ func TestKubernetesIntegrationFallthrough(t *testing.T) {
                 endpoint http://localhost:8080
 		cidrs 10.0.0.0/24
 		namespaces test-1
-		upstream ` + udp + `
 		fallthrough
     }
     erratic {
@@ -641,9 +553,4 @@ a.b.svc.cluster.local.  IN      TXT     "Not a wildcard"
 cname.cluster.local.    IN      CNAME   www.example.net.
 
 service.namespace.svc.cluster.local.    IN      SRV     8080 10 10 cluster.local.
-`
-
-const exampleNet = `; example.net. test file for cname tests
-example.net.          IN      SOA     ns.example.net. admin.example.net. 2015082541 7200 3600 1209600 3600
-example.net. IN A 13.14.15.16
 `

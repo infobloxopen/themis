@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/http"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mholt/caddy"
@@ -59,8 +61,10 @@ func fastcgiParse(c *caddy.Controller) ([]Rule, error) {
 		}
 
 		rule := Rule{
-			Root: absRoot,
-			Path: args[0],
+			Root:        absRoot,
+			Path:        args[0],
+			ReadTimeout: 60 * time.Second,
+			SendTimeout: 60 * time.Second,
 		}
 		upstreams := []string{args[1]}
 
@@ -71,6 +75,10 @@ func fastcgiParse(c *caddy.Controller) ([]Rule, error) {
 		}
 
 		var err error
+		var pool int
+		var connectTimeout = 60 * time.Second
+		var dialers []dialer
+		var poolSize = -1
 
 		for c.NextBlock() {
 			switch c.Val() {
@@ -118,11 +126,24 @@ func fastcgiParse(c *caddy.Controller) ([]Rule, error) {
 				}
 				rule.IgnoredSubPaths = ignoredPaths
 
+			case "pool":
+				if !c.NextArg() {
+					return rules, c.ArgErr()
+				}
+				pool, err = strconv.Atoi(c.Val())
+				if err != nil {
+					return rules, err
+				}
+				if pool >= 0 {
+					poolSize = pool
+				} else {
+					return rules, c.Errf("positive integer expected, found %d", pool)
+				}
 			case "connect_timeout":
 				if !c.NextArg() {
 					return rules, c.ArgErr()
 				}
-				rule.ConnectTimeout, err = time.ParseDuration(c.Val())
+				connectTimeout, err = time.ParseDuration(c.Val())
 				if err != nil {
 					return rules, err
 				}
@@ -147,10 +168,29 @@ func fastcgiParse(c *caddy.Controller) ([]Rule, error) {
 			}
 		}
 
-		rule.balancer = &roundRobin{addresses: upstreams, index: -1}
+		for _, rawAddress := range upstreams {
+			network, address := parseAddress(rawAddress)
+			if poolSize >= 0 {
+				dialers = append(dialers, &persistentDialer{
+					size:    poolSize,
+					network: network,
+					address: address,
+					timeout: connectTimeout,
+				})
+			} else {
+				dialers = append(dialers, basicDialer{
+					network: network,
+					address: address,
+					timeout: connectTimeout,
+				})
+			}
+		}
 
+		rule.dialer = &loadBalancingDialer{dialers: dialers}
+		rule.Address = strings.Join(upstreams, ",")
 		rules = append(rules, rule)
 	}
+
 	return rules, nil
 }
 

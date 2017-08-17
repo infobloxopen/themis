@@ -6,13 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/net/context"
-
 	"github.com/coredns/coredns/middleware"
-	"github.com/coredns/coredns/middleware/pkg/cache"
 	"github.com/coredns/coredns/middleware/pkg/response"
 	"github.com/coredns/coredns/middleware/test"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/miekg/dns"
 )
 
@@ -150,10 +148,10 @@ func cacheMsg(m *dns.Msg, tc cacheTestCase) *dns.Msg {
 
 func newTestCache(ttl time.Duration) (*Cache, *ResponseWriter) {
 	c := &Cache{Zones: []string{"."}, pcap: defaultCap, ncap: defaultCap, pttl: ttl, nttl: ttl}
-	c.pcache = cache.New(c.pcap)
-	c.ncache = cache.New(c.ncap)
+	c.pcache, _ = lru.New(c.pcap)
+	c.ncache, _ = lru.New(c.ncap)
 
-	crr := &ResponseWriter{ResponseWriter: nil, Cache: c}
+	crr := &ResponseWriter{nil, c}
 	return c, crr
 }
 
@@ -178,8 +176,7 @@ func TestCache(t *testing.T) {
 		name := middleware.Name(m.Question[0].Name).Normalize()
 		qtype := m.Question[0].Qtype
 
-		i, _ := c.get(time.Now().UTC(), name, qtype, do)
-		ok := i != nil
+		i, ok, _ := c.get(name, qtype, do)
 
 		if ok != tc.shouldCache {
 			t.Errorf("cached message that should not have been cached: %s", name)
@@ -206,46 +203,4 @@ func TestCache(t *testing.T) {
 			}
 		}
 	}
-}
-
-func BenchmarkCacheResponse(b *testing.B) {
-	c := &Cache{Zones: []string{"."}, pcap: defaultCap, ncap: defaultCap, pttl: maxTTL, nttl: maxTTL}
-	c.pcache = cache.New(c.pcap)
-	c.ncache = cache.New(c.ncap)
-	c.prefetch = 1
-	c.duration = 1 * time.Second
-	c.Next = BackendHandler()
-
-	ctx := context.TODO()
-
-	reqs := make([]*dns.Msg, 5)
-	for i, q := range []string{"example1", "example2", "a", "b", "ddd"} {
-		reqs[i] = new(dns.Msg)
-		reqs[i].SetQuestion(q+".example.org.", dns.TypeA)
-	}
-
-	b.RunParallel(func(pb *testing.PB) {
-		i := 0
-		for pb.Next() {
-			req := reqs[i]
-			c.ServeDNS(ctx, &test.ResponseWriter{}, req)
-			i++
-			i = i % 5
-		}
-	})
-}
-
-func BackendHandler() middleware.Handler {
-	return middleware.HandlerFunc(func(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
-		m := new(dns.Msg)
-		m.SetReply(r)
-		m.Response = true
-		m.RecursionAvailable = true
-
-		owner := m.Question[0].Name
-		m.Answer = []dns.RR{test.A(owner + " 303 IN A 127.0.0.53")}
-
-		w.WriteMsg(m)
-		return dns.RcodeSuccess, nil
-	})
 }

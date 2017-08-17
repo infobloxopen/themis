@@ -217,14 +217,13 @@ func RegisterPlugin(name string, plugin Plugin) {
 // EventName represents the name of an event used with event hooks.
 type EventName string
 
-// Define the event names for the startup and shutdown events
 const (
 	StartupEvent  EventName = "startup"
 	ShutdownEvent EventName = "shutdown"
 )
 
 // EventHook is a type which holds information about a startup hook plugin.
-type EventHook func(eventType EventName, eventInfo interface{}) error
+type EventHook func(eventType EventName) error
 
 // RegisterEventHook plugs in hook. All the hooks should register themselves
 // and they must have a name.
@@ -241,9 +240,9 @@ func RegisterEventHook(name string, hook EventHook) {
 // EmitEvent executes the different hooks passing the EventType as an
 // argument. This is a blocking function. Hook developers should
 // use 'go' keyword if they don't want to block Caddy.
-func EmitEvent(event EventName, info interface{}) {
+func EmitEvent(event EventName) {
 	for name, hook := range eventHooks {
-		err := hook(event, info)
+		err := hook(event)
 
 		if err != nil {
 			log.Printf("error on '%s' hook: %v", name, err)

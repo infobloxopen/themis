@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 
 	"github.com/infobloxopen/themis/pdp"
 )
