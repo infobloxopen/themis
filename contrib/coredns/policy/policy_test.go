@@ -157,12 +157,28 @@ func TestPolicy(t *testing.T) {
 	for _, test := range tests {
 		req := new(dns.Msg)
 		req.SetQuestion(test.query, test.queryType)
+		// add ENDS options to request
+		o := new(dns.OPT)
+		o.Hdr.Name = "."
+		o.Hdr.Rrtype = dns.TypeOPT
+		e := new(dns.EDNS0_LOCAL)
+		e.Code = 0xfffa
+		e.Data = []byte("4e7e318384088e7d4f3dbc96219ee5d4")
+		o.Option = append(o.Option, e)
+		req.Extra = append(req.Extra, o)
+		// Init test mock client
 		pm.pdp = pep.NewTestClientInit(test.response, test.responseIP, test.errResp, test.errRespIP)
-
+		// Add EDNS mapping
+		pm.AddEDNS0Map("0xfffa", "client_id", "hex", "string", "0", "32")
+		pm.AddEDNS0Map("0xfffb", "client_src", "address", "string", "", "")
+		pm.AddEDNS0Map("0xfffc", "client_mac", "bytes", "string", "", "")
+		// Handle request
 		status, err := pm.ServeDNS(context.TODO(), rec, req)
+		// Check status
 		if test.status != status {
 			t.Errorf("Expected status %q but got %q\n", test.status, status)
 		}
+		// Check error
 		if test.err != err {
 			t.Errorf("Expected error %v but got %v\n", test.err, err)
 		}
