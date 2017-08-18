@@ -142,6 +142,14 @@ func TestPolicy(t *testing.T) {
 			status: dns.RcodeSuccess,
 			err:    nil,
 		},
+		{
+			query:     "test.org.",
+			queryType: dns.TypeA,
+			response: &pdp.Response{Effect: pdp.Response_DENY,
+				Obligation: []*pdp.Attribute{{"refuse", "string", "true"}}},
+			status: dns.RcodeRefused,
+			err:    nil,
+		},
 	}
 
 	rec := dnsrecorder.New(&test.ResponseWriter{})

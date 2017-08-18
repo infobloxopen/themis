@@ -63,6 +63,7 @@ type Response struct {
 	Permit   bool   `pdp:"Effect"`
 	Redirect string `pdp:"redirect_to"`
 	PolicyId string `pdp:"policy_id"`
+	Refuse   string `pdp:"refuse"`
 }
 
 func (p *PolicyMiddleware) Connect() error {
@@ -163,11 +164,11 @@ func (r *NewLocalResponseWriter) LocalAddr() net.Addr       { return r.localAddr
 func (r *NewLocalResponseWriter) RemoteAddr() net.Addr      { return r.remoteAddr }
 func (r *NewLocalResponseWriter) WriteMsg(m *dns.Msg) error { r.Msg = m; return nil }
 
-func (p *PolicyMiddleware) retNxdomain(w dns.ResponseWriter, r *dns.Msg) (int, error) {
+func (p *PolicyMiddleware) retRcode(w dns.ResponseWriter, r *dns.Msg, rcode int) (int, error) {
 	msg := &dns.Msg{}
-	msg.SetRcode(r, dns.RcodeNameError)
+	msg.SetRcode(r, rcode)
 	w.WriteMsg(msg)
-	return msg.Rcode, nil
+	return rcode, nil
 }
 
 func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, attrs []*pb.Attribute) (int, error) {
@@ -206,7 +207,7 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 		return p.redirect(ctx, w, r, response.Redirect)
 	}
 
-	return p.retNxdomain(w, r)
+	return p.retRcode(w, r, dns.RcodeNameError)
 }
 
 func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
@@ -248,7 +249,11 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 		return p.redirect(ctx, w, r, response.Redirect)
 	}
 
-	return p.retNxdomain(w, r)
+	if response.Refuse == "true" {
+		return p.retRcode(w, r, dns.RcodeRefused)
+	}
+
+	return p.retRcode(w, r, dns.RcodeNameError)
 }
 
 // Name implements the Handler interface
