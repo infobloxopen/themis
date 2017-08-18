@@ -109,17 +109,16 @@ func (p *PolicyMiddleware) getEDNS0Attrs(r *dns.Msg) ([]*pb.Attribute, bool) {
 		return nil, false
 	}
 
-	for _, m := range p.EDNS0Map {
-		value := ""
-	LOOP:
-		for _, s := range o.Option {
-			switch e := s.(type) {
-			case *dns.EDNS0_NSID:
-				// do stuff with e.Nsid
-			case *dns.EDNS0_SUBNET:
-				// access e.Family, e.Address, etc.
-			case *dns.EDNS0_LOCAL:
+	for _, s := range o.Option {
+		switch e := s.(type) {
+		case *dns.EDNS0_NSID:
+			// do stuff with e.Nsid
+		case *dns.EDNS0_SUBNET:
+			// access e.Family, e.Address, etc.
+		case *dns.EDNS0_LOCAL:
+			for _, m := range p.EDNS0Map {
 				if m.code == e.Code {
+					var value string
 					switch m.dataType {
 					case EDNS0_MAP_DATA_TYPE_BYTES:
 						value = string(e.Data)
@@ -135,11 +134,11 @@ func (p *PolicyMiddleware) getEDNS0Attrs(r *dns.Msg) ([]*pb.Attribute, bool) {
 						value = value[from:to]
 					}
 					foundSourceIP = foundSourceIP || (m.name == "source_ip")
-					break LOOP
+					attrs = append(attrs, &pb.Attribute{Id: m.name, Type: m.destType, Value: value})
+					break
 				}
 			}
 		}
-		attrs = append(attrs, &pb.Attribute{Id: m.name, Type: m.destType, Value: value})
 	}
 	return attrs, foundSourceIP
 }
