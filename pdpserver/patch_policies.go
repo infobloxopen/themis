@@ -72,6 +72,9 @@ func copyAndUpdateAlg(e pdp.EvaluableType) {
 				if mcpy.DefaultPolicy != nil && mcpy.DefaultPolicy.GetID() == p.GetID() {
 					mcpy.DefaultPolicy = p
 				}
+				if mcpy.ErrorPolicy != nil && mcpy.ErrorPolicy.GetID() == p.GetID() {
+					mcpy.ErrorPolicy = p
+				}
 			}
 			mcpy.PoliciesMap = pmap
 			e.AlgParams = &mcpy
@@ -85,6 +88,9 @@ func copyAndUpdateAlg(e pdp.EvaluableType) {
 				rmap[r.ID] = r
 				if mcpy.DefaultRule != nil && mcpy.DefaultRule.ID == r.ID {
 					mcpy.DefaultRule = r
+				}
+				if mcpy.ErrorRule != nil && mcpy.ErrorRule.ID == r.ID {
+					mcpy.ErrorRule = r
 				}
 			}
 			mcpy.RulesMap = rmap
