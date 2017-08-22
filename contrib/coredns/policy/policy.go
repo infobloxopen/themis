@@ -45,7 +45,6 @@ type edns0Map struct {
 
 type PolicyMiddleware struct {
 	Endpoints []string
-	Zones     []string
 	EDNS0Map  []edns0Map
 	Trace     middleware.Handler
 	Next      middleware.Handler
@@ -76,6 +75,10 @@ func (p *PolicyMiddleware) Connect() error {
 	}
 	p.pdp = pep.NewBalancedClient(p.Endpoints, tracer)
 	return p.pdp.Connect()
+}
+
+func (p *PolicyMiddleware) Close() {
+	p.pdp.Close()
 }
 
 func (p *PolicyMiddleware) AddEDNS0Map(code, name, dataType, destType,

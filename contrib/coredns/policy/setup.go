@@ -1,7 +1,6 @@
 package policy
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/coredns/coredns/core/dnsserver"
@@ -32,7 +31,13 @@ func setup(c *caddy.Controller) error {
 		return nil
 	})
 
-	c.OnShutdown(func() error {
+	c.OnRestart(func() error {
+		mw.Close()
+		return nil
+	})
+
+	c.OnFinalShutdown(func() error {
+		mw.Close()
 		return nil
 	})
 
@@ -51,12 +56,6 @@ func policyParse(c *caddy.Controller) (*PolicyMiddleware, error) {
 	for c.Next() {
 		if c.Val() == "policy" {
 			c.RemainingArgs()
-			//mw.Zones = c.RemainingArgs()
-			//if len(mw.Zones) == 0 {
-			//	mw.Zones = make([]string, len(c.ServerBlockKeys))
-			//	copy(mw.Zones, c.ServerBlockKeys)
-			//}
-			//middleware.Zones(mw.Zones).Normalize()
 			for c.NextBlock() {
 				switch c.Val() {
 				case "endpoint":
@@ -97,5 +96,5 @@ func policyParse(c *caddy.Controller) (*PolicyMiddleware, error) {
 			return mw, nil
 		}
 	}
-	return nil, errors.New("Policy setup called without keyword 'policy' in Corefile")
+	return nil, fmt.Errorf("Policy setup called without keyword 'policy' in Corefile")
 }
