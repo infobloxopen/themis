@@ -187,7 +187,7 @@ func (t *LocalContentStorageTransaction) parsePath(c *ContentItem, rawPath []str
 
 	path := make([]AttributeValue, len(rawPath))
 	for i, s := range rawPath {
-		v, err := MakeValueFromSting(c.k[i], s)
+		v, err := MakeValueFromString(c.k[i], s)
 		if err != nil {
 			return nil, bindErrorf(err, "%d", i+2)
 		}

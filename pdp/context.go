@@ -67,12 +67,12 @@ func NewContext(c *LocalContentStorage, count int, f func(i int) (string, Attrib
 func (c *Context) getAttribute(a Attribute) (AttributeValue, error) {
 	t, ok := c.a[a.id]
 	if !ok {
-		return AttributeValue{}, a.newMissingError()
+		return AttributeValue{}, bindError(newMissingAttributeError(), a.describe())
 	}
 
 	v, ok := t[a.t]
 	if !ok {
-		return AttributeValue{}, a.newMissingError()
+		return AttributeValue{}, bindError(newMissingAttributeError(), a.describe())
 	}
 
 	return v, nil

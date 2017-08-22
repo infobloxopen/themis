@@ -73,11 +73,8 @@ func UnmarshalUpdate(in []byte, attrs map[string]pdp.Attribute, oldTag, newTag u
 	}
 
 	ctx := newContextWithAttributes(attrs)
-	u, err := pdp.NewPolicyUpdate(oldTag, newTag)
-	if err != nil {
-		return nil, err
-	}
 
+	u := pdp.NewPolicyUpdate(oldTag, newTag)
 	for i, item := range a {
 		err := ctx.unmarshalCommand(item, u)
 		if err != nil {

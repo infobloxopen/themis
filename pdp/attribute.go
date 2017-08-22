@@ -70,10 +70,6 @@ func (a Attribute) describe() string {
 	return fmt.Sprintf("attr(%s.%s)", a.id, TypeNames[a.t])
 }
 
-func (a Attribute) newMissingError() error {
-	return bindError(newMissingAttributeError(), a.describe())
-}
-
 type AttributeValue struct {
 	t int
 	v interface{}
@@ -133,7 +129,7 @@ func MakeListOfStringsValue(v []string) AttributeValue {
 		v: v}
 }
 
-func MakeValueFromSting(t int, s string) (AttributeValue, error) {
+func MakeValueFromString(t int, s string) (AttributeValue, error) {
 	switch t {
 	case TypeUndefined:
 		return undefinedValue, newInvalidTypeStringCastError(t)
@@ -349,9 +345,6 @@ func (v AttributeValue) Serialize() (string, error) {
 	case TypeUndefined:
 		return "", newInvalidTypeSerializationError(v.t)
 
-	case TypeSetOfDomains, TypeListOfStrings:
-		return "", newNotImplementedSerializationError(v.t)
-
 	case TypeBoolean:
 		return strconv.FormatBool(v.v.(bool)), nil
 
@@ -379,6 +372,22 @@ func (v AttributeValue) Serialize() (string, error) {
 		s := []string{}
 		for p := range v.v.(*iptree.Tree).Enumerate() {
 			s = append(s, strconv.Quote(p.Key.String()))
+		}
+
+		return strings.Join(s, ","), nil
+
+	case TypeSetOfDomains:
+		s := []string{}
+		for p := range v.v.(*domaintree.Node).Enumerate() {
+			s = append(s, strconv.Quote(p.Key))
+		}
+
+		return strings.Join(s, ","), nil
+
+	case TypeListOfStrings:
+		s := []string{}
+		for _, item := range v.v.([]string) {
+			s = append(s, strconv.Quote(item))
 		}
 
 		return strings.Join(s, ","), nil

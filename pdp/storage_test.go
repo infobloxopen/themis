@@ -69,25 +69,21 @@ func TestStorageCommitTransaction(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
 	} else {
-		u, err := NewPolicyUpdate(initialTag, newTag)
+		u := NewPolicyUpdate(initialTag, newTag)
+		err := tr.Apply(u)
 		if err != nil {
 			t.Errorf("Expected no error but got %s", err)
 		} else {
-			err := tr.Apply(u)
+			newS, err := tr.Commit()
 			if err != nil {
 				t.Errorf("Expected no error but got %s", err)
 			} else {
-				newS, err := tr.Commit()
-				if err != nil {
-					t.Errorf("Expected no error but got %s", err)
-				} else {
-					if &newS == &s {
-						t.Errorf("Expected other storage instance but got the same")
-					}
+				if &newS == &s {
+					t.Errorf("Expected other storage instance but got the same")
+				}
 
-					if newS.tag.String() != newTag.String() {
-						t.Errorf("Expected tag %s but got %s", newTag.String(), newS.tag.String())
-					}
+				if newS.tag.String() != newTag.String() {
+					t.Errorf("Expected tag %s but got %s", newTag.String(), newS.tag.String())
 				}
 			}
 		}
@@ -193,6 +189,114 @@ func TestStorageModifications(t *testing.T) {
 
 		if tr.policies != nil {
 			t.Errorf("Expected no root policy but got %#v", tr.policies)
+		}
+	}
+}
+
+func TestStorageTransactionalUpdate(t *testing.T) {
+	tag := uuid.New()
+
+	root := &PolicySet{
+		id: "test",
+		policies: []Evaluable{
+			&Policy{
+				id:     "first",
+				target: makeSimpleStringTarget("s", "test"),
+				rules: []*Rule{
+					{
+						id:          "permit",
+						effect:      EffectPermit,
+						obligations: makeSingleStringObligation("s", "permit")}},
+				algorithm: denyOverridesRCA{}},
+			&Policy{
+				id: "del",
+				rules: []*Rule{
+					{
+						id:          "permit",
+						effect:      EffectPermit,
+						obligations: makeSingleStringObligation("s", "del-permit")}},
+				algorithm: firstApplicableEffectRCA{}}},
+		algorithm: firstApplicableEffectPCA{}}
+
+	s := NewPolicyStorage(root, map[string]Attribute{"s": MakeAttribute("s", TypeString)}, &tag)
+
+	newTag := uuid.New()
+
+	u := NewPolicyUpdate(tag, newTag)
+	u.Append(UOAdd, []string{"test", "first"}, &Rule{
+		id:          "deny",
+		effect:      EffectDeny,
+		obligations: makeSingleStringObligation("s", "deny")})
+	u.Append(UODelete, []string{"test", "del"}, nil)
+
+	tr, err := s.NewTransaction(&tag)
+	if err != nil {
+		t.Fatalf("Expected no error but got %T (%s)", err, err)
+	}
+
+	attrs := tr.Attributes()
+	if len(attrs) != 1 {
+		t.Fatalf("Expected one attribute but got %#v", attrs)
+	}
+	if _, ok := attrs["s"]; !ok {
+		t.Errorf("Expected %q attribute but got %#v", attrs)
+	}
+
+	err = tr.Apply(u)
+	if err != nil {
+		t.Fatalf("Expected no error but got %T (%s)", err, err)
+	}
+
+	s, err = tr.Commit()
+	if err != nil {
+		t.Fatalf("Expected no error but got %T (%s)", err, err)
+	}
+
+	ctx, err := NewContext(nil, 1, func(i int) (string, AttributeValue, error) {
+		return "s", MakeStringValue("test"), nil
+	})
+	if err != nil {
+		t.Errorf("Expected no error but got %T (%s)", err, err)
+	} else {
+		r := s.Root().Calculate(ctx)
+		effect, o, err := r.Status()
+		if err != nil {
+			t.Errorf("Expected no error but got %T (%s)", err, err)
+		}
+
+		if effect != EffectDeny {
+			t.Errorf("Expected deny effect but got %d", effect)
+		}
+
+		if len(o) < 1 {
+			t.Error("Expected at least one obligation")
+		} else {
+			_, _, v, err := o[0].Serialize(ctx)
+			if err != nil {
+				t.Errorf("Expected no error but got %T (%s)", err, err)
+			} else {
+				e := "deny"
+				if v != e {
+					t.Errorf("Expected %q obligation but got %q", e, v)
+				}
+			}
+		}
+	}
+
+	ctx, err = NewContext(nil, 1, func(i int) (string, AttributeValue, error) {
+		return "s", MakeStringValue("no test"), nil
+	})
+	if err != nil {
+		t.Errorf("Expected no error but got %T (%s)", err, err)
+	} else {
+		r := s.Root().Calculate(ctx)
+		effect, _, err := r.Status()
+		if err != nil {
+			t.Errorf("Expected no error but got %T (%s)", err, err)
+		}
+
+		if effect != EffectNotApplicable {
+			t.Errorf("Expected \"not applicable\" effect but got %d", effect)
 		}
 	}
 }

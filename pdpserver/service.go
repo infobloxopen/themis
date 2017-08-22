@@ -61,7 +61,7 @@ func (s *Server) newContext(c *pdp.LocalContentStorage, in *pb.Request) (*pdp.Co
 			return "", pdp.AttributeValue{}, bindError(newUnknownAttributeTypeError(a.Type), a.Id)
 		}
 
-		v, err := pdp.MakeValueFromSting(t, a.Value)
+		v, err := pdp.MakeValueFromString(t, a.Value)
 		if err != nil {
 			return "", pdp.AttributeValue{}, bindError(err, a.Id)
 		}

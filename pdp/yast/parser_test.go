@@ -124,6 +124,172 @@ policies:
   - Parent policy set
   - Useless policy
 `
+
+	allFeaturePolicies = `# Policies YAML with all features
+attributes:
+  boolAttr: boolean
+  strAttr: string
+  addrAttr: address
+  netAttr: network
+  domAttr: domain
+  ssAttr: set of strings
+  snAttr: set of networks
+  sdAttr: set of domains
+  lsAttr: list of strings
+
+policies:
+  # Hidden policy set
+  alg: FirstApplicableEffect
+  target:
+  - equal:
+    - attr: strAttr
+    - val:
+        type: string
+        content: string
+  - any:
+    - contains:
+      - val:
+          type: network
+          content: 192.0.2.0/24
+      - attr: addrAttr
+    - equal:
+      - attr: strAttr
+      - selector:
+         uri: "local:content/content-item"
+         type: "string"
+         path:
+         - attr: netAttr
+         - attr: domAttr
+    - all:
+      - contains:
+        - val:
+            type: network
+            content: 192.0.2.0/24
+        - attr: addrAttr
+      - equal:
+        - attr: strAttr
+        - selector:
+           uri: "local:content/content-item"
+           type: "string"
+           path:
+           - attr: netAttr
+           - attr: domAttr
+  policies:
+  - id: Permit
+    alg: DenyOverrides
+    rules:
+    - condition:
+       not:
+       - and:
+         - attr: boolAttr
+         - or:
+           - contains:
+             - attr: netAttr
+             - val:
+                 type: address
+                 content: "192.0.2.1"
+           - contains:
+             - val:
+                 type: network
+                 content: "192.0.2.0/24"
+             - attr: addrAttr
+           - contains:
+             - attr: sdAttr
+             - val:
+                 type: domain
+                 content: "example.com"
+           - contains:
+             - val:
+                 type: set of strings
+                 content:
+                 - first
+                 - second
+                 - third
+             - attr: strAttr
+           - contains:
+             - val:
+                 type: set of networks
+                 content:
+                 - 192.0.2.16/28
+                 - 192.0.2.32/28
+                 - 2001:db8::/32
+             - attr: addrAttr
+           - contains:
+             - val:
+                 type: set of domains
+                 content:
+                 - example.com
+                 - exmaple.net
+                 - example.org
+             - attr: domAttr
+           - equal:
+             - attr: strAttr
+             - selector:
+                uri: "local:content/content-item"
+                type: "string"
+                path:
+                - attr: netAttr
+                - attr: domAttr
+      effect: Permit
+  - id: Nested Mappers Policy Set
+    alg:
+      id: Mapper
+      map:
+        attr: lsAttr
+      error: Error
+      default: Default
+      alg:
+        id: Mapper
+        map:
+          selector:
+            uri: "local:content/content-item"
+            type: "string"
+            path:
+            - attr: netAttr
+            - attr: netAttr
+    policies:
+    - id: Default
+      alg: FirstApplicableEffect
+      rules:
+      - effect: Permit
+        obligations:
+        - strAttr: "Nested Mappers Policy Set Permit"
+    - id: Error
+      alg: FirstApplicableEffect
+      rules:
+      - effect: Deny
+        obligations:
+        - strAttr: "Nested Mappers Policy Set Deny"
+  - id: Nested Mappers Policy
+    alg:
+      id: Mapper
+      map:
+        attr: lsAttr
+      error: Error
+      default: Default
+      alg:
+        id: Mapper
+        map:
+          selector:
+            uri: "local:content/content-item"
+            type: "string"
+            path:
+            - attr: netAttr
+            - attr: netAttr
+    rules:
+    - id: Default
+      effect: Permit
+      obligations:
+      - strAttr: "Nested Mappers Policy Permit"
+    - id: Error
+      effect: Deny
+      obligations:
+      - strAttr: "Nested Mappers Policy Deny"
+      - lsAttr:
+        - first
+        - second
+        - third
+`
 )
 
 func TestUnmarshal(t *testing.T) {
@@ -161,6 +327,84 @@ func TestUnmarshal(t *testing.T) {
 		r := s.Root().Calculate(&pdp.Context{})
 		if r.Effect != pdp.EffectPermit {
 			t.Errorf("Expected permit as a response for Simple All Permit Policy but got %d", r.Effect)
+		}
+	}
+
+	s, err = Unmarshal([]byte(allFeaturePolicies), nil)
+	if err != nil {
+		t.Errorf("Expected no error but got %T (%s)", err, err)
+	} else {
+		ctx, err := pdp.NewContext(nil, 5, func(i int) (string, pdp.AttributeValue, error) {
+			switch i {
+			case 0:
+				v, err := pdp.MakeValueFromString(pdp.TypeBoolean, "true")
+				if err != nil {
+					return "", pdp.AttributeValue{}, err
+				}
+
+				return "boolAttr", v, nil
+
+			case 1:
+				v, err := pdp.MakeValueFromString(pdp.TypeString, "string")
+				if err != nil {
+					return "", pdp.AttributeValue{}, err
+				}
+
+				return "strAttr", v, nil
+
+			case 2:
+				v, err := pdp.MakeValueFromString(pdp.TypeAddress, "192.0.2.1")
+				if err != nil {
+					return "", pdp.AttributeValue{}, err
+				}
+
+				return "addrAttr", v, nil
+
+			case 3:
+				v, err := pdp.MakeValueFromString(pdp.TypeNetwork, "192.0.2.0/24")
+				if err != nil {
+					return "", pdp.AttributeValue{}, err
+				}
+
+				return "netAttr", v, nil
+
+			case 4:
+				v, err := pdp.MakeValueFromString(pdp.TypeString, "example.com")
+				if err != nil {
+					return "", pdp.AttributeValue{}, err
+				}
+
+				return "domAttr", v, nil
+			}
+
+			return "", pdp.AttributeValue{}, fmt.Errorf("No attribute for index %d", i)
+		})
+		if err != nil {
+			t.Errorf("Expected no error but got %T (%s)", err, err)
+		} else {
+			r := s.Root().Calculate(ctx)
+			effect, o, err := r.Status()
+			if effect != pdp.EffectDeny {
+				if err != nil {
+					t.Errorf("Expected deny as a response for Simple All Permit Policy but got %d (%s)", effect, err)
+				} else {
+					t.Errorf("Expected deny as a response for Simple All Permit Policy but got %d", effect)
+				}
+			}
+
+			if len(o) < 1 {
+				t.Error("Expected at least one obligation")
+			} else {
+				_, _, v, err := o[0].Serialize(ctx)
+				if err != nil {
+					t.Errorf("Expected no error but got %T (%s)", err, err)
+				} else {
+					e := "Nested Mappers Policy Set Deny"
+					if v != e {
+						t.Errorf("Expected %q but got %q", e, v)
+					}
+				}
+			}
 		}
 	}
 }

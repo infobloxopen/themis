@@ -133,14 +133,6 @@ errors:
   args:
   - expr: TypeNames[e.t]
 
-- id: notImplementedSerializationError
-  fields:
-  - id: t
-    type: int
-  msg: "Serialization of %q type hasn't been implemented"
-  args:
-  - expr: TypeNames[e.t]
-
 - id: assignmentTypeMismatch
   fields:
   - id: a

@@ -12,15 +12,6 @@ func NewPolicyStorage(p Evaluable, a map[string]Attribute, t *uuid.UUID) *Policy
 	return &PolicyStorage{tag: t, attrs: a, policies: p}
 }
 
-func (s *PolicyStorage) Attributes() map[string]Attribute {
-	attrs := make(map[string]Attribute)
-	for ID, a := range s.attrs {
-		attrs[ID] = a
-	}
-
-	return attrs
-}
-
 func (s *PolicyStorage) Root() Evaluable {
 	return s.policies
 }
@@ -71,11 +62,11 @@ type PolicyUpdate struct {
 	cmds   []*command
 }
 
-func NewPolicyUpdate(oldTag, newTag uuid.UUID) (*PolicyUpdate, error) {
+func NewPolicyUpdate(oldTag, newTag uuid.UUID) *PolicyUpdate {
 	return &PolicyUpdate{
 		oldTag: oldTag,
 		newTag: newTag,
-		cmds:   []*command{}}, nil
+		cmds:   []*command{}}
 }
 
 func (u *PolicyUpdate) Append(op int, path []string, entity interface{}) {

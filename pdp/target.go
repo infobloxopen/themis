@@ -151,6 +151,8 @@ var TargetCompatibleExpressions = map[string]map[int]map[int]twoArgumentsFunctio
 	"contains": {
 		TypeString: {
 			TypeString: makeFunctionStringContains},
+		TypeAddress: {
+			TypeNetwork: makeFunctionNetworkAddressContainedByNetwork},
 		TypeNetwork: {
 			TypeAddress: makeFunctionNetworkContainsAddress},
 		TypeSetOfStrings: {

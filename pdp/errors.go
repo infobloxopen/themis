@@ -23,7 +23,6 @@ const (
 	duplicateAttributeValueErrorID
 	unknownTypeSerializationErrorID
 	invalidTypeSerializationErrorID
-	notImplementedSerializationErrorID
 	assignmentTypeMismatchID
 	mapperArgumentTypeErrorID
 	UntaggedPolicyModificationErrorID
@@ -303,21 +302,6 @@ func newInvalidTypeSerializationError(t int) *invalidTypeSerializationError {
 
 func (e *invalidTypeSerializationError) Error() string {
 	return e.errorf("Can't serialize value of %q type", TypeNames[e.t])
-}
-
-type notImplementedSerializationError struct {
-	errorLink
-	t int
-}
-
-func newNotImplementedSerializationError(t int) *notImplementedSerializationError {
-	return &notImplementedSerializationError{
-		errorLink: errorLink{id: notImplementedSerializationErrorID},
-		t:         t}
-}
-
-func (e *notImplementedSerializationError) Error() string {
-	return e.errorf("Serialization of %q type hasn't been implemented", TypeNames[e.t])
 }
 
 type assignmentTypeMismatch struct {

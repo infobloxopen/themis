@@ -107,6 +107,19 @@ func (c *contentItem) ppValue(v interface{}) (interface{}, error) {
 			return nil, newStringCastError(v, "network value")
 		}
 
+		_, n, err := net.ParseCIDR(s)
+		if err != nil {
+			return nil, newNetworkCastError(s, err)
+		}
+
+		return n, nil
+
+	case pdp.TypeDomain:
+		s, ok := v.(string)
+		if !ok {
+			return nil, newStringCastError(v, "domain value")
+		}
+
 		d, err := pdp.AdjustDomainName(s)
 		if err != nil {
 			return nil, newDomainCastError(s, err)

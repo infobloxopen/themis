@@ -11,6 +11,10 @@ func makeFunctionNetworkContainsAddress(network, address Expression) Expression 
 		address: address}
 }
 
+func makeFunctionNetworkAddressContainedByNetwork(address, network Expression) Expression {
+	return makeFunctionNetworkContainsAddress(network, address)
+}
+
 func makeFunctionNetworkContainsAddressAlt(args []Expression) Expression {
 	if len(args) != 2 {
 		return nil
