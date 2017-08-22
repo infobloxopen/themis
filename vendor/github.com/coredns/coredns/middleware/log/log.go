@@ -78,10 +78,10 @@ type Rule struct {
 }
 
 const (
-	// DefaultLogFilename is the default output name. This is the only supported value.
-	DefaultLogFilename = "stdout"
+	// DefaultLogFilename is the default log filename.
+	DefaultLogFilename = "query.log"
 	// CommonLogFormat is the common log format.
-	CommonLogFormat = `{remote} ` + CommonLogEmptyValue + ` [{when}] "{type} {class} {name} {proto} {size} {>do} {>bufsize}" {rcode} {>rflags} {rsize} {duration}`
+	CommonLogFormat = `{remote} ` + CommonLogEmptyValue + ` [{when}] "{type} {class} {name} {proto} {size} {>do} {>bufsize}" {rcode} {rsize} {duration}`
 	// CommonLogEmptyValue is the common empty log value.
 	CommonLogEmptyValue = "-"
 	// CombinedLogFormat is the combined log format.

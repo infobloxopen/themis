@@ -4,18 +4,15 @@
 package fastcgi
 
 import (
-	"context"
 	"errors"
 	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/mholt/caddy/caddyhttp/httpserver"
@@ -38,25 +35,9 @@ type Handler struct {
 // ServeHTTP satisfies the httpserver.Handler interface.
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
 	for _, rule := range h.Rules {
-		// First requirement: Base path must match request path. If it doesn't,
-		// we check to make sure the leading slash is not missing, and if so,
-		// we check again with it prepended. This is in case people forget
-		// a leading slash when performing rewrites, and we don't want to expose
-		// the contents of the (likely PHP) script. See issue #1645.
-		hpath := httpserver.Path(r.URL.Path)
-		if !hpath.Matches(rule.Path) {
-			if strings.HasPrefix(string(hpath), "/") {
-				// this is a normal-looking path, and it doesn't match; try next rule
-				continue
-			}
-			hpath = httpserver.Path("/" + string(hpath)) // prepend leading slash
-			if !hpath.Matches(rule.Path) {
-				// even after fixing the request path, it still doesn't match; try next rule
-				continue
-			}
-		}
-		// The path must also be allowed (not ignored).
-		if !rule.AllowedPath(r.URL.Path) {
+
+		// First requirement: Base path must match and the path must be allowed.
+		if !httpserver.Path(r.URL.Path).Matches(rule.Path) || !rule.AllowedPath(r.URL.Path) {
 			continue
 		}
 
@@ -92,28 +73,16 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 			}
 
 			// Connect to FastCGI gateway
-			network, address := parseAddress(rule.Address())
-
-			ctx := context.Background()
-			if rule.ConnectTimeout > 0 {
-				var cancel context.CancelFunc
-				ctx, cancel = context.WithTimeout(ctx, rule.ConnectTimeout)
-				defer cancel()
-			}
-
-			fcgiBackend, err := DialContext(ctx, network, address)
+			fcgiBackend, err := rule.dialer.Dial()
 			if err != nil {
+				if err, ok := err.(net.Error); ok && err.Timeout() {
+					return http.StatusGatewayTimeout, err
+				}
 				return http.StatusBadGateway, err
 			}
 			defer fcgiBackend.Close()
-
-			// read/write timeouts
-			if err := fcgiBackend.SetReadTimeout(rule.ReadTimeout); err != nil {
-				return http.StatusInternalServerError, err
-			}
-			if err := fcgiBackend.SetSendTimeout(rule.SendTimeout); err != nil {
-				return http.StatusInternalServerError, err
-			}
+			fcgiBackend.SetReadTimeout(rule.ReadTimeout)
+			fcgiBackend.SetSendTimeout(rule.SendTimeout)
 
 			var resp *http.Response
 
@@ -135,10 +104,6 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 				resp, err = fcgiBackend.Post(env, r.Method, r.Header.Get("Content-Type"), r.Body, contentLength)
 			}
 
-			if resp != nil && resp.Body != nil {
-				defer resp.Body.Close()
-			}
-
 			if err != nil {
 				if err, ok := err.(net.Error); ok && err.Timeout() {
 					return http.StatusGatewayTimeout, err
@@ -157,9 +122,9 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 			}
 
 			// Log any stderr output from upstream
-			if fcgiBackend.stderr.Len() != 0 {
+			if stderr := fcgiBackend.StdErr(); stderr.Len() != 0 {
 				// Remove trailing newline, error logger already does this.
-				err = LogError(strings.TrimSuffix(fcgiBackend.stderr.String(), "\n"))
+				err = LogError(strings.TrimSuffix(stderr.String(), "\n"))
 			}
 
 			// Normally we would return the status code if it is an error status (>= 400),
@@ -248,19 +213,23 @@ func (h Handler) buildEnv(r *http.Request, rule Rule, fpath string) (map[string]
 	// Strip PATH_INFO from SCRIPT_NAME
 	scriptName = strings.TrimSuffix(scriptName, pathInfo)
 
-	// Get the request URI from context. The context stores the original URI in case
-	// it was changed by a middleware such as rewrite. By default, we pass the
-	// original URI in as the value of REQUEST_URI (the user can overwrite this
-	// if desired). Most PHP apps seem to want the original URI. Besides, this is
-	// how nginx defaults: http://stackoverflow.com/a/12485156/1048862
-	reqURL, _ := r.Context().Value(httpserver.OriginalURLCtxKey).(url.URL)
+	// Get the request URI from context. The request URI might be as it came in over the wire,
+	// or it might have been rewritten internally by the rewrite middleware (see issue #256).
+	// If it was rewritten, there will be a context value with the original URL,
+	// which is needed to get the correct RequestURI value for PHP apps.
+	reqURI := r.URL.RequestURI()
+	if origURI, _ := r.Context().Value(httpserver.URIxRewriteCtxKey).(string); origURI != "" {
+		reqURI = origURI
+	}
 
-	// Retrieve name of remote user that was set by some downstream middleware such as basicauth.
-	remoteUser, _ := r.Context().Value(httpserver.RemoteUserCtxKey).(string)
+	// Retrieve name of remote user that was set by some downstream middleware,
+	// possibly basicauth.
+	remoteUser, _ := r.Context().Value(httpserver.RemoteUserCtxKey).(string) // Blank if not set
 
 	// Some variables are unused but cleared explicitly to prevent
 	// the parent environment from interfering.
 	env = map[string]string{
+
 		// Variables defined in CGI 1.1 spec
 		"AUTH_TYPE":         "", // Not used
 		"CONTENT_LENGTH":    r.Header.Get("Content-Length"),
@@ -283,13 +252,13 @@ func (h Handler) buildEnv(r *http.Request, rule Rule, fpath string) (map[string]
 		"DOCUMENT_ROOT":   rule.Root,
 		"DOCUMENT_URI":    docURI,
 		"HTTP_HOST":       r.Host, // added here, since not always part of headers
-		"REQUEST_URI":     reqURL.RequestURI(),
+		"REQUEST_URI":     reqURI,
 		"SCRIPT_FILENAME": scriptFilename,
 		"SCRIPT_NAME":     scriptName,
 	}
 
-	// compliance with the CGI specification requires that
-	// PATH_TRANSLATED should only exist if PATH_INFO is defined.
+	// compliance with the CGI specification that PATH_TRANSLATED
+	// should only exist if PATH_INFO is defined.
 	// Info: https://www.ietf.org/rfc/rfc3875 Page 14
 	if env["PATH_INFO"] != "" {
 		env["PATH_TRANSLATED"] = filepath.Join(rule.Root, pathInfo) // Info: http://www.oreilly.com/openbook/cgi/ch02_04.html
@@ -300,9 +269,10 @@ func (h Handler) buildEnv(r *http.Request, rule Rule, fpath string) (map[string]
 		env["HTTPS"] = "on"
 	}
 
-	// Add env variables from config (with support for placeholders in values)
 	replacer := httpserver.NewReplacer(r, nil, "")
+	// Add env variables from config
 	for _, envVar := range rule.EnvVars {
+		// replace request placeholders in environment variables
 		env[envVar[0]] = replacer.Replace(envVar[1])
 	}
 
@@ -321,8 +291,8 @@ type Rule struct {
 	// The base path to match. Required.
 	Path string
 
-	// upstream load balancer
-	balancer
+	// The address of the FastCGI server. Required.
+	Address string
 
 	// Always process files with this extension with fastcgi.
 	Ext string
@@ -347,35 +317,14 @@ type Rule struct {
 	// Ignored paths
 	IgnoredSubPaths []string
 
-	// The duration used to set a deadline when connecting to an upstream.
-	ConnectTimeout time.Duration
-
 	// The duration used to set a deadline when reading from the FastCGI server.
 	ReadTimeout time.Duration
 
 	// The duration used to set a deadline when sending to the FastCGI server.
 	SendTimeout time.Duration
-}
 
-// balancer is a fastcgi upstream load balancer.
-type balancer interface {
-	// Address picks an upstream address from the
-	// underlying load balancer.
-	Address() string
-}
-
-// roundRobin is a round robin balancer for fastcgi upstreams.
-type roundRobin struct {
-	// Known Go bug: https://golang.org/pkg/sync/atomic/#pkg-note-BUG
-	// must be first field for 64 bit alignment
-	// on x86 and arm.
-	index     int64
-	addresses []string
-}
-
-func (r *roundRobin) Address() string {
-	index := atomic.AddInt64(&r.index, 1) % int64(len(r.addresses))
-	return r.addresses[index]
+	// FCGI dialer
+	dialer dialer
 }
 
 // canSplit checks if path can split into two based on rule.SplitPath.

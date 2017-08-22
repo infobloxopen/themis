@@ -4,8 +4,6 @@ import (
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/middleware"
 	"github.com/coredns/coredns/middleware/file"
-	"github.com/coredns/coredns/middleware/pkg/dnsutil"
-	"github.com/coredns/coredns/middleware/proxy"
 
 	"github.com/mholt/caddy"
 )
@@ -25,13 +23,12 @@ func setup(c *caddy.Controller) error {
 
 	// Add startup functions to retrieve the zone and keep it up to date.
 	for _, n := range zones.Names {
-		z := zones.Z[n]
-		if len(z.TransferFrom) > 0 {
+		if len(zones.Z[n].TransferFrom) > 0 {
 			c.OnStartup(func() error {
-				z.StartupOnce.Do(func() {
-					z.TransferIn()
+				zones.Z[n].StartupOnce.Do(func() {
+					zones.Z[n].TransferIn()
 					go func() {
-						z.Update()
+						zones.Z[n].Update()
 					}()
 				})
 				return nil
@@ -50,9 +47,7 @@ func secondaryParse(c *caddy.Controller) (file.Zones, error) {
 	z := make(map[string]*file.Zone)
 	names := []string{}
 	origins := []string{}
-	prxy := proxy.Proxy{}
 	for c.Next() {
-
 		if c.Val() == "secondary" {
 			// secondary [origin]
 			origins = make([]string, len(c.ServerBlockKeys))
@@ -68,28 +63,10 @@ func secondaryParse(c *caddy.Controller) (file.Zones, error) {
 			}
 
 			for c.NextBlock() {
-
-				t, f := []string{}, []string{}
-				var e error
-
-				switch c.Val() {
-				case "transfer":
-					t, f, e = file.TransferParse(c, true)
-					if e != nil {
-						return file.Zones{}, e
-					}
-				case "upstream":
-					args := c.RemainingArgs()
-					if len(args) == 0 {
-						return file.Zones{}, c.ArgErr()
-					}
-					ups, err := dnsutil.ParseHostPortOrFile(args...)
-					if err != nil {
-						return file.Zones{}, err
-					}
-					prxy = proxy.NewLookup(ups)
+				t, f, e := file.TransferParse(c, true)
+				if e != nil {
+					return file.Zones{}, e
 				}
-
 				for _, origin := range origins {
 					if t != nil {
 						z[origin].TransferTo = append(z[origin].TransferTo, t...)
@@ -97,7 +74,6 @@ func secondaryParse(c *caddy.Controller) (file.Zones, error) {
 					if f != nil {
 						z[origin].TransferFrom = append(z[origin].TransferFrom, f...)
 					}
-					z[origin].Proxy = prxy
 				}
 			}
 		}

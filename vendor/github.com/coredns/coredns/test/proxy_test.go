@@ -100,7 +100,7 @@ func TestLookupDnsWithForcedTcp(t *testing.T) {
 	}
 }
 
-func BenchmarkProxyLookup(b *testing.B) {
+func BenchmarkLookupProxy(b *testing.B) {
 	t := new(testing.T)
 	name, rm, err := test.TempFile(".", exampleOrg)
 	if err != nil {

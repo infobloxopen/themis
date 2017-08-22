@@ -2,60 +2,51 @@ package pdp
 
 import "fmt"
 
-type FunctionStringEqualType struct {
-	First  ExpressionType
-	Second ExpressionType
+type functionStringEqual struct {
+	first  Expression
+	second Expression
 }
 
-func (f FunctionStringEqualType) describe() string {
-	return fmt.Sprintf("%s(%s, %s)", yastExpressionEqual, yastTagDataTypeString, yastTagDataTypeString)
+func makeFunctionStringEqual(first, second Expression) Expression {
+	return functionStringEqual{
+		first:  first,
+		second: second}
 }
 
-func (f FunctionStringEqualType) getResultType() int {
-	return DataTypeBoolean
-}
-
-func (f FunctionStringEqualType) calculate(ctx *Context) (AttributeValueType, error) {
-	v := AttributeValueType{}
-
-	first, err := f.First.calculate(ctx)
-	if err != nil {
-		return v, err
+func makeFunctionStringEqualAlt(args []Expression) Expression {
+	if len(args) != 2 {
+		panic(fmt.Errorf("String function \"equal\" needs exactly two arguments but got %d", len(args)))
 	}
 
-	firstStr, err := ExtractStringValue(first, "first argument")
-	if err != nil {
-		return v, err
-	}
-
-	second, err := f.Second.calculate(ctx)
-	if err != nil {
-		return v, err
-	}
-
-	secondStr, err := ExtractStringValue(second, "second argument")
-	if err != nil {
-		return v, err
-	}
-
-	v.DataType = DataTypeBoolean
-	v.Value = firstStr == secondStr
-
-	return v, nil
-}
-
-func makeFunctionStringEqual(first ExpressionType, second ExpressionType) ExpressionType {
-	return FunctionStringEqualType{first, second}
-}
-
-func makeFunctionStringEqualComm(args []ExpressionType) ExpressionType {
 	return makeFunctionStringEqual(args[0], args[1])
 }
 
-func checkerFunctionStringEqual(args []ExpressionType) anyArgumentsFunctionType {
-	if len(args) == 2 && args[0].getResultType() == DataTypeString && args[1].getResultType() == DataTypeString {
-		return makeFunctionStringEqualComm
+func (f functionStringEqual) GetResultType() int {
+	return TypeBoolean
+}
+
+func (f functionStringEqual) describe() string {
+	return "equal"
+}
+
+func (f functionStringEqual) calculate(ctx *Context) (AttributeValue, error) {
+	first, err := ctx.calculateStringExpression(f.first)
+	if err != nil {
+		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())
 	}
 
-	return nil
+	second, err := ctx.calculateStringExpression(f.second)
+	if err != nil {
+		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
+	}
+
+	return MakeBooleanValue(first == second), nil
+}
+
+func functionStringEqualValidator(args []Expression) functionMaker {
+	if len(args) != 2 || args[0].GetResultType() != TypeString || args[1].GetResultType() != TypeString {
+		return nil
+	}
+
+	return makeFunctionStringEqualAlt
 }

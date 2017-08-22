@@ -1,44 +1,246 @@
 package pdp
 
-type PolicyCombiningAlgType func(policies []EvaluableType, params interface{}, ctx *Context) ResponseType
+import "fmt"
 
-var PolicyCombiningAlgMap map[string]PolicyCombiningAlgType = map[string]PolicyCombiningAlgType{
-	yastTagFirstApplicableEffectAlg: FirstApplicableEffectPCA,
-	yastTagDenyOverridesAlg:         DenyOverridesPCA,
-	yastTagMapperAlg:                MapperPCA}
-
-type PolicySetType struct {
-	ID                 string
-	Target             TargetType
-	Policies           []EvaluableType
-	Obligations        []AttributeAssignmentExpressionType
-	PolicyCombiningAlg PolicyCombiningAlgType
-	AlgParams          interface{}
+type PolicyCombiningAlg interface {
+	execute(rules []Evaluable, ctx *Context) Response
 }
 
-func (p *PolicySetType) GetID() string {
-	return p.ID
+type PolicyCombiningAlgMaker func(policies []Evaluable, params interface{}) PolicyCombiningAlg
+
+var (
+	firstApplicableEffectPCAInstance = firstApplicableEffectPCA{}
+	denyOverridesPCAInstance         = denyOverridesPCA{}
+
+	PolicyCombiningAlgs = map[string]PolicyCombiningAlgMaker{
+		"firstapplicableeffect": makeFirstApplicableEffectPCA,
+		"denyoverrides":         makeDenyOverridesPCA}
+
+	PolicyCombiningParamAlgs = map[string]PolicyCombiningAlgMaker{
+		"mapper": makeMapperPCA}
+)
+
+type PolicySet struct {
+	id          string
+	hidden      bool
+	target      Target
+	policies    []Evaluable
+	obligations []AttributeAssignmentExpression
+	algorithm   PolicyCombiningAlg
 }
 
-func (p *PolicySetType) Calculate(ctx *Context) ResponseType {
-	match, err := p.Target.calculate(ctx)
+func NewPolicySet(ID string, hidden bool, target Target, policies []Evaluable, makePCA PolicyCombiningAlgMaker, params interface{}, obligations []AttributeAssignmentExpression) *PolicySet {
+	return &PolicySet{
+		id:          ID,
+		hidden:      hidden,
+		target:      target,
+		policies:    policies,
+		obligations: obligations,
+		algorithm:   makePCA(policies, params)}
+}
+
+func (p *PolicySet) describe() string {
+	if pid, ok := p.GetID(); ok {
+		return fmt.Sprintf("policy set %q", pid)
+	}
+
+	return "hidden policy set"
+}
+
+func (p *PolicySet) GetID() (string, bool) {
+	return p.id, !p.hidden
+}
+
+func (p *PolicySet) Calculate(ctx *Context) Response {
+	match, err := p.target.calculate(ctx)
 	if err != nil {
-		return combineEffectAndStatus(err, p.ID, p.PolicyCombiningAlg(p.Policies, p.AlgParams, ctx))
+		r := combineEffectAndStatus(err, p.algorithm.execute(p.policies, ctx))
+		if r.status != nil {
+			r.status = bindError(err, p.describe())
+		}
+		return r
 	}
 
 	if !match {
-		return ResponseType{EffectNotApplicable, "Ok", nil}
+		return Response{EffectNotApplicable, nil, nil}
 	}
 
-	r := p.PolicyCombiningAlg(p.Policies, p.AlgParams, ctx)
+	r := p.algorithm.execute(p.policies, ctx)
 	if r.Effect == EffectDeny || r.Effect == EffectPermit {
-		r.Obligations = append(r.Obligations, p.Obligations...)
+		r.obligations = append(r.obligations, p.obligations...)
+	}
+
+	if r.status != nil {
+		r.status = bindError(r.status, p.describe())
 	}
 
 	return r
 }
 
-func FirstApplicableEffectPCA(policies []EvaluableType, params interface{}, ctx *Context) ResponseType {
+func (p *PolicySet) Append(path []string, v interface{}) (Evaluable, error) {
+	if p.hidden {
+		return p, newHiddenPolicySetModificationError()
+	}
+
+	if len(path) > 0 {
+		ID := path[0]
+
+		child, err := p.getChild(ID)
+		if err != nil {
+			return p, bindError(err, p.id)
+		}
+
+		child, err = child.Append(path[1:], v)
+		if err != nil {
+			return p, bindError(err, p.id)
+		}
+
+		return p.putChild(child), nil
+	}
+
+	child, ok := v.(Evaluable)
+	if !ok {
+		return p, bindError(newInvalidPolicySetItemTypeError(v), p.id)
+	}
+
+	_, ok = child.GetID()
+	if !ok {
+		return p, bindError(newHiddenPolicyAppendError(), p.id)
+	}
+
+	return p.putChild(child), nil
+}
+
+func (p *PolicySet) Delete(path []string) (Evaluable, error) {
+	if p.hidden {
+		return p, newHiddenPolicySetModificationError()
+	}
+
+	if len(path) <= 0 {
+		return p, bindError(newTooShortPathPolicySetModificationError(), p.id)
+	}
+
+	ID := path[0]
+
+	if len(path) > 1 {
+		child, err := p.getChild(ID)
+		if err != nil {
+			return p, bindError(err, p.id)
+		}
+
+		child, err = child.Delete(path[1:])
+		if err != nil {
+			return p, bindError(err, p.id)
+		}
+
+		return p.putChild(child), nil
+	}
+
+	r, err := p.delChild(ID)
+	if err != nil {
+		return p, bindError(err, p.id)
+	}
+
+	return r, nil
+}
+
+func (p *PolicySet) getChild(ID string) (Evaluable, error) {
+	for _, child := range p.policies {
+		if pID, ok := child.GetID(); ok && pID == ID {
+			return child, nil
+		}
+	}
+
+	return nil, newMissingPolicySetChildError(ID)
+}
+
+func (p *PolicySet) putChild(child Evaluable) Evaluable {
+	ID, _ := child.GetID()
+
+	for i, old := range p.policies {
+		if pID, ok := old.GetID(); ok && pID == ID {
+			policies := []Evaluable{}
+			if i > 0 {
+				policies = append(policies, p.policies[:i]...)
+			}
+
+			policies = append(policies, child)
+
+			if i+1 < len(p.policies) {
+				policies = append(policies, p.policies[i+1:]...)
+			}
+
+			algorithm := p.algorithm
+			if m, ok := algorithm.(mapperPCA); ok {
+				algorithm = m.add(ID, child, old)
+			}
+
+			return &PolicySet{
+				id:          p.id,
+				target:      p.target,
+				policies:    policies,
+				obligations: p.obligations,
+				algorithm:   algorithm}
+		}
+	}
+
+	policies := p.policies
+	if policies == nil {
+		policies = []Evaluable{child}
+	} else {
+		policies = append(policies, child)
+	}
+
+	algorithm := p.algorithm
+	if m, ok := algorithm.(mapperPCA); ok {
+		algorithm = m.add(ID, child, nil)
+	}
+
+	return &PolicySet{
+		id:          p.id,
+		target:      p.target,
+		policies:    policies,
+		obligations: p.obligations,
+		algorithm:   algorithm}
+}
+
+func (p *PolicySet) delChild(ID string) (Evaluable, error) {
+	for i, old := range p.policies {
+		if pID, ok := old.GetID(); ok && pID == ID {
+			policies := []Evaluable{}
+			if i > 0 {
+				policies = append(policies, p.policies[:i]...)
+			}
+
+			if i+1 < len(p.policies) {
+				policies = append(policies, p.policies[i+1:]...)
+			}
+
+			algorithm := p.algorithm
+			if m, ok := algorithm.(mapperPCA); ok {
+				algorithm = m.del(ID, old)
+			}
+
+			return &PolicySet{
+				id:          p.id,
+				target:      p.target,
+				policies:    policies,
+				obligations: p.obligations,
+				algorithm:   algorithm}, nil
+		}
+	}
+
+	return nil, newMissingPolicySetChildError(ID)
+}
+
+type firstApplicableEffectPCA struct {
+}
+
+func makeFirstApplicableEffectPCA(policies []Evaluable, params interface{}) PolicyCombiningAlg {
+	return firstApplicableEffectPCAInstance
+}
+
+func (a firstApplicableEffectPCA) execute(policies []Evaluable, ctx *Context) Response {
 	for _, p := range policies {
 		r := p.Calculate(ctx)
 		if r.Effect != EffectNotApplicable {
@@ -46,12 +248,23 @@ func FirstApplicableEffectPCA(policies []EvaluableType, params interface{}, ctx 
 		}
 	}
 
-	return ResponseType{EffectNotApplicable, "Ok", nil}
+	return Response{EffectNotApplicable, nil, nil}
 }
 
-func DenyOverridesPCA(policies []EvaluableType, params interface{}, ctx *Context) ResponseType {
-	status := ""
-	obligations := make([]AttributeAssignmentExpressionType, 0)
+type denyOverridesPCA struct {
+}
+
+func makeDenyOverridesPCA(policies []Evaluable, params interface{}) PolicyCombiningAlg {
+	return denyOverridesPCAInstance
+}
+
+func (a denyOverridesPCA) describe() string {
+	return "deny overrides"
+}
+
+func (a denyOverridesPCA) execute(policies []Evaluable, ctx *Context) Response {
+	errs := []error{}
+	obligations := make([]AttributeAssignmentExpression, 0)
 
 	indetD := 0
 	indetP := 0
@@ -66,8 +279,8 @@ func DenyOverridesPCA(policies []EvaluableType, params interface{}, ctx *Context
 		}
 
 		if r.Effect == EffectPermit {
-			permits += 1
-			obligations = append(obligations, r.Obligations...)
+			permits++
+			obligations = append(obligations, r.obligations...)
 			continue
 		}
 
@@ -76,38 +289,41 @@ func DenyOverridesPCA(policies []EvaluableType, params interface{}, ctx *Context
 		}
 
 		if r.Effect == EffectIndeterminateD {
-			indetD += 1
+			indetD++
 		} else {
 			if r.Effect == EffectIndeterminateP {
-				indetP += 1
+				indetP++
 			} else {
-				indetDP += 1
+				indetDP++
 			}
 
 		}
 
-		if len(status) > 0 {
-			status += ", "
-		}
+		errs = append(errs, r.status)
+	}
 
-		status += r.Status
+	var err boundError
+	if len(errs) > 1 {
+		err = bindError(newMultiError(errs), a.describe())
+	} else if len(errs) > 0 {
+		err = bindError(errs[0], a.describe())
 	}
 
 	if indetDP > 0 || (indetD > 0 && (indetP > 0 || permits > 0)) {
-		return ResponseType{EffectIndeterminateDP, status, nil}
+		return Response{EffectIndeterminateDP, err, nil}
 	}
 
 	if indetD > 0 {
-		return ResponseType{EffectIndeterminateD, status, nil}
+		return Response{EffectIndeterminateD, err, nil}
 	}
 
 	if permits > 0 {
-		return ResponseType{EffectPermit, "Ok", obligations}
+		return Response{EffectPermit, nil, obligations}
 	}
 
 	if indetP > 0 {
-		return ResponseType{EffectIndeterminateP, status, nil}
+		return Response{EffectIndeterminateP, err, nil}
 	}
 
-	return ResponseType{EffectNotApplicable, "Ok", nil}
+	return Response{EffectNotApplicable, nil, nil}
 }

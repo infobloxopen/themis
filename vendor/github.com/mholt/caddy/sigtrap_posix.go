@@ -1,4 +1,4 @@
-// +build !windows,!plan9
+// +build !windows
 
 package caddy
 
@@ -30,7 +30,7 @@ func trapSignalsPosix() {
 				err := Stop()
 				if err != nil {
 					log.Printf("[ERROR] SIGQUIT stop: %v", err)
-					exitCode = 3
+					exitCode = 1
 				}
 				if PidFile != "" {
 					os.Remove(PidFile)

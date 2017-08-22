@@ -3,16 +3,12 @@ package kubernetes
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"strings"
 	"time"
 
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/middleware"
-	"github.com/coredns/coredns/middleware/pkg/dnsutil"
-	"github.com/coredns/coredns/middleware/proxy"
-	"github.com/miekg/dns"
 
 	"github.com/mholt/caddy"
 	unversionedapi "k8s.io/client-go/1.5/pkg/api/unversioned"
@@ -39,16 +35,10 @@ func setup(c *caddy.Controller) error {
 	// Register KubeCache start and stop functions with Caddy
 	c.OnStartup(func() error {
 		go kubernetes.APIConn.Run()
-		if kubernetes.APIProxy != nil {
-			go kubernetes.APIProxy.Run()
-		}
 		return nil
 	})
 
 	c.OnShutdown(func() error {
-		if kubernetes.APIProxy != nil {
-			kubernetes.APIProxy.Stop()
-		}
 		return kubernetes.APIConn.Stop()
 	})
 
@@ -57,35 +47,24 @@ func setup(c *caddy.Controller) error {
 		return kubernetes
 	})
 
-	// Also register kubernetes for use in autopath.
-	dnsserver.GetConfig(c).RegisterHandler(kubernetes)
-
 	return nil
 }
 
 func kubernetesParse(c *caddy.Controller) (*Kubernetes, error) {
-	k8s := &Kubernetes{
-		ResyncPeriod:       defaultResyncPeriod,
-		interfaceAddrsFunc: localPodIP,
-		PodMode:            PodModeDisabled,
-		Proxy:              proxy.Proxy{},
-	}
-
-	k8s.autoPathSearch = searchFromResolvConf()
+	k8s := &Kubernetes{ResyncPeriod: defaultResyncPeriod}
+	k8s.PodMode = PodModeDisabled
 
 	for c.Next() {
 		if c.Val() == "kubernetes" {
 			zones := c.RemainingArgs()
 
-			if len(zones) != 0 {
-				k8s.Zones = zones
-				middleware.Zones(k8s.Zones).Normalize()
-			} else {
+			if len(zones) == 0 {
 				k8s.Zones = make([]string, len(c.ServerBlockKeys))
-				for i := 0; i < len(c.ServerBlockKeys); i++ {
-					k8s.Zones[i] = middleware.Host(c.ServerBlockKeys[i]).Normalize()
-				}
+				copy(k8s.Zones, c.ServerBlockKeys)
 			}
+
+			k8s.Zones = NormalizeZoneList(zones)
+			middleware.Zones(k8s.Zones).Normalize()
 
 			if k8s.Zones == nil || len(k8s.Zones) < 1 {
 				return nil, errors.New("zone name must be provided for kubernetes middleware")
@@ -107,16 +86,12 @@ func kubernetesParse(c *caddy.Controller) (*Kubernetes, error) {
 			for c.NextBlock() {
 				switch c.Val() {
 				case "cidrs":
-
-					// DEPRECATION WARNING
-					log.Printf("[WARNING] \"cidrs\" will be removed for CoreDNS soon. See https://coredns.io/2017/07/23/corefile-explained#reverse-zones for the replacement")
-
 					args := c.RemainingArgs()
 					if len(args) > 0 {
 						for _, cidrStr := range args {
 							_, cidr, err := net.ParseCIDR(cidrStr)
 							if err != nil {
-								return nil, fmt.Errorf("invalid cidr: %s", cidrStr)
+								return nil, errors.New("Invalid cidr: " + cidrStr)
 							}
 							k8s.ReverseCidrs = append(k8s.ReverseCidrs, *cidr)
 
@@ -131,7 +106,7 @@ func kubernetesParse(c *caddy.Controller) (*Kubernetes, error) {
 						case PodModeDisabled, PodModeInsecure, PodModeVerified:
 							k8s.PodMode = args[0]
 						default:
-							return nil, fmt.Errorf("wrong value for pods: %s,  must be one of: disabled, verified, insecure", args[0])
+							return nil, errors.New("Value for pods must be one of: disabled, verified, insecure")
 						}
 						continue
 					}
@@ -146,9 +121,7 @@ func kubernetesParse(c *caddy.Controller) (*Kubernetes, error) {
 				case "endpoint":
 					args := c.RemainingArgs()
 					if len(args) > 0 {
-						for _, endpoint := range strings.Split(args[0], ",") {
-							k8s.APIServerList = append(k8s.APIServerList, strings.TrimSpace(endpoint))
-						}
+						k8s.APIEndpoint = args[0]
 						continue
 					}
 					return nil, c.ArgErr()
@@ -164,7 +137,7 @@ func kubernetesParse(c *caddy.Controller) (*Kubernetes, error) {
 					if len(args) > 0 {
 						rp, err := time.ParseDuration(args[0])
 						if err != nil {
-							return nil, fmt.Errorf("unable to parse resync duration value: '%v': %v", args[0], err)
+							return nil, fmt.Errorf("Unable to parse resync duration value. Value provided was '%v'. Example valid values: '15s', '5m', '1h'. Error was: %v", args[0], err)
 						}
 						k8s.ResyncPeriod = rp
 						continue
@@ -176,7 +149,7 @@ func kubernetesParse(c *caddy.Controller) (*Kubernetes, error) {
 						labelSelectorString := strings.Join(args, " ")
 						ls, err := unversionedapi.ParseToLabelSelector(labelSelectorString)
 						if err != nil {
-							return nil, fmt.Errorf("unable to parse label selector value: '%v': %v", labelSelectorString, err)
+							return nil, fmt.Errorf("Unable to parse label selector. Value provided was '%v'. Error was: %v", labelSelectorString, err)
 						}
 						k8s.LabelSelector = ls
 						continue
@@ -189,45 +162,15 @@ func kubernetesParse(c *caddy.Controller) (*Kubernetes, error) {
 						continue
 					}
 					return nil, c.ArgErr()
-				case "upstream":
-					args := c.RemainingArgs()
-					if len(args) == 0 {
-						return nil, c.ArgErr()
-					}
-					ups, err := dnsutil.ParseHostPortOrFile(args...)
-					if err != nil {
-						return nil, err
-					}
-					k8s.Proxy = proxy.NewLookup(ups)
-				case "federation": // name zone
-					args := c.RemainingArgs()
-					if len(args) == 2 {
-						k8s.Federations = append(k8s.Federations, Federation{
-							name: args[0],
-							zone: args[1],
-						})
-						continue
-					}
-					return nil, fmt.Errorf("incorrect number of arguments for federation, got %v, expected 2", len(args))
 				}
 			}
 			return k8s, nil
 		}
 	}
-	return nil, errors.New("kubernetes setup called without keyword 'kubernetes' in Corefile")
-}
-
-func searchFromResolvConf() []string {
-	rc, err := dns.ClientConfigFromFile("/etc/resolv.conf")
-	if err != nil {
-		return nil
-	}
-	middleware.Zones(rc.Search).Normalize()
-	return rc.Search
+	return nil, errors.New("Kubernetes setup called without keyword 'kubernetes' in Corefile")
 }
 
 const (
 	defaultResyncPeriod = 5 * time.Minute
-	defautNdots         = 0
-	defaultOnNXDOMAIN   = dns.RcodeSuccess
+	defaultPodMode      = PodModeDisabled
 )

@@ -2,64 +2,53 @@ package pdp
 
 import "fmt"
 
-type FunctionSetOfNetworksContainsAddressType struct {
-	Set   ExpressionType
-	Value ExpressionType
+type functionSetOfNetworksContainsAddress struct {
+	set   Expression
+	value Expression
 }
 
-func (f FunctionSetOfNetworksContainsAddressType) describe() string {
-	return fmt.Sprintf("\"%s\".%s(%s)", yastTagDataTypeSetOfNetworks, yastExpressionContains, yastTagDataTypeAddress)
+func makeFunctionSetOfNetworksContainsAddress(set, value Expression) Expression {
+	return functionSetOfNetworksContainsAddress{
+		set:   set,
+		value: value}
 }
 
-func (f FunctionSetOfNetworksContainsAddressType) getResultType() int {
-	return DataTypeBoolean
-}
-
-func (f FunctionSetOfNetworksContainsAddressType) calculate(ctx *Context) (AttributeValueType, error) {
-	v := AttributeValueType{}
-
-	set, err := f.Set.calculate(ctx)
-	if err != nil {
-		return v, err
+func makeFunctionSetOfNetworksContainsAddressAlt(args []Expression) Expression {
+	if len(args) != 2 {
+		panic(fmt.Errorf("Set Of Networks function \"contains\" (Address) needs exactly two arguments but got %d",
+			len(args)))
 	}
 
-	s, err := ExtractSetOfNetworksValue(set, "first argument")
-	if err != nil {
-		return v, err
-	}
-
-	value, err := f.Value.calculate(ctx)
-	if err != nil {
-		return v, err
-	}
-
-	a, err := ExtractAddressValue(value, "second argument")
-	if err != nil {
-		return v, err
-	}
-
-	v.DataType = DataTypeBoolean
-	if s.Contains(a) {
-		v.Value = true
-		return v, nil
-	}
-
-	v.Value = false
-	return v, nil
-}
-
-func makeFunctionSetOfNetworksContainsAddress(first ExpressionType, second ExpressionType) ExpressionType {
-	return FunctionSetOfNetworksContainsAddressType{first, second}
-}
-
-func makeFunctionSetOfNetworksContainsAddressComm(args []ExpressionType) ExpressionType {
 	return makeFunctionSetOfNetworksContainsAddress(args[0], args[1])
 }
 
-func checkerFunctionSetOfNetworksContainsAddress(args []ExpressionType) anyArgumentsFunctionType {
-	if len(args) == 2 && args[0].getResultType() == DataTypeSetOfNetworks && args[1].getResultType() == DataTypeAddress {
-		return makeFunctionSetOfNetworksContainsAddressComm
+func (f functionSetOfNetworksContainsAddress) GetResultType() int {
+	return TypeBoolean
+}
+
+func (f functionSetOfNetworksContainsAddress) describe() string {
+	return "contains"
+}
+
+func (f functionSetOfNetworksContainsAddress) calculate(ctx *Context) (AttributeValue, error) {
+	set, err := ctx.calculateSetOfNetworksExpression(f.set)
+	if err != nil {
+		return undefinedValue, bindError(err, f.describe())
 	}
 
-	return nil
+	a, err := ctx.calculateAddressExpression(f.value)
+	if err != nil {
+		return undefinedValue, bindError(err, f.describe())
+	}
+
+	_, ok := set.GetByIP(a)
+	return MakeBooleanValue(ok), nil
+}
+
+func functionSetOfNetworksContainsAddressValidator(args []Expression) functionMaker {
+	if len(args) != 2 || args[0].GetResultType() != TypeSetOfNetworks || args[1].GetResultType() != TypeAddress {
+		return nil
+	}
+
+	return makeFunctionSetOfNetworksContainsAddressAlt
 }

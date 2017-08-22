@@ -6,7 +6,7 @@ import (
 )
 
 func ExampleZone_All() {
-	zone, err := Parse(strings.NewReader(dbMiekNL), testzone, "stdin", 0)
+	zone, err := Parse(strings.NewReader(dbMiekNL), testzone, "stdin")
 	if err != nil {
 		return
 	}

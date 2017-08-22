@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sync"
 	"text/template"
 
 	"github.com/mholt/caddy/caddyhttp/httpserver"
@@ -34,10 +33,7 @@ func (t Templates) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error
 		for _, ext := range rule.Extensions {
 			if reqExt == ext {
 				// Create execution context
-				ctx := httpserver.NewContextWithHeader(w.Header())
-				ctx.Root = t.FileSys
-				ctx.Req = r
-				ctx.URL = r.URL
+				ctx := httpserver.Context{Root: t.FileSys, Req: r, URL: r.URL}
 
 				// New template
 				templateName := filepath.Base(fpath)
@@ -64,10 +60,8 @@ func (t Templates) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error
 				}
 
 				// Execute it
-				buf := t.BufPool.Get().(*bytes.Buffer)
-				buf.Reset()
-				defer t.BufPool.Put(buf)
-				err = tpl.Execute(buf, ctx)
+				var buf bytes.Buffer
+				err = tpl.Execute(&buf, ctx)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
@@ -103,7 +97,6 @@ type Templates struct {
 	Rules   []Rule
 	Root    string
 	FileSys http.FileSystem
-	BufPool *sync.Pool // docs: "A Pool must not be copied after first use."
 }
 
 // Rule represents a template rule. A template will only execute

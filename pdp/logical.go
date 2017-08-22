@@ -2,159 +2,137 @@ package pdp
 
 import "fmt"
 
-type FunctionBooleanNotType struct {
-	Arg ExpressionType
+type functionBooleanNot struct {
+	arg Expression
 }
 
-type FunctionBooleanOrType struct {
-	Args []ExpressionType
+type functionBooleanOr struct {
+	args []Expression
 }
 
-type FunctionBooleanAndType struct {
-	Args []ExpressionType
+type functionBooleanAnd struct {
+	args []Expression
 }
 
-func (f FunctionBooleanNotType) describe() string {
-	return fmt.Sprintf("%s(%s)", yastExpressionNot, yastTagDataTypeBoolean)
-}
-
-func (f FunctionBooleanNotType) getResultType() int {
-	return DataTypeBoolean
-}
-
-func (f FunctionBooleanNotType) calculate(ctx *Context) (AttributeValueType, error) {
-	v := AttributeValueType{}
-
-	r, err := f.Arg.calculate(ctx)
-	if err != nil {
-		return v, err
+func makeFunctionBooleanNot(args []Expression) Expression {
+	if len(args) != 1 {
+		panic(fmt.Errorf("Boolean function \"not\" needs exactly one argument but got %d", len(args)))
 	}
 
-	a, err := ExtractBooleanValue(r, "argument")
+	return functionBooleanNot{arg: args[0]}
+}
+
+func (f functionBooleanNot) GetResultType() int {
+	return TypeBoolean
+}
+
+func (f functionBooleanNot) describe() string {
+	return "not"
+}
+
+func (f functionBooleanNot) calculate(ctx *Context) (AttributeValue, error) {
+	a, err := ctx.calculateBooleanExpression(f.arg)
 	if err != nil {
-		return v, err
+		return undefinedValue, bindError(err, f.describe())
 	}
 
-	v.DataType = DataTypeBoolean
-	v.Value = !a
-
-	return v, nil
+	return MakeBooleanValue(!a), nil
 }
 
-func (f FunctionBooleanOrType) describe() string {
-	return fmt.Sprintf("%s(%s, %s, ...)", yastExpressionOr, yastTagDataTypeBoolean, yastTagDataTypeBoolean)
+func functionBooleanNotValidator(args []Expression) functionMaker {
+	if len(args) != 1 || args[0].GetResultType() != TypeBoolean {
+		return nil
+	}
+
+	return makeFunctionBooleanNot
 }
 
-func (f FunctionBooleanOrType) getResultType() int {
-	return DataTypeBoolean
+func makeFunctionBooleanOr(args []Expression) Expression {
+	if len(args) < 1 {
+		panic(fmt.Errorf("Boolean function \"or\" needs at least one argument but got %d", len(args)))
+	}
+
+	return functionBooleanOr{args: args}
 }
 
-func (f FunctionBooleanOrType) calculate(ctx *Context) (AttributeValueType, error) {
-	v := AttributeValueType{}
+func (f functionBooleanOr) GetResultType() int {
+	return TypeBoolean
+}
 
-	for i, arg := range f.Args {
-		r, err := arg.calculate(ctx)
+func (f functionBooleanOr) describe() string {
+	return "or"
+}
+
+func (f functionBooleanOr) calculate(ctx *Context) (AttributeValue, error) {
+	for i, arg := range f.args {
+		a, err := ctx.calculateBooleanExpression(arg)
 		if err != nil {
-			return v, err
-		}
-
-		a, err := ExtractBooleanValue(r, fmt.Sprintf("argument %d", i))
-		if err != nil {
-			return v, err
+			return undefinedValue, bindError(bindErrorf(err, "argument %d", i), f.describe())
 		}
 
 		if a {
-			v.DataType = DataTypeBoolean
-			v.Value = true
-			return v, nil
+			return MakeBooleanValue(true), nil
 		}
 	}
 
-	v.DataType = DataTypeBoolean
-	v.Value = false
-
-	return v, nil
+	return MakeBooleanValue(false), nil
 }
 
-func (f FunctionBooleanAndType) describe() string {
-	return fmt.Sprintf("%s(%s, %s, ...)", yastExpressionAnd, yastTagDataTypeBoolean, yastTagDataTypeBoolean)
-}
+func functionBooleanOrValidator(args []Expression) functionMaker {
+	if len(args) < 1 {
+		return nil
+	}
 
-func (f FunctionBooleanAndType) getResultType() int {
-	return DataTypeBoolean
-}
-
-func (f FunctionBooleanAndType) calculate(ctx *Context) (AttributeValueType, error) {
-	v := AttributeValueType{}
-
-	for i, arg := range f.Args {
-		r, err := arg.calculate(ctx)
-		if err != nil {
-			return v, err
+	for _, arg := range args {
+		if arg.GetResultType() != TypeBoolean {
+			return nil
 		}
+	}
 
-		a, err := ExtractBooleanValue(r, fmt.Sprintf("argument %d", i))
+	return makeFunctionBooleanOr
+}
+
+func makeFunctionBooleanAnd(args []Expression) Expression {
+	if len(args) < 1 {
+		panic(fmt.Errorf("Boolean function \"and\" needs at least one argument but got %d", len(args)))
+	}
+
+	return functionBooleanAnd{args: args}
+}
+
+func (f functionBooleanAnd) GetResultType() int {
+	return TypeBoolean
+}
+
+func (f functionBooleanAnd) describe() string {
+	return "and"
+}
+
+func (f functionBooleanAnd) calculate(ctx *Context) (AttributeValue, error) {
+	for i, arg := range f.args {
+		a, err := ctx.calculateBooleanExpression(arg)
 		if err != nil {
-			return v, err
+			return undefinedValue, bindError(bindErrorf(err, "argument %d", i), f.describe())
 		}
 
 		if !a {
-			v.DataType = DataTypeBoolean
-			v.Value = false
-			return v, nil
+			return MakeBooleanValue(false), nil
 		}
 	}
 
-	v.DataType = DataTypeBoolean
-	v.Value = true
-
-	return v, nil
+	return MakeBooleanValue(true), nil
 }
 
-func makeFunctionBooleanNotComm(args []ExpressionType) ExpressionType {
-	return FunctionBooleanNotType{args[0]}
-}
-
-func checkerFunctionBooleanNot(args []ExpressionType) anyArgumentsFunctionType {
-	if len(args) == 1 && args[0].getResultType() == DataTypeBoolean {
-		return makeFunctionBooleanNotComm
-	}
-
-	return nil
-}
-
-func makeFunctionBooleanOrComm(args []ExpressionType) ExpressionType {
-	return FunctionBooleanOrType{args}
-}
-
-func checkerFunctionBooleanOr(args []ExpressionType) anyArgumentsFunctionType {
-	if len(args) < 2 {
+func functionBooleanAndValidator(args []Expression) functionMaker {
+	if len(args) < 1 {
 		return nil
 	}
 
-	for _, a := range args {
-		if a.getResultType() != DataTypeBoolean {
+	for _, arg := range args {
+		if arg.GetResultType() != TypeBoolean {
 			return nil
 		}
 	}
 
-	return makeFunctionBooleanOrComm
-}
-
-func makeFunctionBooleanAndComm(args []ExpressionType) ExpressionType {
-	return FunctionBooleanAndType{args}
-}
-
-func checkerFunctionBooleanAnd(args []ExpressionType) anyArgumentsFunctionType {
-	if len(args) < 2 {
-		return nil
-	}
-
-	for _, a := range args {
-		if a.getResultType() != DataTypeBoolean {
-			return nil
-		}
-	}
-
-	return makeFunctionBooleanAndComm
+	return makeFunctionBooleanAnd
 }

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
-	"reflect"
 	"testing"
 	"text/template"
 
@@ -60,10 +59,9 @@ func TestMarkdownParse(t *testing.T) {
 				".md":  {},
 				".txt": {},
 			},
-			Styles:        []string{"/resources/css/blog.css"},
-			Scripts:       []string{"/resources/js/blog.js"},
-			Template:      GetDefaultTemplate(),
-			TemplateFiles: make(map[string]string),
+			Styles:   []string{"/resources/css/blog.css"},
+			Scripts:  []string{"/resources/js/blog.js"},
+			Template: GetDefaultTemplate(),
 		}}},
 		{`markdown /blog {
 	ext .md
@@ -73,12 +71,12 @@ func TestMarkdownParse(t *testing.T) {
 			Extensions: map[string]struct{}{
 				".md": {},
 			},
-			Template: setDefaultTemplate("./testdata/tpl_with_include.html"),
-			TemplateFiles: map[string]string{
-				"": "testdata/tpl_with_include.html",
-			},
+			Template: GetDefaultTemplate(),
 		}}},
 	}
+	// Setup the extra template
+	tmpl := tests[1].expectedMarkdownConfig[0].Template
+	SetTemplate(tmpl, "", "./testdata/tpl_with_include.html")
 
 	for i, test := range tests {
 		c := caddy.NewTestController("http", test.inputMarkdownConfig)
@@ -112,10 +110,6 @@ func TestMarkdownParse(t *testing.T) {
 			if ok, tx, ty := equalTemplates(actualMarkdownConfig.Template, test.expectedMarkdownConfig[j].Template); !ok {
 				t.Errorf("Test %d the %dth Markdown Config Templates did not match, expected %s to be %s", i, j, tx, ty)
 			}
-			if expect, got := test.expectedMarkdownConfig[j].TemplateFiles, actualMarkdownConfig.TemplateFiles; !reflect.DeepEqual(expect, got) {
-				t.Errorf("Test %d the %d Markdown config TemplateFiles did not match, expect %v, but got %v", i, j, expect, got)
-			}
-
 		}
 	}
 }

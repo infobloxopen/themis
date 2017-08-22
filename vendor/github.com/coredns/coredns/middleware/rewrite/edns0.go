@@ -37,22 +37,21 @@ func (rule *edns0NsidRule) Rewrite(r *dns.Msg) Result {
 	result := RewriteIgnored
 	o := setupEdns0Opt(r)
 	found := false
-Option:
 	for _, s := range o.Option {
 		switch e := s.(type) {
 		case *dns.EDNS0_NSID:
-			if rule.action == Replace || rule.action == Set {
+			if rule.action == "replace" || rule.action == "set" {
 				e.Nsid = "" // make sure it is empty for request
 				result = RewriteDone
 			}
 			found = true
-			break Option
+			break
 		}
 	}
 
 	// add option if not found
-	if !found && (rule.action == Append || rule.action == Set) {
-		o.SetDo()
+	if !found && (rule.action == "append" || rule.action == "set") {
+		o.SetDo(true)
 		o.Option = append(o.Option, &dns.EDNS0_NSID{Code: dns.EDNS0NSID, Nsid: ""})
 		result = RewriteDone
 	}
@@ -69,7 +68,7 @@ func (rule *edns0LocalRule) Rewrite(r *dns.Msg) Result {
 		switch e := s.(type) {
 		case *dns.EDNS0_LOCAL:
 			if rule.code == e.Code {
-				if rule.action == Replace || rule.action == Set {
+				if rule.action == "replace" || rule.action == "set" {
 					e.Data = rule.data
 					result = RewriteDone
 				}
@@ -80,8 +79,8 @@ func (rule *edns0LocalRule) Rewrite(r *dns.Msg) Result {
 	}
 
 	// add option if not found
-	if !found && (rule.action == Append || rule.action == Set) {
-		o.SetDo()
+	if !found && (rule.action == "append" || rule.action == "set") {
+		o.SetDo(true)
 		var opt dns.EDNS0_LOCAL
 		opt.Code = rule.code
 		opt.Data = rule.data
@@ -95,15 +94,15 @@ func (rule *edns0LocalRule) Rewrite(r *dns.Msg) Result {
 // newEdns0Rule creates an EDNS0 rule of the appropriate type based on the args
 func newEdns0Rule(args ...string) (Rule, error) {
 	if len(args) < 2 {
-		return nil, fmt.Errorf("too few arguments for an EDNS0 rule")
+		return nil, fmt.Errorf("Too few arguments for an EDNS0 rule")
 	}
 
 	ruleType := strings.ToLower(args[0])
 	action := strings.ToLower(args[1])
 	switch action {
-	case Append:
-	case Replace:
-	case Set:
+	case "append":
+	case "replace":
+	case "set":
 	default:
 		return nil, fmt.Errorf("invalid action: %q", action)
 	}
@@ -140,10 +139,3 @@ func newEdns0LocalRule(action, code, data string) (*edns0LocalRule, error) {
 
 	return &edns0LocalRule{action: action, code: uint16(c), data: decoded}, nil
 }
-
-// These are all defined actions.
-const (
-	Replace = "replace"
-	Set     = "set"
-	Append  = "append"
-)

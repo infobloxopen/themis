@@ -1,9 +1,7 @@
 package templates
 
 import (
-	"bytes"
 	"net/http"
-	"sync"
 
 	"github.com/mholt/caddy"
 	"github.com/mholt/caddy/caddyhttp/httpserver"
@@ -29,11 +27,6 @@ func setup(c *caddy.Controller) error {
 		Rules:   rules,
 		Root:    cfg.Root,
 		FileSys: http.Dir(cfg.Root),
-		BufPool: &sync.Pool{
-			New: func() interface{} {
-				return new(bytes.Buffer)
-			},
-		},
 	}
 
 	cfg.AddMiddleware(func(next httpserver.Handler) httpserver.Handler {

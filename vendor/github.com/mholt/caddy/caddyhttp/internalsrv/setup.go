@@ -30,12 +30,10 @@ func internalParse(c *caddy.Controller) ([]string, error) {
 	var paths []string
 
 	for c.Next() {
-		if c.NextArg() {
-			paths = append(paths, c.Val())
+		if !c.NextArg() {
+			return paths, c.ArgErr()
 		}
-		if c.NextArg() {
-			return nil, c.ArgErr()
-		}
+		paths = append(paths, c.Val())
 	}
 
 	return paths, nil

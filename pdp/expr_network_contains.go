@@ -1,60 +1,54 @@
 package pdp
 
-import "fmt"
-
-type FunctionNetworkContainsAddressType struct {
-	Network ExpressionType
-	Address ExpressionType
+type functionNetworkContainsAddress struct {
+	network Expression
+	address Expression
 }
 
-func (f FunctionNetworkContainsAddressType) describe() string {
-	return fmt.Sprintf("%s.%s(%s)", yastTagDataTypeNetwork, yastExpressionContains, yastTagDataTypeAddress)
+func makeFunctionNetworkContainsAddress(network, address Expression) Expression {
+	return functionNetworkContainsAddress{
+		network: network,
+		address: address}
 }
 
-func (f FunctionNetworkContainsAddressType) getResultType() int {
-	return DataTypeBoolean
+func makeFunctionNetworkAddressContainedByNetwork(address, network Expression) Expression {
+	return makeFunctionNetworkContainsAddress(network, address)
 }
 
-func (f FunctionNetworkContainsAddressType) calculate(ctx *Context) (AttributeValueType, error) {
-	v := AttributeValueType{}
-
-	network, err := f.Network.calculate(ctx)
-	if err != nil {
-		return v, err
+func makeFunctionNetworkContainsAddressAlt(args []Expression) Expression {
+	if len(args) != 2 {
+		return nil
 	}
 
-	n, err := ExtractNetworkValue(network, "first argument")
-	if err != nil {
-		return v, err
-	}
-
-	address, err := f.Address.calculate(ctx)
-	if err != nil {
-		return v, err
-	}
-
-	a, err := ExtractAddressValue(address, "second argument")
-	if err != nil {
-		return v, err
-	}
-
-	v.DataType = DataTypeBoolean
-	v.Value = n.Contains(a)
-
-	return v, nil
-}
-func makeFunctionNetworkContainsAddress(first ExpressionType, second ExpressionType) ExpressionType {
-	return FunctionNetworkContainsAddressType{first, second}
-}
-
-func makeFunctionNetworkContainsAddressComm(args []ExpressionType) ExpressionType {
 	return makeFunctionNetworkContainsAddress(args[0], args[1])
 }
 
-func checkerFunctionNetworkContainsAddress(args []ExpressionType) anyArgumentsFunctionType {
-	if len(args) == 2 && args[0].getResultType() == DataTypeNetwork && args[1].getResultType() == DataTypeAddress {
-		return makeFunctionNetworkContainsAddressComm
+func (f functionNetworkContainsAddress) GetResultType() int {
+	return TypeBoolean
+}
+
+func (f functionNetworkContainsAddress) describe() string {
+	return "contains"
+}
+
+func (f functionNetworkContainsAddress) calculate(ctx *Context) (AttributeValue, error) {
+	n, err := ctx.calculateNetworkExpression(f.network)
+	if err != nil {
+		return undefinedValue, bindError(err, f.describe())
 	}
 
-	return nil
+	a, err := ctx.calculateAddressExpression(f.address)
+	if err != nil {
+		return undefinedValue, bindError(err, f.describe())
+	}
+
+	return MakeBooleanValue(n.Contains(a)), nil
+}
+
+func functionNetworkContainsAddressValidator(args []Expression) functionMaker {
+	if len(args) != 2 || args[0].GetResultType() != TypeNetwork || args[1].GetResultType() != TypeAddress {
+		return nil
+	}
+
+	return makeFunctionNetworkContainsAddressAlt
 }

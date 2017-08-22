@@ -768,7 +768,7 @@ func IsLoopback(addr string) bool {
 // be an IP or an IP:port combination.
 // Loopback addresses are considered false.
 func IsInternal(addr string) bool {
-	privateNetworks := []string{
+	private_networks := []string{
 		"10.0.0.0/8",
 		"172.16.0.0/12",
 		"192.168.0.0/16",
@@ -777,17 +777,14 @@ func IsInternal(addr string) bool {
 
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
-		host = addr // happens if the addr is just a hostname, missing port
-		// if we encounter an error, the brackets need to be stripped
-		// because SplitHostPort didn't do it for us
-		host = strings.Trim(host, "[]")
+		host = addr // happens if the addr is just a hostname
 	}
 	ip := net.ParseIP(host)
 	if ip == nil {
 		return false
 	}
-	for _, privateNetwork := range privateNetworks {
-		_, ipnet, _ := net.ParseCIDR(privateNetwork)
+	for _, private_network := range private_networks {
+		_, ipnet, _ := net.ParseCIDR(private_network)
 		if ipnet.Contains(ip) {
 			return true
 		}

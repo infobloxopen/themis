@@ -15,7 +15,6 @@ import:
   subpackages:
   - go/otgrpc
 - package: github.com/mholt/caddy
-- package: github.com/miekg/bitradix
 - package: github.com/miekg/dns
 - package: github.com/opentracing/opentracing-go
   version: 1.0.1
@@ -33,3 +32,9 @@ import:
   subpackages:
   - naming
 - package: gopkg.in/yaml.v2
+- package: github.com/google/uuid
+- package: github.com/infobloxopen/go-trees
+  subpackages:
+  - domaintree
+  - strtree
+  - iptree

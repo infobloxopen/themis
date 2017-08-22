@@ -4,7 +4,6 @@ package dns
 
 import (
 	"bytes"
-	"context"
 	"crypto/tls"
 	"encoding/binary"
 	"io"
@@ -71,43 +70,6 @@ func Exchange(m *Msg, a string) (r *Msg, err error) {
 	return r, err
 }
 
-// ExchangeContext performs a synchronous UDP query, like Exchange. It
-// additionally obeys deadlines from the passed Context.
-func ExchangeContext(ctx context.Context, m *Msg, a string) (r *Msg, err error) {
-	// Combine context deadline with built-in timeout. Context chooses whichever
-	// is sooner.
-	timeoutCtx, cancel := context.WithTimeout(ctx, dnsTimeout)
-	defer cancel()
-	deadline, _ := timeoutCtx.Deadline()
-
-	co := new(Conn)
-	dialer := net.Dialer{}
-	co.Conn, err = dialer.DialContext(timeoutCtx, "udp", a)
-	if err != nil {
-		return nil, err
-	}
-
-	defer co.Conn.Close()
-
-	opt := m.IsEdns0()
-	// If EDNS0 is used use that for size.
-	if opt != nil && opt.UDPSize() >= MinMsgSize {
-		co.UDPSize = opt.UDPSize()
-	}
-
-	co.SetWriteDeadline(deadline)
-	if err = co.WriteMsg(m); err != nil {
-		return nil, err
-	}
-
-	co.SetReadDeadline(deadline)
-	r, err = co.ReadMsg()
-	if err == nil && r.Id != m.Id {
-		err = ErrId
-	}
-	return r, err
-}
-
 // ExchangeConn performs a synchronous query. It sends the message m via the connection
 // c and waits for a reply. The connection c is not closed by ExchangeConn.
 // This function is going away, but can easily be mimicked:
@@ -144,18 +106,8 @@ func ExchangeConn(c net.Conn, m *Msg) (r *Msg, err error) {
 // buffer, see SetEdns0. Messages without an OPT RR will fallback to the historic limit
 // of 512 bytes.
 func (c *Client) Exchange(m *Msg, a string) (r *Msg, rtt time.Duration, err error) {
-	return c.ExchangeContext(context.Background(), m, a)
-}
-
-// ExchangeContext acts like Exchange, but honors the deadline on the provided
-// context, if present. If there is both a context deadline and a configured
-// timeout on the client, the earliest of the two takes effect.
-func (c *Client) ExchangeContext(ctx context.Context, m *Msg, a string) (
-	r *Msg,
-	rtt time.Duration,
-	err error) {
 	if !c.SingleInflight {
-		return c.exchange(ctx, m, a)
+		return c.exchange(m, a)
 	}
 	// This adds a bunch of garbage, TODO(miek).
 	t := "nop"
@@ -167,7 +119,7 @@ func (c *Client) ExchangeContext(ctx context.Context, m *Msg, a string) (
 		cl = cl1
 	}
 	r, rtt, err, shared := c.group.Do(m.Question[0].Name+t+cl, func() (*Msg, time.Duration, error) {
-		return c.exchange(ctx, m, a)
+		return c.exchange(m, a)
 	})
 	if r != nil && shared {
 		r = r.Copy()
@@ -202,7 +154,7 @@ func (c *Client) writeTimeout() time.Duration {
 	return dnsTimeout
 }
 
-func (c *Client) exchange(ctx context.Context, m *Msg, a string) (r *Msg, rtt time.Duration, err error) {
+func (c *Client) exchange(m *Msg, a string) (r *Msg, rtt time.Duration, err error) {
 	var co *Conn
 	network := "udp"
 	tls := false
@@ -228,13 +180,10 @@ func (c *Client) exchange(ctx context.Context, m *Msg, a string) (r *Msg, rtt ti
 		deadline = time.Now().Add(c.Timeout)
 	}
 
-	dialDeadline := deadlineOrTimeoutOrCtx(ctx, deadline, c.dialTimeout())
-	dialTimeout := dialDeadline.Sub(time.Now())
-
 	if tls {
-		co, err = DialTimeoutWithTLS(network, a, c.TLSConfig, dialTimeout)
+		co, err = DialTimeoutWithTLS(network, a, c.TLSConfig, c.dialTimeout())
 	} else {
-		co, err = DialTimeout(network, a, dialTimeout)
+		co, err = DialTimeout(network, a, c.dialTimeout())
 	}
 
 	if err != nil {
@@ -253,12 +202,12 @@ func (c *Client) exchange(ctx context.Context, m *Msg, a string) (r *Msg, rtt ti
 	}
 
 	co.TsigSecret = c.TsigSecret
-	co.SetWriteDeadline(deadlineOrTimeoutOrCtx(ctx, deadline, c.writeTimeout()))
+	co.SetWriteDeadline(deadlineOrTimeout(deadline, c.writeTimeout()))
 	if err = co.WriteMsg(m); err != nil {
 		return nil, 0, err
 	}
 
-	co.SetReadDeadline(deadlineOrTimeoutOrCtx(ctx, deadline, c.readTimeout()))
+	co.SetReadDeadline(deadlineOrTimeout(deadline, c.readTimeout()))
 	r, err = co.ReadMsg()
 	if err == nil && r.Id != m.Id {
 		err = ErrId
@@ -510,22 +459,9 @@ func DialTimeoutWithTLS(network, address string, tlsConfig *tls.Config, timeout 
 	return conn, nil
 }
 
-// deadlineOrTimeout chooses between the provided deadline and timeout
-// by always preferring the deadline so long as it's non-zero (regardless
-// of which is bigger), and returns the equivalent deadline value.
 func deadlineOrTimeout(deadline time.Time, timeout time.Duration) time.Time {
 	if deadline.IsZero() {
 		return time.Now().Add(timeout)
 	}
 	return deadline
-}
-
-// deadlineOrTimeoutOrCtx returns the earliest of: a context deadline, or the
-// output of deadlineOrtimeout.
-func deadlineOrTimeoutOrCtx(ctx context.Context, deadline time.Time, timeout time.Duration) time.Time {
-	result := deadlineOrTimeout(deadline, timeout)
-	if ctxDeadline, ok := ctx.Deadline(); ok && ctxDeadline.Before(result) {
-		result = ctxDeadline
-	}
-	return result
 }

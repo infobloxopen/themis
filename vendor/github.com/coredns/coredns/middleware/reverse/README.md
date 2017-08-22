@@ -1,6 +1,6 @@
 # reverse
 
-The *reverse* middleware allows CoreDNS to respond dynamically to a PTR request and the related A/AAAA request.
+The *reverse* middleware allows CoreDNS to respond dynamicly to an PTR request and the related A/AAAA request.
 
 ## Syntax
 
@@ -9,32 +9,30 @@ reverse NETWORK... {
     hostname TEMPLATE
     [ttl TTL]
     [fallthrough]
-    [wildcard]
 ~~~
 
 * **NETWORK** one or more CIDR formatted networks to respond on.
-* `hostname` injects the IP and zone to a template for the hostname. Defaults to "ip-{IP}.{zone[1]}". See below for template.
+* `hostname` inject the IP and zone to an template for the hostname. Defaults to "ip-{IP}.{zone[1]}". See below for template.
 * `ttl` defaults to 60
-* `fallthrough` if zone matches and no record can be generated, pass request to the next middleware.
-* `wildcard` allows matches to catch all subdomains as well.
+* `fallthrough` If zone matches and no record can be generated, pass request to the next middleware.
 
 ### Template Syntax
 
-The template for the hostname is used for generating the PTR for a reverse lookup and matching the
+The template for the hostname is used for generating the PTR for an reverse lookup and matching the
 forward lookup back to an IP.
 
 #### `{ip}`
 
 The `{ip}` symbol is **required** to make reverse work.
-For IPv4 lookups the IP is directly extracted
-With IPv6 lookups the ":" is removed, and any zero ranged are expanded, e.g.,
+For IPv4 lookups the "." is replaced with an "-", i.e.: 10.1.1.1 results in "10-1-1-1"
+With IPv6 lookups the ":" is removed, and any zero ranged are expanded, i.e.:
 "ffff::ffff" results in "ffff000000000000000000000000ffff"
 
 #### `{zone[i]}`
 
 The `{zone[i]}` symbol is **optional** and can be replaced by a fixed (zone) string.
 The zone will be matched by the zones listed in *this* configuration stanza.
-`i` needs to be replaced with the index of the configured listener zones, starting with 1.
+`i` needs to be replaced to the index of the configured listener zones, starting with 1.
 
 ## Examples
 
@@ -43,9 +41,9 @@ arpa compute.internal {
     # proxy unmatched requests
     proxy . 8.8.8.8
 
-    # answer requests for IPs in this network
-    # PTR 1.0.32.10.in-addr.arpa. 3600 ip-10.0.32.1.compute.internal.
-    # A ip-10.0.32.1.compute.internal. 3600 10.0.32.1
+    # answer requests for IPs in this networks
+    # PTR 1.0.32.10.in-addr.arpa. 3600 ip-10-0-32-1.compute.internal.
+    # A ip-10-0-32-1.compute.internal. 3600 10.0.32.1
     # v6 is also possible
     # PTR 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1.0.d.f.ip6.arpa. 3600 ip-fd010000000000000000000000000001.compute.internal.
     # AAAA ip-fd010000000000000000000000000001.compute.internal. 3600 fd01::1
@@ -55,8 +53,8 @@ arpa compute.internal {
 
         ttl 3600
 
-        # Forward unanswered or unmatched requests to proxy
-        # without this flag, requesting A/AAAA records on compute.internal. will end here.
+        # Forward unanswered or unmatched requests to proxy # without this flag, requesting A/AAAA
+        records on compute.internal. will end here.
         fallthrough
     }
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"strings"
 
@@ -14,11 +13,12 @@ func InitTracing(tracingType, tracingEP string) (ot.Tracer, error) {
 		return nil, nil
 	}
 
-	switch tracingType {
+	switch strings.ToLower(tracingType) {
+	default:
+		return nil, newTracingTypeError(tracingType)
+
 	case "zipkin":
 		return setupZipkin(tracingEP)
-	default:
-		return nil, fmt.Errorf("Invalid tracing type: %s", tracingType)
 	}
 }
 

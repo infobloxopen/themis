@@ -58,7 +58,21 @@ func TestSetupParseBasic(t *testing.T) {
 	}
 
 	// Cipher checks
-	expectedCiphers := append([]uint16{tls.TLS_FALLBACK_SCSV}, getPreferredDefaultCiphers()...)
+	expectedCiphers := []uint16{
+		tls.TLS_FALLBACK_SCSV,
+		tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+		tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+		tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+		tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+		tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+		tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+		tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+		tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+		tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+		tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+		tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+	}
 
 	// Ensure count is correct (plus one for TLS_FALLBACK_SCSV)
 	if len(cfg.Ciphers) != len(expectedCiphers) {
@@ -273,46 +287,6 @@ func TestSetupParseWithClientAuth(t *testing.T) {
 				t.Errorf("In case %d: Expected %dth client cert file to be '%s', but was '%s'",
 					caseNumber, idx, expected, actual)
 			}
-		}
-	}
-}
-
-func TestSetupParseWithCAUrl(t *testing.T) {
-	testURL := "https://acme-staging.api.letsencrypt.org/directory"
-	for caseNumber, caseData := range []struct {
-		params        string
-		expectedErr   bool
-		expectedCAUrl string
-	}{
-		// Test working case
-		{`tls {
-				ca ` + testURL + `
-			}`, false, testURL},
-		// Test too few args
-		{`tls {
-				ca
-			}`, true, ""},
-		// Test too many args
-		{`tls {
-				ca 1 2
-			}`, true, ""},
-	} {
-		cfg := new(Config)
-		RegisterConfigGetter("", func(c *caddy.Controller) *Config { return cfg })
-		c := caddy.NewTestController("", caseData.params)
-		err := setupTLS(c)
-		if caseData.expectedErr {
-			if err == nil {
-				t.Errorf("In case %d: Expected an error, got: %v", caseNumber, err)
-			}
-			continue
-		}
-		if err != nil {
-			t.Errorf("In case %d: Expected no errors, got: %v", caseNumber, err)
-		}
-
-		if cfg.CAUrl != caseData.expectedCAUrl {
-			t.Errorf("Expected '%v' as CAUrl, got %#v", caseData.expectedCAUrl, cfg.CAUrl)
 		}
 	}
 }

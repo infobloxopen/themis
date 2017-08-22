@@ -2,60 +2,67 @@ package pdp
 
 import "fmt"
 
-type RuleType struct {
-	ID          string
-	Target      TargetType
-	Condition   ExpressionType
-	Effect      int
-	Obligations []AttributeAssignmentExpressionType
+type Rule struct {
+	id          string
+	hidden      bool
+	target      Target
+	condition   Expression
+	effect      int
+	obligations []AttributeAssignmentExpression
 }
 
-func conditionCalculate(c ExpressionType, ctx *Context) (AttributeValueType, error) {
-	v, err := c.calculate(ctx)
-	if err != nil {
-		return v, err
+func makeConditionStatus(err boundError, effect int) Response {
+	if effect == EffectDeny {
+		return Response{EffectIndeterminateD, err, nil}
 	}
 
-	if v.DataType != DataTypeBoolean {
-		return v, fmt.Errorf("Expected boolean value as condition result but got %s",
-			DataTypeNames[v.DataType])
-	}
-
-	return v, err
+	return Response{EffectIndeterminateP, err, nil}
 }
 
-func (r RuleType) calculate(ctx *Context) ResponseType {
-	match, err := r.Target.calculate(ctx)
-	if err != nil {
-		s := fmt.Sprintf("Match (%s): %s", r.ID, err)
-		if r.Effect == EffectDeny {
-			return ResponseType{EffectIndeterminateD, s, nil}
-		}
+func NewRule(ID string, hidden bool, target Target, condition Expression, effect int, obligations []AttributeAssignmentExpression) *Rule {
+	return &Rule{
+		id:          ID,
+		hidden:      hidden,
+		target:      target,
+		condition:   condition,
+		effect:      effect,
+		obligations: obligations}
+}
 
-		return ResponseType{EffectIndeterminateP, s, nil}
+func (r Rule) describe() string {
+	if !r.hidden {
+		return fmt.Sprintf("rule %q", r.id)
+	}
+
+	return "hidden rule"
+}
+
+func (r Rule) GetID() (string, bool) {
+	return r.id, !r.hidden
+}
+
+func (r Rule) calculate(ctx *Context) Response {
+	match, boundErr := r.target.calculate(ctx)
+	if boundErr != nil {
+		return makeMatchStatus(bindError(boundErr, r.describe()), r.effect)
 	}
 
 	if !match {
-		return ResponseType{EffectNotApplicable, "Ok", nil}
+		return Response{EffectNotApplicable, nil, nil}
 	}
 
-	if r.Condition == nil {
-		return ResponseType{r.Effect, "Ok", r.Obligations}
+	if r.condition == nil {
+		return Response{r.effect, nil, r.obligations}
 	}
 
-	value, err := r.Condition.calculate(ctx)
+	c, err := ctx.calculateBooleanExpression(r.condition)
 	if err != nil {
-		s := fmt.Sprintf("Condition (%s): %s", r.ID, err)
-		if r.Effect == EffectDeny {
-			return ResponseType{EffectIndeterminateD, s, nil}
-		}
-
-		return ResponseType{EffectIndeterminateP, s, nil}
+		return makeConditionStatus(bindError(bindError(err, "condition"), r.describe()), r.effect)
 	}
 
-	if !value.Value.(bool) {
-		return ResponseType{EffectNotApplicable, "Ok", nil}
+	if !c {
+		return Response{EffectNotApplicable, nil, nil}
 	}
 
-	return ResponseType{r.Effect, "Ok", r.Obligations}
+	return Response{r.effect, nil, r.obligations}
 }

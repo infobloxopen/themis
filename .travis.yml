@@ -5,7 +5,7 @@ go:
   - 1.8
 
 script:
-  - make coverage
+  - make
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)

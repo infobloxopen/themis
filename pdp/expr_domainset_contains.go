@@ -2,60 +2,52 @@ package pdp
 
 import "fmt"
 
-type FunctionSetOfDomainsContainsType struct {
-	Set   ExpressionType
-	Value ExpressionType
+type functionSetOfDomainsContains struct {
+	set   Expression
+	value Expression
 }
 
-func (f FunctionSetOfDomainsContainsType) describe() string {
-	return fmt.Sprintf("\"%s\".%s(%s)", yastTagDataTypeSetOfDomains, yastExpressionContains, yastTagDataTypeDomain)
+func makeFunctionSetOfDomainsContains(set, value Expression) Expression {
+	return functionSetOfDomainsContains{
+		set:   set,
+		value: value}
 }
 
-func (f FunctionSetOfDomainsContainsType) getResultType() int {
-	return DataTypeBoolean
-}
-
-func (f FunctionSetOfDomainsContainsType) calculate(ctx *Context) (AttributeValueType, error) {
-	v := AttributeValueType{}
-
-	set, err := f.Set.calculate(ctx)
-	if err != nil {
-		return v, err
+func makeFunctionSetOfDomainsContainsAlt(args []Expression) Expression {
+	if len(args) != 2 {
+		panic(fmt.Errorf("Set Of Domains function \"contains\" needs exactly two arguments but got %d", len(args)))
 	}
 
-	s, err := ExtractSetOfDomainsValue(set, "first argument")
-	if err != nil {
-		return v, err
-	}
-
-	value, err := f.Value.calculate(ctx)
-	if err != nil {
-		return v, err
-	}
-
-	d, err := ExtractDomainValue(value, "second argument")
-	if err != nil {
-		return v, err
-	}
-
-	v.DataType = DataTypeBoolean
-	v.Value = s.Contains(d)
-
-	return v, nil
-}
-
-func makeFunctionSetOfDomainsContains(first ExpressionType, second ExpressionType) ExpressionType {
-	return FunctionSetOfDomainsContainsType{first, second}
-}
-
-func makeFunctionSetOfDomainsContainsComm(args []ExpressionType) ExpressionType {
 	return makeFunctionSetOfDomainsContains(args[0], args[1])
 }
 
-func checkerFunctionSetOfDomainsContains(args []ExpressionType) anyArgumentsFunctionType {
-	if len(args) == 2 && args[0].getResultType() == DataTypeSetOfDomains && args[1].getResultType() == DataTypeDomain {
-		return makeFunctionSetOfDomainsContainsComm
+func (f functionSetOfDomainsContains) GetResultType() int {
+	return TypeBoolean
+}
+
+func (f functionSetOfDomainsContains) describe() string {
+	return "contains"
+}
+
+func (f functionSetOfDomainsContains) calculate(ctx *Context) (AttributeValue, error) {
+	set, err := ctx.calculateSetOfDomainsExpression(f.set)
+	if err != nil {
+		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())
 	}
 
-	return nil
+	value, err := ctx.calculateDomainExpression(f.value)
+	if err != nil {
+		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
+	}
+
+	_, ok := set.Get(value)
+	return MakeBooleanValue(ok), nil
+}
+
+func functionSetOfDomainsContainsValidator(args []Expression) functionMaker {
+	if len(args) != 2 || args[0].GetResultType() != TypeSetOfDomains || args[1].GetResultType() != TypeDomain {
+		return nil
+	}
+
+	return makeFunctionSetOfDomainsContainsAlt
 }

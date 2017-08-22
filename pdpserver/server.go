@@ -5,23 +5,24 @@ package main
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-control && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/control.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-control && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-control"
 
 import (
+	"io"
+	"io/ioutil"
 	"net"
+	"net/http"
+	_ "net/http/pprof"
+	"os"
 	"sync"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
+	ot "github.com/opentracing/opentracing-go"
 	"google.golang.org/grpc"
 
-	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
-
+	"github.com/infobloxopen/themis/pdp"
 	pbc "github.com/infobloxopen/themis/pdp-control"
 	pbs "github.com/infobloxopen/themis/pdp-service"
-
-	"github.com/infobloxopen/themis/pdp"
-
-	"errors"
-	ot "github.com/opentracing/opentracing-go"
-	"io"
-	"net/http"
+	"github.com/infobloxopen/themis/pdp/jcon"
+	"github.com/infobloxopen/themis/pdp/yast"
 )
 
 type Transport struct {
@@ -32,43 +33,78 @@ type Transport struct {
 type Server struct {
 	sync.RWMutex
 
-	Version    string
-	Policy     pdp.EvaluableType
-	Attributes map[string]pdp.AttributeType
-	Includes   map[string]interface{}
-
 	Requests Transport
 	Control  Transport
 	Health   Transport
 
-	Updates *Queue
+	queue *Queue
 
-	AffectedPolicies map[string]pdp.ContentPolicyIndexItem
+	p  *pdp.PolicyStorage
+	pt *pdp.PolicyStorageTransaction
 
-	Ctx pdp.YastCtx
+	c  *pdp.LocalContentStorage
+	ct map[string]*pdp.LocalContentStorageTransaction
 }
 
-func NewServer(path string) *Server {
+func NewServer() *Server {
 	return &Server{
-		Updates:          NewQueue(),
-		AffectedPolicies: map[string]pdp.ContentPolicyIndexItem{},
-		Ctx:              pdp.NewYASTCtx(path)}
+		queue: NewQueue(),
+		c:     pdp.NewLocalContentStorage(nil),
+		ct:    make(map[string]*pdp.LocalContentStorageTransaction)}
 }
 
 func (s *Server) LoadPolicies(path string) error {
-	if len(path) == 0 {
-		log.Error("Invalid path specified. Failed to Load Policies.")
-		return errors.New("Invalid path specified.")
+	if len(path) <= 0 {
+		return nil
 	}
 
 	log.WithField("policy", path).Info("Loading policy")
-	p, err := s.Ctx.UnmarshalYASTFromFile(path)
+	b, err := ioutil.ReadFile(path)
 	if err != nil {
 		log.WithFields(log.Fields{"policy": path, "error": err}).Error("Failed load policy")
 		return err
 	}
 
-	s.Policy = p
+	log.WithField("policy", path).Info("Parsing policy")
+	p, err := yast.Unmarshal(b, nil)
+	if err != nil {
+		log.WithFields(log.Fields{"policy": path, "error": err}).Error("Failed parse policy")
+		return err
+	}
+
+	s.p = p
+
+	return nil
+}
+
+func (s *Server) LoadContent(paths []string) error {
+	items := []*pdp.LocalContent{}
+	for _, path := range paths {
+		err := func() error {
+			log.WithField("content", path).Info("Opening content")
+			f, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+
+			defer f.Close()
+
+			log.WithField("content", path).Info("Parsing content")
+			item, err := jcon.Unmarshal(f, nil)
+			if err != nil {
+				return err
+			}
+
+			items = append(items, item)
+			return nil
+		}()
+		if err != nil {
+			log.WithFields(log.Fields{"content": path, "error": err}).Error("Failed parse content")
+			return err
+		}
+	}
+
+	s.c = pdp.NewLocalContentStorage(items)
 
 	return nil
 }
@@ -98,6 +134,10 @@ func (s *Server) ListenControl(addr string) error {
 }
 
 func (s *Server) ListenHealthCheck(addr string) error {
+	if len(addr) <= 0 {
+		return nil
+	}
+
 	log.WithField("address", addr).Info("Opening health check port")
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -109,7 +149,7 @@ func (s *Server) ListenHealthCheck(addr string) error {
 	return nil
 }
 
-func (s *Server) Serve(tracer ot.Tracer) {
+func (s *Server) Serve(tracer ot.Tracer, profiler string) {
 	go func() {
 		log.Info("Creating control protocol handler")
 		s.Control.Protocol = grpc.NewServer()
@@ -119,14 +159,22 @@ func (s *Server) Serve(tracer ot.Tracer) {
 		s.Control.Protocol.Serve(s.Control.Interface)
 	}()
 
-	healthMux := http.NewServeMux()
-	healthMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		log.Info("Health check responding with OK")
-		io.WriteString(w, "OK")
-	})
-	go func() {
-		http.Serve(s.Health.Interface, healthMux)
-	}()
+	if s.Health.Interface != nil {
+		healthMux := http.NewServeMux()
+		healthMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+			log.Info("Health check responding with OK")
+			io.WriteString(w, "OK")
+		})
+		go func() {
+			http.Serve(s.Health.Interface, healthMux)
+		}()
+	}
+
+	if len(profiler) > 0 {
+		go func() {
+			http.ListenAndServe(profiler, http.DefaultServeMux)
+		}()
+	}
 
 	log.Info("Creating service protocol handler")
 	if tracer == nil {

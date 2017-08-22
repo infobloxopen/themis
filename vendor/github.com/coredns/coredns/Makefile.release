@@ -5,9 +5,8 @@
 # uploaded to github (after some sanity checks).
 #
 # The release should be accompanied by release notes published on
-# coredns.io. For example:
-# https://coredns.io/2016/09/18/coredns-001-release/
-# Also send an email to coredns-discuss@ to announce the new version.
+# blog.coredns.io. For example:
+# https://blog.coredns.io/2016/09/18/coredns-001-release/
 #
 # We use https://github.com/progrium/gh-release to automate github stuff
 # be sure to have that binary in your path.
@@ -17,11 +16,14 @@
 # git log --pretty=format:'%an' v001..master | sort -u
 # (where v001 is the previous release, obviously you'll need to adjust this)
 #
+# Side note: check if MAINTAINERS need an update with `git shortlog -s -n` and see if
+# someone has more than 5 (arbitrary number).
+#
 # Steps:
 # * Get an access token: https://help.github.com/articles/creating-an-access-token-for-command-line-use/
 # * export GITHUB_ACCESS_TOKEN=<token>
 # * Up the version in coremain/version.go
-# * Run: make -f Makefile.release release
+# * Run: make -f Makefile.release
 #   * will commit your change with 'Release $VERSION'
 #   * push to github
 #   * build the release and do all that fluff.
@@ -29,7 +31,7 @@
 # Steps for docker
 # * Login into docker: docker login (should have push creds for coredns registry)
 # * Run: make -f Makefile.release docker
-#
+# 
 # Docker push should happen after you make the new release and uploaded it to Github.
 
 NAME:=coredns
@@ -39,12 +41,9 @@ GITHUB:=coredns
 DOCKER:=coredns
 DOCKER_IMAGE_NAME:=$(DOCKER)/$(NAME)
 
-all:
-	@echo Use the 'release' target to start a release
+all:	commit push build tar release
 
-release:	generate commit push build tar upload
-
-docker: docker-build docker-upload
+docker: docker-build docker-release
 
 .PHONY: push
 push:
@@ -56,17 +55,12 @@ commit:
 	@echo Committing
 	git commit -am"Release $(VERSION)"
 
-.PHONY: generate
-generate: 
-	go generate
-
 .PHONY: build
 build: build-arm build-darwin build-linux
 
 .PHONY: build-linux
 build-linux:
 	@echo Building: linux $(VERSION)
-	mkdir -p build/Linux      && CGO_ENABLED=0 GOOS=linux             go build -ldflags="-s -w" -o build/Linux/$(NAME)
 
 .PHONY: build-darwin
 build-darwin:
@@ -86,23 +80,21 @@ tar:
 	tar -zcf release/$(NAME)_$(VERSION)_linux_armv6l.tgz -C build/Linux/Arm $(NAME)
 	tar -zcf release/$(NAME)_$(VERSION)_darwin_$(ARCH).tgz -C build/Darwin $(NAME)
 
-.PHONY: upload
-upload:
+.PHONY: release
+release:
 	@echo Releasing: $(VERSION)
 	gh-release create $(GITHUB)/$(NAME) $(VERSION)
 
 .PHONY: docker-build
-docker-build:
+docker:
 	CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w"
 	docker build -t $(DOCKER_IMAGE_NAME) .
 	docker tag $(DOCKER_IMAGE_NAME):latest $(DOCKER_IMAGE_NAME):$(VERSION)
 
-.PHONY: docker-upload
-docker-upload:
+.PHONY: docker-release
+docker-release:
 	@echo Pushing: $(VERSION)
 	docker tag $(DOCKER_IMAGE_NAME):latest $(DOCKER_IMAGE_NAME):$(VERSION)
-	docker push $(DOCKER_IMAGE_NAME):latest
-	docker push $(DOCKER_IMAGE_NAME):$(VERSION)
 
 .PHONY: clean
 clean:

@@ -2,7 +2,6 @@ package file
 
 import (
 	"log"
-	"math/rand"
 	"time"
 
 	"github.com/miekg/dns"
@@ -27,19 +26,19 @@ Transfer:
 		t := new(dns.Transfer)
 		c, err := t.In(m, tr)
 		if err != nil {
-			log.Printf("[ERROR] Failed to setup transfer `%s' with `%q': %v", z.origin, tr, err)
+			log.Printf("[ERROR] Failed to setup transfer `%s' with `%s': %v", z.origin, tr, err)
 			Err = err
 			continue Transfer
 		}
 		for env := range c {
 			if env.Error != nil {
-				log.Printf("[ERROR] Failed to transfer `%s' from %q: %v", z.origin, tr, env.Error)
+				log.Printf("[ERROR] Failed to parse transfer `%s': %v", z.origin, env.Error)
 				Err = env.Error
 				continue Transfer
 			}
 			for _, rr := range env.RR {
 				if err := z1.Insert(rr); err != nil {
-					log.Printf("[ERROR] Failed to parse transfer `%s' from: %q: %v", z.origin, tr, err)
+					log.Printf("[ERROR] Failed to parse transfer `%s': %v", z.origin, err)
 					Err = err
 					continue Transfer
 				}
@@ -49,6 +48,7 @@ Transfer:
 		break
 	}
 	if Err != nil {
+		log.Printf("[ERROR] Failed to transfer %s: %s", z.origin, Err)
 		return Err
 	}
 
@@ -147,9 +147,6 @@ Restart:
 			if !retryActive {
 				break
 			}
-
-			time.Sleep(jitter(2000)) // 2s randomize
-
 			ok, err := z.shouldTransfer()
 			if err != nil && ok {
 				if err := z.TransferIn(); err != nil {
@@ -165,9 +162,6 @@ Restart:
 			}
 
 		case <-refreshTicker.C:
-
-			time.Sleep(jitter(5000)) // 5s randomize
-
 			ok, err := z.shouldTransfer()
 			retryActive = err != nil
 			if err != nil && ok {
@@ -185,13 +179,6 @@ Restart:
 			}
 		}
 	}
-}
-
-// jitter returns a random duration between [0,n) * time.Millisecond
-func jitter(n int) time.Duration {
-	r := rand.Intn(n)
-	return time.Duration(r) * time.Millisecond
-
 }
 
 // MaxSerialIncrement is the maximum difference between two serial numbers. If the difference between

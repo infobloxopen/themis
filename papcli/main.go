@@ -2,10 +2,9 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
-	"path/filepath"
+	"os"
 
-	pdpctrl "github.com/infobloxopen/themis/pdpctrl-client"
+	"github.com/infobloxopen/themis/pdpctrl-client"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -13,15 +12,13 @@ import (
 func main() {
 	log.SetLevel(log.InfoLevel)
 
-	policies, includes, err := read(config.Policy, config.Includes)
-	if err != nil {
-		panic(err)
-	}
+	f, policy := openFile()
+	defer f.Close()
 
-	hosts := []*pdpctrl.Client{}
+	hosts := []*pdpcc.Client{}
 
 	for _, addr := range config.Addresses {
-		h := pdpctrl.NewClient(addr, config.ChunkSize)
+		h := pdpcc.NewClient(addr, config.ChunkSize)
 		if err := h.Connect(config.Timeout); err != nil {
 			panic(err)
 		}
@@ -30,64 +27,70 @@ func main() {
 		defer h.Close()
 	}
 
+	log.Infof("Requesting data upload to PDP servers...")
+
+	uids := make([]int32, len(hosts))
+	errors := 0
+	for i, h := range hosts {
+		var (
+			ID  int32
+			err error
+		)
+		if policy {
+			ID, err = h.RequestPoliciesUpload(config.FromTag, config.ToTag)
+		} else {
+			ID, err = h.RequestContentUpload(config.ContentID, config.FromTag, config.ToTag)
+		}
+
+		if err != nil {
+			log.Errorf("Failed to upload data: %v", err)
+			uids[i] = -1
+			errors++
+		} else {
+			uids[i] = ID
+		}
+	}
+
+	if errors >= len(hosts) {
+		panic(fmt.Errorf("No hosts accepted upload requests"))
+	}
+
 	log.Infof("Uploading data to PDP servers...")
 
-	bids := make([]int32, len(hosts))
 	for i, h := range hosts {
-		b := &pdpctrl.DataBucket{
-			FromVersion: config.FromVersion,
-			ToVersion:   config.ToVersion,
-			Policies:    policies,
-			Includes:    includes,
+		id := uids[i]
+		if id == -1 {
+			continue
 		}
 
-		if err := h.Upload(b); err != nil {
+		f.Seek(0, 0)
+		if err := h.Upload(id, f); err != nil {
 			log.Errorf("Failed to upload data: %v", err)
-			bids[i] = -1
-		} else {
-			bids[i] = b.ID
-		}
-	}
-
-	log.Infof("Applying data on PDP servers...")
-
-	for i, h := range hosts {
-		if bids[i] != -1 {
-			if err := h.Apply(bids[i]); err != nil {
-				log.Errorf("Failed to apply data: %v", err)
-			}
 		}
 	}
 }
 
-func read(policy string, includes StringSet) ([]byte, map[string][]byte, error) {
-	m := make(map[string][]byte)
+func openFile() (*os.File, bool) {
+	pOk := len(config.Policy) > 0
+	cOk := len(config.Content) > 0
 
-	for _, name := range includes {
-		id, b, err := readInclude(name)
-		if err != nil {
-			return nil, nil, fmt.Errorf("Error on reading content from \"%s\": %s", name, err)
-		}
-
-		m[id] = b
-		log.Infof("Loaded content from \"%s\" as \"%s\" (%d byte(s)", name, id, len(b))
+	if pOk && cOk {
+		panic(fmt.Errorf("Both policy and content are specified. Please choose only one"))
 	}
 
-	b, err := ioutil.ReadFile(policy)
+	if !pOk && !cOk {
+		panic(fmt.Errorf("Neither policy nor content are specified. Please secifiy any"))
+	}
+
+	path := config.Content
+	if pOk {
+		path = config.Policy
+	}
+
+	f, err := os.Open(path)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Error on reading policy from \"%s\": %s", policy, err)
+		panic(err)
 	}
-	log.Infof("Loaded policy from \"%s\" (%d byte(s)", policy, len(b))
 
-	return b, m, nil
-}
-
-func getIncludeId(name string) string {
-	base := filepath.Base(name)
-	return base[0 : len(base)-len(filepath.Ext(base))]
-}
-
-func readInclude(name string) (string, []byte, error) {
-	b, err := ioutil.ReadFile(name)
-	return getIncludeId(name), b, err
+	return f, pOk
 }

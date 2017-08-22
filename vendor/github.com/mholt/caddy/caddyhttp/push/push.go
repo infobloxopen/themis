@@ -24,7 +24,6 @@ type (
 	Middleware struct {
 		Next  httpserver.Handler
 		Rules []Rule
-		Root  http.FileSystem
 	}
 
 	ruleOp func([]Resource)

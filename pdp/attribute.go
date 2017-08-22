@@ -3,234 +3,458 @@ package pdp
 import (
 	"fmt"
 	"net"
+	"regexp"
+	"strconv"
 	"strings"
+
+	"golang.org/x/net/idna"
+
+	"github.com/infobloxopen/go-trees/domaintree"
+	"github.com/infobloxopen/go-trees/iptree"
+	"github.com/infobloxopen/go-trees/strtree"
 )
 
 const (
-	DataTypeUndefined = iota
-	DataTypeBoolean
-	DataTypeString
-	DataTypeAddress
-	DataTypeNetwork
-	DataTypeDomain
-	DataTypeSetOfStrings
-	DataTypeSetOfNetworks
-	DataTypeSetOfDomains
-	DataTypeListOfStrings
+	TypeUndefined = iota
+	TypeBoolean
+	TypeString
+	TypeAddress
+	TypeNetwork
+	TypeDomain
+	TypeSetOfStrings
+	TypeSetOfNetworks
+	TypeSetOfDomains
+	TypeListOfStrings
 )
 
-var DataTypeNames map[int]string = map[int]string{
-	DataTypeUndefined:     yastTagDataTypeUndefined,
-	DataTypeBoolean:       yastTagDataTypeBoolean,
-	DataTypeString:        yastTagDataTypeString,
-	DataTypeAddress:       yastTagDataTypeAddress,
-	DataTypeNetwork:       yastTagDataTypeNetwork,
-	DataTypeDomain:        yastTagDataTypeDomain,
-	DataTypeSetOfStrings:  yastTagDataTypeSetOfStrings,
-	DataTypeSetOfNetworks: yastTagDataTypeSetOfNetworks,
-	DataTypeSetOfDomains:  yastTagDataTypeSetOfDomains,
-	DataTypeListOfStrings: yastTagDataTypeListOfStrings}
+var TypeNames = []string{
+	"Undefined",
+	"Boolean",
+	"String",
+	"Address",
+	"Network",
+	"Domain",
+	"Set of Strings",
+	"Set of Networks",
+	"Set of Domains",
+	"List of Strings"}
 
-var DataTypeIDs map[string]int = map[string]int{
-	yastTagDataTypeUndefined:     DataTypeUndefined,
-	yastTagDataTypeBoolean:       DataTypeBoolean,
-	yastTagDataTypeString:        DataTypeString,
-	yastTagDataTypeAddress:       DataTypeAddress,
-	yastTagDataTypeNetwork:       DataTypeNetwork,
-	yastTagDataTypeDomain:        DataTypeDomain,
-	yastTagDataTypeSetOfStrings:  DataTypeSetOfStrings,
-	yastTagDataTypeSetOfNetworks: DataTypeSetOfNetworks,
-	yastTagDataTypeSetOfDomains:  DataTypeSetOfDomains,
-	yastTagDataTypeListOfStrings: DataTypeListOfStrings}
+var TypeIDs = map[string]int{
+	"undefined":       TypeUndefined,
+	"boolean":         TypeBoolean,
+	"string":          TypeString,
+	"address":         TypeAddress,
+	"network":         TypeNetwork,
+	"domain":          TypeDomain,
+	"set of strings":  TypeSetOfStrings,
+	"set of networks": TypeSetOfNetworks,
+	"set of domains":  TypeSetOfDomains,
+	"list of strings": TypeListOfStrings}
 
-type AttributeType struct {
-	ID       string
-	DataType int
+var undefinedValue = AttributeValue{}
+
+type Attribute struct {
+	id string
+	t  int
 }
 
-type AttributeValueType struct {
-	DataType int
-	Value    interface{}
+func MakeAttribute(ID string, t int) Attribute {
+	return Attribute{id: ID, t: t}
 }
 
-func (v AttributeValueType) describe() string {
-	switch v.DataType {
-	case DataTypeUndefined:
-		return yastTagDataTypeUndefined
+func (a Attribute) GetType() int {
+	return a.t
+}
 
-	case DataTypeBoolean:
-		return fmt.Sprintf("%v", v.Value)
+func (a Attribute) describe() string {
+	return fmt.Sprintf("attr(%s.%s)", a.id, TypeNames[a.t])
+}
 
-	case DataTypeString:
-		return fmt.Sprintf("%q", v.Value)
+type AttributeValue struct {
+	t int
+	v interface{}
+}
 
-	case DataTypeAddress:
-		return v.Value.(net.IP).String()
+func MakeBooleanValue(v bool) AttributeValue {
+	return AttributeValue{
+		t: TypeBoolean,
+		v: v}
+}
 
-	case DataTypeNetwork:
-		n := v.Value.(net.IPNet)
-		return n.String()
+func MakeStringValue(v string) AttributeValue {
+	return AttributeValue{
+		t: TypeString,
+		v: v}
+}
 
-	case DataTypeDomain:
-		return fmt.Sprintf("%q", v.Value)
+func MakeAddressValue(v net.IP) AttributeValue {
+	return AttributeValue{
+		t: TypeAddress,
+		v: v}
+}
 
-	case DataTypeSetOfStrings:
-		items := []string{}
-		for i, s := range sortSetOfStrings(v.Value.(map[string]int)) {
-			if i > 1 {
-				items = append(items, "...")
-				break
-			}
+func MakeNetworkValue(v *net.IPNet) AttributeValue {
+	return AttributeValue{
+		t: TypeNetwork,
+		v: v}
+}
 
-			items = append(items, s)
+func MakeDomainValue(v string) AttributeValue {
+	return AttributeValue{
+		t: TypeDomain,
+		v: v}
+}
+
+func MakeSetOfStringsValue(v *strtree.Tree) AttributeValue {
+	return AttributeValue{
+		t: TypeSetOfStrings,
+		v: v}
+}
+
+func MakeSetOfNetworksValue(v *iptree.Tree) AttributeValue {
+	return AttributeValue{
+		t: TypeSetOfNetworks,
+		v: v}
+}
+
+func MakeSetOfDomainsValue(v *domaintree.Node) AttributeValue {
+	return AttributeValue{
+		t: TypeSetOfDomains,
+		v: v}
+}
+
+func MakeListOfStringsValue(v []string) AttributeValue {
+	return AttributeValue{
+		t: TypeListOfStrings,
+		v: v}
+}
+
+func MakeValueFromString(t int, s string) (AttributeValue, error) {
+	switch t {
+	case TypeUndefined:
+		return undefinedValue, newInvalidTypeStringCastError(t)
+
+	case TypeSetOfStrings, TypeSetOfNetworks, TypeSetOfDomains, TypeListOfStrings:
+		return undefinedValue, newNotImplementedStringCastError(t)
+
+	case TypeBoolean:
+		b, err := strconv.ParseBool(s)
+		if err != nil {
+			return undefinedValue, newInvalidBooleanStringCastError(s, err)
 		}
 
-		return fmt.Sprintf("[%s]", strings.Join(items, ", "))
+		return MakeBooleanValue(b), nil
 
-	case DataTypeSetOfNetworks:
-		items := []string{}
-		i := 0
-		for n := range v.Value.(*SetOfNetworks).Iterate() {
-			if i > 1 {
-				items = append(items, "...")
-				break
-			}
+	case TypeString:
+		return MakeStringValue(s), nil
 
-			items = append(items, n.Network.String())
-			i++
+	case TypeAddress:
+		a := net.ParseIP(s)
+		if a == nil {
+			return undefinedValue, newInvalidAddressStringCastError(s)
 		}
 
-		return fmt.Sprintf("[%s]", strings.Join(items, ", "))
+		return MakeAddressValue(a), nil
 
-	case DataTypeSetOfDomains:
-		items := []string{}
-		i := 0
-		for d := range v.Value.(*SetOfSubdomains).Iterate() {
-			if i > 1 {
-				items = append(items, "...")
-				break
-			}
-
-			items = append(items, d.Domain)
-			i++
+	case TypeNetwork:
+		_, n, err := net.ParseCIDR(s)
+		if err != nil {
+			return undefinedValue, newInvalidNetworkStringCastError(s, err)
 		}
 
-		return fmt.Sprintf("[%s]", strings.Join(items, ", "))
+		return MakeNetworkValue(n), nil
 
-	case DataTypeListOfStrings:
-		return fmt.Sprintf("[%s]", strings.Join(v.Value.([]string), ", "))
-
+	case TypeDomain:
+		return MakeDomainValue(s), nil
 	}
 
-	return fmt.Sprintf("<unknown value type %d>", v.DataType)
+	return undefinedValue, newUnknownTypeStringCastError(t)
 }
 
-func (v AttributeValueType) getResultType() int {
-	return v.DataType
+func (v AttributeValue) GetResultType() int {
+	return v.t
 }
 
-func (v AttributeValueType) calculate(ctx *Context) (AttributeValueType, error) {
+func (v AttributeValue) describe() string {
+	switch v.t {
+	case TypeUndefined:
+		return "val(undefined)"
+
+	case TypeBoolean:
+		return fmt.Sprintf("%v", v.v.(bool))
+
+	case TypeString:
+		return fmt.Sprintf("%q", v.v.(string))
+
+	case TypeAddress:
+		return v.v.(net.IP).String()
+
+	case TypeNetwork:
+		return v.v.(*net.IPNet).String()
+
+	case TypeDomain:
+		return fmt.Sprintf("domain(%s)", v.v.(string))
+
+	case TypeSetOfStrings:
+		s := []string{}
+		for p := range v.v.(*strtree.Tree).Enumerate() {
+			s = append(s, fmt.Sprintf("%q", p.Key))
+			if len(s) > 2 {
+				s[2] = "..."
+				break
+			}
+		}
+
+		return fmt.Sprintf("set(%s)", strings.Join(s, ", "))
+
+	case TypeSetOfNetworks:
+		s := []string{}
+		for p := range v.v.(*iptree.Tree).Enumerate() {
+			s = append(s, p.Key.String())
+			if len(s) > 2 {
+				s[2] = "..."
+				break
+			}
+		}
+
+		return fmt.Sprintf("set(%s)", strings.Join(s, ", "))
+
+	case TypeSetOfDomains:
+		s := []string{}
+		for p := range v.v.(*domaintree.Node).Enumerate() {
+			s = append(s, fmt.Sprintf("%q", p.Key))
+			if len(s) > 2 {
+				s[2] = "..."
+				break
+			}
+		}
+
+		return fmt.Sprintf("domains(%s)", strings.Join(s, ", "))
+
+	case TypeListOfStrings:
+		s := []string{}
+		for _, item := range v.v.([]string) {
+			s = append(s, fmt.Sprintf("%q", item))
+			if len(s) > 2 {
+				s[2] = "..."
+				break
+			}
+		}
+
+		return fmt.Sprintf("[%s]", strings.Join(s, ", "))
+	}
+
+	return "val(unknown type)"
+}
+
+func (v AttributeValue) typeCheck(t int) error {
+	if v.t != t {
+		return bindError(newAttributeValueTypeError(t, v.t), v.describe())
+	}
+
+	return nil
+}
+
+func (v AttributeValue) boolean() (bool, error) {
+	err := v.typeCheck(TypeBoolean)
+	if err != nil {
+		return false, err
+	}
+
+	return v.v.(bool), nil
+}
+
+func (v AttributeValue) str() (string, error) {
+	err := v.typeCheck(TypeString)
+	if err != nil {
+		return "", err
+	}
+
+	return v.v.(string), nil
+}
+
+func (v AttributeValue) address() (net.IP, error) {
+	err := v.typeCheck(TypeAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	return v.v.(net.IP), nil
+}
+
+func (v AttributeValue) network() (*net.IPNet, error) {
+	err := v.typeCheck(TypeNetwork)
+	if err != nil {
+		return nil, err
+	}
+
+	return v.v.(*net.IPNet), nil
+}
+
+func (v AttributeValue) domain() (string, error) {
+	err := v.typeCheck(TypeDomain)
+	if err != nil {
+		return "", err
+	}
+
+	return v.v.(string), nil
+}
+
+func (v AttributeValue) setOfStrings() (*strtree.Tree, error) {
+	err := v.typeCheck(TypeSetOfStrings)
+	if err != nil {
+		return nil, err
+	}
+
+	return v.v.(*strtree.Tree), nil
+}
+
+func (v AttributeValue) setOfNetworks() (*iptree.Tree, error) {
+	err := v.typeCheck(TypeSetOfNetworks)
+	if err != nil {
+		return nil, err
+	}
+
+	return v.v.(*iptree.Tree), nil
+}
+
+func (v AttributeValue) setOfDomains() (*domaintree.Node, error) {
+	err := v.typeCheck(TypeSetOfDomains)
+	if err != nil {
+		return nil, err
+	}
+
+	return v.v.(*domaintree.Node), nil
+}
+
+func (v AttributeValue) listOfStrings() ([]string, error) {
+	err := v.typeCheck(TypeListOfStrings)
+	if err != nil {
+		return nil, err
+	}
+
+	return v.v.([]string), nil
+}
+
+func (v AttributeValue) calculate(ctx *Context) (AttributeValue, error) {
 	return v, nil
 }
 
-type AttributeAssignmentExpressionType struct {
-	Attribute  AttributeType
-	Expression ExpressionType
-}
+func (v AttributeValue) Serialize() (string, error) {
+	switch v.t {
+	case TypeUndefined:
+		return "", newInvalidTypeSerializationError(v.t)
 
-type AttributeDesignatorType struct {
-	Attribute AttributeType
-}
+	case TypeBoolean:
+		return strconv.FormatBool(v.v.(bool)), nil
 
-func (d AttributeDesignatorType) describe() string {
-	return fmt.Sprintf("%s(%s)", yastTagAttribute, d.Attribute.ID)
-}
+	case TypeString:
+		return v.v.(string), nil
 
-func (d AttributeDesignatorType) getResultType() int {
-	return d.Attribute.DataType
-}
+	case TypeAddress:
+		return v.v.(net.IP).String(), nil
 
-func (d AttributeDesignatorType) calculate(ctx *Context) (AttributeValueType, error) {
-	return ctx.GetAttribute(d.Attribute)
-}
+	case TypeNetwork:
+		return v.v.(*net.IPNet).String(), nil
 
-func ExtractBooleanValue(v AttributeValueType, desc string) (bool, error) {
-	if v.DataType != DataTypeBoolean {
-		return false, fmt.Errorf("Expected %s as %s but got %s",
-			DataTypeNames[DataTypeBoolean], desc, DataTypeNames[v.DataType])
+	case TypeDomain:
+		return v.v.(string), nil
+
+	case TypeSetOfStrings:
+		s := sortSetOfStrings(v.v.(*strtree.Tree))
+		for i, item := range s {
+			s[i] = strconv.Quote(item)
+		}
+
+		return strings.Join(s, ","), nil
+
+	case TypeSetOfNetworks:
+		s := []string{}
+		for p := range v.v.(*iptree.Tree).Enumerate() {
+			s = append(s, strconv.Quote(p.Key.String()))
+		}
+
+		return strings.Join(s, ","), nil
+
+	case TypeSetOfDomains:
+		s := []string{}
+		for p := range v.v.(*domaintree.Node).Enumerate() {
+			s = append(s, strconv.Quote(p.Key))
+		}
+
+		return strings.Join(s, ","), nil
+
+	case TypeListOfStrings:
+		s := []string{}
+		for _, item := range v.v.([]string) {
+			s = append(s, strconv.Quote(item))
+		}
+
+		return strings.Join(s, ","), nil
 	}
 
-	return v.Value.(bool), nil
+	return "", newUnknownTypeSerializationError(v.t)
 }
 
-func ExtractStringValue(v AttributeValueType, desc string) (string, error) {
-	if v.DataType != DataTypeString {
-		return "", fmt.Errorf("Expected %s as %s but got %s",
-			DataTypeNames[DataTypeString], desc, DataTypeNames[v.DataType])
-	}
-
-	return v.Value.(string), nil
+type AttributeAssignmentExpression struct {
+	a Attribute
+	e Expression
 }
 
-func ExtractAddressValue(v AttributeValueType, desc string) (net.IP, error) {
-	if v.DataType != DataTypeAddress {
-		return net.IP{}, fmt.Errorf("Expected %s as %s but got %s",
-			DataTypeNames[DataTypeAddress], desc, DataTypeNames[v.DataType])
-	}
-
-	return v.Value.(net.IP), nil
+func MakeAttributeAssignmentExpression(a Attribute, e Expression) AttributeAssignmentExpression {
+	return AttributeAssignmentExpression{
+		a: a,
+		e: e}
 }
 
-func ExtractNetworkValue(v AttributeValueType, desc string) (net.IPNet, error) {
-	if v.DataType != DataTypeNetwork {
-		return net.IPNet{}, fmt.Errorf("Expected %s as %s but got %s",
-			DataTypeNames[DataTypeNetwork], desc, DataTypeNames[v.DataType])
+func (a AttributeAssignmentExpression) Serialize(ctx *Context) (string, string, string, error) {
+	ID := a.a.id
+	typeName := TypeNames[a.a.t]
+
+	v, err := a.e.calculate(ctx)
+	if err != nil {
+		return ID, typeName, "", bindErrorf(err, "assignment to %q", ID)
 	}
 
-	return v.Value.(net.IPNet), nil
+	t := v.GetResultType()
+	if a.a.t != t {
+		return ID, typeName, "", bindErrorf(newAssignmentTypeMismatch(a.a, t), "assignment to %q", ID)
+	}
+
+	s, err := v.Serialize()
+	if err != nil {
+		return ID, typeName, "", bindErrorf(err, "assignment to %q", ID)
+	}
+
+	return ID, typeName, s, nil
 }
 
-func ExtractDomainValue(v AttributeValueType, desc string) (string, error) {
-	if v.DataType != DataTypeDomain {
-		return "", fmt.Errorf("Expected %s as %s but got %s",
-			DataTypeNames[DataTypeDomain], desc, DataTypeNames[v.DataType])
-	}
-
-	return v.Value.(string), nil
+type AttributeDesignator struct {
+	a Attribute
 }
 
-func ExtractSetOfStringsValue(v AttributeValueType, desc string) (map[string]int, error) {
-	if v.DataType != DataTypeSetOfStrings {
-		return nil, fmt.Errorf("Expected %s as %s but got %s",
-			DataTypeNames[DataTypeSetOfStrings], desc, DataTypeNames[v.DataType])
-	}
-
-	return v.Value.(map[string]int), nil
+func MakeAttributeDesignator(a Attribute) AttributeDesignator {
+	return AttributeDesignator{a}
 }
 
-func ExtractSetOfNetworksValue(v AttributeValueType, desc string) (*SetOfNetworks, error) {
-	if v.DataType != DataTypeSetOfNetworks {
-		return nil, fmt.Errorf("Expected %s as %s but got %s",
-			DataTypeNames[DataTypeSetOfNetworks], desc, DataTypeNames[v.DataType])
-	}
-
-	return v.Value.(*SetOfNetworks), nil
+func (d AttributeDesignator) GetResultType() int {
+	return d.a.t
 }
 
-func ExtractSetOfDomainsValue(v AttributeValueType, desc string) (*SetOfSubdomains, error) {
-	if v.DataType != DataTypeSetOfDomains {
-		return nil, fmt.Errorf("Expected %s as %s but got %s",
-			DataTypeNames[DataTypeSetOfDomains], desc, DataTypeNames[v.DataType])
-	}
-
-	return v.Value.(*SetOfSubdomains), nil
+func (d AttributeDesignator) calculate(ctx *Context) (AttributeValue, error) {
+	return ctx.getAttribute(d.a)
 }
 
-func ExtractListOfStringsValue(v AttributeValueType, desc string) ([]string, error) {
-	if v.DataType != DataTypeListOfStrings {
-		return nil, fmt.Errorf("Expected %s as %s but got %s",
-			DataTypeNames[DataTypeListOfStrings], desc, DataTypeNames[v.DataType])
-	}
+var domainRegexp = regexp.MustCompile("^[-._a-z0-9]+$")
 
-	return v.Value.([]string), nil
+func AdjustDomainName(s string) (string, error) {
+	tmp, err := idna.Punycode.ToASCII(s)
+	if err != nil {
+		return "", fmt.Errorf("Cannot convert domain [%s]", s)
+	}
+	ret := strings.ToLower(tmp)
+	if !domainRegexp.MatchString(ret) {
+		return "", fmt.Errorf("Cannot validate domain [%s]", s)
+	}
+	return ret, nil
 }

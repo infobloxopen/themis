@@ -1,156 +1,70 @@
 package main
 
 import (
-	"fmt"
 	"math"
 	"sync"
 
-	"github.com/infobloxopen/themis/pdp"
+	"github.com/google/uuid"
 )
 
-type Content struct {
-	Id   string
-	Data interface{}
-}
+type Item struct {
+	policy bool
+	id     string
 
-type Policies struct {
-	Version  string
-	Data     pdp.EvaluableType
-	Includes map[string]interface{}
+	fromTag *uuid.UUID
+	toTag   *uuid.UUID
 }
 
 type Queue struct {
-	Lock          *sync.Mutex
-	AutoIncrement int32
-	Items         map[int32]interface{}
+	sync.Mutex
+
+	idx   int32
+	items map[int32]*Item
 }
 
 func NewQueue() *Queue {
-	return &Queue{&sync.Mutex{}, -1, make(map[int32]interface{})}
+	return &Queue{
+		idx:   -1,
+		items: make(map[int32]*Item)}
 }
 
-func (q *Queue) rawResetAutoIncrement() bool {
-	if q.AutoIncrement < math.MaxInt32 || len(q.Items) > 0 {
-		return false
-	}
-
-	q.AutoIncrement = -1
-	return true
+func NewPolicyItem(fromTag, toTag *uuid.UUID) *Item {
+	return &Item{
+		policy:  true,
+		fromTag: fromTag,
+		toTag:   toTag}
 }
 
-func (q *Queue) Put(v interface{}) (int32, error) {
-	q.Lock.Lock()
-	defer q.Lock.Unlock()
-
-	if q.AutoIncrement >= math.MaxInt32 {
-		return q.AutoIncrement,
-			fmt.Errorf("Can't enqueue the policies as autoincrement has reached its maximum of %d", q.AutoIncrement)
-	}
-
-	q.AutoIncrement++
-	q.Items[q.AutoIncrement] = v
-
-	return q.AutoIncrement, nil
+func NewContentItem(id string, fromTag, toTag *uuid.UUID) *Item {
+	return &Item{
+		policy:  false,
+		id:      id,
+		fromTag: fromTag,
+		toTag:   toTag}
 }
 
-func (q *Queue) rawGet(id int32) ([]byte, error) {
-	v, ok := q.Items[id]
-	if !ok {
-		return nil, fmt.Errorf("No data with id %d has been uploaded", id)
+func (q *Queue) Push(item *Item) (int32, error) {
+	q.Lock()
+	defer q.Unlock()
+
+	if q.idx >= math.MaxInt32 {
+		return q.idx, newQueueOverflowError(q.idx)
 	}
 
-	d, ok := v.([]byte)
-	if !ok {
-		return nil, fmt.Errorf("Expected bytes array with id %d but got %T", id, v)
-	}
+	q.idx++
+	q.items[q.idx] = item
 
-	return d, nil
+	return q.idx, nil
 }
 
-func (q *Queue) Get(id int32) ([]byte, error) {
-	q.Lock.Lock()
-	defer q.Lock.Unlock()
+func (q *Queue) Pop(idx int32) (*Item, bool) {
+	q.Lock()
+	defer q.Unlock()
 
-	return q.rawGet(id)
-}
-
-func (q *Queue) Replace(id int32, v interface{}) error {
-	q.Lock.Lock()
-	defer q.Lock.Unlock()
-
-	_, err := q.rawGet(id)
-	if err != nil {
-		return err
+	item, ok := q.items[idx]
+	if ok {
+		delete(q.items, idx)
 	}
 
-	q.Items[id] = v
-	return nil
-}
-
-func (q *Queue) rawGetPolicies(id int32) (Policies, error) {
-	v, ok := q.Items[id]
-	if !ok {
-		return Policies{}, fmt.Errorf("No policies with id %d has been uploaded", id)
-	}
-
-	p, ok := v.(Policies)
-	if !ok {
-		return Policies{}, fmt.Errorf("Expected policy or policy set with id %d but got %T", id, v)
-	}
-
-	return p, nil
-}
-
-func (q *Queue) rawGetInclude(id int32) (Content, error) {
-	v, ok := q.Items[id]
-	if !ok {
-		return Content{}, fmt.Errorf("No item with id %d has been uploaded", id)
-	}
-
-	c, ok := v.(Content)
-	if !ok {
-		return Content{}, fmt.Errorf("Expected content with id %d but got %T", id, v)
-	}
-
-	return c, nil
-}
-
-func (q *Queue) GetIncludes(ids []int32) (map[string]interface{}, error) {
-	r := make(map[string]interface{})
-
-	q.Lock.Lock()
-	defer q.Lock.Unlock()
-
-	for _, id := range ids {
-		c, err := q.rawGetInclude(id)
-		if err != nil {
-			return nil, err
-		}
-
-		r[c.Id] = c.Data
-	}
-
-	return r, nil
-}
-
-func (q *Queue) PopIncludes(ids []int32) int {
-	if ids == nil {
-		return 0
-	}
-
-	q.Lock.Lock()
-	defer q.Lock.Unlock()
-
-	count := 0
-	for _, id := range ids {
-		_, err := q.rawGetInclude(id)
-		if err != nil {
-			continue
-		}
-
-		delete(q.Items, id)
-		count++
-	}
-
-	return count
+	return item, ok
 }

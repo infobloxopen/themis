@@ -1,109 +1,172 @@
 package pdp
 
-import "fmt"
+import (
+	"net"
 
-const (
-	EffectDeny   = iota
-	EffectPermit = iota
-
-	EffectNotApplicable = iota
-
-	EffectIndeterminate   = iota
-	EffectIndeterminateD  = iota
-	EffectIndeterminateP  = iota
-	EffectIndeterminateDP = iota
+	"github.com/infobloxopen/go-trees/domaintree"
+	"github.com/infobloxopen/go-trees/iptree"
+	"github.com/infobloxopen/go-trees/strtree"
 )
 
-var EffectNames map[int]string = map[int]string{
-	EffectDeny:            "Deny",
-	EffectPermit:          "Permit",
-	EffectNotApplicable:   "NotApplicable",
-	EffectIndeterminate:   "Indeterminate",
-	EffectIndeterminateD:  "Indeterminate{D}",
-	EffectIndeterminateP:  "Indeterminate{P}",
-	EffectIndeterminateDP: "Indeterminate{DP}"}
+const (
+	EffectDeny = iota
+	EffectPermit
 
-var EffectIDs map[string]int = map[string]int{
-	"deny":   EffectDeny,
-	"permit": EffectPermit}
+	EffectNotApplicable
+
+	EffectIndeterminate
+	EffectIndeterminateD
+	EffectIndeterminateP
+	EffectIndeterminateDP
+)
+
+var (
+	effectNames = []string{
+		"Deny",
+		"Permit",
+		"NotApplicable",
+		"Indeterminate",
+		"Indeterminate{D}",
+		"Indeterminate{P}",
+		"Indeterminate{DP}"}
+
+	EffectIDs = map[string]int{
+		"deny":   EffectDeny,
+		"permit": EffectPermit}
+)
 
 type Context struct {
-	Attributes map[string]map[int]AttributeValueType
+	a map[string]map[int]AttributeValue
+	c *LocalContentStorage
 }
 
-func NewContext() Context {
-	return Context{make(map[string]map[int]AttributeValueType)}
-}
+func NewContext(c *LocalContentStorage, count int, f func(i int) (string, AttributeValue, error)) (*Context, error) {
+	ctx := &Context{a: map[string]map[int]AttributeValue{}, c: c}
 
-func (c *Context) StoreRawAttribute(ID string, dataType int, a AttributeValueType) {
-	t, ok := c.Attributes[ID]
-	if ok {
-		t[dataType] = a
-		return
+	for i := 0; i < count; i++ {
+		ID, v, err := f(i)
+		if err != nil {
+			return nil, err
+		}
+
+		t := v.GetResultType()
+		if m, ok := ctx.a[ID]; ok {
+			if old, ok := m[t]; ok {
+				return nil, newDuplicateAttributeValueError(ID, t, v, old)
+			}
+
+			m[t] = v
+		} else {
+			ctx.a[ID] = map[int]AttributeValue{t: v}
+		}
 	}
 
-	c.Attributes[ID] = map[int]AttributeValueType{dataType: a}
+	return ctx, nil
 }
 
-func (c *Context) StoreAttribute(ID string, dataType int, v interface{}) {
-	c.StoreRawAttribute(ID, dataType, AttributeValueType{dataType, v})
-}
-
-func (c *Context) GetAttribute(attr AttributeType) (AttributeValueType, error) {
-	t, ok := c.Attributes[attr.ID]
+func (c *Context) getAttribute(a Attribute) (AttributeValue, error) {
+	t, ok := c.a[a.id]
 	if !ok {
-		return AttributeValueType{}, fmt.Errorf("Missing attribute %s (%s)", attr.ID, DataTypeNames[attr.DataType])
+		return AttributeValue{}, bindError(newMissingAttributeError(), a.describe())
 	}
 
-	v, ok := t[attr.DataType]
+	v, ok := t[a.t]
 	if !ok {
-		return AttributeValueType{}, fmt.Errorf("Missing attribute %s (%s)", attr.ID, DataTypeNames[attr.DataType])
+		return AttributeValue{}, bindError(newMissingAttributeError(), a.describe())
 	}
 
 	return v, nil
 }
 
-func (c *Context) CalculateObligations(obligations []AttributeAssignmentExpressionType, ctx *Context) error {
-	for _, obligation := range obligations {
-		v, err := obligation.Expression.calculate(ctx)
-		if err != nil {
-			return err
-		}
-
-		c.StoreRawAttribute(obligation.Attribute.ID, obligation.Attribute.DataType, v)
-	}
-
-	return nil
+func (c *Context) getContentItem(cID, iID string) (*ContentItem, error) {
+	return c.c.Get(cID, iID)
 }
 
-type ResponseType struct {
+func (c *Context) calculateBooleanExpression(e Expression) (bool, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return false, err
+	}
+
+	return v.boolean()
+}
+
+func (c *Context) calculateStringExpression(e Expression) (string, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return "", err
+	}
+
+	return v.str()
+}
+
+func (c *Context) calculateAddressExpression(e Expression) (net.IP, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return v.address()
+}
+
+func (c *Context) calculateDomainExpression(e Expression) (string, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return "", err
+	}
+
+	return v.domain()
+}
+
+func (c *Context) calculateNetworkExpression(e Expression) (*net.IPNet, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return v.network()
+}
+
+func (c *Context) calculateSetOfStringsExpression(e Expression) (*strtree.Tree, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return v.setOfStrings()
+}
+
+func (c *Context) calculateSetOfNetworksExpression(e Expression) (*iptree.Tree, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return v.setOfNetworks()
+}
+
+func (c *Context) calculateSetOfDomainsExpression(e Expression) (*domaintree.Node, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return v.setOfDomains()
+}
+
+type Response struct {
 	Effect      int
-	Status      string
-	Obligations []AttributeAssignmentExpressionType
+	status      boundError
+	obligations []AttributeAssignmentExpression
 }
 
-type EvaluableType interface {
-	GetID() string
-	Calculate(ctx *Context) ResponseType
+func (r Response) Status() (int, []AttributeAssignmentExpression, error) {
+	return r.Effect, r.obligations, r.status
 }
 
-func combineEffectAndStatus(err error, ID string, r ResponseType) ResponseType {
-	s := fmt.Sprintf("Match (%s): %s", ID, err)
-	if r.Status != "Ok" {
-		s = fmt.Sprintf("%s (%s)", s, r.Status)
-	}
-
-	if r.Effect == EffectNotApplicable {
-		return ResponseType{EffectNotApplicable, s, nil}
-	}
-
-	if r.Effect == EffectDeny || r.Effect == EffectIndeterminateD {
-		return ResponseType{EffectIndeterminateD, s, nil}
-	}
-
-	if r.Effect == EffectPermit || r.Effect == EffectIndeterminateP {
-		return ResponseType{EffectIndeterminateP, s, nil}
-	}
-
-	return ResponseType{EffectIndeterminateDP, s, nil}
+type Evaluable interface {
+	GetID() (string, bool)
+	Calculate(ctx *Context) Response
+	Append(path []string, v interface{}) (Evaluable, error)
+	Delete(path []string) (Evaluable, error)
 }

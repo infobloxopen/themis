@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/coredns/coredns/middleware/file"
-	"github.com/coredns/coredns/middleware/pkg/cache"
 	"github.com/coredns/coredns/middleware/pkg/dnsrecorder"
 	"github.com/coredns/coredns/middleware/test"
 
+	"github.com/hashicorp/golang-lru"
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
 )
@@ -81,7 +81,7 @@ var dnsTestCases = []test.Case{
 }
 
 func TestLookupZone(t *testing.T) {
-	zone, err := file.Parse(strings.NewReader(dbMiekNL), "miek.nl.", "stdin", 0)
+	zone, err := file.Parse(strings.NewReader(dbMiekNL), "miek.nl.", "stdin")
 	if err != nil {
 		return
 	}
@@ -89,8 +89,8 @@ func TestLookupZone(t *testing.T) {
 	dnskey, rm1, rm2 := newKey(t)
 	defer rm1()
 	defer rm2()
-	c := cache.New(defaultCap)
-	dh := New([]string{"miek.nl."}, []*DNSKEY{dnskey}, fm, c)
+	cache, _ := lru.New(defaultCap)
+	dh := New([]string{"miek.nl."}, []*DNSKEY{dnskey}, fm, cache)
 	ctx := context.TODO()
 
 	for _, tc := range dnsTestCases {
@@ -128,8 +128,8 @@ func TestLookupDNSKEY(t *testing.T) {
 	dnskey, rm1, rm2 := newKey(t)
 	defer rm1()
 	defer rm2()
-	c := cache.New(defaultCap)
-	dh := New([]string{"miek.nl."}, []*DNSKEY{dnskey}, test.ErrorHandler(), c)
+	cache, _ := lru.New(defaultCap)
+	dh := New([]string{"miek.nl."}, []*DNSKEY{dnskey}, test.ErrorHandler(), cache)
 	ctx := context.TODO()
 
 	for _, tc := range dnssecTestCases {

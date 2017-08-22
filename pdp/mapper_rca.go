@@ -1,119 +1,234 @@
 package pdp
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/infobloxopen/go-trees/strtree"
+)
+
+type mapperRCA struct {
+	argument  Expression
+	rules     *strtree.Tree
+	def       *Rule
+	err       *Rule
+	algorithm RuleCombiningAlg
+}
 
 type MapperRCAParams struct {
-	Argument    ExpressionType
-	RulesMap    map[string]*RuleType
-	DefaultRule *RuleType
-	ErrorRule   *RuleType
-	SubAlg      RuleCombiningAlgType
-	AlgParams   interface{}
+	Argument  Expression
+	DefOk     bool
+	Def       string
+	ErrOk     bool
+	Err       string
+	Algorithm RuleCombiningAlg
 }
 
-func calculateErrorRule(rule *RuleType, ctx *Context, err error) ResponseType {
-	if rule != nil {
-		return rule.calculate(ctx)
-	}
-
-	return ResponseType{EffectIndeterminate, fmt.Sprintf("Mapper Rule Combining Algorithm: %s", err), nil}
-}
-
-func getSetOfIDs(v AttributeValueType) ([]string, error) {
-	ID, err := ExtractStringValue(v, "argument")
+func getSetOfIDs(v AttributeValue) ([]string, error) {
+	ID, err := v.str()
 	if err == nil {
 		return []string{ID}, nil
 	}
 
-	setIDs, err := ExtractSetOfStringsValue(v, "argument")
+	setIDs, err := v.setOfStrings()
 	if err == nil {
 		return sortSetOfStrings(setIDs), nil
 	}
 
-	listIDs, err := ExtractListOfStringsValue(v, "argument")
+	listIDs, err := v.listOfStrings()
 	if err == nil {
 		return listIDs, nil
 	}
 
-	return nil, fmt.Errorf("Expected %s, %s or %s as argument but got %s",
-		DataTypeNames[DataTypeString], DataTypeNames[DataTypeSetOfStrings], DataTypeNames[DataTypeListOfStrings], DataTypeNames[v.DataType])
+	return nil, newMapperArgumentTypeError(v.t)
 }
 
-func getRulesMap(rules []*RuleType, params *MapperRCAParams) map[string]*RuleType {
-	if params.RulesMap != nil {
-		return params.RulesMap
-	}
-
-	m := make(map[string]*RuleType)
-	for _, rule := range rules {
-		m[rule.ID] = rule
-	}
-
-	return m
-}
-
-func collectSubRules(IDs []string, m map[string]*RuleType) []*RuleType {
-	rules := []*RuleType{}
+func collectSubRules(IDs []string, m *strtree.Tree) []*Rule {
+	rules := []*Rule{}
 	for _, ID := range IDs {
-		rule, ok := m[ID]
+		rule, ok := m.Get(ID)
 		if ok {
-			rules = append(rules, rule)
+			rules = append(rules, rule.(*Rule))
 		}
 	}
 
 	return rules
 }
 
-func MapperRCA(rules []*RuleType, params interface{}, ctx *Context) ResponseType {
-	mapperParams := params.(*MapperRCAParams)
+func makeMapperRCA(rules []*Rule, params interface{}) RuleCombiningAlg {
+	mapperParams, ok := params.(MapperRCAParams)
+	if !ok {
+		panic(fmt.Errorf("Mapper rule combining algorithm maker expected MapperRCAParams structure as params "+
+			"but got %T", params))
+	}
 
-	v, err := mapperParams.Argument.calculate(ctx)
-	if err != nil {
-		switch err.(type) {
-		case MissingValueError, *MissingValueError:
-			if mapperParams.DefaultRule != nil {
-				return mapperParams.DefaultRule.calculate(ctx)
+	var (
+		m   *strtree.Tree
+		def *Rule
+		err *Rule
+	)
+
+	if rules != nil {
+		m = strtree.NewTree()
+		count := 0
+		for _, r := range rules {
+			if !r.hidden {
+				m.InplaceInsert(r.id, r)
+				count++
 			}
 		}
 
-		return calculateErrorRule(mapperParams.ErrorRule, ctx, err)
+		if count > 0 {
+			if mapperParams.DefOk {
+				if v, ok := m.Get(mapperParams.Def); ok {
+					def = v.(*Rule)
+				}
+			}
+
+			if mapperParams.ErrOk {
+				if v, ok := m.Get(mapperParams.Err); ok {
+					err = v.(*Rule)
+				}
+			}
+		} else {
+			m = nil
+		}
 	}
 
-	if mapperParams.SubAlg != nil {
-		IDs, err := getSetOfIDs(v)
-		if err != nil {
-			return calculateErrorRule(mapperParams.ErrorRule, ctx, err)
+	return mapperRCA{
+		argument:  mapperParams.Argument,
+		rules:     m,
+		def:       def,
+		err:       err,
+		algorithm: mapperParams.Algorithm}
+}
+
+func (a mapperRCA) describe() string {
+	return "mapper"
+}
+
+func (a mapperRCA) calculateErrorRule(ctx *Context, err error) Response {
+	if a.err != nil {
+		return a.err.calculate(ctx)
+	}
+
+	return Response{EffectIndeterminate, bindError(err, a.describe()), nil}
+}
+
+func (a mapperRCA) getRulesMap(rules []*Rule) *strtree.Tree {
+	if a.rules != nil {
+		return a.rules
+	}
+
+	m := strtree.NewTree()
+	count := 0
+	for _, rule := range rules {
+		if !rule.hidden {
+			m.InplaceInsert(rule.id, rule)
+			count++
+		}
+	}
+
+	if count > 0 {
+		return m
+	}
+
+	return nil
+}
+
+func (a mapperRCA) add(ID string, child, old *Rule) RuleCombiningAlg {
+	def := a.def
+	if old != nil && old == def {
+		def = child
+	}
+
+	err := a.err
+	if old != nil && old == err {
+		err = child
+	}
+
+	return mapperRCA{
+		argument:  a.argument,
+		rules:     a.rules.Insert(ID, child),
+		def:       def,
+		err:       err,
+		algorithm: a.algorithm}
+}
+
+func (a mapperRCA) del(ID string, old *Rule) RuleCombiningAlg {
+	def := a.def
+	if old != nil && old == def {
+		def = nil
+	}
+
+	err := a.err
+	if old != nil && old == err {
+		err = nil
+	}
+
+	rules := a.rules
+	if rules != nil {
+		rules, _ = a.rules.Delete(ID)
+		if rules.IsEmpty() {
+			rules = nil
+		}
+	}
+
+	return mapperRCA{
+		argument:  a.argument,
+		rules:     rules,
+		def:       def,
+		err:       err,
+		algorithm: a.algorithm}
+}
+
+func (a mapperRCA) execute(rules []*Rule, ctx *Context) Response {
+	v, err := a.argument.calculate(ctx)
+	if err != nil {
+		switch err.(type) {
+		case *missingValueError:
+			if a.def != nil {
+				return a.def.calculate(ctx)
+			}
 		}
 
-		r := mapperParams.SubAlg(collectSubRules(IDs, getRulesMap(rules, mapperParams)), mapperParams.AlgParams, ctx)
-		if r.Effect == EffectNotApplicable && mapperParams.DefaultRule != nil {
-			return mapperParams.DefaultRule.calculate(ctx)
+		return a.calculateErrorRule(ctx, err)
+	}
+
+	if a.algorithm != nil {
+		IDs, err := getSetOfIDs(v)
+		if err != nil {
+			return a.calculateErrorRule(ctx, err)
+		}
+
+		r := a.algorithm.execute(collectSubRules(IDs, a.getRulesMap(rules)), ctx)
+		if r.Effect == EffectNotApplicable && a.def != nil {
+			return a.def.calculate(ctx)
 		}
 
 		return r
 	}
 
-	ID, err := ExtractStringValue(v, "argument")
+	ID, err := v.str()
 	if err != nil {
-		return calculateErrorRule(mapperParams.ErrorRule, ctx, err)
+		return a.calculateErrorRule(ctx, err)
 	}
 
-	if mapperParams.RulesMap != nil {
-		rule, ok := mapperParams.RulesMap[ID]
+	if a.rules != nil {
+		rule, ok := a.rules.Get(ID)
 		if ok {
-			return rule.calculate(ctx)
+			return rule.(*Rule).calculate(ctx)
 		}
 	} else {
 		for _, rule := range rules {
-			if rule.ID == ID {
+			if rule.id == ID {
 				return rule.calculate(ctx)
 			}
 		}
 	}
 
-	if mapperParams.DefaultRule != nil {
-		return mapperParams.DefaultRule.calculate(ctx)
+	if a.def != nil {
+		return a.def.calculate(ctx)
 	}
 
-	return ResponseType{EffectNotApplicable, "Ok", nil}
+	return Response{EffectNotApplicable, nil, nil}
 }

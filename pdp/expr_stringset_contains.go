@@ -2,60 +2,52 @@ package pdp
 
 import "fmt"
 
-type FunctionSetOfStringContainsType struct {
-	Set   ExpressionType
-	Value ExpressionType
+type functionSetOfStringsContains struct {
+	set   Expression
+	value Expression
 }
 
-func (f FunctionSetOfStringContainsType) describe() string {
-	return fmt.Sprintf("\"%s\".%s(%s)", yastTagDataTypeSetOfStrings, yastExpressionContains, yastTagDataTypeString)
+func makeFunctionSetOfStringsContains(set, value Expression) Expression {
+	return functionSetOfStringsContains{
+		set:   set,
+		value: value}
 }
 
-func (f FunctionSetOfStringContainsType) getResultType() int {
-	return DataTypeBoolean
+func makeFunctionSetOfStringsContainsAlt(args []Expression) Expression {
+	if len(args) != 2 {
+		panic(fmt.Errorf("Set Of Strings function \"contains\" needs exactly two arguments but got %d", len(args)))
+	}
+
+	return makeFunctionSetOfStringsContains(args[0], args[1])
 }
 
-func (f FunctionSetOfStringContainsType) calculate(ctx *Context) (AttributeValueType, error) {
-	v := AttributeValueType{}
+func (f functionSetOfStringsContains) GetResultType() int {
+	return TypeBoolean
+}
 
-	set, err := f.Set.calculate(ctx)
+func (f functionSetOfStringsContains) describe() string {
+	return "contains"
+}
+
+func (f functionSetOfStringsContains) calculate(ctx *Context) (AttributeValue, error) {
+	set, err := ctx.calculateSetOfStringsExpression(f.set)
 	if err != nil {
-		return v, err
+		return undefinedValue, bindError(err, f.describe())
 	}
 
-	s, err := ExtractSetOfStringsValue(set, "first argument")
+	s, err := ctx.calculateStringExpression(f.value)
 	if err != nil {
-		return v, err
+		return undefinedValue, bindError(err, f.describe())
 	}
 
-	value, err := f.Value.calculate(ctx)
-	if err != nil {
-		return v, err
-	}
-
-	vStr, err := ExtractStringValue(value, "second argument")
-	if err != nil {
-		return v, err
-	}
-
-	v.DataType = DataTypeBoolean
-	v.Value = s[vStr]
-
-	return v, nil
+	_, ok := set.Get(s)
+	return MakeBooleanValue(ok), nil
 }
 
-func makeFunctionSetOfStringContains(first ExpressionType, second ExpressionType) ExpressionType {
-	return FunctionSetOfStringContainsType{first, second}
-}
-
-func makeFunctionSetOfStringContainsComm(args []ExpressionType) ExpressionType {
-	return makeFunctionSetOfStringContains(args[0], args[1])
-}
-
-func checkerFunctionSetOfStringContains(args []ExpressionType) anyArgumentsFunctionType {
-	if len(args) == 2 && args[0].getResultType() == DataTypeSetOfStrings && args[1].getResultType() == DataTypeString {
-		return makeFunctionSetOfStringContainsComm
+func functionSetOfStringsContainsValidator(args []Expression) functionMaker {
+	if len(args) != 2 || args[0].GetResultType() != TypeSetOfStrings || args[1].GetResultType() != TypeString {
+		return nil
 	}
 
-	return nil
+	return makeFunctionSetOfStringsContainsAlt
 }
