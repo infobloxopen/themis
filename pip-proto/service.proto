@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package service;
+
+service PIP {
+  rpc GetAttribute (Request) returns (Response) {}
+}
+
+message Attribute {
+  string id = 1;
+  string type = 2;
+  string value = 3;
+}
+
+message Request {
+  repeated Attribute attributes = 1;
+}
+
+message Response {
+  enum Status {
+    OK       = 0;
+    NOTFOUND = 1;
+    INSUFFICIENTDATA   = 2;
+    NOTAPPLICABLE   = 3;
+    GENERALERROR   = 4;
+    SERVICEERROR  = 5;
+    FATALERROR  = 6;
+  }
+  Status status = 1;
+  repeated Attribute values = 2;
+}

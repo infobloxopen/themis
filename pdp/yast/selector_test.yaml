@@ -1,0 +1,29 @@
+      - selector:
+         uri: "pip:1.2.3.4/time-zone"
+         type: "string"
+         args:
+         - attr: netAttr
+         - attr: domAttr
+         - val:
+             type: string
+             content: test
+
+      - selector:
+         uri: "http://1.2.3.4/time-zone"
+         type: "string"
+         content-type: json
+         path:
+         - attr: .... 
+         args:
+         - attr: netAttr
+         - attr: domAttr
+         - val:
+             type: string
+             content: test
+
+             - selector:
+                uri: "local:content/content-item"
+                type: "string"
+                path:
+                - attr: netAttr
+                - attr: domAttr

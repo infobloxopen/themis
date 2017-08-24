@@ -272,7 +272,7 @@ policies:
         id: Mapper
         map:
           selector:
-            uri: "local:content/content-item"
+            uri: "pip:10.0.0.3/category"
             type: "string"
             path:
             - attr: netAttr

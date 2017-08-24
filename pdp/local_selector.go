@@ -1,6 +1,8 @@
 package pdp
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // LocalSelector represent local selector expression. The expression extracts
 // value from local content storage by given path and validates that result
