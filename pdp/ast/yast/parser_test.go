@@ -272,11 +272,10 @@ policies:
         id: Mapper
         map:
           selector:
-            uri: "pip:10.0.0.3/category"
+            uri: "pip:10.0.0.3/domain-category"
             type: "string"
             path:
-            - attr: netAttr
-            - attr: netAttr
+            - attr: domAttr
     rules:
     - id: Default
       effect: Permit

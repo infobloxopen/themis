@@ -3,18 +3,18 @@ package pdp
 import "fmt"
 
 type PIPSelector struct {
-	content string
-	item    string
-	path    []Expression
-	t       int
+	service   string
+	queryType string
+	path      []Expression
+	t         int
 }
 
-func MakePIPSelector(content, item string, path []Expression, t int) PIPSelector {
+func MakePIPSelector(service, queryType string, path []Expression, t int) PIPSelector {
 	return PIPSelector{
-		content: content,
-		item:    item,
-		path:    path,
-		t:       t}
+		service:   service,
+		queryType: queryType,
+		path:      path,
+		t:         t}
 }
 
 func (s PIPSelector) GetResultType() int {
@@ -22,28 +22,46 @@ func (s PIPSelector) GetResultType() int {
 }
 
 func (s PIPSelector) describe() string {
-	return fmt.Sprintf("selector(%s.%s)", s.content, s.item)
+	return fmt.Sprintf("PIPselector(%s.%s)", s.service, s.queryType)
+}
+
+func (s PIPSelector) getAttributeValue(ctx *Context) (AttributeValue, error) {
+	domainStr, err := s.path[0].calculate(ctx)
+	if err != nil {
+		return undefinedValue, err
+	}
+	fmt.Printf("domainStr is '%v'\n", domainStr)
+	return MakeStringValue("Naughty"), nil
 }
 
 func (s PIPSelector) calculate(ctx *Context) (AttributeValue, error) {
-	item, err := ctx.getContentItem(s.content, s.item)
-	if err != nil {
-		return undefinedValue, bindError(err, s.describe())
-	}
+	fmt.Printf("s is %v\n", s)
 
-	if s.t != item.t {
-		return undefinedValue, bindError(newInvalidContentItemTypeError(s.t, item.t), s.describe())
-	}
+	/*
+			item, err := ctx.getContentItem(s.content, s.item)
+			fmt.Printf("item is %v\n", item)
 
-	r, err := item.Get(s.path, ctx)
-	if err != nil {
-		return undefinedValue, bindError(err, s.describe())
-	}
+			if err != nil {
+				return undefinedValue, bindError(err, s.describe())
+			}
 
-	t := r.GetResultType()
-	if t != s.t {
-		return undefinedValue, bindError(newInvalidContentItemTypeError(s.t, t), s.describe())
-	}
+			if s.t != item.t {
+				return undefinedValue, bindError(newInvalidContentItemTypeError(s.t, item.t), s.describe())
+			}
 
-	return r, nil
+		r, err := s.getCategory(s.path, ctx)
+		fmt.Printf("r is %v\n", r)
+
+		if err != nil {
+			return undefinedValue, bindError(err, s.describe())
+		}
+
+		t := r.GetResultType()
+		if t != s.t {
+			return undefinedValue, bindError(newInvalidContentItemTypeError(s.t, t), s.describe())
+		}
+
+		return r, nil
+	*/
+	return s.getAttributeValue(ctx)
 }
