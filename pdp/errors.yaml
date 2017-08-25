@@ -89,6 +89,17 @@ errors:
   - field: s
   - field: err
 
+- id: invalidAddressNetworkStringCastError
+  fields:
+  - id: s
+    type: string
+  - id: err
+    type: error
+  msg: "Can't treat %q as address or network (%s)"
+  args:
+  - field: s
+  - field: err
+
 - id: attributeValueTypeError
   fields:
   - id: expected
