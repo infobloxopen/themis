@@ -19,6 +19,7 @@ const (
 	invalidBooleanStringCastErrorID
 	invalidAddressStringCastErrorID
 	invalidNetworkStringCastErrorID
+	invalidAddressNetworkStringCastErrorID
 	attributeValueTypeErrorID
 	duplicateAttributeValueErrorID
 	unknownTypeSerializationErrorID
@@ -234,6 +235,23 @@ func newInvalidNetworkStringCastError(s string, err error) *invalidNetworkString
 
 func (e *invalidNetworkStringCastError) Error() string {
 	return e.errorf("Can't treat %q as network address (%s)", e.s, e.err)
+}
+
+type invalidAddressNetworkStringCastError struct {
+	errorLink
+	s   string
+	err error
+}
+
+func newInvalidAddressNetworkStringCastError(s string, err error) *invalidAddressNetworkStringCastError {
+	return &invalidAddressNetworkStringCastError{
+		errorLink: errorLink{id: invalidAddressNetworkStringCastErrorID},
+		s:         s,
+		err:       err}
+}
+
+func (e *invalidAddressNetworkStringCastError) Error() string {
+	return e.errorf("Can't treat %q as address or network (%s)", e.s, e.err)
 }
 
 type attributeValueTypeError struct {

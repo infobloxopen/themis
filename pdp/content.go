@@ -187,6 +187,22 @@ func (t *LocalContentStorageTransaction) parsePath(c *ContentItem, rawPath []str
 
 	path := make([]AttributeValue, len(rawPath))
 	for i, s := range rawPath {
+		if c.k[i] == TypeAddress || c.k[i] == TypeNetwork {
+			a := net.ParseIP(s)
+			if a != nil {
+				path[i] = MakeAddressValue(a)
+				continue
+			}
+
+			_, n, err := net.ParseCIDR(s)
+			if err == nil {
+				path[i] = MakeNetworkValue(n)
+				continue
+			}
+
+			return nil, bindErrorf(newInvalidAddressNetworkStringCastError(s, err), "%d", i+2)
+		}
+
 		v, err := MakeValueFromString(c.k[i], s)
 		if err != nil {
 			return nil, bindErrorf(err, "%d", i+2)

@@ -145,6 +145,8 @@ func TestLocalContentStorage(t *testing.T) {
 	u.Append(UOAdd, []string{"str-map", "4-fourth"}, MakeContentValueItem("4-fourth", TypeString, "fourth"))
 	u.Append(UOAdd, []string{"net-map", "2001:db8:1000::/40"},
 		MakeContentValueItem("2001:db8:1000::/40", TypeString, "fourth"))
+	u.Append(UOAdd, []string{"net-map", "2001:db8:1000::1"},
+		MakeContentValueItem("2001:db8:1000::1", TypeString, "fifth"))
 	u.Append(UODelete, []string{"str-map", "3-third"}, nil)
 
 	u.Append(UOAdd, []string{"dom-map-add"}, dmcAdd)
