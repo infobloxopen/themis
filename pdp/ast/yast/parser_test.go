@@ -226,7 +226,7 @@ policies:
            - equal:
              - attr: strAttr
              - selector:
-                uri: "local:content/content-item"
+                uri: "pip:content/content-item"
                 type: "string"
                 path:
                 - attr: netAttr

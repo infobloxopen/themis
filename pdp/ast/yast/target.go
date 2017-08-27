@@ -27,6 +27,13 @@ func (ctx context) getAdjustedArguments(v interface{}, val pdp.Expression, attr 
 
 		return a, attr, nil
 
+	case pdp.PIPSelector:
+		if val != nil {
+			return nil, nil, newMatchFunctionBothValuesError()
+		}
+
+		return a, attr, nil
+
 	case pdp.AttributeDesignator:
 		if attr != nil {
 			return nil, nil, newMatchFunctionBothAttrsError()

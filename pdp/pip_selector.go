@@ -1,6 +1,14 @@
 package pdp
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+
+	pip_service "github.com/infobloxopen/themis/pip-service"
+	"google.golang.org/grpc"
+)
+
+const pIPServicePort = ":5356"
 
 type PIPSelector struct {
 	service   string
@@ -11,7 +19,7 @@ type PIPSelector struct {
 
 func MakePIPSelector(service, queryType string, path []Expression, t int) PIPSelector {
 	return PIPSelector{
-		service:   service,
+		service:   service + pIPServicePort,
 		queryType: queryType,
 		path:      path,
 		t:         t}
@@ -26,12 +34,35 @@ func (s PIPSelector) describe() string {
 }
 
 func (s PIPSelector) getAttributeValue(ctx *Context) (AttributeValue, error) {
-	domainStr, err := s.path[0].calculate(ctx)
+	domainAttr, err := s.path[0].calculate(ctx)
+
+	domainStr, err := domainAttr.Serialize()
+
 	if err != nil {
 		return undefinedValue, err
 	}
 	fmt.Printf("domainStr is '%v'\n", domainStr)
-	return MakeStringValue("Naughty"), nil
+
+	conn, err := grpc.Dial(s.service, grpc.WithInsecure())
+	if err != nil {
+		fmt.Printf("cannot connect to pip: %s\n", err)
+	}
+	defer conn.Close()
+
+	c := pip_service.NewPIPClient(conn)
+	reqAttr := &pip_service.Attribute{Value: domainStr}
+	request := &pip_service.Request{Attributes: []*pip_service.Attribute{reqAttr}}
+
+	r, err := c.GetAttribute(context.Background(), request)
+	if err != nil {
+		fmt.Printf("Cannot get value from PIP\n")
+		return undefinedValue, err
+	}
+	res := r.GetValues()
+	val := res[0].GetValue()
+	fmt.Printf("PIP returned value='%v'\n", val)
+	return MakeStringValue(val), nil
+	//	return MakeStringValue("Naughty"), nil
 }
 
 func (s PIPSelector) calculate(ctx *Context) (AttributeValue, error) {

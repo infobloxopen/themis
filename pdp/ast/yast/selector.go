@@ -19,11 +19,13 @@ func (ctx context) unmarshalSelector(v interface{}) (pdp.Expression, boundError)
 		return pdp.LocalSelector{}, err
 	}
 
+	fmt.Printf("uri string is '%s'\n", s)
 	ID, ierr := url.Parse(s)
 	if ierr != nil {
 		return pdp.LocalSelector{}, newSelectorURIError(s, ierr)
 	}
 
+	fmt.Printf("ID is '%v'\n", ID)
 	scheme := strings.ToLower(ID.Scheme)
 	loc := strings.Split(ID.Opaque, "/")
 	fmt.Printf("Scheme is %v, Loc is %v\n", scheme, loc)
