@@ -169,6 +169,17 @@ errors:
   - field: id
   - field: err
 
+- id: policyUploadStoreError
+  fields:
+  - id: id
+    type: int32
+  - id: err
+    type: error
+  msg: "Failed to store parsed policy %d: %s"
+  args:
+  - field: id
+  - field: err
+
 - id: contentUploadParseError
   fields:
   - id: id
@@ -180,11 +191,19 @@ errors:
   - field: id
   - field: err
 
+- id: contentUploadStoreError
+  fields:
+  - id: id
+    type: int32
+  - id: err
+    type: error
+  msg: "Failed to store parsed content %d: %s"
+  args:
+  - field: id
+  - field: err
+  
 - id: missingPolicyStorageError
   msg: "No any policy to update"
-
-- id: policyTransactionInProgressError
-  msg: "Can't start new policy update or completely reload policy while another update is in progress"
 
 - id: policyTransactionCreationError
   fields:
@@ -231,6 +250,21 @@ errors:
   - expr: e.item.toTag.String()
   - field: err
 
+- id: policyUpdateUploadStoreError
+  fields:
+  - id: id
+    type: int32
+  - id: item
+    type: "*Item"
+  - id: err
+    type: error
+  msg: "Failed to store parsed policy update %d from tag %q to %q: %s"
+  args:
+  - field: id
+  - expr: e.item.fromTag.String()
+  - expr: e.item.toTag.String()
+  - field: err
+
 - id: policyTransactionCommitError
   fields:
   - id: id
@@ -246,13 +280,24 @@ errors:
   - expr: e.item.toTag.String()
   - field: err
 
-- id: contentTransactionInProgressError
+- id: missingPolicyDataApplyError
   fields:
   - id: id
-    type: string
-  msg: "Can't start new content update or completely reload content %q while another update of the content is in progress"
+    type: int32
+  msg: "Request %d doesn't contain parsed policy or parsed policy update"
   args:
   - field: id
+
+- id: missingContentDataApplyError
+  fields:
+  - id: id
+    type: int32
+  - id: cid
+    type: string
+  msg: "Request %d doesn't contain parsed content %q or parsed content update"
+  args:
+  - field: id
+  - field: cid
 
 - id: contentTransactionCreationError
   fields:
@@ -302,6 +347,22 @@ errors:
   - expr: e.item.toTag.String()
   - field: err
 
+- id: contentUpdateUploadStoreError
+  fields:
+  - id: id
+    type: int32
+  - id: item
+    type: "*Item"
+  - id: err
+    type: error
+  msg: "Failed to store parsed content %q update %d from tag %q to %q: %s"
+  args:
+  - field: item.id
+  - field: id
+  - expr: e.item.fromTag.String()
+  - expr: e.item.toTag.String()
+  - field: err
+
 - id: contentTransactionCommitError
   fields:
   - id: id
@@ -317,3 +378,11 @@ errors:
   - expr: e.item.fromTag.String()
   - expr: e.item.toTag.String()
   - field: err
+
+- id: unknownUploadedRequestError
+  fields:
+  - id: id
+    type: int32
+  msg: "Can't find parsed policy or content with id %d"
+  args:
+  - field: id

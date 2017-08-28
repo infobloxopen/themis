@@ -5,6 +5,8 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+
+	"github.com/infobloxopen/themis/pdp"
 )
 
 type Item struct {
@@ -13,6 +15,12 @@ type Item struct {
 
 	fromTag *uuid.UUID
 	toTag   *uuid.UUID
+
+	p  *pdp.PolicyStorage
+	pt *pdp.PolicyStorageTransaction
+
+	c  *pdp.LocalContent
+	ct *pdp.LocalContentStorageTransaction
 }
 
 type Queue struct {

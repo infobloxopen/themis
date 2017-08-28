@@ -72,10 +72,10 @@ func (c *Client) RequestContentUpload(id, fromTag, toTag string) (int32, error) 
 		Id:      id})
 }
 
-func (c *Client) Upload(id int32, r io.Reader) error {
+func (c *Client) Upload(id int32, r io.Reader) (int32, error) {
 	u, err := c.client.Upload(context.Background())
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	p := make([]byte, c.chunkSize)
@@ -86,7 +86,7 @@ func (c *Client) Upload(id int32, r io.Reader) error {
 				Id:   id,
 				Data: string(p[:n])}
 			if err := u.Send(chunk); err != nil {
-				return err
+				return -1, err
 			}
 		}
 
@@ -96,11 +96,24 @@ func (c *Client) Upload(id int32, r io.Reader) error {
 
 		if err != nil {
 			c.closeUpload(u)
-			return err
+			return -1, err
 		}
 	}
 
 	return c.closeUpload(u)
+}
+
+func (c *Client) Apply(id int32) error {
+	r, err := c.client.Apply(context.Background(), &pb.Update{Id: id})
+	if err != nil {
+		return err
+	}
+
+	if r.Status != pb.Response_ACK {
+		return errors.New(r.Details)
+	}
+
+	return nil
 }
 
 func (c *Client) request(item *pb.Item) (int32, error) {
@@ -123,15 +136,15 @@ func (c *Client) request(item *pb.Item) (int32, error) {
 	return -1, fmt.Errorf("Unknown response statue: %d", r.Status)
 }
 
-func (c *Client) closeUpload(u pb.PDPControl_UploadClient) error {
+func (c *Client) closeUpload(u pb.PDPControl_UploadClient) (int32, error) {
 	r, err := u.CloseAndRecv()
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	if r.Status != pb.Response_ACK {
-		return errors.New(r.Details)
+		return -1, errors.New(r.Details)
 	}
 
-	return nil
+	return r.Id, nil
 }

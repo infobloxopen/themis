@@ -232,7 +232,7 @@ func (s *Server) dispatchUpload(id int32, r *streamReader, stream pb.PDPControl_
 	return req, nil
 }
 
-func (s *Server) applyPolicy(id int32, r *streamReader, req *Item, stream pb.PDPControl_UploadServer) error {
+func (s *Server) uploadPolicy(id int32, r *streamReader, req *Item, stream pb.PDPControl_UploadServer) error {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return err
@@ -243,184 +243,178 @@ func (s *Server) applyPolicy(id int32, r *streamReader, req *Item, stream pb.PDP
 		return stream.SendAndClose(controlFail(newPolicyUploadParseError(id, err)))
 	}
 
-	s.Lock()
-	if s.pt != nil {
-		s.Unlock()
-		return stream.SendAndClose(controlFail(newPolicyTransactionInProgressError()))
+	req.p = p
+	nid, err := s.queue.Push(req)
+	if err != nil {
+		return stream.SendAndClose(controlFail(newPolicyUploadStoreError(id, err)))
 	}
 
-	s.p = p
-	s.Unlock()
-
-	if req.toTag == nil {
-		log.WithField("id", id).Info("New policy has been applied")
-	} else {
-		log.WithFields(log.Fields{
-			"id":  id,
-			"tag": req.toTag.String()}).Info("New policy has been applied")
-	}
-
-	return stream.SendAndClose(&pb.Response{Status: pb.Response_ACK, Id: id})
+	return stream.SendAndClose(&pb.Response{Status: pb.Response_ACK, Id: nid})
 }
 
-func (s *Server) applyContent(id int32, r *streamReader, req *Item, stream pb.PDPControl_UploadServer) error {
+func (s *Server) uploadPolicyUpdate(id int32, r *streamReader, req *Item, stream pb.PDPControl_UploadServer) error {
+	s.RLock()
+	if s.p == nil {
+		s.RUnlock()
+		r.skip()
+		return stream.SendAndClose(controlFail(newMissingPolicyStorageError()))
+	}
+
+	t, err := s.p.NewTransaction(req.fromTag)
+	if err != nil {
+		s.RUnlock()
+		r.skip()
+		return stream.SendAndClose(controlFail(newPolicyTransactionCreationError(id, req, err)))
+	}
+	s.RUnlock()
+
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		return err
+	}
+
+	u, err := yast.UnmarshalUpdate(b, t.Attributes(), *req.fromTag, *req.toTag)
+	if err != nil {
+		return stream.SendAndClose(controlFail(newPolicyUpdateParseError(id, req, err)))
+	}
+
+	err = t.Apply(u)
+	if err != nil {
+		return stream.SendAndClose(controlFail(newPolicyUpdateApplicationError(id, req, err)))
+	}
+
+	req.pt = t
+	nid, err := s.queue.Push(req)
+	if err != nil {
+		return stream.SendAndClose(controlFail(newPolicyUpdateUploadStoreError(id, req, err)))
+	}
+
+	return stream.SendAndClose(&pb.Response{Status: pb.Response_ACK, Id: nid})
+}
+
+func (s *Server) applyPolicy(id int32, req *Item) (*pb.Response, error) {
+	if req.p != nil {
+		s.Lock()
+		s.p = req.p
+		s.Unlock()
+
+		if req.toTag == nil {
+			log.WithField("id", id).Info("New policy has been applied")
+		} else {
+			log.WithFields(log.Fields{
+				"id":  id,
+				"tag": req.toTag.String()}).Info("New policy has been applied")
+		}
+
+		return &pb.Response{Status: pb.Response_ACK, Id: id}, nil
+	}
+
+	if req.pt != nil {
+		p, err := req.pt.Commit()
+		if err != nil {
+			return controlFail(newPolicyTransactionCommitError(id, req, err)), nil
+		}
+
+		s.Lock()
+		s.p = p
+		s.Unlock()
+
+		log.WithFields(log.Fields{
+			"id":       id,
+			"prev-tag": req.fromTag,
+			"curr-tag": req.toTag}).Info("Policy update has been applied")
+
+		return &pb.Response{Status: pb.Response_ACK, Id: id}, nil
+	}
+
+	return controlFail(newMissingPolicyDataApplyError(id)), nil
+}
+
+func (s *Server) uploadContent(id int32, r *streamReader, req *Item, stream pb.PDPControl_UploadServer) error {
 	c, err := jcon.Unmarshal(r, req.toTag)
 	if err != nil {
 		r.skip()
 		return stream.SendAndClose(controlFail(newContentUploadParseError(id, err)))
 	}
 
-	s.Lock()
-	_, ok := s.ct[req.id]
-	if ok {
-		s.Unlock()
-		return stream.SendAndClose(controlFail(newContentTransactionInProgressError(req.id)))
+	req.c = c
+	nid, err := s.queue.Push(req)
+	if err != nil {
+		return stream.SendAndClose(controlFail(newContentUploadStoreError(id, err)))
 	}
 
-	s.c = s.c.Add(c)
-	s.Unlock()
-
-	if req.toTag == nil {
-		log.WithField("id", id).Info("New content has been applied")
-	} else {
-		log.WithFields(log.Fields{
-			"id":  id,
-			"tag": req.toTag.String()}).Info("New content has been applied")
-	}
-
-	return stream.SendAndClose(&pb.Response{Status: pb.Response_ACK, Id: id})
+	return stream.SendAndClose(&pb.Response{Status: pb.Response_ACK, Id: nid})
 }
 
-func (s *Server) updatePolicy(id int32, r *streamReader, req *Item, stream pb.PDPControl_UploadServer) error {
-	s.Lock()
-	if s.p == nil {
-		s.Unlock()
-		r.skip()
-		return stream.SendAndClose(controlFail(newMissingPolicyStorageError()))
-	}
-
-	if s.pt != nil {
-		s.Unlock()
-		r.skip()
-		return stream.SendAndClose(controlFail(newPolicyTransactionInProgressError()))
-	}
-
-	t, err := s.p.NewTransaction(req.fromTag)
-	if err != nil {
-		s.Unlock()
-		r.skip()
-		return stream.SendAndClose(controlFail(newPolicyTransactionCreationError(id, req, err)))
-	}
-
-	s.pt = t
-	s.Unlock()
-
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		s.Lock()
-		s.pt = nil
-		s.Unlock()
-
-		return err
-	}
-
-	u, err := yast.UnmarshalUpdate(b, t.Attributes(), *req.fromTag, *req.toTag)
-	if err != nil {
-		s.Lock()
-		s.pt = nil
-		s.Unlock()
-
-		return stream.SendAndClose(controlFail(newPolicyUpdateParseError(id, req, err)))
-	}
-
-	err = t.Apply(u)
-	if err != nil {
-		s.Lock()
-		s.pt = nil
-		s.Unlock()
-
-		return stream.SendAndClose(controlFail(newPolicyUpdateApplicationError(id, req, err)))
-	}
-
-	s.Lock()
-	p, err := t.Commit()
-	if err != nil {
-		s.pt = nil
-		s.Unlock()
-
-		return stream.SendAndClose(controlFail(newPolicyTransactionCommitError(id, req, err)))
-	}
-
-	s.p = p
-	s.pt = nil
-	s.Unlock()
-
-	log.WithFields(log.Fields{
-		"id":       id,
-		"prev-tag": req.fromTag,
-		"curr-tag": req.toTag}).Info("Policy update has been applied")
-
-	return stream.SendAndClose(&pb.Response{Status: pb.Response_ACK, Id: id})
-}
-
-func (s *Server) updateContent(id int32, r *streamReader, req *Item, stream pb.PDPControl_UploadServer) error {
-	s.Lock()
-	t, ok := s.ct[req.id]
-	if ok {
-		s.Unlock()
-		r.skip()
-		return stream.SendAndClose(controlFail(newContentTransactionInProgressError(req.id)))
-	}
-
+func (s *Server) uploadContentUpdate(id int32, r *streamReader, req *Item, stream pb.PDPControl_UploadServer) error {
+	s.RLock()
 	t, err := s.c.NewTransaction(req.id, req.fromTag)
 	if err != nil {
-		s.Unlock()
+		s.RUnlock()
 		r.skip()
 		return stream.SendAndClose(controlFail(newContentTransactionCreationError(id, req, err)))
 	}
-
-	s.ct[req.id] = t
-	s.Unlock()
+	s.RUnlock()
 
 	u, err := jcon.UnmarshalUpdate(r, req.id, *req.fromTag, *req.toTag)
 	if err != nil {
-		s.Lock()
-		delete(s.ct, req.id)
-		s.Unlock()
-
 		r.skip()
 		return stream.SendAndClose(controlFail(newContentUpdateParseError(id, req, err)))
 	}
 
 	err = t.Apply(u)
 	if err != nil {
-		s.Lock()
-		delete(s.ct, req.id)
-		s.Unlock()
-
 		return stream.SendAndClose(controlFail(newContentUpdateApplicationError(id, req, err)))
 	}
 
-	s.Lock()
-	c, err := t.Commit(s.c)
+	req.ct = t
+	nid, err := s.queue.Push(req)
 	if err != nil {
-		delete(s.ct, req.id)
-		s.Unlock()
-
-		return stream.SendAndClose(controlFail(newContentTransactionCommitError(id, req, err)))
+		return stream.SendAndClose(controlFail(newContentUpdateUploadStoreError(id, req, err)))
 	}
 
-	s.c = c
-	delete(s.ct, req.id)
-	s.Unlock()
+	return stream.SendAndClose(&pb.Response{Status: pb.Response_ACK, Id: nid})
+}
 
-	log.WithFields(log.Fields{
-		"id":       id,
-		"cid":      req.id,
-		"prev-tag": req.fromTag,
-		"curr-tag": req.toTag}).Info("Content update has been applied")
+func (s *Server) applyContent(id int32, req *Item) (*pb.Response, error) {
+	if req.c != nil {
+		s.Lock()
+		s.c = s.c.Add(req.c)
+		s.Unlock()
 
-	return stream.SendAndClose(&pb.Response{Status: pb.Response_ACK, Id: id})
+		if req.toTag == nil {
+			log.WithField("id", id).Info("New content has been applied")
+		} else {
+			log.WithFields(log.Fields{
+				"id":  id,
+				"tag": req.toTag.String()}).Info("New content has been applied")
+		}
+
+		return &pb.Response{Status: pb.Response_ACK, Id: id}, nil
+	}
+
+	if req.ct != nil {
+		s.Lock()
+		c, err := req.ct.Commit(s.c)
+		if err != nil {
+			s.Unlock()
+
+			return controlFail(newContentTransactionCommitError(id, req, err)), nil
+		}
+
+		s.c = c
+		s.Unlock()
+
+		log.WithFields(log.Fields{
+			"id":       id,
+			"cid":      req.id,
+			"prev-tag": req.fromTag,
+			"curr-tag": req.toTag}).Info("Content update has been applied")
+
+		return &pb.Response{Status: pb.Response_ACK, Id: id}, nil
+	}
+
+	return controlFail(newMissingContentDataApplyError(id, req.id)), nil
 }
 
 func (s *Server) Upload(stream pb.PDPControl_UploadServer) error {
@@ -438,15 +432,31 @@ func (s *Server) Upload(stream pb.PDPControl_UploadServer) error {
 
 	if req.fromTag == nil {
 		if req.policy {
-			return s.applyPolicy(id, r, req, stream)
+			return s.uploadPolicy(id, r, req, stream)
 		}
 
-		return s.applyContent(id, r, req, stream)
+		return s.uploadContent(id, r, req, stream)
 	}
 
 	if req.policy {
-		return s.updatePolicy(id, r, req, stream)
+		return s.uploadPolicyUpdate(id, r, req, stream)
 	}
 
-	return s.updateContent(id, r, req, stream)
+	return s.uploadContentUpdate(id, r, req, stream)
+}
+
+func (s *Server) Apply(ctx context.Context, in *pb.Update) (*pb.Response, error) {
+	log.Info("Got apply command")
+
+	req, ok := s.queue.Pop(in.Id)
+	if !ok {
+		log.WithField("id", in.Id).Error("no such request")
+		return controlFail(newUnknownUploadedRequestError(in.Id)), nil
+	}
+
+	if req.policy {
+		return s.applyPolicy(in.Id, req)
+	}
+
+	return s.applyContent(in.Id, req)
 }
