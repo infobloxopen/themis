@@ -39,8 +39,7 @@ type Server struct {
 
 	queue *Queue
 
-	p  *pdp.PolicyStorage
-	pt *pdp.PolicyStorageTransaction
+	p *pdp.PolicyStorage
 
 	c  *pdp.LocalContentStorage
 	ct map[string]*pdp.LocalContentStorageTransaction

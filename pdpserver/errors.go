@@ -28,18 +28,23 @@ const (
 	emptyUploadErrorID
 	unknownUploadErrorID
 	policyUploadParseErrorID
+	policyUploadStoreErrorID
 	contentUploadParseErrorID
+	contentUploadStoreErrorID
 	missingPolicyStorageErrorID
-	policyTransactionInProgressErrorID
 	policyTransactionCreationErrorID
 	policyUpdateParseErrorID
 	policyUpdateApplicationErrorID
+	policyUpdateUploadStoreErrorID
 	policyTransactionCommitErrorID
-	contentTransactionInProgressErrorID
+	missingPolicyDataApplyErrorID
+	missingContentDataApplyErrorID
 	contentTransactionCreationErrorID
 	contentUpdateParseErrorID
 	contentUpdateApplicationErrorID
+	contentUpdateUploadStoreErrorID
 	contentTransactionCommitErrorID
+	unknownUploadedRequestErrorID
 )
 
 type externalError struct {
@@ -337,6 +342,23 @@ func (e *policyUploadParseError) Error() string {
 	return e.errorf("Failed to parse policy %d: %s", e.id, e.err)
 }
 
+type policyUploadStoreError struct {
+	errorLink
+	id  int32
+	err error
+}
+
+func newPolicyUploadStoreError(id int32, err error) *policyUploadStoreError {
+	return &policyUploadStoreError{
+		errorLink: errorLink{id: policyUploadStoreErrorID},
+		id:        id,
+		err:       err}
+}
+
+func (e *policyUploadStoreError) Error() string {
+	return e.errorf("Failed to store parsed policy %d: %s", e.id, e.err)
+}
+
 type contentUploadParseError struct {
 	errorLink
 	id  int32
@@ -354,6 +376,23 @@ func (e *contentUploadParseError) Error() string {
 	return e.errorf("Failed to parse content %d: %s", e.id, e.err)
 }
 
+type contentUploadStoreError struct {
+	errorLink
+	id  int32
+	err error
+}
+
+func newContentUploadStoreError(id int32, err error) *contentUploadStoreError {
+	return &contentUploadStoreError{
+		errorLink: errorLink{id: contentUploadStoreErrorID},
+		id:        id,
+		err:       err}
+}
+
+func (e *contentUploadStoreError) Error() string {
+	return e.errorf("Failed to store parsed content %d: %s", e.id, e.err)
+}
+
 type missingPolicyStorageError struct {
 	errorLink
 }
@@ -365,19 +404,6 @@ func newMissingPolicyStorageError() *missingPolicyStorageError {
 
 func (e *missingPolicyStorageError) Error() string {
 	return e.errorf("No any policy to update")
-}
-
-type policyTransactionInProgressError struct {
-	errorLink
-}
-
-func newPolicyTransactionInProgressError() *policyTransactionInProgressError {
-	return &policyTransactionInProgressError{
-		errorLink: errorLink{id: policyTransactionInProgressErrorID}}
-}
-
-func (e *policyTransactionInProgressError) Error() string {
-	return e.errorf("Can't start new policy update or completely reload policy while another update is in progress")
 }
 
 type policyTransactionCreationError struct {
@@ -437,6 +463,25 @@ func (e *policyUpdateApplicationError) Error() string {
 	return e.errorf("Failed to apply update %d from tag %q to %q: %s", e.id, e.item.fromTag.String(), e.item.toTag.String(), e.err)
 }
 
+type policyUpdateUploadStoreError struct {
+	errorLink
+	id   int32
+	item *Item
+	err  error
+}
+
+func newPolicyUpdateUploadStoreError(id int32, item *Item, err error) *policyUpdateUploadStoreError {
+	return &policyUpdateUploadStoreError{
+		errorLink: errorLink{id: policyUpdateUploadStoreErrorID},
+		id:        id,
+		item:      item,
+		err:       err}
+}
+
+func (e *policyUpdateUploadStoreError) Error() string {
+	return e.errorf("Failed to store parsed policy update %d from tag %q to %q: %s", e.id, e.item.fromTag.String(), e.item.toTag.String(), e.err)
+}
+
 type policyTransactionCommitError struct {
 	errorLink
 	id   int32
@@ -456,19 +501,36 @@ func (e *policyTransactionCommitError) Error() string {
 	return e.errorf("Failed to commit transaction %d from tag %q to %q: %s", e.id, e.item.fromTag.String(), e.item.toTag.String(), e.err)
 }
 
-type contentTransactionInProgressError struct {
+type missingPolicyDataApplyError struct {
 	errorLink
-	id string
+	id int32
 }
 
-func newContentTransactionInProgressError(id string) *contentTransactionInProgressError {
-	return &contentTransactionInProgressError{
-		errorLink: errorLink{id: contentTransactionInProgressErrorID},
+func newMissingPolicyDataApplyError(id int32) *missingPolicyDataApplyError {
+	return &missingPolicyDataApplyError{
+		errorLink: errorLink{id: missingPolicyDataApplyErrorID},
 		id:        id}
 }
 
-func (e *contentTransactionInProgressError) Error() string {
-	return e.errorf("Can't start new content update or completely reload content %q while another update of the content is in progress", e.id)
+func (e *missingPolicyDataApplyError) Error() string {
+	return e.errorf("Request %d doesn't contain parsed policy or parsed policy update", e.id)
+}
+
+type missingContentDataApplyError struct {
+	errorLink
+	id  int32
+	cid string
+}
+
+func newMissingContentDataApplyError(id int32, cid string) *missingContentDataApplyError {
+	return &missingContentDataApplyError{
+		errorLink: errorLink{id: missingContentDataApplyErrorID},
+		id:        id,
+		cid:       cid}
+}
+
+func (e *missingContentDataApplyError) Error() string {
+	return e.errorf("Request %d doesn't contain parsed content %q or parsed content update", e.id, e.cid)
 }
 
 type contentTransactionCreationError struct {
@@ -528,6 +590,25 @@ func (e *contentUpdateApplicationError) Error() string {
 	return e.errorf("Failed to apply content %q update %d from tag %q to %q: %s", e.item.id, e.id, e.item.fromTag.String(), e.item.toTag.String(), e.err)
 }
 
+type contentUpdateUploadStoreError struct {
+	errorLink
+	id   int32
+	item *Item
+	err  error
+}
+
+func newContentUpdateUploadStoreError(id int32, item *Item, err error) *contentUpdateUploadStoreError {
+	return &contentUpdateUploadStoreError{
+		errorLink: errorLink{id: contentUpdateUploadStoreErrorID},
+		id:        id,
+		item:      item,
+		err:       err}
+}
+
+func (e *contentUpdateUploadStoreError) Error() string {
+	return e.errorf("Failed to store parsed content %q update %d from tag %q to %q: %s", e.item.id, e.id, e.item.fromTag.String(), e.item.toTag.String(), e.err)
+}
+
 type contentTransactionCommitError struct {
 	errorLink
 	id   int32
@@ -545,4 +626,19 @@ func newContentTransactionCommitError(id int32, item *Item, err error) *contentT
 
 func (e *contentTransactionCommitError) Error() string {
 	return e.errorf("Failed to commit content %q transaction %d from tag %q to %q: %s", e.item.id, e.id, e.item.fromTag.String(), e.item.toTag.String(), e.err)
+}
+
+type unknownUploadedRequestError struct {
+	errorLink
+	id int32
+}
+
+func newUnknownUploadedRequestError(id int32) *unknownUploadedRequestError {
+	return &unknownUploadedRequestError{
+		errorLink: errorLink{id: unknownUploadedRequestErrorID},
+		id:        id}
+}
+
+func (e *unknownUploadedRequestError) Error() string {
+	return e.errorf("Can't find parsed policy or content with id %d", e.id)
 }

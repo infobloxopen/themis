@@ -57,6 +57,16 @@ func main() {
 
 	log.Infof("Uploading data to PDP servers...")
 
+	rem := 0
+	for _, id := range uids {
+		if id == -1 {
+			continue
+		}
+
+		rem++
+	}
+
+	errors = 0
 	for i, h := range hosts {
 		id := uids[i]
 		if id == -1 {
@@ -64,8 +74,28 @@ func main() {
 		}
 
 		f.Seek(0, 0)
-		if err := h.Upload(id, f); err != nil {
+		nid, err := h.Upload(id, f)
+		if err != nil {
+			uids[i] = -1
+			errors++
 			log.Errorf("Failed to upload data: %v", err)
+		} else {
+			uids[i] = nid
+		}
+	}
+
+	if errors >= rem {
+		panic(fmt.Errorf("No hosts got data"))
+	}
+
+	for i, h := range hosts {
+		id := uids[i]
+		if id == -1 {
+			continue
+		}
+
+		if err := h.Apply(id); err != nil {
+			log.Errorf("Failed to apply: %v", err)
 		}
 	}
 }

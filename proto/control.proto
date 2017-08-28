@@ -5,6 +5,7 @@ package control;
 service PDPControl {
   rpc Request (Item) returns (Response) {}
   rpc Upload (stream Chunk) returns (Response) {}
+  rpc Apply (Update) returns (Response) {}
 }
 
 message Item {
@@ -21,6 +22,10 @@ message Item {
 message Chunk {
   int32 id = 1;
   string data = 2;
+}
+
+message Update {
+  int32 id = 1;
 }
 
 message Response {
