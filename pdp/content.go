@@ -90,6 +90,30 @@ func (s *LocalContentStorage) NewTransaction(cID string, tag *uuid.UUID) (*Local
 	return &LocalContentStorageTransaction{tag: *tag, ID: cID, items: c.items}, nil
 }
 
+func (s *LocalContentStorage) String() string {
+	if s == nil {
+		return ""
+	}
+
+	lines := []string{"content:"}
+	for p := range s.r.Enumerate() {
+		line := fmt.Sprintf("- %s: ", p.Key)
+		if c, ok := p.Value.(*LocalContent); ok {
+			line += c.String()
+		} else {
+			line += fmt.Sprintf("\"invalid type: %T\"", p.Value)
+		}
+
+		lines = append(lines, line)
+	}
+
+	if len(lines) > 1 {
+		return strings.Join(lines, "\n")
+	}
+
+	return ""
+}
+
 type ContentUpdate struct {
 	cID    string
 	oldTag uuid.UUID
@@ -107,6 +131,22 @@ func NewContentUpdate(cID string, oldTag, newTag uuid.UUID) *ContentUpdate {
 
 func (u *ContentUpdate) Append(op int, path []string, entity *ContentItem) {
 	u.cmds = append(u.cmds, &command{op: op, path: path, entity: entity})
+}
+
+func (u *ContentUpdate) String() string {
+	if u == nil {
+		return "no content update"
+	}
+
+	lines := []string{fmt.Sprintf("content update: %s - %s\ncontent: %q", u.oldTag, u.newTag, u.cID)}
+	if len(u.cmds) > 0 {
+		lines = append(lines, "commands:")
+		for _, cmd := range u.cmds {
+			lines = append(lines, "- "+cmd.describe())
+		}
+	}
+
+	return strings.Join(lines, "\n")
 }
 
 type LocalContentStorageTransaction struct {
@@ -145,7 +185,7 @@ func (t *LocalContentStorageTransaction) Apply(u *ContentUpdate) error {
 		err := t.applyCmd(cmd)
 		if err != nil {
 			t.err = err
-			return bindErrorf(err, "command %d", i)
+			return bindErrorf(err, "command %d - %s", i, cmd.describe())
 		}
 	}
 
@@ -316,6 +356,18 @@ func (c *LocalContent) Get(ID string) (*ContentItem, error) {
 	}
 
 	return item, nil
+}
+
+func (c *LocalContent) String() string {
+	if c == nil {
+		return "null"
+	}
+
+	if c.tag == nil {
+		return "no tag"
+	}
+
+	return c.tag.String()
 }
 
 type ContentItem struct {

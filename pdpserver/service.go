@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -52,6 +53,21 @@ func makeFailEffect(effect pb.Response_Effect) (pb.Response_Effect, error) {
 	return pb.Response_INDETERMINATE, newUnknownEffectError(int(effect))
 }
 
+type obligation []*pb.Attribute
+
+func (o obligation) String() string {
+	if len(o) <= 0 {
+		return "no attributes"
+	}
+
+	lines := []string{"attributes:"}
+	for _, attr := range o {
+		lines = append(lines, fmt.Sprintf("- %s.(%s): %q", attr.Id, attr.Type, attr.Value))
+	}
+
+	return strings.Join(lines, "\n")
+}
+
 func (s *Server) newContext(c *pdp.LocalContentStorage, in *pb.Request) (*pdp.Context, error) {
 	ctx, err := pdp.NewContext(c, len(in.Attributes), func(i int) (string, pdp.AttributeValue, error) {
 		a := in.Attributes[i]
@@ -98,6 +114,8 @@ func (s *Server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, i
 		return pb.Response_INDETERMINATE, []error{err}, nil
 	}
 
+	log.WithField("context", ctx).Debug("Request context")
+
 	errs := []error{}
 
 	r := p.Root().Calculate(ctx)
@@ -142,6 +160,13 @@ func (s *Server) Validate(ctx context.Context, in *pb.Request) (*pb.Response, er
 	} else if len(errs) > 0 {
 		status = errs[0].Error()
 	}
+
+	log.Info("Returning response")
+	log.WithFields(log.Fields{
+		"effect":     pb.Response_Effect_name[int32(effect)],
+		"reason":     status,
+		"obligation": obligation(attrs),
+	}).Debug("Response")
 
 	return &pb.Response{
 		Effect:     effect,

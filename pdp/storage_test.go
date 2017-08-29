@@ -1,6 +1,7 @@
 package pdp
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -228,6 +229,15 @@ func TestStorageTransactionalUpdate(t *testing.T) {
 		effect:      EffectDeny,
 		obligations: makeSingleStringObligation("s", "deny")})
 	u.Append(UODelete, []string{"test", "del"}, nil)
+
+	eUpd := fmt.Sprintf("policy update: %s - %s\n"+
+		"commands:\n"+
+		"- Add (\"test\"/\"first\")\n"+
+		"- Delete (\"test\"/\"del\")", tag.String(), newTag.String())
+	sUpd := u.String()
+	if sUpd != eUpd {
+		t.Errorf("Expected:\n%s\n\nupdate but got:\n%s\n\n", eUpd, sUpd)
+	}
 
 	tr, err := s.NewTransaction(&tag)
 	if err != nil {

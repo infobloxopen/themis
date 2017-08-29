@@ -1,6 +1,12 @@
 package pdp
 
-import "github.com/google/uuid"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/google/uuid"
+)
 
 type PolicyStorage struct {
 	tag      *uuid.UUID
@@ -73,10 +79,47 @@ func (u *PolicyUpdate) Append(op int, path []string, entity interface{}) {
 	u.cmds = append(u.cmds, &command{op: op, path: path, entity: entity})
 }
 
+func (u *PolicyUpdate) String() string {
+	if u == nil {
+		return "no policy update"
+	}
+
+	lines := []string{fmt.Sprintf("policy update: %s - %s", u.oldTag, u.newTag)}
+	if len(u.cmds) > 0 {
+		lines = append(lines, "commands:")
+		for _, cmd := range u.cmds {
+			lines = append(lines, "- "+cmd.describe())
+		}
+	}
+
+	return strings.Join(lines, "\n")
+}
+
 type command struct {
 	op     int
 	path   []string
 	entity interface{}
+}
+
+func (c *command) describe() string {
+	if c == nil {
+		return "nop"
+	}
+
+	sop := "unknown"
+	if c.op >= 0 && c.op < len(UpdateOpNames) {
+		sop = UpdateOpNames[c.op]
+	}
+
+	qpath := []string{"."}
+	if len(c.path) > 0 {
+		qpath = make([]string, len(c.path))
+		for i, s := range c.path {
+			qpath[i] = strconv.Quote(s)
+		}
+	}
+
+	return fmt.Sprintf("%s (%s)", sop, strings.Join(qpath, "/"))
 }
 
 type PolicyStorageTransaction struct {
@@ -115,7 +158,7 @@ func (t *PolicyStorageTransaction) Apply(u *PolicyUpdate) error {
 		err := t.applyCmd(cmd)
 		if err != nil {
 			t.err = err
-			return bindErrorf(err, "command %d", i)
+			return bindErrorf(err, "command %d - %s", i, cmd.describe())
 		}
 	}
 

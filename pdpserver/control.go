@@ -278,6 +278,8 @@ func (s *Server) uploadPolicyUpdate(id int32, r *streamReader, req *Item, stream
 		return stream.SendAndClose(controlFail(newPolicyUpdateParseError(id, req, err)))
 	}
 
+	log.WithField("update", u).Debug("Policy update")
+
 	err = t.Apply(u)
 	if err != nil {
 		return stream.SendAndClose(controlFail(newPolicyUpdateApplicationError(id, req, err)))
@@ -361,6 +363,8 @@ func (s *Server) uploadContentUpdate(id int32, r *streamReader, req *Item, strea
 		r.skip()
 		return stream.SendAndClose(controlFail(newContentUpdateParseError(id, req, err)))
 	}
+
+	log.WithField("update", u).Debug("Content update")
 
 	err = t.Apply(u)
 	if err != nil {
