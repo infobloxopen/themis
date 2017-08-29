@@ -135,10 +135,10 @@ func (u *ContentUpdate) Append(op int, path []string, entity *ContentItem) {
 
 func (u *ContentUpdate) String() string {
 	if u == nil {
-		return "no update"
+		return "no content update"
 	}
 
-	lines := []string{fmt.Sprintf("content: %q\nfrom: %s\nto: %s", u.cID, u.oldTag, u.newTag)}
+	lines := []string{fmt.Sprintf("content update: %s - %s\ncontent: %q", u.oldTag, u.newTag, u.cID)}
 	if len(u.cmds) > 0 {
 		lines = append(lines, "commands:")
 		for _, cmd := range u.cmds {

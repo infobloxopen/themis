@@ -1,6 +1,7 @@
 package pdp
 
 import (
+	"fmt"
 	"net"
 	"testing"
 
@@ -151,6 +152,29 @@ func TestLocalContentStorage(t *testing.T) {
 
 	u.Append(UOAdd, []string{"dom-map-add"}, dmcAdd)
 	u.Append(UODelete, []string{"dom-map-del"}, nil)
+
+	eUpd := fmt.Sprintf("content update: %s - %s\n"+
+		"content: \"first\"\n"+
+		"commands:\n"+
+		"- Add (\"str-str-map\"/\"key\")\n"+
+		"- Add (\"str-net-map\"/\"key\")\n"+
+		"- Add (\"str-dom-map\"/\"key\")\n"+
+		"- Add (\"str-str-map\"/\"key\"/\"4-fourth\")\n"+
+		"- Delete (\"str-str-map\"/\"key\"/\"3-third\")\n"+
+		"- Add (\"str-net-map\"/\"key\"/\"192.0.2.48/28\")\n"+
+		"- Delete (\"str-net-map\"/\"key\"/\"2001:db8::/32\")\n"+
+		"- Add (\"str-dom-map\"/\"key\"/\"example.gov\")\n"+
+		"- Delete (\"str-dom-map\"/\"key\"/\"example.net\")\n"+
+		"- Add (\"str-map\"/\"4-fourth\")\n"+
+		"- Add (\"net-map\"/\"2001:db8:1000::/40\")\n"+
+		"- Add (\"net-map\"/\"2001:db8:1000::1\")\n"+
+		"- Delete (\"str-map\"/\"3-third\")\n"+
+		"- Add (\"dom-map-add\")\n"+
+		"- Delete (\"dom-map-del\")", tag.String(), newTag.String())
+	sUpd := u.String()
+	if eUpd != sUpd {
+		t.Errorf("Expected:\n%s\n\nbut got:\n%s\n\n", eUpd, sUpd)
+	}
 
 	tr, err := s.NewTransaction("first", &tag)
 	if err != nil {

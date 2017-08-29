@@ -81,10 +81,10 @@ func (u *PolicyUpdate) Append(op int, path []string, entity interface{}) {
 
 func (u *PolicyUpdate) String() string {
 	if u == nil {
-		return "no update"
+		return "no policy update"
 	}
 
-	lines := []string{fmt.Sprintf("from: %s\nto: %s", u.oldTag, u.newTag)}
+	lines := []string{fmt.Sprintf("policy update: %s - %s", u.oldTag, u.newTag)}
 	if len(u.cmds) > 0 {
 		lines = append(lines, "commands:")
 		for _, cmd := range u.cmds {
