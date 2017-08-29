@@ -8,11 +8,11 @@ service PIP {
 
 message Attribute {
   string type = 1;
-  string value = 1;
+  string value = 2;
 }
 
 message Request {
-  string query_type = 1
+  string query_type = 1;
   repeated Attribute attributes = 2;
 }
 

@@ -2,8 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
+	log "github.com/Sirupsen/logrus"
 	"net"
 	"os"
 
@@ -19,19 +18,22 @@ type server struct {
 	CategoryMap map[string]string
 }
 
+const supportedQueryType = "domain-category"
+
+
 func getCategoryMap(categoryFile string) (map[string]string, error) {
 	categoryMap := make(map[string]string)
 
 	f, err := os.Open(categoryFile)
 	if err != nil {
-		fmt.Printf("cannot open category file '%s': '%s'\n", categoryFile, err)
+		log.Fatalf("cannot open category file '%s': '%s'\n", categoryFile, err)
 	}
 	defer f.Close()
 
 	dec := json.NewDecoder(f)
 
 	if err = dec.Decode(&categoryMap); err != nil {
-		fmt.Printf("cannot decode category file '%s': '%s\n", categoryFile, err)
+		log.Fatalf("cannot decode category file '%s': '%s\n", categoryFile, err)
 	}
 
 	return categoryMap, err
@@ -39,16 +41,24 @@ func getCategoryMap(categoryFile string) (map[string]string, error) {
 
 // SayHello implements helloworld.GreeterServer
 func (s *server) GetAttribute(ctx context.Context, in *pb.Request) (*pb.Response, error) {
+	responseStatus := pb.Response_OK
+
+	queryType := in.GetQueryType()
+	if queryType != supportedQueryType {
+		log.Errorf("Query type '%s' is not supported", queryType)
+		responseStatus = pb.Response_SERVICEERROR
+	}
 	inAttrs := in.GetAttributes()
 	domainStr := inAttrs[0].GetValue()
 	category, ok := s.CategoryMap[domainStr]
 	if !ok {
 		category = "unknown category"
+		responseStatus = pb.Response_NOTFOUND
 	}
 
 	respAttr := &pb.Attribute{Value: category}
 	values := []*pb.Attribute{respAttr}
-	return &pb.Response{Values: values}, nil
+	return &pb.Response{Status: responseStatus, Values: values}, nil
 }
 
 func main() {
@@ -65,7 +75,7 @@ func main() {
 
 	categoryMap, err := getCategoryMap("category-map.json")
 	if err != nil {
-		fmt.Printf("getCategoryMap error: %s\n", err)
+		log.Fatalf("getCategoryMap error: %s\n", err)
 		os.Exit(1)
 	}
 
