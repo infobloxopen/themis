@@ -37,7 +37,10 @@ func makePIPSelector(ctx context, loc []string, m map[interface{}]interface{}) (
 		return pdp.PIPSelector{}, bindErrorf(newInvalidTypeError(t), "selector(%s.%s)", loc[0], loc[1])
 	}
 
-	res := pdp.MakePIPSelector(loc[0], loc[1], path, t)
+	res, pip_err := pdp.MakePIPSelector(loc[0], loc[1], path, t)
+	if pip_err != nil {
+		return pdp.PIPSelector{}, bindErrorf(pip_err, "selector(%s.%s)", loc[0], loc[1])
+	}
 
 	fmt.Printf("Res is %v\n", res)
 	return res, nil

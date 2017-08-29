@@ -7,13 +7,13 @@ service PIP {
 }
 
 message Attribute {
-  string id = 1;
-  string type = 2;
-  string value = 3;
+  string type = 1;
+  string value = 1;
 }
 
 message Request {
-  repeated Attribute attributes = 1;
+  string query_type = 1
+  repeated Attribute attributes = 2;
 }
 
 message Response {

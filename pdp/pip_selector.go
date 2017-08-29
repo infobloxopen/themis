@@ -4,25 +4,31 @@ import (
 	"context"
 	"fmt"
 
-	pip_service "github.com/infobloxopen/themis/pip-service"
+	ps "github.com/infobloxopen/themis/pip-service"
 	"google.golang.org/grpc"
 )
 
 const pIPServicePort = ":5356"
 
 type PIPSelector struct {
-	service   string
+	serviceAddr string
 	queryType string
 	path      []Expression
 	t         int
 }
 
-func MakePIPSelector(service, queryType string, path []Expression, t int) PIPSelector {
+
+func MakePIPSelector(service, queryType string, path []Expression, t int) (PIPSelector, error) {
+	addr, err := ps.GetPIPConnection(service)
+	if err != nil {
+		return PIPSelector{}, err
+	}
+
 	return PIPSelector{
-		service:   service + pIPServicePort,
+		serviceAddr: addr,
 		queryType: queryType,
 		path:      path,
-		t:         t}
+		t:         t}, nil
 }
 
 func (s PIPSelector) GetResultType() int {
@@ -30,7 +36,7 @@ func (s PIPSelector) GetResultType() int {
 }
 
 func (s PIPSelector) describe() string {
-	return fmt.Sprintf("PIPselector(%s.%s)", s.service, s.queryType)
+	return fmt.Sprintf("PIPselector(%s.%s)", s.serviceAddr, s.queryType)
 }
 
 func (s PIPSelector) getAttributeValue(ctx *Context) (AttributeValue, error) {
@@ -43,15 +49,15 @@ func (s PIPSelector) getAttributeValue(ctx *Context) (AttributeValue, error) {
 	}
 	fmt.Printf("domainStr is '%v'\n", domainStr)
 
-	conn, err := grpc.Dial(s.service, grpc.WithInsecure())
+	conn, err := grpc.Dial(s.serviceAddr, grpc.WithInsecure())
 	if err != nil {
 		fmt.Printf("cannot connect to pip: %s\n", err)
 	}
 	defer conn.Close()
 
-	c := pip_service.NewPIPClient(conn)
-	reqAttr := &pip_service.Attribute{Value: domainStr}
-	request := &pip_service.Request{Attributes: []*pip_service.Attribute{reqAttr}}
+	c := ps.NewPIPClient(conn)
+	reqAttr := &ps.Attribute{Value: domainStr}
+	request := &ps.Request{Attributes: []*ps.Attribute{reqAttr}}
 
 	r, err := c.GetAttribute(context.Background(), request)
 	if err != nil {

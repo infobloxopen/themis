@@ -14,10 +14,6 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-const (
-	port = ":5356"
-)
-
 // server is used to implement helloworld.GreeterServer.
 type server struct {
 	CategoryMap map[string]string
@@ -56,7 +52,13 @@ func (s *server) GetAttribute(ctx context.Context, in *pb.Request) (*pb.Response
 }
 
 func main() {
-	lis, err := net.Listen("tcp", port)
+	pipServiceName := "mcafee-ts"
+	conn, err := pb.GetPIPConnection(pipServiceName)
+	if err != nil {
+		log.Fatalf("Cannot get PIP connection for PIP service '%s': %s", pipServiceName, err)
+	}
+
+	lis, err := net.Listen("tcp", conn)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
