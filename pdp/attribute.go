@@ -25,33 +25,36 @@ const (
 	TypeSetOfNetworks
 	TypeSetOfDomains
 	TypeListOfStrings
+
+	typesTotal
 )
 
-var TypeNames = []string{
-	"Undefined",
-	"Boolean",
-	"String",
-	"Address",
-	"Network",
-	"Domain",
-	"Set of Strings",
-	"Set of Networks",
-	"Set of Domains",
-	"List of Strings"}
+var (
+	TypeNames = []string{
+		"Undefined",
+		"Boolean",
+		"String",
+		"Address",
+		"Network",
+		"Domain",
+		"Set of Strings",
+		"Set of Networks",
+		"Set of Domains",
+		"List of Strings"}
 
-var TypeIDs = map[string]int{
-	"undefined":       TypeUndefined,
-	"boolean":         TypeBoolean,
-	"string":          TypeString,
-	"address":         TypeAddress,
-	"network":         TypeNetwork,
-	"domain":          TypeDomain,
-	"set of strings":  TypeSetOfStrings,
-	"set of networks": TypeSetOfNetworks,
-	"set of domains":  TypeSetOfDomains,
-	"list of strings": TypeListOfStrings}
+	TypeKeys = []string{}
+	TypeIDs  = map[string]int{}
+)
 
 var undefinedValue = AttributeValue{}
+
+func init() {
+	for t := 0; t < typesTotal; t++ {
+		key := strings.ToLower(TypeNames[t])
+		TypeKeys = append(TypeKeys, key)
+		TypeIDs[key] = t
+	}
+}
 
 type Attribute struct {
 	id string
@@ -409,7 +412,7 @@ func MakeAttributeAssignmentExpression(a Attribute, e Expression) AttributeAssig
 
 func (a AttributeAssignmentExpression) Serialize(ctx *Context) (string, string, string, error) {
 	ID := a.a.id
-	typeName := TypeNames[a.a.t]
+	typeName := TypeKeys[a.a.t]
 
 	v, err := a.e.calculate(ctx)
 	if err != nil {

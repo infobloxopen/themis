@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
@@ -108,11 +109,11 @@ func makeFieldMap(t reflect.Type) (map[string]string, error) {
 type fieldUnmarshaller func(attr *pb.Attribute, v reflect.Value) error
 
 var unmarshallersByType = map[string]fieldUnmarshaller{
-	"boolean": boolUnmarshaller,
-	"string":  stringUnmarshaller,
-	"address": addressUnmarshaller,
-	"network": networkUnmarshaller,
-	"domain":  domainUnmarshaller}
+	pdp.TypeKeys[pdp.TypeBoolean]: boolUnmarshaller,
+	pdp.TypeKeys[pdp.TypeString]:  stringUnmarshaller,
+	pdp.TypeKeys[pdp.TypeAddress]: addressUnmarshaller,
+	pdp.TypeKeys[pdp.TypeNetwork]: networkUnmarshaller,
+	pdp.TypeKeys[pdp.TypeDomain]:  domainUnmarshaller}
 
 func unmarshalToTaggedStruct(res *pb.Response, v reflect.Value, fields map[string]string) error {
 	name, ok := fields[EffectFieldName]

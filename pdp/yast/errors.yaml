@@ -261,14 +261,14 @@ errors:
   - id: ID
     type: string
   - id: first
-    type: string
+    type: int
   - id: second
-    type: string
+    type: int
   msg: "No function %s for arguments %s and %s"
   args:
   - field: ID
-  - field: first
-  - field: second
+  - expr: pdp.TypeNames[e.first]
+  - expr: pdp.TypeNames[e.second]
 
 - id: matchFunctionArgsNumberError
   fields:
