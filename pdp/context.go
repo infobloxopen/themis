@@ -1,7 +1,9 @@
 package pdp
 
 import (
+	"fmt"
 	"net"
+	"strings"
 
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
@@ -62,6 +64,30 @@ func NewContext(c *LocalContentStorage, count int, f func(i int) (string, Attrib
 	}
 
 	return ctx, nil
+}
+
+func (c *Context) String() string {
+	lines := []string{}
+	if c.c != nil {
+		if s := c.c.String(); len(s) > 0 {
+			lines = append(lines, s)
+		}
+	}
+
+	if len(c.a) > 0 {
+		if len(lines) > 0 {
+			lines = append(lines, "")
+		}
+
+		lines = append(lines, "attributes:")
+		for name, attrs := range c.a {
+			for t, v := range attrs {
+				lines = append(lines, fmt.Sprintf("- %s.(%s): %s", name, TypeNames[t], v.describe()))
+			}
+		}
+	}
+
+	return strings.Join(lines, "\n")
 }
 
 func (c *Context) getAttribute(a Attribute) (AttributeValue, error) {
