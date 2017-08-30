@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
@@ -28,6 +29,16 @@ type TestTaggedResponseStruct struct {
 	Domain  string    `pdp:"d,domain"`
 	Address net.IP    `pdp`
 	Network net.IPNet `pdp:"net,network"`
+}
+
+type TestTaggedAllTypesResponseStruct struct {
+	Effect  string    `pdp:"Effect"`
+	Reason  string    `pdp:"Reason"`
+	Bool    bool      `pdp:"ba"`
+	String  string    `pdp:"sa"`
+	Address net.IP    `pdp:"aa"`
+	Network net.IPNet `pdp:"na"`
+	Domain  string    `pdp:"da,domain"`
 }
 
 type TestInvalidResponseStruct1 struct {
@@ -132,6 +143,68 @@ func TestUnmarshalTaggedStruct(t *testing.T) {
 			"example.com",
 			net.ParseIP("1.2.3.4"), *n}
 		CompareTestTaggedStruct(v, e, t)
+	}
+
+	ba := pdp.MakeAttribute("ba", pdp.TypeBoolean)
+	bv := pdp.MakeBooleanValue(true)
+
+	sa := pdp.MakeAttribute("sa", pdp.TypeString)
+	sv := pdp.MakeStringValue("test")
+
+	aa := pdp.MakeAttribute("aa", pdp.TypeAddress)
+	a := net.ParseIP("192.0.2.1")
+	if a == nil {
+		t.Fatal("Can't create IP address")
+	}
+	av := pdp.MakeAddressValue(a)
+
+	na := pdp.MakeAttribute("na", pdp.TypeNetwork)
+	_, n, err := net.ParseCIDR("192.0.2.0/24")
+	if err != nil {
+		t.Fatalf("Can't create network: %s", err)
+	}
+	nv := pdp.MakeNetworkValue(n)
+
+	da := pdp.MakeAttribute("da", pdp.TypeDomain)
+	dv := pdp.MakeDomainValue("example.com")
+
+	assignments := []pdp.AttributeAssignmentExpression{
+		pdp.MakeAttributeAssignmentExpression(ba, bv),
+		pdp.MakeAttributeAssignmentExpression(sa, sv),
+		pdp.MakeAttributeAssignmentExpression(aa, av),
+		pdp.MakeAttributeAssignmentExpression(na, nv),
+		pdp.MakeAttributeAssignmentExpression(da, dv),
+	}
+
+	obligations := make([]*pb.Attribute, len(assignments))
+	for i, assignment := range assignments {
+		id, attrType, v, err := assignment.Serialize(nil)
+		if err != nil {
+			t.Fatalf("Can't serialize assignment %d: %s", i, err)
+		}
+
+		obligations[i] = &pb.Attribute{
+			Id:    id,
+			Type:  attrType,
+			Value: v,
+		}
+	}
+
+	r = &pb.Response{pb.Response_INDETERMINATED, "Test Error!", obligations}
+	vAllTypes := TestTaggedAllTypesResponseStruct{}
+	err = unmarshalToValue(r, reflect.ValueOf(&vAllTypes))
+	if err != nil {
+		t.Errorf("Expected no error but got: %s", err)
+	} else {
+		eAllTypes := TestTaggedAllTypesResponseStruct{
+			Effect:  pb.Response_Effect_name[int32(pb.Response_INDETERMINATED)],
+			Reason:  "Test Error!",
+			Bool:    true,
+			String:  "test",
+			Address: a,
+			Network: *n,
+			Domain:  "example.com"}
+		CompareTestTaggedAllTypesStruct(vAllTypes, eAllTypes, t)
 	}
 }
 
@@ -312,6 +385,18 @@ func CompareTestTaggedStruct(v, e TestTaggedResponseStruct, t *testing.T) {
 	}
 }
 
+func CompareTestTaggedAllTypesStruct(v, e TestTaggedAllTypesResponseStruct, t *testing.T) {
+	if v.Effect != e.Effect ||
+		v.Reason != e.Reason ||
+		v.Bool != e.Bool ||
+		v.String != e.String ||
+		v.Address.String() != e.Address.String() ||
+		v.Network.String() != e.Network.String() ||
+		v.Domain != e.Domain {
+		t.Errorf("Expected:\n%v\nbut got:\n%v\n", SprintfTestTaggedAllTypesStruct(e), SprintfTestTaggedAllTypesStruct(v))
+	}
+}
+
 func SprintfTestResponseStruct(v TestResponseStruct) string {
 	return fmt.Sprintf("\tEffect: %v\n\tInt: %v\n\tBool: %v\n\tString: %v\n\tAddress: %s\n\tNetwork: %s\n",
 		v.Effect, v.Int, v.Bool, v.String, v.Address.String(), v.Network.String())
@@ -322,4 +407,11 @@ func SprintfTestTaggedStruct(v TestTaggedResponseStruct) string {
 		"\tBool1: %v\n\tBool2: %v\n\tBool3: %v\n"+
 		"\tDomain: %v\n\tAddress: %v\n\tNetwork: %v\n",
 		v.Result, v.Error, v.Bool1, v.Bool2, v.Bool3, v.Domain, v.Address.String(), v.Network.String())
+}
+
+func SprintfTestTaggedAllTypesStruct(v TestTaggedAllTypesResponseStruct) string {
+	return fmt.Sprintf("\tEffect: %v\n\tReason: %v\n"+
+		"\tBool: %v\n\tString: %v\n\tAddress:%v\n"+
+		"\tNetwork: %v\n\tDomain: %v\n",
+		v.Effect, v.Reason, v.Bool, v.String, v.Address.String(), v.Network.String(), v.Domain)
 }

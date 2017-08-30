@@ -699,7 +699,7 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 	id, tName, s, err := ae.Serialize(ctx)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else if id != a.id || tName != TypeNames[a.t] || s != expect {
+	} else if id != a.id || tName != TypeKeys[a.t] || s != expect {
 		t.Errorf("Expected %q, %q, %q but got %q, %q, %q", a.id, TypeNames[a.t], expect, id, tName, s)
 	}
 

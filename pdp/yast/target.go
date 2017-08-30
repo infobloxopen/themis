@@ -73,12 +73,12 @@ func (ctx context) unmarshalTargetMatchExpression(ID string, v interface{}) (pdp
 
 	subTypeFunctionMap, ok := typeFunctionMap[firstType]
 	if !ok {
-		return nil, newMatchFunctionCastError(ID, pdp.TypeNames[firstType], pdp.TypeNames[secondType])
+		return nil, newMatchFunctionCastError(ID, firstType, secondType)
 	}
 
 	maker, ok := subTypeFunctionMap[secondType]
 	if !ok {
-		return nil, newMatchFunctionCastError(ID, pdp.TypeNames[firstType], pdp.TypeNames[secondType])
+		return nil, newMatchFunctionCastError(ID, firstType, secondType)
 	}
 
 	return maker(first, second), nil

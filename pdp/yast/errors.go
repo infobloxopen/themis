@@ -542,11 +542,11 @@ func (e *unknownMatchFunctionError) Error() string {
 type matchFunctionCastError struct {
 	errorLink
 	ID     string
-	first  string
-	second string
+	first  int
+	second int
 }
 
-func newMatchFunctionCastError(ID, first, second string) *matchFunctionCastError {
+func newMatchFunctionCastError(ID string, first, second int) *matchFunctionCastError {
 	return &matchFunctionCastError{
 		errorLink: errorLink{id: matchFunctionCastErrorID},
 		ID:        ID,
@@ -555,7 +555,7 @@ func newMatchFunctionCastError(ID, first, second string) *matchFunctionCastError
 }
 
 func (e *matchFunctionCastError) Error() string {
-	return e.errorf("No function %s for arguments %s and %s", e.ID, e.first, e.second)
+	return e.errorf("No function %s for arguments %s and %s", e.ID, pdp.TypeNames[e.first], pdp.TypeNames[e.second])
 }
 
 type matchFunctionArgsNumberError struct {
