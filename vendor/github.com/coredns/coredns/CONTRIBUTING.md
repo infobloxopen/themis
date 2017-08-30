@@ -1,9 +1,9 @@
-## Contributing to CoreDNS
+# Contributing to CoreDNS
 
 Welcome! Our community focuses on helping others and making CoreDNS the best it
 can be. We gladly accept contributions and encourage you to get involved!
 
-### Bug reports
+## Bug reports
 
 First, please [search this repository](https://github.com/coredns/coredns/search?q=&type=Issues&utf8=%E2%9C%93)
 with a variety of keywords to ensure your bug is not already reported.
@@ -21,14 +21,14 @@ Please be kind. :smile: Remember that CoreDNS comes at no cost to you, and you'r
 getting free help.
 
 
-### Minor improvements and new tests
+## Minor improvements and new tests
 
 Submit [pull requests](https://github.com/coredns/coredns/pulls) at any time. Make
 sure to write tests to assert your change is working properly and is thoroughly
 covered.
 
 
-### Proposals, suggestions, ideas, new features
+## Proposals, suggestions, ideas, new features
 
 First, please [search](https://github.com/coredns/coredns/search?q=&type=Issues&utf8=%E2%9C%93)
 with a variety of keywords to ensure your suggestion/proposal is new.
@@ -48,15 +48,10 @@ If you are going to spend significant time implementing code for a pull request,
 best to open an issue first and "claim" it and get feedback before you invest
 a lot of time.
 
-
-### Vulnerabilities
+## Vulnerabilities
 
 If you've found a vulnerability that is serious, please email me: <miek@miek.nl>.
 If it's not a big deal, a pull request will probably be faster.
-
-## Thank you
-
-Thanks for your help! CoreDNS would not be what it is today without your contributions.
 
 ## Git Hook
 
@@ -85,3 +80,34 @@ for d in *; do
     golint "$d"/...
 done
 ~~~
+
+## Updating Dependencies
+
+We use Golang's [`dep`](https://github.com/golang/dep) as the tool to manage vendor dependencies.
+The tool could be obtained through:
+
+```sh
+$ go get -u github.com/golang/dep/cmd/dep
+```
+
+Use the following to update the locked versions of all dependencies
+```sh
+$ dep ensure -update
+```
+
+To add a dependency to the project, you might run
+```sh
+$ dep ensure github.com/pkg/errors
+```
+
+After the dependencies have been updated or added, you might run the following to
+prune vendored packages:
+```sh
+$ dep prune
+```
+
+Please refer to Golang's [`dep`](https://github.com/golang/dep) for more details.
+
+# Thank you
+
+Thanks for your help! CoreDNS would not be what it is today without your contributions.

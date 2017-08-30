@@ -20,12 +20,10 @@ func TestGrpc(t *testing.T) {
 		whoami
 }
 `
-	g, err := CoreDNSServer(corefile)
+	g, _, tcp, err := CoreDNSServerAndPorts(corefile)
 	if err != nil {
 		t.Fatalf("Could not get CoreDNS serving instance: %s", err)
 	}
-
-	_, tcp := CoreDNSServerPorts(g, 0)
 	defer g.Stop()
 
 	conn, err := grpc.Dial(tcp, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(5*time.Second))
@@ -52,10 +50,10 @@ func TestGrpc(t *testing.T) {
 	}
 
 	if d.Rcode != dns.RcodeSuccess {
-		t.Errorf("Expected success but got %s", d.Rcode)
+		t.Errorf("Expected success but got %d", d.Rcode)
 	}
 
 	if len(d.Extra) != 2 {
-		t.Errorf("Expected 2 RRs in additional section, but got %s", len(d.Extra))
+		t.Errorf("Expected 2 RRs in additional section, but got %d", len(d.Extra))
 	}
 }

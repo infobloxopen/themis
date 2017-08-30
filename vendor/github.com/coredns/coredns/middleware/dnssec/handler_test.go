@@ -1,15 +1,14 @@
 package dnssec
 
 import (
-	"sort"
 	"strings"
 	"testing"
 
 	"github.com/coredns/coredns/middleware/file"
+	"github.com/coredns/coredns/middleware/pkg/cache"
 	"github.com/coredns/coredns/middleware/pkg/dnsrecorder"
 	"github.com/coredns/coredns/middleware/test"
 
-	"github.com/hashicorp/golang-lru"
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
 )
@@ -81,7 +80,7 @@ var dnsTestCases = []test.Case{
 }
 
 func TestLookupZone(t *testing.T) {
-	zone, err := file.Parse(strings.NewReader(dbMiekNL), "miek.nl.", "stdin")
+	zone, err := file.Parse(strings.NewReader(dbMiekNL), "miek.nl.", "stdin", 0)
 	if err != nil {
 		return
 	}
@@ -89,8 +88,8 @@ func TestLookupZone(t *testing.T) {
 	dnskey, rm1, rm2 := newKey(t)
 	defer rm1()
 	defer rm2()
-	cache, _ := lru.New(defaultCap)
-	dh := New([]string{"miek.nl."}, []*DNSKEY{dnskey}, fm, cache)
+	c := cache.New(defaultCap)
+	dh := New([]string{"miek.nl."}, []*DNSKEY{dnskey}, fm, c)
 	ctx := context.TODO()
 
 	for _, tc := range dnsTestCases {
@@ -104,23 +103,7 @@ func TestLookupZone(t *testing.T) {
 		}
 
 		resp := rec.Msg
-		sort.Sort(test.RRSet(resp.Answer))
-		sort.Sort(test.RRSet(resp.Ns))
-		sort.Sort(test.RRSet(resp.Extra))
-
-		if !test.Header(t, tc, resp) {
-			t.Logf("%v\n", resp)
-			continue
-		}
-		if !test.Section(t, tc, test.Answer, resp.Answer) {
-			t.Logf("%v\n", resp)
-		}
-		if !test.Section(t, tc, test.Ns, resp.Ns) {
-			t.Logf("%v\n", resp)
-		}
-		if !test.Section(t, tc, test.Extra, resp.Extra) {
-			t.Logf("%v\n", resp)
-		}
+		test.SortAndCheck(t, resp, tc)
 	}
 }
 
@@ -128,8 +111,8 @@ func TestLookupDNSKEY(t *testing.T) {
 	dnskey, rm1, rm2 := newKey(t)
 	defer rm1()
 	defer rm2()
-	cache, _ := lru.New(defaultCap)
-	dh := New([]string{"miek.nl."}, []*DNSKEY{dnskey}, test.ErrorHandler(), cache)
+	c := cache.New(defaultCap)
+	dh := New([]string{"miek.nl."}, []*DNSKEY{dnskey}, test.ErrorHandler(), c)
 	ctx := context.TODO()
 
 	for _, tc := range dnssecTestCases {
@@ -147,23 +130,7 @@ func TestLookupDNSKEY(t *testing.T) {
 			t.Errorf("Authoritative Answer should be true, got false")
 		}
 
-		sort.Sort(test.RRSet(resp.Answer))
-		sort.Sort(test.RRSet(resp.Ns))
-		sort.Sort(test.RRSet(resp.Extra))
-
-		if !test.Header(t, tc, resp) {
-			t.Logf("%v\n", resp)
-			continue
-		}
-		if !test.Section(t, tc, test.Answer, resp.Answer) {
-			t.Logf("%v\n", resp)
-		}
-		if !test.Section(t, tc, test.Ns, resp.Ns) {
-			t.Logf("%v\n", resp)
-		}
-		if !test.Section(t, tc, test.Extra, resp.Extra) {
-			t.Logf("%v\n", resp)
-		}
+		test.SortAndCheck(t, resp, tc)
 	}
 }
 

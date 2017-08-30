@@ -1,5 +1,5 @@
 hash: 95234e3ae4cfb8b1855cb6a474914fec09dda9b9086027a00949f84703593129
-updated: 2017-08-17T17:06:57.498174872+03:00
+updated: 2017-08-30T12:48:16.849067104+03:00
 imports:
 - name: github.com/apache/thrift
   version: 19baeefd8c38d62085891d7956349601f79448b3
@@ -10,7 +10,7 @@ imports:
   subpackages:
   - quantile
 - name: github.com/coredns/coredns
-  version: 4fc1318e28b21c85c117f1821c3fb34790679f0f
+  version: 7b8cf9df905a5e5f3fe9918a31edb406d50941d1
   subpackages:
   - core/dnsserver
   - middleware
@@ -25,7 +25,7 @@ imports:
   - pb
   - request
 - name: github.com/davecgh/go-spew
-  version: 346938d642f2ec3594ed81d874461961cd0faa76
+  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
   subpackages:
   - spew
 - name: github.com/eapache/go-resiliency
@@ -38,6 +38,7 @@ imports:
   version: 44cc805cf13205b55f69e14bcb69867d1ae92f98
 - name: github.com/flynn/go-shlex
   version: 3f9db97f856818214da2e1057f8ad84803971cff
+  repo: https://github.com/flynn/go-shlex
 - name: github.com/go-logfmt/logfmt
   version: 390ab7935ee28ec6b286364bba9b4dd6410cb3d5
 - name: github.com/gogo/protobuf
@@ -45,7 +46,7 @@ imports:
   subpackages:
   - proto
 - name: github.com/golang/protobuf
-  version: 2bba0603135d7d7f5cb73b2125beeda19c09f4ef
+  version: 748d386b5c1ea99658fd69fe9f03991ce86a90c1
   subpackages:
   - proto
   - ptypes/any
@@ -73,11 +74,11 @@ imports:
   subpackages:
   - pbutil
 - name: github.com/mholt/caddy
-  version: 27785f7993319b615acae4ff2a33cdb36fb68376
+  version: 49e98a151827a3aae7e6ceed194c3180d1bcbe68
   subpackages:
   - caddyfile
 - name: github.com/miekg/dns
-  version: 113c7538ea6d8f429071f901bd26af59cc9676fe
+  version: 4f8d08ab3c3f260afc934e9baf564bede5795458
 - name: github.com/opentracing/opentracing-go
   version: 6edb48674bd9467b8e91fda004f2bd7202d60ce4
   subpackages:
@@ -98,7 +99,7 @@ imports:
   subpackages:
   - xxHash32
 - name: github.com/prometheus/client_golang
-  version: 7d9484283ebefa862b5b7727d4344cfdf9a0d138
+  version: 94ff84a9a6ebb5e6eb9172897c221a64df3443bc
   subpackages:
   - prometheus
 - name: github.com/prometheus/client_model
@@ -106,13 +107,13 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 49fee292b27bfff7f354ee0f64e1bc4850462edf
+  version: 61f87aac8082fa8c3c5655c7608d7478d46ac2ad
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: a1dba9ce8baed984a2495b658c82687f8157b98f
+  version: e645f4e5aaa8506fc71d6edbc5c4ff02c04c46f2
   subpackages:
   - xfs
 - name: github.com/rcrowley/go-metrics
@@ -122,7 +123,7 @@ imports:
 - name: github.com/Sirupsen/logrus
   version: ba1b36c82c5e05c4f912a88eab0dcd91a171688f
 - name: golang.org/x/net
-  version: da118f7b8e5954f39d0d2130ab35d4bf0e3cb344
+  version: f5079bd7f6f74e23c4d65efa0f4ce14cbd6a3c0f
   subpackages:
   - context
   - http2
@@ -132,18 +133,19 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: 9ccfe848b9db8435a24c424abbc07a921adf1df5
+  version: 35ef4487ce0a1ea5d4b616ffe71e34febe723695
+  repo: https://go.googlesource.com/sys
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 470f45bf29f4147d6fbd7dfd0a02a848e49f5bf4
+  version: 836efe42bb4aa16aaa17b9c155d8813d336ed720
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: google.golang.org/genproto
-  version: 411e09b969b1170a9f0c467558eb4c4c110d9c77
+  version: ee236bd376b077c7a89f260c026c4735b195e459
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
@@ -166,6 +168,6 @@ imports:
   version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
 testImports:
 - name: github.com/pmezard/go-difflib
-  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
   subpackages:
   - difflib

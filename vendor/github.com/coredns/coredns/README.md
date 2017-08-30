@@ -1,9 +1,10 @@
-# CoreDNS
+[![CoreDNS](https://coredns.io/images/CoreDNS_Colour_Horizontal.png)](https://coredns.io)
 
-[![Documentation](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](https://godoc.org/github.com/coredns/coredns)
-[![Build Status](https://img.shields.io/travis/coredns/coredns.svg?style=flat-square&label=build)](https://travis-ci.org/coredns/coredns)
-[![Code Coverage](https://img.shields.io/codecov/c/github/coredns/coredns/master.svg?style=flat-square)](https://codecov.io/github/coredns/coredns?branch=master)
-[![Go Report Card](https://goreportcard.com/badge/github.com/coredns/coredns?style=flat-square)](https://goreportcard.com/report/coredns/coredns)
+[![Documentation](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/coredns/coredns)
+[![Build Status](https://img.shields.io/travis/coredns/coredns/master.svg?label=build)](https://travis-ci.org/coredns/coredns)
+[![Code Coverage](https://img.shields.io/codecov/c/github/coredns/coredns/master.svg)](https://codecov.io/github/coredns/coredns?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/coredns/coredns)](https://goreportcard.com/report/coredns/coredns)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fcoredns%2Fcoredns.svg?type=shield)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fcoredns%2Fcoredns?ref=badge_shield)
 
 CoreDNS is a DNS server that started as a fork of [Caddy](https://github.com/mholt/caddy/). It has
 the same model: it chains middleware. In fact it's so similar that CoreDNS is now a server type
@@ -108,7 +109,7 @@ And then just query on that port (53). The query should be forwarded to 8.8.8.8 
 will be returned. Each query should also show up in the log.
 
 Serve the (NSEC) DNSSEC-signed `example.org` on port 1053, with errors and logging sent to stdout.
-Allow zone transfers to everybody, but specically mention 1 IP address so that CoreDNS can send
+Allow zone transfers to everybody, but specifically mention 1 IP address so that CoreDNS can send
 notifies to it.
 
 ~~~ txt
@@ -166,6 +167,19 @@ example.org {
     # ...
 }
 ~~~
+
+IP addresses are also allowed. They are automatically converted to reverse zones:
+
+~~~ txt
+10.0.0.0/24 {
+    # ...
+}
+~~~
+Means you are authoritative for `0.0.10.in-addr.arpa.`. 
+
+The netmask must be dividable by 8, if it is not the reverse conversion is not done. This also works
+for IPv6 addresses. If for some reason you want to serve a zone named `10.0.0.0/24` add the closing
+dot: `10.0.0.0/24.` as this also stops the conversion.
 
 Listening on TLS and for gRPC? Use:
 

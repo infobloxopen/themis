@@ -12,6 +12,10 @@ GOCOVER = $(GOTEST) -race -coverprofile=/tmp/cover.out -covermode=atomic && cat 
 .PHONY: all
 all: fmt build cover
 
+.PHONY: bootstrap
+bootstrap:
+	glide install --strip-vendor
+
 .PHONY: clean
 clean: clean-cover clean-pepcli clean-papcli clean-pdpserver clean-egen
 

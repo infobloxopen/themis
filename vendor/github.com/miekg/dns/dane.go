@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"errors"
+	"io"
 )
 
 // CertificateToDANE converts a certificate to a hex string as used in the TLSA or SMIMEA records.
@@ -22,20 +23,20 @@ func CertificateToDANE(selector, matchingType uint8, cert *x509.Certificate) (st
 		h := sha256.New()
 		switch selector {
 		case 0:
-			h.Write(cert.Raw)
+			io.WriteString(h, string(cert.Raw))
 			return hex.EncodeToString(h.Sum(nil)), nil
 		case 1:
-			h.Write(cert.RawSubjectPublicKeyInfo)
+			io.WriteString(h, string(cert.RawSubjectPublicKeyInfo))
 			return hex.EncodeToString(h.Sum(nil)), nil
 		}
 	case 2:
 		h := sha512.New()
 		switch selector {
 		case 0:
-			h.Write(cert.Raw)
+			io.WriteString(h, string(cert.Raw))
 			return hex.EncodeToString(h.Sum(nil)), nil
 		case 1:
-			h.Write(cert.RawSubjectPublicKeyInfo)
+			io.WriteString(h, string(cert.RawSubjectPublicKeyInfo))
 			return hex.EncodeToString(h.Sum(nil)), nil
 		}
 	}
