@@ -2,45 +2,24 @@ package proxy
 
 import (
 	"fmt"
-	"io"
-	"io/ioutil"
-	"log"
 	"net"
-	"net/http"
-	"net/url"
 	"strconv"
-	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/coredns/coredns/middleware"
 	"github.com/coredns/coredns/middleware/pkg/dnsutil"
+	"github.com/coredns/coredns/middleware/pkg/healthcheck"
 	"github.com/coredns/coredns/middleware/pkg/tls"
 	"github.com/mholt/caddy/caddyfile"
 	"github.com/miekg/dns"
 )
 
-var (
-	supportedPolicies = make(map[string]func() Policy)
-)
-
 type staticUpstream struct {
 	from string
-	stop chan struct{}  // Signals running goroutines to stop.
-	wg   sync.WaitGroup // Used to wait for running goroutines to stop.
 
-	Hosts  HostPool
-	Policy Policy
-	Spray  Policy
+	healthcheck.HealthCheck
 
-	FailTimeout time.Duration
-	MaxFails    int32
-	HealthCheck struct {
-		Path     string
-		Port     string
-		Interval time.Duration
-	}
 	WithoutPathPrefix string
 	IgnoredSubDomains []string
 	ex                Exchanger
@@ -52,19 +31,20 @@ func NewStaticUpstreams(c *caddyfile.Dispenser) ([]Upstream, error) {
 	var upstreams []Upstream
 	for c.Next() {
 		upstream := &staticUpstream{
-			from:        ".",
-			stop:        make(chan struct{}),
-			Hosts:       nil,
-			Policy:      &Random{},
-			Spray:       nil,
-			FailTimeout: 10 * time.Second,
-			MaxFails:    1,
-			ex:          newDNSEx(),
+			from: ".",
+			HealthCheck: healthcheck.HealthCheck{
+				FailTimeout: 10 * time.Second,
+				MaxFails:    1,
+				Future:      60 * time.Second,
+			},
+			ex: newDNSEx(),
 		}
 
 		if !c.Args(&upstream.from) {
 			return upstreams, c.ArgErr()
 		}
+		upstream.from = middleware.Host(upstream.from).Normalize()
+
 		to := c.RemainingArgs()
 		if len(to) == 0 {
 			return upstreams, c.ArgErr()
@@ -82,28 +62,32 @@ func NewStaticUpstreams(c *caddyfile.Dispenser) ([]Upstream, error) {
 			}
 		}
 
-		upstream.Hosts = make([]*UpstreamHost, len(toHosts))
+		upstream.Hosts = make([]*healthcheck.UpstreamHost, len(toHosts))
 		for i, host := range toHosts {
-			uh := &UpstreamHost{
+			uh := &healthcheck.UpstreamHost{
 				Name:        host,
 				Conns:       0,
 				Fails:       0,
 				FailTimeout: upstream.FailTimeout,
-				Unhealthy:   false,
 
-				CheckDown: func(upstream *staticUpstream) UpstreamHostDownFunc {
-					return func(uh *UpstreamHost) bool {
-						uh.checkMu.Lock()
-						defer uh.checkMu.Unlock()
-						if uh.Unhealthy {
-							return true
+				CheckDown: func(upstream *staticUpstream) healthcheck.UpstreamHostDownFunc {
+					return func(uh *healthcheck.UpstreamHost) bool {
+
+						down := false
+
+						uh.CheckMu.Lock()
+						until := uh.OkUntil
+						uh.CheckMu.Unlock()
+
+						if !until.IsZero() && time.Now().After(until) {
+							down = true
 						}
 
 						fails := atomic.LoadInt32(&uh.Fails)
 						if fails >= upstream.MaxFails && upstream.MaxFails != 0 {
-							return true
+							down = true
 						}
-						return false
+						return down
 					}
 				}(upstream),
 				WithoutPathPrefix: upstream.WithoutPathPrefix,
@@ -111,30 +95,11 @@ func NewStaticUpstreams(c *caddyfile.Dispenser) ([]Upstream, error) {
 
 			upstream.Hosts[i] = uh
 		}
+		upstream.Start()
 
-		if upstream.HealthCheck.Path != "" {
-			upstream.wg.Add(1)
-			go func() {
-				defer upstream.wg.Done()
-				upstream.HealthCheckWorker(upstream.stop)
-			}()
-		}
 		upstreams = append(upstreams, upstream)
 	}
 	return upstreams, nil
-}
-
-// Stop sends a signal to all goroutines started by this staticUpstream to exit
-// and waits for them to finish before returning.
-func (u *staticUpstream) Stop() error {
-	close(u.stop)
-	u.wg.Wait()
-	return nil
-}
-
-// RegisterPolicy adds a custom policy to the proxy.
-func RegisterPolicy(name string, policy func() Policy) {
-	supportedPolicies[name] = policy
 }
 
 func (u *staticUpstream) From() string {
@@ -147,7 +112,7 @@ func parseBlock(c *caddyfile.Dispenser, u *staticUpstream) error {
 		if !c.NextArg() {
 			return c.ArgErr()
 		}
-		policyCreateFunc, ok := supportedPolicies[c.Val()]
+		policyCreateFunc, ok := healthcheck.SupportedPolicies[c.Val()]
 		if !ok {
 			return c.ArgErr()
 		}
@@ -186,6 +151,12 @@ func parseBlock(c *caddyfile.Dispenser, u *staticUpstream) error {
 				return err
 			}
 			u.HealthCheck.Interval = dur
+			u.Future = 2 * dur
+
+			// set a minimum of 3 seconds
+			if u.Future < (3 * time.Second) {
+				u.Future = 3 * time.Second
+			}
 		}
 	case "without":
 		if !c.NextArg() {
@@ -198,11 +169,11 @@ func parseBlock(c *caddyfile.Dispenser, u *staticUpstream) error {
 			return c.ArgErr()
 		}
 		for i := 0; i < len(ignoredDomains); i++ {
-			ignoredDomains[i] = strings.ToLower(dns.Fqdn(ignoredDomains[i]))
+			ignoredDomains[i] = middleware.Host(ignoredDomains[i]).Normalize()
 		}
 		u.IgnoredSubDomains = ignoredDomains
 	case "spray":
-		u.Spray = &Spray{}
+		u.Spray = &healthcheck.Spray{}
 	case "protocol":
 		encArgs := c.RemainingArgs()
 		if len(encArgs) == 0 {
@@ -245,104 +216,6 @@ func parseBlock(c *caddyfile.Dispenser, u *staticUpstream) error {
 		return c.Errf("unknown property '%s'", c.Val())
 	}
 	return nil
-}
-
-func (u *staticUpstream) healthCheck() {
-	for _, host := range u.Hosts {
-		var hostName, checkPort string
-
-		// The DNS server might be an HTTP server.  If so, extract its name.
-		if url, err := url.Parse(host.Name); err == nil {
-			hostName = url.Host
-		} else {
-			hostName = host.Name
-		}
-
-		// Extract the port number from the parsed server name.
-		checkHostName, checkPort, err := net.SplitHostPort(hostName)
-		if err != nil {
-			checkHostName = hostName
-		}
-
-		if u.HealthCheck.Port != "" {
-			checkPort = u.HealthCheck.Port
-		}
-
-		hostURL := "http://" + net.JoinHostPort(checkHostName, checkPort) + u.HealthCheck.Path
-
-		host.checkMu.Lock()
-		defer host.checkMu.Unlock()
-
-		if r, err := http.Get(hostURL); err == nil {
-			io.Copy(ioutil.Discard, r.Body)
-			r.Body.Close()
-			if r.StatusCode < 200 || r.StatusCode >= 400 {
-				log.Printf("[WARNING] Health check URL %s returned HTTP code %d\n",
-					hostURL, r.StatusCode)
-				host.Unhealthy = true
-			} else {
-				host.Unhealthy = false
-			}
-		} else {
-			log.Printf("[WARNING] Health check probe failed: %v\n", err)
-			host.Unhealthy = true
-		}
-	}
-}
-
-func (u *staticUpstream) HealthCheckWorker(stop chan struct{}) {
-	ticker := time.NewTicker(u.HealthCheck.Interval)
-	u.healthCheck()
-	for {
-		select {
-		case <-ticker.C:
-			u.healthCheck()
-		case <-stop:
-			ticker.Stop()
-			return
-		}
-	}
-}
-
-func (u *staticUpstream) Select() *UpstreamHost {
-	pool := u.Hosts
-	if len(pool) == 1 {
-		if pool[0].Down() && u.Spray == nil {
-			return nil
-		}
-		return pool[0]
-	}
-	allDown := true
-	for _, host := range pool {
-		if !host.Down() {
-			allDown = false
-			break
-		}
-	}
-	if allDown {
-		if u.Spray == nil {
-			return nil
-		}
-		return u.Spray.Select(pool)
-	}
-
-	if u.Policy == nil {
-		h := (&Random{}).Select(pool)
-		if h == nil && u.Spray == nil {
-			return nil
-		}
-		return u.Spray.Select(pool)
-	}
-
-	h := u.Policy.Select(pool)
-	if h != nil {
-		return h
-	}
-
-	if u.Spray == nil {
-		return nil
-	}
-	return u.Spray.Select(pool)
 }
 
 func (u *staticUpstream) IsAllowedDomain(name string) bool {

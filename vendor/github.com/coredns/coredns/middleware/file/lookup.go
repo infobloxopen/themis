@@ -39,6 +39,14 @@ func (z *Zone) Lookup(state request.Request, qname string) ([]dns.RR, []dns.RR, 
 		}
 	}()
 
+	// If z is a secondary zone we might not have transferred it, meaning we have
+	// all zone context setup, except the actual record. This means (for one thing) the apex
+	// is empty and we don't have a SOA record.
+	soa := z.Apex.SOA
+	if soa == nil {
+		return nil, nil, nil, ServerFailure
+	}
+
 	if qtype == dns.TypeSOA {
 		return z.soa(do), z.ns(do), nil, Success
 	}
@@ -63,12 +71,11 @@ func (z *Zone) Lookup(state request.Request, qname string) ([]dns.RR, []dns.RR, 
 	//   use the wildcard.
 	//
 	// Main for-loop handles delegation and finding or not finding the qname.
-	// If found we check if it is a CNAME and do CNAME processing (DNAME should be added as well)
+	// If found we check if it is a CNAME/DNAME and do CNAME processing
 	// We also check if we have type and do a nodata resposne.
 	//
 	// If not found, we check the potential wildcard, and use that for further processing.
 	// If not found and no wildcard we will process this as an NXDOMAIN response.
-	//
 	for {
 		parts, shot = z.nameFromRight(qname, i)
 		// We overshot the name, break and check if we previously found something.
@@ -80,12 +87,11 @@ func (z *Zone) Lookup(state request.Request, qname string) ([]dns.RR, []dns.RR, 
 		if !found {
 			// Apex will always be found, when we are here we can search for a wildcard
 			// and save the result of that search. So when nothing match, but we have a
-			// wildcard we should expand the wildcard. There can only be one wildcard,
-			// so when we found one, we won't look for another.
+			// wildcard we should expand the wildcard.
 
-			if wildElem == nil {
-				wildcard := replaceWithAsteriskLabel(parts)
-				wildElem, _ = z.Tree.Search(wildcard)
+			wildcard := replaceWithAsteriskLabel(parts)
+			if wild, found := z.Tree.Search(wildcard); found {
+				wildElem = wild
 			}
 
 			// Keep on searching, because maybe we hit an empty-non-terminal (which aren't
@@ -93,6 +99,30 @@ func (z *Zone) Lookup(state request.Request, qname string) ([]dns.RR, []dns.RR, 
 			// we can be confident that we didn't find anything.
 			i++
 			continue
+		}
+
+		// If we see DNAME records, we should return those.
+		if dnamerrs := elem.Types(dns.TypeDNAME); dnamerrs != nil {
+			// Only one DNAME is allowed per name. We just pick the first one to synthesize from.
+			dname := dnamerrs[0]
+			if cname := synthesizeCNAME(state.Name(), dname.(*dns.DNAME)); cname != nil {
+				answer, ns, extra, rcode := z.searchCNAME(state, elem, []dns.RR{cname})
+
+				if do {
+					sigs := elem.Types(dns.TypeRRSIG)
+					sigs = signatureForSubType(sigs, dns.TypeDNAME)
+					dnamerrs = append(dnamerrs, sigs...)
+				}
+
+				// The relevant DNAME RR should be included in the answer section,
+				// if the DNAME is being employed as a substitution instruction.
+				answer = append(dnamerrs, answer...)
+
+				return answer, ns, extra, rcode
+			}
+			// The domain name that owns a DNAME record is allowed to have other RR types
+			// at that domain name, except those have restrictions on what they can coexist
+			// with (e.g. another DNAME). So there is nothing special left here.
 		}
 
 		// If we see NS records, it means the name as been delegated, and we should return the delegation.
@@ -122,7 +152,6 @@ func (z *Zone) Lookup(state request.Request, qname string) ([]dns.RR, []dns.RR, 
 	// Found entire name.
 	if found && shot {
 
-		// DNAME...?
 		if rrs := elem.Types(dns.TypeCNAME); len(rrs) > 0 && qtype != dns.TypeCNAME {
 			return z.searchCNAME(state, elem, rrs)
 		}
@@ -202,7 +231,7 @@ func (z *Zone) Lookup(state request.Request, qname string) ([]dns.RR, []dns.RR, 
 
 	ret := z.soa(do)
 	if do {
-		deny, found := z.Tree.Prev(qname)
+		deny, _ := z.Tree.Prev(qname) // TODO(miek): *found* was not used here.
 		nsec := z.typeFromElem(deny, dns.TypeNSEC, do)
 		ret = append(ret, nsec...)
 

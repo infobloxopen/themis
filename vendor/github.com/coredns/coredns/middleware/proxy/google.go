@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/coredns/coredns/middleware/pkg/debug"
+	"github.com/coredns/coredns/middleware/pkg/healthcheck"
 	"github.com/coredns/coredns/request"
 
 	"github.com/miekg/dns"
@@ -200,41 +201,48 @@ func extractAnswer(m *dns.Msg) ([]string, error) {
 // newUpstream returns an upstream initialized with hosts.
 func newUpstream(hosts []string, old *staticUpstream) Upstream {
 	upstream := &staticUpstream{
-		from:              old.from,
-		Hosts:             nil,
-		Policy:            &Random{},
-		Spray:             nil,
-		FailTimeout:       10 * time.Second,
-		MaxFails:          3,
+		from: old.from,
+		HealthCheck: healthcheck.HealthCheck{
+			FailTimeout: 10 * time.Second,
+			MaxFails:    3,
+			Future:      60 * time.Second,
+		},
 		ex:                old.ex,
 		WithoutPathPrefix: old.WithoutPathPrefix,
 		IgnoredSubDomains: old.IgnoredSubDomains,
 	}
 
-	upstream.Hosts = make([]*UpstreamHost, len(hosts))
+	upstream.Hosts = make([]*healthcheck.UpstreamHost, len(hosts))
 	for i, h := range hosts {
-		uh := &UpstreamHost{
+		uh := &healthcheck.UpstreamHost{
 			Name:        h,
 			Conns:       0,
 			Fails:       0,
 			FailTimeout: upstream.FailTimeout,
-			Unhealthy:   false,
 
-			CheckDown: func(upstream *staticUpstream) UpstreamHostDownFunc {
-				return func(uh *UpstreamHost) bool {
-					if uh.Unhealthy {
-						return true
+			CheckDown: func(upstream *staticUpstream) healthcheck.UpstreamHostDownFunc {
+				return func(uh *healthcheck.UpstreamHost) bool {
+
+					down := false
+
+					uh.CheckMu.Lock()
+					until := uh.OkUntil
+					uh.CheckMu.Unlock()
+
+					if !until.IsZero() && time.Now().After(until) {
+						down = true
 					}
 
 					fails := atomic.LoadInt32(&uh.Fails)
 					if fails >= upstream.MaxFails && upstream.MaxFails != 0 {
-						return true
+						down = true
 					}
-					return false
+					return down
 				}
 			}(upstream),
 			WithoutPathPrefix: upstream.WithoutPathPrefix,
 		}
+
 		upstream.Hosts[i] = uh
 	}
 	return upstream

@@ -2,9 +2,6 @@ package etcd
 
 import (
 	"crypto/tls"
-	"net"
-	"net/http"
-	"time"
 
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/middleware"
@@ -63,21 +60,22 @@ func etcdParse(c *caddy.Controller) (*Etcd, bool, error) {
 		stubzones = false
 	)
 	for c.Next() {
-		if c.Val() == "etcd" {
-			etc.Zones = c.RemainingArgs()
-			if len(etc.Zones) == 0 {
-				etc.Zones = make([]string, len(c.ServerBlockKeys))
-				copy(etc.Zones, c.ServerBlockKeys)
-			}
-			for i, str := range etc.Zones {
-				etc.Zones[i] = middleware.Host(str).Normalize()
-			}
+		etc.Zones = c.RemainingArgs()
+		if len(etc.Zones) == 0 {
+			etc.Zones = make([]string, len(c.ServerBlockKeys))
+			copy(etc.Zones, c.ServerBlockKeys)
+		}
+		for i, str := range etc.Zones {
+			etc.Zones[i] = middleware.Host(str).Normalize()
+		}
 
-			if c.NextBlock() {
-				// TODO(miek): 2 switches?
+		if c.NextBlock() {
+			for {
 				switch c.Val() {
 				case "stubzones":
 					stubzones = true
+				case "fallthrough":
+					etc.Fallthrough = true
 				case "debug":
 					etc.Debugging = true
 				case "path":
@@ -112,56 +110,21 @@ func etcdParse(c *caddy.Controller) (*Etcd, bool, error) {
 						return &Etcd{}, false, c.Errf("unknown property '%s'", c.Val())
 					}
 				}
-				for c.Next() {
-					switch c.Val() {
-					case "stubzones":
-						stubzones = true
-					case "debug":
-						etc.Debugging = true
-					case "path":
-						if !c.NextArg() {
-							return &Etcd{}, false, c.ArgErr()
-						}
-						etc.PathPrefix = c.Val()
-					case "endpoint":
-						args := c.RemainingArgs()
-						if len(args) == 0 {
-							return &Etcd{}, false, c.ArgErr()
-						}
-						endpoints = args
-					case "upstream":
-						args := c.RemainingArgs()
-						if len(args) == 0 {
-							return &Etcd{}, false, c.ArgErr()
-						}
-						ups, err := dnsutil.ParseHostPortOrFile(args...)
-						if err != nil {
-							return &Etcd{}, false, c.ArgErr()
-						}
-						etc.Proxy = proxy.NewLookup(ups)
-					case "tls": // cert key cacertfile
-						args := c.RemainingArgs()
-						tlsConfig, err = mwtls.NewTLSConfigFromArgs(args...)
-						if err != nil {
-							return &Etcd{}, false, err
-						}
-					default:
-						if c.Val() != "}" { // TODO(miek): this feels like I'm doing it completely wrong.
-							return &Etcd{}, false, c.Errf("unknown property '%s'", c.Val())
-						}
-					}
+
+				if !c.Next() {
+					break
 				}
-
 			}
-			client, err := newEtcdClient(endpoints, tlsConfig)
-			if err != nil {
-				return &Etcd{}, false, err
-			}
-			etc.Client = client
-			etc.endpoints = endpoints
 
-			return &etc, stubzones, nil
 		}
+		client, err := newEtcdClient(endpoints, tlsConfig)
+		if err != nil {
+			return &Etcd{}, false, err
+		}
+		etc.Client = client
+		etc.endpoints = endpoints
+
+		return &etc, stubzones, nil
 	}
 	return &Etcd{}, false, nil
 }
@@ -169,32 +132,13 @@ func etcdParse(c *caddy.Controller) (*Etcd, bool, error) {
 func newEtcdClient(endpoints []string, cc *tls.Config) (etcdc.KeysAPI, error) {
 	etcdCfg := etcdc.Config{
 		Endpoints: endpoints,
-		Transport: newHTTPSTransport(cc),
+		Transport: mwtls.NewHTTPSTransport(cc),
 	}
 	cli, err := etcdc.New(etcdCfg)
 	if err != nil {
 		return nil, err
 	}
 	return etcdc.NewKeysAPI(cli), nil
-}
-
-func newHTTPSTransport(cc *tls.Config) etcdc.CancelableTransport {
-	// this seems like a bad idea but was here in the previous version
-	if cc != nil {
-		cc.InsecureSkipVerify = true
-	}
-
-	tr := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		Dial: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).Dial,
-		TLSHandshakeTimeout: 10 * time.Second,
-		TLSClientConfig:     cc,
-	}
-
-	return tr
 }
 
 const defaultEndpoint = "http://localhost:2379"

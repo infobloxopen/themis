@@ -819,8 +819,8 @@ func classToInt(token string) (uint16, bool) {
 	if len(token) < offset+1 {
 		return 0, false
 	}
-	class, err := strconv.ParseUint(token[offset:], 10, 16)
-	if err != nil {
+	class, ok := strconv.Atoi(token[offset:])
+	if ok != nil || class > maxUint16 {
 		return 0, false
 	}
 	return uint16(class), true
@@ -832,8 +832,8 @@ func typeToInt(token string) (uint16, bool) {
 	if len(token) < offset+1 {
 		return 0, false
 	}
-	typ, err := strconv.ParseUint(token[offset:], 10, 16)
-	if err != nil {
+	typ, ok := strconv.Atoi(token[offset:])
+	if ok != nil || typ > maxUint16 {
 		return 0, false
 	}
 	return uint16(typ), true

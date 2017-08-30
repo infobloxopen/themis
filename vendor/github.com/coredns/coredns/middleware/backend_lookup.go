@@ -25,7 +25,7 @@ func A(b ServiceBackend, zone string, state request.Request, previousRecords []d
 		what, ip := serv.HostType()
 
 		switch what {
-		case dns.TypeANY:
+		case dns.TypeCNAME:
 			if Name(state.Name()).Matches(dns.Fqdn(serv.Host)) {
 				// x CNAME x is a direct loop, don't add those
 				continue
@@ -92,7 +92,7 @@ func AAAA(b ServiceBackend, zone string, state request.Request, previousRecords 
 		what, ip := serv.HostType()
 
 		switch what {
-		case dns.TypeANY:
+		case dns.TypeCNAME:
 			// Try to resolve as CNAME if it's not an IP, but only if we don't create loops.
 			if Name(state.Name()).Matches(dns.Fqdn(serv.Host)) {
 				// x CNAME x is a direct loop, don't add those
@@ -182,7 +182,7 @@ func SRV(b ServiceBackend, zone string, state request.Request, opt Options) (rec
 		what, ip := serv.HostType()
 
 		switch what {
-		case dns.TypeANY:
+		case dns.TypeCNAME:
 			srv := serv.NewSRV(state.QName(), weight)
 			records = append(records, srv)
 
@@ -218,7 +218,7 @@ func SRV(b ServiceBackend, zone string, state request.Request, opt Options) (rec
 			// Internal name, we should have some info on them, either v4 or v6
 			// Clients expect a complete answer, because we are a recursor in their view.
 			state1 := state.NewWithQuestion(srv.Target, dns.TypeA)
-			addr, debugAddr, e1 := A(b, zone, state1, nil, Options(opt))
+			addr, debugAddr, e1 := A(b, zone, state1, nil, opt)
 			if e1 == nil {
 				extra = append(extra, addr...)
 				debug = append(debug, debugAddr...)
@@ -250,7 +250,7 @@ func MX(b ServiceBackend, zone string, state request.Request, opt Options) (reco
 		}
 		what, ip := serv.HostType()
 		switch what {
-		case dns.TypeANY:
+		case dns.TypeCNAME:
 			mx := serv.NewMX(state.QName())
 			records = append(records, mx)
 			if _, ok := lookup[mx.Mx]; ok {
@@ -364,7 +364,7 @@ func NS(b ServiceBackend, zone string, state request.Request, opt Options) (reco
 	for _, serv := range services {
 		what, ip := serv.HostType()
 		switch what {
-		case dns.TypeANY:
+		case dns.TypeCNAME:
 			return nil, nil, debug, fmt.Errorf("NS record must be an IP address: %s", serv.Host)
 
 		case dns.TypeA, dns.TypeAAAA:
@@ -380,16 +380,22 @@ func NS(b ServiceBackend, zone string, state request.Request, opt Options) (reco
 func SOA(b ServiceBackend, zone string, state request.Request, opt Options) ([]dns.RR, []msg.Service, error) {
 	header := dns.RR_Header{Name: zone, Rrtype: dns.TypeSOA, Ttl: 300, Class: dns.ClassINET}
 
+	Mbox := hostmaster + "."
+	Ns := "ns.dns."
+	if zone[0] != '.' {
+		Mbox += zone
+		Ns += zone
+	}
+
 	soa := &dns.SOA{Hdr: header,
-		Mbox:    hostmaster + "." + zone,
-		Ns:      "ns.dns." + zone,
+		Mbox:    Mbox,
+		Ns:      Ns,
 		Serial:  uint32(time.Now().Unix()),
 		Refresh: 7200,
 		Retry:   1800,
 		Expire:  86400,
 		Minttl:  minTTL,
 	}
-	// TODO(miek): fake some msg.Service here when returning?
 	return []dns.RR{soa}, nil, nil
 }
 

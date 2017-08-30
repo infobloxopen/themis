@@ -5,6 +5,9 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"net"
+	"net/http"
+	"time"
 )
 
 // NewTLSConfigFromArgs returns a TLS config based upon the passed
@@ -50,7 +53,7 @@ func NewTLSConfigFromArgs(args ...string) (*tls.Config, error) {
 		// Client cert, use specified CA
 		c, err = NewTLSConfig(args[0], args[1], args[2])
 	default:
-		err = fmt.Errorf("Maximum of three arguments allowed for TLS config, found %d", len(args))
+		err = fmt.Errorf("maximum of three arguments allowed for TLS config, found %d", len(args))
 	}
 	if err != nil {
 		return nil, err
@@ -64,7 +67,7 @@ func NewTLSConfigFromArgs(args ...string) (*tls.Config, error) {
 func NewTLSConfig(certPath, keyPath, caPath string) (*tls.Config, error) {
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
-		return nil, fmt.Errorf("Could not load TLS cert: %s", err)
+		return nil, fmt.Errorf("could not load TLS cert: %s", err)
 	}
 
 	roots, err := loadRoots(caPath)
@@ -94,11 +97,32 @@ func loadRoots(caPath string) (*x509.CertPool, error) {
 	roots := x509.NewCertPool()
 	pem, err := ioutil.ReadFile(caPath)
 	if err != nil {
-		return nil, fmt.Errorf("Error reading %s: %s", caPath, err)
+		return nil, fmt.Errorf("error reading %s: %s", caPath, err)
 	}
 	ok := roots.AppendCertsFromPEM(pem)
 	if !ok {
-		return nil, fmt.Errorf("Could not read root certs: %s", err)
+		return nil, fmt.Errorf("could not read root certs: %s", err)
 	}
 	return roots, nil
+}
+
+// NewHTTPSTransport returns an HTTP transport configured using tls.Config
+func NewHTTPSTransport(cc *tls.Config) *http.Transport {
+	// this seems like a bad idea but was here in the previous version
+	if cc != nil {
+		cc.InsecureSkipVerify = true
+	}
+
+	tr := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
+		TLSClientConfig:     cc,
+		MaxIdleConnsPerHost: 25,
+	}
+
+	return tr
 }

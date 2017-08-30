@@ -836,7 +836,11 @@ func TestSRVPacking(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		port, _ := strconv.ParseUint(p, 10, 16)
+		port := 8484
+		tmp, err := strconv.Atoi(p)
+		if err == nil {
+			port = tmp
+		}
 
 		rr := &SRV{
 			Hdr: RR_Header{Name: "somename.",
@@ -1504,24 +1508,6 @@ func TestParseURI(t *testing.T) {
 		}
 		if rr.String() != o {
 			t.Errorf("`%s' should be equal to\n`%s', but is     `%s'", i, o, rr.String())
-		} else {
-			t.Logf("RR is OK: `%s'", rr.String())
-		}
-	}
-}
-
-func TestParseAVC(t *testing.T) {
-	avcs := map[string]string{
-		`example.org. IN AVC "app-name:WOLFGANG|app-class:OAM|business=yes"`: `example.org.	3600	IN	AVC	"app-name:WOLFGANG|app-class:OAM|business=yes"`,
-	}
-	for avc, o := range avcs {
-		rr, err := NewRR(avc)
-		if err != nil {
-			t.Error("failed to parse RR: ", err)
-			continue
-		}
-		if rr.String() != o {
-			t.Errorf("`%s' should be equal to\n`%s', but is     `%s'", avc, o, rr.String())
 		} else {
 			t.Logf("RR is OK: `%s'", rr.String())
 		}

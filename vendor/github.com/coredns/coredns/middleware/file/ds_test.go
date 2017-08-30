@@ -1,7 +1,6 @@
 package file
 
 import (
-	"sort"
 	"strings"
 	"testing"
 
@@ -52,7 +51,7 @@ var dsTestCases = []test.Case{
 }
 
 func TestLookupDS(t *testing.T) {
-	zone, err := Parse(strings.NewReader(dbMiekNLDelegation), testzone, "stdin")
+	zone, err := Parse(strings.NewReader(dbMiekNLDelegation), testzone, "stdin", 0)
 	if err != nil {
 		t.Fatalf("Expected no error when reading zone, got %q", err)
 	}
@@ -71,22 +70,6 @@ func TestLookupDS(t *testing.T) {
 		}
 
 		resp := rec.Msg
-		sort.Sort(test.RRSet(resp.Answer))
-		sort.Sort(test.RRSet(resp.Ns))
-		sort.Sort(test.RRSet(resp.Extra))
-
-		if !test.Header(t, tc, resp) {
-			t.Logf("%v\n", resp)
-			continue
-		}
-		if !test.Section(t, tc, test.Answer, resp.Answer) {
-			t.Logf("%v\n", resp)
-		}
-		if !test.Section(t, tc, test.Ns, resp.Ns) {
-			t.Logf("%v\n", resp)
-		}
-		if !test.Section(t, tc, test.Extra, resp.Extra) {
-			t.Logf("%v\n", resp)
-		}
+		test.SortAndCheck(t, resp, tc)
 	}
 }
