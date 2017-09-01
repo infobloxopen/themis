@@ -25,7 +25,9 @@ var (
 type Client interface {
 	Connect() error
 	Close()
+
 	Validate(ctx context.Context, in, out interface{}) error
+	ModalValidate(in, out interface{}) error
 }
 
 type pdpClient struct {
@@ -103,6 +105,10 @@ func (c *pdpClient) Validate(ctx context.Context, in, out interface{}) error {
 	return fillResponse(res, out)
 }
 
+func (c *pdpClient) ModalValidate(in, out interface{}) error {
+	return c.Validate(context.Background(), in, out)
+}
+
 type TestClient struct {
 	NextResponse   *pb.Response
 	NextResponseIP *pb.Response
@@ -142,6 +148,10 @@ func (c *TestClient) Validate(ctx context.Context, in, out interface{}) error {
 	return fillResponse(c.NextResponse, out)
 }
 
+func (c *TestClient) ModalValidate(in, out interface{}) error {
+	return c.Validate(context.Background(), in, out)
+}
+
 func makeRequest(v interface{}) (pb.Request, error) {
 	if req, ok := v.(pb.Request); ok {
 		return req, nil
@@ -155,6 +165,11 @@ func makeRequest(v interface{}) (pb.Request, error) {
 }
 
 func fillResponse(res *pb.Response, v interface{}) error {
+	if out, ok := v.(*pb.Response); ok {
+		*out = *res
+		return nil
+	}
+
 	return unmarshalToValue(res, reflect.ValueOf(v))
 }
 
