@@ -61,6 +61,9 @@ errors:
   args:
   - field: err
 
+- id: missingPolicyError
+  msg: "There is no any policy to process request"
+
 - id: policyCalculationError
   fields:
   - id: err
