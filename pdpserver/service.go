@@ -109,6 +109,10 @@ func (s *Server) newAttributes(obligations []pdp.AttributeAssignmentExpression, 
 }
 
 func (s *Server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in *pb.Request) (pb.Response_Effect, []error, []*pb.Attribute) {
+	if p == nil {
+		return pb.Response_INDETERMINATE, []error{newMissingPolicyError()}, nil
+	}
+
 	ctx, err := s.newContext(c, in)
 	if err != nil {
 		return pb.Response_INDETERMINATE, []error{err}, nil

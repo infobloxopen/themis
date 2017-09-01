@@ -2,7 +2,6 @@ package pep
 
 import (
 	pdp "github.com/infobloxopen/themis/pdp-service"
-	context "golang.org/x/net/context"
 	"testing"
 )
 
@@ -14,7 +13,7 @@ func TestTestClient(t *testing.T) {
 
 	res := &TestResponseStruct{}
 
-	c.Validate(context.TODO(), nil, res)
+	c.ModalValidate(nil, res)
 
 	if !res.Effect {
 		t.Errorf("Expected PERMIT but got %v", res.Effect)

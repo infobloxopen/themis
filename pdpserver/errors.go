@@ -15,6 +15,7 @@ const (
 	unknownEffectErrorID
 	unknownAttributeTypeErrorID
 	contextCreationErrorID
+	missingPolicyErrorID
 	policyCalculationErrorID
 	effectTranslationErrorID
 	effectCombiningErrorID
@@ -141,6 +142,19 @@ func newContextCreationError(err error) *contextCreationError {
 
 func (e *contextCreationError) Error() string {
 	return e.errorf("Failed to create request context: %s", e.err)
+}
+
+type missingPolicyError struct {
+	errorLink
+}
+
+func newMissingPolicyError() *missingPolicyError {
+	return &missingPolicyError{
+		errorLink: errorLink{id: missingPolicyErrorID}}
+}
+
+func (e *missingPolicyError) Error() string {
+	return e.errorf("There is no any policy to process request")
 }
 
 type policyCalculationError struct {
