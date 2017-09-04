@@ -188,7 +188,7 @@ policies:
 ### Target
 Any particular policy set or policy or rule is applicable only if request matches its target. Target is a list of **any** expressions. **Any** expression is a list of **all** expressions and **all** expression is a list of match expression. Match expression is a boolean expression of two arguments. One of arguments should be a request attribute and other should be a immediate value. Only two functions can represent match expression **equal** and **contains**. If list of match expressions for particular **all** expression contains single element **all** keyword can be dropped. Similarly if list of **all** expressions for particular **any** expression consists of one element **any** keyword can be dropped.
 
-Target matches request when all **any** expression match (if one or more of **any** expression doesn't match, target also doesn't match). **Any** expression matches request if one or more of its **all** expressions match the request (if all **all** expressions don't match, **any** expression doesn't match as well). And similarly to target **all** expression matches if all its inner expressions match as well. If during target evaluation error occurs the policy set, policy or rule effect becomes **indeterminate** (if rule effect is permit it is **indeterminateP** if deny - **indeterminateD** for policy and policy set kind of **indeterminate** depends on combining algorithm).
+Request matches target when all **any** expressions match (if one or more of **any** expression doesn't match, target also doesn't match). **Any** expression matches request if one or more of its **all** expressions match the request (if all **all** expressions don't match, **any** expression doesn't match as well). And similarly to target **all** expression matches if all its inner expressions match as well. If during target evaluation error occurs the policy set, policy or rule effect becomes **indeterminate** (if rule effect is permit it is **indeterminateP** if deny - **indeterminateD** for policy and policy set kind of **indeterminate** depends on combining algorithm (see below).
 
 Below an example of policy with different kinds of targets:
 ```yaml
@@ -303,7 +303,7 @@ In any expression attribute can be referred with **attr** keyword and immediate 
 
 ### Immediate Value
 Immediate value can be reffered with **val** keyword and has fields:
-- **type** - value type;
+- **type** - value type (any of available types);
 - **content** - value data.
 For **obligations** only data itself requires as type can be derived from attribute definition.
 
@@ -438,8 +438,80 @@ Selector expression is an expression to access additionally supplied data. Selec
 
 Local selector uses local content data (see below) and has following fields:
 - **uri** - URI of local content ("local:<content-id>/<content-item-id>);
-- **path** - defines path to data in local content;
-- **type** - type of data in local content.
+- **path** - defines path to data in local content (optional, if not set selector extracts immediate value from content item). Path represents a list of expressions. It should match to content item keys (see below). Selector calculates path expressions one by one and extracts value from next mapping step of content item until reaches desired value;
+- **type** - type of data in local content (any of available types).
+
+Example of local selector:
+```yaml
+# Selector example
+attributes:
+  d: domain
+  a: address
+  s: string
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - target:
+    - contains:
+      - selector:
+          uri: "local:content/domain-addresses"
+          path:
+          - val:
+              type: string
+              content: good
+          - attr: d
+          type: set of networks
+      - attr: a
+    effect: Permit
+    obligations:
+    - s: Good
+  - target:
+    - contains:
+      - selector:
+          uri: "local:content/domain-addresses"
+          path:
+          - val:
+              type: string
+              content: bad
+          - attr: d
+          type: set of networks
+      - attr: a
+    effect: Deny
+    obligations:
+    - s: Bad
+```
+
+Content for the example:
+```json
+{
+  "id": "content",
+  "items": {
+    "domain-addresses": {
+      "keys": ["string", "domain"],
+      "type": "set of networks",
+      "data": {
+        "good": {
+          "example.com": ["192.0.2.16/28", "192.0.2.32/28"],
+          "test.com": ["192.0.2.48/28", "192.0.2.64/28"]
+        },
+        "bad": {
+          "example.com": ["2001:db8:1000::/40", "2001:db8:2000::/40"],
+          "test.com": ["2001:db8:3000::/40", "2001:db8:4000::/40"]
+        }
+      }
+    }
+  }
+}
+```
+
+### Local Content
+Local content is a set of content items (see example above). It's identified by id field which can be any string with no slash character (`/`). Each content item also has id (key of "items" JSON object) and following fields:
+- **keys** - list of types of nested maps (optional, if not present data should contain immediate value of type);
+- **type** - any possible type;
+- **data** - list of nested maps with keys of mentioned types or immediate value of given type.
+
+Local content supports string map (key type "string"), domain map (key type "domain") and network map (key type "network" or "address"). Selector expectes string expression as path item for string map, domain - for domain map and address or network - for network map ("address" expression is allowed even if content key is "network" and vice verse). 
 
 # References
 **[XACML-V3.0]** *eXtensible Access Control Markup Language (XACML) Version 3.0.* 22 January 2013. OASIS Standard. http://docs.oasis-open.org/xacml/3.0/xacml-3.0-core-spec-os-en.html.
