@@ -71,7 +71,7 @@ policies:
 Policies section contains root **policy** or **policy set**. **Policy** holds rules under its "rules" field while **policy set** is able to contain both inner policies or policy sets under its "policies" field.
 
 ### Policy Set
-Policy Set holds set of policies or inner policy sets and defines how to combine them. It has following fields:
+Policy Set holds set of **policies** or inner **policy sets** and defines how to combine them. It has following fields:
 - **id** - policy id (optional, if not defined policy is hidden);
 - **target** - target expression which defines if policy set is applicable to request (optional, if not defined policy set is applicable to any request);
 - **policies** - set of inner policies and policy sets;
@@ -437,7 +437,7 @@ policies:
 Selector expression is an expression to access additionally supplied data. Selector uses **uri** field to locate source of such data. Currently only "local" URI schema is supported which defines local selector.
 
 Local selector uses local content data (see below) and has following fields:
-- **uri** - URI of local content ("local:<content-id>/<content-item-id>);
+- **uri** - URI of local content ("local:&lt;content-id&gt;/&lt;content-item-id&gt;);
 - **path** - defines path to data in local content (optional, if not set selector extracts immediate value from content item). Path represents a list of expressions. It should match to content item keys (see below). Selector calculates path expressions one by one and extracts value from next mapping step of content item until reaches desired value;
 - **type** - type of data in local content (any of available types).
 
