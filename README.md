@@ -640,6 +640,88 @@ and content for them:
 }
 ```
 
+# PDPServer
+PDP server allows to run and control PDP. Additionally the server provides endpoint for healthcheck and supports OpenZipkin tracing. Started with no options pdpservers gets no initial policies and content. Policies and content in the case should be provided by control interface. Option `-p` provides initial policy for the server from given YAML file. Option `-j` provides content (it can be specified several times). For example (`-v 3` sets maximal log level):
+```
+$ pdpserver -v 3 -p policy.yaml -j mapper.json -j content.json
+INFO[0000] Starting PDP server
+INFO[0000] Loading policy                                policy=policy.yaml
+INFO[0000] Parsing policy                                policy=policy.yaml
+INFO[0000] Opening content                               content=mapper.json
+INFO[0000] Parsing content                               content=mapper.json
+INFO[0000] Opening content                               content=content.json
+INFO[0000] Parsing content                               content=content.json
+INFO[0000] Opening service port                          address="0.0.0.0:5555"
+INFO[0000] Opening control port                          address="0.0.0.0:5554"
+INFO[0000] Creating service protocol handler
+INFO[0000] Creating control protocol handler
+INFO[0000] Serving decision requests
+INFO[0000] Serving control requests
+```
+Other pdpserver options:
+- `-c` - listen for policies on given address:port (default "0.0.0.0:5554");
+- `-health` - health check endpoint;
+- `-l` - listen for decision requests on given address:port (default "0.0.0.0:5555");
+- `-pprof` - performance profiler endpoint (see go tool pprof);
+- `-t` - OpenZipkin tracing endpoint;
+- `-v` - log verbosity (0 - error, 1 - warn (default), 2 - info, 3 - debug).
+
+## Requests
+To make decision requests there are 3 options. Create client from scratch which implements protocol defined by `proto/service.proto`, use golang client package `themis\pep` to implement client application (see `contrib/coredns/policy`) and for debug use simple PEPCLI client. To use PEPCLI client create requests YAML file for example:
+```yaml
+attributes:
+  s: string
+  a: address
+
+requests:
+- s: Local Test
+  a: 127.0.0.1
+
+- s: Example
+  a: 192.0.2.1
+```
+start PDP server with some policy (use for example "All permit policy" above):
+```
+$ pdpserver -v 3 -p all-permit-policy.yaml
+INFO[0000] Starting PDP server
+INFO[0000] Loading policy                                policy=all-permit-policy.yaml
+INFO[0000] Parsing policy                                policy=all-permit-policy.yaml
+INFO[0000] Opening service port                          address="0.0.0.0:5555"
+INFO[0000] Opening control port                          address="0.0.0.0:5554"
+INFO[0000] Creating service protocol handler
+INFO[0000] Creating control protocol handler
+INFO[0000] Serving decision requests
+INFO[0000] Serving control requests
+```
+in the other terminal run PEPCLI:
+```
+$ pepcli -i requests.yaml
+Got 2 requests. Sending...
+- effect: PERMIT
+  reason: "Ok"
+
+- effect: PERMIT
+  reason: "Ok"
+```
+PEPCLI sends two requests which are listed in the file ang gets all permitted as instructed by the policy. In PDP's terminal you can see respective logs:
+```
+...
+INFO[0000] Serving decision requests
+INFO[0000] Serving control requests
+INFO[0089] Validating context
+DEBU[0089] Request context                               context=attributes:
+- a.(Address): 127.0.0.1
+- s.(String): "Local Test"
+INFO[0089] Returning response
+DEBU[0089] Response                                      effect=PERMIT obligation=no attributes reason=Ok
+INFO[0089] Validating context
+DEBU[0089] Request context                               context=attributes:
+- s.(String): "Example"
+- a.(Address): 192.0.2.1
+INFO[0089] Returning response
+DEBU[0089] Response                                      effect=PERMIT obligation=no attributes reason=Ok
+...
+```
+
 # References
 **[XACML-V3.0]** *eXtensible Access Control Markup Language (XACML) Version 3.0.* 22 January 2013. OASIS Standard. http://docs.oasis-open.org/xacml/3.0/xacml-3.0-core-spec-os-en.html.
-
