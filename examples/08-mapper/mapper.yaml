@@ -1,0 +1,72 @@
+# Mapper example
+attributes:
+  p: string
+  d: domain
+  err: string
+
+policies:
+  alg:
+    id: Mapper
+    map:
+      attr: p
+    default: DenyPolicy
+    error: ErrorPolicy
+  policies:
+  - id: DenyPolicy
+    alg: FirstApplicableEffect
+    rules:
+    - effect: Deny
+  - id: ErrorPolicy
+    alg: FirstApplicableEffect
+    rules:
+    - effect: Deny
+    obligations:
+    - err: Can't calculate policy id
+  - id: First
+    alg:
+      id: Mapper
+      map:
+        selector:
+          uri: "local:content/domain-policies"
+          path:
+          - attr: d
+          type: list of strings
+      default: DenyRule
+      alg: FirstApplicableEffect
+    rules:
+    - id: DenyRule
+      effect: Deny
+      obligations:
+      - p: First Default Deny
+    - id: PermitNet
+      effect: Permit
+      obligations:
+      - p: First PermitNet
+    - id: DenyCom
+      effect: Deny
+      obligations:
+      - p: First DenyCom
+  - id: Second
+    alg:
+      id: Mapper
+      map:
+        selector:
+          uri: "local:content/domain-policies"
+          path:
+          - attr: d
+          type: list of strings
+      default: DenyRule
+      alg: FirstApplicableEffect
+    rules:
+    - id: DenyRule
+      effect: Deny
+      obligations:
+      - p: Second Default Deny
+    - id: DenyNet
+      effect: Deny
+      obligations:
+      - p: Second DenyNet
+    - id: PermitCom
+      effect: Permit
+      obligations:
+      - p: Second PermitCom
