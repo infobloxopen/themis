@@ -373,42 +373,15 @@ Local selector uses local content data (see below) and has following fields:
 Example of local selector:
 ```yaml
 # Selector example
-attributes:
-  d: domain
-  a: address
-  s: string
-
-policies:
-  alg: FirstApplicableEffect
-  rules:
-  - target:
-    - contains:
-      - selector:
-          uri: "local:content/domain-addresses"
-          path:
-          - val:
-              type: string
-              content: good
-          - attr: d
-          type: set of networks
-      - attr: a
-    effect: Permit
-    obligations:
-    - s: Good
-  - target:
-    - contains:
-      - selector:
-          uri: "local:content/domain-addresses"
-          path:
-          - val:
-              type: string
-              content: bad
-          - attr: d
-          type: set of networks
-      - attr: a
-    effect: Deny
-    obligations:
-    - s: Bad
+...
+selector:
+  uri: "local:content/domain-addresses"
+  path:
+  - val:
+      type: string
+      content: good
+  - attr: d
+  type: set of networks
 ```
 
 Content for the example:
