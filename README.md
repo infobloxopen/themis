@@ -146,34 +146,26 @@ Rule defines decision effect. Possible fields of a rule:
 For example a rule with all fields:
 ```yaml
 # Rule with all its fields
-attributes:
-  x: string
-  a: address
-  n: network
-  b: boolean
-
-policies:
-  alg: FirstApplicableEffect
-  rules:
-  - id: "Test Policy"
-    target: # x == "test"
-    - equal:
-      - attr: x
+...
+id: "Test Rule"
+target: # x == "test"
+- equal:
+  - attr: x
+  - val:
+      type: string
+      content: "test"
+condition: # not (c contains 192.0.2.1 or b)
+  not:
+  - or:
+    - contains:
+      - attr: c
       - val:
-          type: string
-          content: "test"
-    condition: # not (n contains 192.0.2.1 or b)
-      not:
-        or:
-        - contains:
-          - attr: n
-          - val:
-              type: address
-              content: "192.0.2.1"
-        - attr: b
-    effect: Permit
-    obligations:
-    - a: "192.0.2.1"
+          type: address
+          content: "192.0.2.1"
+    - attr: b
+effect: Permit
+obligations:
+- a: "192.0.2.1"
 ```
 
 ### Target
