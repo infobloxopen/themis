@@ -280,127 +280,86 @@ For **obligations** only data itself requires as type can be derived from attrib
 Example of policy with all possible values:
 ```yaml
 # All values example
-attributes:
-  b: boolean
-  s: string
-  a: address
-  c: network
-  d: domain
-  ss: set of strings
-  sn: set of networks
-  sd: set of domains
-  ls: list of strings
-
-policies:
-  alg: DenyOverrides
-  policies:
-  - alg: FirstApplicableEffect
-    rules:
-    - target: # string
-      - equal:
-        - attr: s
-        - val:
-            type: string
-            content: test
-      effect: Permit
-      obligations:
-      - s: example
-    - target: # address
-      - contains:
-        - attr: c
-        - val:
-            type: address
-            content: 192.0.2.1
-      effect: Permit
-      obligations:
-      - a: 192.0.2.1
-    - target: # network
-      - contains:
-        - attr: a
-        - val:
-            type: network
-            content: 192.0.2.0/28
-      effect: Permit
-      obligations:
-      - c: 192.0.2.0/28
-    - condition: # domain and set of domains
-        and:
-        - contains:
-          - val:
-              type: set of domains
-              content:
-              - test.com
-              - example.com
-          - attr: d
-        - contains:
-          - val:
-              type: set of domains
-              content:
-              - test.com
-              - example.com
-          - val:
-              type: domain
-              content: test.com
-      effect: Permit
-      obligations:
-      - d: example.net
-      - sd:
-        - test.com
-        - example.com
-    - target: # set of strings
-      - contains:
-        - attr: s
-        - val:
-            type: set of strings
-            content:
-            - first
-            - second
-      effect: Permit
-      obligations:
-      - ss:
-        - first
-        - second
-    - target: # set of networks
-      - contains:
-        - attr: a
-        - val:
-            type: set of networks
-            content:
-            - 192.0.2.0/28
-            - 192.0.2.16/28
-      effect: Permit
-      obligations:
-      - sn:
-        - 192.0.2.0/28
-        - 192.0.2.16/28
-  - alg: # list of strings
-      id: Mapper
-      alg: FirstApplicableEffect
-      map:
-        val:
-          type: list of strings
-          content:
-          - first
-          - second
-    rules:
-    - target:
-      - equal:
-        - attr: s
-        - val:
-            type: string
-            content: first-rule
-      effect: Permit
-      obligations:
-      - s: first-rule
-    - target:
-      - equal:
-        - attr: s
-        - val:
-            type: string
-            content: second-rule
-      effect: Permit
-      obligations:
-      - s: second-rule
+...
+# String
+val:
+  type: string
+  content: test
+...
+obligations:
+- s: example
+...
+# Address
+val:
+  type: address
+  content: 192.0.2.1
+...
+obligations:
+- a: 192.0.2.2
+...
+# Network
+val:
+  type: network
+  content: 192.0.2.0/28
+...
+obligations:
+- c: 192.0.2.16/28
+...
+# Domain
+val:
+  type: domain
+  content: example.com
+...
+obligations:
+- d: example.net
+...
+# Set of Strings
+val:
+  type: set of strings
+  content:
+  - first
+  - second
+...
+obligations:
+- ss:
+  - first
+  - second
+...
+# Set of Networks
+val:
+  type: set of networks
+  content:
+  - 192.0.2.0/28
+  - 192.0.2.16/28
+...
+obligations:
+- sn:
+  - 192.0.2.0/28
+  - 192.0.2.16/28
+...
+# Set of Domains
+val:
+  type: set of domains
+  content:
+  - example.com
+  - example.net
+...
+obligations:
+- sd:
+  - example.org
+  - example.edu
+...
+# List of Strings
+val:
+  type: list of strings
+  content:
+  - first
+  - second
+...
+obligations:
+- ls:
+  - first
+  - second
 ```
 
 ### Selector

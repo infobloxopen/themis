@@ -1,4 +1,4 @@
-# 04-Rule
+# 05-Target
 
 The example shows policies file with different kinds of target.
 
