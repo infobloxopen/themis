@@ -781,7 +781,7 @@ policies:
   - id: First Rule
     effect: Permit
 ```
-Run PAPCLI with the policy and initial tag:
+Run PAPCLI with the policy and initial tag (option `-vt` the tag should be correct UUID):
 ```
 $ papcli -s 127.0.0.1:5554 -p permit-test-x-policy.yaml -vt 823f79f2-0001-4eb2-9ba0-2a8c1b284443
 INFO[0000] Requesting data upload to PDP servers...
@@ -813,7 +813,7 @@ Then policy can be updated (with following update which removes "First Rule" and
   - Root
   - First Rule
 ```
-Run PAPCLI with the update:
+Run PAPCLI with the update (you need to specify previous tag with option `-vf` and new tag with option `-vt`, when both options present PDP server considers data as update and checks if `-vf` tag matches to tag current tag of updated to maintain update consistency):
 ```
 $ papcli -s 127.0.0.1:5554 -p permit-test-x-policy-update.yaml -vf 823f79f2-0001-4eb2-9ba0-2a8c1b284443 -vt 93a17ce2-788d-476f-bd11-a5580a2f35f3
 INFO[0000] Requesting data upload to PDP servers...     
