@@ -176,98 +176,85 @@ Request matches target when all **any** expressions match (if one or more of **a
 Below an example of policy with different kinds of targets:
 ```yaml
 # Target examples
-attributes:
-  r: string
-  x: string
-  a: address
-  c: network
-
-policies:
-  alg: FirstApplicableEffect
-  rules:
-  - target: # ((x == test and c contains address(192.0.2.1)) or
-            #  x == example) and
-            # (network(192.0.2.0/28) contains a or network(192.0.2.16/28) contains a)
-    - any:
-      - all:
-        - equal:
-          - attr: x
-          - val:
-              type: string
-              content: "test"
-        - contains:
-          - attr: c
-          - val:
-              type: address
-              content: 192.0.2.1
-      - equal:
-        - attr: x
-        - val:
-            type: string
-            content: "example"
-    - any:
-      - contains:
-        - val:
-            type: network
-            content: 192.0.2.0/28
-        - attr: a
-      - contains:
-        - val:
-            type: network
-            content: 192.0.2.16/28
-        - attr: a
-    effect: Permit
-    obligations:
-    - r: first
-  - target: # (x == test or x == example) and (network(192.0.2.0/28) contains a or network(192.0.2.16/28) contains a)
-    - any:
-      - equal:
-        - attr: x
-        - val:
-            type: string
-            content: "test"
-      - equal:
-        - attr: x
-        - val:
-            type: string
-            content: "example"
-    - any:
-      - contains:
-        - val:
-            type: network
-            content: 192.0.2.0/28
-        - attr: a
-      - contains:
-        - val:
-            type: network
-            content: 192.0.2.16/28
-        - attr: a
-    effect: Permit
-    obligations:
-    - r: second
-  - target: # x == test and network(192.0.2.0/24) contains a
+...
+# ((x == test and c contains address(192.0.2.1)) or
+#  x == example) and
+# (network(192.0.2.0/28) contains a or network(192.0.2.16/28) contains a)
+target:
+- any:
+  - all:
     - equal:
       - attr: x
       - val:
           type: string
           content: "test"
     - contains:
+      - attr: c
       - val:
-          type: network
-          content: 192.0.2.0/24
-      - attr: a
-    effect: Permit
-    obligations:
-    - r: third
-  - target: # x == test
-    - equal:
-      - attr: x
-      - val:
-          type: string
-          content: "test"
-    effect: Permit
-    obligations:
-    - r: fourth
+          type: address
+          content: 192.0.2.1
+  - equal:
+    - attr: x
+    - val:
+        type: string
+        content: "example"
+- any:
+  - contains:
+    - val:
+        type: network
+        content: 192.0.2.0/28
+    - attr: a
+  - contains:
+    - val:
+        type: network
+        content: 192.0.2.16/28
+    - attr: a
+...
+# (x == test or x == example) and (network(192.0.2.0/28) contains a or network(192.0.2.16/28) contains a)
+target:
+- any:
+  - equal:
+    - attr: x
+    - val:
+        type: string
+        content: "test"
+  - equal:
+    - attr: x
+    - val:
+        type: string
+        content: "example"
+- any:
+  - contains:
+    - val:
+        type: network
+        content: 192.0.2.0/28
+    - attr: a
+  - contains:
+    - val:
+        type: network
+        content: 192.0.2.16/28
+    - attr: a
+...
+# x == test and network(192.0.2.0/24) contains a
+target:
+- equal:
+  - attr: x
+  - val:
+      type: string
+      content: "test"
+- contains:
+  - val:
+      type: network
+      content: 192.0.2.0/24
+  - attr: a
+...
+# x == test
+target:
+- equal:
+  - attr: x
+  - val:
+      type: string
+      content: "test"
 ```
 
 ### Condition

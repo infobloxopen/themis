@@ -7,3 +7,4 @@ Here gathered set of examples which can help to understand, investigate and debu
 - **02-policy-set** - example of policy set with all its fields defined;
 - **03-policy** - example of policy with all its fields set;
 - **04-rule** - example of rule with all its fields set;
+- **05-target** - example of different targets;
