@@ -4,3 +4,4 @@ Here gathered set of examples which can help to understand, investigate and debu
 
 ## Content
 - **01-intro** - simple policies and queries to check them;
+- **02-policy-set** - example of policy set with all its fields defined;

@@ -81,37 +81,32 @@ Policy Set holds set of **policies** or inner **policy sets** and defines how to
 Example of policy set with all its fields (it contains one hidden policy set and one hidden policy):
 ```yaml
 # Policy set with all its fields
-attributes:
-  x: string
-  a: address
-  z: string
-
+...
+id: "Test Policy Set"
+target: # x == "test"
+- equal:
+  - attr: x
+  - val:
+      type: string
+      content: "test"
+alg: FirstApplicableEffect
 policies:
-  id: "Test Policy Set"
-  target: # x == "test"
-  - equal:
-    - attr: x
+- alg: FirstApplicableEffect
+  target:
+  - equal: # z == "example"
+    - attr: z
     - val:
         type: string
-        content: "test"
-  alg: FirstApplicableEffect
+        content: "example"
   policies:
   - alg: FirstApplicableEffect
-    target:
-    - equal: # z == "example"
-      - attr: z
-      - val:
-          type: string
-          content: "example"
-    policies:
-    - alg: FirstApplicableEffect
-      rules:
-      - effect: Permit
-  - alg: FirstApplicableEffect
     rules:
-    - effect: Deny
-  obligations:
-  - a: "192.0.2.1"
+    - effect: Permit
+- alg: FirstApplicableEffect
+  rules:
+  - effect: Deny
+obligations:
+- a: "192.0.2.1"
 ```
 
 ### Policy
