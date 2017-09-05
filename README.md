@@ -723,5 +723,219 @@ DEBU[0089] Response                                      effect=PERMIT obligatio
 ...
 ```
 
+## Policies and content uploading and updating
+PDP Server accepts control requests to upload and update policies or content. Themis user can implement her own client from scratch using protocol definition from `proto/control.proto` or using golang package `themis/pdpctrl-client`. To make control requests for debug purpose Themis provides PAPCLI tool.
+
+Update is a list of commands each contains three fields:
+- **op** - add or delete;
+- **path** - list of ids;
+- **entity** - contains an entity to add as child to entity defined by path.
+
+PDP supporst **add** and **delete** commands. In case of **add** path should point to parent item and **entity** should contain appropriate child. For example if it is policy update and **path** points to policy set **entity** can be policy or other policy set. If **path** points to policy then only rule can be accepted as **entity**.
+
+For example in one terminal start PDP server with no policies:
+```
+$ pdpserver -v 3
+INFO[0000] Starting PDP server
+INFO[0000] Opening service port                          address="0.0.0.0:5555"
+INFO[0000] Opening control port                          address="0.0.0.0:5554"
+INFO[0000] Creating service protocol handler
+INFO[0000] Creating control protocol handler
+INFO[0000] Serving decision requests
+INFO[0000] Serving control requests
+```
+Then upload policy with PAPCLI ("All permit policy"):
+```
+$ papcli -s 127.0.0.1:5554 -p all-permit-policy.yaml
+INFO[0000] Requesting data upload to PDP servers...
+INFO[0000] Uploading data to PDP servers...
+```
+PDP got the data:
+```
+...
+INFO[0000] Serving decision requests
+INFO[0000] Serving control requests
+INFO[0004] Got new control request
+INFO[0004] Got new data stream
+INFO[0004] Got apply command
+INFO[0004] New policy has been applied                   id=1
+...
+```
+
+PDP Server doesn't accept updates to policy with no tag so upload other policy and set tag to it to make update later (here policy similar to "permit if x is test" is used but with ids (because commands add and delete doen't see hidden policies or rules):
+```yaml
+# Permit if x is "test" otherwise Not Applicable
+attributes:
+  x: string
+
+policies:
+  id: Root
+  alg: FirstApplicableEffect
+  target:
+  - equal:
+    - attr: x
+    - val:
+        type: string
+        content: "test"
+  rules:
+  - id: First Rule
+    effect: Permit
+```
+Run PAPCLI with the policy and initial tag:
+```
+$ papcli -s 127.0.0.1:5554 -p permit-test-x-policy.yaml -vt 823f79f2-0001-4eb2-9ba0-2a8c1b284443
+INFO[0000] Requesting data upload to PDP servers...
+INFO[0000] Uploading data to PDP servers...
+```
+PDP Server accepts the policy:
+```
+...
+INFO[0016] Got new control request
+INFO[0016] Got new data stream
+INFO[0016] Got apply command
+INFO[0016] New policy has been applied                   id=1 tag=823f79f2-0001-4eb2-9ba0-2a8c1b284443
+...
+```
+
+Then policy can be updated (with following update which removes "First Rule" and adds other one):
+```yaml
+- op: add
+  path:
+  - Root
+  entity:
+    id: Permit Rule With Obligation
+    effect: Permit
+    obligations:
+    - x: example
+
+- op: delete
+  path:
+  - Root
+  - First Rule
+```
+Run PAPCLI with the update:
+```
+$ papcli -s 127.0.0.1:5554 -p permit-test-x-policy-update.yaml -vf 823f79f2-0001-4eb2-9ba0-2a8c1b284443 -vt 93a17ce2-788d-476f-bd11-a5580a2f35f3
+INFO[0000] Requesting data upload to PDP servers...     
+INFO[0000] Uploading data to PDP servers...
+```
+PDP accepts the update:
+```
+...
+INFO[0373] Got new control request
+INFO[0373] Got new data stream
+DEBU[0373] Policy update                                 update=policy update: 823f79f2-0001-4eb2-9ba0-2a8c1b284443 - 93a17ce2-788d-476f-bd11-a5580a2f35f3
+commands:
+- Add ("Root")
+- Delete ("Root"/"First Rule")
+INFO[0373] Got apply command
+INFO[0373] Policy update has been applied                curr-tag=93a17ce2-788d-476f-bd11-a5580a2f35f3 id=3 prev-tag=823f79f2-0001-4eb2-9ba0-2a8c1b284443
+...
+```
+Consider content update. For example use "Selector example" policy. Start PDP with the policy:
+```
+$ pdpserver -v 3 -p selector-examle.yaml 
+INFO[0000] Starting PDP server                          
+INFO[0000] Loading policy                                policy=selector-examle.yaml
+INFO[0000] Parsing policy                                policy=selector-examle.yaml
+INFO[0000] Opening service port                          address="0.0.0.0:5555"
+INFO[0000] Opening control port                          address="0.0.0.0:5554"
+INFO[0000] Creating service protocol handler            
+INFO[0000] Serving decision requests                    
+INFO[0000] Creating control protocol handler            
+INFO[0000] Serving control requests                     
+```
+Then upload content with some tag (to be able to update it):
+```
+$ papcli -s 127.0.0.1:5554 -j selector-examle.json -vt 823f79f2-0001-4eb2-9ba0-2a8c1b284443
+INFO[0000] Requesting data upload to PDP servers...     
+INFO[0000] Uploading data to PDP servers...             
+```
+PDP server accepts upload:
+```
+...
+INFO[0265] Got new control request                      
+INFO[0265] Got new data stream                          
+INFO[0265] Got apply command                            
+INFO[0265] New content has been applied                  id=1 tag=823f79f2-0001-4eb2-9ba0-2a8c1b284443
+...
+```
+Now lets move IPv4 addresses from "good" to "bad" map and IPv6 from 
+"bad" to "good" for "example.com":
+```json
+[
+  {
+    "op": "delete",
+    "path": ["domain-addresses", "good", "example.com"]
+  },
+  {
+    "op": "add",
+    "path": ["domain-addresses", "good", "example.com"],
+    "entity": {
+      "type": "set of networks",
+      "data": ["2001:db8:1000::/40", "2001:db8:2000::/40"]
+    }
+  },
+  {
+    "op": "delete",
+    "path": ["domain-addresses", "bad", "example.com"]
+  },
+  {
+    "op": "add",
+    "path": ["domain-addresses", "bad", "example.com"],
+    "entity": {
+      "type": "set of networks",
+      "data": ["192.0.2.16/28", "192.0.2.32/28"]
+    }
+  }
+]
+```
+Note that update's entities doesn't contain **keys** field as **data** is immediate value (and has no any mappings). If update add some entity with mapping entity should have a **keys** filed. For example:
+```json
+[
+  {
+    "op": "delete",
+    "path": ["domain-addresses", "good"]
+  },
+  {
+    "op": "add",
+    "path": ["domain-addresses", "good"],
+    "entity": {
+      "type": "set of networks",
+      "keys": ["domain"],
+      "data": {
+        "example.com": ["2001:db8:1000::/40", "2001:db8:2000::/40"],
+        "test.com": ["2001:db8:3000::/40", "2001:db8:4000::/40"]
+      }
+    }
+  }
+]
+```
+
+Run PAPCLI with content update file:
+```
+$ papcli -s 127.0.0.1:5554 -id content -j selector-examle-update.json -vf 823f79f2-0001-4eb2-9ba0-2a8c1b284443 -vt 93a17ce2-788d-476f-bd11-a5580a2f35f3
+INFO[0000] Requesting data upload to PDP servers...
+INFO[0000] Uploading data to PDP servers...
+```
+
+Check PDP logs:
+```
+...
+INFO[2190] Got new control request
+INFO[2190] Got new data stream
+DEBU[2190] Content update                                update=content update: 823f79f2-0001-4eb2-9ba0-2a8c1b284443 - 93a17ce2-788d-476f-bd11-a5580a2f35f3
+content: "content"
+commands:
+- Delete ("domain-addresses"/"good"/"example.com")
+- Add ("domain-addresses"/"good"/"example.com")
+- Delete ("domain-addresses"/"bad"/"example.com")
+- Add ("domain-addresses"/"bad"/"example.com")
+INFO[2190] Got apply command
+INFO[2190] Content update has been applied               cid=content curr-tag=93a17ce2-788d-476f-bd11-a5580a2f35f3 id=5 
+...
+```
+
 # References
 **[XACML-V3.0]** *eXtensible Access Control Markup Language (XACML) Version 3.0.* 22 January 2013. OASIS Standard. http://docs.oasis-open.org/xacml/3.0/xacml-3.0-core-spec-os-en.html.
+
