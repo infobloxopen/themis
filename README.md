@@ -936,6 +936,8 @@ INFO[2190] Content update has been applied               cid=content curr-tag=93
 ...
 ```
 
+Contents with different ids and policies can be updated independently and in paralel.
+
 # References
 **[XACML-V3.0]** *eXtensible Access Control Markup Language (XACML) Version 3.0.* 22 January 2013. OASIS Standard. http://docs.oasis-open.org/xacml/3.0/xacml-3.0-core-spec-os-en.html.
 
