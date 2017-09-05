@@ -120,23 +120,19 @@ Policy stores set of rules and defines how to combine them. It has following fie
 Here is an example of policy with all fields defined (it contains one hidden rule):
 ```yaml
 # Policy with all its fields
-attributes:
-  x: string
-  a: address
-
-policies:
-  id: "Test Policy"
-  target: # x == "test"
-  - equal:
-    - attr: x
-    - val:
-        type: string
-        content: "test"
-  alg: FirstApplicableEffect
-  rules:
-  - effect: Permit
-  obligations:
-  - a: "192.0.2.1"
+...
+id: "Test Policy"
+target: # x == "test"
+- equal:
+  - attr: x
+  - val:
+      type: string
+      content: "test"
+alg: FirstApplicableEffect
+rules:
+- effect: Permit
+obligations:
+- a: "192.0.2.1"
 ```
 
 ### Rule

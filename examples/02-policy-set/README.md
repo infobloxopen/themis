@@ -1,6 +1,6 @@
 # 02-Policy-Set
 
-The example shows policy files with full featured policy set.
+The example shows policies file with full featured policy set.
 
 Run pdpserver using policy file:
 ```
