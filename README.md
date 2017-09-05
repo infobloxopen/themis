@@ -39,7 +39,7 @@ Some application may require more details for particular decision. For example i
 **Boolean** value is accepted as "1", "t", "T", "TRUE", "true", "True", "0", "f", "F", "FALSE", "false", "False" and serialized to "true" and "false". **Address** accepted in dotted decimal ("192.0.2.1") form or in IPv6 ("2001:db8::68") form and serialized respectively. **Network** is accepted as a CIDR notation IP address and prefix (for example "192.0.2.0/24" or "2001:db8::/32"). **Domain** name is accepted as string of labels separated by dots (string is converted from punycode to ASCII and validated with regualr expression "^[-.\_A-Za-z0-9]+$" (**TODO**: need to rework according to RFC1035, 2181 and 4343). **Set of strings**, **set of domains**, **set of networks** and **list of strings** aren't accepted in request context but can appear in responce's obligations as comma separated list of values.
 
 ## Policies
-PDP uses YAML based language (YAML Abstract Syntax Tree or YAST) to define **policies** and specifically constructed JSON to define local **content**.
+PDP uses YAML based language (YAML Abstract Syntax Tree or YAST) to define **policies** and specifically constructed JSON to define local **content**  (JSON Content or JCON).
 
 ### Root
 Any **policies** definition consists of attributes (optional) and policies (required) sections. Attributes section contains set of pairs attribute name and type. For example:
@@ -506,12 +506,140 @@ Content for the example:
 ```
 
 ### Local Content
-Local content is a set of content items (see example above). It's identified by id field which can be any string with no slash character (`/`). Each content item also has id (key of "items" JSON object) and following fields:
+Local content is a set of content **items** (see example above). It's identified by **id** field which can be any string with no slash character (`/`). Each content item also has id (key of "items" JSON object) and following fields:
 - **keys** - list of types of nested maps (optional, if not present data should contain immediate value of type);
 - **type** - any possible type;
 - **data** - list of nested maps with keys of mentioned types or immediate value of given type.
 
 Local content supports string map (key type "string"), domain map (key type "domain") and network map (key type "network" or "address"). Selector expectes string expression as path item for string map, domain - for domain map and address or network - for network map ("address" expression is allowed even if content key is "network" and vice verse). 
 
+### Policy and Rule Combining Algorithms
+Policy and rule combinig algorithms define how to use child policies or rules of given policy set or policy and how to combine their effects, statuses and obligations. Themis supports following algorithms:
+- **FirstApplicableEffect** - evaluates child policies or rules one by one until meets any other than **NotApplicable** effect (see details below);
+- **DenyOverrides** - evaluates child policies or rules one by one until meets **Deny** effect;
+- **Mapper** - evaluates map expression and uses result to find child policy or rule to evaluate.
+
+For any algorithm if effect of children evaluation is **Deny** or **Permit** policy or policy set adds its obligation to what it got from children.
+
+#### First Applicable Effect
+The algorithm iterates child policies or rules and evaluates them one by one. User should not relay on any particular order (however for now it goes sequentionaly from first to the last). If any child evaluation effect is not **NotApplicable** the effect becomes overall policy or policy set result.
+
+#### DenyOverrides
+The algorithm as well evaluates child policies or rules one by one. User should not relay on any particular order (however for now it goes sequentionaly from first to the last). If any effect is **Deny** the effect becomes overall policy or policy set result and any other evaluation results are dropped. Other effects are combined as following:
+
+| Effects | Result |
+| --- | --- |
+| at least one **IndeterminateDP** or at least one **IndeterminateD** with at least one **Permit** or at least one **IndeterminateP** and any **NotApplicable** | **IndeterminateDP** |
+| at least one **IndeterminateD** and any **NotApplicable** | **IndeterminateD** |
+| at least one **Permit** and any **IndeterminateP** or **NotApplicable** | **Permit** |
+| at least one **IndeterminateP** and any **NotApplicable** | **IndeterminateP** |
+| only **NotApplicable** | **NotApplicable** |
+
+In case of any **Indeterminate** result all statuses are combined together.
+
+#### Mapper
+The algorithm is capable to select particular child policy or rule with no evaluation other children one by one. It has some parameters:
+- **id** - always "mapper" for the algorithm;
+- **map** - expression to get resulting policy or rule id (it can be string, set of strings or list of strings expression);
+- **default** - policy or rule id to evaluate if result of map expression doesn't match any child id (optional, if absent mapper policy effect is **Indeterminate**);
+- **error** - policy or rule id to evaluate if map expression can't be evaluated (optional, if absent mapper policy effect is **Indeterminate**);
+- **alg** - nested algorithm to use if map expression result is set of strings or list of strings (required if map is set of strings or list of strings expression, otherwise ignored). Other mapper can be used here (but for it **default** and **error** fields are ignored).
+
+Any hidden child policy or rule is ignored by mapper algorithm.
+
+For example policies:
+```yaml
+# Mapper example
+attributes:
+  p: string
+  d: domain
+  err: string
+
+policies:
+  alg:
+    id: Mapper
+    map:
+      attr: p
+    default: DenyPolicy
+    error: ErrorPolicy
+  policies:
+  - id: DenyPolicy
+    alg: FirstApplicableEffect
+    rules:
+    - effect: Deny
+  - id: ErrorPolicy
+    alg: FirstApplicableEffect
+    rules:
+    - effect: Deny
+    obligations:
+    - err: Can't calculate policy id
+  - id: First
+    alg:
+      id: Mapper
+      map:
+        selector:
+          uri: "local:content/domain-policies"
+          path:
+          - attr: d
+          type: list of strings
+      default: DenyRule
+      alg: FirstApplicableEffect
+    rules:
+    - id: DenyRule
+      effect: Deny
+      obligations:
+      - p: First Default Deny
+    - id: PermitNet
+      effect: Permit
+      obligations:
+      - p: First PermitNet
+    - id: DenyCom
+      effect: Deny
+      obligations:
+      - p: First DenyCom
+  - id: Second
+    alg:
+      id: Mapper
+      map:
+        selector:
+          uri: "local:content/domain-policies"
+          path:
+          - attr: d
+          type: list of strings
+      default: DenyRule
+      alg: FirstApplicableEffect
+    rules:
+    - id: DenyRule
+      effect: Deny
+      obligations:
+      - p: Second Default Deny
+    - id: DenyNet
+      effect: Deny
+      obligations:
+      - p: Second DenyNet
+    - id: PermitCom
+      effect: Permit
+      obligations:
+      - p: Second PermitCom
+```
+
+and content for them:
+```json
+{
+  "id": "content",
+  "items": {
+    "domain-policies": {
+      "keys": ["domain"],
+      "type": "list of strings",
+      "data": {
+        "example.com": ["PermitCom", "DenyCom"],
+        "example.net": ["PermitNet", "DenyNet"]
+      }
+    }
+  }
+}
+```
+
 # References
 **[XACML-V3.0]** *eXtensible Access Control Markup Language (XACML) Version 3.0.* 22 January 2013. OASIS Standard. http://docs.oasis-open.org/xacml/3.0/xacml-3.0-core-spec-os-en.html.
+
