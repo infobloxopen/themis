@@ -17,9 +17,9 @@ func main() {
 
 	hosts := []*pdpcc.Client{}
 
-	for _, addr := range config.Addresses {
-		h := pdpcc.NewClient(addr, config.ChunkSize)
-		if err := h.Connect(config.Timeout); err != nil {
+	for _, addr := range conf.addresses {
+		h := pdpcc.NewClient(addr, conf.chunkSize)
+		if err := h.Connect(conf.timeout); err != nil {
 			panic(err)
 		}
 
@@ -37,9 +37,9 @@ func main() {
 			err error
 		)
 		if policy {
-			ID, err = h.RequestPoliciesUpload(config.FromTag, config.ToTag)
+			ID, err = h.RequestPoliciesUpload(conf.fromTag, conf.toTag)
 		} else {
-			ID, err = h.RequestContentUpload(config.ContentID, config.FromTag, config.ToTag)
+			ID, err = h.RequestContentUpload(conf.contentID, conf.fromTag, conf.toTag)
 		}
 
 		if err != nil {
@@ -52,7 +52,7 @@ func main() {
 	}
 
 	if errors >= len(hosts) {
-		panic(fmt.Errorf("No hosts accepted upload requests"))
+		panic(fmt.Errorf("no hosts accepted upload requests"))
 	}
 
 	log.Infof("Uploading data to PDP servers...")
@@ -85,7 +85,7 @@ func main() {
 	}
 
 	if errors >= rem {
-		panic(fmt.Errorf("No hosts got data"))
+		panic(fmt.Errorf("no hosts got data"))
 	}
 
 	for i, h := range hosts {
@@ -101,20 +101,20 @@ func main() {
 }
 
 func openFile() (*os.File, bool) {
-	pOk := len(config.Policy) > 0
-	cOk := len(config.Content) > 0
+	pOk := len(conf.policy) > 0
+	cOk := len(conf.content) > 0
 
 	if pOk && cOk {
-		panic(fmt.Errorf("Both policy and content are specified. Please choose only one"))
+		panic(fmt.Errorf("both policy and content are specified. Please choose only one"))
 	}
 
 	if !pOk && !cOk {
-		panic(fmt.Errorf("Neither policy nor content are specified. Please secifiy any"))
+		panic(fmt.Errorf("neither policy nor content are specified. Please secifiy any"))
 	}
 
-	path := config.Content
+	path := conf.content
 	if pOk {
-		path = config.Policy
+		path = conf.policy
 	}
 
 	f, err := os.Open(path)
