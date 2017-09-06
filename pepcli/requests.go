@@ -1,48 +1,61 @@
 package main
 
+//go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-service && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/service.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-service && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-service"
+
 import (
 	"fmt"
 	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 
+	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
-type Requests struct {
+type requests struct {
 	Attributes map[string]string
 	Requests   []map[string]interface{}
+
+	symbols map[string]int
 }
 
-type Request struct {
-	Index    int
-	Position int
-	Request  *pb.Request
-	Error    error
+type request struct {
+	index    int
+	position int
+	request  pb.Request
+	err      error
 }
 
-func LoadRequests(name string) (*Requests, error) {
-	f, err := os.Open(name)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	b, err := ioutil.ReadAll(f)
+func loadRequests(name string) (*requests, error) {
+	b, err := ioutil.ReadFile(name)
 	if err != nil {
 		return nil, err
 	}
 
-	r := &Requests{}
-	return r, yaml.Unmarshal(b, r)
+	r := &requests{}
+	err = yaml.Unmarshal(b, r)
+	if err != nil {
+		return nil, err
+	}
+
+	r.symbols = make(map[string]int)
+	for k, v := range r.Attributes {
+		t, ok := pdp.TypeIDs[strings.ToLower(v)]
+		if !ok {
+			return nil, fmt.Errorf("unknown type \"%s\" of \"%s\" attribute", v, k)
+		}
+
+		r.symbols[k] = t
+	}
+
+	return r, nil
 }
 
-func (r *Requests) Parse(count int) chan Request {
-	ch := make(chan Request)
+func (r *requests) parse(count int) chan request {
+	ch := make(chan request)
 	go func() {
 		defer close(ch)
 
@@ -57,23 +70,29 @@ func (r *Requests) Parse(count int) chan Request {
 
 			attrs := []*pb.Attribute{}
 			for name, value := range req {
-				attr, err := makeAttribute(name, value, r.Attributes)
+				attr, err := makeAttribute(name, value, r.symbols)
 				if err != nil {
-					ch <- Request{Index: i + 1, Position: j + 1, Error: err}
+					ch <- request{index: i + 1, position: j + 1, err: err}
 					return
 				}
 
 				attrs = append(attrs, attr)
 			}
 
-			ch <- Request{Index: i + 1, Position: j + 1, Request: &pb.Request{attrs}}
+			ch <- request{
+				index:    i + 1,
+				position: j + 1,
+				request: pb.Request{
+					Attributes: attrs,
+				},
+			}
 		}
 	}()
 
 	return ch
 }
 
-func DumpResponse(r *pb.Response, f io.Writer) error {
+func dumpResponse(r *pb.Response, f io.Writer) error {
 	lines := []string{fmt.Sprintf("- effect: %s", r.Effect.String())}
 	if len(r.Reason) > 0 {
 		lines = append(lines, fmt.Sprintf("  reason: %q", r.Reason))
@@ -95,24 +114,16 @@ func DumpResponse(r *pb.Response, f io.Writer) error {
 	return err
 }
 
-const (
-	booleanAttribute = "boolean"
-	stringAttribute  = "string"
-	addressAttribute = "address"
-	networkAttribute = "network"
-	domainAttribute  = "domain"
-)
-
 type attributeMarshaller func(value interface{}) (string, error)
 
-var marshallers = map[string]attributeMarshaller{
-	booleanAttribute: booleanMarshaller,
-	stringAttribute:  stringMarshaller,
-	addressAttribute: addressMarshaller,
-	networkAttribute: networkMarshaller,
-	domainAttribute:  domainMarshaller}
+var marshallers = map[int]attributeMarshaller{
+	pdp.TypeBoolean: booleanMarshaller,
+	pdp.TypeString:  stringMarshaller,
+	pdp.TypeAddress: addressMarshaller,
+	pdp.TypeNetwork: networkMarshaller,
+	pdp.TypeDomain:  domainMarshaller}
 
-func makeAttribute(name string, value interface{}, symbols map[string]string) (*pb.Attribute, error) {
+func makeAttribute(name string, value interface{}, symbols map[string]int) (*pb.Attribute, error) {
 	t, ok := symbols[name]
 	var err error
 	if !ok {
@@ -124,32 +135,37 @@ func makeAttribute(name string, value interface{}, symbols map[string]string) (*
 
 	marshaller, ok := marshallers[t]
 	if !ok {
-		return nil, fmt.Errorf("unknown type \"%s\" of \"%s\" attribute", t, name)
+		return nil, fmt.Errorf("marshaling hasn't been implemented for type \"%s\" of \"%s\" attribute",
+			pdp.TypeNames[t], name)
 	}
 
 	s, err := marshaller(value)
 	if err != nil {
-		return nil, fmt.Errorf("can't marshal \"%s\" attribute as \"%s\": %s", name, t, err)
+		return nil, fmt.Errorf("can't marshal \"%s\" attribute as \"%s\": %s", name, pdp.TypeNames[t], err)
 	}
 
-	return &pb.Attribute{name, t, s}, nil
+	return &pb.Attribute{
+		Id:    name,
+		Type:  pdp.TypeKeys[t],
+		Value: s,
+	}, nil
 }
 
-func guessType(value interface{}) (string, error) {
+func guessType(value interface{}) (int, error) {
 	switch value.(type) {
 	case bool:
-		return booleanAttribute, nil
+		return pdp.TypeBoolean, nil
 	case string:
-		return stringAttribute, nil
+		return pdp.TypeString, nil
 	case net.IP:
-		return addressAttribute, nil
+		return pdp.TypeAddress, nil
 	case net.IPNet:
-		return networkAttribute, nil
+		return pdp.TypeNetwork, nil
 	case *net.IPNet:
-		return networkAttribute, nil
+		return pdp.TypeNetwork, nil
 	}
 
-	return "", fmt.Errorf("marshaling hasn't been implemented for %T", value)
+	return 0, fmt.Errorf("marshaling hasn't been implemented for %T", value)
 }
 
 func booleanMarshaller(value interface{}) (string, error) {

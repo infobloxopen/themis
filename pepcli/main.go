@@ -16,15 +16,10 @@ func check(err error, format string, args ...interface{}) {
 }
 
 func main() {
-	client := NewClient()
-	err := client.Connect(config.Server, config.Timeout)
-	check(err, "can't connect to \"%s\"", config.Server)
-	defer client.Close()
-
-	reqs, err := LoadRequests(config.Input)
-	check(err, "can't load requests from \"%s\"", config.Input)
+	reqs, err := loadRequests(conf.input)
+	check(err, "can't load requests from \"%s\"", conf.input)
 
 	fmt.Printf("Got %d requests. Sending...\n", len(reqs.Requests))
-	err = client.Send(reqs, config.Count, config.Output)
+	err = send(conf.server, reqs, conf.count, conf.output)
 	check(err, "can't send requests")
 }
