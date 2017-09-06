@@ -2,7 +2,7 @@ package main
 
 import log "github.com/Sirupsen/logrus"
 
-func InitLogging(verbose int) {
+func initLogging(verbose int) {
 	switch verbose {
 	case 0:
 		log.SetLevel(log.ErrorLevel)

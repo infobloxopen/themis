@@ -25,19 +25,19 @@ import (
 	"github.com/infobloxopen/themis/pdp/yast"
 )
 
-type Transport struct {
-	Interface net.Listener
-	Protocol  *grpc.Server
+type transport struct {
+	iface net.Listener
+	proto *grpc.Server
 }
 
-type Server struct {
+type server struct {
 	sync.RWMutex
 
-	Requests Transport
-	Control  Transport
-	Health   Transport
+	requests transport
+	control  transport
+	health   transport
 
-	queue *Queue
+	q *queue
 
 	p *pdp.PolicyStorage
 
@@ -45,14 +45,14 @@ type Server struct {
 	ct map[string]*pdp.LocalContentStorageTransaction
 }
 
-func NewServer() *Server {
-	return &Server{
-		queue: NewQueue(),
-		c:     pdp.NewLocalContentStorage(nil),
-		ct:    make(map[string]*pdp.LocalContentStorageTransaction)}
+func newServer() *server {
+	return &server{
+		q:  newQueue(),
+		c:  pdp.NewLocalContentStorage(nil),
+		ct: make(map[string]*pdp.LocalContentStorageTransaction)}
 }
 
-func (s *Server) LoadPolicies(path string) error {
+func (s *server) loadPolicies(path string) error {
 	if len(path) <= 0 {
 		return nil
 	}
@@ -76,7 +76,7 @@ func (s *Server) LoadPolicies(path string) error {
 	return nil
 }
 
-func (s *Server) LoadContent(paths []string) error {
+func (s *server) loadContent(paths []string) error {
 	items := []*pdp.LocalContent{}
 	for _, path := range paths {
 		err := func() error {
@@ -108,7 +108,7 @@ func (s *Server) LoadContent(paths []string) error {
 	return nil
 }
 
-func (s *Server) ListenRequests(addr string) error {
+func (s *server) listenRequests(addr string) error {
 	log.WithField("address", addr).Info("Opening service port")
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -116,11 +116,11 @@ func (s *Server) ListenRequests(addr string) error {
 		return err
 	}
 
-	s.Requests.Interface = ln
+	s.requests.iface = ln
 	return nil
 }
 
-func (s *Server) ListenControl(addr string) error {
+func (s *server) listenControl(addr string) error {
 	log.WithField("address", addr).Info("Opening control port")
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -128,11 +128,11 @@ func (s *Server) ListenControl(addr string) error {
 		return err
 	}
 
-	s.Control.Interface = ln
+	s.control.iface = ln
 	return nil
 }
 
-func (s *Server) ListenHealthCheck(addr string) error {
+func (s *server) listenHealthCheck(addr string) error {
 	if len(addr) <= 0 {
 		return nil
 	}
@@ -144,28 +144,28 @@ func (s *Server) ListenHealthCheck(addr string) error {
 		return err
 	}
 
-	s.Health.Interface = ln
+	s.health.iface = ln
 	return nil
 }
 
-func (s *Server) Serve(tracer ot.Tracer, profiler string) {
+func (s *server) serve(tracer ot.Tracer, profiler string) {
 	go func() {
 		log.Info("Creating control protocol handler")
-		s.Control.Protocol = grpc.NewServer()
-		pbc.RegisterPDPControlServer(s.Control.Protocol, s)
+		s.control.proto = grpc.NewServer()
+		pbc.RegisterPDPControlServer(s.control.proto, s)
 
 		log.Info("Serving control requests")
-		s.Control.Protocol.Serve(s.Control.Interface)
+		s.control.proto.Serve(s.control.iface)
 	}()
 
-	if s.Health.Interface != nil {
+	if s.health.iface != nil {
 		healthMux := http.NewServeMux()
 		healthMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 			log.Info("Health check responding with OK")
 			io.WriteString(w, "OK")
 		})
 		go func() {
-			http.Serve(s.Health.Interface, healthMux)
+			http.Serve(s.health.iface, healthMux)
 		}()
 	}
 
@@ -177,16 +177,16 @@ func (s *Server) Serve(tracer ot.Tracer, profiler string) {
 
 	log.Info("Creating service protocol handler")
 	if tracer == nil {
-		s.Requests.Protocol = grpc.NewServer()
+		s.requests.proto = grpc.NewServer()
 	} else {
 		onlyIfParent := func(parentSpanCtx ot.SpanContext, method string, req, resp interface{}) bool {
 			return parentSpanCtx != nil
 		}
 		intercept := otgrpc.OpenTracingServerInterceptor(tracer, otgrpc.IncludingSpans(onlyIfParent))
-		s.Requests.Protocol = grpc.NewServer(grpc.UnaryInterceptor(intercept))
+		s.requests.proto = grpc.NewServer(grpc.UnaryInterceptor(intercept))
 	}
-	pbs.RegisterPDPServer(s.Requests.Protocol, s)
+	pbs.RegisterPDPServer(s.requests.proto, s)
 
 	log.Info("Serving decision requests")
-	s.Requests.Protocol.Serve(s.Requests.Interface)
+	s.requests.proto.Serve(s.requests.iface)
 }
