@@ -1,32 +1,79 @@
+// Package pep implements gRPC client for Policy Decision Point (PDP) server. PEP package (Policy Enforcement Point) wraps service part of golang gRPC protocol implementation. The protocol is defined by github.com/infobloxopen/themis/proto/service.proto. Its golang implementation can be found at github.com/infobloxopen/themis/pdp-service. PEP is able to work with single server as well as multiple servers balancing requests using round-robin approach.
 package pep
 
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-service && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/service.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-service && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-service"
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 
+	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
+	ot "github.com/opentracing/opentracing-go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/naming"
 
-	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
-
 	pb "github.com/infobloxopen/themis/pdp-service"
-
-	ot "github.com/opentracing/opentracing-go"
 )
 
 var (
-	ErrorConnected    = fmt.Errorf("Connection has been already established")
-	ErrorNotConnected = fmt.Errorf("No connection")
+	// ErrorConnected occurs if method connect is called after connection has been established.
+	ErrorConnected = errors.New("connection has been already established")
+	// ErrorNotConnected indicates that there is no connection established to PDP server.
+	ErrorNotConnected = errors.New("no connection")
 )
 
+// Client defines abstract PDP service client interface.
+//
+// Marshalling and unmarshalling
+//
+// Validate method accepts as "in" argument any structure and pointer to
+// any structure as "out" argument. If "in" argument is Request structure from
+// github.com/infobloxopen/themis/pdp-service package, Validate passes it as is
+// to server. Similarly if "out" argument is pointer to Response structure
+// from the protocol package, Validate just copy data from server's response
+// to the structure.
+//
+// If "in" argument is just a structure, Validate marshals it to list of PDP
+// attributes. If no fields contains format string, Validate tries to convert
+// all exported fields to attributes. Any bool field is converted to boolean
+// attribute, string - to string attribute, net.IP - to address, net.IPNet or
+// *net.IPNet to network. Fields of other types are silently ingnored.
+//
+// Marshalling can be ajusted more precisely with help of `pdp` key in format
+// string. When some fields of "in" structure have format string, only fields
+// with "pdp" key are converted to attributes. The key supports two option
+// separated by comma. First is desired attribute name. Second - attribute type.
+// Allowed types are: boolean, string, address, network and domain. Validate can
+// convert only bool structure field to boolean attribute, string to string
+// attribute, net.IP to address attribute, net.IPNet or *net.IPNet to network
+// attribute and string to domain attribute.
+//
+// Validate is also able to unmarshal server's response to structure.
+// It accepts pointer to the structure as "out" argument. If no fields
+// of the structure has format string, Validate assigns effect to Effect field,
+// reason to Reason field and obligation attributes to other fields
+// according to their names and types. Effect field can be of bool type
+// (and becomes true if effect is Permit or false otherwise), integer (it gets
+// one of Response_* constants form pdp-service package) or string (gets
+// Response_Effect_name value). Reason should be a string field. Obligation
+// attributes are assigned to fields with corresponding names if
+// types of fields allow assignment if there is no field with appropriate
+// name and type response attribute silently dropped. The same as for marshaling
+// `pdp` key can control unmarshaling.
+
 type Client interface {
+	// Connect establishes connection to PDP server.
 	Connect() error
+	// Close terminates previously established connection if any.
+	// Close should silently return if connection hasn't been established yet or
+	// if it has been already closed.
 	Close()
 
+	// Validate sends decision request to PDP server and fills out response.
 	Validate(ctx context.Context, in, out interface{}) error
+	// ModalValidate is the same as Validate but uses context.Background.
 	ModalValidate(in, out interface{}) error
 }
 
@@ -38,6 +85,7 @@ type pdpClient struct {
 	tracer   ot.Tracer
 }
 
+// NewBalancedClient creates client instance bound to several PDP servers with round-robin balancing.
 func NewBalancedClient(addrs []string, tracer ot.Tracer) Client {
 	c := &pdpClient{addr: "pdp", tracer: tracer}
 	r := newStaticResolver("pdp", addrs...)
@@ -45,6 +93,7 @@ func NewBalancedClient(addrs []string, tracer ot.Tracer) Client {
 	return c
 }
 
+// NewClient creates client instance bound to single PDP server.
 func NewClient(addr string, tracer ot.Tracer) Client {
 	return &pdpClient{addr: addr, tracer: tracer}
 }
@@ -109,49 +158,6 @@ func (c *pdpClient) ModalValidate(in, out interface{}) error {
 	return c.Validate(context.Background(), in, out)
 }
 
-type TestClient struct {
-	NextResponse   *pb.Response
-	NextResponseIP *pb.Response
-	ErrResponse    error
-	ErrResponseIP  error
-}
-
-func NewTestClient() *TestClient {
-	return &TestClient{}
-}
-
-func NewTestClientInit(nextResponse *pb.Response, nextResponseIP *pb.Response,
-	errResponse error, errResponseIP error) *TestClient {
-	return &TestClient{nextResponse, nextResponseIP, errResponse, errResponseIP}
-}
-
-func (c *TestClient) Connect() error { return nil }
-func (c *TestClient) Close()         {}
-func (c *TestClient) Validate(ctx context.Context, in, out interface{}) error {
-	if in != nil {
-		p := in.(pb.Request)
-		for _, a := range p.Attributes {
-			if a.Id == "address" {
-				if c.ErrResponseIP != nil {
-					return c.ErrResponseIP
-				}
-				if c.NextResponseIP != nil {
-					return fillResponse(c.NextResponseIP, out)
-				}
-				continue
-			}
-		}
-	}
-	if c.ErrResponse != nil {
-		return c.ErrResponse
-	}
-	return fillResponse(c.NextResponse, out)
-}
-
-func (c *TestClient) ModalValidate(in, out interface{}) error {
-	return c.Validate(context.Background(), in, out)
-}
-
 func makeRequest(v interface{}) (pb.Request, error) {
 	if req, ok := v.(pb.Request); ok {
 		return req, nil
@@ -161,7 +167,7 @@ func makeRequest(v interface{}) (pb.Request, error) {
 		return pb.Request{}, err
 	}
 
-	return pb.Request{attrs}, nil
+	return pb.Request{Attributes: attrs}, nil
 }
 
 func fillResponse(res *pb.Response, v interface{}) error {

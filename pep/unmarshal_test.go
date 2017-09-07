@@ -24,10 +24,10 @@ type TestTaggedResponseStruct struct {
 	Result  string `pdp:"Effect"`
 	Error   string `pdp:"Reason"`
 	Bool1   bool
-	Bool2   bool      `pdp`
+	Bool2   bool      `pdp:""`
 	Bool3   bool      `pdp:"flag"`
 	Domain  string    `pdp:"d,domain"`
-	Address net.IP    `pdp`
+	Address net.IP    `pdp:""`
 	Network net.IPNet `pdp:"net,network"`
 }
 
@@ -115,7 +115,7 @@ var (
 )
 
 func TestUnmarshalUntaggedStruct(t *testing.T) {
-	r := &pb.Response{pb.Response_PERMIT, "", TestObligations}
+	r := newResponse(pb.Response_PERMIT, "", TestObligations)
 	v := TestResponseStruct{}
 
 	err := unmarshalToValue(r, reflect.ValueOf(&v))
@@ -128,7 +128,7 @@ func TestUnmarshalUntaggedStruct(t *testing.T) {
 }
 
 func TestUnmarshalTaggedStruct(t *testing.T) {
-	r := &pb.Response{pb.Response_INDETERMINATED, "Test Error!", TestTaggedObligations}
+	r := newResponse(pb.Response_INDETERMINATED, "Test Error!", TestTaggedObligations)
 	v := TestTaggedResponseStruct{}
 
 	err := unmarshalToValue(r, reflect.ValueOf(&v))
@@ -190,7 +190,7 @@ func TestUnmarshalTaggedStruct(t *testing.T) {
 		}
 	}
 
-	r = &pb.Response{pb.Response_INDETERMINATED, "Test Error!", obligations}
+	r = newResponse(pb.Response_INDETERMINATED, "Test Error!", obligations)
 	vAllTypes := TestTaggedAllTypesResponseStruct{}
 	err = unmarshalToValue(r, reflect.ValueOf(&vAllTypes))
 	if err != nil {
@@ -217,7 +217,7 @@ type TestUintResponse struct {
 }
 
 func TestUnmarshalEffectTypes(t *testing.T) {
-	r := &pb.Response{pb.Response_INDETERMINATEDP, "", nil}
+	r := newResponse(pb.Response_INDETERMINATEDP, "", nil)
 
 	v1 := TestIntResponse{}
 	err := unmarshalToValue(r, reflect.ValueOf(&v1))
@@ -237,119 +237,119 @@ func TestUnmarshalEffectTypes(t *testing.T) {
 }
 
 func TestUnmarshalInvalidObligations(t *testing.T) {
-	r := &pb.Response{pb.Response_INDETERMINATEDP, "", TestInvalidObligations1}
+	r := newResponse(pb.Response_INDETERMINATEDP, "", TestInvalidObligations1)
 	v := TestResponseStruct{}
 	err := unmarshalToValue(r, reflect.ValueOf(&v))
 	if err != nil {
-		if !strings.Contains(err.Error(), "Can't treat") {
-			t.Errorf("Expected \"Can't treat\" error but got: %s", err)
+		if !strings.Contains(err.Error(), "can't treat") {
+			t.Errorf("Expected \"can't treat\" error but got: %s", err)
 		}
 	} else {
-		t.Errorf("Expected \"Can't treat\" error")
+		t.Errorf("Expected \"can't treat\" error")
 	}
 
-	r = &pb.Response{pb.Response_INDETERMINATEDP, "", TestInvalidObligations2}
+	r = newResponse(pb.Response_INDETERMINATEDP, "", TestInvalidObligations2)
 	v = TestResponseStruct{}
 	err = unmarshalToValue(r, reflect.ValueOf(&v))
 	if err != nil {
-		if !strings.Contains(err.Error(), "Can't treat") {
-			t.Errorf("Expected \"Can't treat\" error but got: %s", err)
+		if !strings.Contains(err.Error(), "can't treat") {
+			t.Errorf("Expected \"can't treat\" error but got: %s", err)
 		}
 	} else {
-		t.Errorf("Expected \"Can't treat\" error")
+		t.Errorf("Expected \"can't treat\" error")
 	}
 
-	r = &pb.Response{pb.Response_INDETERMINATEDP, "", TestInvalidObligations3}
+	r = newResponse(pb.Response_INDETERMINATEDP, "", TestInvalidObligations3)
 	v = TestResponseStruct{}
 	err = unmarshalToValue(r, reflect.ValueOf(&v))
 	if err != nil {
-		if !strings.Contains(err.Error(), "Can't treat") {
-			t.Errorf("Expected \"Can't treat\" error but got: %s", err)
+		if !strings.Contains(err.Error(), "can't treat") {
+			t.Errorf("Expected \"can't treat\" error but got: %s", err)
 		}
 	} else {
-		t.Errorf("Expected \"Can't treat\" error")
+		t.Errorf("Expected \"can't treat\" error")
 	}
 
-	r = &pb.Response{pb.Response_INDETERMINATEDP, "", TestInvalidObligations4}
+	r = newResponse(pb.Response_INDETERMINATEDP, "", TestInvalidObligations4)
 	v = TestResponseStruct{}
 	err = unmarshalToValue(r, reflect.ValueOf(&v))
 	if err != nil {
-		if !strings.Contains(err.Error(), "Can't unmarshal") {
-			t.Errorf("Expected \"Can't unmarshal\" error but got: %s", err)
+		if !strings.Contains(err.Error(), "can't unmarshal") {
+			t.Errorf("Expected \"can't unmarshal\" error but got: %s", err)
 		}
 	} else {
-		t.Errorf("Expected \"Can't unmarshal\" error")
+		t.Errorf("Expected \"can't unmarshal\" error")
 	}
 
-	r = &pb.Response{pb.Response_INDETERMINATEDP, "", TestInvalidObligations5}
+	r = newResponse(pb.Response_INDETERMINATEDP, "", TestInvalidObligations5)
 	v1 := TestTaggedResponseStruct{}
 	err = unmarshalToValue(r, reflect.ValueOf(&v1))
 	if err != nil {
-		if !strings.Contains(err.Error(), "Can't unmarshal") {
-			t.Errorf("Expected \"Can't unmarshal\" error but got: %s", err)
+		if !strings.Contains(err.Error(), "can't unmarshal") {
+			t.Errorf("Expected \"can't unmarshal\" error but got: %s", err)
 		}
 	} else {
-		t.Errorf("Expected \"Can't unmarshal\" error")
+		t.Errorf("Expected \"can't unmarshal\" error")
 	}
 
-	r = &pb.Response{pb.Response_INDETERMINATEDP, "", TestInvalidObligations6}
+	r = newResponse(pb.Response_INDETERMINATEDP, "", TestInvalidObligations6)
 	v1 = TestTaggedResponseStruct{}
 	err = unmarshalToValue(r, reflect.ValueOf(&v1))
 	if err != nil {
-		if !strings.Contains(err.Error(), "Can't unmarshal") {
-			t.Errorf("Expected \"Can't unmarshal\" error but got: %s", err)
+		if !strings.Contains(err.Error(), "can't unmarshal") {
+			t.Errorf("Expected \"can't unmarshal\" error but got: %s", err)
 		}
 	} else {
-		t.Errorf("Expected \"Can't unmarshal\" error")
+		t.Errorf("Expected \"can't unmarshal\" error")
 	}
 }
 
 func TestUnmarshalInvalidStructures(t *testing.T) {
-	r := &pb.Response{pb.Response_INDETERMINATEDP, "", nil}
+	r := newResponse(pb.Response_INDETERMINATEDP, "", nil)
 	v1 := TestInvalidResponseStruct1{}
 	err := unmarshalToValue(r, reflect.ValueOf(&v1))
 	if err != nil {
-		if !strings.Contains(err.Error(), "Don't support type definition") {
-			t.Errorf("Expected \"Don't support type definition\" error but got: %s", err)
+		if !strings.Contains(err.Error(), "don't support type definition") {
+			t.Errorf("Expected \"don't support type definition\" error but got: %s", err)
 		}
 	} else {
-		t.Errorf("Expected \"Don't support type definition\" error")
+		t.Errorf("Expected \"don't support type definition\" error")
 	}
 
-	r = &pb.Response{pb.Response_INDETERMINATEDP, "", nil}
+	r = newResponse(pb.Response_INDETERMINATEDP, "", nil)
 	v2 := TestInvalidResponseStruct2{}
 	err = unmarshalToValue(r, reflect.ValueOf(&v2))
 	if err != nil {
-		if !strings.Contains(err.Error(), "Don't support type definition") {
-			t.Errorf("Expected \"Don't support type definition\" error but got: %s", err)
+		if !strings.Contains(err.Error(), "don't support type definition") {
+			t.Errorf("Expected \"don't support type definition\" error but got: %s", err)
 		}
 	} else {
-		t.Errorf("Expected \"Don't support type definition\" error")
+		t.Errorf("Expected \"don't support type definition\" error")
 	}
 
-	r = &pb.Response{pb.Response_INDETERMINATEDP, "", nil}
+	r = newResponse(pb.Response_INDETERMINATEDP, "", nil)
 	v3 := TestInvalidResponseStruct3{}
 	err = unmarshalToValue(r, reflect.ValueOf(&v3))
 	if err != nil {
-		if !strings.Contains(err.Error(), "Unknown type") {
-			t.Errorf("Expected \"Unknown type\" error but got: %s", err)
+		if !strings.Contains(err.Error(), "unknown type") {
+			t.Errorf("Expected \"unknown type\" error but got: %s", err)
 		}
 	} else {
-		t.Errorf("Expected \"Unknown type\" error")
+		t.Errorf("Expected \"unknown type\" error")
 	}
 
-	r = &pb.Response{pb.Response_INDETERMINATEDP, "", nil}
+	r = newResponse(pb.Response_INDETERMINATEDP, "", nil)
 	v4 := TestInvalidResponseStruct4{}
 	err = unmarshalToValue(r, reflect.ValueOf(&v4))
 	if err != nil {
-		if !strings.Contains(err.Error(), "Tagged type") {
-			t.Errorf("Expected \"Tagged type\" error but got: %s", err)
+		if !strings.Contains(err.Error(), "tagged type") {
+			t.Errorf("Expected \"tagged type\" error but got: %s", err)
 		}
 	} else {
-		t.Errorf("Expected \"Tagged type\" error")
+		t.Errorf("Expected \"tagged type\" error")
 	}
 
-	r = &pb.Response{pb.Response_INDETERMINATED, "Test Error!", TestTaggedObligations}
+	r = newResponse(pb.Response_INDETERMINATED, "Test Error!", TestTaggedObligations)
 	v5 := TestInvalidResponseStruct5{}
 	err = unmarshalToValue(r, reflect.ValueOf(&v5))
 	if err != nil {
@@ -358,6 +358,14 @@ func TestUnmarshalInvalidStructures(t *testing.T) {
 		}
 	} else {
 		t.Errorf("Expected \"can't be set\" error")
+	}
+}
+
+func newResponse(effect pb.Response_Effect, reason string, obligation []*pb.Attribute) *pb.Response {
+	return &pb.Response{
+		Effect:     effect,
+		Reason:     reason,
+		Obligation: obligation,
 	}
 }
 
