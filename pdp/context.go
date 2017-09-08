@@ -1,3 +1,5 @@
+// Package pdp implements Policy Decision Point (PDP). It is responsible for
+// making authorization decisions based on policies it has.
 package pdp
 
 import (
@@ -10,15 +12,29 @@ import (
 	"github.com/infobloxopen/go-trees/strtree"
 )
 
+// Effect* constants define possible consequences of decision evaluation.
 const (
+	// EffectDeny indicates that request is denied.
 	EffectDeny = iota
+	// EffectPermit indicates that request is permitted.
 	EffectPermit
 
+	// EffectNotApplicable indicates that policies don't contain any policy
+	// and rule applicabe to the request.
 	EffectNotApplicable
 
+	// EffectIndeterminate indicates that evaluation can't be done for
+	// the request. For example required attribute is missing.
 	EffectIndeterminate
+	// EffectIndeterminateD indicates that evaluation can't be done for
+	// the request but if it could effect would be EffectDeny.
 	EffectIndeterminateD
+	// EffectIndeterminateD indicates that evaluation can't be done for
+	// the request but if it could effect would be EffectPermit.
 	EffectIndeterminateP
+	// EffectIndeterminateD indicates that evaluation can't be done for
+	// the request but if it could effect would be only EffectDeny or
+	// EffectPermit.
 	EffectIndeterminateDP
 )
 
@@ -32,16 +48,28 @@ var (
 		"Indeterminate{P}",
 		"Indeterminate{DP}"}
 
+	// EffectIDs maps all possible values of rule's effect to its id.
 	EffectIDs = map[string]int{
 		"deny":   EffectDeny,
 		"permit": EffectPermit}
 )
 
+// Context represents request context. The context contains all information
+// needed to evaluate request.
 type Context struct {
 	a map[string]map[int]AttributeValue
 	c *LocalContentStorage
 }
 
+// NewContext creates new instance of context. It requires pointer to local
+// content storage and request attributes. The storage can be nil only
+// if there is no policies or rules require it (otherwise evaluation may
+// crash reaching it). Context collects input attributes by calling "f"
+// function. The function is called "count" times and on each call it gets
+// incrementing number starting from 0. The function should return attribute
+// name and value. If "f" function returns error NewContext stops iterations
+// and returns the same error. All pairs of attribute name and type should be
+// unique.
 func NewContext(c *LocalContentStorage, count int, f func(i int) (string, AttributeValue, error)) (*Context, error) {
 	ctx := &Context{a: map[string]map[int]AttributeValue{}, c: c}
 
@@ -66,6 +94,7 @@ func NewContext(c *LocalContentStorage, count int, f func(i int) (string, Attrib
 	return ctx, nil
 }
 
+// String implements Stringer interface.
 func (c *Context) String() string {
 	lines := []string{}
 	if c.c != nil {
@@ -180,16 +209,22 @@ func (c *Context) calculateSetOfDomainsExpression(e Expression) (*domaintree.Nod
 	return v.setOfDomains()
 }
 
+// Response represent result of policies evaluation.
 type Response struct {
+	// Effect is resulting effect.
 	Effect      int
 	status      boundError
 	obligations []AttributeAssignmentExpression
 }
 
+// Status returns response's effect, obligation (as list of assignment
+// expression) and error if any occurs during evaluation.
 func (r Response) Status() (int, []AttributeAssignmentExpression, error) {
 	return r.Effect, r.obligations, r.status
 }
 
+// Evaluable interface defines abstract PDP's entity which can be evaluated
+// for given context (policy set or policy).
 type Evaluable interface {
 	GetID() (string, bool)
 	Calculate(ctx *Context) Response
