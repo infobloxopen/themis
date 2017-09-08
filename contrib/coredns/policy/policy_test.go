@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -15,8 +16,8 @@ import (
 )
 
 var (
-	fakePdpError      = fmt.Errorf("Fake PDP error")
-	fakeResolverError = fmt.Errorf("Fake Resolver error")
+	errFakePdp      = errors.New("fake PDP error")
+	errFakeResolver = errors.New("fake Resolver error")
 )
 
 func TestPolicy(t *testing.T) {
@@ -35,17 +36,17 @@ func TestPolicy(t *testing.T) {
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			errResp:   fakePdpError,
+			errResp:   errFakePdp,
 			status:    dns.RcodeServerFailure,
-			err:       fakePdpError,
+			err:       errFakePdp,
 		},
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
 			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
-			errRespIP: fakePdpError,
+			errRespIP: errFakePdp,
 			status:    dns.RcodeServerFailure,
-			err:       fakePdpError,
+			err:       errFakePdp,
 		},
 		{
 			query:     "test.com.",
@@ -110,14 +111,14 @@ func TestPolicy(t *testing.T) {
 			response: &pdp.Response{Effect: pdp.Response_DENY,
 				Obligation: []*pdp.Attribute{{"redirect_to", "string", "test.net"}}},
 			status: dns.RcodeServerFailure,
-			err:    fakeResolverError,
+			err:    errFakeResolver,
 		},
 		{
 			query:     "test.net.",
 			queryType: dns.TypeA,
 			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
 			status:    dns.RcodeServerFailure,
-			err:       fakeResolverError,
+			err:       errFakeResolver,
 		},
 		{
 			query:     "test.org.",
@@ -216,7 +217,7 @@ func handler() middleware.Handler {
 			w.WriteMsg(r)
 			return dns.RcodeNameError, nil
 		default:
-			return dns.RcodeServerFailure, fakeResolverError
+			return dns.RcodeServerFailure, errFakeResolver
 		}
 		w.WriteMsg(r)
 		return dns.RcodeSuccess, nil
@@ -281,7 +282,7 @@ func fillResponse(in *pdp.Response, out interface{}) error {
 			r.Redirect = attr.Value
 
 		case "policy_id":
-			r.PolicyId = attr.Value
+			r.PolicyID = attr.Value
 
 		case "refuse":
 			r.Refuse = attr.Value

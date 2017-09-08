@@ -1,3 +1,7 @@
+// Package policy implements Policy Enforcement Point (PEP) for CoreDNS.
+// It allows to connect CoreDNS to Policy Decision Point (PDP), send decision
+// requests to the PDP and perform actions on DNS requests and replies according
+// recieved decisions.
 package policy
 
 import (
@@ -23,15 +27,15 @@ import (
 )
 
 const (
-	EDNS0_MAP_DATA_TYPE_BYTES = iota
-	EDNS0_MAP_DATA_TYPE_HEX   = iota
-	EDNS0_MAP_DATA_TYPE_IP    = iota
+	typeEDNS0Bytes = iota
+	typeEDNS0Hex
+	typeEDNS0IP
 )
 
 var stringToEDNS0MapType = map[string]uint16{
-	"bytes":   EDNS0_MAP_DATA_TYPE_BYTES,
-	"hex":     EDNS0_MAP_DATA_TYPE_HEX,
-	"address": EDNS0_MAP_DATA_TYPE_IP,
+	"bytes":   typeEDNS0Bytes,
+	"hex":     typeEDNS0Hex,
+	"address": typeEDNS0IP,
 }
 
 type edns0Map struct {
@@ -43,28 +47,26 @@ type edns0Map struct {
 	stringSize   int
 }
 
+// PolicyMiddleware represents a middleware instance that can validate DNS
+// requests and replies using PDP server.
 type PolicyMiddleware struct {
 	Endpoints []string
-	EDNS0Map  []edns0Map
+	symbols   []edns0Map
 	Trace     middleware.Handler
 	Next      middleware.Handler
 	pdp       pep.Client
 	ErrorFunc func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
 }
 
-type Attribute struct {
-	Id    string
-	Type  string
-	Value string
-}
-
+// Response represents decision received from PDP server.
 type Response struct {
 	Permit   bool   `pdp:"Effect"`
 	Redirect string `pdp:"redirect_to"`
-	PolicyId string `pdp:"policy_id"`
+	PolicyID string `pdp:"policy_id"`
 	Refuse   string `pdp:"refuse"`
 }
 
+// Connect establishes connection to PDP server.
 func (p *PolicyMiddleware) Connect() error {
 	log.Printf("[DEBUG] Connecting %v", p)
 	var tracer ot.Tracer
@@ -77,10 +79,12 @@ func (p *PolicyMiddleware) Connect() error {
 	return p.pdp.Connect()
 }
 
+// Close terminates previously established connection.
 func (p *PolicyMiddleware) Close() {
 	p.pdp.Close()
 }
 
+// AddEDNS0Map adds new EDNS0 to table.
 func (p *PolicyMiddleware) AddEDNS0Map(code, name, dataType, destType,
 	stringOffset, stringSize string) error {
 	c, err := strconv.ParseUint(code, 0, 16)
@@ -99,7 +103,7 @@ func (p *PolicyMiddleware) AddEDNS0Map(code, name, dataType, destType,
 	if !ok {
 		return fmt.Errorf("Invalid dataType for EDNS0 map: %s", dataType)
 	}
-	p.EDNS0Map = append(p.EDNS0Map, edns0Map{uint16(c), name, ednsType, destType, offset, size})
+	p.symbols = append(p.symbols, edns0Map{uint16(c), name, ednsType, destType, offset, size})
 	return nil
 }
 
@@ -119,15 +123,15 @@ func (p *PolicyMiddleware) getEDNS0Attrs(r *dns.Msg) ([]*pb.Attribute, bool) {
 		case *dns.EDNS0_SUBNET:
 			// access e.Family, e.Address, etc.
 		case *dns.EDNS0_LOCAL:
-			for _, m := range p.EDNS0Map {
+			for _, m := range p.symbols {
 				if m.code == e.Code {
 					var value string
 					switch m.dataType {
-					case EDNS0_MAP_DATA_TYPE_BYTES:
+					case typeEDNS0Bytes:
 						value = string(e.Data)
-					case EDNS0_MAP_DATA_TYPE_HEX:
+					case typeEDNS0Hex:
 						value = hex.EncodeToString(e.Data)
-					case EDNS0_MAP_DATA_TYPE_IP:
+					case typeEDNS0IP:
 						ip := net.IP(e.Data)
 						value = ip.String()
 					}
@@ -146,24 +150,39 @@ func (p *PolicyMiddleware) getEDNS0Attrs(r *dns.Msg) ([]*pb.Attribute, bool) {
 	return attrs, foundSourceIP
 }
 
+// NewLocalResponseWriter implements intermediate ResponseWriter to apply all
+// other middleware effects before validating DNS reply.
 type NewLocalResponseWriter struct {
 	localAddr  net.Addr
 	remoteAddr net.Addr
 	Msg        *dns.Msg
 }
 
+// Write implements the dns.ResponseWriter interface.
 func (r *NewLocalResponseWriter) Write(b []byte) (int, error) {
 	r.Msg = new(dns.Msg)
 	return len(b), r.Msg.Unpack(b)
 }
 
-// These methods implement the dns.ResponseWriter interface from Go DNS.
-func (r *NewLocalResponseWriter) Close() error              { return nil }
-func (r *NewLocalResponseWriter) TsigStatus() error         { return nil }
-func (r *NewLocalResponseWriter) TsigTimersOnly(b bool)     { return }
-func (r *NewLocalResponseWriter) Hijack()                   { return }
-func (r *NewLocalResponseWriter) LocalAddr() net.Addr       { return r.localAddr }
-func (r *NewLocalResponseWriter) RemoteAddr() net.Addr      { return r.remoteAddr }
+// Close implements the dns.ResponseWriter interface.
+func (r *NewLocalResponseWriter) Close() error { return nil }
+
+// TsigStatus implements the dns.ResponseWriter interface.
+func (r *NewLocalResponseWriter) TsigStatus() error { return nil }
+
+// TsigTimersOnly implements the dns.ResponseWriter interface.
+func (r *NewLocalResponseWriter) TsigTimersOnly(b bool) { return }
+
+// Hijack implements the dns.ResponseWriter interface.
+func (r *NewLocalResponseWriter) Hijack() { return }
+
+// LocalAddr implements the dns.ResponseWriter interface.
+func (r *NewLocalResponseWriter) LocalAddr() net.Addr { return r.localAddr }
+
+// RemoteAddr implements the dns.ResponseWriter interface.
+func (r *NewLocalResponseWriter) RemoteAddr() net.Addr { return r.remoteAddr }
+
+// WriteMsg implements the dns.ResponseWriter interface.
 func (r *NewLocalResponseWriter) WriteMsg(m *dns.Msg) error { r.Msg = m; return nil }
 
 func (p *PolicyMiddleware) retRcode(w dns.ResponseWriter, r *dns.Msg, rcode int) (int, error) {
@@ -189,7 +208,6 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 			} else if a, ok := rr.(*dns.AAAA); ok {
 				address = a.AAAA.String()
 			}
-		default:
 		}
 	}
 
@@ -199,10 +217,10 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 	if address == "" {
 		w.WriteMsg(lw.Msg)
 		return status, nil
-	} else {
-		attrs[0].Value = "response"
-		attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: address})
 	}
+
+	attrs[0].Value = "response"
+	attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: address})
 
 	var response Response
 	err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &response)
@@ -223,6 +241,7 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 	return p.retRcode(w, r, dns.RcodeNameError)
 }
 
+// ServeDNS implements the Handler interface.
 func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	state := request.Request{W: w, Req: r}
 
@@ -254,7 +273,7 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 	}
 
 	if response.Permit {
-		attrs = append(attrs, &pb.Attribute{Id: "policy_id", Type: "string", Value: response.PolicyId})
+		attrs = append(attrs, &pb.Attribute{Id: "policy_id", Type: "string", Value: response.PolicyID})
 		return p.handlePermit(ctx, w, r, attrs)
 	}
 
@@ -272,24 +291,24 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 // Name implements the Handler interface
 func (p *PolicyMiddleware) Name() string { return "policy" }
 
-func (p *PolicyMiddleware) redirect(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, redirect_to string) (int, error) {
+func (p *PolicyMiddleware) redirect(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, dst string) (int, error) {
 	state := request.Request{W: w, Req: r}
 	var rr dns.RR
 	cname := false
 
-	if ipv4 := net.ParseIP(redirect_to).To4(); ipv4 != nil {
+	if ipv4 := net.ParseIP(dst).To4(); ipv4 != nil {
 		rr = new(dns.A)
 		rr.(*dns.A).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeA, Class: state.QClass()}
 		rr.(*dns.A).A = ipv4
-	} else if ipv6 := net.ParseIP(redirect_to).To16(); ipv6 != nil {
+	} else if ipv6 := net.ParseIP(dst).To16(); ipv6 != nil {
 		rr = new(dns.AAAA)
 		rr.(*dns.AAAA).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeAAAA, Class: state.QClass()}
 		rr.(*dns.AAAA).AAAA = ipv6
 	} else {
-		redirect_to = strings.TrimSuffix(redirect_to, ".") + "."
+		dst = strings.TrimSuffix(dst, ".") + "."
 		rr = new(dns.CNAME)
 		rr.(*dns.CNAME).Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeCNAME, Class: state.QClass()}
-		rr.(*dns.CNAME).Target = redirect_to
+		rr.(*dns.CNAME).Target = dst
 		cname = true
 	}
 
@@ -300,7 +319,7 @@ func (p *PolicyMiddleware) redirect(ctx context.Context, w dns.ResponseWriter, r
 
 	if cname {
 		msg := new(dns.Msg)
-		msg.SetQuestion(redirect_to, state.QType())
+		msg.SetQuestion(dst, state.QType())
 
 		lw := new(NewLocalResponseWriter)
 		status, err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lw, msg)
