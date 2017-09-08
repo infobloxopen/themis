@@ -150,6 +150,13 @@ func TestPolicy(t *testing.T) {
 			status: dns.RcodeRefused,
 			err:    nil,
 		},
+		{
+			query:     "nxdomain.org.",
+			queryType: dns.TypeA,
+			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
+			status:    dns.RcodeNameError,
+			err:       nil,
+		},
 	}
 
 	rec := dnsrecorder.New(&test.ResponseWriter{})
@@ -206,6 +213,9 @@ func handler() middleware.Handler {
 			r.Answer = []dns.RR{
 				test.AAAA("redirect.net.	600	IN	AAAA		2001:db8:0:200:0:0:0:7"),
 			}
+		case "nxdomain.org.":
+			w.WriteMsg(r)
+			return dns.RcodeNameError, nil
 		default:
 			return dns.RcodeServerFailure, fakeResolverError
 		}
