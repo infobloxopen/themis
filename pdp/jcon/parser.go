@@ -1,3 +1,4 @@
+// Package jcon implements JSON content (JCON) parser.
 package jcon
 
 import (
@@ -9,6 +10,9 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 )
 
+// Unmarshal parses JSON content representation to PDP's internal represntation
+// and returns pointer to LocalContent. It sets given tag to the content.
+// Content with no tag can't be updated.
 func Unmarshal(r io.Reader, tag *uuid.UUID) (*pdp.LocalContent, error) {
 	c := &content{}
 	err := c.unmarshal(json.NewDecoder(r))
@@ -19,6 +23,9 @@ func Unmarshal(r io.Reader, tag *uuid.UUID) (*pdp.LocalContent, error) {
 	return pdp.NewLocalContent(c.id, tag, c.items), nil
 }
 
+// UnmarshalUpdate parses JSON content update representation to PDP's internal
+// represntation. It requires content id and oldTag to match content to update.
+// Value of newTag is set to the content when update is applied.
 func UnmarshalUpdate(r io.Reader, cID string, oldTag, newTag uuid.UUID) (*pdp.ContentUpdate, error) {
 	u := pdp.NewContentUpdate(cID, oldTag, newTag)
 	err := unmarshalCommands(json.NewDecoder(r), u)

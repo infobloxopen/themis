@@ -297,7 +297,7 @@ func (c *contentItem) unmarshal(k string, d *json.Decoder) error {
 func (c *contentItem) adjustValue(v interface{}) pdp.ContentSubItem {
 	cv, ok := v.(pdp.ContentSubItem)
 	if !ok {
-		panic(fmt.Errorf("Expected value of type ContentSubItem when item is ready but got %T", v))
+		panic(fmt.Errorf("expected value of type ContentSubItem when item is ready but got %T", v))
 	}
 
 	return cv
