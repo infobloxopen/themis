@@ -377,7 +377,7 @@ func TestUnmarshal(t *testing.T) {
 				return "domAttr", v, nil
 			}
 
-			return "", pdp.AttributeValue{}, fmt.Errorf("No attribute for index %d", i)
+			return "", pdp.AttributeValue{}, fmt.Errorf("no attribute for index %d", i)
 		})
 		if err != nil {
 			t.Errorf("Expected no error but got %T (%s)", err, err)
@@ -505,12 +505,12 @@ func newStringContext(m map[string]string) (*pdp.Context, error) {
 
 	return pdp.NewContext(nil, len(m), func(i int) (string, pdp.AttributeValue, error) {
 		if i >= len(names) {
-			return "", pdp.AttributeValue{}, fmt.Errorf("No attribute name for index %d", i)
+			return "", pdp.AttributeValue{}, fmt.Errorf("no attribute name for index %d", i)
 		}
 		n := names[i]
 
 		if i >= len(values) {
-			return "", pdp.AttributeValue{}, fmt.Errorf("No attribute value for index %d", i)
+			return "", pdp.AttributeValue{}, fmt.Errorf("no attribute value for index %d", i)
 		}
 		v := values[i]
 
