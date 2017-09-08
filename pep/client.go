@@ -1,4 +1,10 @@
-// Package pep implements gRPC client for Policy Decision Point (PDP) server. PEP package (Policy Enforcement Point) wraps service part of golang gRPC protocol implementation. The protocol is defined by github.com/infobloxopen/themis/proto/service.proto. Its golang implementation can be found at github.com/infobloxopen/themis/pdp-service. PEP is able to work with single server as well as multiple servers balancing requests using round-robin approach.
+// Package pep implements gRPC client for Policy Decision Point (PDP) server.
+// PEP package (Policy Enforcement Point) wraps service part of golang gRPC
+// protocol implementation. The protocol is defined by
+// github.com/infobloxopen/themis/proto/service.proto. Its golang implementation
+// can be found at github.com/infobloxopen/themis/pdp-service. PEP is able
+// to work with single server as well as multiple servers balancing requests
+// using round-robin approach.
 package pep
 
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-service && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/service.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-service && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-service"
