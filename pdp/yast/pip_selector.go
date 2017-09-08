@@ -43,5 +43,7 @@ func makePIPSelector(ctx context, loc []string, m map[interface{}]interface{}) (
 	}
 
 	fmt.Printf("Res is %v\n", res)
+	fmt.Printf("Type of path[0] is %T\n", path[0])
+	fmt.Printf("Value of path[0] is %#v\n", path[0])
 	return res, nil
 }

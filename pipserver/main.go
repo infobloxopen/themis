@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	log "github.com/Sirupsen/logrus"
+	"fmt"
 	"net"
 	"os"
+
+	log "github.com/Sirupsen/logrus"
 
 	pb "github.com/infobloxopen/themis/pip-service"
 
@@ -19,7 +21,6 @@ type server struct {
 }
 
 const supportedQueryType = "domain-category"
-
 
 func getCategoryMap(categoryFile string) (map[string]string, error) {
 	categoryMap := make(map[string]string)
@@ -39,7 +40,6 @@ func getCategoryMap(categoryFile string) (map[string]string, error) {
 	return categoryMap, err
 }
 
-// SayHello implements helloworld.GreeterServer
 func (s *server) GetAttribute(ctx context.Context, in *pb.Request) (*pb.Response, error) {
 	responseStatus := pb.Response_OK
 
@@ -49,6 +49,7 @@ func (s *server) GetAttribute(ctx context.Context, in *pb.Request) (*pb.Response
 		responseStatus = pb.Response_SERVICEERROR
 	}
 	inAttrs := in.GetAttributes()
+	fmt.Printf("inAttrs[0] is '%v'\n", inAttrs[0])
 	domainStr := inAttrs[0].GetValue()
 	category, ok := s.CategoryMap[domainStr]
 	if !ok {
