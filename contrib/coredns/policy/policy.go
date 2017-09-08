@@ -180,17 +180,28 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 		return status, err
 	}
 
-	attrs[0].Value = "response"
+	var address string
 	for _, rr := range lw.Msg.Answer {
 		switch rr.Header().Rrtype {
 		case dns.TypeA, dns.TypeAAAA:
 			if a, ok := rr.(*dns.A); ok {
-				attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: a.A.String()})
+				address = a.A.String()
 			} else if a, ok := rr.(*dns.AAAA); ok {
-				attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: a.AAAA.String()})
+				address = a.AAAA.String()
 			}
 		default:
 		}
+	}
+
+	// if external resolver ret code is not RcodeSuccess
+	// address is not filled from the answer
+	// in this case just pass through answer w/o validation
+	if address == "" {
+		w.WriteMsg(lw.Msg)
+		return status, nil
+	} else {
+		attrs[0].Value = "response"
+		attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: address})
 	}
 
 	var response Response
