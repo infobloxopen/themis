@@ -15,7 +15,7 @@ func makeFunctionStringEqual(first, second Expression) Expression {
 
 func makeFunctionStringEqualAlt(args []Expression) Expression {
 	if len(args) != 2 {
-		panic(fmt.Errorf("String function \"equal\" needs exactly two arguments but got %d", len(args)))
+		panic(fmt.Errorf("function \"equal\" for String needs exactly two arguments but got %d", len(args)))
 	}
 
 	return makeFunctionStringEqual(args[0], args[1])

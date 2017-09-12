@@ -2,6 +2,7 @@ package pdp
 
 import "fmt"
 
+// Rule represents PDP rule (child or PDP policy).
 type Rule struct {
 	id          string
 	hidden      bool
@@ -19,6 +20,8 @@ func makeConditionStatus(err boundError, effect int) Response {
 	return Response{EffectIndeterminateP, err, nil}
 }
 
+// NewRule creates new instance of rule with given id (or hidden), target,
+// condition, effect and obligations.
 func NewRule(ID string, hidden bool, target Target, condition Expression, effect int, obligations []AttributeAssignmentExpression) *Rule {
 	return &Rule{
 		id:          ID,
@@ -37,6 +40,7 @@ func (r Rule) describe() string {
 	return "hidden rule"
 }
 
+// GetID returns rule id if the rule isn't hidden.
 func (r Rule) GetID() (string, bool) {
 	return r.id, !r.hidden
 }

@@ -14,12 +14,27 @@ type mapperRCA struct {
 	algorithm RuleCombiningAlg
 }
 
+// MapperRCAParams gathers all parameters of mapper rule combining algorithm.
 type MapperRCAParams struct {
-	Argument  Expression
-	DefOk     bool
-	Def       string
-	ErrOk     bool
-	Err       string
+	// Argument represent expression which value is used to get nested rule
+	// (or list of them).
+	Argument Expression
+
+	// DefOk indicates if Def contains valid value.
+	DefOk bool
+	// Def contains id of default rule (the default rule is used when Argument
+	// expression evaluates to a value which doesn't match to any id).
+	// This value is used only if DefOk is true.
+	Def string
+
+	// ErrOk indicateis if Err contains valid value.
+	ErrOk bool
+	// Err ontains id of rule to use in case of error (when  Argument can't be
+	// evaluated).
+	Err string
+
+	// Algorithm is additional rule combining algorithm which is used when
+	// argument can return several ids.
 	Algorithm RuleCombiningAlg
 }
 

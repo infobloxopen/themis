@@ -514,11 +514,11 @@ var domainRegexp = regexp.MustCompile("^[-._a-z0-9]+$")
 func AdjustDomainName(s string) (string, error) {
 	tmp, err := idna.Punycode.ToASCII(s)
 	if err != nil {
-		return "", fmt.Errorf("Cannot convert domain [%s]", s)
+		return "", fmt.Errorf("can't convert domain [%s]", s)
 	}
 	ret := strings.ToLower(tmp)
 	if !domainRegexp.MatchString(ret) {
-		return "", fmt.Errorf("Cannot validate domain [%s]", s)
+		return "", fmt.Errorf("can't validate domain [%s]", s)
 	}
 	return ret, nil
 }

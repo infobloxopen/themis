@@ -2,6 +2,9 @@ package pdp
 
 import "fmt"
 
+// LocalSelector represent local selector expression. The expression extracts
+// value from local content storage by given path and validates that result
+// has desired type.
 type LocalSelector struct {
 	content string
 	item    string
@@ -9,6 +12,10 @@ type LocalSelector struct {
 	t       int
 }
 
+// MakeLocalSelector creates instance of local selector. Arguments content and
+// item are id of content in storage and id of content item within content.
+// Argument path defines set of expressions to get a value of type t. Local
+// selector implements late binding and checks path and type on any evaluation.
 func MakeLocalSelector(content, item string, path []Expression, t int) LocalSelector {
 	return LocalSelector{
 		content: content,
@@ -17,6 +24,8 @@ func MakeLocalSelector(content, item string, path []Expression, t int) LocalSele
 		t:       t}
 }
 
+// GetResultType implements Expression interface and returns type of final value
+// expected by the selector from corresponding content.
 func (s LocalSelector) GetResultType() int {
 	return s.t
 }

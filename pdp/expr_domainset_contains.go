@@ -15,7 +15,7 @@ func makeFunctionSetOfDomainsContains(set, value Expression) Expression {
 
 func makeFunctionSetOfDomainsContainsAlt(args []Expression) Expression {
 	if len(args) != 2 {
-		panic(fmt.Errorf("Set Of Domains function \"contains\" needs exactly two arguments but got %d", len(args)))
+		panic(fmt.Errorf("function \"contains\" for Set Of Domains needs exactly two arguments but got %d", len(args)))
 	}
 
 	return makeFunctionSetOfDomainsContains(args[0], args[1])

@@ -2,24 +2,34 @@ package pdp
 
 import "fmt"
 
+// RuleCombiningAlg represent abstract rule combining algorithm. The algorithm
+// defines how to evaluate policy rules and how to get paticular result.
 type RuleCombiningAlg interface {
 	execute(rules []*Rule, ctx *Context) Response
 }
 
+// RuleCombiningAlgMaker creates instance of rule combining algorithm.
+// The function accepts set of policy rules and parameters of algorithm.
 type RuleCombiningAlgMaker func(rules []*Rule, params interface{}) RuleCombiningAlg
 
 var (
 	firstApplicableEffectRCAInstance = firstApplicableEffectRCA{}
 	denyOverridesRCAInstance         = denyOverridesRCA{}
 
+	// RuleCombiningAlgs defines map of algorithm id to particular maker of
+	// the algorithm. Contains only algorithms which don't require any
+	// parameters.
 	RuleCombiningAlgs = map[string]RuleCombiningAlgMaker{
 		"firstapplicableeffect": makeFirstApplicableEffectRCA,
 		"denyoverrides":         makeDenyOverridesRCA}
 
+	// RuleCombiningParamAlgs defines map of algorithm id to particular maker
+	// of the algorithm. Contains only algorithms which require parameters.
 	RuleCombiningParamAlgs = map[string]RuleCombiningAlgMaker{
 		"mapper": makeMapperRCA}
 )
 
+// Policy represent PDP policy (minimal evaluable entity).
 type Policy struct {
 	id          string
 	hidden      bool
@@ -29,6 +39,10 @@ type Policy struct {
 	algorithm   RuleCombiningAlg
 }
 
+// NewPolicy creates new instance of policy with given id (or hidden), target,
+// set of rules, algorithm and obligations. To make instance of algorithm it
+// uses one of makers from RuleCombiningAlgs or RuleCombiningParamAlgs and its
+// parameters if it requires any.
 func NewPolicy(ID string, hidden bool, target Target, rules []*Rule, makeRCA RuleCombiningAlgMaker, params interface{}, obligations []AttributeAssignmentExpression) *Policy {
 	return &Policy{
 		id:          ID,
@@ -47,10 +61,14 @@ func (p *Policy) describe() string {
 	return "hidden policy"
 }
 
+// GetID implements Evaluable interface and returns policy id if policy
+// isn't hidden.
 func (p *Policy) GetID() (string, bool) {
 	return p.id, !p.hidden
 }
 
+// Calculate implements Evaluable interface and evaluates policy for given
+// request contest.
 func (p *Policy) Calculate(ctx *Context) Response {
 	match, err := p.target.calculate(ctx)
 	if err != nil {
@@ -77,6 +95,9 @@ func (p *Policy) Calculate(ctx *Context) Response {
 	return r
 }
 
+// Append implements Evaluable interface and puts new rule to the policy.
+// Argument path should be empty and v should contain a pointer to rule.
+// Append can't put hidden rule to policy or any rule to hidden policy.
 func (p *Policy) Append(path []string, v interface{}) (Evaluable, error) {
 	if p.hidden {
 		return p, newHiddenPolicyModificationError()
@@ -99,6 +120,9 @@ func (p *Policy) Append(path []string, v interface{}) (Evaluable, error) {
 	return p.putChild(child), nil
 }
 
+// Delete implements Evaluable interface and removes rule from the policy.
+// Argument path should contain exactly one string which is id of rule
+// to remove. Delete can't remove a rule from hidden policy.
 func (p *Policy) Delete(path []string) (Evaluable, error) {
 	if p.hidden {
 		return p, newHiddenPolicyModificationError()

@@ -14,12 +14,27 @@ type mapperPCA struct {
 	algorithm PolicyCombiningAlg
 }
 
+// MapperPCAParams gathers all parameters of mapper policy combining algorithm.
 type MapperPCAParams struct {
-	Argument  Expression
-	DefOk     bool
-	Def       string
-	ErrOk     bool
-	Err       string
+	// Argument represent expression which value is used to get nested policy
+	// set or policy (or list of them).
+	Argument Expression
+
+	// DefOk indicates if Def contains valid value.
+	DefOk bool
+	// Def contains id of default policy set or policy (the default policy
+	// is used when Argument expression evaluates to a value which doesn't
+	// match to any id). This value is used only if DefOk is true.
+	Def string
+
+	// ErrOk indicateis if Err contains valid value.
+	ErrOk bool
+	// Err ontains id of policy set or policy to use in case of error (when
+	// Argument can't be evaluated).
+	Err string
+
+	// Algorithm is additional policy combining algorithm which is used when
+	// argument can return several ids.
 	Algorithm PolicyCombiningAlg
 }
 
