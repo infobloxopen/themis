@@ -21,6 +21,7 @@ type definition struct {
 	Fields []*field    `yaml:"fields"`
 	Msg    string      `yaml:"msg"`
 	Args   []*argument `yaml:"args"`
+	Desc   string      `yaml:"desc"`
 }
 
 type field struct {
@@ -67,6 +68,10 @@ func unmarshal(path string) (*errors, error) {
 		item.ID = strings.TrimSpace(ID)
 		if len(item.ID) <= 0 {
 			return nil, fmt.Errorf("Empty error id for error at %d", i+1)
+		}
+
+		if strings.ToUpper(item.ID[:1]) == item.ID[:1] && len(item.Desc) <= 0 {
+			return nil, fmt.Errorf("Exported error %q has no description", item.ID)
 		}
 
 		for j, field := range item.Fields {

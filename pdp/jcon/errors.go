@@ -9,49 +9,49 @@ import (
 )
 
 const (
-	externalErrorID = iota
-	rootObjectStartTokenErrorID
-	rootObjectStartDelimiterErrorID
-	objectStartTokenErrorID
-	objectStartDelimiterErrorID
-	objectEndDelimiterErrorID
-	objectTokenErrorID
-	rootArrayStartTokenErrorID
-	rootArrayStartDelimiterErrorID
-	arrayStartTokenErrorID
-	arrayStartDelimiterErrorID
-	arrayEndDelimiterErrorID
-	stringArrayTokenErrorID
-	objectArrayStartTokenErrorID
-	objectArrayStartDelimiterErrorID
-	objectArrayTokenErrorID
-	unexpectedObjectArrayDelimiterErrorID
-	unexpectedDelimiterErrorID
-	objectKeyErrorID
-	missingEOFErrorID
-	booleanCastErrorID
-	stringCastErrorID
-	addressCastErrorID
-	networkCastErrorID
-	domainCastErrorID
-	addressNetworkCastErrorID
-	unknownContentFieldErrorID
-	unknownContentItemFieldErrorID
-	unknownTypeErrorID
-	invalidContentItemTypeErrorID
-	invalidContentKeyTypeErrorID
-	unknownDataFormatErrorID
-	duplicateContentItemFieldErrorID
-	missingContentDataErrorID
-	missingContentTypeErrorID
-	invalidSequenceContentItemNodeErrorID
-	invalidMapContentItemNodeErrorID
-	unknownCommadFieldErrorID
-	duplicateCommandFieldErrorID
-	missingCommandOpErrorID
-	missingCommandPathErrorID
-	missingCommandEntityErrorID
-	unknownContentUpdateOperationErrorID
+	externalErrorID                       = 0
+	rootObjectStartTokenErrorID           = 1
+	rootObjectStartDelimiterErrorID       = 2
+	objectStartTokenErrorID               = 3
+	objectStartDelimiterErrorID           = 4
+	objectEndDelimiterErrorID             = 5
+	objectTokenErrorID                    = 6
+	rootArrayStartTokenErrorID            = 7
+	rootArrayStartDelimiterErrorID        = 8
+	arrayStartTokenErrorID                = 9
+	arrayStartDelimiterErrorID            = 10
+	arrayEndDelimiterErrorID              = 11
+	stringArrayTokenErrorID               = 12
+	objectArrayStartTokenErrorID          = 13
+	objectArrayStartDelimiterErrorID      = 14
+	objectArrayTokenErrorID               = 15
+	unexpectedObjectArrayDelimiterErrorID = 16
+	unexpectedDelimiterErrorID            = 17
+	objectKeyErrorID                      = 18
+	missingEOFErrorID                     = 19
+	booleanCastErrorID                    = 20
+	stringCastErrorID                     = 21
+	addressCastErrorID                    = 22
+	networkCastErrorID                    = 23
+	domainCastErrorID                     = 24
+	addressNetworkCastErrorID             = 25
+	unknownContentFieldErrorID            = 26
+	unknownContentItemFieldErrorID        = 27
+	unknownTypeErrorID                    = 28
+	invalidContentItemTypeErrorID         = 29
+	invalidContentKeyTypeErrorID          = 30
+	unknownDataFormatErrorID              = 31
+	duplicateContentItemFieldErrorID      = 32
+	missingContentDataErrorID             = 33
+	missingContentTypeErrorID             = 34
+	invalidSequenceContentItemNodeErrorID = 35
+	invalidMapContentItemNodeErrorID      = 36
+	unknownCommadFieldErrorID             = 37
+	duplicateCommandFieldErrorID          = 38
+	missingCommandOpErrorID               = 39
+	missingCommandPathErrorID             = 40
+	missingCommandEntityErrorID           = 41
+	unknownContentUpdateOperationErrorID  = 42
 )
 
 type externalError struct {

@@ -9,43 +9,43 @@ import (
 )
 
 const (
-	externalErrorID = iota
-	multiErrorID
-	tracingTypeErrorID
-	unknownEffectErrorID
-	unknownAttributeTypeErrorID
-	contextCreationErrorID
-	missingPolicyErrorID
-	policyCalculationErrorID
-	effectTranslationErrorID
-	effectCombiningErrorID
-	obligationTranslationErrorID
-	queueOverflowErrorID
-	unknownUploadRequestErrorID
-	invalidFromTagErrorID
-	invalidToTagErrorID
-	invalidTagsErrorID
-	tagCheckErrorID
-	emptyUploadErrorID
-	unknownUploadErrorID
-	policyUploadParseErrorID
-	policyUploadStoreErrorID
-	contentUploadParseErrorID
-	contentUploadStoreErrorID
-	missingPolicyStorageErrorID
-	policyTransactionCreationErrorID
-	policyUpdateParseErrorID
-	policyUpdateApplicationErrorID
-	policyUpdateUploadStoreErrorID
-	policyTransactionCommitErrorID
-	missingPolicyDataApplyErrorID
-	missingContentDataApplyErrorID
-	contentTransactionCreationErrorID
-	contentUpdateParseErrorID
-	contentUpdateApplicationErrorID
-	contentUpdateUploadStoreErrorID
-	contentTransactionCommitErrorID
-	unknownUploadedRequestErrorID
+	externalErrorID                   = 0
+	multiErrorID                      = 1
+	tracingTypeErrorID                = 2
+	unknownEffectErrorID              = 3
+	unknownAttributeTypeErrorID       = 4
+	contextCreationErrorID            = 5
+	missingPolicyErrorID              = 6
+	policyCalculationErrorID          = 7
+	effectTranslationErrorID          = 8
+	effectCombiningErrorID            = 9
+	obligationTranslationErrorID      = 10
+	queueOverflowErrorID              = 11
+	unknownUploadRequestErrorID       = 12
+	invalidFromTagErrorID             = 13
+	invalidToTagErrorID               = 14
+	invalidTagsErrorID                = 15
+	tagCheckErrorID                   = 16
+	emptyUploadErrorID                = 17
+	unknownUploadErrorID              = 18
+	policyUploadParseErrorID          = 19
+	policyUploadStoreErrorID          = 20
+	contentUploadParseErrorID         = 21
+	contentUploadStoreErrorID         = 22
+	missingPolicyStorageErrorID       = 23
+	policyTransactionCreationErrorID  = 24
+	policyUpdateParseErrorID          = 25
+	policyUpdateApplicationErrorID    = 26
+	policyUpdateUploadStoreErrorID    = 27
+	policyTransactionCommitErrorID    = 28
+	missingPolicyDataApplyErrorID     = 29
+	missingContentDataApplyErrorID    = 30
+	contentTransactionCreationErrorID = 31
+	contentUpdateParseErrorID         = 32
+	contentUpdateApplicationErrorID   = 33
+	contentUpdateUploadStoreErrorID   = 34
+	contentTransactionCommitErrorID   = 35
+	unknownUploadedRequestErrorID     = 36
 )
 
 type externalError struct {
