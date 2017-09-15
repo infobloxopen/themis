@@ -1,6 +1,7 @@
 package pep
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"reflect"
@@ -12,12 +13,14 @@ import (
 )
 
 const (
-	EffectFieldName = "Effect"
-	ReasonFieldName = "Reason"
+	effectFieldName = "Effect"
+	reasonFieldName = "Reason"
 )
 
 var (
-	ErrorInvalidDestination = fmt.Errorf("Given value is not a pointer to structure")
+	// ErrorInvalidDestination indicates that output value of validate method is
+	// not a structure.
+	ErrorInvalidDestination = errors.New("given value is not a pointer to structure")
 )
 
 func unmarshalToValue(res *pb.Response, v reflect.Value) error {
@@ -48,30 +51,30 @@ func parseTag(tag string, f reflect.StructField, t reflect.Type) (string, error)
 		tag = items[0]
 		taggedTypeName := items[1]
 
-		if tag == EffectFieldName || tag == ReasonFieldName {
-			return "", fmt.Errorf("Don't support type definition for \"%s\" and \"%s\" fields (%s.%s)",
-				EffectFieldName, ReasonFieldName, t.Name(), f.Name)
+		if tag == effectFieldName || tag == reasonFieldName {
+			return "", fmt.Errorf("don't support type definition for \"%s\" and \"%s\" fields (%s.%s)",
+				effectFieldName, reasonFieldName, t.Name(), f.Name)
 		}
 
 		taggedType, ok := typeByTag[strings.ToLower(taggedTypeName)]
 		if !ok {
-			return "", fmt.Errorf("Unknown type \"%s\" (%s.%s)", taggedTypeName, t.Name(), f.Name)
+			return "", fmt.Errorf("unknown type \"%s\" (%s.%s)", taggedTypeName, t.Name(), f.Name)
 		}
 
 		if taggedType != f.Type {
-			return "", fmt.Errorf("Tagged type \"%s\" doesn't match field type \"%s\" (%s.%s)",
+			return "", fmt.Errorf("tagged type \"%s\" doesn't match field type \"%s\" (%s.%s)",
 				taggedTypeName, f.Type.Name(), t.Name(), f.Name)
 		}
 
 		return tag, nil
 	}
 
-	if tag == EffectFieldName {
-		return EffectFieldName, nil
+	if tag == effectFieldName {
+		return effectFieldName, nil
 	}
 
-	if tag == ReasonFieldName {
-		return ReasonFieldName, nil
+	if tag == reasonFieldName {
+		return reasonFieldName, nil
 	}
 
 	return tag, nil
@@ -116,12 +119,12 @@ var unmarshallersByType = map[string]fieldUnmarshaller{
 	pdp.TypeKeys[pdp.TypeDomain]:  domainUnmarshaller}
 
 func unmarshalToTaggedStruct(res *pb.Response, v reflect.Value, fields map[string]string) error {
-	name, ok := fields[EffectFieldName]
+	name, ok := fields[effectFieldName]
 	if ok {
 		setToUntaggedEffect(res, v, name)
 	}
 
-	name, ok = fields[ReasonFieldName]
+	name, ok = fields[reasonFieldName]
 	if ok {
 		setToUntaggedReason(res, v, name)
 	}
@@ -134,21 +137,21 @@ func unmarshalToTaggedStruct(res *pb.Response, v reflect.Value, fields map[strin
 
 		f := v.FieldByName(name)
 		if !f.CanSet() {
-			return fmt.Errorf("Field %s.%s is tagged but can't be set", v.Type().Name(), name)
+			return fmt.Errorf("field %s.%s is tagged but can't be set", v.Type().Name(), name)
 		}
 
 		unmarshaller, ok := unmarshallersByType[attr.Type]
 		if !ok {
-			return fmt.Errorf("Can't unmarshal \"%s\" of \"%s\" type", attr.Id, attr.Type)
+			return fmt.Errorf("can't unmarshal \"%s\" of \"%s\" type", attr.Id, attr.Type)
 		}
 
 		if t, ok := typeByTag[attr.Type]; ok {
 			if t != f.Type() {
-				return fmt.Errorf("Can't unmarshal \"%s\" of \"%s\" type to field %s.%s",
+				return fmt.Errorf("can't unmarshal \"%s\" of \"%s\" type to field %s.%s",
 					attr.Id, attr.Type, v.Type().Name(), name)
 			}
 		} else {
-			return fmt.Errorf("Can't unmarshal \"%s\" of \"%s\" type", attr.Id, attr.Type)
+			return fmt.Errorf("can't unmarshal \"%s\" of \"%s\" type", attr.Id, attr.Type)
 		}
 
 		err := unmarshaller(attr, f)
@@ -205,15 +208,15 @@ func setToUntaggedReason(res *pb.Response, v reflect.Value, name string) bool {
 }
 
 func unmarshalToUntaggedStruct(res *pb.Response, v reflect.Value) error {
-	skipEffect := setToUntaggedEffect(res, v, EffectFieldName)
-	skipReason := setToUntaggedReason(res, v, ReasonFieldName)
+	skipEffect := setToUntaggedEffect(res, v, effectFieldName)
+	skipReason := setToUntaggedReason(res, v, reasonFieldName)
 
 	for _, attr := range res.Obligation {
-		if attr.Id == EffectFieldName && skipEffect {
+		if attr.Id == effectFieldName && skipEffect {
 			continue
 		}
 
-		if attr.Id == ReasonFieldName && skipReason {
+		if attr.Id == reasonFieldName && skipReason {
 			continue
 		}
 
@@ -224,7 +227,7 @@ func unmarshalToUntaggedStruct(res *pb.Response, v reflect.Value) error {
 
 		unmarshaller, ok := unmarshallersByType[attr.Type]
 		if !ok {
-			return fmt.Errorf("Can't unmarshal \"%s\" of \"%s\" type", attr.Id, attr.Type)
+			return fmt.Errorf("can't unmarshal \"%s\" of \"%s\" type", attr.Id, attr.Type)
 		}
 
 		if t, ok := typeByTag[attr.Type]; !ok || t != f.Type() {
@@ -243,7 +246,7 @@ func unmarshalToUntaggedStruct(res *pb.Response, v reflect.Value) error {
 func boolUnmarshaller(attr *pb.Attribute, v reflect.Value) error {
 	b, err := strconv.ParseBool(attr.Value)
 	if err != nil {
-		return fmt.Errorf("Can't treat \"%s\" value (%s) as boolean: %s", attr.Id, attr.Value, err)
+		return fmt.Errorf("can't treat \"%s\" value (%s) as boolean: %s", attr.Id, attr.Value, err)
 	}
 
 	v.SetBool(b)
@@ -267,7 +270,7 @@ func addressUnmarshaller(attr *pb.Attribute, v reflect.Value) error {
 
 	ip := net.ParseIP(s)
 	if ip == nil {
-		return fmt.Errorf("Can't treat \"%s\" value (%s) as address", attr.Id, attr.Value)
+		return fmt.Errorf("can't treat \"%s\" value (%s) as address", attr.Id, attr.Value)
 	}
 
 	v.Set(reflect.ValueOf(ip))
@@ -277,7 +280,7 @@ func addressUnmarshaller(attr *pb.Attribute, v reflect.Value) error {
 func networkUnmarshaller(attr *pb.Attribute, v reflect.Value) error {
 	_, n, err := net.ParseCIDR(attr.Value)
 	if err != nil {
-		return fmt.Errorf("Can't treat \"%s\" value (%s) as network: %s", attr.Id, attr.Value, err)
+		return fmt.Errorf("can't treat \"%s\" value (%s) as network: %s", attr.Id, attr.Value, err)
 	}
 
 	v.Set(reflect.ValueOf(*n))

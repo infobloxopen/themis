@@ -8,77 +8,78 @@ import (
 	"strings"
 )
 
+// Numeric identifiers of errors.
 const (
-	externalErrorID = iota
-	multiErrorID
-	missingAttributeErrorID
-	missingValueErrorID
-	unknownTypeStringCastErrorID
-	invalidTypeStringCastErrorID
-	notImplementedStringCastErrorID
-	invalidBooleanStringCastErrorID
-	invalidAddressStringCastErrorID
-	invalidNetworkStringCastErrorID
-	invalidAddressNetworkStringCastErrorID
-	attributeValueTypeErrorID
-	duplicateAttributeValueErrorID
-	unknownTypeSerializationErrorID
-	invalidTypeSerializationErrorID
-	assignmentTypeMismatchID
-	mapperArgumentTypeErrorID
-	UntaggedPolicyModificationErrorID
-	MissingPolicyTagErrorID
-	emptyPathModificationErrorID
-	invalidRootPolicyItemTypeErrorID
-	hiddenRootPolicyAppendErrorID
-	invalidRootPolicyErrorID
-	hiddenPolicySetModificationErrorID
-	invalidPolicySetItemTypeErrorID
-	tooShortPathPolicySetModificationErrorID
-	missingPolicySetChildErrorID
-	hiddenPolicyAppendErrorID
-	PolicyTagsNotMatchErrorID
-	policyTransactionTagsNotMatchErrorID
-	failedPolicyTransactionErrorID
-	unknownPolicyUpdateOperationErrorID
-	hiddenPolicyModificationErrorID
-	tooLongPathPolicyModificationErrorID
-	tooShortPathPolicyModificationErrorID
-	invalidPolicyItemTypeErrorID
-	hiddenRuleAppendErrorID
-	missingPolicyChildErrorID
-	missingContentErrorID
-	invalidContentStorageItemID
-	missingContentItemErrorID
-	invalidContentItemErrorID
-	invalidContentItemTypeErrorID
-	invalidSelectorPathErrorID
-	networkMapKeyValueTypeErrorID
-	mapContentSubitemErrorID
-	invalidContentModificationErrorID
-	missingPathContentModificationErrorID
-	tooLongPathContentModificationErrorID
-	invalidContentValueModificationErrorID
-	UntaggedContentModificationErrorID
-	MissingContentTagErrorID
-	ContentTagsNotMatchErrorID
-	unknownContentUpdateOperationErrorID
-	failedContentTransactionErrorID
-	contentTransactionIDNotMatchErrorID
-	contentTransactionTagsNotMatchErrorID
-	tooShortRawPathContentModificationErrorID
-	tooLongRawPathContentModificationErrorID
-	invalidContentUpdateDataErrorID
-	invalidContentUpdateResultTypeErrorID
-	invalidContentUpdateKeysErrorID
-	unknownContentItemResultTypeErrorID
-	invalidContentItemResultTypeErrorID
-	invalidContentKeyTypeErrorID
-	invalidContentStringMapErrorID
-	invalidContentNetworkMapErrorID
-	invalidContentDomainMapErrorID
-	invalidContentValueErrorID
-	invalidContentValueTypeErrorID
+	externalErrorID                           = 0
+	multiErrorID                              = 1
+	missingAttributeErrorID                   = 2
+	missingValueErrorID                       = 3
+	unknownTypeStringCastErrorID              = 4
+	invalidTypeStringCastErrorID              = 5
+	notImplementedStringCastErrorID           = 6
+	invalidBooleanStringCastErrorID           = 7
+	invalidAddressStringCastErrorID           = 8
+	invalidNetworkStringCastErrorID           = 9
+	invalidAddressNetworkStringCastErrorID    = 10
+	attributeValueTypeErrorID                 = 11
+	duplicateAttributeValueErrorID            = 12
+	unknownTypeSerializationErrorID           = 13
+	invalidTypeSerializationErrorID           = 14
+	assignmentTypeMismatchID                  = 15
+	mapperArgumentTypeErrorID                 = 16
+	UntaggedPolicyModificationErrorID         = 17
+	MissingPolicyTagErrorID                   = 18
+	PolicyTagsNotMatchErrorID                 = 19
+	emptyPathModificationErrorID              = 20
+	invalidRootPolicyItemTypeErrorID          = 21
+	hiddenRootPolicyAppendErrorID             = 22
+	invalidRootPolicyErrorID                  = 23
+	hiddenPolicySetModificationErrorID        = 24
+	invalidPolicySetItemTypeErrorID           = 25
+	tooShortPathPolicySetModificationErrorID  = 26
+	missingPolicySetChildErrorID              = 27
+	hiddenPolicyAppendErrorID                 = 28
+	policyTransactionTagsNotMatchErrorID      = 29
+	failedPolicyTransactionErrorID            = 30
+	unknownPolicyUpdateOperationErrorID       = 31
+	hiddenPolicyModificationErrorID           = 32
+	tooLongPathPolicyModificationErrorID      = 33
+	tooShortPathPolicyModificationErrorID     = 34
+	invalidPolicyItemTypeErrorID              = 35
+	hiddenRuleAppendErrorID                   = 36
+	missingPolicyChildErrorID                 = 37
+	missingContentErrorID                     = 38
+	invalidContentStorageItemID               = 39
+	missingContentItemErrorID                 = 40
+	invalidContentItemErrorID                 = 41
+	invalidContentItemTypeErrorID             = 42
+	invalidSelectorPathErrorID                = 43
+	networkMapKeyValueTypeErrorID             = 44
+	mapContentSubitemErrorID                  = 45
+	invalidContentModificationErrorID         = 46
+	missingPathContentModificationErrorID     = 47
+	tooLongPathContentModificationErrorID     = 48
+	invalidContentValueModificationErrorID    = 49
+	UntaggedContentModificationErrorID        = 50
+	MissingContentTagErrorID                  = 51
+	ContentTagsNotMatchErrorID                = 52
+	unknownContentUpdateOperationErrorID      = 53
+	failedContentTransactionErrorID           = 54
+	contentTransactionIDNotMatchErrorID       = 55
+	contentTransactionTagsNotMatchErrorID     = 56
+	tooShortRawPathContentModificationErrorID = 57
+	tooLongRawPathContentModificationErrorID  = 58
+	invalidContentUpdateDataErrorID           = 59
+	invalidContentUpdateResultTypeErrorID     = 60
+	invalidContentUpdateKeysErrorID           = 61
+	unknownContentItemResultTypeErrorID       = 62
+	invalidContentItemResultTypeErrorID       = 63
+	invalidContentKeyTypeErrorID              = 64
+	invalidContentStringMapErrorID            = 65
+	invalidContentNetworkMapErrorID           = 66
+	invalidContentDomainMapErrorID            = 67
+	invalidContentValueErrorID                = 68
+	invalidContentValueTypeErrorID            = 69
 )
 
 type externalError struct {
@@ -354,6 +355,7 @@ func (e *mapperArgumentTypeError) Error() string {
 	return e.errorf("Expected %s, %s or %s as argument but got %s", TypeNames[TypeString], TypeNames[TypeSetOfStrings], TypeNames[TypeListOfStrings], TypeNames[e.actual])
 }
 
+// UntaggedPolicyModificationError indicates attempt to modify incrementally a policy which has no tag.
 type UntaggedPolicyModificationError struct {
 	errorLink
 }
@@ -363,10 +365,12 @@ func newUntaggedPolicyModificationError() *UntaggedPolicyModificationError {
 		errorLink: errorLink{id: UntaggedPolicyModificationErrorID}}
 }
 
+// Error implements error interface.
 func (e *UntaggedPolicyModificationError) Error() string {
 	return e.errorf("Can't modify policies with no tag")
 }
 
+// MissingPolicyTagError indicates that update has no tag to match policy before modification.
 type MissingPolicyTagError struct {
 	errorLink
 }
@@ -376,8 +380,28 @@ func newMissingPolicyTagError() *MissingPolicyTagError {
 		errorLink: errorLink{id: MissingPolicyTagErrorID}}
 }
 
+// Error implements error interface.
 func (e *MissingPolicyTagError) Error() string {
 	return e.errorf("Update has no previous policy tag")
+}
+
+// PolicyTagsNotMatchError indicates that update tag doesn't match policy before modification.
+type PolicyTagsNotMatchError struct {
+	errorLink
+	cntTag *uuid.UUID
+	updTag *uuid.UUID
+}
+
+func newPolicyTagsNotMatchError(cntTag, updTag *uuid.UUID) *PolicyTagsNotMatchError {
+	return &PolicyTagsNotMatchError{
+		errorLink: errorLink{id: PolicyTagsNotMatchErrorID},
+		cntTag:    cntTag,
+		updTag:    updTag}
+}
+
+// Error implements error interface.
+func (e *PolicyTagsNotMatchError) Error() string {
+	return e.errorf("Update tag %s doesn't match policies tag %s", e.updTag.String(), e.cntTag.String())
 }
 
 type emptyPathModificationError struct {
@@ -505,23 +529,6 @@ func newHiddenPolicyAppendError() *hiddenPolicyAppendError {
 
 func (e *hiddenPolicyAppendError) Error() string {
 	return e.errorf("Can't append hidden policy or policy set")
-}
-
-type PolicyTagsNotMatchError struct {
-	errorLink
-	cntTag *uuid.UUID
-	updTag *uuid.UUID
-}
-
-func newPolicyTagsNotMatchError(cntTag, updTag *uuid.UUID) *PolicyTagsNotMatchError {
-	return &PolicyTagsNotMatchError{
-		errorLink: errorLink{id: PolicyTagsNotMatchErrorID},
-		cntTag:    cntTag,
-		updTag:    updTag}
-}
-
-func (e *PolicyTagsNotMatchError) Error() string {
-	return e.errorf("Update tag %s doesn't match policies tag %s", e.updTag.String(), e.cntTag.String())
 }
 
 type policyTransactionTagsNotMatchError struct {
@@ -867,6 +874,7 @@ func (e *invalidContentValueModificationError) Error() string {
 	return e.errorf("Can't modify final content value")
 }
 
+// UntaggedContentModificationError indicates attempt to modify incrementally a content which has no tag.
 type UntaggedContentModificationError struct {
 	errorLink
 	ID string
@@ -878,10 +886,12 @@ func newUntaggedContentModificationError(ID string) *UntaggedContentModification
 		ID:        ID}
 }
 
+// Error implements error interface.
 func (e *UntaggedContentModificationError) Error() string {
 	return e.errorf("Can't modify content %q with no tag", e.ID)
 }
 
+// MissingContentTagError indicates that update has no tag to match content before modification.
 type MissingContentTagError struct {
 	errorLink
 }
@@ -891,10 +901,12 @@ func newMissingContentTagError() *MissingContentTagError {
 		errorLink: errorLink{id: MissingContentTagErrorID}}
 }
 
+// Error implements error interface.
 func (e *MissingContentTagError) Error() string {
 	return e.errorf("Update has no previous content tag")
 }
 
+// ContentTagsNotMatchError indicates that update tag doesn't match content before modification.
 type ContentTagsNotMatchError struct {
 	errorLink
 	ID     string
@@ -910,6 +922,7 @@ func newContentTagsNotMatchError(ID string, cntTag, updTag *uuid.UUID) *ContentT
 		updTag:    updTag}
 }
 
+// Error implements error interface.
 func (e *ContentTagsNotMatchError) Error() string {
 	return e.errorf("Update tag %s doesn't match content %q tag %s", e.cntTag.String(), e.ID, e.updTag.String())
 }

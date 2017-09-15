@@ -5,39 +5,39 @@ import (
 	"strings"
 )
 
-type Config struct {
-	Verbose    int
-	Policy     string
-	Content    StringSet
-	ServiceEP  string
-	ControlEP  string
-	TracingEP  string
-	HealthEP   string
-	ProfilerEP string
+type config struct {
+	verbose    int
+	policy     string
+	content    stringSet
+	serviceEP  string
+	controlEP  string
+	tracingEP  string
+	healthEP   string
+	profilerEP string
 }
 
-type StringSet []string
+type stringSet []string
 
-func (s *StringSet) String() string {
+func (s *stringSet) String() string {
 	return strings.Join(*s, ", ")
 }
 
-func (s *StringSet) Set(v string) error {
+func (s *stringSet) Set(v string) error {
 	*s = append(*s, v)
 	return nil
 }
 
-var config Config
+var conf config
 
 func init() {
-	flag.IntVar(&config.Verbose, "v", 1, "log verbosity (0 - error, 1 - warn (default), 2 - info, 3 - debug)")
-	flag.StringVar(&config.Policy, "p", "", "policy file to start with")
-	flag.Var(&config.Content, "j", "JSON content files to start with")
-	flag.StringVar(&config.ServiceEP, "l", "0.0.0.0:5555", "listen for decision requests on this address:port")
-	flag.StringVar(&config.ControlEP, "c", "0.0.0.0:5554", "listen for policies on this address:port")
-	flag.StringVar(&config.TracingEP, "t", "", "OpenZipkin tracing endpoint")
-	flag.StringVar(&config.HealthEP, "health", "", "Health check endpoint")
-	flag.StringVar(&config.ProfilerEP, "pprof", "", "Performance profiler endpoint")
+	flag.IntVar(&conf.verbose, "v", 1, "log verbosity (0 - error, 1 - warn (default), 2 - info, 3 - debug)")
+	flag.StringVar(&conf.policy, "p", "", "policy file to start with")
+	flag.Var(&conf.content, "j", "JSON content files to start with")
+	flag.StringVar(&conf.serviceEP, "l", "0.0.0.0:5555", "listen for decision requests on this address:port")
+	flag.StringVar(&conf.controlEP, "c", "0.0.0.0:5554", "listen for policies on this address:port")
+	flag.StringVar(&conf.tracingEP, "t", "", "OpenZipkin tracing endpoint")
+	flag.StringVar(&conf.healthEP, "health", "", "Health check endpoint")
+	flag.StringVar(&conf.profilerEP, "pprof", "", "Performance profiler endpoint")
 
 	flag.Parse()
 }

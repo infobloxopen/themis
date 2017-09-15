@@ -1,3 +1,4 @@
+// Package yast implements policies YAML AST (YAST) parser.
 package yast
 
 import (
@@ -36,6 +37,10 @@ const (
 	yastTagDenyOverridesAlg         = "denyoverrides"
 )
 
+// Unmarshal parses YAML policies representation to PDP's internal
+// representation and returns pointer to PolicyStorage with the policies.
+// It sets given tag to the policies. Policies with no tag can't be updated
+// incrementally.
 func Unmarshal(in []byte, tag *uuid.UUID) (*pdp.PolicyStorage, error) {
 	m := make(map[interface{}]interface{})
 	err := yaml.Unmarshal(in, &m)
@@ -65,6 +70,11 @@ func Unmarshal(in []byte, tag *uuid.UUID) (*pdp.PolicyStorage, error) {
 	return nil, newRootKeysError(m)
 }
 
+// UnmarshalUpdate parses YAML policies update representation to PDP's internal
+// representation. Requires attribute symbols table as attrs argument which maps
+// attribute name to its specification. Argument oldTag should match current
+// policies tag to make update applicable. Value of newTag is set to policies
+// when update is applied.
 func UnmarshalUpdate(in []byte, attrs map[string]pdp.Attribute, oldTag, newTag uuid.UUID) (*pdp.PolicyUpdate, error) {
 	a := []interface{}{}
 	err := yaml.Unmarshal(in, &a)

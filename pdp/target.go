@@ -1,21 +1,32 @@
 package pdp
 
+// Match represents match expression. Specific kind of boolean expression which
+// can have two arguments. One of arguments should be immediate value and other
+// should be attribute designator.
 type Match struct {
 	m Expression
 }
 
+// AllOf groups match expressions into boolean expression which result is true
+// when all of child match expressions are true.
 type AllOf struct {
 	m []Match
 }
 
+// AnyOf groups AllOf expressions into boolean expression which result is true
+// when at least one of child AllOf expressions is true.
 type AnyOf struct {
 	a []AllOf
 }
 
+// Target represents target expression for policy set, policy and rule.
+// It gathers set of AnyOf expressions and matches to the request when all
+// of child AnyOf expressions are true.
 type Target struct {
 	a []AnyOf
 }
 
+// MakeMatch creates instance of match expression.
 func MakeMatch(e Expression) Match {
 	return Match{m: e}
 }
@@ -33,6 +44,7 @@ func (m Match) calculate(ctx *Context) (bool, error) {
 	return v, nil
 }
 
+// MakeAllOf creates instance of AllOf expression.
 func MakeAllOf() AllOf {
 	return AllOf{m: []Match{}}
 }
@@ -56,10 +68,12 @@ func (a AllOf) calculate(ctx *Context) (bool, error) {
 	return true, nil
 }
 
+// Append adds match expression to the end of list of child match expressions.
 func (a *AllOf) Append(item Match) {
 	a.m = append(a.m, item)
 }
 
+// MakeAnyOf creates instance of AnyOf expressions.
 func MakeAnyOf() AnyOf {
 	return AnyOf{a: []AllOf{}}
 }
@@ -83,10 +97,12 @@ func (a AnyOf) calculate(ctx *Context) (bool, error) {
 	return false, nil
 }
 
+// Append adds AllOf expression to the end of list of child AllOf expressions.
 func (a *AnyOf) Append(item AllOf) {
 	a.a = append(a.a, item)
 }
 
+// MakeTarget creates instance of target.
 func MakeTarget() Target {
 	return Target{a: []AnyOf{}}
 }
@@ -110,6 +126,7 @@ func (t Target) calculate(ctx *Context) (bool, boundError) {
 	return true, nil
 }
 
+// Append adds AnyOf expression to the end of list of child AnyOf expressions.
 func (t *Target) Append(item AnyOf) {
 	t.a = append(t.a, item)
 }
@@ -144,6 +161,8 @@ func combineEffectAndStatus(err boundError, r Response) Response {
 
 type twoArgumentsFunctionType func(first, second Expression) Expression
 
+// TargetCompatibleExpressions maps name of expression and types of its
+// arguments to particular expression maker.
 var TargetCompatibleExpressions = map[string]map[int]map[int]twoArgumentsFunctionType{
 	"equal": {
 		TypeString: {

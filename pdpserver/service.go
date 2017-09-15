@@ -68,7 +68,7 @@ func (o obligation) String() string {
 	return strings.Join(lines, "\n")
 }
 
-func (s *Server) newContext(c *pdp.LocalContentStorage, in *pb.Request) (*pdp.Context, error) {
+func (s *server) newContext(c *pdp.LocalContentStorage, in *pb.Request) (*pdp.Context, error) {
 	ctx, err := pdp.NewContext(c, len(in.Attributes), func(i int) (string, pdp.AttributeValue, error) {
 		a := in.Attributes[i]
 
@@ -91,7 +91,7 @@ func (s *Server) newContext(c *pdp.LocalContentStorage, in *pb.Request) (*pdp.Co
 	return ctx, nil
 }
 
-func (s *Server) newAttributes(obligations []pdp.AttributeAssignmentExpression, ctx *pdp.Context) ([]*pb.Attribute, error) {
+func (s *server) newAttributes(obligations []pdp.AttributeAssignmentExpression, ctx *pdp.Context) ([]*pb.Attribute, error) {
 	attrs := make([]*pb.Attribute, len(obligations))
 	for i, e := range obligations {
 		ID, t, s, err := e.Serialize(ctx)
@@ -108,7 +108,7 @@ func (s *Server) newAttributes(obligations []pdp.AttributeAssignmentExpression, 
 	return attrs, nil
 }
 
-func (s *Server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in *pb.Request) (pb.Response_Effect, []error, []*pb.Attribute) {
+func (s *server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in *pb.Request) (pb.Response_Effect, []error, []*pb.Attribute) {
 	if p == nil {
 		return pb.Response_INDETERMINATE, []error{newMissingPolicyError()}, nil
 	}
@@ -148,7 +148,7 @@ func (s *Server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, i
 	return re, errs, attrs
 }
 
-func (s *Server) Validate(ctx context.Context, in *pb.Request) (*pb.Response, error) {
+func (s *server) Validate(ctx context.Context, in *pb.Request) (*pb.Response, error) {
 	log.Info("Validating context")
 
 	s.RLock()

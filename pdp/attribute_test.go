@@ -37,7 +37,7 @@ func TestAttribute(t *testing.T) {
 		t.Errorf("Expected no error but got %s", err)
 	} else if r.t != v.t || r.v != v.v {
 		t.Errorf("Expected the same attribute with type %d and value %T (%#v) but got %d and %T (%#v)",
-			v.t, v.v, r.t, r.v)
+			v.t, v.v, v.v, r.t, r.v, r.v)
 	}
 
 	v = undefinedValue

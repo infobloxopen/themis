@@ -8,20 +8,29 @@ import (
 	"github.com/google/uuid"
 )
 
+// PolicyStorage is a storage for policies.
 type PolicyStorage struct {
 	tag      *uuid.UUID
 	attrs    map[string]Attribute
 	policies Evaluable
 }
 
+// NewPolicyStorage creates new policy storage with given root policy set
+// or policy, symbol table (which maps attribute names to its definitions)
+// and tag. Tag can be nil in which case policies can't be updated
+// incrementally.
 func NewPolicyStorage(p Evaluable, a map[string]Attribute, t *uuid.UUID) *PolicyStorage {
 	return &PolicyStorage{tag: t, attrs: a, policies: p}
 }
 
+// Root returns root policy from the storage.
 func (s *PolicyStorage) Root() Evaluable {
 	return s.policies
 }
 
+// CheckTag checks if given tag matches to the storage tag. If the storage
+// doesn't have any tag, no tag matches the storage and vice versa nil tag
+// doesn't match any storage.
 func (s *PolicyStorage) CheckTag(tag *uuid.UUID) error {
 	if s.tag == nil {
 		return newUntaggedPolicyModificationError()
@@ -38,6 +47,7 @@ func (s *PolicyStorage) CheckTag(tag *uuid.UUID) error {
 	return nil
 }
 
+// NewTransaction creates new transaction for given policy storage.
 func (s *PolicyStorage) NewTransaction(tag *uuid.UUID) (*PolicyStorageTransaction, error) {
 	err := s.CheckTag(tag)
 	if err != nil {
@@ -47,27 +57,36 @@ func (s *PolicyStorage) NewTransaction(tag *uuid.UUID) (*PolicyStorageTransactio
 	return &PolicyStorageTransaction{tag: *tag, attrs: s.attrs, policies: s.policies}, nil
 }
 
+// Here set of supported update operations is defined.
 const (
+	// UOAdd stands for add operation (add or append item to a collection).
 	UOAdd = iota
+	// UODelete is delete operation (remove item from collection).
 	UODelete
 )
 
 var (
+	// UpdateOpIDs maps operation keys to operation ids.
 	UpdateOpIDs = map[string]int{
 		"add":    UOAdd,
 		"delete": UODelete}
 
+	// UpdateOpNames lists operation names in order of operation ids.
 	UpdateOpNames = []string{
 		"Add",
 		"Delete"}
 )
 
+// PolicyUpdate encapsulates list of changes to particular policy storage.
 type PolicyUpdate struct {
 	oldTag uuid.UUID
 	newTag uuid.UUID
 	cmds   []*command
 }
 
+// NewPolicyUpdate creates empty update for policy storage and sets update tags.
+// Policy storage must have oldTag so update can be applied. newTag will be set
+// to storage after update.
 func NewPolicyUpdate(oldTag, newTag uuid.UUID) *PolicyUpdate {
 	return &PolicyUpdate{
 		oldTag: oldTag,
@@ -75,10 +94,15 @@ func NewPolicyUpdate(oldTag, newTag uuid.UUID) *PolicyUpdate {
 		cmds:   []*command{}}
 }
 
+// Append inserts particular change to the end of changes list. Op is
+// an operation (like add or delete), path identifies policy set, policy or rule
+// to perform operation and entity to add (and ignored in case of delete
+// operation).
 func (u *PolicyUpdate) Append(op int, path []string, entity interface{}) {
 	u.cmds = append(u.cmds, &command{op: op, path: path, entity: entity})
 }
 
+// String implements Stringer interface.
 func (u *PolicyUpdate) String() string {
 	if u == nil {
 		return "no policy update"
@@ -122,6 +146,9 @@ func (c *command) describe() string {
 	return fmt.Sprintf("%s (%s)", sop, strings.Join(qpath, "/"))
 }
 
+// PolicyStorageTransaction represents transaction for policy storage.
+// Transaction aggregates updates and then can be committed to policy storage
+// to make all the updates visible at once.
 type PolicyStorageTransaction struct {
 	tag      uuid.UUID
 	attrs    map[string]Attribute
@@ -129,6 +156,8 @@ type PolicyStorageTransaction struct {
 	err      error
 }
 
+// Attributes returns symbol tables captured from policy storage on transaction
+// creation.
 func (t *PolicyStorageTransaction) Attributes() map[string]Attribute {
 	return t.attrs
 }
@@ -145,6 +174,7 @@ func (t *PolicyStorageTransaction) applyCmd(cmd *command) error {
 	return newUnknownPolicyUpdateOperationError(cmd.op)
 }
 
+// Apply updates captured policies with given policy update.
 func (t *PolicyStorageTransaction) Apply(u *PolicyUpdate) error {
 	if t.err != nil {
 		return newFailedPolicyTransactionError(t.tag, t.err)
@@ -166,6 +196,10 @@ func (t *PolicyStorageTransaction) Apply(u *PolicyUpdate) error {
 	return nil
 }
 
+// Commit creates new policy storage with updated policies. Each commit creates
+// copy of storage with only its changes applied so applications must ensure
+// that all pairs of NewTransaction and Commit for the same content id go
+// sequentially.
 func (t *PolicyStorageTransaction) Commit() (*PolicyStorage, error) {
 	if t.err != nil {
 		return nil, newFailedPolicyTransactionError(t.tag, t.err)

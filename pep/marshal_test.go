@@ -27,10 +27,10 @@ type TestStruct struct {
 
 type TestTaggedStruct struct {
 	Bool1   bool
-	Bool2   bool      `pdp`
+	Bool2   bool      `pdp:""`
 	Bool3   bool      `pdp:"flag"`
 	Domain  string    `pdp:"d,domain"`
-	Address net.IP    `pdp`
+	Address net.IP    `pdp:""`
 	network net.IPNet `pdp:"net,network"`
 }
 
@@ -43,7 +43,7 @@ type TestInvalidStruct2 struct {
 }
 
 type TestInvalidStruct3 struct {
-	If interface{} `pdp`
+	If interface{} `pdp:""`
 }
 
 var (
@@ -87,31 +87,31 @@ func TestMarshalInvalidStructs(t *testing.T) {
 	v1 := TestInvalidStruct1{}
 	_, err := marshalValue(reflect.ValueOf(v1))
 	if err != nil {
-		if !strings.Contains(err.Error(), "Unknown type") {
-			t.Errorf("Exepcted \"Unknown type\" error but got:\n%s", err)
+		if !strings.Contains(err.Error(), "unknown type") {
+			t.Errorf("Exepcted \"unknown type\" error but got:\n%s", err)
 		}
 	} else {
-		t.Errorf("Exepcted \"Unknown type\" error")
+		t.Errorf("Exepcted \"unknown type\" error")
 	}
 
 	v2 := TestInvalidStruct2{}
 	_, err = marshalValue(reflect.ValueOf(v2))
 	if err != nil {
-		if !strings.Contains(err.Error(), "Can't marshal") {
-			t.Errorf("Exepcted \"Can't marshal\" error but got:\n%s", err)
+		if !strings.Contains(err.Error(), "can't marshal") {
+			t.Errorf("Exepcted \"can't marshal\" error but got:\n%s", err)
 		}
 	} else {
-		t.Errorf("Exepcted \"Can't marshal\" error")
+		t.Errorf("Exepcted \"can't marshal\" error")
 	}
 
 	v3 := TestInvalidStruct3{}
 	_, err = marshalValue(reflect.ValueOf(v3))
 	if err != nil {
-		if !strings.Contains(err.Error(), "Can't marshal") {
-			t.Errorf("Exepcted \"Can't marshal\" error but got:\n%s", err)
+		if !strings.Contains(err.Error(), "can't marshal") {
+			t.Errorf("Exepcted \"can't marshal\" error but got:\n%s", err)
 		}
 	} else {
-		t.Errorf("Exepcted \"Can't marshal\" error")
+		t.Errorf("Exepcted \"can't marshal\" error")
 	}
 }
 

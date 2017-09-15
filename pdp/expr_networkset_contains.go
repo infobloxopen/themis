@@ -15,7 +15,7 @@ func makeFunctionSetOfNetworksContainsAddress(set, value Expression) Expression 
 
 func makeFunctionSetOfNetworksContainsAddressAlt(args []Expression) Expression {
 	if len(args) != 2 {
-		panic(fmt.Errorf("Set Of Networks function \"contains\" (Address) needs exactly two arguments but got %d",
+		panic(fmt.Errorf("function \"contains\" for Set Of Networks (Address) needs exactly two arguments but got %d",
 			len(args)))
 	}
 

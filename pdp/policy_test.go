@@ -503,7 +503,7 @@ func assertStrings(v, e []string, desc string, t *testing.T) {
 
 	diff, err := difflib.GetContextDiffString(ctx)
 	if err != nil {
-		panic(fmt.Errorf("Can't compare \"%s\": %s", desc, err))
+		panic(fmt.Errorf("can't compare \"%s\": %s", desc, err))
 	}
 
 	if len(diff) > 0 {

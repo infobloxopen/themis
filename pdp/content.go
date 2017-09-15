@@ -12,16 +12,20 @@ import (
 	"github.com/infobloxopen/go-trees/strtree"
 )
 
+// ContentKeyTypes gathers all types which can be a key for content map.
 var ContentKeyTypes = map[int]bool{
 	TypeString:  true,
 	TypeAddress: true,
 	TypeNetwork: true,
 	TypeDomain:  true}
 
+// LocalContentStorage is a storage of all independent local contents.
 type LocalContentStorage struct {
 	r *strtree.Tree
 }
 
+// NewLocalContentStorage creates new LocalContentStorage instance. It's filled
+// with given contents.
 func NewLocalContentStorage(items []*LocalContent) *LocalContentStorage {
 	s := &LocalContentStorage{r: strtree.NewTree()}
 
@@ -32,6 +36,7 @@ func NewLocalContentStorage(items []*LocalContent) *LocalContentStorage {
 	return s
 }
 
+// Get returns content item by given content id and nested content item id.
 func (s *LocalContentStorage) Get(cID, iID string) (*ContentItem, error) {
 	v, ok := s.r.Get(cID)
 	if !ok {
@@ -51,10 +56,14 @@ func (s *LocalContentStorage) Get(cID, iID string) (*ContentItem, error) {
 	return item, nil
 }
 
+// Add puts new content to storage. It returns copy of existing storage with
+// new content in it. Existing storage isn't affected by the operation.
 func (s *LocalContentStorage) Add(c *LocalContent) *LocalContentStorage {
 	return &LocalContentStorage{r: s.r.Insert(c.id, c)}
 }
 
+// GetLocalContent returns content from storage by given id only if the content
+// has its own tag and the tag matches to tag argument.
 func (s *LocalContentStorage) GetLocalContent(cID string, tag *uuid.UUID) (*LocalContent, error) {
 	v, ok := s.r.Get(cID)
 	if !ok {
@@ -81,6 +90,7 @@ func (s *LocalContentStorage) GetLocalContent(cID string, tag *uuid.UUID) (*Loca
 	return c, nil
 }
 
+// NewTransaction creates new transaction for given content in the storage.
 func (s *LocalContentStorage) NewTransaction(cID string, tag *uuid.UUID) (*LocalContentStorageTransaction, error) {
 	c, err := s.GetLocalContent(cID, tag)
 	if err != nil {
@@ -90,6 +100,7 @@ func (s *LocalContentStorage) NewTransaction(cID string, tag *uuid.UUID) (*Local
 	return &LocalContentStorageTransaction{tag: *tag, ID: cID, items: c.items}, nil
 }
 
+// String implements Stringer interface.
 func (s *LocalContentStorage) String() string {
 	if s == nil {
 		return ""
@@ -114,6 +125,7 @@ func (s *LocalContentStorage) String() string {
 	return ""
 }
 
+// ContentUpdate encapsulates list of changes to particular content.
 type ContentUpdate struct {
 	cID    string
 	oldTag uuid.UUID
@@ -121,6 +133,9 @@ type ContentUpdate struct {
 	cmds   []*command
 }
 
+// NewContentUpdate creates empty update for given content and sets tags.
+// Content must have oldTag so update can be applied. newTag will be set
+// to content after the update.
 func NewContentUpdate(cID string, oldTag, newTag uuid.UUID) *ContentUpdate {
 	return &ContentUpdate{
 		cID:    cID,
@@ -129,10 +144,14 @@ func NewContentUpdate(cID string, oldTag, newTag uuid.UUID) *ContentUpdate {
 		cmds:   []*command{}}
 }
 
+// Append inserts particular change to the end of changes list. Op is an
+// operation (like add or delete), path identifies content part to perform
+// operation and entity item to add (and ignored in case of delete operation).
 func (u *ContentUpdate) Append(op int, path []string, entity *ContentItem) {
 	u.cmds = append(u.cmds, &command{op: op, path: path, entity: entity})
 }
 
+// String implements Stringer interface.
 func (u *ContentUpdate) String() string {
 	if u == nil {
 		return "no content update"
@@ -149,6 +168,9 @@ func (u *ContentUpdate) String() string {
 	return strings.Join(lines, "\n")
 }
 
+// LocalContentStorageTransaction represents transaction for local content.
+// Transaction aggregates updates and then can be committed
+// to LocalContentStorage to make all the updates visible at once.
 type LocalContentStorageTransaction struct {
 	tag   uuid.UUID
 	ID    string
@@ -168,6 +190,7 @@ func (t *LocalContentStorageTransaction) applyCmd(cmd *command) error {
 	return newUnknownContentUpdateOperationError(cmd.op)
 }
 
+// Apply updates captured content with given content update.
 func (t *LocalContentStorageTransaction) Apply(u *ContentUpdate) error {
 	if t.err != nil {
 		return newFailedContentTransactionError(t.ID, t.tag, t.err)
@@ -193,6 +216,12 @@ func (t *LocalContentStorageTransaction) Apply(u *ContentUpdate) error {
 	return nil
 }
 
+// Commit creates new content storage with updated content previously captured
+// by transaction. Each commit creates copy of storage with only its changes
+// applied. So applications must ensure that all commits to the same storage
+// are made sequentially and that there is only one transaction for the same
+// content id (all pairs of NewTransaction and Commit for the same content id
+// go sequentially).
 func (t *LocalContentStorageTransaction) Commit(s *LocalContentStorage) (*LocalContentStorage, error) {
 	if t.err != nil {
 		return nil, newFailedContentTransactionError(t.ID, t.tag, t.err)
@@ -328,12 +357,18 @@ func (t *LocalContentStorageTransaction) del(rawPath []string) error {
 	return nil
 }
 
+// LocalContent represents content object which can be accessed by its id and
+// independently taged and updated. It holds content items which represent
+// mapping objects (or immediate values) of different type.
 type LocalContent struct {
 	id    string
 	tag   *uuid.UUID
 	items *strtree.Tree
 }
 
+// NewLocalContent creates content of given id with given tag and set of content
+// items. Nil tag makes the content untagged. Such content can't be
+// incrementally updated.
 func NewLocalContent(id string, tag *uuid.UUID, items []*ContentItem) *LocalContent {
 	c := &LocalContent{id: id, tag: tag, items: strtree.NewTree()}
 
@@ -344,6 +379,7 @@ func NewLocalContent(id string, tag *uuid.UUID, items []*ContentItem) *LocalCont
 	return c
 }
 
+// Get returns content item of given id.
 func (c *LocalContent) Get(ID string) (*ContentItem, error) {
 	v, ok := c.items.Get(ID)
 	if !ok {
@@ -358,6 +394,7 @@ func (c *LocalContent) Get(ID string) (*ContentItem, error) {
 	return item, nil
 }
 
+// String implements Stringer interface.
 func (c *LocalContent) String() string {
 	if c == nil {
 		return "null"
@@ -370,6 +407,9 @@ func (c *LocalContent) String() string {
 	return c.tag.String()
 }
 
+// ContentItem represents item of particular content. It can be mapping object
+// with defined set of keys to access value of particular type or immediate
+// value of defined type.
 type ContentItem struct {
 	id string
 	r  ContentSubItem
@@ -377,6 +417,8 @@ type ContentItem struct {
 	k  []int
 }
 
+// MakeContentValueItem creates content item which represents immediate value
+// of given type.
 func MakeContentValueItem(id string, t int, v interface{}) *ContentItem {
 	return &ContentItem{
 		id: id,
@@ -384,6 +426,9 @@ func MakeContentValueItem(id string, t int, v interface{}) *ContentItem {
 		t:  t}
 }
 
+// MakeContentMappingItem creates mapping content item. Argument t is type
+// of final value while k list is a list of types from ContentKeyTypes and
+// defines which maps the item consists from.
 func MakeContentMappingItem(id string, t int, k []int, v ContentSubItem) *ContentItem {
 	return &ContentItem{
 		id: id,
@@ -601,6 +646,8 @@ func (c *ContentItem) del(ID string, path []AttributeValue) (*ContentItem, error
 	return MakeContentMappingItem(ID, c.t, c.k, m), nil
 }
 
+// Get returns value from content item by given path. It sequentially evaluates
+// path expressions and extracts next subitem until gets final value or error.
 func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, error) {
 	d := len(path)
 	if d != len(c.k) {
@@ -640,6 +687,8 @@ func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, erro
 	return c.r.getValue(undefinedValue, c.t)
 }
 
+// ContentSubItem interface abstracts all possible mapping objects and immediate
+// content value.
 type ContentSubItem interface {
 	getValue(key AttributeValue, t int) (AttributeValue, error)
 	next(key AttributeValue) (ContentSubItem, error)
@@ -647,10 +696,15 @@ type ContentSubItem interface {
 	del(key AttributeValue) (ContentSubItem, error)
 }
 
+// ContentStringMap implements ContentSubItem as map of string
+// to ContentSubItem.
 type ContentStringMap struct {
 	tree *strtree.Tree
 }
 
+// MakeContentStringMap creates instance of ContentStringMap based on strtree
+// from github.com/infobloxopen/go-trees. Nodes should be of the same
+// ContentSubItem compatible type.
 func MakeContentStringMap(tree *strtree.Tree) ContentStringMap {
 	return ContentStringMap{tree: tree}
 }
@@ -715,10 +769,15 @@ func (m ContentStringMap) del(key AttributeValue) (ContentSubItem, error) {
 	return MakeContentStringMap(t), nil
 }
 
+// ContentNetworkMap implements ContentSubItem as map of IP address or network
+// to ContentSubItem.
 type ContentNetworkMap struct {
 	tree *iptree.Tree
 }
 
+// MakeContentNetworkMap creates instance of ContentNetworkMap based on iptree
+// from github.com/infobloxopen/go-trees. Nodes should be of the same
+// ContentSubItem compatible type.
 func MakeContentNetworkMap(tree *iptree.Tree) ContentNetworkMap {
 	return ContentNetworkMap{tree: tree}
 }
@@ -806,10 +865,15 @@ func (m ContentNetworkMap) del(key AttributeValue) (ContentSubItem, error) {
 	return nil, newNetworkMapKeyValueTypeError(key.GetResultType())
 }
 
+// ContentDomainMap implements ContentSubItem as map of domain name
+// to ContentSubItem.
 type ContentDomainMap struct {
 	tree *domaintree.Node
 }
 
+// MakeContentDomainMap creates instance of ContentDomainMap based on domaintree
+// from github.com/infobloxopen/go-trees. Nodes should be of the same
+// ContentSubItem compatible type.
 func MakeContentDomainMap(tree *domaintree.Node) ContentDomainMap {
 	return ContentDomainMap{tree: tree}
 }
@@ -874,10 +938,14 @@ func (m ContentDomainMap) del(key AttributeValue) (ContentSubItem, error) {
 	return MakeContentDomainMap(t), nil
 }
 
+// ContentValue implements ContentSubItem as immediate value.
 type ContentValue struct {
 	value interface{}
 }
 
+// MakeContentValue creates instance of ContentValue with given data. Argument
+// value should be value of golang type which corresponds to one of supported
+// attribute types.
 func MakeContentValue(value interface{}) ContentValue {
 	return ContentValue{value: value}
 }
@@ -885,7 +953,7 @@ func MakeContentValue(value interface{}) ContentValue {
 func (v ContentValue) getValue(key AttributeValue, t int) (AttributeValue, error) {
 	switch t {
 	case TypeUndefined:
-		panic(fmt.Errorf("Can't convert to value of undefined type"))
+		panic(fmt.Errorf("can't convert to value of undefined type"))
 
 	case TypeBoolean:
 		return MakeBooleanValue(v.value.(bool)), nil
@@ -915,7 +983,7 @@ func (v ContentValue) getValue(key AttributeValue, t int) (AttributeValue, error
 		return MakeListOfStringsValue(v.value.([]string)), nil
 	}
 
-	panic(fmt.Errorf("Can't convert to value of unknown type with index %d", t))
+	panic(fmt.Errorf("can't convert to value of unknown type with index %d", t))
 }
 
 func (v ContentValue) next(key AttributeValue) (ContentSubItem, error) {

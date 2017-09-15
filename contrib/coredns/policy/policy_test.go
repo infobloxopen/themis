@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -9,15 +10,14 @@ import (
 	"github.com/coredns/coredns/middleware/test"
 
 	pdp "github.com/infobloxopen/themis/pdp-service"
-	pep "github.com/infobloxopen/themis/pep"
 
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
 )
 
 var (
-	fakePdpError      = fmt.Errorf("Fake PDP error")
-	fakeResolverError = fmt.Errorf("Fake Resolver error")
+	errFakePdp      = errors.New("fake PDP error")
+	errFakeResolver = errors.New("fake Resolver error")
 )
 
 func TestPolicy(t *testing.T) {
@@ -36,17 +36,17 @@ func TestPolicy(t *testing.T) {
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			errResp:   fakePdpError,
+			errResp:   errFakePdp,
 			status:    dns.RcodeServerFailure,
-			err:       fakePdpError,
+			err:       errFakePdp,
 		},
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
 			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
-			errRespIP: fakePdpError,
+			errRespIP: errFakePdp,
 			status:    dns.RcodeServerFailure,
-			err:       fakePdpError,
+			err:       errFakePdp,
 		},
 		{
 			query:     "test.com.",
@@ -111,14 +111,14 @@ func TestPolicy(t *testing.T) {
 			response: &pdp.Response{Effect: pdp.Response_DENY,
 				Obligation: []*pdp.Attribute{{"redirect_to", "string", "test.net"}}},
 			status: dns.RcodeServerFailure,
-			err:    fakeResolverError,
+			err:    errFakeResolver,
 		},
 		{
 			query:     "test.net.",
 			queryType: dns.TypeA,
 			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
 			status:    dns.RcodeServerFailure,
-			err:       fakeResolverError,
+			err:       errFakeResolver,
 		},
 		{
 			query:     "test.org.",
@@ -174,7 +174,7 @@ func TestPolicy(t *testing.T) {
 		o.Option = append(o.Option, e)
 		req.Extra = append(req.Extra, o)
 		// Init test mock client
-		pm.pdp = pep.NewTestClientInit(test.response, test.responseIP, test.errResp, test.errRespIP)
+		pm.pdp = newTestClientInit(test.response, test.responseIP, test.errResp, test.errRespIP)
 		// Add EDNS mapping
 		pm.AddEDNS0Map("0xfffa", "client_id", "hex", "string", "0", "32")
 		pm.AddEDNS0Map("0xfffb", "client_src", "address", "string", "", "")
@@ -217,9 +217,77 @@ func handler() middleware.Handler {
 			w.WriteMsg(r)
 			return dns.RcodeNameError, nil
 		default:
-			return dns.RcodeServerFailure, fakeResolverError
+			return dns.RcodeServerFailure, errFakeResolver
 		}
 		w.WriteMsg(r)
 		return dns.RcodeSuccess, nil
 	})
+}
+
+type testClient struct {
+	nextResponse   *pdp.Response
+	nextResponseIP *pdp.Response
+	errResponse    error
+	errResponseIP  error
+}
+
+func newTestClientInit(nextResponse *pdp.Response, nextResponseIP *pdp.Response,
+	errResponse error, errResponseIP error) *testClient {
+	return &testClient{
+		nextResponse:   nextResponse,
+		nextResponseIP: nextResponseIP,
+		errResponse:    errResponse,
+		errResponseIP:  errResponseIP,
+	}
+}
+
+func (c *testClient) Connect() error { return nil }
+func (c *testClient) Close()         {}
+func (c *testClient) Validate(ctx context.Context, in, out interface{}) error {
+	if in != nil {
+		p := in.(pdp.Request)
+		for _, a := range p.Attributes {
+			if a.Id == "address" {
+				if c.errResponseIP != nil {
+					return c.errResponseIP
+				}
+				if c.nextResponseIP != nil {
+					return fillResponse(c.nextResponseIP, out)
+				}
+				continue
+			}
+		}
+	}
+	if c.errResponse != nil {
+		return c.errResponse
+	}
+	return fillResponse(c.nextResponse, out)
+}
+
+func (c *testClient) ModalValidate(in, out interface{}) error {
+	return c.Validate(context.Background(), in, out)
+}
+
+func fillResponse(in *pdp.Response, out interface{}) error {
+	r, ok := out.(*Response)
+	if !ok {
+		return fmt.Errorf("testClient can only translate response to *Response type but got %T", out)
+	}
+
+	r.Permit = in.Effect == pdp.Response_PERMIT
+
+	for _, attr := range in.Obligation {
+		switch attr.Id {
+		case "redirect_to":
+			r.Redirect = attr.Value
+
+		case "policy_id":
+			r.PolicyID = attr.Value
+
+		case "refuse":
+			r.Refuse = attr.Value
+		}
+	}
+
+	return nil
 }

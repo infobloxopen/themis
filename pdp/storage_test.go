@@ -249,7 +249,7 @@ func TestStorageTransactionalUpdate(t *testing.T) {
 		t.Fatalf("Expected one attribute but got %#v", attrs)
 	}
 	if _, ok := attrs["s"]; !ok {
-		t.Errorf("Expected %q attribute but got %#v", attrs)
+		t.Errorf("Expected %q attribute but got %#v", "s", attrs)
 	}
 
 	err = tr.Apply(u)

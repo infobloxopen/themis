@@ -9,7 +9,7 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 )
 
-type Item struct {
+type item struct {
 	policy bool
 	id     string
 
@@ -23,35 +23,35 @@ type Item struct {
 	ct *pdp.LocalContentStorageTransaction
 }
 
-type Queue struct {
+type queue struct {
 	sync.Mutex
 
 	idx   int32
-	items map[int32]*Item
+	items map[int32]*item
 }
 
-func NewQueue() *Queue {
-	return &Queue{
+func newQueue() *queue {
+	return &queue{
 		idx:   -1,
-		items: make(map[int32]*Item)}
+		items: make(map[int32]*item)}
 }
 
-func NewPolicyItem(fromTag, toTag *uuid.UUID) *Item {
-	return &Item{
+func newPolicyItem(fromTag, toTag *uuid.UUID) *item {
+	return &item{
 		policy:  true,
 		fromTag: fromTag,
 		toTag:   toTag}
 }
 
-func NewContentItem(id string, fromTag, toTag *uuid.UUID) *Item {
-	return &Item{
+func newContentItem(id string, fromTag, toTag *uuid.UUID) *item {
+	return &item{
 		policy:  false,
 		id:      id,
 		fromTag: fromTag,
 		toTag:   toTag}
 }
 
-func (q *Queue) Push(item *Item) (int32, error) {
+func (q *queue) push(v *item) (int32, error) {
 	q.Lock()
 	defer q.Unlock()
 
@@ -60,19 +60,19 @@ func (q *Queue) Push(item *Item) (int32, error) {
 	}
 
 	q.idx++
-	q.items[q.idx] = item
+	q.items[q.idx] = v
 
 	return q.idx, nil
 }
 
-func (q *Queue) Pop(idx int32) (*Item, bool) {
+func (q *queue) pop(idx int32) (*item, bool) {
 	q.Lock()
 	defer q.Unlock()
 
-	item, ok := q.items[idx]
+	v, ok := q.items[idx]
 	if ok {
 		delete(q.items, idx)
 	}
 
-	return item, ok
+	return v, ok
 }

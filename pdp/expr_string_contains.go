@@ -18,7 +18,7 @@ func makeFunctionStringContains(str, substr Expression) Expression {
 
 func makeFunctionStringContainsAlt(args []Expression) Expression {
 	if len(args) != 2 {
-		panic(fmt.Errorf("String function \"contains\" needs exactly two arguments but got %d", len(args)))
+		panic(fmt.Errorf("function \"contains\" for String needs exactly two arguments but got %d", len(args)))
 	}
 
 	return makeFunctionStringContains(args[0], args[1])

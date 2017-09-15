@@ -1,6 +1,7 @@
 package pep
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"reflect"
@@ -11,9 +12,15 @@ import (
 )
 
 var (
-	ErrorInvalidSource = fmt.Errorf("Given value is not a structure")
-	ErrorInvalidSlice  = fmt.Errorf("Marshalling for the slice hasn't been implemented")
-	ErrorInvalidStruct = fmt.Errorf("Marshalling for the struct hasn't been implemented")
+	// ErrorInvalidSource indicates that input value of validate method is not
+	// a structure.
+	ErrorInvalidSource = errors.New("given value is not a structure")
+	// ErrorInvalidSlice indicates that input structure has slice field
+	// (client can't marshal slices).
+	ErrorInvalidSlice = errors.New("marshalling for the slice hasn't been implemented")
+	// ErrorInvalidStruct indicates that input structure has struct field
+	// (client can't marshal nested structures).
+	ErrorInvalidStruct = errors.New("marshalling for the struct hasn't been implemented")
 )
 
 type fieldMarshaller func(v reflect.Value) (string, string, error)
@@ -109,18 +116,18 @@ func marshalTaggedStruct(v reflect.Value, fields []reflect.StructField) ([]*pb.A
 
 			marshaller, ok = marshallersByTag[strings.ToLower(t)]
 			if !ok {
-				return nil, fmt.Errorf("Unknown type \"%s\" (%s.%s)", t, v.Type().Name(), f.Name)
+				return nil, fmt.Errorf("unknown type \"%s\" (%s.%s)", t, v.Type().Name(), f.Name)
 			}
 
 			if typeByTag[strings.ToLower(t)] != f.Type {
 				return nil,
-					fmt.Errorf("Can't marshal \"%s\" as \"%s\" (%s.%s)", f.Type.String(), t, v.Type().Name(), f.Name)
+					fmt.Errorf("can't marshal \"%s\" as \"%s\" (%s.%s)", f.Type.String(), t, v.Type().Name(), f.Name)
 			}
 
 		} else {
 			marshaller, ok = marshallersByKind[f.Type.Kind()]
 			if !ok {
-				return nil, fmt.Errorf("Can't marshal \"%s\" (%s.%s)", f.Type.String(), v.Type().Name(), f.Name)
+				return nil, fmt.Errorf("can't marshal \"%s\" (%s.%s)", f.Type.String(), v.Type().Name(), f.Name)
 			}
 		}
 
@@ -140,7 +147,7 @@ func marshalTaggedStruct(v reflect.Value, fields []reflect.StructField) ([]*pb.A
 			return nil, err
 		}
 
-		attrs = append(attrs, &pb.Attribute{tag, t, s})
+		attrs = append(attrs, &pb.Attribute{Id: tag, Type: t, Value: s})
 	}
 
 	return attrs, nil
@@ -168,7 +175,7 @@ func marshalUntaggedStruct(v reflect.Value, fields []reflect.StructField) ([]*pb
 			return nil, err
 		}
 
-		attrs = append(attrs, &pb.Attribute{name, t, s})
+		attrs = append(attrs, &pb.Attribute{Id: name, Type: t, Value: s})
 	}
 
 	return attrs, nil
@@ -203,7 +210,7 @@ func addressMarshaller(v reflect.Value) (string, string, error) {
 }
 
 func networkMarshaller(v reflect.Value) (string, string, error) {
-	return (&net.IPNet{v.Field(0).Bytes(), v.Field(1).Bytes()}).String(), "network", nil
+	return (&net.IPNet{IP: v.Field(0).Bytes(), Mask: v.Field(1).Bytes()}).String(), "network", nil
 }
 
 func domainMarshaller(v reflect.Value) (string, string, error) {

@@ -8,7 +8,7 @@ import (
 	zipkin "github.com/openzipkin/zipkin-go-opentracing"
 )
 
-func InitTracing(tracingType, tracingEP string) (ot.Tracer, error) {
+func initTracing(tracingType, tracingEP string) (ot.Tracer, error) {
 	if tracingEP == "" {
 		return nil, nil
 	}

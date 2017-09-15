@@ -14,22 +14,38 @@ import (
 	"github.com/infobloxopen/go-trees/strtree"
 )
 
+// Type* constants represent all data types PDP can work with.
 const (
+	// TypeUndefined stands for type of undefined value. The value usually
+	// means that evaluation can't be done.
 	TypeUndefined = iota
+	// TypeBoolean is boolean data type.
 	TypeBoolean
+	// TypeString is string data type.
 	TypeString
+	// TypeAddress is IPv4 or IPv6 address data type.
 	TypeAddress
+	// TypeNetwork is IPv4 or IPv6 network data type.
 	TypeNetwork
+	// TypeDomain is domain name data type.
 	TypeDomain
+	// TypeSetOfStrings is set of strings data type (internally stores order
+	// in which it was created).
 	TypeSetOfStrings
+	// TypeSetOfNetworks is set of networks data type (unordered).
 	TypeSetOfNetworks
+	// TypeSetOfDomains is set of domains data type (unordered).
 	TypeSetOfDomains
+	// TypeListOfStrings is list of strings data type.
 	TypeListOfStrings
 
 	typesTotal
 )
 
+// Type* collections bind type names and IDs.
 var (
+	// TypeNames is list of humanreadable type names. The order must be kept
+	// in sync with Type* constants order.
 	TypeNames = []string{
 		"Undefined",
 		"Boolean",
@@ -42,8 +58,12 @@ var (
 		"Set of Domains",
 		"List of Strings"}
 
+	// TypeKeys maps Type* constants to type IDs. Type ID is all lower case
+	// type name. The slice is filled by init function.
 	TypeKeys = []string{}
-	TypeIDs  = map[string]int{}
+	// TypeIDs maps type IDs to Type* constants. The map is filled by init
+	// function.
+	TypeIDs = map[string]int{}
 )
 
 var undefinedValue = AttributeValue{}
@@ -56,15 +76,21 @@ func init() {
 	}
 }
 
+// Attribute represents attribute definition which binds attribute name
+// and type.
 type Attribute struct {
 	id string
 	t  int
 }
 
+// MakeAttribute creates new attribute instance. It requires attribute name
+// as "ID" argument and type as "t" argument. Value of "t" should be one of
+// Type* constants.
 func MakeAttribute(ID string, t int) Attribute {
 	return Attribute{id: ID, t: t}
 }
 
+// GetType returns attribute type.
 func (a Attribute) GetType() int {
 	return a.t
 }
@@ -73,65 +99,82 @@ func (a Attribute) describe() string {
 	return fmt.Sprintf("attr(%s.%s)", a.id, TypeNames[a.t])
 }
 
+// AttributeValue represents attribute value which binds data type and data.
+// Value with undefined type indicates that evaluation can't get particular
+// value.
 type AttributeValue struct {
 	t int
 	v interface{}
 }
 
+// MakeBooleanValue creates instance of boolean attribute value.
 func MakeBooleanValue(v bool) AttributeValue {
 	return AttributeValue{
 		t: TypeBoolean,
 		v: v}
 }
 
+// MakeStringValue creates instance of string attribute value.
 func MakeStringValue(v string) AttributeValue {
 	return AttributeValue{
 		t: TypeString,
 		v: v}
 }
 
+// MakeAddressValue creates instance of IP address attribute value.
 func MakeAddressValue(v net.IP) AttributeValue {
 	return AttributeValue{
 		t: TypeAddress,
 		v: v}
 }
 
+// MakeNetworkValue creates instance of IP network address attribute value.
+// Argument should not be nil. Caller is responsible for the validation.
 func MakeNetworkValue(v *net.IPNet) AttributeValue {
 	return AttributeValue{
 		t: TypeNetwork,
 		v: v}
 }
 
+// MakeDomainValue creates instance of domain name attribute value. Argument
+// should be valid domain name. Caller is responsible for the validation.
 func MakeDomainValue(v string) AttributeValue {
 	return AttributeValue{
 		t: TypeDomain,
 		v: v}
 }
 
+// MakeSetOfStringsValue creates instance of set of strings attribute value.
 func MakeSetOfStringsValue(v *strtree.Tree) AttributeValue {
 	return AttributeValue{
 		t: TypeSetOfStrings,
 		v: v}
 }
 
+// MakeSetOfNetworksValue creates instance of set of networks attribute value.
 func MakeSetOfNetworksValue(v *iptree.Tree) AttributeValue {
 	return AttributeValue{
 		t: TypeSetOfNetworks,
 		v: v}
 }
 
+// MakeSetOfDomainsValue creates instance of set of domains attribute value.
 func MakeSetOfDomainsValue(v *domaintree.Node) AttributeValue {
 	return AttributeValue{
 		t: TypeSetOfDomains,
 		v: v}
 }
 
+// MakeListOfStringsValue creates instance of list of strings attribute value.
 func MakeListOfStringsValue(v []string) AttributeValue {
 	return AttributeValue{
 		t: TypeListOfStrings,
 		v: v}
 }
 
+// MakeValueFromString creates instance of attribute value by given type and
+// string representation. The function performs necessary validation.
+// No covertion defined for undefined type and collection types.
 func MakeValueFromString(t int, s string) (AttributeValue, error) {
 	switch t {
 	case TypeUndefined:
@@ -168,12 +211,15 @@ func MakeValueFromString(t int, s string) (AttributeValue, error) {
 		return MakeNetworkValue(n), nil
 
 	case TypeDomain:
+		//TODO: Add domain validation according standards.
 		return MakeDomainValue(s), nil
 	}
 
 	return undefinedValue, newUnknownTypeStringCastError(t)
 }
 
+// GetResultType returns type of attribute value (implements Expression
+// interface).
 func (v AttributeValue) GetResultType() int {
 	return v.t
 }
@@ -343,6 +389,8 @@ func (v AttributeValue) calculate(ctx *Context) (AttributeValue, error) {
 	return v, nil
 }
 
+// Serialize converts attribute value to its string representation.
+// No conversion defined for undefined value.
 func (v AttributeValue) Serialize() (string, error) {
 	switch v.t {
 	case TypeUndefined:
@@ -399,17 +447,23 @@ func (v AttributeValue) Serialize() (string, error) {
 	return "", newUnknownTypeSerializationError(v.t)
 }
 
+// AttributeAssignmentExpression represents assignment of arbitrary expression
+// result to an attribute.
 type AttributeAssignmentExpression struct {
 	a Attribute
 	e Expression
 }
 
+// MakeAttributeAssignmentExpression creates attribute assignment expression.
 func MakeAttributeAssignmentExpression(a Attribute, e Expression) AttributeAssignmentExpression {
 	return AttributeAssignmentExpression{
 		a: a,
 		e: e}
 }
 
+// Serialize evaluates assignment expression and returns string representation
+// of resulting attribute name, type and value or error if the evaluaction
+// can't be done.
 func (a AttributeAssignmentExpression) Serialize(ctx *Context) (string, string, string, error) {
 	ID := a.a.id
 	typeName := TypeKeys[a.a.t]
@@ -432,14 +486,20 @@ func (a AttributeAssignmentExpression) Serialize(ctx *Context) (string, string, 
 	return ID, typeName, s, nil
 }
 
+// AttributeDesignator represents an expression which result is corresponding
+// attribute value from request context.
 type AttributeDesignator struct {
 	a Attribute
 }
 
+// MakeAttributeDesignator creates designator expression instance for given
+// attribute.
 func MakeAttributeDesignator(a Attribute) AttributeDesignator {
 	return AttributeDesignator{a}
 }
 
+// GetResultType returns type of wrapped attribute (implements Expression
+// interface).
 func (d AttributeDesignator) GetResultType() int {
 	return d.a.t
 }
@@ -450,14 +510,15 @@ func (d AttributeDesignator) calculate(ctx *Context) (AttributeValue, error) {
 
 var domainRegexp = regexp.MustCompile("^[-._a-z0-9]+$")
 
+// AdjustDomainName makes necessary conversions and validations for domain name.
 func AdjustDomainName(s string) (string, error) {
 	tmp, err := idna.Punycode.ToASCII(s)
 	if err != nil {
-		return "", fmt.Errorf("Cannot convert domain [%s]", s)
+		return "", fmt.Errorf("can't convert domain [%s]", s)
 	}
 	ret := strings.ToLower(tmp)
 	if !domainRegexp.MatchString(ret) {
-		return "", fmt.Errorf("Cannot validate domain [%s]", s)
+		return "", fmt.Errorf("can't validate domain [%s]", s)
 	}
 	return ret, nil
 }

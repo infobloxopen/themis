@@ -212,75 +212,75 @@ errors:
   fields:
   - id: id
     type: int32
-  - id: item
-    type: "*Item"
+  - id: v
+    type: "*item"
   - id: err
     type: error
   msg: "Can't create transaction for policy update %d from tag %q to %q: %s"
   args:
   - field: id
-  - expr: e.item.fromTag.String()
-  - expr: e.item.toTag.String()
+  - expr: e.v.fromTag.String()
+  - expr: e.v.toTag.String()
   - field: err
 
 - id: policyUpdateParseError
   fields:
   - id: id
     type: int32
-  - id: item
-    type: "*Item"
+  - id: v
+    type: "*item"
   - id: err
     type: error
   msg: "Failed to parse update %d from tag %q to %q: %s"
   args:
   - field: id
-  - expr: e.item.fromTag.String()
-  - expr: e.item.toTag.String()
+  - expr: e.v.fromTag.String()
+  - expr: e.v.toTag.String()
   - field: err
 
 - id: policyUpdateApplicationError
   fields:
   - id: id
     type: int32
-  - id: item
-    type: "*Item"
+  - id: v
+    type: "*item"
   - id: err
     type: error
   msg: "Failed to apply update %d from tag %q to %q: %s"
   args:
   - field: id
-  - expr: e.item.fromTag.String()
-  - expr: e.item.toTag.String()
+  - expr: e.v.fromTag.String()
+  - expr: e.v.toTag.String()
   - field: err
 
 - id: policyUpdateUploadStoreError
   fields:
   - id: id
     type: int32
-  - id: item
-    type: "*Item"
+  - id: v
+    type: "*item"
   - id: err
     type: error
   msg: "Failed to store parsed policy update %d from tag %q to %q: %s"
   args:
   - field: id
-  - expr: e.item.fromTag.String()
-  - expr: e.item.toTag.String()
+  - expr: e.v.fromTag.String()
+  - expr: e.v.toTag.String()
   - field: err
 
 - id: policyTransactionCommitError
   fields:
   - id: id
     type: int32
-  - id: item
-    type: "*Item"
+  - id: v
+    type: "*item"
   - id: err
     type: error
   msg: "Failed to commit transaction %d from tag %q to %q: %s"
   args:
   - field: id
-  - expr: e.item.fromTag.String()
-  - expr: e.item.toTag.String()
+  - expr: e.v.fromTag.String()
+  - expr: e.v.toTag.String()
   - field: err
 
 - id: missingPolicyDataApplyError
@@ -306,80 +306,80 @@ errors:
   fields:
   - id: id
     type: int32
-  - id: item
-    type: "*Item"
+  - id: v
+    type: "*item"
   - id: err
     type: error
   msg: "Can't create transaction for content %q update %d from tag %q to %q: %s"
   args:
-  - field: item.id
+  - field: v.id
   - field: id
-  - expr: e.item.fromTag.String()
-  - expr: e.item.toTag.String()
+  - expr: e.v.fromTag.String()
+  - expr: e.v.toTag.String()
   - field: err
 
 - id: contentUpdateParseError
   fields:
   - id: id
     type: int32
-  - id: item
-    type: "*Item"
+  - id: v
+    type: "*item"
   - id: err
     type: error
   msg: "Failed to parse content %q update %d from tag %q to %q: %s"
   args:
-  - field: item.id
+  - field: v.id
   - field: id
-  - expr: e.item.fromTag.String()
-  - expr: e.item.toTag.String()
+  - expr: e.v.fromTag.String()
+  - expr: e.v.toTag.String()
   - field: err
 
 - id: contentUpdateApplicationError
   fields:
   - id: id
     type: int32
-  - id: item
-    type: "*Item"
+  - id: v
+    type: "*item"
   - id: err
     type: error
   msg: "Failed to apply content %q update %d from tag %q to %q: %s"
   args:
-  - field: item.id
+  - field: v.id
   - field: id
-  - expr: e.item.fromTag.String()
-  - expr: e.item.toTag.String()
+  - expr: e.v.fromTag.String()
+  - expr: e.v.toTag.String()
   - field: err
 
 - id: contentUpdateUploadStoreError
   fields:
   - id: id
     type: int32
-  - id: item
-    type: "*Item"
+  - id: v
+    type: "*item"
   - id: err
     type: error
   msg: "Failed to store parsed content %q update %d from tag %q to %q: %s"
   args:
-  - field: item.id
+  - field: v.id
   - field: id
-  - expr: e.item.fromTag.String()
-  - expr: e.item.toTag.String()
+  - expr: e.v.fromTag.String()
+  - expr: e.v.toTag.String()
   - field: err
 
 - id: contentTransactionCommitError
   fields:
   - id: id
     type: int32
-  - id: item
-    type: "*Item"
+  - id: v
+    type: "*item"
   - id: err
     type: error
   msg: "Failed to commit content %q transaction %d from tag %q to %q: %s"
   args:
-  - field: item.id
+  - field: v.id
   - field: id
-  - expr: e.item.fromTag.String()
-  - expr: e.item.toTag.String()
+  - expr: e.v.fromTag.String()
+  - expr: e.v.toTag.String()
   - field: err
 
 - id: unknownUploadedRequestError

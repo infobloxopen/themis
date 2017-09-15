@@ -168,10 +168,24 @@ errors:
   - expr: TypeNames[e.actual]
 
 - id: UntaggedPolicyModificationError
+  desc: "indicates attempt to modify incrementally a policy which has no tag"
   msg: "Can't modify policies with no tag"
 
 - id: MissingPolicyTagError
+  desc: "indicates that update has no tag to match policy before modification"
   msg: "Update has no previous policy tag"
+
+- id: PolicyTagsNotMatchError
+  desc: "indicates that update tag doesn't match policy before modification"
+  fields:
+  - id: cntTag
+    type: "*uuid.UUID"
+  - id: updTag
+    type: "*uuid.UUID"
+  msg: "Update tag %s doesn't match policies tag %s"
+  args:
+  - expr: e.updTag.String()
+  - expr: e.cntTag.String()
 
 - id: emptyPathModificationError
   msg: "Can't modify items by empty path"
@@ -222,17 +236,6 @@ errors:
 
 - id: hiddenPolicyAppendError
   msg: "Can't append hidden policy or policy set"
-
-- id: PolicyTagsNotMatchError
-  fields:
-  - id: cntTag
-    type: "*uuid.UUID"
-  - id: updTag
-    type: "*uuid.UUID"
-  msg: "Update tag %s doesn't match policies tag %s"
-  args:
-  - expr: e.updTag.String()
-  - expr: e.cntTag.String()
 
 - id: policyTransactionTagsNotMatchError
   fields:
@@ -422,6 +425,7 @@ errors:
   msg: "Can't modify final content value"
 
 - id: UntaggedContentModificationError
+  desc: "indicates attempt to modify incrementally a content which has no tag"
   fields:
   - id: ID
     type: string
@@ -430,9 +434,11 @@ errors:
   - field: ID
 
 - id: MissingContentTagError
+  desc: "indicates that update has no tag to match content before modification"
   msg: "Update has no previous content tag"
 
 - id: ContentTagsNotMatchError
+  desc: "indicates that update tag doesn't match content before modification"
   fields:
   - id: ID
     type: string

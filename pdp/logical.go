@@ -16,7 +16,7 @@ type functionBooleanAnd struct {
 
 func makeFunctionBooleanNot(args []Expression) Expression {
 	if len(args) != 1 {
-		panic(fmt.Errorf("Boolean function \"not\" needs exactly one argument but got %d", len(args)))
+		panic(fmt.Errorf("boolean function \"not\" needs exactly one argument but got %d", len(args)))
 	}
 
 	return functionBooleanNot{arg: args[0]}
@@ -49,7 +49,7 @@ func functionBooleanNotValidator(args []Expression) functionMaker {
 
 func makeFunctionBooleanOr(args []Expression) Expression {
 	if len(args) < 1 {
-		panic(fmt.Errorf("Boolean function \"or\" needs at least one argument but got %d", len(args)))
+		panic(fmt.Errorf("boolean function \"or\" needs at least one argument but got %d", len(args)))
 	}
 
 	return functionBooleanOr{args: args}
@@ -94,7 +94,7 @@ func functionBooleanOrValidator(args []Expression) functionMaker {
 
 func makeFunctionBooleanAnd(args []Expression) Expression {
 	if len(args) < 1 {
-		panic(fmt.Errorf("Boolean function \"and\" needs at least one argument but got %d", len(args)))
+		panic(fmt.Errorf("boolean function \"and\" needs at least one argument but got %d", len(args)))
 	}
 
 	return functionBooleanAnd{args: args}

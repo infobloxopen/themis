@@ -9,59 +9,59 @@ import (
 )
 
 const (
-	externalErrorID = iota
-	rootKeysErrorID
-	stringErrorID
-	missingStringErrorID
-	mapErrorID
-	missingMapErrorID
-	listErrorID
-	missingListErrorID
-	attributeTypeErrorID
-	policyAmbiguityErrorID
-	policyMissingKeyErrorID
-	unknownRCAErrorID
-	missingRCAErrorID
-	invalidRCAErrorID
-	missingMapRCAParamErrorID
-	missingDefaultRuleRCAErrorID
-	missingErrorRuleRCAErrorID
-	notImplementedRCAErrorID
-	unknownPCAErrorID
-	missingPCAErrorID
-	invalidPCAErrorID
-	missingMapPCAParamErrorID
-	missingDefaultPolicyPCAErrorID
-	missingErrorPolicyPCAErrorID
-	notImplementedPCAErrorID
-	mapperArgumentTypeErrorID
-	conditionTypeErrorID
-	unknownEffectErrorID
-	noSMPItemsErrorID
-	tooManySMPItemsErrorID
-	unknownMatchFunctionErrorID
-	matchFunctionCastErrorID
-	matchFunctionArgsNumberErrorID
-	invalidMatchFunctionArgErrorID
-	matchFunctionBothValuesErrorID
-	matchFunctionBothAttrsErrorID
-	unknownFunctionErrorID
-	functionCastErrorID
-	unknownAttributeErrorID
-	unknownTypeErrorID
-	invalidTypeErrorID
-	missingContentErrorID
-	notImplementedValueTypeErrorID
-	invalidAddressErrorID
-	invalidNetworkErrorID
-	invalidDomainErrorID
-	selectorURIErrorID
-	selectorLocationErrorID
-	unsupportedSelectorSchemeErrorID
-	entityAmbiguityErrorID
-	entityMissingKeyErrorID
-	unknownPolicyUpdateOperationErrorID
-	invalidPolicyUpdatePathElementErrorID
+	externalErrorID                       = 0
+	rootKeysErrorID                       = 1
+	stringErrorID                         = 2
+	missingStringErrorID                  = 3
+	mapErrorID                            = 4
+	missingMapErrorID                     = 5
+	listErrorID                           = 6
+	missingListErrorID                    = 7
+	attributeTypeErrorID                  = 8
+	policyAmbiguityErrorID                = 9
+	policyMissingKeyErrorID               = 10
+	unknownRCAErrorID                     = 11
+	missingRCAErrorID                     = 12
+	invalidRCAErrorID                     = 13
+	missingMapRCAParamErrorID             = 14
+	missingDefaultRuleRCAErrorID          = 15
+	missingErrorRuleRCAErrorID            = 16
+	notImplementedRCAErrorID              = 17
+	unknownPCAErrorID                     = 18
+	missingPCAErrorID                     = 19
+	invalidPCAErrorID                     = 20
+	missingMapPCAParamErrorID             = 21
+	missingDefaultPolicyPCAErrorID        = 22
+	missingErrorPolicyPCAErrorID          = 23
+	notImplementedPCAErrorID              = 24
+	mapperArgumentTypeErrorID             = 25
+	conditionTypeErrorID                  = 26
+	unknownEffectErrorID                  = 27
+	noSMPItemsErrorID                     = 28
+	tooManySMPItemsErrorID                = 29
+	unknownMatchFunctionErrorID           = 30
+	matchFunctionCastErrorID              = 31
+	matchFunctionArgsNumberErrorID        = 32
+	invalidMatchFunctionArgErrorID        = 33
+	matchFunctionBothValuesErrorID        = 34
+	matchFunctionBothAttrsErrorID         = 35
+	unknownFunctionErrorID                = 36
+	functionCastErrorID                   = 37
+	unknownAttributeErrorID               = 38
+	unknownTypeErrorID                    = 39
+	invalidTypeErrorID                    = 40
+	missingContentErrorID                 = 41
+	notImplementedValueTypeErrorID        = 42
+	invalidAddressErrorID                 = 43
+	invalidNetworkErrorID                 = 44
+	invalidDomainErrorID                  = 45
+	selectorURIErrorID                    = 46
+	selectorLocationErrorID               = 47
+	unsupportedSelectorSchemeErrorID      = 48
+	entityAmbiguityErrorID                = 49
+	entityMissingKeyErrorID               = 50
+	unknownPolicyUpdateOperationErrorID   = 51
+	invalidPolicyUpdatePathElementErrorID = 52
 )
 
 type externalError struct {

@@ -21,16 +21,19 @@ import (
 )
 `
 
-	singleIDTemplate = `
-const %sID = iota
-`
+	commentForIDs = `
+// Numeric identifiers of errors.`
 
-	multiIDTemplate = `
+	idTemplate = `%sID = %d`
+
+	idsTemplate = `
 const (
-	%sID = iota
-	%sID
+	%s
 )
 `
+
+	commentForType = `
+// %s %s.`
 
 	noFieldTypeTemplate = `
 type %s struct {
@@ -59,6 +62,9 @@ func new%s%s(%s) *%s {
 		%s}
 }
 `
+
+	commentForMethod = `
+// Error implements error interface.`
 
 	noArgMethod = `
 func (e *%s) Error() string {
@@ -89,18 +95,24 @@ func (e *errors) generate() {
 		fmt.Printf(singleImportTemplate, e.Imports[0])
 	}
 
+	exportedErrors := false
 	IDs := make([]string, len(e.Errors))
 	for i, item := range e.Errors {
-		IDs[i] = item.ID
+		if strings.ToUpper(item.ID[:1]) == item.ID[:1] {
+			exportedErrors = true
+		}
+
+		IDs[i] = fmt.Sprintf(idTemplate, item.ID, i)
 	}
 
-	if len(IDs) > 1 {
-		fmt.Printf(multiIDTemplate, IDs[0], strings.Join(IDs[1:], "ID\n\t"))
-	} else {
-		fmt.Printf(singleIDTemplate, IDs[0])
+	if exportedErrors {
+		fmt.Printf(commentForIDs)
 	}
+	fmt.Printf(idsTemplate, strings.Join(IDs, "\n\t"))
 
 	for _, item := range e.Errors {
+		exportedError := strings.ToUpper(item.ID[:1]) == item.ID[:1]
+
 		if len(item.Fields) > 0 {
 			maxLen := 0
 			for _, field := range item.Fields {
@@ -112,6 +124,10 @@ func (e *errors) generate() {
 			fields := make([]string, len(item.Fields))
 			for i, field := range item.Fields {
 				fields[i] = fmt.Sprintf("%s%s %s", field.ID, strings.Repeat(" ", maxLen-len(field.ID)), field.Type)
+			}
+
+			if exportedError {
+				fmt.Printf(commentForType, item.ID, item.Desc)
 			}
 			fmt.Printf(multiFieldTypeTemplate, item.ID, strings.Join(fields, "\n\t"))
 
@@ -150,6 +166,9 @@ func (e *errors) generate() {
 				item.ID,
 				strings.Join(fields, ",\n\t\t"))
 		} else {
+			if exportedError {
+				fmt.Printf(commentForType, item.ID, item.Desc)
+			}
 			fmt.Printf(noFieldTypeTemplate, item.ID)
 
 			fmt.Printf(noFieldConstructor,
@@ -186,15 +205,27 @@ func (e *errors) generate() {
 			}
 
 			if len(snippets) > 0 {
+				if exportedError {
+					fmt.Printf(commentForMethod)
+				}
+
 				fmt.Printf(multiArgAndSnippetMethod,
 					item.ID,
 					strings.Join(snippets, "\n\n"),
 					item.Msg,
 					strings.Join(args, ", "))
 			} else {
+				if exportedError {
+					fmt.Printf(commentForMethod)
+				}
+
 				fmt.Printf(multiArgMethod, item.ID, item.Msg, strings.Join(args, ", "))
 			}
 		} else {
+			if exportedError {
+				fmt.Printf(commentForMethod)
+			}
+
 			fmt.Printf(noArgMethod, item.ID, item.Msg)
 		}
 	}

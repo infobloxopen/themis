@@ -7,36 +7,36 @@ import (
 )
 
 func main() {
-	InitLogging(config.Verbose)
+	initLogging(conf.verbose)
 	log.Info("Starting PDP server")
 
-	pdp := NewServer()
+	pdp := newServer()
 
 	if pdp == nil {
 		log.Error("Failed to create Server.")
 		os.Exit(1)
 	}
 
-	pdp.LoadPolicies(config.Policy)
-	pdp.LoadContent(config.Content)
+	pdp.loadPolicies(conf.policy)
+	pdp.loadContent(conf.content)
 	runtime.GC()
 
-	if pdp.ListenRequests(config.ServiceEP) != nil {
+	if pdp.listenRequests(conf.serviceEP) != nil {
 		log.Error("Failed to Listen to Requests.")
 		os.Exit(1)
 	}
-	if pdp.ListenControl(config.ControlEP) != nil {
+	if pdp.listenControl(conf.controlEP) != nil {
 		log.Error("Failed to Listen to Control Packets.")
 		os.Exit(1)
 	}
-	if pdp.ListenHealthCheck(config.HealthEP) != nil {
+	if pdp.listenHealthCheck(conf.healthEP) != nil {
 		log.Error("Failed to Listen to Health Check.")
 		os.Exit(1)
 	}
 
-	tracer, err := InitTracing("zipkin", config.TracingEP)
+	tracer, err := initTracing("zipkin", conf.tracingEP)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Warning("Could not initialize tracing.")
 	}
-	pdp.Serve(tracer, config.ProfilerEP)
+	pdp.serve(tracer, conf.profilerEP)
 }
