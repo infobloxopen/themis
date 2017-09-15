@@ -57,7 +57,7 @@ var (
 // Context represents request context. The context contains all information
 // needed to evaluate request.
 type Context struct {
-	a map[string]map[int]AttributeValue
+	a map[string]interface{}
 	c *LocalContentStorage
 }
 
@@ -71,23 +71,38 @@ type Context struct {
 // and returns the same error. All pairs of attribute name and type should be
 // unique.
 func NewContext(c *LocalContentStorage, count int, f func(i int) (string, AttributeValue, error)) (*Context, error) {
-	ctx := &Context{a: map[string]map[int]AttributeValue{}, c: c}
+	ctx := &Context{a: make(map[string]interface{}, count), c: c}
 
 	for i := 0; i < count; i++ {
-		ID, v, err := f(i)
+		ID, av, err := f(i)
 		if err != nil {
 			return nil, err
 		}
 
-		t := v.GetResultType()
-		if m, ok := ctx.a[ID]; ok {
-			if old, ok := m[t]; ok {
-				return nil, newDuplicateAttributeValueError(ID, t, v, old)
-			}
+		t := av.GetResultType()
+		if v, ok := ctx.a[ID]; ok {
+			switch v := v.(type) {
+			default:
+				panic(fmt.Errorf("expected AttributeValue or map[int]AttributeValue but got: %T, %#v", v, v))
 
-			m[t] = v
+			case AttributeValue:
+				if v.t == t {
+					return nil, newDuplicateAttributeValueError(ID, t, av, v)
+				}
+
+				m := make(map[int]AttributeValue, 2)
+				m[v.t] = v
+				m[t] = av
+
+			case map[int]AttributeValue:
+				if old, ok := v[t]; ok {
+					return nil, newDuplicateAttributeValueError(ID, t, av, old)
+				}
+
+				v[t] = av
+			}
 		} else {
-			ctx.a[ID] = map[int]AttributeValue{t: v}
+			ctx.a[ID] = av
 		}
 	}
 
@@ -110,8 +125,17 @@ func (c *Context) String() string {
 
 		lines = append(lines, "attributes:")
 		for name, attrs := range c.a {
-			for t, v := range attrs {
-				lines = append(lines, fmt.Sprintf("- %s.(%s): %s", name, TypeNames[t], v.describe()))
+			switch v := attrs.(type) {
+			default:
+				panic(fmt.Errorf("expected AttributeValue or map[int]AttributeValue but got: %T, %#v", v, v))
+
+			case AttributeValue:
+				lines = append(lines, fmt.Sprintf("- %s.(%s): %s", name, TypeNames[v.t], v.describe()))
+
+			case map[int]AttributeValue:
+				for t, av := range v {
+					lines = append(lines, fmt.Sprintf("- %s.(%s): %s", name, TypeNames[t], av.describe()))
+				}
 			}
 		}
 	}
@@ -120,17 +144,29 @@ func (c *Context) String() string {
 }
 
 func (c *Context) getAttribute(a Attribute) (AttributeValue, error) {
-	t, ok := c.a[a.id]
+	v, ok := c.a[a.id]
 	if !ok {
 		return AttributeValue{}, bindError(newMissingAttributeError(), a.describe())
 	}
 
-	v, ok := t[a.t]
-	if !ok {
-		return AttributeValue{}, bindError(newMissingAttributeError(), a.describe())
+	switch v := v.(type) {
+	case AttributeValue:
+		if v.t != a.t {
+			return undefinedValue, bindError(newMissingAttributeError(), a.describe())
+		}
+
+		return v, nil
+
+	case map[int]AttributeValue:
+		av, ok := v[a.t]
+		if !ok {
+			return AttributeValue{}, bindError(newMissingAttributeError(), a.describe())
+		}
+
+		return av, nil
 	}
 
-	return v, nil
+	panic(fmt.Errorf("expected AttributeValue or map[int]AttributeValue but got: %T, %#v", v, v))
 }
 
 func (c *Context) getContentItem(cID, iID string) (*ContentItem, error) {
