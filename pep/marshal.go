@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
@@ -50,20 +51,111 @@ var (
 		"domain":  reflect.TypeOf("string")}
 )
 
+type reqFieldInfo struct {
+	idx        int
+	tag        string
+	marshaller fieldMarshaller
+}
+
+type reqFieldsInfo struct {
+	fields []reqFieldInfo
+	err    error
+}
+
+func makeTaggetFieldsInfo(fields []reflect.StructField, typeName string) reqFieldsInfo {
+	out := []reqFieldInfo{}
+	for i, f := range fields {
+		tag, ok := getTag(f)
+		if !ok {
+			continue
+		}
+
+		var marshaller fieldMarshaller
+		items := strings.Split(tag, ",")
+		if len(items) > 1 {
+			tag = items[0]
+			t := items[1]
+
+			marshaller, ok = marshallersByTag[strings.ToLower(t)]
+			if !ok {
+				return reqFieldsInfo{err: fmt.Errorf("unknown type \"%s\" (%s.%s)", t, typeName, f.Name)}
+			}
+
+			if typeByTag[strings.ToLower(t)] != f.Type {
+				return reqFieldsInfo{
+					err: fmt.Errorf("can't marshal \"%s\" as \"%s\" (%s.%s)", f.Type.String(), t, typeName, f.Name),
+				}
+			}
+
+		} else {
+			marshaller, ok = marshallersByKind[f.Type.Kind()]
+			if !ok {
+				return reqFieldsInfo{err: fmt.Errorf("can't marshal \"%s\" (%s.%s)", f.Type.String(), typeName, f.Name)}
+			}
+		}
+
+		if len(tag) <= 0 {
+			tag, ok = getName(f)
+			if !ok {
+				continue
+			}
+		}
+
+		out = append(out, reqFieldInfo{
+			idx:        i,
+			tag:        tag,
+			marshaller: marshaller,
+		})
+	}
+
+	return reqFieldsInfo{fields: out}
+}
+
+func makeUntaggedFieldsInfo(fields []reflect.StructField, typeName string) reqFieldsInfo {
+	out := []reqFieldInfo{}
+	for i, f := range fields {
+		name, ok := getName(f)
+		if !ok {
+			continue
+		}
+
+		marshaller, ok := marshallersByKind[f.Type.Kind()]
+		if !ok {
+			continue
+		}
+
+		out = append(out, reqFieldInfo{
+			idx:        i,
+			tag:        name,
+			marshaller: marshaller,
+		})
+	}
+
+	return reqFieldsInfo{fields: out}
+}
+
+var (
+	typeCache     = map[string]reqFieldsInfo{}
+	typeCacheLock = sync.RWMutex{}
+)
+
 func marshalValue(v reflect.Value) ([]*pb.Attribute, error) {
 	if v.Kind() != reflect.Struct {
 		return nil, ErrorInvalidSource
 	}
 
-	fields, tagged := getFields(v.Type())
-	if tagged {
-		return marshalTaggedStruct(v, fields)
-	}
-
-	return marshalUntaggedStruct(v, fields)
+	return marshalStruct(v, getFields(v.Type()))
 }
 
-func getFields(t reflect.Type) ([]reflect.StructField, bool) {
+func getFields(t reflect.Type) reqFieldsInfo {
+	key := t.PkgPath() + "." + t.Name()
+	typeCacheLock.RLock()
+	if info, ok := typeCache[key]; ok {
+		typeCacheLock.RUnlock()
+		return info
+	}
+	typeCacheLock.RUnlock()
+
 	fields := make([]reflect.StructField, 0)
 	tagged := false
 	for i := 0; i < t.NumField(); i++ {
@@ -75,7 +167,17 @@ func getFields(t reflect.Type) ([]reflect.StructField, bool) {
 		fields = append(fields, f)
 	}
 
-	return fields, tagged
+	typeCacheLock.Lock()
+	var info reqFieldsInfo
+	if tagged {
+		info = makeTaggetFieldsInfo(fields, t.Name())
+	} else {
+		info = makeUntaggedFieldsInfo(fields, t.Name())
+	}
+	typeCache[key] = info
+	typeCacheLock.Unlock()
+
+	return info
 }
 
 func getName(f reflect.StructField) (string, bool) {
@@ -100,45 +202,15 @@ func getTag(f reflect.StructField) (string, bool) {
 	return f.Tag.Lookup("pdp")
 }
 
-func marshalTaggedStruct(v reflect.Value, fields []reflect.StructField) ([]*pb.Attribute, error) {
-	attrs := make([]*pb.Attribute, 0)
-	for _, f := range fields {
-		tag, ok := getTag(f)
-		if !ok {
-			continue
-		}
+func marshalStruct(v reflect.Value, info reqFieldsInfo) ([]*pb.Attribute, error) {
+	if info.err != nil {
+		return nil, info.err
+	}
 
-		var marshaller fieldMarshaller
-		items := strings.Split(tag, ",")
-		if len(items) > 1 {
-			tag = items[0]
-			t := items[1]
-
-			marshaller, ok = marshallersByTag[strings.ToLower(t)]
-			if !ok {
-				return nil, fmt.Errorf("unknown type \"%s\" (%s.%s)", t, v.Type().Name(), f.Name)
-			}
-
-			if typeByTag[strings.ToLower(t)] != f.Type {
-				return nil,
-					fmt.Errorf("can't marshal \"%s\" as \"%s\" (%s.%s)", f.Type.String(), t, v.Type().Name(), f.Name)
-			}
-
-		} else {
-			marshaller, ok = marshallersByKind[f.Type.Kind()]
-			if !ok {
-				return nil, fmt.Errorf("can't marshal \"%s\" (%s.%s)", f.Type.String(), v.Type().Name(), f.Name)
-			}
-		}
-
-		if len(tag) <= 0 {
-			tag, ok = getName(f)
-			if !ok {
-				continue
-			}
-		}
-
-		s, t, err := marshaller(v.FieldByName(f.Name))
+	attrs := make([]*pb.Attribute, len(info.fields))
+	i := 0
+	for _, f := range info.fields {
+		s, t, err := f.marshaller(v.Field(f.idx))
 		if err != nil {
 			if err == ErrorInvalidStruct || err == ErrorInvalidSlice {
 				continue
@@ -147,38 +219,11 @@ func marshalTaggedStruct(v reflect.Value, fields []reflect.StructField) ([]*pb.A
 			return nil, err
 		}
 
-		attrs = append(attrs, &pb.Attribute{Id: tag, Type: t, Value: s})
+		attrs[i] = &pb.Attribute{Id: f.tag, Type: t, Value: s}
+		i++
 	}
 
-	return attrs, nil
-}
-
-func marshalUntaggedStruct(v reflect.Value, fields []reflect.StructField) ([]*pb.Attribute, error) {
-	attrs := make([]*pb.Attribute, 0)
-	for _, f := range fields {
-		marshaller, ok := marshallersByKind[f.Type.Kind()]
-		if !ok {
-			continue
-		}
-
-		name, ok := getName(f)
-		if !ok {
-			continue
-		}
-
-		s, t, err := marshaller(v.FieldByName(name))
-		if err != nil {
-			if err == ErrorInvalidStruct || err == ErrorInvalidSlice {
-				continue
-			}
-
-			return nil, err
-		}
-
-		attrs = append(attrs, &pb.Attribute{Id: name, Type: t, Value: s})
-	}
-
-	return attrs, nil
+	return attrs[:i], nil
 }
 
 func boolMarshaller(v reflect.Value) (string, string, error) {
