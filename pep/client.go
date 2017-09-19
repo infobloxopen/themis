@@ -68,7 +68,6 @@ var (
 // types of fields allow assignment if there is no field with appropriate
 // name and type response attribute silently dropped. The same as for marshaling
 // `pdp` key can control unmarshaling.
-
 type Client interface {
 	// Connect establishes connection to PDP server.
 	Connect() error
