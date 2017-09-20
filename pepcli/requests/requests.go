@@ -1,11 +1,10 @@
-package test
+package requests
 
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-service && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/service.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-service && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-service"
 
 import (
 	"fmt"
 	"gopkg.in/yaml.v2"
-	"io"
 	"io/ioutil"
 	"net"
 	"strconv"
@@ -18,100 +17,48 @@ import (
 type requests struct {
 	Attributes map[string]string
 	Requests   []map[string]interface{}
-
-	symbols map[string]int
 }
 
-type request struct {
-	index    int
-	position int
-	request  pb.Request
-	err      error
-}
-
-func loadRequests(name string) (*requests, error) {
+func Load(name string) ([]pb.Request, error) {
 	b, err := ioutil.ReadFile(name)
 	if err != nil {
 		return nil, err
 	}
 
-	r := &requests{}
-	err = yaml.Unmarshal(b, r)
+	in := &requests{}
+	err = yaml.Unmarshal(b, in)
 	if err != nil {
 		return nil, err
 	}
 
-	r.symbols = make(map[string]int)
-	for k, v := range r.Attributes {
+	symbols := make(map[string]int)
+	for k, v := range in.Attributes {
 		t, ok := pdp.TypeIDs[strings.ToLower(v)]
 		if !ok {
 			return nil, fmt.Errorf("unknown type \"%s\" of \"%s\" attribute", v, k)
 		}
 
-		r.symbols[k] = t
+		symbols[k] = t
 	}
 
-	return r, nil
-}
-
-func (r *requests) parse(count int) chan request {
-	ch := make(chan request)
-	go func() {
-		defer close(ch)
-
-		length := len(r.Requests)
-		if count <= 0 {
-			count = length
-		}
-
-		for i := 0; i < count; i++ {
-			j := i % length
-			req := r.Requests[j]
-
-			attrs := []*pb.Attribute{}
-			for name, value := range req {
-				attr, err := makeAttribute(name, value, r.symbols)
-				if err != nil {
-					ch <- request{index: i + 1, position: j + 1, err: err}
-					return
-				}
-
-				attrs = append(attrs, attr)
+	out := make([]pb.Request, len(in.Requests))
+	for i, r := range in.Requests {
+		attrs := make([]*pb.Attribute, len(r))
+		j := 0
+		for k, v := range r {
+			a, err := makeAttribute(k, v, symbols)
+			if err != nil {
+				return nil, fmt.Errorf("invalid attribute in request %d: %s", i+1, err)
 			}
 
-			ch <- request{
-				index:    i + 1,
-				position: j + 1,
-				request: pb.Request{
-					Attributes: attrs,
-				},
-			}
+			attrs[j] = a
+			j++
 		}
-	}()
 
-	return ch
-}
-
-func dumpResponse(r *pb.Response, f io.Writer) error {
-	lines := []string{fmt.Sprintf("- effect: %s", r.Effect.String())}
-	if len(r.Reason) > 0 {
-		lines = append(lines, fmt.Sprintf("  reason: %q", r.Reason))
+		out[i] = pb.Request{Attributes: attrs}
 	}
 
-	if len(r.Obligation) > 0 {
-		lines = append(lines, "  obligation:")
-		for _, attr := range r.Obligation {
-			lines = append(lines, fmt.Sprintf("    - id: %q", attr.Id))
-			lines = append(lines, fmt.Sprintf("      type: %q", attr.Type))
-			lines = append(lines, fmt.Sprintf("      value: %q", attr.Value))
-			lines = append(lines, "")
-		}
-	} else {
-		lines = append(lines, "")
-	}
-
-	_, err := fmt.Fprintf(f, "%s\n", strings.Join(lines, "\n"))
-	return err
+	return out, nil
 }
 
 type attributeMarshaller func(value interface{}) (string, error)
