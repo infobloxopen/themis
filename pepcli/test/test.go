@@ -10,20 +10,18 @@ import (
 
 const (
 	Name        = "test"
-	Description = "tests given requests on PDP server"
+	Description = "evaluates given requests on PDP server"
 )
 
-func Exec(addr string, v interface{}) error {
-	input := v.(config).input
-	reqs, err := loadRequests(input)
+func Exec(addr, in, out string, n int, v interface{}) error {
+	reqs, err := loadRequests(in)
 	if err != nil {
-		return fmt.Errorf("can't load requests from \"%s\"", input)
+		return fmt.Errorf("can't load requests from \"%s\"", in)
 	}
 
-	name := v.(config).output
 	f := os.Stdout
-	if len(name) > 0 {
-		f, err = os.Create(name)
+	if len(out) > 0 {
+		f, err = os.Create(out)
 		if err != nil {
 			return err
 		}
@@ -37,7 +35,7 @@ func Exec(addr string, v interface{}) error {
 	}
 	defer c.Close()
 
-	for req := range reqs.parse(v.(config).count) {
+	for req := range reqs.parse(n) {
 		if req.err != nil {
 			return fmt.Errorf("don't understand request %d: %s", req.position, req.err)
 		}
