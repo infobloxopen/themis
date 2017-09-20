@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/infobloxopen/themis/pepcli/perf"
 	"github.com/infobloxopen/themis/pepcli/test"
 )
 
@@ -39,9 +40,13 @@ type (
 
 var (
 	cmds = map[string]command{
-		test.Name: command{
+		test.Name: {
 			exec:   test.Exec,
 			parser: test.FlagsParser,
+		},
+		perf.Name: {
+			exec:   perf.Exec,
+			parser: perf.FlagsParser,
 		},
 	}
 
@@ -49,6 +54,10 @@ var (
 		{
 			name: test.Name,
 			desc: test.Description,
+		},
+		{
+			name: perf.Name,
+			desc: perf.Description,
 		},
 	}
 )
