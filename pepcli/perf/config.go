@@ -9,7 +9,7 @@ import (
 )
 
 type config struct {
-	parallel bool
+	parallel int
 }
 
 var perfFlagSet = flag.NewFlagSet(Name, flag.ExitOnError)
@@ -18,7 +18,8 @@ func FlagsParser(args []string) interface{} {
 	conf := config{}
 
 	perfFlagSet.Usage = usage
-	perfFlagSet.BoolVar(&conf.parallel, "p", false, "make requests in parallel")
+	perfFlagSet.IntVar(&conf.parallel, "p", 0, "make given number of requests in parallel "+
+		"(default and zero - make requests sequentially; negative - make all requess in parallel)")
 	perfFlagSet.Parse(args)
 
 	count := perfFlagSet.NArg()

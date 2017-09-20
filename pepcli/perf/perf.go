@@ -38,7 +38,35 @@ func Exec(addr, in, out string, n int, v interface{}) error {
 
 	recs := make([]timing, n)
 
-	if v.(config).parallel {
+	p := v.(config).parallel
+	if p > 0 {
+		ch := make(chan int, p)
+
+		var wg sync.WaitGroup
+		for i := 0; i < n; i++ {
+			ch <- 0
+
+			wg.Add(1)
+			go func(i int, req pb.Request) {
+				defer func() {
+					wg.Done()
+					<-ch
+				}()
+
+				res := &pb.Response{}
+
+				recs[i].setSend()
+				err := c.ModalValidate(req, res)
+				if err != nil {
+					recs[i].setError(err)
+				} else {
+					recs[i].setReceive()
+				}
+			}(i, reqs[i%len(reqs)])
+		}
+
+		wg.Wait()
+	} else if p < 0 {
 		var wg sync.WaitGroup
 		for i := 0; i < n; i++ {
 			wg.Add(1)
