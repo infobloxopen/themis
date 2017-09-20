@@ -1,4 +1,4 @@
-package main
+package test
 
 import (
 	"fmt"
@@ -8,9 +8,20 @@ import (
 	"github.com/infobloxopen/themis/pep"
 )
 
-func send(addr string, reqs *requests, count int, name string) error {
+const (
+	Name        = "test"
+	Description = "tests given requests on PDP server"
+)
+
+func Exec(addr string, v interface{}) error {
+	input := v.(config).input
+	reqs, err := loadRequests(input)
+	if err != nil {
+		return fmt.Errorf("can't load requests from \"%s\"", input)
+	}
+
+	name := v.(config).output
 	f := os.Stdout
-	var err error
 	if len(name) > 0 {
 		f, err = os.Create(name)
 		if err != nil {
@@ -26,7 +37,7 @@ func send(addr string, reqs *requests, count int, name string) error {
 	}
 	defer c.Close()
 
-	for req := range reqs.parse(count) {
+	for req := range reqs.parse(v.(config).count) {
 		if req.err != nil {
 			return fmt.Errorf("don't understand request %d: %s", req.position, req.err)
 		}
