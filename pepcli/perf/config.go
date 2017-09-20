@@ -9,19 +9,21 @@ import (
 )
 
 type config struct {
+	parallel bool
 }
 
-var testFlagSet = flag.NewFlagSet(Name, flag.ExitOnError)
+var perfFlagSet = flag.NewFlagSet(Name, flag.ExitOnError)
 
 func FlagsParser(args []string) interface{} {
 	conf := config{}
 
-	testFlagSet.Usage = usage
-	testFlagSet.Parse(args)
+	perfFlagSet.Usage = usage
+	perfFlagSet.BoolVar(&conf.parallel, "p", false, "make requests in parallel")
+	perfFlagSet.Parse(args)
 
-	count := testFlagSet.NArg()
+	count := perfFlagSet.NArg()
 	if count > 1 {
-		tail := strings.Join(testFlagSet.Args()[1:count], "\", \"")
+		tail := strings.Join(perfFlagSet.Args()[1:count], "\", \"")
 		fmt.Fprintf(os.Stderr, "trailing arguments after cluster name: \"%s\"\n", tail)
 		usage()
 		os.Exit(2)
@@ -34,8 +36,9 @@ func usage() {
 	base := path.Base(os.Args[0])
 	fmt.Fprintf(os.Stderr,
 		"Usage of %s.%s:\n\n"+
-			"  %s [GLOBAL OPTIONS] %s\n\n"+
+			"  %s [GLOBAL OPTIONS] %s [%s OPTIONS]\n\n"+
 			"GLOBAL OPTIONS:\n"+
-			"  See %s -h\n\n", base, Name, base, Name, base)
-	testFlagSet.PrintDefaults()
+			"  See %s -h\n\n"+
+			"%s OPTIONS:\n", base, Name, base, Name, strings.ToUpper(Name), base, strings.ToUpper(Name))
+	perfFlagSet.PrintDefaults()
 }

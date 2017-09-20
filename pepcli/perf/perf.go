@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"sync"
 	"time"
 
 	pb "github.com/infobloxopen/themis/pdp-service"
@@ -37,30 +38,59 @@ func Exec(addr, in, out string, n int, v interface{}) error {
 
 	recs := make([]timing, n)
 
-	res := &pb.Response{}
-	for i := 0; i < n; i++ {
-		idx := i % len(reqs)
-		req := reqs[idx]
+	if v.(config).parallel {
+		var wg sync.WaitGroup
+		for i := 0; i < n; i++ {
+			wg.Add(1)
+			go func(i int, req pb.Request) {
+				defer wg.Done()
 
-		recs[i].setSend()
-		err := c.ModalValidate(req, res)
-		if err != nil {
-			return fmt.Errorf("can't send request %d (%d): %s", idx, i, err)
+				res := &pb.Response{}
+
+				recs[i].setSend()
+				err := c.ModalValidate(req, res)
+				if err != nil {
+					recs[i].setError(err)
+				} else {
+					recs[i].setReceive()
+				}
+			}(i, reqs[i%len(reqs)])
 		}
-		recs[i].setReceive()
+
+		wg.Wait()
+	} else {
+		res := &pb.Response{}
+		for i := 0; i < n; i++ {
+			idx := i % len(reqs)
+			req := reqs[idx]
+
+			recs[i].setSend()
+			err := c.ModalValidate(req, res)
+			if err != nil {
+				return fmt.Errorf("can't send request %d (%d): %s", idx, i, err)
+			}
+			recs[i].setReceive()
+		}
 	}
 
 	tm := timings{
 		Sends:    make([]int64, len(recs)),
 		Receives: make([]int64, len(recs)),
-		Pairs:    make([][3]int64, len(recs)),
+		Pairs:    make([][]int64, len(recs)),
 	}
 
+	sort.Sort(bySend(recs))
 	for i, t := range recs {
 		tm.Sends[i] = t.s.UnixNano()
-		tm.Pairs[i][0] = t.s.UnixNano()
-		tm.Pairs[i][1] = t.r.UnixNano()
-		tm.Pairs[i][2] = tm.Pairs[i][1] - tm.Pairs[i][0]
+		if t.e != nil {
+			tm.Pairs[i] = []int64{t.s.UnixNano()}
+		} else {
+			tm.Pairs[i] = []int64{
+				t.s.UnixNano(),
+				t.r.UnixNano(),
+				t.r.UnixNano() - t.s.UnixNano(),
+			}
+		}
 	}
 
 	sort.Sort(byRecive(recs))
@@ -96,6 +126,7 @@ func Exec(addr, in, out string, n int, v interface{}) error {
 type timing struct {
 	s time.Time
 	r time.Time
+	e error
 }
 
 func (t *timing) setSend() {
@@ -106,14 +137,38 @@ func (t *timing) setReceive() {
 	t.r = time.Now()
 }
 
+func (t *timing) setError(err error) {
+	t.e = err
+}
+
+type bySend []timing
+
+func (s bySend) Len() int           { return len(s) }
+func (s bySend) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s bySend) Less(i, j int) bool { return s[i].s.Before(s[j].s) }
+
 type byRecive []timing
 
-func (s byRecive) Len() int           { return len(s) }
-func (s byRecive) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-func (s byRecive) Less(i, j int) bool { return s[i].r.Before(s[j].r) }
+func (s byRecive) Len() int      { return len(s) }
+func (s byRecive) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s byRecive) Less(i, j int) bool {
+	if s[i].e != nil && s[j].e != nil {
+		return s[i].s.Before(s[j].s)
+	}
+
+	if s[i].e != nil {
+		return false
+	}
+
+	if s[j].e != nil {
+		return true
+	}
+
+	return s[i].r.Before(s[j].r)
+}
 
 type timings struct {
-	Sends    []int64    `json:"sends"`
-	Receives []int64    `json:"receives"`
-	Pairs    [][3]int64 `json:"pairs"`
+	Sends    []int64   `json:"sends"`
+	Receives []int64   `json:"receives"`
+	Pairs    [][]int64 `json:"pairs"`
 }
