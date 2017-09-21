@@ -20,7 +20,7 @@ bootstrap:
 clean: clean-cover clean-pepcli clean-papcli clean-pdpserver clean-egen
 
 .PHONY: fmt
-fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jcon fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pdpserver fmt-middleware fmt-egen
+fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jcon fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver fmt-middleware fmt-egen
 
 .PHONY: build
 build: build-pepcli build-papcli build-pdpserver build-middleware build-egen
@@ -90,6 +90,21 @@ fmt-pep:
 fmt-pepcli:
 	@echo "Checking PEP CLI format..."
 	@$(AT)/pepcli && $(GOFMTCHECK)
+
+.PHONY: fmt-pepcli-requests
+fmt-pepcli-requests:
+	@echo "Checking PEP CLI requests package format..."
+	@$(AT)/pepcli/requests && $(GOFMTCHECK)
+
+.PHONY: fmt-pepcli-test
+fmt-pepcli-test:
+	@echo "Checking PEP CLI test package format..."
+	@$(AT)/pepcli/test && $(GOFMTCHECK)
+
+.PHONY: fmt-pepcli-perf
+fmt-pepcli-perf:
+	@echo "Checking PEP CLI perf package format..."
+	@$(AT)/pepcli/perf && $(GOFMTCHECK)
 
 .PHONY: fmt-pdpserver
 fmt-pdpserver:
