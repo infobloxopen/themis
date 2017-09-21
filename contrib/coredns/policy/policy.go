@@ -139,13 +139,13 @@ func (p *PolicyMiddleware) AddEDNS0Map(code, name, dataType, destType,
 	return nil
 }
 
-func (p *PolicyMiddleware) getEDNS0Attrs(r *dns.Msg) ([]*pb.Attribute, bool) {
+func (p *PolicyMiddleware) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pb.Attribute {
 	foundSourceIP := false
 	var attrs []*pb.Attribute
 
 	o := r.IsEdns0()
 	if o == nil {
-		return nil, false
+		return nil
 	}
 
 	for _, s := range o.Option {
@@ -179,7 +179,12 @@ func (p *PolicyMiddleware) getEDNS0Attrs(r *dns.Msg) ([]*pb.Attribute, bool) {
 			}
 		}
 	}
-	return attrs, foundSourceIP
+	if foundSourceIP {
+		attrs = append(attrs, &pb.Attribute{Id: "proxy_source_ip", Type: "address", Value: ip})
+	} else {
+		attrs = append(attrs, &pb.Attribute{Id: "source_ip", Type: "address", Value: ip})
+	}
+	return attrs
 }
 
 func (p *PolicyMiddleware) retRcode(w dns.ResponseWriter, r *dns.Msg, rcode int) (int, error) {
@@ -200,7 +205,6 @@ func (p *PolicyMiddleware) retDebugInfo(r *dns.Msg, w dns.ResponseWriter,
 	r.Response = true
 	r.Rcode = dns.RcodeSuccess
 	w.WriteMsg(r)
-	log.Printf("[DEBUG] Query \"%s\" response [%s]", r.Question[0].Name, debugQueryInfo)
 	return dns.RcodeSuccess, nil
 }
 
@@ -298,14 +302,8 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 		{Id: "dns_qtype", Type: "string", Value: dns.TypeToString[state.QType()]},
 	}
 
-	edns, foundSourceIP := p.getEDNS0Attrs(r)
-	attrs = append(attrs, edns...)
-
-	if foundSourceIP {
-		attrs = append(attrs, &pb.Attribute{Id: "proxy_source_ip", Type: "address", Value: state.IP()})
-	} else {
-		attrs = append(attrs, &pb.Attribute{Id: "source_ip", Type: "address", Value: state.IP()})
-	}
+	ednsAttrs := p.getAttrsFromEDNS0(r, state.IP())
+	attrs = append(attrs, ednsAttrs...)
 
 	var response pb.Response
 	err := p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &response)
