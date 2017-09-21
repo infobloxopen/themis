@@ -30,7 +30,9 @@ func dump(recs []timing, path string) error {
 
 	sort.Sort(byRecive(recs))
 	for i, t := range recs {
-		tm.Receives[i] = t.r.UnixNano()
+		if t.e == nil {
+			tm.Receives[i] = t.r.UnixNano()
+		}
 	}
 
 	b, err := json.MarshalIndent(tm, "", "  ")
