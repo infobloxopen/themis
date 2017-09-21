@@ -20,7 +20,7 @@ INFO[0000] Serving control requests
 
 In other terminal run pepcli to make some requests to pdpserver:
 ```
-$ pepcli -i all-permit.requests.yaml
+$ pepcli -i all-permit.requests.yaml test
 Got 6 requests. Sending...
 - effect: PERMIT
   reason: "Ok"
@@ -97,7 +97,7 @@ INFO[0000] Serving control requests
 
 And run requests for the policy:
 ```
-$ pepcli -i permit-x-test.requests.yaml
+$ pepcli -i permit-x-test.requests.yaml test
 Got 2 requests. Sending...
 - effect: PERMIT
   reason: "Ok"

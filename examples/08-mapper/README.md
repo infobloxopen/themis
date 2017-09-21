@@ -20,7 +20,7 @@ INFO[0000] Serving control requests
 
 In other terminal run pepcli:
 ```
-$ pepcli -i mapper.requests.yaml
+$ pepcli -i mapper.requests.yaml test
 Got 6 requests. Sending...
 - effect: DENY
   reason: "Ok"

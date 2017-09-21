@@ -4,7 +4,7 @@ Themis represents a set of tools for managing and enforcing security policies al
 - **pdpserver** - standalone application server which runs PDP;
 - **proto**, **pdp-service**, **pdp-control** - gRPC protocol definitions and implementations;
 - **pep** - golang client package for "service" protocol (Policy Enforcement Point or PEP);
-- **pepcli** - CLI application which implements simple PEP;
+- **pepcli** - CLI application which implements simple PEP and performance measurement tool for PDP server;
 - **pdpctr-client** - golang client package for "control" protocol (Policy Administration Point or PAP);
 - **papcli** - CLI application which implements simple PAP;
 - **egen** - error processing code generator (development tool).
@@ -544,7 +544,7 @@ INFO[0000] Serving control requests
 ```
 in the other terminal run PEPCLI:
 ```
-$ pepcli -i requests.yaml
+$ pepcli -i requests.yaml test
 Got 2 requests. Sending...
 - effect: PERMIT
   reason: "Ok"
