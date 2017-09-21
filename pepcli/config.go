@@ -67,10 +67,9 @@ func init() {
 
 	flag.StringVar(&conf.server, "s", "127.0.0.1:5555", "PDP server to work with")
 	flag.StringVar(&conf.input, "i", "requests.yaml", "file with YAML formatted list of requests to send to PDP")
-	flag.IntVar(&conf.count, "n", 0, "number or requests to send "+
+	flag.IntVar(&conf.count, "n", 0, "number or requests to send\n\t"+
 		"(default and value less than one means all requests from file)")
-	flag.StringVar(&conf.output, "o", "", "file to write YAML formatted list of responses from PDP "+
-		"(default stdout)")
+	flag.StringVar(&conf.output, "o", "", "file to write command output (default stdout)")
 
 	flag.Parse()
 
