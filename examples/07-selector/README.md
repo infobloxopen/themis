@@ -20,7 +20,7 @@ INFO[0000] Serving control requests
 
 In other terminal run pepcli:
 ```
-$ pepcli -i selector.requests.yaml
+$ pepcli -i selector.requests.yaml test
 Got 4 requests. Sending...
 - effect: PERMIT
   reason: "Ok"

@@ -18,7 +18,7 @@ INFO[0000] Serving control requests
 
 In other terminal run pepcli:
 ```
-$ pepcli -i policy.requests.yaml
+$ pepcli -i policy.requests.yaml test
 Got 2 requests. Sending...
 - effect: PERMIT
   reason: "Ok"
