@@ -75,6 +75,26 @@ func TestPolicyConfigParse(t *testing.T) {
 			endpoints:  []string{"10.2.4.1:5555"},
 			errContent: "Could not add EDNS0 map",
 		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							debug_query_suffix
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Wrong argument count or unexpected line ending",
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							debug_query_suffix debug.local.
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "",
+		},
 	}
 
 	for _, test := range tests {
