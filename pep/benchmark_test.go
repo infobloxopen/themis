@@ -983,15 +983,15 @@ func (p *pipe) dump() []string {
 }
 
 func (p *pipe) cleanup() []string {
+	if p.w != nil {
+		p.w.Close()
+		p.w = nil
+	}
+
 	if p.r != nil {
 		p.r.Close()
 		p.r = nil
 		p.Wait()
-	}
-
-	if p.w != nil {
-		p.w.Close()
-		p.w = nil
 	}
 
 	return p.storage.lines
