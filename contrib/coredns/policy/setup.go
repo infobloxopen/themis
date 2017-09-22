@@ -90,6 +90,13 @@ func policyParse(c *caddy.Controller) (*PolicyMiddleware, error) {
 					} else {
 						return nil, fmt.Errorf("Invalid edns0 directive")
 					}
+				case "debug_query_suffix":
+					args := c.RemainingArgs()
+					if len(args) == 1 {
+						mw.DebugSuffix = args[0]
+						continue
+					}
+					return nil, c.ArgErr()
 				}
 			}
 			return mw, nil

@@ -151,6 +151,15 @@ func TestPolicy(t *testing.T) {
 			err:    nil,
 		},
 		{
+			query:     "test.com.",
+			queryType: dns.TypeA,
+			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.Response_DENY,
+				Obligation: []*pdp.Attribute{{"refuse", "string", "true"}}},
+			status: dns.RcodeRefused,
+			err:    nil,
+		},
+		{
 			query:     "nxdomain.org.",
 			queryType: dns.TypeA,
 			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
@@ -161,7 +170,7 @@ func TestPolicy(t *testing.T) {
 
 	rec := dnsrecorder.New(&test.ResponseWriter{})
 
-	for _, test := range tests {
+	for i, test := range tests {
 		req := new(dns.Msg)
 		req.SetQuestion(test.query, test.queryType)
 		// add ENDS options to request
@@ -183,14 +192,42 @@ func TestPolicy(t *testing.T) {
 		status, err := pm.ServeDNS(context.TODO(), rec, req)
 		// Check status
 		if test.status != status {
-			t.Errorf("Expected status %q but got %q\n", test.status, status)
+			t.Errorf("Case test[%d]: expected status %q but got %q\n", i, test.status, status)
 		}
 		// Check error
 		if test.err != err {
-			t.Errorf("Expected error %v but got %v\n", test.err, err)
+			t.Errorf("Case test[%d]: expected error %v but got %v\n", i, test.err, err)
 		}
 	}
 
+	pm.DebugSuffix = "debug."
+	for i, test := range tests {
+		req := new(dns.Msg)
+		req.Question = make([]dns.Question, 1)
+		req.Question[0] = dns.Question{test.query + pm.DebugSuffix, dns.TypeTXT, dns.ClassCHAOS}
+		// Init test mock client
+		pm.pdp = newTestClientInit(test.response, test.responseIP, test.errResp, test.errRespIP)
+		// Handle request
+		status, err := pm.ServeDNS(context.TODO(), rec, req)
+		var test_status int
+		var test_err error
+		if test.err == errFakePdp {
+			test_err = errFakePdp
+			test_status = dns.RcodeServerFailure
+		}
+		if test.status == dns.RcodeRefused {
+			test_status = dns.RcodeRefused
+			test_err = nil
+		}
+		// Check status
+		if test_status != status {
+			t.Errorf("Case debug[%d]: expected status %q but got %q\n", i, test_status, status)
+		}
+		// Check error
+		if test_err != err {
+			t.Errorf("Case debug[%d]: expected error %v but got %v\n", i, test_err, err)
+		}
+	}
 }
 
 func handler() middleware.Handler {
@@ -269,25 +306,11 @@ func (c *testClient) ModalValidate(in, out interface{}) error {
 }
 
 func fillResponse(in *pdp.Response, out interface{}) error {
-	r, ok := out.(*Response)
+	r, ok := out.(*pdp.Response)
 	if !ok {
-		return fmt.Errorf("testClient can only translate response to *Response type but got %T", out)
+		return fmt.Errorf("testClient can only translate response to *pb.Response type but got %T", out)
 	}
-
-	r.Permit = in.Effect == pdp.Response_PERMIT
-
-	for _, attr := range in.Obligation {
-		switch attr.Id {
-		case "redirect_to":
-			r.Redirect = attr.Value
-
-		case "policy_id":
-			r.PolicyID = attr.Value
-
-		case "refuse":
-			r.Refuse = attr.Value
-		}
-	}
-
+	r.Effect = in.Effect
+	r.Obligation = in.Obligation
 	return nil
 }

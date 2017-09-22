@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/coredns/coredns/middleware"
+	"github.com/coredns/coredns/middleware/pkg/nonwriter"
 	"github.com/coredns/coredns/middleware/pkg/trace"
 	"github.com/coredns/coredns/request"
 
@@ -30,6 +31,10 @@ const (
 	typeEDNS0Bytes = iota
 	typeEDNS0Hex
 	typeEDNS0IP
+	typeRefuse = iota
+	typeAllow
+	typeRedirect
+	typeBlock
 )
 
 var stringToEDNS0MapType = map[string]uint16{
@@ -50,20 +55,47 @@ type edns0Map struct {
 // PolicyMiddleware represents a middleware instance that can validate DNS
 // requests and replies using PDP server.
 type PolicyMiddleware struct {
-	Endpoints []string
-	symbols   []edns0Map
-	Trace     middleware.Handler
-	Next      middleware.Handler
-	pdp       pep.Client
-	ErrorFunc func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
+	Endpoints   []string
+	symbols     []edns0Map
+	Trace       middleware.Handler
+	Next        middleware.Handler
+	pdp         pep.Client
+	DebugSuffix string
+	ErrorFunc   func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
 }
 
-// Response represents decision received from PDP server.
 type Response struct {
-	Permit   bool   `pdp:"Effect"`
-	Redirect string `pdp:"redirect_to"`
-	PolicyID string `pdp:"policy_id"`
-	Refuse   string `pdp:"refuse"`
+	Action   int
+	Redirect string
+}
+
+func makeResponse(resp pb.Response) (ret Response) {
+	if resp.Effect == pb.Response_PERMIT {
+		ret.Action = typeAllow
+		return
+	} else if resp.Effect == pb.Response_DENY {
+		for _, item := range resp.Obligation {
+			switch item.Id {
+			case "refuse":
+				if item.Value == "true" {
+					ret.Action = typeRefuse
+					return
+				}
+			case "redirect_to":
+				if item.Value != "" {
+					ret.Action = typeRedirect
+					ret.Redirect = item.Value
+					return
+				}
+			}
+		}
+		ret.Action = typeBlock
+		return
+	} else {
+		log.Printf("[ERROR] PDP Effect %s", resp.Effect)
+		ret.Action = typeRefuse
+		return
+	}
 }
 
 // Connect establishes connection to PDP server.
@@ -107,13 +139,13 @@ func (p *PolicyMiddleware) AddEDNS0Map(code, name, dataType, destType,
 	return nil
 }
 
-func (p *PolicyMiddleware) getEDNS0Attrs(r *dns.Msg) ([]*pb.Attribute, bool) {
+func (p *PolicyMiddleware) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pb.Attribute {
 	foundSourceIP := false
 	var attrs []*pb.Attribute
 
 	o := r.IsEdns0()
 	if o == nil {
-		return nil, false
+		return nil
 	}
 
 	for _, s := range o.Option {
@@ -147,43 +179,13 @@ func (p *PolicyMiddleware) getEDNS0Attrs(r *dns.Msg) ([]*pb.Attribute, bool) {
 			}
 		}
 	}
-	return attrs, foundSourceIP
+	if foundSourceIP {
+		attrs = append(attrs, &pb.Attribute{Id: "proxy_source_ip", Type: "address", Value: ip})
+	} else {
+		attrs = append(attrs, &pb.Attribute{Id: "source_ip", Type: "address", Value: ip})
+	}
+	return attrs
 }
-
-// NewLocalResponseWriter implements intermediate ResponseWriter to apply all
-// other middleware effects before validating DNS reply.
-type NewLocalResponseWriter struct {
-	localAddr  net.Addr
-	remoteAddr net.Addr
-	Msg        *dns.Msg
-}
-
-// Write implements the dns.ResponseWriter interface.
-func (r *NewLocalResponseWriter) Write(b []byte) (int, error) {
-	r.Msg = new(dns.Msg)
-	return len(b), r.Msg.Unpack(b)
-}
-
-// Close implements the dns.ResponseWriter interface.
-func (r *NewLocalResponseWriter) Close() error { return nil }
-
-// TsigStatus implements the dns.ResponseWriter interface.
-func (r *NewLocalResponseWriter) TsigStatus() error { return nil }
-
-// TsigTimersOnly implements the dns.ResponseWriter interface.
-func (r *NewLocalResponseWriter) TsigTimersOnly(b bool) { return }
-
-// Hijack implements the dns.ResponseWriter interface.
-func (r *NewLocalResponseWriter) Hijack() { return }
-
-// LocalAddr implements the dns.ResponseWriter interface.
-func (r *NewLocalResponseWriter) LocalAddr() net.Addr { return r.localAddr }
-
-// RemoteAddr implements the dns.ResponseWriter interface.
-func (r *NewLocalResponseWriter) RemoteAddr() net.Addr { return r.remoteAddr }
-
-// WriteMsg implements the dns.ResponseWriter interface.
-func (r *NewLocalResponseWriter) WriteMsg(m *dns.Msg) error { r.Msg = m; return nil }
 
 func (p *PolicyMiddleware) retRcode(w dns.ResponseWriter, r *dns.Msg, rcode int) (int, error) {
 	msg := &dns.Msg{}
@@ -192,10 +194,34 @@ func (p *PolicyMiddleware) retRcode(w dns.ResponseWriter, r *dns.Msg, rcode int)
 	return rcode, nil
 }
 
-func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, attrs []*pb.Attribute) (int, error) {
-	lw := new(NewLocalResponseWriter)
-	status, err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lw, r)
+func (p *PolicyMiddleware) retDebugInfo(r *dns.Msg, w dns.ResponseWriter,
+	resp pb.Response, resolve string) (int, error) {
+	hdr := dns.RR_Header{Name: r.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassCHAOS, Ttl: 0}
+	debugQueryInfo := fmt.Sprintf("resolve: %s effect: %s", resolve, resp.Effect)
+	for _, item := range resp.Obligation {
+		debugQueryInfo += fmt.Sprintf(" %s: %s", item.Id, item.Value)
+	}
+	r.Answer = append(r.Answer, &dns.TXT{Hdr: hdr, Txt: []string{debugQueryInfo}})
+	r.Response = true
+	r.Rcode = dns.RcodeSuccess
+	w.WriteMsg(r)
+	return dns.RcodeSuccess, nil
+}
+
+func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWriter,
+	r *dns.Msg, attrs []*pb.Attribute, respDomain pb.Response, debugQuery bool) (int, error) {
+	req := r
+	lw := nonwriter.New(w)
+	if debugQuery {
+		req = new(dns.Msg)
+		name := strings.TrimSuffix(r.Question[0].Name, p.DebugSuffix)
+		req.SetQuestion(name, dns.TypeA)
+	}
+	status, err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lw, req)
 	if err != nil {
+		if debugQuery {
+			return p.retDebugInfo(r, w, respDomain, "failed")
+		}
 		return status, err
 	}
 
@@ -215,77 +241,93 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 	// address is not filled from the answer
 	// in this case just pass through answer w/o validation
 	if address == "" {
+		if debugQuery {
+			return p.retDebugInfo(r, w, respDomain, "no")
+		}
 		w.WriteMsg(lw.Msg)
 		return status, nil
 	}
 
 	attrs[0].Value = "response"
 	attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: address})
+	attrs = append(attrs, respDomain.Obligation...)
 
-	var response Response
+	var response pb.Response
 	err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &response)
 	if err != nil {
-		log.Printf("[ERROR] Policy validation failed due to error %s\n", err)
+		log.Printf("[ERROR] Policy validation failed due to error %s", err)
 		return dns.RcodeServerFailure, err
 	}
 
-	if response.Permit {
+	resp := makeResponse(response)
+
+	if debugQuery && resp.Action != typeRefuse {
+		return p.retDebugInfo(r, w, response, "yes")
+	}
+
+	switch resp.Action {
+	case typeAllow:
 		w.WriteMsg(lw.Msg)
 		return status, nil
+	case typeRedirect:
+		return p.redirect(ctx, w, r, resp.Redirect)
+	case typeBlock:
+		return p.retRcode(w, r, dns.RcodeNameError)
 	}
 
-	if response.Redirect != "" {
-		return p.redirect(ctx, w, r, response.Redirect)
-	}
-
-	return p.retRcode(w, r, dns.RcodeNameError)
+	return p.retRcode(w, r, dns.RcodeRefused)
 }
 
 // ServeDNS implements the Handler interface.
 func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+	var (
+		debugQuery bool
+		domain     string
+	)
+
 	state := request.Request{W: w, Req: r}
 
+	domain = state.Name()
+	if state.QClass() == dns.ClassCHAOS && state.QType() == dns.TypeTXT {
+		if strings.HasSuffix(domain, p.DebugSuffix) {
+			debugQuery = true
+			domain = strings.TrimSuffix(domain, p.DebugSuffix)
+		}
+	}
+
 	// need to process OPT to get customer id
-	attrs := []*pb.Attribute{{Id: "type", Type: "string", Value: "query"}}
-
-	if len(r.Question) > 0 {
-		q := r.Question[0]
-		attrs = append(attrs, &pb.Attribute{Id: "domain_name", Type: "domain", Value: strings.TrimRight(q.Name, ".")})
-		attrs = append(attrs, &pb.Attribute{Id: "dns_qtype", Type: "string", Value: dns.TypeToString[q.Qtype]})
+	attrs := []*pb.Attribute{
+		{Id: "type", Type: "string", Value: "query"},
+		{Id: "domain_name", Type: "domain", Value: strings.TrimRight(domain, ".")},
+		{Id: "dns_qtype", Type: "string", Value: dns.TypeToString[state.QType()]},
 	}
 
-	edns, foundSourceIP := p.getEDNS0Attrs(r)
-	if len(edns) > 0 {
-		attrs = append(attrs, edns...)
-	}
+	ednsAttrs := p.getAttrsFromEDNS0(r, state.IP())
+	attrs = append(attrs, ednsAttrs...)
 
-	if foundSourceIP {
-		attrs = append(attrs, &pb.Attribute{Id: "proxy_source_ip", Type: "address", Value: state.IP()})
-	} else {
-		attrs = append(attrs, &pb.Attribute{Id: "source_ip", Type: "address", Value: state.IP()})
-	}
-
-	var response Response
+	var response pb.Response
 	err := p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &response)
 	if err != nil {
-		log.Printf("[ERROR] Policy validation failed due to error %s\n", err)
+		log.Printf("[ERROR] Policy validation failed due to error %s", err)
 		return dns.RcodeServerFailure, err
 	}
 
-	if response.Permit {
-		attrs = append(attrs, &pb.Attribute{Id: "policy_id", Type: "string", Value: response.PolicyID})
-		return p.handlePermit(ctx, w, r, attrs)
+	resp := makeResponse(response)
+
+	if debugQuery && (resp.Action == typeRedirect || resp.Action == typeBlock) {
+		return p.retDebugInfo(r, w, response, "skip")
 	}
 
-	if response.Redirect != "" {
-		return p.redirect(ctx, w, r, response.Redirect)
+	switch resp.Action {
+	case typeAllow:
+		return p.handlePermit(ctx, w, r, attrs, response, debugQuery)
+	case typeRedirect:
+		return p.redirect(ctx, w, r, resp.Redirect)
+	case typeBlock:
+		return p.retRcode(w, r, dns.RcodeNameError)
 	}
 
-	if response.Refuse == "true" {
-		return p.retRcode(w, r, dns.RcodeRefused)
-	}
-
-	return p.retRcode(w, r, dns.RcodeNameError)
+	return p.retRcode(w, r, dns.RcodeRefused)
 }
 
 // Name implements the Handler interface
@@ -321,7 +363,7 @@ func (p *PolicyMiddleware) redirect(ctx context.Context, w dns.ResponseWriter, r
 		msg := new(dns.Msg)
 		msg.SetQuestion(dst, state.QType())
 
-		lw := new(NewLocalResponseWriter)
+		lw := nonwriter.New(w)
 		status, err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lw, msg)
 		if err != nil {
 			return status, err
