@@ -1,14 +1,16 @@
 package: github.com/infobloxopen/themis
 import:
 - package: github.com/Sirupsen/logrus
-  version: 0.11.5
 - package: github.com/coredns/coredns
   subpackages:
   - core/dnsserver
-  - middleware
-  - middleware/pkg/trace
+  - plugin
   - request
 - package: github.com/golang/protobuf
+  subpackages:
+  - proto
+- package: github.com/apache/thrift
+- package: github.com/gogo/protobuf
   subpackages:
   - proto
 - package: github.com/grpc-ecosystem/grpc-opentracing
@@ -17,9 +19,7 @@ import:
 - package: github.com/mholt/caddy
 - package: github.com/miekg/dns
 - package: github.com/opentracing/opentracing-go
-  version: 1.0.1
 - package: github.com/openzipkin/zipkin-go-opentracing
-  version: 0.2.3
 - package: golang.org/x/net
   subpackages:
   - context
@@ -28,7 +28,6 @@ import:
   subpackages:
   - unicode/norm
 - package: google.golang.org/grpc
-  version: 1.3.0
   subpackages:
   - naming
 - package: gopkg.in/yaml.v2

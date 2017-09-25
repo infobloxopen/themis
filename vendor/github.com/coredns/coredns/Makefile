@@ -11,15 +11,15 @@ coredns: check godeps
 	CGO_ENABLED=0 $(SYSTEM) go build -v -ldflags="-s -w -X github.com/coredns/coredns/coremain.gitCommit=$(GITCOMMIT)" -o $(BINARY)
 
 .PHONY: check
-check: fmt core/zmiddleware.go core/dnsserver/zdirectives.go godeps
+check: linter core/zplugin.go core/dnsserver/zdirectives.go godeps
 
 .PHONY: test
 test: check
-	go test -race -v ./test ./middleware/...
+	go test -race -v ./test ./plugin/...
 
 .PHONY: testk8s
 testk8s: check
-	go test -race -v -tags=k8s -run 'TestKubernetes' ./test ./middleware/kubernetes/...
+	go test -race -v -tags=k8s -run 'TestKubernetes' ./test ./plugin/kubernetes/...
 
 .PHONY: godeps
 godeps:
@@ -38,8 +38,8 @@ endif
 ifeq ($(TEST_TYPE),integration)
 	( cd test ; go test -v  -tags 'etcd k8s' -race ./... )
 endif
-ifeq ($(TEST_TYPE),middleware)
-	( cd middleware ; go test -v  -tags 'etcd k8s' -race ./... )
+ifeq ($(TEST_TYPE),plugin)
+	( cd plugin ; go test -v  -tags 'etcd k8s' -race ./... )
 endif
 ifeq ($(TEST_TYPE),coverage)
 	for d in `go list ./... | grep -v vendor`; do \
@@ -55,24 +55,18 @@ ifeq ($(TEST_TYPE),coverage)
 endif
 
 
-core/zmiddleware.go core/dnsserver/zdirectives.go: middleware.cfg
+core/zplugin.go core/dnsserver/zdirectives.go: plugin.cfg
 	go generate coredns.go
 
 .PHONY: gen
 gen:
 	go generate coredns.go
 
-.PHONY: fmt
-fmt:
-	## run go fmt
-	@test -z "$$(find . -type d | grep -vE '(/vendor|^\.$$|/.git|/.travis)' | xargs gofmt -s -l  | tee /dev/stderr)" || \
-		(echo "please format Go code with 'gofmt -s -w'" && false)
-
-.PHONY: lint
-lint:
-	go get -u github.com/golang/lint/golint
-	@test -z "$$(find . -type d | grep -vE '(/vendor|^\.$$|/.git|/.travis)' | grep -vE '(^\./pb)' | xargs golint \
-		| grep -vE "context\.Context should be the first parameter of a function" | tee /dev/stderr)"
+.PHONY: linter
+linter:
+	go get -u github.com/alecthomas/gometalinter
+	gometalinter --install golint
+	gometalinter --deadline=1m --disable-all --enable=gofmt --enable=golint --enable=vet --exclude=^vendor/ --exclude=^pb/ ./...
 
 .PHONY: clean
 clean:

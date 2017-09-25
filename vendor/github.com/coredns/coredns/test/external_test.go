@@ -8,12 +8,12 @@ import (
 	"testing"
 )
 
-// Go get external example middleware, compile it into CoreDNS
+// Go get external example plugin, compile it into CoreDNS
 // and check if it is really there, but running coredns -plugins.
 
 // Dangerous test as it messes with your git tree, maybe use tag?
-func testExternalMiddlewareCompile(t *testing.T) {
-	if err := addExampleMiddleware(); err != nil {
+func testExternalPluginCompile(t *testing.T) {
+	if err := addExamplePlugin(); err != nil {
 		t.Fatal(err)
 	}
 	defer run(t, gitReset)
@@ -36,7 +36,7 @@ func testExternalMiddlewareCompile(t *testing.T) {
 	}
 
 	if !strings.Contains(string(out), "dns.example") {
-		t.Fatal("dns.example middleware should be there")
+		t.Fatal("dns.example plugin should be there")
 	}
 }
 
@@ -50,8 +50,8 @@ func run(t *testing.T, c *exec.Cmd) ([]byte, error) {
 
 }
 
-func addExampleMiddleware() error {
-	f, err := os.OpenFile("../middleware.cfg", os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+func addExamplePlugin() error {
+	f, err := os.OpenFile("../plugin.cfg", os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		return err
 	}

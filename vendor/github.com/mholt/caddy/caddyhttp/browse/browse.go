@@ -1,3 +1,17 @@
+// Copyright 2015 Light Code Labs, LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // Package browse provides middleware for listing files in a directory
 // when directory path is requested instead of a specific file.
 package browse
@@ -9,7 +23,6 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -294,18 +307,18 @@ func isSymlinkTargetDir(f os.FileInfo, urlPath string, config *Config) bool {
 		return false
 	}
 
-	// a bit strange but we want Stat thru the jailed filesystem to be safe
-	target, err := config.Fs.Root.Open(filepath.Join(urlPath, f.Name()))
+	// a bit strange, but we want Stat thru the jailed filesystem to be safe
+	target, err := config.Fs.Root.Open(path.Join(urlPath, f.Name()))
 	if err != nil {
 		return false
 	}
 	defer target.Close()
-	targetInto, err := target.Stat()
+	targetInfo, err := target.Stat()
 	if err != nil {
 		return false
 	}
 
-	return targetInto.IsDir()
+	return targetInfo.IsDir()
 }
 
 // ServeHTTP determines if the request is for this plugin, and if all prerequisites are met.

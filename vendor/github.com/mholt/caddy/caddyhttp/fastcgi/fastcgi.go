@@ -1,3 +1,17 @@
+// Copyright 2015 Light Code Labs, LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // Package fastcgi has middleware that acts as a FastCGI client. Requests
 // that get forwarded to FastCGI stop the middleware execution chain.
 // The most common use for this package is to serve PHP websites via php-fpm.
@@ -18,6 +32,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/mholt/caddy"
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 )
 
@@ -247,6 +262,11 @@ func (h Handler) buildEnv(r *http.Request, rule Rule, fpath string) (map[string]
 
 	// Strip PATH_INFO from SCRIPT_NAME
 	scriptName = strings.TrimSuffix(scriptName, pathInfo)
+
+	// Add vhost path prefix to scriptName. Otherwise, some PHP software will
+	// have difficulty discovering its URL.
+	pathPrefix, _ := r.Context().Value(caddy.CtxKey("path_prefix")).(string)
+	scriptName = path.Join(pathPrefix, scriptName)
 
 	// Get the request URI from context. The context stores the original URI in case
 	// it was changed by a middleware such as rewrite. By default, we pass the
