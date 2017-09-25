@@ -278,8 +278,7 @@ func parseZone(r io.Reader, origin, f string, t chan *Token, include int) {
 				return
 			}
 			neworigin := origin // There may be optionally a new origin set after the filename, if not use current one
-			l := <-c
-			switch l.value {
+			switch l := <-c; l.value {
 			case zBlank:
 				l := <-c
 				if l.value == zString {
@@ -314,7 +313,7 @@ func parseZone(r io.Reader, origin, f string, t chan *Token, include int) {
 				t <- &Token{Error: &ParseError{f, "too deeply nested $INCLUDE", l}}
 				return
 			}
-			parseZone(r1, l.token, neworigin, t, include+1)
+			parseZone(r1, neworigin, l.token, t, include+1)
 			st = zExpectOwnerDir
 		case zExpectDirTtlBl:
 			if l.value != zBlank {
@@ -811,6 +810,12 @@ func zlexer(s *scan, c chan lex) {
 		debug.Printf("[%+v]", l.token)
 		c <- l
 	}
+	if brace != 0 {
+		l.token = "unbalanced brace"
+		l.tokenUpper = l.token
+		l.err = true
+		c <- l
+	}
 }
 
 // Extract the class number from CLASSxx
@@ -819,8 +824,8 @@ func classToInt(token string) (uint16, bool) {
 	if len(token) < offset+1 {
 		return 0, false
 	}
-	class, ok := strconv.Atoi(token[offset:])
-	if ok != nil || class > maxUint16 {
+	class, err := strconv.ParseUint(token[offset:], 10, 16)
+	if err != nil {
 		return 0, false
 	}
 	return uint16(class), true
@@ -832,8 +837,8 @@ func typeToInt(token string) (uint16, bool) {
 	if len(token) < offset+1 {
 		return 0, false
 	}
-	typ, ok := strconv.Atoi(token[offset:])
-	if ok != nil || typ > maxUint16 {
+	typ, err := strconv.ParseUint(token[offset:], 10, 16)
+	if err != nil {
 		return 0, false
 	}
 	return uint16(typ), true

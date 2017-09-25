@@ -1,20 +1,35 @@
+// Copyright 2015 Light Code Labs, LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package templates
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
 
 	"github.com/mholt/caddy/caddyhttp/httpserver"
+	"github.com/mholt/caddy/caddyhttp/staticfiles"
 )
 
 func TestTemplates(t *testing.T) {
+	siteRoot := "./testdata"
 	tmpl := Templates{
-		Next: httpserver.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (int, error) {
-			return 0, nil
-		}),
+		Next: staticfiles.FileServer{Root: http.Dir(siteRoot)},
 		Rules: []Rule{
 			{
 				Extensions: []string{".html"},
@@ -28,15 +43,13 @@ func TestTemplates(t *testing.T) {
 				Delims:     [2]string{"{%", "%}"},
 			},
 		},
-		Root:    "./testdata",
-		FileSys: http.Dir("./testdata"),
+		Root:    siteRoot,
+		FileSys: http.Dir(siteRoot),
 		BufPool: &sync.Pool{New: func() interface{} { return new(bytes.Buffer) }},
 	}
 
 	tmplroot := Templates{
-		Next: httpserver.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (int, error) {
-			return 0, nil
-		}),
+		Next: staticfiles.FileServer{Root: http.Dir(siteRoot)},
 		Rules: []Rule{
 			{
 				Extensions: []string{".html"},
@@ -44,8 +57,8 @@ func TestTemplates(t *testing.T) {
 				Path:       "/",
 			},
 		},
-		Root:    "./testdata",
-		FileSys: http.Dir("./testdata"),
+		Root:    siteRoot,
+		FileSys: http.Dir(siteRoot),
 		BufPool: &sync.Pool{New: func() interface{} { return new(bytes.Buffer) }},
 	}
 
@@ -54,6 +67,7 @@ func TestTemplates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Test: Could not create HTTP request: %v", err)
 	}
+	req = req.WithContext(context.WithValue(req.Context(), httpserver.OriginalURLCtxKey, *req.URL))
 
 	rec := httptest.NewRecorder()
 
@@ -77,6 +91,7 @@ func TestTemplates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not create HTTP request: %v", err)
 	}
+	req = req.WithContext(context.WithValue(req.Context(), httpserver.OriginalURLCtxKey, *req.URL))
 
 	rec = httptest.NewRecorder()
 
@@ -100,6 +115,7 @@ func TestTemplates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not create HTTP request: %v", err)
 	}
+	req = req.WithContext(context.WithValue(req.Context(), httpserver.OriginalURLCtxKey, *req.URL))
 
 	rec = httptest.NewRecorder()
 
@@ -122,6 +138,7 @@ func TestTemplates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not create HTTP request: %v", err)
 	}
+	req = req.WithContext(context.WithValue(req.Context(), httpserver.OriginalURLCtxKey, *req.URL))
 
 	rec = httptest.NewRecorder()
 

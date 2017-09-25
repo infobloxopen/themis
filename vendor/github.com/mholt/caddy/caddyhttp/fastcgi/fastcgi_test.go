@@ -1,3 +1,17 @@
+// Copyright 2015 Light Code Labs, LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package fastcgi
 
 import (
@@ -12,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mholt/caddy"
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 )
 
@@ -122,7 +137,11 @@ func TestBuildEnv(t *testing.T) {
 		}
 	}
 
-	rule := Rule{}
+	rule := Rule{
+		Ext:        ".php",
+		SplitPath:  ".php",
+		IndexFiles: []string{"index.php"},
+	}
 	url, err := url.Parse("http://localhost:2015/fgci_test.php?test=foobar")
 	if err != nil {
 		t.Error("Unexpected error:", err.Error())
@@ -156,6 +175,7 @@ func TestBuildEnv(t *testing.T) {
 			"QUERY_STRING":    "test=foobar",
 			"REQUEST_METHOD":  "GET",
 			"HTTP_HOST":       "localhost:2015",
+			"SCRIPT_NAME":     "/fgci_test.php",
 		}
 	}
 
@@ -205,6 +225,14 @@ func TestBuildEnv(t *testing.T) {
 	envExpected["HTTP_HOST"] = "localhost:2015"
 	envExpected["CUSTOM_URI"] = "custom_uri/fgci_test.php?test=foobar"
 	envExpected["CUSTOM_QUERY"] = "custom=true&test=foobar"
+	testBuildEnv(r, rule, fpath, envExpected)
+
+	// 6. Test SCRIPT_NAME includes path prefix
+	r = newReq()
+	ctx := context.WithValue(r.Context(), caddy.CtxKey("path_prefix"), "/test")
+	r = r.WithContext(ctx)
+	envExpected = newEnv()
+	envExpected["SCRIPT_NAME"] = "/test/fgci_test.php"
 	testBuildEnv(r, rule, fpath, envExpected)
 }
 

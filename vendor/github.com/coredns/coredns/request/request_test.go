@@ -3,7 +3,7 @@ package request
 import (
 	"testing"
 
-	"github.com/coredns/coredns/middleware/test"
+	"github.com/coredns/coredns/plugin/test"
 
 	"github.com/miekg/dns"
 )
@@ -28,6 +28,35 @@ func TestRequestRemote(t *testing.T) {
 	}
 	if p != "40212" {
 		t.Fatalf("Wrong port from request")
+	}
+}
+
+func TestRequestMalformed(t *testing.T) {
+	m := new(dns.Msg)
+	st := Request{Req: m}
+
+	if x := st.QType(); x != 0 {
+		t.Errorf("Expected 0 Qtype, got %d", x)
+	}
+
+	if x := st.QClass(); x != 0 {
+		t.Errorf("Expected 0 QClass, got %d", x)
+	}
+
+	if x := st.QName(); x != "." {
+		t.Errorf("Expected . Qname, got %s", x)
+	}
+
+	if x := st.Name(); x != "." {
+		t.Errorf("Expected . Name, got %s", x)
+	}
+
+	if x := st.Type(); x != "" {
+		t.Errorf("Expected empty Type, got %s", x)
+	}
+
+	if x := st.Class(); x != "" {
+		t.Errorf("Expected empty Class, got %s", x)
 	}
 }
 

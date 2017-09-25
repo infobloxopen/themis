@@ -1,3 +1,17 @@
+// Copyright 2015 Light Code Labs, LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package proxy
 
 import (
@@ -10,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lucas-clemente/quic-go/h2quic"
 	"github.com/mholt/caddy/caddyfile"
 )
 
@@ -498,6 +513,41 @@ func TestHealthCheckContentString(t *testing.T) {
 				t.Errorf("Health check bad response")
 			}
 			upstream.Stop()
+		}
+	}
+}
+
+func TestQuicHost(t *testing.T) {
+	// tests for QUIC proxy
+	tests := []struct {
+		config string
+		flag   bool
+	}{
+		// Test #1: without flag
+		{"proxy / quic://localhost:8080", false},
+
+		// Test #2: with flag
+		{"proxy / quic://localhost:8080 {\n insecure_skip_verify \n}", true},
+	}
+
+	for _, test := range tests {
+		upstreams, err := NewStaticUpstreams(caddyfile.NewDispenser("Testfile", strings.NewReader(test.config)), "")
+		if err != nil {
+			t.Errorf("Expected no error. Got: %s", err.Error())
+		}
+		for _, upstream := range upstreams {
+			staticUpstream, ok := upstream.(*staticUpstream)
+			if !ok {
+				t.Errorf("Type mismatch: %#v", upstream)
+				continue
+			}
+			for _, host := range staticUpstream.Hosts {
+				_, ok := host.ReverseProxy.Transport.(*h2quic.RoundTripper)
+				if !ok {
+					t.Errorf("Type mismatch: %#v", host.ReverseProxy.Transport)
+					continue
+				}
+			}
 		}
 	}
 }
