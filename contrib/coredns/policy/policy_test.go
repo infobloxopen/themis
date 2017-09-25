@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/coredns/coredns/middleware"
-	"github.com/coredns/coredns/middleware/pkg/dnsrecorder"
-	"github.com/coredns/coredns/middleware/test"
+	"github.com/coredns/coredns/plugin"
+	"github.com/coredns/coredns/plugin/pkg/dnstest"
+	"github.com/coredns/coredns/plugin/test"
 
 	pdp "github.com/infobloxopen/themis/pdp-service"
 
@@ -21,7 +21,7 @@ var (
 )
 
 func TestPolicy(t *testing.T) {
-	pm := PolicyMiddleware{Next: handler()}
+	pm := PolicyPlugin{Next: handler()}
 
 	tests := []struct {
 		query      string
@@ -168,7 +168,7 @@ func TestPolicy(t *testing.T) {
 		},
 	}
 
-	rec := dnsrecorder.New(&test.ResponseWriter{})
+	rec := dnstest.NewRecorder(&test.ResponseWriter{})
 
 	for i, test := range tests {
 		req := new(dns.Msg)
@@ -230,8 +230,8 @@ func TestPolicy(t *testing.T) {
 	}
 }
 
-func handler() middleware.Handler {
-	return middleware.HandlerFunc(func(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+func handler() plugin.Handler {
+	return plugin.HandlerFunc(func(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 		q := r.Question[0].Name
 		switch q {
 		case "test.com.":

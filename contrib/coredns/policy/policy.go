@@ -12,9 +12,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/coredns/coredns/middleware"
-	"github.com/coredns/coredns/middleware/pkg/nonwriter"
-	"github.com/coredns/coredns/middleware/pkg/trace"
+	"github.com/coredns/coredns/plugin"
+	"github.com/coredns/coredns/plugin/pkg/nonwriter"
+	"github.com/coredns/coredns/plugin/pkg/trace"
 	"github.com/coredns/coredns/request"
 
 	pb "github.com/infobloxopen/themis/pdp-service"
@@ -52,13 +52,13 @@ type edns0Map struct {
 	stringSize   int
 }
 
-// PolicyMiddleware represents a middleware instance that can validate DNS
+// PolicyPlugin represents a plugin instance that can validate DNS
 // requests and replies using PDP server.
-type PolicyMiddleware struct {
+type PolicyPlugin struct {
 	Endpoints   []string
 	symbols     []edns0Map
-	Trace       middleware.Handler
-	Next        middleware.Handler
+	Trace       plugin.Handler
+	Next        plugin.Handler
 	pdp         pep.Client
 	DebugSuffix string
 	ErrorFunc   func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
@@ -99,7 +99,7 @@ func makeResponse(resp pb.Response) (ret Response) {
 }
 
 // Connect establishes connection to PDP server.
-func (p *PolicyMiddleware) Connect() error {
+func (p *PolicyPlugin) Connect() error {
 	log.Printf("[DEBUG] Connecting %v", p)
 	var tracer ot.Tracer
 	if p.Trace != nil {
@@ -112,12 +112,12 @@ func (p *PolicyMiddleware) Connect() error {
 }
 
 // Close terminates previously established connection.
-func (p *PolicyMiddleware) Close() {
+func (p *PolicyPlugin) Close() {
 	p.pdp.Close()
 }
 
 // AddEDNS0Map adds new EDNS0 to table.
-func (p *PolicyMiddleware) AddEDNS0Map(code, name, dataType, destType,
+func (p *PolicyPlugin) AddEDNS0Map(code, name, dataType, destType,
 	stringOffset, stringSize string) error {
 	c, err := strconv.ParseUint(code, 0, 16)
 	if err != nil {
@@ -139,7 +139,7 @@ func (p *PolicyMiddleware) AddEDNS0Map(code, name, dataType, destType,
 	return nil
 }
 
-func (p *PolicyMiddleware) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pb.Attribute {
+func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pb.Attribute {
 	foundSourceIP := false
 	var attrs []*pb.Attribute
 
@@ -187,14 +187,14 @@ func (p *PolicyMiddleware) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pb.Attrib
 	return attrs
 }
 
-func (p *PolicyMiddleware) retRcode(w dns.ResponseWriter, r *dns.Msg, rcode int) (int, error) {
+func (p *PolicyPlugin) retRcode(w dns.ResponseWriter, r *dns.Msg, rcode int) (int, error) {
 	msg := &dns.Msg{}
 	msg.SetRcode(r, rcode)
 	w.WriteMsg(msg)
 	return rcode, nil
 }
 
-func (p *PolicyMiddleware) retDebugInfo(r *dns.Msg, w dns.ResponseWriter,
+func (p *PolicyPlugin) retDebugInfo(r *dns.Msg, w dns.ResponseWriter,
 	resp pb.Response, resolve string) (int, error) {
 	hdr := dns.RR_Header{Name: r.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassCHAOS, Ttl: 0}
 	debugQueryInfo := fmt.Sprintf("resolve: %s effect: %s", resolve, resp.Effect)
@@ -208,16 +208,16 @@ func (p *PolicyMiddleware) retDebugInfo(r *dns.Msg, w dns.ResponseWriter,
 	return dns.RcodeSuccess, nil
 }
 
-func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWriter,
+func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
 	r *dns.Msg, attrs []*pb.Attribute, respDomain pb.Response, debugQuery bool) (int, error) {
 	req := r
-	lw := nonwriter.New(w)
+	responseWriter := nonwriter.New(w)
 	if debugQuery {
 		req = new(dns.Msg)
 		name := strings.TrimSuffix(r.Question[0].Name, p.DebugSuffix)
 		req.SetQuestion(name, dns.TypeA)
 	}
-	status, err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lw, req)
+	status, err := plugin.NextOrFailure(p.Name(), p.Next, ctx, responseWriter, req)
 	if err != nil {
 		if debugQuery {
 			return p.retDebugInfo(r, w, respDomain, "failed")
@@ -226,7 +226,7 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 	}
 
 	var address string
-	for _, rr := range lw.Msg.Answer {
+	for _, rr := range responseWriter.Msg.Answer {
 		switch rr.Header().Rrtype {
 		case dns.TypeA, dns.TypeAAAA:
 			if a, ok := rr.(*dns.A); ok {
@@ -244,7 +244,7 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 		if debugQuery {
 			return p.retDebugInfo(r, w, respDomain, "no")
 		}
-		w.WriteMsg(lw.Msg)
+		w.WriteMsg(responseWriter.Msg)
 		return status, nil
 	}
 
@@ -267,7 +267,7 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 
 	switch resp.Action {
 	case typeAllow:
-		w.WriteMsg(lw.Msg)
+		w.WriteMsg(responseWriter.Msg)
 		return status, nil
 	case typeRedirect:
 		return p.redirect(ctx, w, r, resp.Redirect)
@@ -279,7 +279,7 @@ func (p *PolicyMiddleware) handlePermit(ctx context.Context, w dns.ResponseWrite
 }
 
 // ServeDNS implements the Handler interface.
-func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	var (
 		debugQuery bool
 		domain     string
@@ -331,9 +331,9 @@ func (p *PolicyMiddleware) ServeDNS(ctx context.Context, w dns.ResponseWriter, r
 }
 
 // Name implements the Handler interface
-func (p *PolicyMiddleware) Name() string { return "policy" }
+func (p *PolicyPlugin) Name() string { return "policy" }
 
-func (p *PolicyMiddleware) redirect(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, dst string) (int, error) {
+func (p *PolicyPlugin) redirect(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, dst string) (int, error) {
 	state := request.Request{W: w, Req: r}
 	var rr dns.RR
 	cname := false
@@ -363,13 +363,13 @@ func (p *PolicyMiddleware) redirect(ctx context.Context, w dns.ResponseWriter, r
 		msg := new(dns.Msg)
 		msg.SetQuestion(dst, state.QType())
 
-		lw := nonwriter.New(w)
-		status, err := middleware.NextOrFailure(p.Name(), p.Next, ctx, lw, msg)
+		responseWriter := nonwriter.New(w)
+		status, err := plugin.NextOrFailure(p.Name(), p.Next, ctx, responseWriter, msg)
 		if err != nil {
 			return status, err
 		}
 
-		a.Answer = append(a.Answer, lw.Msg.Answer...)
+		a.Answer = append(a.Answer, responseWriter.Msg.Answer...)
 		a.SetRcode(r, status)
 	} else {
 		a.SetRcode(r, dns.RcodeSuccess)

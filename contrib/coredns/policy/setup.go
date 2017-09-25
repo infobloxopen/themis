@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/coredns/coredns/core/dnsserver"
-	"github.com/coredns/coredns/middleware"
+	"github.com/coredns/coredns/plugin"
 
 	"github.com/mholt/caddy"
 )
@@ -17,40 +17,41 @@ func init() {
 }
 
 func setup(c *caddy.Controller) error {
-	mw, err := policyParse(c)
+	policyPlugin, err := policyParse(c)
 
 	if err != nil {
-		return middleware.Error("policy", err)
+		return plugin.Error("policy", err)
 	}
 
 	c.OnStartup(func() error {
-		err := mw.Connect()
+		policyPlugin.Trace = dnsserver.GetConfig(c).Handler("trace")
+		err := policyPlugin.Connect()
 		if err != nil {
-			return middleware.Error("policy", err)
+			return plugin.Error("policy", err)
 		}
 		return nil
 	})
 
 	c.OnRestart(func() error {
-		mw.Close()
+		policyPlugin.Close()
 		return nil
 	})
 
 	c.OnFinalShutdown(func() error {
-		mw.Close()
+		policyPlugin.Close()
 		return nil
 	})
 
-	dnsserver.GetConfig(c).AddMiddleware(func(next middleware.Handler) middleware.Handler {
-		mw.Next = next
-		return mw
+	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
+		policyPlugin.Next = next
+		return policyPlugin
 	})
 
 	return nil
 }
 
-func policyParse(c *caddy.Controller) (*PolicyMiddleware, error) {
-	mw := &PolicyMiddleware{Trace: dnsserver.GetConfig(c).Handler("trace")}
+func policyParse(c *caddy.Controller) (*PolicyPlugin, error) {
+	policyPlugin := &PolicyPlugin{}
 
 	for c.Next() {
 		if c.Val() == "policy" {
@@ -60,7 +61,7 @@ func policyParse(c *caddy.Controller) (*PolicyMiddleware, error) {
 				case "endpoint":
 					args := c.RemainingArgs()
 					if len(args) > 0 {
-						mw.Endpoints = args
+						policyPlugin.Endpoints = args
 						continue
 					}
 					return nil, c.ArgErr()
@@ -83,7 +84,7 @@ func policyParse(c *caddy.Controller) (*PolicyMiddleware, error) {
 							stringOffset = args[4]
 							stringSize = args[5]
 						}
-						err := mw.AddEDNS0Map(args[0], args[1], dataType, destType, stringOffset, stringSize)
+						err := policyPlugin.AddEDNS0Map(args[0], args[1], dataType, destType, stringOffset, stringSize)
 						if err != nil {
 							return nil, fmt.Errorf("Could not add EDNS0 map for %s: %s", args[0], err)
 						}
@@ -93,13 +94,13 @@ func policyParse(c *caddy.Controller) (*PolicyMiddleware, error) {
 				case "debug_query_suffix":
 					args := c.RemainingArgs()
 					if len(args) == 1 {
-						mw.DebugSuffix = args[0]
+						policyPlugin.DebugSuffix = args[0]
 						continue
 					}
 					return nil, c.ArgErr()
 				}
 			}
-			return mw, nil
+			return policyPlugin, nil
 		}
 	}
 	return nil, fmt.Errorf("Policy setup called without keyword 'policy' in Corefile")
