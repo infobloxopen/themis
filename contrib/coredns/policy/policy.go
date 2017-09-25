@@ -7,16 +7,19 @@ package policy
 import (
 	"encoding/hex"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/pkg/nonwriter"
 	"github.com/coredns/coredns/plugin/pkg/trace"
 	"github.com/coredns/coredns/request"
 
+	tap "github.com/infobloxopen/themis/contrib/coredns/policy/policytap"
 	pb "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pep"
 
@@ -57,6 +60,7 @@ type edns0Map struct {
 type PolicyPlugin struct {
 	Endpoints   []string
 	symbols     []edns0Map
+	TapWriter   io.Writer
 	Trace       plugin.Handler
 	Next        plugin.Handler
 	pdp         pep.Client
@@ -209,7 +213,7 @@ func (p *PolicyPlugin) retDebugInfo(r *dns.Msg, w dns.ResponseWriter,
 }
 
 func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
-	r *dns.Msg, attrs []*pb.Attribute, respDomain pb.Response, debugQuery bool) (int, error) {
+	r *dns.Msg, attrs []*pb.Attribute, tapAttrs []*tap.DnstapAttribute, respDomain pb.Response, debugQuery bool) (int, error) {
 	req := r
 	responseWriter := nonwriter.New(w)
 	if debugQuery {
@@ -259,6 +263,11 @@ func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
 		return dns.RcodeServerFailure, err
 	}
 
+	err = tap.ToDnstap(p.TapWriter, time.Now(), r, tap.PolicyHitMessage_POLICY_TRIGGER_DOMAIN, tapAttrs, &response)
+	if err != nil {
+		log.Printf("[ERROR] Failed to dnstap the PolicyHit message (%s)\n", err)
+	}
+
 	resp := makeResponse(response)
 
 	if debugQuery && resp.Action != typeRefuse {
@@ -302,6 +311,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		{Id: "dns_qtype", Type: "string", Value: dns.TypeToString[state.QType()]},
 	}
 
+	ednsStart := len(attrs)
 	ednsAttrs := p.getAttrsFromEDNS0(r, state.IP())
 	attrs = append(attrs, ednsAttrs...)
 
@@ -312,6 +322,15 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		return dns.RcodeServerFailure, err
 	}
 
+	tapAttrs := []*tap.DnstapAttribute{}
+	if p.TapWriter != nil {
+		tapAttrs = tap.ConvertAttrs(attrs[ednsStart:])
+		err = tap.ToDnstap(p.TapWriter, time.Now(), r, tap.PolicyHitMessage_POLICY_TRIGGER_DOMAIN, tapAttrs, &response)
+		if err != nil {
+			log.Printf("[ERROR] Failed to dnstap the PolicyHit message (%s)\n", err)
+		}
+	}
+
 	resp := makeResponse(response)
 
 	if debugQuery && (resp.Action == typeRedirect || resp.Action == typeBlock) {
@@ -320,7 +339,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 
 	switch resp.Action {
 	case typeAllow:
-		return p.handlePermit(ctx, w, r, attrs, response, debugQuery)
+		return p.handlePermit(ctx, w, r, attrs, tapAttrs, response, debugQuery)
 	case typeRedirect:
 		return p.redirect(ctx, w, r, resp.Redirect)
 	case typeBlock:

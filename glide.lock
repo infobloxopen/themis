@@ -1,5 +1,5 @@
-hash: dde279237d1c3556b705b34bdc066cdca4364dfa6232cfdc2d56fa7874845fc2
-updated: 2017-09-25T12:51:58.773305097+03:00
+hash: 65eb104e8971606e5f81a81644db2df3dd6c017bbf7b4d928e7196a717ce2b4b
+updated: 2017-09-25T15:41:21.735405723+03:00
 imports:
 - name: github.com/apache/thrift
   version: 19baeefd8c38d62085891d7956349601f79448b3
@@ -15,6 +15,10 @@ imports:
   - core/dnsserver
   - pb
   - plugin
+  - plugin/dnstap
+  - plugin/dnstap/msg
+  - plugin/dnstap/out
+  - plugin/dnstap/taprw
   - plugin/etcd/msg
   - plugin/metrics/vars
   - plugin/pkg/dnstest
@@ -29,6 +33,8 @@ imports:
   version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
   subpackages:
   - spew
+- name: github.com/dnstap/golang-dnstap
+  version: 2cf77a2b5e11ac8d0ba3892772ac8e1f7b528344
 - name: github.com/eapache/go-resiliency
   version: b1fe83b5b03f624450823b751b662259ffc6af70
   subpackages:
@@ -37,6 +43,8 @@ imports:
   version: bb955e01b9346ac19dc29eb16586c90ded99a98c
 - name: github.com/eapache/queue
   version: 44cc805cf13205b55f69e14bcb69867d1ae92f98
+- name: github.com/farsightsec/golang-framestream
+  version: dec85654e8b8cf6712870afb14ee53d1c98cd5e2
 - name: github.com/flynn/go-shlex
   version: 3f9db97f856818214da2e1057f8ad84803971cff
   repo: https://github.com/flynn/go-shlex
