@@ -37,3 +37,4 @@ import:
   - domaintree
   - strtree
   - iptree
+- package: github.com/dnstap/golang-dnstap

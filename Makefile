@@ -20,16 +20,16 @@ bootstrap:
 clean: clean-cover clean-pepcli clean-papcli clean-pdpserver clean-egen
 
 .PHONY: fmt
-fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jcon fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver fmt-middleware fmt-egen
+fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jcon fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver fmt-plugin fmt-egen
 
 .PHONY: build
-build: build-pepcli build-papcli build-pdpserver build-middleware build-egen
+build: build-pepcli build-papcli build-pdpserver build-plugin build-egen
 
 .PHONY: test
-test: test-pdp test-pdp-yast test-pdp-jcon test-pep test-middleware
+test: test-pdp test-pdp-yast test-pdp-jcon test-pep test-plugin
 
 .PHONY: cover
-cover: cover-pdp cover-pdp-yast cover-pdp-jcon cover-pep cover-middleware
+cover: cover-pdp cover-pdp-yast cover-pdp-jcon cover-pep cover-plugin
 
 $(COVEROUT):
 	echo > $(COVEROUT)
@@ -111,10 +111,11 @@ fmt-pdpserver:
 	@echo "Checking PDP server format..."
 	@$(AT)/pdpserver && $(GOFMTCHECK)
 
-.PHONY: fmt-middleware
-fmt-middleware:
+.PHONY: fmt-plugin
+fmt-plugin:
 	@echo "Checking PE-CoreDNS Middleware format..."
 	@$(AT)/contrib/coredns/policy && $(GOFMTCHECK)
+	@$(AT)/contrib/coredns/policy/policytap && $(GOFMTCHECK)
 
 .PHONY: fmt-egen
 fmt-egen:
@@ -134,9 +135,10 @@ build-papcli:
 build-pdpserver:
 	$(AT)/pdpserver && $(GOBUILD)
 
-.PHONY: build-middleware
-build-middleware:
+.PHONY: build-plugin
+build-plugin:
 	$(AT)/contrib/coredns/policy && $(GOBUILD)
+	$(AT)/contrib/coredns/policy/policytap && $(GOBUILD)
 
 .PHONY: build-egen
 build-egen:
@@ -158,9 +160,10 @@ test-pdp-jcon:
 test-pep:
 	$(AT)/pep && $(GOTEST)
 
-.PHONY: test-middleware
-test-middleware:
+.PHONY: test-plugin
+test-plugin:
 	$(AT)/contrib/coredns/policy && $(GOTEST)
+	$(AT)/contrib/coredns/policy/policytap && $(GOTEST)
 
 # Per package test coverage targets
 .PHONY: cover-pdp
@@ -179,6 +182,7 @@ cover-pdp-jcon: | $(COVEROUT)
 cover-pep: | $(COVEROUT)
 	$(AT)/pep && $(GOCOVER)
 
-.PHONY: cover-middleware
-cover-middleware: | $(COVEROUT)
+.PHONY: cover-plugin
+cover-plugin: | $(COVEROUT)
 	$(AT)/contrib/coredns/policy && $(GOCOVER)
+	$(AT)/contrib/coredns/policy/policytap && $(GOCOVER)
