@@ -145,7 +145,7 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pb.Attribute 
 
 	o := r.IsEdns0()
 	if o == nil {
-		return nil
+		return []*pb.Attribute{{Id: "source_ip", Type: "address", Value: ip}}
 	}
 
 	for _, s := range o.Option {
