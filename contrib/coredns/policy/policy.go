@@ -44,7 +44,6 @@ var stringToEDNS0MapType = map[string]uint16{
 }
 
 type edns0Map struct {
-	code         uint16
 	name         string
 	dataType     uint16
 	destType     string
@@ -56,7 +55,7 @@ type edns0Map struct {
 // requests and replies using PDP server.
 type PolicyPlugin struct {
 	Endpoints   []string
-	symbols     []edns0Map
+	options     map[uint16]edns0Map
 	Trace       plugin.Handler
 	Next        plugin.Handler
 	pdp         pep.Client
@@ -135,7 +134,7 @@ func (p *PolicyPlugin) AddEDNS0Map(code, name, dataType, destType,
 	if !ok {
 		return fmt.Errorf("Invalid dataType for EDNS0 map: %s", dataType)
 	}
-	p.symbols = append(p.symbols, edns0Map{uint16(c), name, ednsType, destType, offset, size})
+	p.options[uint16(c)] = edns0Map{name, ednsType, destType, offset, size}
 	return nil
 }
 
@@ -148,36 +147,32 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pb.Attribute 
 		return []*pb.Attribute{{Id: "source_ip", Type: "address", Value: ip}}
 	}
 
-	for _, s := range o.Option {
-		switch e := s.(type) {
-		case *dns.EDNS0_NSID:
-			// do stuff with e.Nsid
-		case *dns.EDNS0_SUBNET:
-			// access e.Family, e.Address, etc.
-		case *dns.EDNS0_LOCAL:
-			for _, m := range p.symbols {
-				if m.code == e.Code {
-					var value string
-					switch m.dataType {
-					case typeEDNS0Bytes:
-						value = string(e.Data)
-					case typeEDNS0Hex:
-						value = hex.EncodeToString(e.Data)
-					case typeEDNS0IP:
-						ip := net.IP(e.Data)
-						value = ip.String()
-					}
-					from := m.stringOffset
-					to := m.stringOffset + m.stringSize
-					if to > 0 && to <= len(value) && from < to {
-						value = value[from:to]
-					}
-					foundSourceIP = foundSourceIP || (m.name == "source_ip")
-					attrs = append(attrs, &pb.Attribute{Id: m.name, Type: m.destType, Value: value})
-					break
-				}
-			}
+	for _, opt := range o.Option {
+		optLocal, local := opt.(*dns.EDNS0_LOCAL)
+		if !local {
+			continue
 		}
+		option, ok := p.options[optLocal.Code]
+		if !ok {
+			continue
+		}
+		var value string
+		switch option.dataType {
+		case typeEDNS0Bytes:
+			value = string(optLocal.Data)
+		case typeEDNS0Hex:
+			value = hex.EncodeToString(optLocal.Data)
+		case typeEDNS0IP:
+			ip := net.IP(optLocal.Data)
+			value = ip.String()
+		}
+		from := option.stringOffset
+		to := option.stringOffset + option.stringSize
+		if to > 0 && to <= len(value) && from < to {
+			value = value[from:to]
+		}
+		foundSourceIP = foundSourceIP || (option.name == "source_ip")
+		attrs = append(attrs, &pb.Attribute{Id: option.name, Type: option.destType, Value: value})
 	}
 	if foundSourceIP {
 		attrs = append(attrs, &pb.Attribute{Id: "proxy_source_ip", Type: "address", Value: ip})

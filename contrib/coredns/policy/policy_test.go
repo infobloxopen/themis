@@ -21,7 +21,7 @@ var (
 )
 
 func TestPolicy(t *testing.T) {
-	pm := PolicyPlugin{Next: handler()}
+	pm := PolicyPlugin{Next: handler(), options: make(map[uint16]edns0Map)}
 
 	tests := []struct {
 		query      string
