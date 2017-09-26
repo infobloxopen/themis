@@ -144,35 +144,37 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pb.Attribute 
 	var attrs []*pb.Attribute
 
 	o := r.IsEdns0()
-	if o != nil {
-		for _, s := range o.Option {
-			switch e := s.(type) {
-			case *dns.EDNS0_NSID:
-				// do stuff with e.Nsid
-			case *dns.EDNS0_SUBNET:
-				// access e.Family, e.Address, etc.
-			case *dns.EDNS0_LOCAL:
-				for _, m := range p.symbols {
-					if m.code == e.Code {
-						var value string
-						switch m.dataType {
-						case typeEDNS0Bytes:
-							value = string(e.Data)
-						case typeEDNS0Hex:
-							value = hex.EncodeToString(e.Data)
-						case typeEDNS0IP:
-							ip := net.IP(e.Data)
-							value = ip.String()
-						}
-						from := m.stringOffset
-						to := m.stringOffset + m.stringSize
-						if to > 0 && to <= len(value) && from < to {
-							value = value[from:to]
-						}
-						foundSourceIP = foundSourceIP || (m.name == "source_ip")
-						attrs = append(attrs, &pb.Attribute{Id: m.name, Type: m.destType, Value: value})
-						break
+	if o == nil {
+		return []*pb.Attribute{&pb.Attribute{Id: "source_ip", Type: "address", Value: ip}}
+	}
+
+	for _, s := range o.Option {
+		switch e := s.(type) {
+		case *dns.EDNS0_NSID:
+			// do stuff with e.Nsid
+		case *dns.EDNS0_SUBNET:
+			// access e.Family, e.Address, etc.
+		case *dns.EDNS0_LOCAL:
+			for _, m := range p.symbols {
+				if m.code == e.Code {
+					var value string
+					switch m.dataType {
+					case typeEDNS0Bytes:
+						value = string(e.Data)
+					case typeEDNS0Hex:
+						value = hex.EncodeToString(e.Data)
+					case typeEDNS0IP:
+						ip := net.IP(e.Data)
+						value = ip.String()
 					}
+					from := m.stringOffset
+					to := m.stringOffset + m.stringSize
+					if to > 0 && to <= len(value) && from < to {
+						value = value[from:to]
+					}
+					foundSourceIP = foundSourceIP || (m.name == "source_ip")
+					attrs = append(attrs, &pb.Attribute{Id: m.name, Type: m.destType, Value: value})
+					break
 				}
 			}
 		}
