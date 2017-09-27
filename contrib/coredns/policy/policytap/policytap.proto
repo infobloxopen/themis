@@ -67,6 +67,6 @@ extend dnstap.Dnstap {
 	optional PolicyHitMessage policy_hit = 1001;
 }
 
-message PolicyHitMessageWraper {
+message PolicyHitMessageWrapper {
 	required PolicyHitMessage policy_hit = 1001;
 }

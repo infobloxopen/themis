@@ -1,5 +1,5 @@
 hash: 65eb104e8971606e5f81a81644db2df3dd6c017bbf7b4d928e7196a717ce2b4b
-updated: 2017-09-25T15:41:21.735405723+03:00
+updated: 2017-09-27T14:33:03.014779163+03:00
 imports:
 - name: github.com/apache/thrift
   version: 19baeefd8c38d62085891d7956349601f79448b3
@@ -10,12 +10,13 @@ imports:
   subpackages:
   - quantile
 - name: github.com/coredns/coredns
-  version: 2a32cd415911bea79784bee3387103bd9576f438
+  version: 44a0cb9557b4554e1359ad0d0c11fb64ddd77a76
   subpackages:
   - core/dnsserver
   - pb
   - plugin
   - plugin/dnstap
+  - plugin/dnstap/dnstapio
   - plugin/dnstap/msg
   - plugin/dnstap/out
   - plugin/dnstap/taprw
@@ -30,7 +31,7 @@ imports:
   - plugin/test
   - request
 - name: github.com/davecgh/go-spew
-  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
+  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
   subpackages:
   - spew
 - name: github.com/dnstap/golang-dnstap
@@ -85,7 +86,7 @@ imports:
   subpackages:
   - caddyfile
 - name: github.com/miekg/dns
-  version: e4205768578dc90c2669e75a2f8a8bf77e3083a4
+  version: 4f8d08ab3c3f260afc934e9baf564bede5795458
 - name: github.com/opentracing/opentracing-go
   version: 6edb48674bd9467b8e91fda004f2bd7202d60ce4
   subpackages:

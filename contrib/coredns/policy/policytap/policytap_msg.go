@@ -1,32 +1,32 @@
 package policytap
 
 import (
-	"io"
 	"log"
 	"strings"
 	"time"
 
+	tapplg "github.com/coredns/coredns/plugin/dnstap"
 	dnstap "github.com/dnstap/golang-dnstap"
 	"github.com/golang/protobuf/proto"
 	pb "github.com/infobloxopen/themis/pdp-service"
 	"github.com/miekg/dns"
 )
 
-// ToDnstap creates PolicyHitMessage and writes it to the privided Writer
-func ToDnstap(w io.Writer, t time.Time, msg *dns.Msg, tt PolicyHitMessage_PolicyTriggerType,
-	attrs []*DnstapAttribute, r *pb.Response) error {
+// SendPolicyHitMsg creates PolicyHitMessage and asynchronously sends it to the provided IORoutine
+// Parameter tapIO must not be nil
+func SendPolicyHitMsg(tapIO tapplg.IORoutine, t time.Time, msg *dns.Msg, tt PolicyHitMessage_PolicyTriggerType,
+	attrs []*DnstapAttribute, r *pb.Response) {
 
-	if w == nil {
-		return nil
-	}
+	//write message asynchronously
+	go func() {
+		phm := newPolicyHitMessage(t)
+		phm.TriggerType = &tt
+		phm.updateFromMessage(msg)
+		phm.AddDnstapAttrs(attrs)
+		phm.updateFromResponse(r)
 
-	phm := newPolicyHitMessage(t)
-	phm.TriggerType = &tt
-	phm.updateFromMessage(msg)
-	phm.AddDnstapAttrs(attrs)
-	phm.updateFromResponse(r)
-
-	return writeMessage(w, phm)
+		writeMessage(tapIO, phm)
+	}()
 }
 
 func newPolicyHitMessage(t time.Time) *PolicyHitMessage {
@@ -37,8 +37,8 @@ func newPolicyHitMessage(t time.Time) *PolicyHitMessage {
 
 func (phm *PolicyHitMessage) updateFromMessage(msg *dns.Msg) {
 	if msg != nil {
-		qId := uint32(msg.Id)
-		phm.QueryId = &qId
+		qID := uint32(msg.Id)
+		phm.QueryId = &qID
 		if len(msg.Question) > 0 {
 			q := msg.Question[0]
 			qType := uint32(q.Qtype)
@@ -59,26 +59,24 @@ func (phm *PolicyHitMessage) updateFromResponse(r *pb.Response) {
 	phm.AddPdpAttrs(r.Obligation)
 }
 
-func writeMessage(w io.Writer, phm *PolicyHitMessage) error {
+func writeMessage(tapIO tapplg.IORoutine, phm *PolicyHitMessage) {
 	dnstapType := dnstap.Dnstap_MESSAGE
 	dnstapMsg := dnstap.Dnstap{Type: &dnstapType}
 
 	err := proto.SetExtension(&dnstapMsg, E_PolicyHit, phm)
 	if err != nil {
 		// likely linked with not extendable Dnstap, adding message to XXX_unrecognized
-		wraper := PolicyHitMessageWraper{PolicyHit: phm}
-		rawPhm, err1 := proto.Marshal(&wraper)
-		if err1 != nil {
-			return err
+		wrapper := PolicyHitMessageWrapper{PolicyHit: phm}
+		rawPhm, err1 := proto.Marshal(&wrapper)
+		if err1 == nil {
+			dnstapMsg.XXX_unrecognized = rawPhm
+			err = nil
 		}
-		dnstapMsg.XXX_unrecognized = rawPhm
 	}
 
-	rawMsg, err := proto.Marshal(&dnstapMsg)
-	if err != nil {
-		log.Printf("[ERROR] %v", err)
-		return err
+	if err == nil {
+		tapIO.Dnstap(dnstapMsg)
+	} else {
+		log.Printf("[ERROR] Failed to pack PolicyHit message (%s)", err)
 	}
-	_, err = w.Write(rawMsg)
-	return err
 }

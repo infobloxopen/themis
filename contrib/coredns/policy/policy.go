@@ -7,7 +7,6 @@ package policy
 import (
 	"encoding/hex"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"strconv"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	"github.com/coredns/coredns/plugin"
+	tapplg "github.com/coredns/coredns/plugin/dnstap"
 	"github.com/coredns/coredns/plugin/pkg/nonwriter"
 	"github.com/coredns/coredns/plugin/pkg/trace"
 	"github.com/coredns/coredns/request"
@@ -59,7 +59,7 @@ type edns0Map struct {
 type PolicyPlugin struct {
 	Endpoints   []string
 	options     map[uint16]edns0Map
-	TapWriter   io.Writer
+	TapIO       tapplg.IORoutine
 	Trace       plugin.Handler
 	Next        plugin.Handler
 	pdp         pep.Client
@@ -248,7 +248,8 @@ func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
 	}
 
 	attrs[0].Value = "response"
-	attrs = append(attrs, &pb.Attribute{Id: "address", Type: "address", Value: address})
+	addressAttr := &pb.Attribute{Id: "address", Type: "address", Value: address}
+	attrs = append(attrs, addressAttr)
 	attrs = append(attrs, respDomain.Obligation...)
 
 	var response pb.Response
@@ -258,9 +259,9 @@ func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
 		return dns.RcodeServerFailure, err
 	}
 
-	err = tap.ToDnstap(p.TapWriter, time.Now(), r, tap.PolicyHitMessage_POLICY_TRIGGER_DOMAIN, tapAttrs, &response)
-	if err != nil {
-		log.Printf("[ERROR] Failed to dnstap the PolicyHit message (%s)\n", err)
+	if p.TapIO != nil {
+		tapAttrs = append(tapAttrs, tap.PdpAttr2DnstapAttr(addressAttr))
+		tap.SendPolicyHitMsg(p.TapIO, time.Now(), r, tap.PolicyHitMessage_POLICY_TRIGGER_ADDRESS, tapAttrs, &response)
 	}
 
 	resp := makeResponse(response)
@@ -318,12 +319,9 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	}
 
 	tapAttrs := []*tap.DnstapAttribute{}
-	if p.TapWriter != nil {
+	if p.TapIO != nil {
 		tapAttrs = tap.ConvertAttrs(attrs[ednsStart:])
-		err = tap.ToDnstap(p.TapWriter, time.Now(), r, tap.PolicyHitMessage_POLICY_TRIGGER_DOMAIN, tapAttrs, &response)
-		if err != nil {
-			log.Printf("[ERROR] Failed to dnstap the PolicyHit message (%s)\n", err)
-		}
+		tap.SendPolicyHitMsg(p.TapIO, time.Now(), r, tap.PolicyHitMessage_POLICY_TRIGGER_DOMAIN, tapAttrs, &response)
 	}
 
 	resp := makeResponse(response)

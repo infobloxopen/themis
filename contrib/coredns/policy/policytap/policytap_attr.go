@@ -40,12 +40,12 @@ func (phm *PolicyHitMessage) AddPdpAttrs(attrs []*pb.Attribute) {
 type attrHandler func(*PolicyHitMessage, *pb.Attribute)
 
 var specialAttrs = map[string]attrHandler{
-	"policy_id":   policyIdHandler,
+	"policy_id":   policyIDHandler,
 	"refuse":      refuseHandler,
 	"redirect_to": redirectHandler,
 }
 
-func policyIdHandler(phm *PolicyHitMessage, a *pb.Attribute) {
+func policyIDHandler(phm *PolicyHitMessage, a *pb.Attribute) {
 	phm.PolicyId = []byte(a.Value)
 }
 
