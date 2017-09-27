@@ -59,6 +59,47 @@ func TestPolicyConfigParse(t *testing.T) {
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
+							edns0 wrong_hex uid hex string
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Could not parse EDNS0 code",
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							edns0 0xfff0 uid hex string wrong_offset 32
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Could not parse EDNS0 string offset",
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							edns0 0xfff0 uid hex string 0 wrong_size
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Could not parse EDNS0 string size",
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							edns0 0xfff0 uid hex string
+							edns0 0xfff0 id hex string
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Duplicated EDNS0 code",
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
 							edns0 0xfff1
 						}
 					}`,

@@ -134,17 +134,21 @@ func (p *PolicyPlugin) AddEDNS0Map(code, name, dataType, destType,
 	if !ok {
 		return fmt.Errorf("Invalid dataType for EDNS0 map: %s", dataType)
 	}
-	p.options[uint16(c)] = edns0Map{name, ednsType, destType, offset, size}
+	ecode := uint16(c)
+	if _, ok := p.options[ecode]; ok {
+		return fmt.Errorf("Duplicated EDNS0 code: %d", ecode)
+	}
+	p.options[ecode] = edns0Map{name, ednsType, destType, offset, size}
 	return nil
 }
 
 func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pb.Attribute {
-	foundSourceIP := false
+	ipId := "source_ip"
 	var attrs []*pb.Attribute
 
 	o := r.IsEdns0()
 	if o == nil {
-		return []*pb.Attribute{{Id: "source_ip", Type: "address", Value: ip}}
+		return []*pb.Attribute{{Id: ipId, Type: "address", Value: ip}}
 	}
 
 	for _, opt := range o.Option {
@@ -171,14 +175,12 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pb.Attribute 
 		if to > 0 && to <= len(value) && from < to {
 			value = value[from:to]
 		}
-		foundSourceIP = foundSourceIP || (option.name == "source_ip")
+		if option.name == "source_ip" {
+			ipId = "proxy_source_ip"
+		}
 		attrs = append(attrs, &pb.Attribute{Id: option.name, Type: option.destType, Value: value})
 	}
-	if foundSourceIP {
-		attrs = append(attrs, &pb.Attribute{Id: "proxy_source_ip", Type: "address", Value: ip})
-	} else {
-		attrs = append(attrs, &pb.Attribute{Id: "source_ip", Type: "address", Value: ip})
-	}
+	attrs = append(attrs, &pb.Attribute{Id: ipId, Type: "address", Value: ip})
 	return attrs
 }
 
