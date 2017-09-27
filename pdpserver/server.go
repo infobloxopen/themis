@@ -12,6 +12,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"sync"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
@@ -148,7 +149,47 @@ func (s *server) listenHealthCheck(addr string) error {
 	return nil
 }
 
+func (s *server) serveRequests(tracer ot.Tracer) {
+	log.Info("Waiting for policies to be applied.")
+	for {
+		s.RLock()
+		p := s.p
+		s.RUnlock()
+		if p != nil {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	if s.listenRequests(conf.serviceEP) != nil {
+		log.Error("Failed to Listen to Requests.")
+		os.Exit(1)
+	}
+	log.Info("Creating service protocol handler")
+	if tracer == nil {
+		s.requests.proto = grpc.NewServer()
+	} else {
+		onlyIfParent := func(parentSpanCtx ot.SpanContext, method string, req, resp interface{}) bool {
+			return parentSpanCtx != nil
+		}
+		intercept := otgrpc.OpenTracingServerInterceptor(tracer, otgrpc.IncludingSpans(onlyIfParent))
+		s.requests.proto = grpc.NewServer(grpc.UnaryInterceptor(intercept))
+	}
+	pbs.RegisterPDPServer(s.requests.proto, s)
+
+	log.Info("Serving decision requests")
+	s.requests.proto.Serve(s.requests.iface)
+}
+
 func (s *server) serve(tracer ot.Tracer, profiler string) {
+	if s.listenControl(conf.controlEP) != nil {
+		log.Error("Failed to Listen to Control Packets.")
+		os.Exit(1)
+	}
+	if s.listenHealthCheck(conf.healthEP) != nil {
+		log.Error("Failed to Listen to Health Check.")
+		os.Exit(1)
+	}
+
 	go func() {
 		log.Info("Creating control protocol handler")
 		s.control.proto = grpc.NewServer()
@@ -174,19 +215,5 @@ func (s *server) serve(tracer ot.Tracer, profiler string) {
 			http.ListenAndServe(profiler, http.DefaultServeMux)
 		}()
 	}
-
-	log.Info("Creating service protocol handler")
-	if tracer == nil {
-		s.requests.proto = grpc.NewServer()
-	} else {
-		onlyIfParent := func(parentSpanCtx ot.SpanContext, method string, req, resp interface{}) bool {
-			return parentSpanCtx != nil
-		}
-		intercept := otgrpc.OpenTracingServerInterceptor(tracer, otgrpc.IncludingSpans(onlyIfParent))
-		s.requests.proto = grpc.NewServer(grpc.UnaryInterceptor(intercept))
-	}
-	pbs.RegisterPDPServer(s.requests.proto, s)
-
-	log.Info("Serving decision requests")
-	s.requests.proto.Serve(s.requests.iface)
+	s.serveRequests(tracer)
 }
