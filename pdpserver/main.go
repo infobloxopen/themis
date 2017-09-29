@@ -4,9 +4,12 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"os"
 	"runtime"
+	"runtime/debug"
 )
 
 func main() {
+	debug.SetGCPercent(10)
+
 	initLogging(conf.verbose)
 	log.Info("Starting PDP server")
 
