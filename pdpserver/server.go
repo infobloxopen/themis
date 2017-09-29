@@ -11,6 +11,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -47,12 +48,21 @@ type server struct {
 	softMemWarn *time.Time
 	backMemWarn *time.Time
 	fragMemWarn *time.Time
+	gcMax       int
+	gcPercent   int
 }
 
 func newServer() *server {
+	gcp := debug.SetGCPercent(-1)
+	if gcp != -1 {
+		debug.SetGCPercent(gcp)
+	}
+
 	return &server{
-		q: newQueue(),
-		c: pdp.NewLocalContentStorage(nil)}
+		q:         newQueue(),
+		c:         pdp.NewLocalContentStorage(nil),
+		gcMax:     gcp,
+		gcPercent: gcp}
 }
 
 func (s *server) loadPolicies(path string) error {
