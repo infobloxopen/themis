@@ -14,6 +14,7 @@ type config struct {
 	tracingEP  string
 	healthEP   string
 	profilerEP string
+	mem        memCheckConfig
 }
 
 type stringSet []string
@@ -38,6 +39,13 @@ func init() {
 	flag.StringVar(&conf.tracingEP, "t", "", "OpenZipkin tracing endpoint")
 	flag.StringVar(&conf.healthEP, "health", "", "Health check endpoint")
 	flag.StringVar(&conf.profilerEP, "pprof", "", "Performance profiler endpoint")
+	flag.Uint64Var(&conf.mem.limit, "mem-limit", 0, "Memory limit in megabytes")
 
 	flag.Parse()
+
+	conf.mem.limit *= 1024 * 1024
+	conf.mem.reset = 0.9 * float64(conf.mem.limit)
+	conf.mem.soft = 0.7 * float64(conf.mem.limit)
+	conf.mem.frag = 0.3
+	conf.mem.back = 0.3
 }

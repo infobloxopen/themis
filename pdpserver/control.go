@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"runtime/debug"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/google/uuid"
@@ -121,17 +122,22 @@ func (s *server) Upload(stream pb.PDPControl_UploadServer) error {
 
 	if req.fromTag == nil {
 		if req.policy {
-			return s.uploadPolicy(id, r, req, stream)
+			err = s.uploadPolicy(id, r, req, stream)
+		} else {
+			err = s.uploadContent(id, r, req, stream)
 		}
-
-		return s.uploadContent(id, r, req, stream)
+	} else {
+		if req.policy {
+			err = s.uploadPolicyUpdate(id, r, req, stream)
+		} else {
+			err = s.uploadContentUpdate(id, r, req, stream)
+		}
 	}
 
-	if req.policy {
-		return s.uploadPolicyUpdate(id, r, req, stream)
-	}
+	debug.FreeOSMemory()
+	s.checkMemory(&conf.mem)
 
-	return s.uploadContentUpdate(id, r, req, stream)
+	return err
 }
 
 func (s *server) Apply(ctx context.Context, in *pb.Update) (*pb.Response, error) {
@@ -143,9 +149,18 @@ func (s *server) Apply(ctx context.Context, in *pb.Update) (*pb.Response, error)
 		return controlFail(newUnknownUploadedRequestError(in.Id)), nil
 	}
 
+	var (
+		res *pb.Response
+		err error
+	)
 	if req.policy {
-		return s.applyPolicy(in.Id, req)
+		res, err = s.applyPolicy(in.Id, req)
+	} else {
+		res, err = s.applyContent(in.Id, req)
 	}
 
-	return s.applyContent(in.Id, req)
+	debug.FreeOSMemory()
+	s.checkMemory(&conf.mem)
+
+	return res, err
 }

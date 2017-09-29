@@ -12,6 +12,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"sync"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
@@ -41,16 +42,17 @@ type server struct {
 	q *queue
 
 	p *pdp.PolicyStorage
+	c *pdp.LocalContentStorage
 
-	c  *pdp.LocalContentStorage
-	ct map[string]*pdp.LocalContentStorageTransaction
+	softMemWarn *time.Time
+	backMemWarn *time.Time
+	fragMemWarn *time.Time
 }
 
 func newServer() *server {
 	return &server{
-		q:  newQueue(),
-		c:  pdp.NewLocalContentStorage(nil),
-		ct: make(map[string]*pdp.LocalContentStorageTransaction)}
+		q: newQueue(),
+		c: pdp.NewLocalContentStorage(nil)}
 }
 
 func (s *server) loadPolicies(path string) error {
@@ -109,60 +111,52 @@ func (s *server) loadContent(paths []string) error {
 	return nil
 }
 
-func (s *server) listenRequests(addr string) error {
+func (s *server) listenRequests(addr string) {
 	log.WithField("address", addr).Info("Opening service port")
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open service port")
-		return err
 	}
 
 	s.requests.iface = ln
-	return nil
 }
 
-func (s *server) listenControl(addr string) error {
+func (s *server) listenControl(addr string) {
 	log.WithField("address", addr).Info("Opening control port")
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open control port")
-		return err
 	}
 
 	s.control.iface = ln
-	return nil
 }
 
-func (s *server) listenHealthCheck(addr string) error {
+func (s *server) listenHealthCheck(addr string) {
 	if len(addr) <= 0 {
-		return nil
+		return
 	}
 
 	log.WithField("address", addr).Info("Opening health check port")
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open health check port")
-		return err
 	}
 
 	s.health.iface = ln
-	return nil
 }
 
-func (s *server) listenProfiler(addr string) error {
+func (s *server) listenProfiler(addr string) {
 	if len(addr) <= 0 {
-		return nil
+		return
 	}
 
 	log.WithField("address", addr).Info("Opening profiler port")
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open profiler port")
-		return err
 	}
 
 	s.profiler = ln
-	return nil
 }
 
 func (s *server) serve(tracer ot.Tracer) {
