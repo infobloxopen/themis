@@ -36,6 +36,7 @@ type server struct {
 	requests transport
 	control  transport
 	health   transport
+	profiler net.Listener
 
 	q *queue
 
@@ -148,7 +149,23 @@ func (s *server) listenHealthCheck(addr string) error {
 	return nil
 }
 
-func (s *server) serve(tracer ot.Tracer, profiler string) {
+func (s *server) listenProfiler(addr string) error {
+	if len(addr) <= 0 {
+		return nil
+	}
+
+	log.WithField("address", addr).Info("Opening profiler port")
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open profiler port")
+		return err
+	}
+
+	s.profiler = ln
+	return nil
+}
+
+func (s *server) serve(tracer ot.Tracer) {
 	go func() {
 		log.Info("Creating control protocol handler")
 		s.control.proto = grpc.NewServer()
@@ -169,9 +186,9 @@ func (s *server) serve(tracer ot.Tracer, profiler string) {
 		}()
 	}
 
-	if len(profiler) > 0 {
+	if s.profiler != nil {
 		go func() {
-			http.ListenAndServe(profiler, http.DefaultServeMux)
+			http.Serve(s.profiler, nil)
 		}()
 	}
 

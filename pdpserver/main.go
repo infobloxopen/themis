@@ -33,10 +33,14 @@ func main() {
 		log.Error("Failed to Listen to Health Check.")
 		os.Exit(1)
 	}
+	if pdp.listenProfiler(conf.profilerEP) != nil {
+		log.Error("Failed to Listen to Profiler.")
+		os.Exit(1)
+	}
 
 	tracer, err := initTracing("zipkin", conf.tracingEP)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Warning("Could not initialize tracing.")
 	}
-	pdp.serve(tracer, conf.profilerEP)
+	pdp.serve(tracer)
 }
