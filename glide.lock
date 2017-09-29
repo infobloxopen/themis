@@ -1,5 +1,5 @@
-hash: dde279237d1c3556b705b34bdc066cdca4364dfa6232cfdc2d56fa7874845fc2
-updated: 2017-09-25T12:51:58.773305097+03:00
+hash: 65eb104e8971606e5f81a81644db2df3dd6c017bbf7b4d928e7196a717ce2b4b
+updated: 2017-09-27T14:33:03.014779163+03:00
 imports:
 - name: github.com/apache/thrift
   version: 19baeefd8c38d62085891d7956349601f79448b3
@@ -10,11 +10,16 @@ imports:
   subpackages:
   - quantile
 - name: github.com/coredns/coredns
-  version: 2a32cd415911bea79784bee3387103bd9576f438
+  version: 44a0cb9557b4554e1359ad0d0c11fb64ddd77a76
   subpackages:
   - core/dnsserver
   - pb
   - plugin
+  - plugin/dnstap
+  - plugin/dnstap/dnstapio
+  - plugin/dnstap/msg
+  - plugin/dnstap/out
+  - plugin/dnstap/taprw
   - plugin/etcd/msg
   - plugin/metrics/vars
   - plugin/pkg/dnstest
@@ -26,9 +31,11 @@ imports:
   - plugin/test
   - request
 - name: github.com/davecgh/go-spew
-  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
+  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
   subpackages:
   - spew
+- name: github.com/dnstap/golang-dnstap
+  version: 2cf77a2b5e11ac8d0ba3892772ac8e1f7b528344
 - name: github.com/eapache/go-resiliency
   version: b1fe83b5b03f624450823b751b662259ffc6af70
   subpackages:
@@ -37,6 +44,8 @@ imports:
   version: bb955e01b9346ac19dc29eb16586c90ded99a98c
 - name: github.com/eapache/queue
   version: 44cc805cf13205b55f69e14bcb69867d1ae92f98
+- name: github.com/farsightsec/golang-framestream
+  version: dec85654e8b8cf6712870afb14ee53d1c98cd5e2
 - name: github.com/flynn/go-shlex
   version: 3f9db97f856818214da2e1057f8ad84803971cff
   repo: https://github.com/flynn/go-shlex
@@ -77,7 +86,7 @@ imports:
   subpackages:
   - caddyfile
 - name: github.com/miekg/dns
-  version: e4205768578dc90c2669e75a2f8a8bf77e3083a4
+  version: 4f8d08ab3c3f260afc934e9baf564bede5795458
 - name: github.com/opentracing/opentracing-go
   version: 6edb48674bd9467b8e91fda004f2bd7202d60ce4
   subpackages:
