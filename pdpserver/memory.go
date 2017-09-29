@@ -144,21 +144,21 @@ func fmtMemSize(size uint64) string {
 		return fmt.Sprintf("%d", size)
 	}
 
-	size /= 1024
-	if size < 1024 {
-		return fmt.Sprintf("%d KB", size)
+	s := float32(size) / 1024
+	if s < 1024 {
+		return fmt.Sprintf("%.2f KB", s)
 	}
 
-	size /= 1024
-	if size < 1024 {
-		return fmt.Sprintf("%d MB", size)
+	s /= 1024
+	if s < 1024 {
+		return fmt.Sprintf("%.2f MB", s)
 	}
 
-	size /= 1024
-	if size < 1024 {
-		return fmt.Sprintf("%d GB", size)
+	s /= 1024
+	if s < 1024 {
+		return fmt.Sprintf("%.2f GB", s)
 	}
 
-	size /= 1024
-	return fmt.Sprintf("%d TB", size)
+	s /= 1024
+	return fmt.Sprintf("%.2f TB", s)
 }

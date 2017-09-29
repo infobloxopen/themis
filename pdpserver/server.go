@@ -57,6 +57,9 @@ func newServer() *server {
 	if gcp != -1 {
 		debug.SetGCPercent(gcp)
 	}
+	if gcp > 50 {
+		gcp = 50
+	}
 
 	return &server{
 		q:         newQueue(),
