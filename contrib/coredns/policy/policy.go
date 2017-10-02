@@ -269,6 +269,7 @@ func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
 	resp := makeResponse(response)
 
 	if debugQuery && resp.Action != typeRefuse {
+		response.Obligation = append(response.Obligation, respDomain.Obligation...)
 		return p.retDebugInfo(r, w, response, "yes")
 	}
 
