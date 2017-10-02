@@ -1,10 +1,12 @@
 package dns
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 )
@@ -77,8 +79,8 @@ func TestClientTLSSync(t *testing.T) {
 	}
 }
 
-func TestClientSyncBadId(t *testing.T) {
-	HandleFunc("miek.nl.", HelloServerBadId)
+func TestClientSyncBadID(t *testing.T) {
+	HandleFunc("miek.nl.", HelloServerBadID)
 	defer HandleRemove("miek.nl.")
 
 	s, addrstr, err := RunLocalUDPServer("127.0.0.1:0")
@@ -248,6 +250,9 @@ func TestClientConn(t *testing.T) {
 		t.Errorf("failed to exchange: %v", err)
 	}
 	r, err := cn.ReadMsg()
+	if err != nil {
+		t.Errorf("failed to get a valid answer: %v", err)
+	}
 	if r == nil || r.Rcode != RcodeSuccess {
 		t.Errorf("failed to get an valid answer\n%v", r)
 	}
@@ -260,6 +265,9 @@ func TestClientConn(t *testing.T) {
 	buf, err := cn.ReadMsgHeader(h)
 	if buf == nil {
 		t.Errorf("failed to get an valid answer\n%v", r)
+	}
+	if err != nil {
+		t.Errorf("failed to get a valid answer: %v", err)
 	}
 	if int(h.Bits&0xF) != RcodeSuccess {
 		t.Errorf("failed to get an valid answer in ReadMsgHeader\n%v", r)
@@ -422,7 +430,7 @@ func TestTimeout(t *testing.T) {
 
 	// Use a channel + timeout to ensure we don't get stuck if the
 	// Client Timeout is not working properly
-	done := make(chan struct{})
+	done := make(chan struct{}, 2)
 
 	timeout := time.Millisecond
 	allowable := timeout + (10 * time.Millisecond)
@@ -434,19 +442,91 @@ func TestTimeout(t *testing.T) {
 		c := &Client{Timeout: timeout}
 		_, _, err := c.Exchange(m, addrstr)
 		if err == nil {
-			t.Error("no timeout using Client")
+			t.Error("no timeout using Client.Exchange")
 		}
 		done <- struct{}{}
 	}()
 
-	select {
-	case <-done:
-	case <-time.After(abortAfter):
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		c := &Client{}
+		_, _, err := c.ExchangeContext(ctx, m, addrstr)
+		if err == nil {
+			t.Error("no timeout using Client.ExchangeContext")
+		}
+		done <- struct{}{}
+	}()
+
+	// Wait for both the Exchange and ExchangeContext tests to be done.
+	for i := 0; i < 2; i++ {
+		select {
+		case <-done:
+		case <-time.After(abortAfter):
+		}
 	}
 
 	length := time.Since(start)
 
 	if length > allowable {
 		t.Errorf("exchange took longer (%v) than specified Timeout (%v)", length, timeout)
+	}
+}
+
+// Check that responses from deduplicated requests aren't shared between callers
+func TestConcurrentExchanges(t *testing.T) {
+	cases := make([]*Msg, 2)
+	cases[0] = new(Msg)
+	cases[1] = new(Msg)
+	cases[1].Truncated = true
+	for _, m := range cases {
+		block := make(chan struct{})
+		waiting := make(chan struct{})
+
+		handler := func(w ResponseWriter, req *Msg) {
+			r := m.Copy()
+			r.SetReply(req)
+
+			waiting <- struct{}{}
+			<-block
+			w.WriteMsg(r)
+		}
+
+		HandleFunc("miek.nl.", handler)
+		defer HandleRemove("miek.nl.")
+
+		s, addrstr, err := RunLocalUDPServer("127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("unable to run test server: %s", err)
+		}
+		defer s.Shutdown()
+
+		m := new(Msg)
+		m.SetQuestion("miek.nl.", TypeSRV)
+		c := &Client{
+			SingleInflight: true,
+		}
+		r := make([]*Msg, 2)
+
+		var wg sync.WaitGroup
+		wg.Add(len(r))
+		for i := 0; i < len(r); i++ {
+			go func(i int) {
+				r[i], _, _ = c.Exchange(m.Copy(), addrstr)
+				wg.Done()
+			}(i)
+		}
+		select {
+		case <-waiting:
+		case <-time.After(time.Second):
+			t.FailNow()
+		}
+		close(block)
+		wg.Wait()
+
+		if r[0] == r[1] {
+			t.Log("Got same response object, expected non-shared responses")
+			t.Fail()
+		}
 	}
 }
