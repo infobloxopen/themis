@@ -46,8 +46,16 @@ func TestPolicy(t *testing.T) {
 			query:     "test.com.",
 			queryType: dns.TypeA,
 			response:  &pdp.Response{Effect: pdp.Response_INDETERMINATE},
-			status:    dns.RcodeRefused,
-			err:       nil,
+			status:    dns.RcodeServerFailure,
+			err:       errInvalidAction,
+		},
+		{
+			query:      "test.com.",
+			queryType:  dns.TypeA,
+			response:   &pdp.Response{Effect: pdp.Response_PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.Response_INDETERMINATE},
+			status:     dns.RcodeServerFailure,
+			err:        errInvalidAction,
 		},
 		{
 			query:     "test.com.",
