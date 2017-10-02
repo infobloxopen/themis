@@ -224,7 +224,6 @@ func (p *PolicyPlugin) retDebugInfo(r *dns.Msg, w dns.ResponseWriter,
 			debugQueryInfo += join(item.Id, item.Value)
 		}
 	}
-	log.Printf("[DEBUG] %s", debugQueryInfo)
 	r.Answer = append(r.Answer, &dns.TXT{Hdr: hdr, Txt: []string{debugQueryInfo}})
 	r.Response = true
 	r.Rcode = dns.RcodeSuccess

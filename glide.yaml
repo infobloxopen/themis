@@ -18,6 +18,8 @@ import:
   - go/otgrpc
 - package: github.com/mholt/caddy
 - package: github.com/miekg/dns
+  subpackages:
+  - internal/socket
 - package: github.com/opentracing/opentracing-go
 - package: github.com/openzipkin/zipkin-go-opentracing
 - package: golang.org/x/net

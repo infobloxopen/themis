@@ -8,7 +8,7 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 
-	"github.com/openzipkin/zipkin-go-opentracing/_thrift/gen-go/zipkincore"
+	"github.com/openzipkin/zipkin-go-opentracing/thrift/gen-go/zipkincore"
 )
 
 // Default timeout for http request in seconds
@@ -35,7 +35,13 @@ type HTTPCollector struct {
 	shutdown      chan error
 	sendMutex     *sync.Mutex
 	batchMutex    *sync.Mutex
+	reqCallback   RequestCallback
 }
+
+// RequestCallback receives the initialized request from the Collector before
+// sending it over the wire. This allows one to plug in additional headers or
+// do other customization.
+type RequestCallback func(*http.Request)
 
 // HTTPOption sets a parameter for the HttpCollector
 type HTTPOption func(c *HTTPCollector)
@@ -69,6 +75,17 @@ func HTTPMaxBacklog(n int) HTTPOption {
 // emitting them to the collector. The default batch interval is 1 second.
 func HTTPBatchInterval(d time.Duration) HTTPOption {
 	return func(c *HTTPCollector) { c.batchInterval = d }
+}
+
+// HTTPClient sets a custom http client to use.
+func HTTPClient(client *http.Client) HTTPOption {
+	return func(c *HTTPCollector) { c.client = client }
+}
+
+// HTTPRequestCallback registers a callback function to adjust the collector
+// *http.Request before it sends the request to Zipkin.
+func HTTPRequestCallback(rc RequestCallback) HTTPOption {
+	return func(c *HTTPCollector) { c.reqCallback = rc }
 }
 
 // NewHTTPCollector returns a new HTTP-backend Collector. url should be a http
@@ -163,7 +180,7 @@ func (c *HTTPCollector) append(span *zipkincore.Span) (newBatchSize int) {
 	c.batch = append(c.batch, span)
 	if len(c.batch) > c.maxBacklog {
 		dispose := len(c.batch) - c.maxBacklog
-		c.logger.Log("Backlog too long, disposing spans.", "count", dispose)
+		c.logger.Log("msg", "backlog too long, disposing spans.", "count", dispose)
 		c.batch = c.batch[dispose:]
 	}
 	newBatchSize = len(c.batch)
@@ -194,9 +211,18 @@ func (c *HTTPCollector) send() error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/x-thrift")
-	if _, err = c.client.Do(req); err != nil {
+	if c.reqCallback != nil {
+		c.reqCallback(req)
+	}
+	resp, err := c.client.Do(req)
+	if err != nil {
 		c.logger.Log("err", err.Error())
 		return err
+	}
+	resp.Body.Close()
+	// non 2xx code
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		c.logger.Log("err", "HTTP POST span failed", "code", resp.Status)
 	}
 
 	// Remove sent spans from the batch

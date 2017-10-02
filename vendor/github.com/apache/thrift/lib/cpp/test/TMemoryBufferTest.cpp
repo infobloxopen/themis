@@ -21,8 +21,9 @@
 #include <iostream>
 #include <climits>
 #include <vector>
-#include <thrift/transport/TBufferTransports.h>
 #include <thrift/protocol/TBinaryProtocol.h>
+#include <thrift/stdcxx.h>
+#include <thrift/transport/TBufferTransports.h>
 #include "gen-cpp/ThriftTest_types.h"
 
 BOOST_AUTO_TEST_SUITE(TMemoryBufferTest)
@@ -30,7 +31,7 @@ BOOST_AUTO_TEST_SUITE(TMemoryBufferTest)
 using apache::thrift::protocol::TBinaryProtocol;
 using apache::thrift::transport::TMemoryBuffer;
 using apache::thrift::transport::TTransportException;
-using boost::shared_ptr;
+using apache::thrift::stdcxx::shared_ptr;
 using std::cout;
 using std::endl;
 using std::string;
@@ -114,6 +115,54 @@ BOOST_AUTO_TEST_CASE(test_exceptions) {
 
   TMemoryBuffer buf2((uint8_t*)data, 7, TMemoryBuffer::COPY);
   BOOST_CHECK_NO_THROW(buf2.write((const uint8_t*)"bar", 3));
+}
+
+BOOST_AUTO_TEST_CASE(test_default_maximum_buffer_size)
+{
+  BOOST_CHECK_EQUAL(std::numeric_limits<uint32_t>::max(), TMemoryBuffer().getMaxBufferSize());
+}
+
+BOOST_AUTO_TEST_CASE(test_default_buffer_size)
+{
+  BOOST_CHECK_EQUAL(1024, TMemoryBuffer().getBufferSize());
+}
+
+BOOST_AUTO_TEST_CASE(test_error_set_max_buffer_size_too_small)
+{
+  TMemoryBuffer buf;
+  BOOST_CHECK_THROW(buf.setMaxBufferSize(buf.getBufferSize() - 1), TTransportException);
+}
+
+BOOST_AUTO_TEST_CASE(test_maximum_buffer_size)
+{
+  TMemoryBuffer buf;
+  buf.setMaxBufferSize(8192);
+  std::vector<uint8_t> small_buff(1);
+
+  for (size_t i = 0; i < 8192; ++i)
+  {
+    buf.write(&small_buff[0], 1);
+  }
+
+  BOOST_CHECK_THROW(buf.write(&small_buff[0], 1), TTransportException);
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_buffer_to_get_sizeof_objects)
+{
+  // This is a demonstration of how to use TMemoryBuffer to determine
+  // the serialized size of a thrift object in the Binary protocol.
+  // See THRIFT-3480
+
+  shared_ptr<TMemoryBuffer> memBuffer(new TMemoryBuffer());
+  shared_ptr<TBinaryProtocol> binaryProtcol(new TBinaryProtocol(memBuffer));
+
+  thrift::test::Xtruct object;
+  object.i32_thing = 10;
+  object.i64_thing = 30;
+  object.string_thing = "who's your daddy?";
+
+  uint32_t size = object.write(binaryProtcol.get());
+  BOOST_CHECK_EQUAL(47, size);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
