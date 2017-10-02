@@ -6,6 +6,7 @@ package policy
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -38,6 +39,11 @@ const (
 	typeAllow
 	typeRedirect
 	typeBlock
+	typeInvalid
+)
+
+var (
+	errInvalidAction = errors.New("invalid action")
 )
 
 var stringToEDNS0MapType = map[string]uint16{
@@ -72,7 +78,12 @@ type Response struct {
 	Redirect string
 }
 
-func makeResponse(resp pb.Response) (ret Response) {
+func makeResponse(resp *pb.Response) (ret Response) {
+	if resp == nil {
+		log.Printf("[ERROR] PDP response pointer is nil")
+		ret.Action = typeInvalid
+		return
+	}
 	if resp.Effect == pb.Response_PERMIT {
 		ret.Action = typeAllow
 		return
@@ -95,8 +106,8 @@ func makeResponse(resp pb.Response) (ret Response) {
 		ret.Action = typeBlock
 		return
 	} else {
-		log.Printf("[ERROR] PDP Effect %s", resp.Effect)
-		ret.Action = typeRefuse
+		log.Printf("[ERROR] PDP Effect: %s", resp.Effect)
+		ret.Action = typeInvalid
 		return
 	}
 }
@@ -188,20 +199,32 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pb.Attribute 
 	return attrs
 }
 
-func (p *PolicyPlugin) retRcode(w dns.ResponseWriter, r *dns.Msg, rcode int) (int, error) {
+func (p *PolicyPlugin) retRcode(w dns.ResponseWriter, r *dns.Msg, rcode int, err error) (int, error) {
 	msg := &dns.Msg{}
 	msg.SetRcode(r, rcode)
 	w.WriteMsg(msg)
-	return rcode, nil
+	return rcode, err
 }
 
+func join(key, value string) string { return "," + key + ":" + value }
+
 func (p *PolicyPlugin) retDebugInfo(r *dns.Msg, w dns.ResponseWriter,
-	resp pb.Response, resolve string) (int, error) {
+	respDomain *pb.Response, respIP *pb.Response, resolve string) (int, error) {
 	hdr := dns.RR_Header{Name: r.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassCHAOS, Ttl: 0}
-	debugQueryInfo := fmt.Sprintf("resolve: %s effect: %s", resolve, resp.Effect)
-	for _, item := range resp.Obligation {
-		debugQueryInfo += fmt.Sprintf(" %s: %s", item.Id, item.Value)
+	debugQueryInfo := "resolve:" + resolve
+	if respDomain != nil {
+		debugQueryInfo += join("query", respDomain.Effect.String())
+		for _, item := range respDomain.Obligation {
+			debugQueryInfo += join(item.Id, item.Value)
+		}
 	}
+	if respIP != nil {
+		debugQueryInfo += join("response", respIP.Effect.String())
+		for _, item := range respIP.Obligation {
+			debugQueryInfo += join(item.Id, item.Value)
+		}
+	}
+	log.Printf("[DEBUG] %s", debugQueryInfo)
 	r.Answer = append(r.Answer, &dns.TXT{Hdr: hdr, Txt: []string{debugQueryInfo}})
 	r.Response = true
 	r.Rcode = dns.RcodeSuccess
@@ -210,7 +233,7 @@ func (p *PolicyPlugin) retDebugInfo(r *dns.Msg, w dns.ResponseWriter,
 }
 
 func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
-	r *dns.Msg, attrs []*pb.Attribute, tapAttrs []*tap.DnstapAttribute, respDomain pb.Response, debugQuery bool) (int, error) {
+	r *dns.Msg, attrs []*pb.Attribute, tapAttrs []*tap.DnstapAttribute, respDomain *pb.Response, debugQuery bool) (int, error) {
 	req := r
 	responseWriter := nonwriter.New(w)
 	if debugQuery {
@@ -221,7 +244,7 @@ func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
 	status, err := plugin.NextOrFailure(p.Name(), p.Next, ctx, responseWriter, req)
 	if err != nil {
 		if debugQuery {
-			return p.retDebugInfo(r, w, respDomain, "failed")
+			return p.retDebugInfo(r, w, respDomain, nil, "failed")
 		}
 		return status, err
 	}
@@ -243,7 +266,7 @@ func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
 	// in this case just pass through answer w/o validation
 	if address == "" {
 		if debugQuery {
-			return p.retDebugInfo(r, w, respDomain, "no")
+			return p.retDebugInfo(r, w, respDomain, nil, "no")
 		}
 		w.WriteMsg(responseWriter.Msg)
 		return status, nil
@@ -254,22 +277,22 @@ func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
 	attrs = append(attrs, addressAttr)
 	attrs = append(attrs, respDomain.Obligation...)
 
-	var response pb.Response
-	err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &response)
+	response := new(pb.Response)
+	err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, response)
 	if err != nil {
 		log.Printf("[ERROR] Policy validation failed due to error %s", err)
-		return dns.RcodeServerFailure, err
+		return p.retRcode(w, r, dns.RcodeServerFailure, err)
 	}
 
 	if p.TapIO != nil {
 		tapAttrs = append(tapAttrs, tap.PdpAttr2DnstapAttr(addressAttr))
-		tap.SendPolicyHitMsg(p.TapIO, time.Now(), r, tap.PolicyHitMessage_POLICY_TRIGGER_ADDRESS, tapAttrs, &response)
+		tap.SendPolicyHitMsg(p.TapIO, time.Now(), r, tap.PolicyHitMessage_POLICY_TRIGGER_ADDRESS, tapAttrs, response)
 	}
 
 	resp := makeResponse(response)
 
 	if debugQuery && resp.Action != typeRefuse {
-		return p.retDebugInfo(r, w, response, "yes")
+		return p.retDebugInfo(r, w, respDomain, response, "yes")
 	}
 
 	switch resp.Action {
@@ -279,10 +302,12 @@ func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
 	case typeRedirect:
 		return p.redirect(ctx, w, r, resp.Redirect)
 	case typeBlock:
-		return p.retRcode(w, r, dns.RcodeNameError)
+		return p.retRcode(w, r, dns.RcodeNameError, nil)
+	case typeRefuse:
+		return p.retRcode(w, r, dns.RcodeRefused, nil)
 	}
 
-	return p.retRcode(w, r, dns.RcodeRefused)
+	return p.retRcode(w, r, dns.RcodeServerFailure, errInvalidAction)
 }
 
 // ServeDNS implements the Handler interface.
@@ -313,23 +338,23 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	ednsAttrs := p.getAttrsFromEDNS0(r, state.IP())
 	attrs = append(attrs, ednsAttrs...)
 
-	var response pb.Response
-	err := p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, &response)
+	response := new(pb.Response)
+	err := p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, response)
 	if err != nil {
 		log.Printf("[ERROR] Policy validation failed due to error %s", err)
-		return dns.RcodeServerFailure, err
+		return p.retRcode(w, r, dns.RcodeServerFailure, err)
 	}
 
 	tapAttrs := []*tap.DnstapAttribute{}
 	if p.TapIO != nil {
 		tapAttrs = tap.ConvertAttrs(attrs[ednsStart:])
-		tap.SendPolicyHitMsg(p.TapIO, time.Now(), r, tap.PolicyHitMessage_POLICY_TRIGGER_DOMAIN, tapAttrs, &response)
+		tap.SendPolicyHitMsg(p.TapIO, time.Now(), r, tap.PolicyHitMessage_POLICY_TRIGGER_DOMAIN, tapAttrs, response)
 	}
 
 	resp := makeResponse(response)
 
-	if debugQuery && (resp.Action == typeRedirect || resp.Action == typeBlock) {
-		return p.retDebugInfo(r, w, response, "skip")
+	if debugQuery && (resp.Action == typeRedirect || resp.Action == typeBlock || resp.Action == typeInvalid) {
+		return p.retDebugInfo(r, w, response, nil, "skip")
 	}
 
 	switch resp.Action {
@@ -338,10 +363,12 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	case typeRedirect:
 		return p.redirect(ctx, w, r, resp.Redirect)
 	case typeBlock:
-		return p.retRcode(w, r, dns.RcodeNameError)
+		return p.retRcode(w, r, dns.RcodeNameError, nil)
+	case typeRefuse:
+		return p.retRcode(w, r, dns.RcodeRefused, nil)
 	}
 
-	return p.retRcode(w, r, dns.RcodeRefused)
+	return p.retRcode(w, r, dns.RcodeServerFailure, errInvalidAction)
 }
 
 // Name implements the Handler interface
