@@ -11,7 +11,9 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"runtime/debug"
 	"sync"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
@@ -36,20 +38,34 @@ type server struct {
 	requests transport
 	control  transport
 	health   transport
+	profiler net.Listener
 
 	q *queue
 
 	p *pdp.PolicyStorage
+	c *pdp.LocalContentStorage
 
-	c  *pdp.LocalContentStorage
-	ct map[string]*pdp.LocalContentStorageTransaction
+	softMemWarn *time.Time
+	backMemWarn *time.Time
+	fragMemWarn *time.Time
+	gcMax       int
+	gcPercent   int
 }
 
 func newServer() *server {
+	gcp := debug.SetGCPercent(-1)
+	if gcp != -1 {
+		debug.SetGCPercent(gcp)
+	}
+	if gcp > 50 {
+		gcp = 50
+	}
+
 	return &server{
-		q:  newQueue(),
-		c:  pdp.NewLocalContentStorage(nil),
-		ct: make(map[string]*pdp.LocalContentStorageTransaction)}
+		q:         newQueue(),
+		c:         pdp.NewLocalContentStorage(nil),
+		gcMax:     gcp,
+		gcPercent: gcp}
 }
 
 func (s *server) loadPolicies(path string) error {
@@ -108,47 +124,55 @@ func (s *server) loadContent(paths []string) error {
 	return nil
 }
 
-func (s *server) listenRequests(addr string) error {
+func (s *server) listenRequests(addr string) {
 	log.WithField("address", addr).Info("Opening service port")
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open service port")
-		return err
 	}
 
 	s.requests.iface = ln
-	return nil
 }
 
-func (s *server) listenControl(addr string) error {
+func (s *server) listenControl(addr string) {
 	log.WithField("address", addr).Info("Opening control port")
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open control port")
-		return err
 	}
 
 	s.control.iface = ln
-	return nil
 }
 
-func (s *server) listenHealthCheck(addr string) error {
+func (s *server) listenHealthCheck(addr string) {
 	if len(addr) <= 0 {
-		return nil
+		return
 	}
 
 	log.WithField("address", addr).Info("Opening health check port")
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open health check port")
-		return err
 	}
 
 	s.health.iface = ln
-	return nil
 }
 
-func (s *server) serve(tracer ot.Tracer, profiler string) {
+func (s *server) listenProfiler(addr string) {
+	if len(addr) <= 0 {
+		return
+	}
+
+	log.WithField("address", addr).Info("Opening profiler port")
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open profiler port")
+	}
+
+	s.profiler = ln
+}
+
+func (s *server) serve(tracer ot.Tracer) {
 	go func() {
 		log.Info("Creating control protocol handler")
 		s.control.proto = grpc.NewServer()
@@ -169,9 +193,9 @@ func (s *server) serve(tracer ot.Tracer, profiler string) {
 		}()
 	}
 
-	if len(profiler) > 0 {
+	if s.profiler != nil {
 		go func() {
-			http.ListenAndServe(profiler, http.DefaultServeMux)
+			http.Serve(s.profiler, nil)
 		}()
 	}
 
