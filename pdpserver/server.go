@@ -35,6 +35,8 @@ type transport struct {
 type server struct {
 	sync.RWMutex
 
+	start    chan bool
+
 	requests transport
 	control  transport
 	health   transport
@@ -62,6 +64,7 @@ func newServer() *server {
 	}
 
 	return &server{
+		start:     make(chan bool),
 		q:         newQueue(),
 		c:         pdp.NewLocalContentStorage(nil),
 		gcMax:     gcp,
@@ -173,6 +176,9 @@ func (s *server) listenProfiler(addr string) {
 }
 
 func (s *server) serve(tracer ot.Tracer) {
+	s.listenControl(conf.controlEP)
+	s.listenHealthCheck(conf.healthEP)
+	s.listenProfiler(conf.profilerEP)
 	go func() {
 		log.Info("Creating control protocol handler")
 		s.control.proto = grpc.NewServer()
@@ -198,6 +204,11 @@ func (s *server) serve(tracer ot.Tracer) {
 			http.Serve(s.profiler, nil)
 		}()
 	}
+
+	log.Info("Waiting for policies to be applied.")
+
+	<-s.start
+	s.listenRequests(conf.serviceEP)
 
 	log.Info("Creating service protocol handler")
 	if tracer == nil {
