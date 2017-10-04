@@ -23,7 +23,7 @@ var (
 )
 
 func TestPolicy(t *testing.T) {
-	pm := PolicyPlugin{Next: handler(), options: make(map[uint16]edns0Map)}
+	pm := PolicyPlugin{Next: handler(), options: make(map[uint16][]edns0Map)}
 
 	tests := []struct {
 		query      string
@@ -352,16 +352,25 @@ func makeRequestWithEDNS0(code uint16, hexstring string, nonlocal bool) *dns.Msg
 }
 
 func TestEdns(t *testing.T) {
-	pm := PolicyPlugin{options: make(map[uint16]edns0Map)}
+	pm := PolicyPlugin{options: make(map[uint16][]edns0Map)}
 
 	// Add EDNS mapping
-	if err := pm.AddEDNS0Map("0xfffa", "client_id", "hex", "string", "0", "32"); err != nil {
+	if err := pm.AddEDNS0Map("0xfffa", "client_id", "hex", "string", "0", "16"); err != nil {
+		t.Errorf("Expected error 'nil' but got %v\n", err)
+	}
+	if err := pm.AddEDNS0Map("0xfffa", "group_id", "hex", "string", "16", "32"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
 	if err := pm.AddEDNS0Map("0xfffb", "source_ip", "address", "address", "0", "0"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
 	if err := pm.AddEDNS0Map("0xfffc", "client_name", "bytes", "string", "0", "0"); err != nil {
+		t.Errorf("Expected error 'nil' but got %v\n", err)
+	}
+	if err := pm.AddEDNS0Map("0xfffd", "client_uid", "hex", "string", "0", "0"); err != nil {
+		t.Errorf("Expected error 'nil' but got %v\n", err)
+	}
+	if err := pm.AddEDNS0Map("0xfffe", "hex_name", "hex", "string", "2", "0"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
 
@@ -383,7 +392,7 @@ func TestEdns(t *testing.T) {
 		},
 		{
 			name: "Test option that not in config mapping",
-			code: 0xfffd,
+			code: 0xffff,
 			data: "cafecafe",
 			ip:   "192.168.0.2",
 			attr: map[string]*pdp.Attribute{
@@ -393,11 +402,12 @@ func TestEdns(t *testing.T) {
 		{
 			name: "Test option handled as hex",
 			code: 0xfffa,
-			data: "4e7e318384088e7d4f3dbc96219ee5d4",
+			data: "4e7e318384088e7d4f3dbc96219ee5d4" + "318384088e7d4f3dbc96219ee5d44e7e",
 			ip:   "192.168.0.3",
 			attr: map[string]*pdp.Attribute{
 				"source_ip": {Id: "source_ip", Type: "address", Value: "192.168.0.3"},
 				"client_id": {Id: "client_id", Type: "string", Value: "4e7e318384088e7d4f3dbc96219ee5d4"},
+				"group_id":  {Id: "group_id", Type: "string", Value: "318384088e7d4f3dbc96219ee5d44e7e"},
 			},
 		},
 		{
@@ -418,6 +428,26 @@ func TestEdns(t *testing.T) {
 			attr: map[string]*pdp.Attribute{
 				"source_ip":   {Id: "source_ip", Type: "address", Value: "192.168.0.5"},
 				"client_name": {Id: "client_name", Type: "string", Value: "customer"},
+			},
+		},
+		{
+			name: "Test option handled as hex, start = 0 and end = 0 (whole data)",
+			code: 0xfffd,
+			data: "96219ee5d44e7e318384088e7d4f3dbc",
+			ip:   "192.168.0.6",
+			attr: map[string]*pdp.Attribute{
+				"source_ip":  {Id: "source_ip", Type: "address", Value: "192.168.0.6"},
+				"client_uid": {Id: "client_uid", Type: "string", Value: "96219ee5d44e7e318384088e7d4f3dbc"},
+			},
+		},
+		{
+			name: "Test option handled as hex, start = 2 and end = 0 (from start to end of data)",
+			code: 0xfffe,
+			data: "8e7d" + "4f3dbc96219ee5d44e7e31838408",
+			ip:   "192.168.0.7",
+			attr: map[string]*pdp.Attribute{
+				"source_ip": {Id: "source_ip", Type: "address", Value: "192.168.0.7"},
+				"hex_name":  {Id: "hex_name", Type: "string", Value: "4f3dbc96219ee5d44e7e31838408"},
 			},
 		},
 	}

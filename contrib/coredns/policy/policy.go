@@ -53,18 +53,18 @@ var stringToEDNS0MapType = map[string]uint16{
 }
 
 type edns0Map struct {
-	name         string
-	dataType     uint16
-	destType     string
-	stringOffset int
-	stringSize   int
+	name     string
+	dataType uint16
+	destType string
+	start    uint
+	end      uint
 }
 
 // PolicyPlugin represents a plugin instance that can validate DNS
 // requests and replies using PDP server.
 type PolicyPlugin struct {
 	Endpoints   []string
-	options     map[uint16]edns0Map
+	options     map[uint16][]edns0Map
 	TapIO       tapplg.IORoutine
 	Trace       plugin.Handler
 	Next        plugin.Handler
@@ -132,28 +132,28 @@ func (p *PolicyPlugin) Close() {
 
 // AddEDNS0Map adds new EDNS0 to table.
 func (p *PolicyPlugin) AddEDNS0Map(code, name, dataType, destType,
-	stringOffset, stringSize string) error {
+	startIndex, endIndex string) error {
 	c, err := strconv.ParseUint(code, 0, 16)
 	if err != nil {
 		return fmt.Errorf("Could not parse EDNS0 code: %s", err)
 	}
-	offset, err := strconv.Atoi(stringOffset)
+	start, err := strconv.ParseUint(startIndex, 10, 32)
 	if err != nil {
-		return fmt.Errorf("Could not parse EDNS0 string offset: %s", err)
+		return fmt.Errorf("Could not parse EDNS0 start index: %s", err)
 	}
-	size, err := strconv.Atoi(stringSize)
+	end, err := strconv.ParseUint(endIndex, 10, 32)
 	if err != nil {
-		return fmt.Errorf("Could not parse EDNS0 string size: %s", err)
+		return fmt.Errorf("Could not parse EDNS0 end index: %s", err)
+	}
+	if end <= start && end != 0 {
+		return fmt.Errorf("End index should be > start index (actual %d <= %d)", end, start)
 	}
 	ednsType, ok := stringToEDNS0MapType[dataType]
 	if !ok {
 		return fmt.Errorf("Invalid dataType for EDNS0 map: %s", dataType)
 	}
 	ecode := uint16(c)
-	if _, ok := p.options[ecode]; ok {
-		return fmt.Errorf("Duplicated EDNS0 code: %d", ecode)
-	}
-	p.options[ecode] = edns0Map{name, ednsType, destType, offset, size}
+	p.options[ecode] = append(p.options[ecode], edns0Map{name, ednsType, destType, uint(start), uint(end)})
 	return nil
 }
 
@@ -171,29 +171,34 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pb.Attribute 
 		if !local {
 			continue
 		}
-		option, ok := p.options[optLocal.Code]
+		options, ok := p.options[optLocal.Code]
 		if !ok {
 			continue
 		}
-		var value string
-		switch option.dataType {
-		case typeEDNS0Bytes:
-			value = string(optLocal.Data)
-		case typeEDNS0Hex:
-			value = hex.EncodeToString(optLocal.Data)
-		case typeEDNS0IP:
-			ip := net.IP(optLocal.Data)
-			value = ip.String()
+		for _, option := range options {
+			var value string
+			switch option.dataType {
+			case typeEDNS0Bytes:
+				value = string(optLocal.Data)
+			case typeEDNS0Hex:
+				start := uint(0)
+				end := uint(len(optLocal.Data))
+				if option.start < end {
+					start = option.start
+				}
+				if option.end < end && option.end > 0 {
+					end = option.end
+				}
+				value = hex.EncodeToString(optLocal.Data[start:end])
+			case typeEDNS0IP:
+				ip := net.IP(optLocal.Data)
+				value = ip.String()
+			}
+			if option.name == "source_ip" {
+				ipId = "proxy_source_ip"
+			}
+			attrs = append(attrs, &pb.Attribute{Id: option.name, Type: option.destType, Value: value})
 		}
-		from := option.stringOffset
-		to := option.stringOffset + option.stringSize
-		if to > 0 && to <= len(value) && from < to {
-			value = value[from:to]
-		}
-		if option.name == "source_ip" {
-			ipId = "proxy_source_ip"
-		}
-		attrs = append(attrs, &pb.Attribute{Id: option.name, Type: option.destType, Value: value})
 	}
 	attrs = append(attrs, &pb.Attribute{Id: ipId, Type: "address", Value: ip})
 	return attrs
@@ -245,7 +250,7 @@ func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
 		if debugQuery {
 			return p.retDebugInfo(r, w, respDomain, nil, "failed")
 		}
-		return status, err
+		return p.retRcode(w, r, dns.RcodeServerFailure, err)
 	}
 
 	var address string
@@ -406,7 +411,7 @@ func (p *PolicyPlugin) redirect(ctx context.Context, w dns.ResponseWriter, r *dn
 		responseWriter := nonwriter.New(w)
 		status, err := plugin.NextOrFailure(p.Name(), p.Next, ctx, responseWriter, msg)
 		if err != nil {
-			return status, err
+			return p.retRcode(w, r, dns.RcodeServerFailure, err)
 		}
 
 		a.Answer = append(a.Answer, responseWriter.Msg.Answer...)
