@@ -157,6 +157,36 @@ func (p *PolicyPlugin) AddEDNS0Map(code, name, dataType, destType,
 	return nil
 }
 
+func parseOptionGroup(data []byte, options []edns0Map) ([]*pb.Attribute, bool) {
+	srcIpFound := false
+	var attrs []*pb.Attribute
+	for _, option := range options {
+		var value string
+		switch option.dataType {
+		case typeEDNS0Bytes:
+			value = string(data)
+		case typeEDNS0Hex:
+			start := uint(0)
+			end := uint(len(data))
+			if option.start < end {
+				start = option.start
+			}
+			if option.end < end && option.end > 0 {
+				end = option.end
+			}
+			value = hex.EncodeToString(data[start:end])
+		case typeEDNS0IP:
+			ip := net.IP(data)
+			value = ip.String()
+		}
+		if option.name == "source_ip" {
+			srcIpFound = true
+		}
+		attrs = append(attrs, &pb.Attribute{Id: option.name, Type: option.destType, Value: value})
+	}
+	return attrs, srcIpFound
+}
+
 func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pb.Attribute {
 	ipId := "source_ip"
 	var attrs []*pb.Attribute
@@ -175,29 +205,10 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pb.Attribute 
 		if !ok {
 			continue
 		}
-		for _, option := range options {
-			var value string
-			switch option.dataType {
-			case typeEDNS0Bytes:
-				value = string(optLocal.Data)
-			case typeEDNS0Hex:
-				start := uint(0)
-				end := uint(len(optLocal.Data))
-				if option.start < end {
-					start = option.start
-				}
-				if option.end < end && option.end > 0 {
-					end = option.end
-				}
-				value = hex.EncodeToString(optLocal.Data[start:end])
-			case typeEDNS0IP:
-				ip := net.IP(optLocal.Data)
-				value = ip.String()
-			}
-			if option.name == "source_ip" {
-				ipId = "proxy_source_ip"
-			}
-			attrs = append(attrs, &pb.Attribute{Id: option.name, Type: option.destType, Value: value})
+		group, srcIpFound := parseOptionGroup(optLocal.Data, options)
+		attrs = append(attrs, group...)
+		if srcIpFound {
+			ipId = "proxy_source_ip"
 		}
 	}
 	attrs = append(attrs, &pb.Attribute{Id: ipId, Type: "address", Value: ip})
