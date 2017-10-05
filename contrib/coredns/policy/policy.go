@@ -248,7 +248,7 @@ func (p *PolicyPlugin) retDebugInfo(r *dns.Msg, w dns.ResponseWriter,
 }
 
 func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
-	r *dns.Msg, attrs []*pb.Attribute, tapAttrs []*tap.DnstapAttribute, respDomain *pb.Response, debugQuery bool) (int, error) {
+	r *dns.Msg, tapAttrs []*tap.DnstapAttribute, respDomain *pb.Response, debugQuery bool) (int, error) {
 	req := r
 	responseWriter := nonwriter.New(w)
 	if debugQuery {
@@ -287,7 +287,7 @@ func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
 		return status, nil
 	}
 
-	attrs[0].Value = "response"
+	attrs := []*pb.Attribute{{Id: "type", Type: "string", Value: "response"}}
 	addressAttr := &pb.Attribute{Id: "address", Type: "address", Value: address}
 	attrs = append(attrs, addressAttr)
 	attrs = append(attrs, respDomain.Obligation...)
@@ -374,7 +374,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 
 	switch resp.Action {
 	case typeAllow:
-		return p.handlePermit(ctx, w, r, attrs, tapAttrs, response, debugQuery)
+		return p.handlePermit(ctx, w, r, tapAttrs, response, debugQuery)
 	case typeRedirect:
 		return p.redirect(ctx, w, r, resp.Redirect)
 	case typeBlock:
