@@ -73,7 +73,7 @@ func TestPolicyConfigParse(t *testing.T) {
 						}
 					}`,
 			endpoints:  []string{"10.2.4.1:5555"},
-			errContent: "Could not parse EDNS0 string offset",
+			errContent: "Could not parse EDNS0 start index",
 		},
 		{
 			input: `.:53 {
@@ -83,18 +83,28 @@ func TestPolicyConfigParse(t *testing.T) {
 						}
 					}`,
 			endpoints:  []string{"10.2.4.1:5555"},
-			errContent: "Could not parse EDNS0 string size",
+			errContent: "Could not parse EDNS0 end index",
 		},
 		{
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							edns0 0xfff0 uid hex string
-							edns0 0xfff0 id hex string
+							edns0 0xfff0 uid hex string 0 16
+							edns0 0xfff0 id hex string 16 32
 						}
 					}`,
 			endpoints:  []string{"10.2.4.1:5555"},
-			errContent: "Duplicated EDNS0 code",
+			errContent: "",
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							edns0 0xfff0 uid hex string 16 15
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "End index should be > start index",
 		},
 		{
 			input: `.:53 {
