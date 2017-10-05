@@ -56,6 +56,7 @@ type edns0Map struct {
 	name     string
 	dataType uint16
 	destType string
+	size     uint
 	start    uint
 	end      uint
 }
@@ -132,16 +133,20 @@ func (p *PolicyPlugin) Close() {
 
 // AddEDNS0Map adds new EDNS0 to table.
 func (p *PolicyPlugin) AddEDNS0Map(code, name, dataType, destType,
-	startIndex, endIndex string) error {
+	sizeStr, startStr, endStr string) error {
 	c, err := strconv.ParseUint(code, 0, 16)
 	if err != nil {
 		return fmt.Errorf("Could not parse EDNS0 code: %s", err)
 	}
-	start, err := strconv.ParseUint(startIndex, 10, 32)
+	size, err := strconv.ParseUint(sizeStr, 10, 32)
+	if err != nil {
+		return fmt.Errorf("Could not parse EDNS0 data size: %s", err)
+	}
+	start, err := strconv.ParseUint(startStr, 10, 32)
 	if err != nil {
 		return fmt.Errorf("Could not parse EDNS0 start index: %s", err)
 	}
-	end, err := strconv.ParseUint(endIndex, 10, 32)
+	end, err := strconv.ParseUint(endStr, 10, 32)
 	if err != nil {
 		return fmt.Errorf("Could not parse EDNS0 end index: %s", err)
 	}
@@ -153,7 +158,7 @@ func (p *PolicyPlugin) AddEDNS0Map(code, name, dataType, destType,
 		return fmt.Errorf("Invalid dataType for EDNS0 map: %s", dataType)
 	}
 	ecode := uint16(c)
-	p.options[ecode] = append(p.options[ecode], edns0Map{name, ednsType, destType, uint(start), uint(end)})
+	p.options[ecode] = append(p.options[ecode], edns0Map{name, ednsType, destType, uint(size), uint(start), uint(end)})
 	return nil
 }
 
@@ -166,6 +171,9 @@ func parseOptionGroup(data []byte, options []edns0Map) ([]*pb.Attribute, bool) {
 		case typeEDNS0Bytes:
 			value = string(data)
 		case typeEDNS0Hex:
+			if uint(len(data)) != option.size && option.size > 0 {
+				continue
+			}
 			start := uint(0)
 			end := uint(len(data))
 			if option.start < end {

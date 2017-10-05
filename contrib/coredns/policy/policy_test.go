@@ -355,22 +355,22 @@ func TestEdns(t *testing.T) {
 	pm := PolicyPlugin{options: make(map[uint16][]edns0Map)}
 
 	// Add EDNS mapping
-	if err := pm.AddEDNS0Map("0xfffa", "client_id", "hex", "string", "0", "16"); err != nil {
+	if err := pm.AddEDNS0Map("0xfffa", "client_id", "hex", "string", "32", "0", "16"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
-	if err := pm.AddEDNS0Map("0xfffa", "group_id", "hex", "string", "16", "32"); err != nil {
+	if err := pm.AddEDNS0Map("0xfffa", "group_id", "hex", "string", "32", "16", "32"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
-	if err := pm.AddEDNS0Map("0xfffb", "source_ip", "address", "address", "0", "0"); err != nil {
+	if err := pm.AddEDNS0Map("0xfffb", "source_ip", "address", "address", "0", "0", "0"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
-	if err := pm.AddEDNS0Map("0xfffc", "client_name", "bytes", "string", "0", "0"); err != nil {
+	if err := pm.AddEDNS0Map("0xfffc", "client_name", "bytes", "string", "0", "0", "0"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
-	if err := pm.AddEDNS0Map("0xfffd", "client_uid", "hex", "string", "0", "0"); err != nil {
+	if err := pm.AddEDNS0Map("0xfffd", "client_uid", "hex", "string", "0", "0", "0"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
-	if err := pm.AddEDNS0Map("0xfffe", "hex_name", "hex", "string", "2", "0"); err != nil {
+	if err := pm.AddEDNS0Map("0xfffe", "hex_name", "hex", "string", "0", "2", "0"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
 
@@ -448,6 +448,15 @@ func TestEdns(t *testing.T) {
 			attr: map[string]*pdp.Attribute{
 				"source_ip": {Id: "source_ip", Type: "address", Value: "192.168.0.7"},
 				"hex_name":  {Id: "hex_name", Type: "string", Value: "4f3dbc96219ee5d44e7e31838408"},
+			},
+		},
+		{
+			name: "Test skip option with wrong size",
+			code: 0xfffa,
+			data: "8e7d4f3dbc96219ee5d44e7e31838408",
+			ip:   "192.168.0.8",
+			attr: map[string]*pdp.Attribute{
+				"source_ip": {Id: "source_ip", Type: "address", Value: "192.168.0.8"},
 			},
 		},
 	}

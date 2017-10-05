@@ -49,7 +49,17 @@ func TestPolicyConfigParse(t *testing.T) {
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							edns0 0xfff0 uid hex string 0 32
+							edns0 0xfff0 uid hex string wrong_size 0 32
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Could not parse EDNS0 data size",
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							edns0 0xfff0 uid hex string 32 0 32
 						}
 					}`,
 			endpoints:  []string{"10.2.4.1:5555"},
@@ -69,7 +79,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							edns0 0xfff0 uid hex string wrong_offset 32
+							edns0 0xfff0 uid hex string 32 wrong_offset 32
 						}
 					}`,
 			endpoints:  []string{"10.2.4.1:5555"},
@@ -79,7 +89,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							edns0 0xfff0 uid hex string 0 wrong_size
+							edns0 0xfff0 uid hex string 32 0 wrong_size
 						}
 					}`,
 			endpoints:  []string{"10.2.4.1:5555"},
@@ -89,8 +99,8 @@ func TestPolicyConfigParse(t *testing.T) {
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							edns0 0xfff0 uid hex string 0 16
-							edns0 0xfff0 id hex string 16 32
+							edns0 0xfff0 uid hex string 32 0 16
+							edns0 0xfff0 id hex string 32 16 32
 						}
 					}`,
 			endpoints:  []string{"10.2.4.1:5555"},
@@ -100,7 +110,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							edns0 0xfff0 uid hex string 16 15
+							edns0 0xfff0 uid hex string 32 16 15
 						}
 					}`,
 			endpoints:  []string{"10.2.4.1:5555"},
