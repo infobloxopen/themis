@@ -19,12 +19,13 @@
 
 #include <boost/test/auto_unit_test.hpp>
 #include <boost/test/unit_test_suite.hpp>
+#include <boost/bind.hpp>
 #include <boost/chrono/duration.hpp>
 #include <boost/date_time/posix_time/posix_time_duration.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
-#include <thrift/stdcxx.h>
+#include <boost/shared_ptr.hpp>
 #include <thrift/transport/TSSLSocket.h>
 #include <thrift/transport/TSSLServerSocket.h>
 #ifdef __linux__
@@ -36,9 +37,6 @@ using apache::thrift::transport::TSSLSocket;
 using apache::thrift::transport::TTransport;
 using apache::thrift::transport::TTransportException;
 using apache::thrift::transport::TSSLSocketFactory;
-
-using apache::thrift::stdcxx::static_pointer_cast;
-using apache::thrift::stdcxx::shared_ptr;
 
 BOOST_AUTO_TEST_SUITE(TSSLSocketInterruptTest)
 
@@ -94,7 +92,7 @@ BOOST_GLOBAL_FIXTURE(GlobalFixtureSSL);
 BOOST_GLOBAL_FIXTURE(GlobalFixtureSSL)
 #endif
 
-void readerWorker(shared_ptr<TTransport> tt, uint32_t expectedResult) {
+void readerWorker(boost::shared_ptr<TTransport> tt, uint32_t expectedResult) {
   uint8_t buf[4];
   try {
     tt->read(buf, 1);
@@ -104,7 +102,7 @@ void readerWorker(shared_ptr<TTransport> tt, uint32_t expectedResult) {
   }
 }
 
-void readerWorkerMustThrow(shared_ptr<TTransport> tt) {
+void readerWorkerMustThrow(boost::shared_ptr<TTransport> tt) {
   try {
     uint8_t buf[400];
     tt->read(buf, 1);
@@ -115,8 +113,8 @@ void readerWorkerMustThrow(shared_ptr<TTransport> tt) {
   }
 }
 
-shared_ptr<TSSLSocketFactory> createServerSocketFactory() {
-  shared_ptr<TSSLSocketFactory> pServerSocketFactory;
+boost::shared_ptr<TSSLSocketFactory> createServerSocketFactory() {
+  boost::shared_ptr<TSSLSocketFactory> pServerSocketFactory;
 
   pServerSocketFactory.reset(new TSSLSocketFactory());
   pServerSocketFactory->ciphers("ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH");
@@ -126,8 +124,8 @@ shared_ptr<TSSLSocketFactory> createServerSocketFactory() {
   return pServerSocketFactory;
 }
 
-shared_ptr<TSSLSocketFactory> createClientSocketFactory() {
-  shared_ptr<TSSLSocketFactory> pClientSocketFactory;
+boost::shared_ptr<TSSLSocketFactory> createClientSocketFactory() {
+  boost::shared_ptr<TSSLSocketFactory> pClientSocketFactory;
 
   pClientSocketFactory.reset(new TSSLSocketFactory());
   pClientSocketFactory->authenticate(true);
@@ -138,15 +136,15 @@ shared_ptr<TSSLSocketFactory> createClientSocketFactory() {
 }
 
 BOOST_AUTO_TEST_CASE(test_ssl_interruptable_child_read_while_handshaking) {
-  shared_ptr<TSSLSocketFactory> pServerSocketFactory = createServerSocketFactory();
+  boost::shared_ptr<TSSLSocketFactory> pServerSocketFactory = createServerSocketFactory();
   TSSLServerSocket sock1("localhost", 0, pServerSocketFactory);
   sock1.listen();
   int port = sock1.getPort();
-  shared_ptr<TSSLSocketFactory> pClientSocketFactory = createClientSocketFactory();
-  shared_ptr<TSSLSocket> clientSock = pClientSocketFactory->createSocket("localhost", port);
+  boost::shared_ptr<TSSLSocketFactory> pClientSocketFactory = createClientSocketFactory();
+  boost::shared_ptr<TSSLSocket> clientSock = pClientSocketFactory->createSocket("localhost", port);
   clientSock->open();
-  shared_ptr<TTransport> accepted = sock1.accept();
-  boost::thread readThread(apache::thrift::stdcxx::bind(readerWorkerMustThrow, accepted));
+  boost::shared_ptr<TTransport> accepted = sock1.accept();
+  boost::thread readThread(boost::bind(readerWorkerMustThrow, accepted));
   boost::this_thread::sleep(boost::posix_time::milliseconds(50));
   // readThread is practically guaranteed to be blocking now
   sock1.interruptChildren();
@@ -158,15 +156,15 @@ BOOST_AUTO_TEST_CASE(test_ssl_interruptable_child_read_while_handshaking) {
 }
 
 BOOST_AUTO_TEST_CASE(test_ssl_interruptable_child_read) {
-  shared_ptr<TSSLSocketFactory> pServerSocketFactory = createServerSocketFactory();
+  boost::shared_ptr<TSSLSocketFactory> pServerSocketFactory = createServerSocketFactory();
   TSSLServerSocket sock1("localhost", 0, pServerSocketFactory);
   sock1.listen();
   int port = sock1.getPort();
-  shared_ptr<TSSLSocketFactory> pClientSocketFactory = createClientSocketFactory();
-  shared_ptr<TSSLSocket> clientSock = pClientSocketFactory->createSocket("localhost", port);
+  boost::shared_ptr<TSSLSocketFactory> pClientSocketFactory = createClientSocketFactory();
+  boost::shared_ptr<TSSLSocket> clientSock = pClientSocketFactory->createSocket("localhost", port);
   clientSock->open();
-  shared_ptr<TTransport> accepted = sock1.accept();
-  boost::thread readThread(apache::thrift::stdcxx::bind(readerWorkerMustThrow, accepted));
+  boost::shared_ptr<TTransport> accepted = sock1.accept();
+  boost::thread readThread(boost::bind(readerWorkerMustThrow, accepted));
   clientSock->write((const uint8_t*)"0", 1);
   boost::this_thread::sleep(boost::posix_time::milliseconds(50));
   // readThread is practically guaranteed to be blocking now
@@ -179,17 +177,17 @@ BOOST_AUTO_TEST_CASE(test_ssl_interruptable_child_read) {
 }
 
 BOOST_AUTO_TEST_CASE(test_ssl_non_interruptable_child_read) {
-  shared_ptr<TSSLSocketFactory> pServerSocketFactory = createServerSocketFactory();
+  boost::shared_ptr<TSSLSocketFactory> pServerSocketFactory = createServerSocketFactory();
   TSSLServerSocket sock1("localhost", 0, pServerSocketFactory);
   sock1.setInterruptableChildren(false); // returns to pre-THRIFT-2441 behavior
   sock1.listen();
   int port = sock1.getPort();
-  shared_ptr<TSSLSocketFactory> pClientSocketFactory = createClientSocketFactory();
-  shared_ptr<TSSLSocket> clientSock = pClientSocketFactory->createSocket("localhost", port);
+  boost::shared_ptr<TSSLSocketFactory> pClientSocketFactory = createClientSocketFactory();
+  boost::shared_ptr<TSSLSocket> clientSock = pClientSocketFactory->createSocket("localhost", port);
   clientSock->open();
-  shared_ptr<TTransport> accepted = sock1.accept();
-  static_pointer_cast<TSSLSocket>(accepted)->setRecvTimeout(1000);
-  boost::thread readThread(apache::thrift::stdcxx::bind(readerWorker, accepted, 0));
+  boost::shared_ptr<TTransport> accepted = sock1.accept();
+  boost::static_pointer_cast<TSSLSocket>(accepted)->setRecvTimeout(1000);
+  boost::thread readThread(boost::bind(readerWorker, accepted, 0));
   clientSock->write((const uint8_t*)"0", 1);
   boost::this_thread::sleep(boost::posix_time::milliseconds(50));
   // readThread is practically guaranteed to be blocking here
@@ -205,14 +203,14 @@ BOOST_AUTO_TEST_CASE(test_ssl_non_interruptable_child_read) {
 }
 
 BOOST_AUTO_TEST_CASE(test_ssl_cannot_change_after_listen) {
-  shared_ptr<TSSLSocketFactory> pServerSocketFactory = createServerSocketFactory();
+  boost::shared_ptr<TSSLSocketFactory> pServerSocketFactory = createServerSocketFactory();
   TSSLServerSocket sock1("localhost", 0, pServerSocketFactory);
   sock1.listen();
   BOOST_CHECK_THROW(sock1.setInterruptableChildren(false), std::logic_error);
   sock1.close();
 }
 
-void peekerWorker(shared_ptr<TTransport> tt, bool expectedResult) {
+void peekerWorker(boost::shared_ptr<TTransport> tt, bool expectedResult) {
   uint8_t buf[400];
   try {
     tt->read(buf, 1);
@@ -222,7 +220,7 @@ void peekerWorker(shared_ptr<TTransport> tt, bool expectedResult) {
   }
 }
 
-void peekerWorkerInterrupt(shared_ptr<TTransport> tt) {
+void peekerWorkerInterrupt(boost::shared_ptr<TTransport> tt) {
   uint8_t buf[400];
   try {
     tt->read(buf, 1);
@@ -233,15 +231,15 @@ void peekerWorkerInterrupt(shared_ptr<TTransport> tt) {
 }
 
 BOOST_AUTO_TEST_CASE(test_ssl_interruptable_child_peek) {
-  shared_ptr<TSSLSocketFactory> pServerSocketFactory = createServerSocketFactory();
+  boost::shared_ptr<TSSLSocketFactory> pServerSocketFactory = createServerSocketFactory();
   TSSLServerSocket sock1("localhost", 0, pServerSocketFactory);
   sock1.listen();
   int port = sock1.getPort();
-  shared_ptr<TSSLSocketFactory> pClientSocketFactory = createClientSocketFactory();
-  shared_ptr<TSSLSocket> clientSock = pClientSocketFactory->createSocket("localhost", port);
+  boost::shared_ptr<TSSLSocketFactory> pClientSocketFactory = createClientSocketFactory();
+  boost::shared_ptr<TSSLSocket> clientSock = pClientSocketFactory->createSocket("localhost", port);
   clientSock->open();
-  shared_ptr<TTransport> accepted = sock1.accept();
-  boost::thread peekThread(apache::thrift::stdcxx::bind(peekerWorkerInterrupt, accepted));
+  boost::shared_ptr<TTransport> accepted = sock1.accept();
+  boost::thread peekThread(boost::bind(peekerWorkerInterrupt, accepted));
   clientSock->write((const uint8_t*)"0", 1);
   boost::this_thread::sleep(boost::posix_time::milliseconds(50));
   // peekThread is practically guaranteed to be blocking now
@@ -254,17 +252,17 @@ BOOST_AUTO_TEST_CASE(test_ssl_interruptable_child_peek) {
 }
 
 BOOST_AUTO_TEST_CASE(test_ssl_non_interruptable_child_peek) {
-  shared_ptr<TSSLSocketFactory> pServerSocketFactory = createServerSocketFactory();
+  boost::shared_ptr<TSSLSocketFactory> pServerSocketFactory = createServerSocketFactory();
   TSSLServerSocket sock1("localhost", 0, pServerSocketFactory);
   sock1.setInterruptableChildren(false); // returns to pre-THRIFT-2441 behavior
   sock1.listen();
   int port = sock1.getPort();
-  shared_ptr<TSSLSocketFactory> pClientSocketFactory = createClientSocketFactory();
-  shared_ptr<TSSLSocket> clientSock = pClientSocketFactory->createSocket("localhost", port);
+  boost::shared_ptr<TSSLSocketFactory> pClientSocketFactory = createClientSocketFactory();
+  boost::shared_ptr<TSSLSocket> clientSock = pClientSocketFactory->createSocket("localhost", port);
   clientSock->open();
-  shared_ptr<TTransport> accepted = sock1.accept();
-  static_pointer_cast<TSSLSocket>(accepted)->setRecvTimeout(1000);
-  boost::thread peekThread(apache::thrift::stdcxx::bind(peekerWorker, accepted, false));
+  boost::shared_ptr<TTransport> accepted = sock1.accept();
+  boost::static_pointer_cast<TSSLSocket>(accepted)->setRecvTimeout(1000);
+  boost::thread peekThread(boost::bind(peekerWorker, accepted, false));
   clientSock->write((const uint8_t*)"0", 1);
   boost::this_thread::sleep(boost::posix_time::milliseconds(50));
   // peekThread is practically guaranteed to be blocking now

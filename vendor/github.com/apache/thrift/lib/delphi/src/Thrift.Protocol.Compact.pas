@@ -123,7 +123,7 @@ type
 
     // If we encounter a boolean field begin, save the TField here so it can
     // have the value incorporated.
-    private booleanField_ : TThriftField;
+    private booleanField_ : IField;
 
     // If we Read a field header, and it's a boolean field, save the boolean
     // value here so that ReadBool can use it.
@@ -148,21 +148,21 @@ type
   private
     // The workhorse of WriteFieldBegin. It has the option of doing a 'type override'
     // of the type header. This is used specifically in the boolean field case.
-    procedure WriteFieldBeginInternal( const field : TThriftField; typeOverride : Byte);
+    procedure WriteFieldBeginInternal( const field : IField; typeOverride : Byte);
 
   public
-    procedure WriteMessageBegin( const msg: TThriftMessage); override;
+    procedure WriteMessageBegin( const msg: IMessage); override;
     procedure WriteMessageEnd; override;
-    procedure WriteStructBegin( const struc: TThriftStruct); override;
+    procedure WriteStructBegin( const struc: IStruct); override;
     procedure WriteStructEnd; override;
-    procedure WriteFieldBegin( const field: TThriftField); override;
+    procedure WriteFieldBegin( const field: IField); override;
     procedure WriteFieldEnd; override;
     procedure WriteFieldStop; override;
-    procedure WriteMapBegin( const map: TThriftMap); override;
+    procedure WriteMapBegin( const map: IMap); override;
     procedure WriteMapEnd; override;
-    procedure WriteListBegin( const list: TThriftList); override;
+    procedure WriteListBegin( const list: IList); override;
     procedure WriteListEnd(); override;
-    procedure WriteSetBegin( const set_: TThriftSet ); override;
+    procedure WriteSetBegin( const set_: ISet ); override;
     procedure WriteSetEnd(); override;
     procedure WriteBool( b: Boolean); override;
     procedure WriteByte( b: ShortInt); override;
@@ -194,17 +194,17 @@ type
     class procedure fixedLongToBytes( const n : Int64; var buf : TBytes);
 
   public
-    function  ReadMessageBegin: TThriftMessage; override;
+    function  ReadMessageBegin: IMessage; override;
     procedure ReadMessageEnd(); override;
-    function  ReadStructBegin: TThriftStruct; override;
+    function  ReadStructBegin: IStruct; override;
     procedure ReadStructEnd; override;
-    function  ReadFieldBegin: TThriftField; override;
+    function  ReadFieldBegin: IField; override;
     procedure ReadFieldEnd(); override;
-    function  ReadMapBegin: TThriftMap; override;
+    function  ReadMapBegin: IMap; override;
     procedure ReadMapEnd(); override;
-    function  ReadListBegin: TThriftList; override;
+    function  ReadListBegin: IList; override;
     procedure ReadListEnd(); override;
-    function  ReadSetBegin: TThriftSet; override;
+    function  ReadSetBegin: ISet; override;
     procedure ReadSetEnd(); override;
     function  ReadBool: Boolean; override;
     function  ReadByte: ShortInt; override;
@@ -273,7 +273,7 @@ begin
   lastFieldId_ := 0;
   lastField_ := TStack<Integer>.Create;
 
-  Init( booleanField_, '', TType.Stop, 0);
+  booleanField_ := nil;
   boolValue_ := unused;
 end;
 
@@ -293,7 +293,7 @@ procedure TCompactProtocolImpl.Reset;
 begin
   lastField_.Clear();
   lastFieldId_ := 0;
-  Init( booleanField_, '', TType.Stop, 0);
+  booleanField_ := nil;
   boolValue_ := unused;
 end;
 
@@ -301,8 +301,11 @@ end;
 // Writes a byte without any possibility of all that field header nonsense.
 // Used internally by other writing methods that know they need to Write a byte.
 procedure TCompactProtocolImpl.WriteByteDirect( const b : Byte);
+var data : TBytes;
 begin
-  Transport.Write( @b, SizeOf(b));
+  SetLength( data, 1);
+  data[0] := b;
+  Transport.Write( data);
 end;
 
 
@@ -341,7 +344,7 @@ end;
 
 // Write a message header to the wire. Compact Protocol messages contain the
 // protocol version so we can migrate forwards in the future if need be.
-procedure TCompactProtocolImpl.WriteMessageBegin( const msg: TThriftMessage);
+procedure TCompactProtocolImpl.WriteMessageBegin( const msg: IMessage);
 var versionAndType : Byte;
 begin
   Reset;
@@ -359,7 +362,7 @@ end;
 // Write a struct begin. This doesn't actually put anything on the wire. We use it as an
 // opportunity to put special placeholder markers on the field stack so we can get the
 // field id deltas correct.
-procedure TCompactProtocolImpl.WriteStructBegin( const struc: TThriftStruct);
+procedure TCompactProtocolImpl.WriteStructBegin( const struc: IStruct);
 begin
   lastField_.Push(lastFieldId_);
   lastFieldId_ := 0;
@@ -377,7 +380,7 @@ end;
 // Write a field header containing the field id and field type. If the difference between the
 // current field id and the last one is small (< 15), then the field id will be encoded in
 // the 4 MSB as a delta. Otherwise, the field id will follow the type header as a zigzag varint.
-procedure TCompactProtocolImpl.WriteFieldBegin( const field: TThriftField);
+procedure TCompactProtocolImpl.WriteFieldBegin( const field: IField);
 begin
   case field.Type_ of
     TType.Bool_ : booleanField_ := field; // we want to possibly include the value, so we'll wait.
@@ -389,7 +392,7 @@ end;
 
 // The workhorse of WriteFieldBegin. It has the option of doing a 'type override'
 // of the type header. This is used specifically in the boolean field case.
-procedure TCompactProtocolImpl.WriteFieldBeginInternal( const field : TThriftField; typeOverride : Byte);
+procedure TCompactProtocolImpl.WriteFieldBeginInternal( const field : IField; typeOverride : Byte);
 var typeToWrite : Byte;
 begin
   // if there's a type override, use that.
@@ -422,7 +425,7 @@ end;
 
 // Write a map header. If the map is empty, omit the key and value type
 // headers, as we don't need any additional information to skip it.
-procedure TCompactProtocolImpl.WriteMapBegin( const map: TThriftMap);
+procedure TCompactProtocolImpl.WriteMapBegin( const map: IMap);
 var key, val : Byte;
 begin
   if (map.Count = 0)
@@ -437,14 +440,14 @@ end;
 
 
 // Write a list header.
-procedure TCompactProtocolImpl.WriteListBegin( const list: TThriftList);
+procedure TCompactProtocolImpl.WriteListBegin( const list: IList);
 begin
   WriteCollectionBegin( list.ElementType, list.Count);
 end;
 
 
 // Write a set header.
-procedure TCompactProtocolImpl.WriteSetBegin( const set_: TThriftSet );
+procedure TCompactProtocolImpl.WriteSetBegin( const set_: ISet );
 begin
   WriteCollectionBegin( set_.ElementType, set_.Count);
 end;
@@ -461,10 +464,10 @@ begin
   then bt := Types.BOOLEAN_TRUE
   else bt := Types.BOOLEAN_FALSE;
 
-  if booleanField_.Type_ = TType.Bool_ then begin
+  if booleanField_ <> nil then begin
     // we haven't written the field header yet
     WriteFieldBeginInternal( booleanField_, Byte(bt));
-    booleanField_.Type_ := TType.Stop;
+    booleanField_ := nil;
   end
   else begin
     // we're not part of a field, so just Write the value.
@@ -639,7 +642,7 @@ end;
 
 
 // Read a message header.
-function TCompactProtocolImpl.ReadMessageBegin : TThriftMessage;
+function TCompactProtocolImpl.ReadMessageBegin : IMessage;
 var protocolId, versionAndType, version, type_ : Byte;
     seqid : Integer;
     msgNm : String;
@@ -660,17 +663,17 @@ begin
   type_ := Byte( (versionAndType shr TYPE_SHIFT_AMOUNT) and TYPE_BITS);
   seqid := Integer( ReadVarint32);
   msgNm := ReadString;
-  Init( result, msgNm, TMessageType(type_), seqid);
+  result := TMessageImpl.Create( msgNm, TMessageType(type_), seqid);
 end;
 
 
 // Read a struct begin. There's nothing on the wire for this, but it is our
 // opportunity to push a new struct begin marker onto the field stack.
-function TCompactProtocolImpl.ReadStructBegin: TThriftStruct;
+function TCompactProtocolImpl.ReadStructBegin: IStruct;
 begin
   lastField_.Push( lastFieldId_);
   lastFieldId_ := 0;
-  Init( result);
+  result := TStructImpl.Create('');
 end;
 
 
@@ -684,7 +687,7 @@ end;
 
 
 // Read a field header off the wire.
-function TCompactProtocolImpl.ReadFieldBegin: TThriftField;
+function TCompactProtocolImpl.ReadFieldBegin: IField;
 var type_ : Byte;
     fieldId, modifier : ShortInt;
 begin
@@ -692,7 +695,7 @@ begin
 
   // if it's a stop, then we can return immediately, as the struct is over.
   if type_ = Byte(Types.STOP) then begin
-    Init( result, '', TType.Stop, 0);
+    result := TFieldImpl.Create( '', TType.Stop, 0);
     Exit;
   end;
 
@@ -702,7 +705,7 @@ begin
   then fieldId := ReadI16    // not a delta. look ahead for the zigzag varint field id.
   else fieldId := ShortInt( lastFieldId_ + modifier); // add the delta to the last Read field id.
 
-  Init( result, '', getTType(Byte(type_ and $0F)), fieldId);
+  result := TFieldImpl.Create( '', getTType(Byte(type_ and $0F)), fieldId);
 
   // if this happens to be a boolean field, the value is encoded in the type
    // save the boolean value in a special instance variable.
@@ -720,7 +723,7 @@ end;
 // Read a map header off the wire. If the size is zero, skip Reading the key
 // and value type. This means that 0-length maps will yield TMaps without the
 // "correct" types.
-function TCompactProtocolImpl.ReadMapBegin: TThriftMap;
+function TCompactProtocolImpl.ReadMapBegin: IMap;
 var size : Integer;
     keyAndValueType : Byte;
     key, val : TType;
@@ -732,7 +735,7 @@ begin
 
   key := getTType( Byte( keyAndValueType shr 4));
   val := getTType( Byte( keyAndValueType and $F));
-  Init( result, key, val, size);
+  result := TMapImpl.Create( key, val, size);
   ASSERT( (result.KeyType = key) and (result.ValueType = val));
 end;
 
@@ -741,7 +744,7 @@ end;
 // be packed into the element type header. If it's a longer list, the 4 MSB
 // of the element type header will be $F, and a varint will follow with the
 // true size.
-function TCompactProtocolImpl.ReadListBegin: TThriftList;
+function TCompactProtocolImpl.ReadListBegin: IList;
 var size_and_type : Byte;
     size : Integer;
     type_ : TType;
@@ -753,7 +756,7 @@ begin
   then size := Integer( ReadVarint32);
 
   type_ := getTType( size_and_type);
-  Init( result, type_, size);
+  result := TListImpl.Create( type_, size);
 end;
 
 
@@ -761,7 +764,7 @@ end;
 // be packed into the element type header. If it's a longer set, the 4 MSB
 // of the element type header will be $F, and a varint will follow with the
 // true size.
-function TCompactProtocolImpl.ReadSetBegin: TThriftSet;
+function TCompactProtocolImpl.ReadSetBegin: ISet;
 var size_and_type : Byte;
     size : Integer;
     type_ : TType;
@@ -773,7 +776,7 @@ begin
   then size := Integer( ReadVarint32);
 
   type_ := getTType( size_and_type);
-  Init( result, type_, size);
+  result := TSetImpl.Create( type_, size);
 end;
 
 
@@ -794,8 +797,11 @@ end;
 
 // Read a single byte off the wire. Nothing interesting here.
 function TCompactProtocolImpl.ReadByte: ShortInt;
+var data : TBytes;
 begin
-  Transport.ReadAll( @result, SizeOf(result), 0, 1);
+  SetLength( data, 1);
+  Transport.ReadAll( data, 0, 1);
+  result := ShortInt(data[0]);
 end;
 
 

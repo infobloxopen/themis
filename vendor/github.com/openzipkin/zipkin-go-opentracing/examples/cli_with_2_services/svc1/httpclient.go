@@ -3,7 +3,6 @@
 package svc1
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -11,6 +10,7 @@ import (
 	"strconv"
 
 	opentracing "github.com/opentracing/opentracing-go"
+	"golang.org/x/net/context"
 
 	"github.com/openzipkin/zipkin-go-opentracing/examples/middleware"
 )

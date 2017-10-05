@@ -22,7 +22,7 @@
 
 #include <thrift/transport/TPipe.h>
 #include <thrift/transport/TPipeServer.h>
-#include <thrift/stdcxx.h>
+#include <boost/shared_ptr.hpp>
 #include <boost/noncopyable.hpp>
 
 #ifdef _WIN32
@@ -37,14 +37,15 @@ namespace transport {
 
 #ifdef _WIN32
 
-using stdcxx::shared_ptr;
+using namespace std;
+using boost::shared_ptr;
 
 class TPipeServerImpl : boost::noncopyable {
 public:
   TPipeServerImpl() {}
   virtual ~TPipeServerImpl() {}
   virtual void interrupt() = 0;
-  virtual stdcxx::shared_ptr<TTransport> acceptImpl() = 0;
+  virtual boost::shared_ptr<TTransport> acceptImpl() = 0;
 
   virtual HANDLE getPipeHandle() = 0;
   virtual HANDLE getWrtPipeHandle() = 0;
@@ -75,7 +76,7 @@ public:
 
   virtual void interrupt() {} // not currently implemented
 
-  virtual stdcxx::shared_ptr<TTransport> acceptImpl();
+  virtual boost::shared_ptr<TTransport> acceptImpl();
 
   virtual HANDLE getPipeHandle() { return PipeR_.h; }
   virtual HANDLE getWrtPipeHandle() { return PipeW_.h; }
@@ -117,7 +118,7 @@ public:
     }
   }
 
-  virtual stdcxx::shared_ptr<TTransport> acceptImpl();
+  virtual boost::shared_ptr<TTransport> acceptImpl();
 
   virtual HANDLE getPipeHandle() { return Pipe_.h; }
   virtual HANDLE getWrtPipeHandle() { return INVALID_HANDLE_VALUE; }
@@ -141,7 +142,7 @@ private:
 
   TCriticalSection pipe_protect_;
   // only read or write these variables underneath a locked pipe_protect_
-  stdcxx::shared_ptr<TPipe> cached_client_;
+  boost::shared_ptr<TPipe> cached_client_;
   TAutoHandle Pipe_;
 };
 
@@ -296,10 +297,6 @@ shared_ptr<TTransport> TNamedPipeServer::acceptImpl() {
   // if we got here, then we are in an error / shutdown case
   DWORD gle = GetLastError(); // save error before doing cleanup
   GlobalOutput.perror("TPipeServer ConnectNamedPipe GLE=", gle);
-  if(gle == ERROR_OPERATION_ABORTED) {
-    TAutoCrit lock(pipe_protect_);    	// Needed to insure concurrent thread to be out of interrupt.
-    throw TTransportException(TTransportException::INTERRUPTED, "TPipeServer: server interupted");
-  }
   throw TTransportException(TTransportException::NOT_OPEN, "TPipeServer: client connection failed");
 }
 
@@ -407,7 +404,7 @@ bool TAnonPipeServer::createAnonPipe() {
 //---------------------------------------------------------
 // Accessors
 //---------------------------------------------------------
-std::string TPipeServer::getPipename() {
+string TPipeServer::getPipename() {
   return pipename_;
 }
 

@@ -21,6 +21,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+using namespace std;
 using namespace apache::thrift::concurrency;
 
 namespace {
@@ -81,7 +82,7 @@ EventLog::EventLog() {
 void EventLog::append(EventType type,
                       uint32_t connectionId,
                       uint32_t callId,
-                      const std::string& message) {
+                      const string& message) {
   Synchronized s(monitor_);
   debug("%d <-- %u, %u, %s \"%s\"", id_, connectionId, callId, type, message.c_str());
 

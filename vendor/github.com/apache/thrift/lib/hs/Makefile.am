@@ -24,7 +24,7 @@ EXTRA_DIST = \
 	README.md \
 	Setup.lhs \
 	TODO \
-	thrift.cabal \
+	Thrift.cabal \
 	src \
 	test
 

@@ -7,7 +7,6 @@ import (
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 
-	otobserver "github.com/opentracing-contrib/go-observer"
 	"github.com/openzipkin/zipkin-go-opentracing/flag"
 )
 
@@ -108,8 +107,6 @@ type TracerOptions struct {
 	// Regardless of this setting, the library will propagate and support both
 	// 64 and 128 bit incoming traces from upstream sources.
 	traceID128Bit bool
-
-	observer otobserver.Observer
 }
 
 // TracerOption allows for functional options.
@@ -173,11 +170,8 @@ func TraceID128Bit(val bool) TracerOption {
 }
 
 // ClientServerSameSpan allows to place client-side and server-side annotations
-// for a RPC call in the same span (Zipkin V1 behavior) or different spans
-// (more in line with other tracing solutions). By default this Tracer
-// uses shared host spans (so client-side and server-side in the same span).
-// If using separate spans you might run into trouble with Zipkin V1 as clock
-// skew issues can't be remedied at Zipkin server side.
+// for a RPC call in the same span (Zipkin V1 behavior). By default this Tracer
+// uses single host spans (so client-side and server-side in separate spans).
 func ClientServerSameSpan(val bool) TracerOption {
 	return func(opts *TracerOptions) error {
 		opts.clientServerSameSpan = val
@@ -230,11 +224,10 @@ func NewTracer(recorder SpanRecorder, options ...TracerOption) (opentracing.Trac
 		logger:               &nopLogger{},
 		debugAssertSingleGoroutine: false,
 		debugAssertUseAfterFinish:  false,
-		clientServerSameSpan:       true,
+		clientServerSameSpan:       false,
 		debugMode:                  false,
 		traceID128Bit:              false,
 		maxLogsPerSpan:             10000,
-		observer:                   nil,
 	}
 	for _, o := range options {
 		err := o(opts)
@@ -293,11 +286,6 @@ func (t *tracerImpl) startSpanWithOptions(
 	// Build the new span. This is the only allocation: We'll return this as
 	// an opentracing.Span.
 	sp := t.getSpan()
-
-	if t.options.observer != nil {
-		sp.observer, _ = t.options.observer.OnStartSpan(sp, operationName, opts)
-	}
-
 	// Look for a parent in the list of References.
 	//
 	// TODO: would be nice if basictracer did something with all
@@ -388,7 +376,6 @@ func (t *tracerImpl) startSpanInternal(
 	sp.raw.Start = startTime
 	sp.raw.Duration = -1
 	sp.raw.Tags = tags
-
 	if t.options.debugAssertSingleGoroutine {
 		sp.SetTag(debugGoroutineIDTag, curGoroutineID())
 	}
@@ -429,12 +416,4 @@ func (t *tracerImpl) Extract(format interface{}, carrier interface{}) (opentraci
 
 func (t *tracerImpl) Options() TracerOptions {
 	return t.options
-}
-
-// WithObserver assigns an initialized observer to opts.observer
-func WithObserver(observer otobserver.Observer) TracerOption {
-	return func(opts *TracerOptions) error {
-		opts.observer = observer
-		return nil
-	}
 }

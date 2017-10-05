@@ -23,20 +23,19 @@
 #include <QMetaType>
 #include <QTcpSocket>
 
-#include <thrift/stdcxx.h>
+#include <thrift/cxxfunctional.h>
 
 #include <thrift/protocol/TProtocol.h>
 #include <thrift/async/TAsyncProcessor.h>
 
+using boost::shared_ptr;
 using apache::thrift::protocol::TProtocol;
 using apache::thrift::protocol::TProtocolFactory;
 using apache::thrift::transport::TTransport;
 using apache::thrift::transport::TTransportException;
 using apache::thrift::transport::TQIODeviceTransport;
-using apache::thrift::stdcxx::bind;
 using apache::thrift::stdcxx::function;
-using apache::thrift::stdcxx::placeholders::_1;
-using apache::thrift::stdcxx::shared_ptr;
+using apache::thrift::stdcxx::bind;
 
 QT_USE_NAMESPACE
 
@@ -111,7 +110,7 @@ void TQTcpServer::beginDecode() {
 
   try {
     processor_
-        ->process(bind(&TQTcpServer::finish, this, ctx, _1),
+        ->process(bind(&TQTcpServer::finish, this, ctx, apache::thrift::stdcxx::placeholders::_1),
                   ctx->iprot_,
                   ctx->oprot_);
   } catch (const TTransportException& ex) {

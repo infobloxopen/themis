@@ -21,12 +21,13 @@
 
 #if USE_STD_THREAD
 
-#include <thrift/concurrency/Exception.h>
-#include <thrift/concurrency/Monitor.h>
 #include <thrift/concurrency/StdThreadFactory.h>
-#include <thrift/stdcxx.h>
+#include <thrift/concurrency/Exception.h>
 
 #include <cassert>
+
+#include <boost/enable_shared_from_this.hpp>
+#include <boost/weak_ptr.hpp>
 #include <thread>
 
 namespace apache {
@@ -42,20 +43,19 @@ namespace concurrency {
  *
  * @version $Id:$
  */
-class StdThread : public Thread, public stdcxx::enable_shared_from_this<StdThread> {
+class StdThread : public Thread, public boost::enable_shared_from_this<StdThread> {
 public:
   enum STATE { uninitialized, starting, started, stopping, stopped };
 
-  static void threadMain(stdcxx::shared_ptr<StdThread> thread);
+  static void threadMain(boost::shared_ptr<StdThread> thread);
 
 private:
   std::unique_ptr<std::thread> thread_;
-  Monitor monitor_;
   STATE state_;
   bool detached_;
 
 public:
-  StdThread(bool detached, stdcxx::shared_ptr<Runnable> runnable)
+  StdThread(bool detached, boost::shared_ptr<Runnable> runnable)
     : state_(uninitialized), detached_(detached) {
     this->Thread::runnable(runnable);
   }
@@ -70,42 +70,18 @@ public:
     }
   }
 
-  STATE getState() const
-  {
-    Synchronized sync(monitor_);
-    return state_;
-  }
-
-  void setState(STATE newState)
-  {
-    Synchronized sync(monitor_);
-    state_ = newState;
-
-    // unblock start() with the knowledge that the thread has actually
-    // started running, which avoids a race in detached threads.
-    if (newState == started) {
-	  monitor_.notify();
-    }
-  }
-
   void start() {
-    if (getState() != uninitialized) {
+    if (state_ != uninitialized) {
       return;
     }
 
-    stdcxx::shared_ptr<StdThread> selfRef = shared_from_this();
-    setState(starting);
+    boost::shared_ptr<StdThread> selfRef = shared_from_this();
+    state_ = starting;
 
-    Synchronized sync(monitor_);
     thread_ = std::unique_ptr<std::thread>(new std::thread(threadMain, selfRef));
 
     if (detached_)
       thread_->detach();
-    
-    // Wait for the thread to start and get far enough to grab everything
-    // that it needs from the calling context, thus absolving the caller
-    // from being required to hold on to runnable indefinitely.
-    monitor_.wait();
   }
 
   void join() {
@@ -116,29 +92,35 @@ public:
 
   Thread::id_t getId() { return thread_.get() ? thread_->get_id() : std::thread::id(); }
 
-  stdcxx::shared_ptr<Runnable> runnable() const { return Thread::runnable(); }
+  boost::shared_ptr<Runnable> runnable() const { return Thread::runnable(); }
 
-  void runnable(stdcxx::shared_ptr<Runnable> value) { Thread::runnable(value); }
+  void runnable(boost::shared_ptr<Runnable> value) { Thread::runnable(value); }
 };
 
-void StdThread::threadMain(stdcxx::shared_ptr<StdThread> thread) {
-#if GOOGLE_PERFTOOLS_REGISTER_THREAD
-  ProfilerRegisterThread();
-#endif
+void StdThread::threadMain(boost::shared_ptr<StdThread> thread) {
+  if (thread == NULL) {
+    return;
+  }
 
-  thread->setState(started);
+  if (thread->state_ != starting) {
+    return;
+  }
+
+  thread->state_ = started;
   thread->runnable()->run();
 
-  if (thread->getState() != stopping && thread->getState() != stopped) {
-    thread->setState(stopping);
+  if (thread->state_ != stopping && thread->state_ != stopped) {
+    thread->state_ = stopping;
   }
+
+  return;
 }
 
 StdThreadFactory::StdThreadFactory(bool detached) : ThreadFactory(detached) {
 }
 
-stdcxx::shared_ptr<Thread> StdThreadFactory::newThread(stdcxx::shared_ptr<Runnable> runnable) const {
-  stdcxx::shared_ptr<StdThread> result = stdcxx::shared_ptr<StdThread>(new StdThread(isDetached(), runnable));
+boost::shared_ptr<Thread> StdThreadFactory::newThread(boost::shared_ptr<Runnable> runnable) const {
+  boost::shared_ptr<StdThread> result = boost::shared_ptr<StdThread>(new StdThread(isDetached(), runnable));
   runnable->thread(result);
   return result;
 }

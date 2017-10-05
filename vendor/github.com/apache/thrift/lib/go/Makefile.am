@@ -31,15 +31,10 @@ install:
 	@echo '##############################################################'
 
 check-local:
-	GOPATH=`pwd` $(GO) get golang.org/x/net/context
-	GOPATH=`pwd` $(GO) test -race ./thrift
-
-clean-local:
-	$(RM) -rf pkg
+	$(GO) test ./thrift
 
 all-local:
-	GOPATH=`pwd` $(GO) get golang.org/x/net/context
-	GOPATH=`pwd` $(GO) build ./thrift
+	$(GO) build ./thrift
 
 EXTRA_DIST = \
 	thrift \

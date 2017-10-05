@@ -143,7 +143,6 @@ EXTRA_DIST = \
 	OptionalRequiredTest.thrift \
 	Recursive.thrift \
 	ReuseObjects.thrift \
-	EnumContainersTest.thrift \
 	SmallTest.thrift \
 	StressTest.thrift \
 	ThriftTest.thrift \

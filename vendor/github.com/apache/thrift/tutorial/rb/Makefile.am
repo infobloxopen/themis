@@ -17,6 +17,8 @@
 # under the License.
 #
 
+THRIFT = $(top_builddir)/compiler/cpp/thrift
+
 gen-py/calculator.rb gen-py/shared_service.rb: $(top_srcdir)/tutorial/tutorial.thrift
 	$(THRIFT) --gen rb -r $<
 

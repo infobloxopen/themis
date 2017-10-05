@@ -68,16 +68,16 @@ type
     // the standard format, without the service name prepended to TMessage.name.
     TStoredMessageProtocol = class( TProtocolDecorator)
     private
-      FMessageBegin : TThriftMessage;
+      FMessageBegin : IMessage;
     public
-      constructor Create( const protocol : IProtocol; const aMsgBegin : TThriftMessage);
-      function ReadMessageBegin: TThriftMessage; override;
+      constructor Create( const protocol : IProtocol; const aMsgBegin : IMessage);
+      function ReadMessageBegin: IMessage; override;
     end;
 
   private
     FServiceProcessorMap : TDictionary<String, IProcessor>;
 
-    procedure Error( const oprot : IProtocol; const msg : TThriftMessage;
+    procedure Error( const oprot : IProtocol; const msg : IMessage;
                      extype : TApplicationExceptionSpecializedClass; const etxt : string);
 
   public
@@ -105,14 +105,14 @@ type
 
 implementation
 
-constructor TMultiplexedProcessorImpl.TStoredMessageProtocol.Create( const protocol : IProtocol; const aMsgBegin : TThriftMessage);
+constructor TMultiplexedProcessorImpl.TStoredMessageProtocol.Create( const protocol : IProtocol; const aMsgBegin : IMessage);
 begin
   inherited Create( protocol);
   FMessageBegin := aMsgBegin;
 end;
 
 
-function TMultiplexedProcessorImpl.TStoredMessageProtocol.ReadMessageBegin: TThriftMessage;
+function TMultiplexedProcessorImpl.TStoredMessageProtocol.ReadMessageBegin: IMessage;
 begin
   result := FMessageBegin;
 end;
@@ -141,15 +141,15 @@ begin
 end;
 
 
-procedure TMultiplexedProcessorImpl.Error( const oprot : IProtocol; const msg : TThriftMessage;
+procedure TMultiplexedProcessorImpl.Error( const oprot : IProtocol; const msg : IMessage;
                                            extype : TApplicationExceptionSpecializedClass;
                                            const etxt : string);
 var appex  : TApplicationException;
-    newMsg : TThriftMessage;
+    newMsg : IMessage;
 begin
   appex := extype.Create(etxt);
   try
-    Init( newMsg, msg.Name, TMessageType.Exception, msg.SeqID);
+    newMsg := TMessageImpl.Create( msg.Name, TMessageType.Exception, msg.SeqID);
 
     oprot.WriteMessageBegin(newMsg);
     appex.Write(oprot);
@@ -163,7 +163,7 @@ end;
 
 
 function TMultiplexedProcessorImpl.Process(const iprot, oprot : IProtocol; const events : IProcessorEvents = nil): Boolean;
-var msg, newMsg : TThriftMessage;
+var msg, newMsg : IMessage;
     idx         : Integer;
     sService    : string;
     processor   : IProcessor;
@@ -204,7 +204,7 @@ begin
 
   // Create a new TMessage, removing the service name
   Inc( idx, Length(TMultiplexedProtocol.SEPARATOR));
-  Init( newMsg, Copy( msg.Name, idx, MAXINT), msg.Type_, msg.SeqID);
+  newMsg := TMessageImpl.Create( Copy( msg.Name, idx, MAXINT), msg.Type_, msg.SeqID);
 
   // Dispatch processing to the stored processor
   protocol := TStoredMessageProtocol.Create( iprot, newMsg);

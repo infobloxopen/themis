@@ -28,7 +28,7 @@
 #include <thrift/transport/TTransport.h>
 #include <thrift/protocol/TProtocolException.h>
 
-#include <thrift/stdcxx.h>
+#include <boost/shared_ptr.hpp>
 #include <boost/static_assert.hpp>
 
 #ifdef HAVE_NETINET_IN_H
@@ -550,12 +550,12 @@ public:
   }
   virtual uint32_t skip_virt(TType type);
 
-  inline stdcxx::shared_ptr<TTransport> getTransport() { return ptrans_; }
+  inline boost::shared_ptr<TTransport> getTransport() { return ptrans_; }
 
   // TODO: remove these two calls, they are for backwards
   // compatibility
-  inline stdcxx::shared_ptr<TTransport> getInputTransport() { return ptrans_; }
-  inline stdcxx::shared_ptr<TTransport> getOutputTransport() { return ptrans_; }
+  inline boost::shared_ptr<TTransport> getInputTransport() { return ptrans_; }
+  inline boost::shared_ptr<TTransport> getOutputTransport() { return ptrans_; }
 
   // input and output recursion depth are kept separate so that one protocol
   // can be used concurrently for both input and output.
@@ -577,11 +577,11 @@ public:
   void setRecurisionLimit(uint32_t depth) {recursion_limit_ = depth;}
 
 protected:
-  TProtocol(stdcxx::shared_ptr<TTransport> ptrans)
+  TProtocol(boost::shared_ptr<TTransport> ptrans)
     : ptrans_(ptrans), input_recursion_depth_(0), output_recursion_depth_(0), recursion_limit_(DEFAULT_RECURSION_LIMIT)
   {}
 
-  stdcxx::shared_ptr<TTransport> ptrans_;
+  boost::shared_ptr<TTransport> ptrans_;
 
 private:
   TProtocol() {}
@@ -599,9 +599,9 @@ public:
 
   virtual ~TProtocolFactory();
 
-  virtual stdcxx::shared_ptr<TProtocol> getProtocol(stdcxx::shared_ptr<TTransport> trans) = 0;
-  virtual stdcxx::shared_ptr<TProtocol> getProtocol(stdcxx::shared_ptr<TTransport> inTrans,
-               stdcxx::shared_ptr<TTransport> outTrans) {
+  virtual boost::shared_ptr<TProtocol> getProtocol(boost::shared_ptr<TTransport> trans) = 0;
+  virtual boost::shared_ptr<TProtocol> getProtocol(boost::shared_ptr<TTransport> inTrans,
+               boost::shared_ptr<TTransport> outTrans) {
     (void)outTrans;
     return getProtocol(inTrans);
   }
@@ -753,8 +753,6 @@ uint32_t skip(Protocol_& prot, TType type) {
   case T_UTF8:
   case T_UTF16:
     break;
-  default:
-    throw TProtocolException(TProtocolException::INVALID_DATA);
   }
   return 0;
 }

@@ -55,6 +55,7 @@ TBinaryProtocol.prototype.writeMessageBegin = function(name, type, seqid) {
     }
     // Record client seqid to find callback again
     if (this._seqid) {
+      // TODO better logging log warning
       log.warning('SeqId already set', { 'name': name });
     } else {
       this._seqid = seqid;
@@ -176,6 +177,7 @@ TBinaryProtocol.prototype.readMessageBegin = function() {
   if (sz < 0) {
     var version = sz & VERSION_MASK;
     if (version != VERSION_1) {
+      console.log("BAD: " + version);
       throw new Thrift.TProtocolException(Thrift.TProtocolExceptionType.BAD_VERSION, "Bad version in readMessageBegin: " + sz);
     }
     type = sz & TYPE_MASK;

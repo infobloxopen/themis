@@ -17,12 +17,11 @@
  * under the License.
  */
 var util = require('util');
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require("events").EventEmitter;
 var constants = require('constants');
 var net = require('net');
 var tls = require('tls');
 var thrift = require('./thrift');
-var log = require('./log');
 
 var TBufferedTransport = require('./buffered_transport');
 var TBinaryProtocol = require('./binary_protocol');
@@ -205,7 +204,9 @@ Connection.prototype.connection_gone = function () {
     this.retry_delay = Math.floor(this.retry_delay * this.retry_backoff);
   }
 
-  log.debug("Retry connection in " + this.retry_delay + " ms");
+  if (self._debug) {
+    console.log("Retry connection in " + this.retry_delay + " ms");
+  }
 
   if (this.max_attempts && this.attempts >= this.max_attempts) {
     this.retry_timer = null;
@@ -221,7 +222,9 @@ Connection.prototype.connection_gone = function () {
   });
 
   this.retry_timer = setTimeout(function () {
-    log.debug("Retrying connection...");
+    if (self._debug) {
+       console.log("Retrying connection...");
+  }
 
     self.retry_totaltime += self.retry_delay;
 
@@ -273,19 +276,20 @@ var StdIOConnection = exports.StdIOConnection = function(command, options) {
   var self = this;
   EventEmitter.call(this);
 
+  this._debug = options.debug || false;
   this.connection = child.stdin;
   this.options = options || {};
   this.transport = this.options.transport || TBufferedTransport;
   this.protocol = this.options.protocol || TBinaryProtocol;
   this.offline_queue = [];
 
-  if (log.getLogLevel() === 'debug') {
-    this.child.stderr.on('data', function (err) {
-      log.debug(err.toString(), 'CHILD ERROR');
+  if(this._debug === true){
+    this.child.stderr.on('data',function(err){
+      console.log(err.toString(),'CHILD ERROR');
     });
 
-    this.child.on('exit', function (code,signal) {
-      log.debug(code + ':' + signal, 'CHILD EXITED');
+    this.child.on('exit',function(code,signal){
+      console.log(code+':'+signal,'CHILD EXITED');
     });
   }
 

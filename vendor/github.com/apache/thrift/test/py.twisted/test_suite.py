@@ -36,11 +36,12 @@ from twisted.trial import unittest
 from twisted.internet import defer, reactor
 from twisted.internet.protocol import ClientCreator
 
-from zope.interface import implementer
+from zope.interface import implements
 
 
-@implementer(ThriftTest.Iface)
 class TestHandler:
+    implements(ThriftTest.Iface)
+
     def __init__(self):
         self.onewaysQueue = defer.DeferredQueue()
 

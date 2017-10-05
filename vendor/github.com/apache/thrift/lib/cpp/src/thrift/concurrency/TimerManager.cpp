@@ -29,8 +29,7 @@ namespace apache {
 namespace thrift {
 namespace concurrency {
 
-using stdcxx::shared_ptr;
-using stdcxx::weak_ptr;
+using boost::shared_ptr;
 
 /**
  * TimerManager class
@@ -52,10 +51,6 @@ public:
       state_ = COMPLETE;
     }
   }
-
-  bool operator==(const shared_ptr<Runnable> & runnable) const { return runnable_ == runnable; }
-
-  task_iterator it_;
 
 private:
   shared_ptr<Runnable> runnable_;
@@ -111,7 +106,6 @@ public:
           for (task_iterator ix = manager_->taskMap_.begin(); ix != expiredTaskEnd; ix++) {
             shared_ptr<TimerManager::Task> task = ix->second;
             expiredTasks.insert(task);
-            task->it_ = manager_->taskMap_.end();
             if (task->state_ == TimerManager::Task::WAITING) {
               task->state_ = TimerManager::Task::EXECUTING;
             }
@@ -239,7 +233,7 @@ size_t TimerManager::taskCount() const {
   return taskCount_;
 }
 
-TimerManager::Timer TimerManager::add(shared_ptr<Runnable> task, int64_t timeout) {
+void TimerManager::add(shared_ptr<Runnable> task, int64_t timeout) {
   int64_t now = Util::currentTime();
   timeout += now;
 
@@ -254,9 +248,9 @@ TimerManager::Timer TimerManager::add(shared_ptr<Runnable> task, int64_t timeout
     // because the new task might insert at the front.
     bool notifyRequired = (taskCount_ == 0) ? true : timeout < taskMap_.begin()->first;
 
-    shared_ptr<Task> timer(new Task(task));
     taskCount_++;
-    timer->it_ = taskMap_.insert(std::pair<int64_t, shared_ptr<Task> >(timeout, timer));
+    taskMap_.insert(
+        std::pair<int64_t, shared_ptr<Task> >(timeout, shared_ptr<Task>(new Task(task))));
 
     // If the task map was empty, or if we have an expiration that is earlier
     // than any previously seen, kick the dispatcher so it can update its
@@ -264,13 +258,10 @@ TimerManager::Timer TimerManager::add(shared_ptr<Runnable> task, int64_t timeout
     if (notifyRequired) {
       monitor_.notify();
     }
-
-    return timer;
   }
 }
 
-TimerManager::Timer TimerManager::add(shared_ptr<Runnable> task,
-    const struct THRIFT_TIMESPEC& value) {
+void TimerManager::add(shared_ptr<Runnable> task, const struct THRIFT_TIMESPEC& value) {
 
   int64_t expiration;
   Util::toMilliseconds(expiration, value);
@@ -281,11 +272,10 @@ TimerManager::Timer TimerManager::add(shared_ptr<Runnable> task,
     throw InvalidArgumentException();
   }
 
-  return add(task, expiration - now);
+  add(task, expiration - now);
 }
 
-TimerManager::Timer TimerManager::add(shared_ptr<Runnable> task,
-    const struct timeval& value) {
+void TimerManager::add(shared_ptr<Runnable> task, const struct timeval& value) {
 
   int64_t expiration;
   Util::toMilliseconds(expiration, value);
@@ -296,47 +286,15 @@ TimerManager::Timer TimerManager::add(shared_ptr<Runnable> task,
     throw InvalidArgumentException();
   }
 
-  return add(task, expiration - now);
+  add(task, expiration - now);
 }
 
 void TimerManager::remove(shared_ptr<Runnable> task) {
+  (void)task;
   Synchronized s(monitor_);
   if (state_ != TimerManager::STARTED) {
     throw IllegalStateException();
   }
-  bool found = false;
-  for (task_iterator ix = taskMap_.begin(); ix != taskMap_.end();) {
-    if (*ix->second == task) {
-      found = true;
-      taskCount_--;
-      taskMap_.erase(ix++);
-    } else {
-      ++ix;
-    }
-  }
-  if (!found) {
-    throw NoSuchTaskException();
-  }
-}
-
-void TimerManager::remove(Timer handle) {
-  Synchronized s(monitor_);
-  if (state_ != TimerManager::STARTED) {
-    throw IllegalStateException();
-  }
-
-  shared_ptr<Task> task = handle.lock();
-  if (!task) {
-    throw NoSuchTaskException();
-  }
-
-  if (task->it_ == taskMap_.end()) {
-    // Task is being executed
-    throw UncancellableTaskException();
-  }
-
-  taskMap_.erase(task->it_);
-  taskCount_--;
 }
 
 TimerManager::STATE TimerManager::state() const {

@@ -141,8 +141,7 @@ public class TProtocolUtil {
         break;
 
       default:
-        throw new TProtocolException(TProtocolException.INVALID_DATA,
-                                   "Unrecognized type " + type);
+        break;
     }
   }
 

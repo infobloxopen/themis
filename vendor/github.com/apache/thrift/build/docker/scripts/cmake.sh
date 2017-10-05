@@ -19,5 +19,5 @@ for LIB in $BUILD_LIBS; do
 done
 $MAKEPROG -j3
 cpack
-ctest -VV -E "(python_test)"
-# disabled cmake python_test for now since it fails in travis under centos
+ctest -VV 
+# was: -E "(concurrency_test|processor_test)"

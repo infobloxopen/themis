@@ -20,7 +20,7 @@
 #ifndef _THRIFT_ASYNC_TASYNCCHANNEL_H_
 #define _THRIFT_ASYNC_TASYNCCHANNEL_H_ 1
 
-#include <thrift/stdcxx.h>
+#include <thrift/cxxfunctional.h>
 #include <thrift/Thrift.h>
 
 namespace apache {

@@ -84,17 +84,13 @@ if NET_2_0
 export CSC_DEFINES = -d:NET_2_0
 endif
 
-all-local: Thrift.dll Thrift.45.dll
+all-local: Thrift.dll
 
 Thrift.dll: $(THRIFTCODE)
 	$(CSC) $(CSC_DEFINES) -out:$@ -target:library -reference:System.Web $(THRIFTCODE)
 
-Thrift.45.dll: $(THRIFTCODE)
-	$(CSC) $(CSC_DEFINES) -out:$@ -target:library -reference:System.Web $(THRIFTCODE)
-
 clean-local:
-	$(RM) Thrift.dll  \
-	$(RM) Thrift.45.dll
+	$(RM) Thrift.dll
 
 EXTRA_DIST = \
              $(THRIFTCODE) \

@@ -17,23 +17,20 @@
 # under the License.
 #
 
+THRIFT = $(top_builddir)/compiler/cpp/thrift
+
 stubs: ../ThriftTest.thrift
 	$(THRIFT) --gen php ../ThriftTest.thrift
 	$(THRIFT) --gen php:inlined ../ThriftTest.thrift
 	$(MKDIR_P) gen-php-psr4
 	$(THRIFT) -out gen-php-psr4 --gen php:psr4 ../ThriftTest.thrift
 
-php_ext_dir:
-	mkdir -p php_ext_dir
-	ln -s ../../../lib/php/src/ext/thrift_protocol/modules/thrift_protocol.so php_ext_dir/
-	ln -s "$$(php-config --extension-dir)/sockets.so" php_ext_dir/
+precross: stubs
 
-precross: stubs php_ext_dir
-
-check: stubs php_ext_dir
+check: stubs
 
 clean-local:
-	$(RM) -r gen-php gen-phpi gen-php-psr4 php_ext_dir
+	$(RM) -r gen-php gen-phpi gen-php-psr4
 
-client: stubs php_ext_dir
+client: stubs
 	php TestClient.php

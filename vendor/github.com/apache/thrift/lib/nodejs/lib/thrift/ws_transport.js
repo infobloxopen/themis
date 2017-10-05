@@ -17,8 +17,6 @@
  * under the License.
  */
 
-var log = require('./log');
-
 module.exports = TWebSocketTransport;
 
 /**
@@ -107,7 +105,7 @@ TWebSocketTransport.prototype.__onMessage = function(evt) {
 };
 
 TWebSocketTransport.prototype.__onError = function(evt) {
-  log.error('websocket: ' + evt.toString());
+  console.log("Thrift WebSocket Error: " + evt.toString());
   this.socket.close();
 };
 
