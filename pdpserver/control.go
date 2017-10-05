@@ -167,7 +167,12 @@ func (s *server) Apply(ctx context.Context, in *pb.Update) (*pb.Response, error)
 
 func (s *server) NotifyReady(ctx context.Context, m *pb.Empty) (*pb.Response, error) {
 	log.Info("Got notified about readiness")
-	s.start <- true
+
+	// PDP server needs 'ready' signal from PAP server only if there
+	// are no initialization policy and content files provided.
+	if len(conf.policy) == 0 && len(conf.content) == 0 {
+		s.start <- true
+	}
 
 	return &pb.Response{Status: pb.Response_ACK}, nil
 }

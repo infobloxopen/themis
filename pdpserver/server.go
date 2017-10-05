@@ -207,7 +207,11 @@ func (s *server) serve(tracer ot.Tracer) {
 
 	log.Info("Waiting for policies to be applied.")
 
-	<-s.start
+	// Wait for 'ready' signal from PAP server only if there
+	// are no initialization policy and content files provided.
+	if len(conf.policy) == 0 && len(conf.content) == 0 {
+		<-s.start
+	}
 	s.listenRequests(conf.serviceEP)
 
 	log.Info("Creating service protocol handler")
