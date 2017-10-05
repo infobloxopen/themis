@@ -513,7 +513,7 @@ func TestPolicyWithDnstap(t *testing.T) {
 
 	msgCnt := 0
 	expCnt := 3 //PH on query, PH on Response, and CR
-	for _ = range tapIO.dnstapChan {
+	for range tapIO.dnstapChan {
 		msgCnt++
 		if msgCnt == expCnt {
 			break
