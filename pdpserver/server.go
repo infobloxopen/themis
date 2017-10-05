@@ -35,7 +35,7 @@ type transport struct {
 type server struct {
 	sync.RWMutex
 
-	start    chan bool
+	start chan bool
 
 	requests transport
 	control  transport
