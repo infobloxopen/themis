@@ -6,10 +6,14 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/coredns/coredns/plugin"
+	"github.com/coredns/coredns/plugin/dnstap/taprw"
+	dtest "github.com/coredns/coredns/plugin/dnstap/test"
 	"github.com/coredns/coredns/plugin/pkg/dnstest"
 	"github.com/coredns/coredns/plugin/test"
+	dnstap "github.com/dnstap/golang-dnstap"
 
 	pdp "github.com/infobloxopen/themis/pdp-service"
 
@@ -465,5 +469,62 @@ func TestEdns(t *testing.T) {
 		if !reflect.DeepEqual(test.attr, mapAttr) {
 			t.Errorf("%s: expected attributes %q but got %q\n", test.name, test.attr, mapAttr)
 		}
+	}
+}
+
+// dnstap test
+
+type testIORoutine struct {
+	dnstapChan chan dnstap.Dnstap
+}
+
+func newIORoutine() testIORoutine {
+	ch := make(chan dnstap.Dnstap, 3)
+	io := testIORoutine{dnstapChan: ch}
+	// close channel by timeout to prevent checker from waiting forever
+	go func() {
+		time.Sleep(5 * time.Second)
+		close(ch)
+	}()
+	return io
+}
+
+func (io testIORoutine) Dnstap(msg dnstap.Dnstap) {
+	io.dnstapChan <- msg
+}
+
+func TestPolicyWithDnstap(t *testing.T) {
+	tapIO := newIORoutine()
+	pm := PolicyPlugin{Next: handler(), TapIO: tapIO, options: make(map[uint16][]edns0Map)}
+
+	req := new(dns.Msg)
+	req.SetQuestion("test.com.", dns.TypeA)
+
+	permit := &pdp.Response{Effect: pdp.Response_PERMIT}
+	pm.pdp = newTestClientInit(permit, permit, nil, nil)
+
+	trapper := dtest.TrapTapper{Full: true}
+	tapRW := taprw.ResponseWriter{
+		Query:          new(dns.Msg),
+		ResponseWriter: &test.ResponseWriter{},
+		Tapper:         &trapper,
+	}
+	pm.ServeDNS(context.TODO(), &tapRW, req)
+
+	msgCnt := 0
+	expCnt := 3 //PH on query, PH on Response, and CR
+	for _ = range tapIO.dnstapChan {
+		msgCnt++
+		if msgCnt == expCnt {
+			break
+		}
+	}
+	if msgCnt != expCnt {
+		t.Errorf("Unexpected number of Dnstap messages: expected %d, actual %d", expCnt, msgCnt)
+	}
+
+	if l := len(trapper.Trap); l != 0 {
+		t.Errorf("Dnstap unexpectedly sent %d messages", l)
+		return
 	}
 }

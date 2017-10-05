@@ -353,6 +353,13 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	ednsAttrs := p.getAttrsFromEDNS0(r, state.IP())
 	attrs = append(attrs, ednsAttrs...)
 
+	if p.TapIO != nil {
+		if pw := tap.NewProxyWriter(w); pw != nil {
+			w = pw
+			defer tap.SendCRExtraMsg(p.TapIO, time.Now(), pw, ednsAttrs)
+		}
+	}
+
 	response := new(pb.Response)
 	err := p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, response)
 	if err != nil {
