@@ -120,6 +120,16 @@ func TestPolicyConfigParse(t *testing.T) {
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
+							edns0 0xfff0 uid hex string 32 0 33
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "End index should be <= size",
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
 							edns0 0xfff1
 						}
 					}`,

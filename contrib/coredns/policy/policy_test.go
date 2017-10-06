@@ -373,6 +373,9 @@ func TestEdns(t *testing.T) {
 	if err := pm.AddEDNS0Map("0xfffe", "hex_name", "hex", "string", "0", "2", "0"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
+	if err := pm.AddEDNS0Map("0xffff", "var", "hex", "string", "0", "2", "6"); err != nil {
+		t.Errorf("Expected error 'nil' but got %v\n", err)
+	}
 
 	tests := []struct {
 		name     string
@@ -392,7 +395,7 @@ func TestEdns(t *testing.T) {
 		},
 		{
 			name: "Test option that not in config mapping",
-			code: 0xffff,
+			code: 0xfff9,
 			data: "cafecafe",
 			ip:   "192.168.0.2",
 			attr: map[string]*pdp.Attribute{
@@ -457,6 +460,24 @@ func TestEdns(t *testing.T) {
 			ip:   "192.168.0.8",
 			attr: map[string]*pdp.Attribute{
 				"source_ip": {Id: "source_ip", Type: "address", Value: "192.168.0.8"},
+			},
+		},
+		{
+			name: "Test skip option if start >= size",
+			code: 0xffff,
+			data: "0011",
+			ip:   "192.168.0.9",
+			attr: map[string]*pdp.Attribute{
+				"source_ip": {Id: "source_ip", Type: "address", Value: "192.168.0.9"},
+			},
+		},
+		{
+			name: "Test skip option if end > size",
+			code: 0xffff,
+			data: "00112233",
+			ip:   "192.168.0.10",
+			attr: map[string]*pdp.Attribute{
+				"source_ip": {Id: "source_ip", Type: "address", Value: "192.168.0.10"},
 			},
 		},
 	}

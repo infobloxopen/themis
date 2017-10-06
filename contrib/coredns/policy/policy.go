@@ -153,6 +153,9 @@ func (p *PolicyPlugin) AddEDNS0Map(code, name, dataType, destType,
 	if end <= start && end != 0 {
 		return fmt.Errorf("End index should be > start index (actual %d <= %d)", end, start)
 	}
+	if end > size && size != 0 {
+		return fmt.Errorf("End index should be <= size (actual %d > %d)", end, size)
+	}
 	ednsType, ok := stringToEDNS0MapType[dataType]
 	if !ok {
 		return fmt.Errorf("Invalid dataType for EDNS0 map: %s", dataType)
@@ -160,6 +163,37 @@ func (p *PolicyPlugin) AddEDNS0Map(code, name, dataType, destType,
 	ecode := uint16(c)
 	p.options[ecode] = append(p.options[ecode], edns0Map{name, ednsType, destType, uint(size), uint(start), uint(end)})
 	return nil
+}
+
+func parseHex(data []byte, option edns0Map) string {
+	size := uint(len(data))
+	// if option.size == 0 - don't check size
+	if option.size > 0 {
+		if size != option.size {
+			// skip parsing option with wrong size
+			return ""
+		}
+	}
+	start := uint(0)
+	if option.start < size {
+		// set start index
+		start = option.start
+	} else {
+		// skip parsing option if start >= data size
+		return ""
+	}
+	end := size
+	// if option.end == 0 - return data[start:]
+	if option.end > 0 {
+		if option.end <= size {
+			// set end index
+			end = option.end
+		} else {
+			// skip parsing option if end > data size
+			return ""
+		}
+	}
+	return hex.EncodeToString(data[start:end])
 }
 
 func parseOptionGroup(data []byte, options []edns0Map) ([]*pb.Attribute, bool) {
@@ -171,18 +205,10 @@ func parseOptionGroup(data []byte, options []edns0Map) ([]*pb.Attribute, bool) {
 		case typeEDNS0Bytes:
 			value = string(data)
 		case typeEDNS0Hex:
-			if uint(len(data)) != option.size && option.size > 0 {
+			value = parseHex(data, option)
+			if value == "" {
 				continue
 			}
-			start := uint(0)
-			end := uint(len(data))
-			if option.start < end {
-				start = option.start
-			}
-			if option.end < end && option.end > 0 {
-				end = option.end
-			}
-			value = hex.EncodeToString(data[start:end])
 		case typeEDNS0IP:
 			ip := net.IP(data)
 			value = ip.String()
