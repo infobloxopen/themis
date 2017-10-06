@@ -74,24 +74,26 @@ func policyParse(c *caddy.Controller) (*PolicyPlugin, error) {
 					return nil, c.ArgErr()
 				case "edns0":
 					args := c.RemainingArgs()
-					// Usage: edns0 <code> <name> [ <dataType> <destType> ] [ <start> <end> ].
+					// Usage: edns0 <code> <name> [ <dataType> <destType> ] [ <size> <start> <end> ].
 					// Valid dataTypes are hex (default), bytes, ip.
 					// Valid destTypes depend on PDP (default string).
 					argsLen := len(args)
-					if argsLen == 2 || argsLen == 4 || argsLen == 6 {
+					if argsLen == 2 || argsLen == 4 || argsLen == 7 {
 						dataType := "hex"
 						destType := "string"
+						size := "0"
 						start := "0"
 						end := "0"
 						if argsLen > 2 {
 							dataType = args[2]
 							destType = args[3]
 						}
-						if argsLen == 6 && dataType == "hex" {
-							start = args[4]
-							end = args[5]
+						if argsLen == 7 && dataType == "hex" {
+							size = args[4]
+							start = args[5]
+							end = args[6]
 						}
-						err := policyPlugin.AddEDNS0Map(args[0], args[1], dataType, destType, start, end)
+						err := policyPlugin.AddEDNS0Map(args[0], args[1], dataType, destType, size, start, end)
 						if err != nil {
 							return nil, fmt.Errorf("Could not add EDNS0 map for %s: %s", args[0], err)
 						}

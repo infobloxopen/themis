@@ -56,6 +56,7 @@ type edns0Map struct {
 	name     string
 	dataType uint16
 	destType string
+	size     uint
 	start    uint
 	end      uint
 }
@@ -132,29 +133,67 @@ func (p *PolicyPlugin) Close() {
 
 // AddEDNS0Map adds new EDNS0 to table.
 func (p *PolicyPlugin) AddEDNS0Map(code, name, dataType, destType,
-	startIndex, endIndex string) error {
+	sizeStr, startStr, endStr string) error {
 	c, err := strconv.ParseUint(code, 0, 16)
 	if err != nil {
 		return fmt.Errorf("Could not parse EDNS0 code: %s", err)
 	}
-	start, err := strconv.ParseUint(startIndex, 10, 32)
+	size, err := strconv.ParseUint(sizeStr, 10, 32)
+	if err != nil {
+		return fmt.Errorf("Could not parse EDNS0 data size: %s", err)
+	}
+	start, err := strconv.ParseUint(startStr, 10, 32)
 	if err != nil {
 		return fmt.Errorf("Could not parse EDNS0 start index: %s", err)
 	}
-	end, err := strconv.ParseUint(endIndex, 10, 32)
+	end, err := strconv.ParseUint(endStr, 10, 32)
 	if err != nil {
 		return fmt.Errorf("Could not parse EDNS0 end index: %s", err)
 	}
 	if end <= start && end != 0 {
 		return fmt.Errorf("End index should be > start index (actual %d <= %d)", end, start)
 	}
+	if end > size && size != 0 {
+		return fmt.Errorf("End index should be <= size (actual %d > %d)", end, size)
+	}
 	ednsType, ok := stringToEDNS0MapType[dataType]
 	if !ok {
 		return fmt.Errorf("Invalid dataType for EDNS0 map: %s", dataType)
 	}
 	ecode := uint16(c)
-	p.options[ecode] = append(p.options[ecode], edns0Map{name, ednsType, destType, uint(start), uint(end)})
+	p.options[ecode] = append(p.options[ecode], edns0Map{name, ednsType, destType, uint(size), uint(start), uint(end)})
 	return nil
+}
+
+func parseHex(data []byte, option edns0Map) string {
+	size := uint(len(data))
+	// if option.size == 0 - don't check size
+	if option.size > 0 {
+		if size != option.size {
+			// skip parsing option with wrong size
+			return ""
+		}
+	}
+	start := uint(0)
+	if option.start < size {
+		// set start index
+		start = option.start
+	} else {
+		// skip parsing option if start >= data size
+		return ""
+	}
+	end := size
+	// if option.end == 0 - return data[start:]
+	if option.end > 0 {
+		if option.end <= size {
+			// set end index
+			end = option.end
+		} else {
+			// skip parsing option if end > data size
+			return ""
+		}
+	}
+	return hex.EncodeToString(data[start:end])
 }
 
 func parseOptionGroup(data []byte, options []edns0Map) ([]*pb.Attribute, bool) {
@@ -166,15 +205,10 @@ func parseOptionGroup(data []byte, options []edns0Map) ([]*pb.Attribute, bool) {
 		case typeEDNS0Bytes:
 			value = string(data)
 		case typeEDNS0Hex:
-			start := uint(0)
-			end := uint(len(data))
-			if option.start < end {
-				start = option.start
+			value = parseHex(data, option)
+			if value == "" {
+				continue
 			}
-			if option.end < end && option.end > 0 {
-				end = option.end
-			}
-			value = hex.EncodeToString(data[start:end])
 		case typeEDNS0IP:
 			ip := net.IP(data)
 			value = ip.String()
@@ -248,7 +282,7 @@ func (p *PolicyPlugin) retDebugInfo(r *dns.Msg, w dns.ResponseWriter,
 }
 
 func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
-	r *dns.Msg, attrs []*pb.Attribute, tapAttrs []*tap.DnstapAttribute, respDomain *pb.Response, debugQuery bool) (int, error) {
+	r *dns.Msg, tapAttrs []*tap.DnstapAttribute, respDomain *pb.Response, debugQuery bool) (int, error) {
 	req := r
 	responseWriter := nonwriter.New(w)
 	if debugQuery {
@@ -287,7 +321,7 @@ func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
 		return status, nil
 	}
 
-	attrs[0].Value = "response"
+	attrs := []*pb.Attribute{{Id: "type", Type: "string", Value: "response"}}
 	addressAttr := &pb.Attribute{Id: "address", Type: "address", Value: address}
 	attrs = append(attrs, addressAttr)
 	attrs = append(attrs, respDomain.Obligation...)
@@ -374,7 +408,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 
 	switch resp.Action {
 	case typeAllow:
-		return p.handlePermit(ctx, w, r, attrs, tapAttrs, response, debugQuery)
+		return p.handlePermit(ctx, w, r, tapAttrs, response, debugQuery)
 	case typeRedirect:
 		return p.redirect(ctx, w, r, resp.Redirect)
 	case typeBlock:
