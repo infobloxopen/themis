@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package service;
+package pip_service;
 
 service PIP {
   rpc GetAttribute (Request) returns (Response) {}

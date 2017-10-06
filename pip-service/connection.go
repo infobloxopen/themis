@@ -1,4 +1,4 @@
-package service
+package pip_service
 
 import (
 	"fmt"
