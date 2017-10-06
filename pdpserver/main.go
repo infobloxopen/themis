@@ -21,9 +21,5 @@ func main() {
 	pdp.loadContent(conf.content)
 	runtime.GC()
 
-	tracer, err := initTracing("zipkin", conf.tracingEP)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Warning("Could not initialize tracing.")
-	}
-	pdp.serve(tracer)
+	pdp.serve()
 }
