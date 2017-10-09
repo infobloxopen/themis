@@ -168,7 +168,7 @@ func (s *server) Apply(ctx context.Context, in *pb.Update) (*pb.Response, error)
 func (s *server) NotifyReady(ctx context.Context, m *pb.Empty) (*pb.Response, error) {
 	log.Info("Got notified about readiness")
 
-	s.startOnce.Do(s.serveRequests)
+	go s.startOnce.Do(s.serveRequests)
 
 	return &pb.Response{Status: pb.Response_ACK}, nil
 }
