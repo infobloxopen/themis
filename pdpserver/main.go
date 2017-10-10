@@ -22,4 +22,8 @@ func main() {
 	runtime.GC()
 
 	pdp.serve()
+
+	// Prevent the main Go-routine to be finished,
+	// while other Go-routines are serving requests.
+	select {}
 }

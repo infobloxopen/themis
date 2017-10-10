@@ -241,7 +241,4 @@ func (s *server) serve() {
 		// serveRequests() will be executed by external request.
 		log.Info("Waiting for policies to be applied.")
 	}
-	for {
-		time.Sleep(time.Second)
-	}
 }
