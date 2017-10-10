@@ -33,6 +33,10 @@ type transport struct {
 type server struct {
 	sync.RWMutex
 
+	tracer ot.Tracer
+
+	startOnce sync.Once
+
 	control  transport
 	health   transport
 	profiler net.Listener
@@ -50,6 +54,13 @@ type server struct {
 }
 
 func newServer() *server {
+
+	tracer, err := initTracing("zipkin", conf.tracingEP)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Warning("Cannot initialize tracing.")
+		tracer = nil
+	}
+
 	gcp := debug.SetGCPercent(-1)
 	if gcp != -1 {
 		debug.SetGCPercent(gcp)
@@ -59,6 +70,7 @@ func newServer() *server {
 	}
 
 	return &server{
+		tracer:    tracer,
 		q:         newQueue(),
 		c:         pdp.NewLocalContentStorage(nil),
 		gcMax:     gcp,
@@ -121,17 +133,6 @@ func (s *server) loadContent(paths []string) error {
 	return nil
 }
 
-func (s *server) listenRequests(addr string) {
-	gorpc.RegisterType(&pep.Request{})
-	gorpc.RegisterType(&pep.Response{})
-	log.WithField("address", addr).Info("Opening service port")
-	server := gorpc.NewTCPServer(addr, s.Validate)
-	err := server.Start()
-	if err != nil {
-		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open service port")
-	}
-}
-
 func (s *server) listenControl(addr string) {
 	log.WithField("address", addr).Info("Opening control port")
 	ln, err := net.Listen("tcp", addr)
@@ -170,7 +171,31 @@ func (s *server) listenProfiler(addr string) {
 	s.profiler = ln
 }
 
-func (s *server) serve(tracer ot.Tracer) {
+func (s *server) serveRequests() {
+	addr := conf.serviceEP
+	gorpc.RegisterType(&pep.Request{})
+	gorpc.RegisterType(&pep.Response{})
+	log.WithField("address", addr).Info("Opening service port")
+	server := gorpc.NewTCPServer(addr, s.Validate)
+	err := server.Serve()
+	if err != nil {
+		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open service port")
+	}
+}
+
+func (s *server) serve() {
+	s.listenControl(conf.controlEP)
+	s.listenHealthCheck(conf.healthEP)
+	s.listenProfiler(conf.profilerEP)
+	go func() {
+		log.Info("Creating control protocol handler")
+		s.control.proto = grpc.NewServer()
+		pbc.RegisterPDPControlServer(s.control.proto, s)
+
+		log.Info("Serving control requests")
+		s.control.proto.Serve(s.control.iface)
+	}()
+
 	if s.health.iface != nil {
 		healthMux := http.NewServeMux()
 		healthMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -188,10 +213,12 @@ func (s *server) serve(tracer ot.Tracer) {
 		}()
 	}
 
-	log.Info("Creating control protocol handler")
-	s.control.proto = grpc.NewServer()
-	pbc.RegisterPDPControlServer(s.control.proto, s)
-
-	log.Info("Serving control requests")
-	s.control.proto.Serve(s.control.iface)
+	if len(conf.policy) != 0 || len(conf.content) != 0 {
+		// We already have policy info applied; supplied from local files,
+		// pointed to by CLI options.
+		s.startOnce.Do(s.serveRequests)
+	} else {
+		// serveRequests() will be executed by external request.
+		log.Info("Waiting for policies to be applied.")
+	}
 }

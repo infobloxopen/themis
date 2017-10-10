@@ -152,6 +152,19 @@ func (c *Client) Apply(id int32) error {
 	return nil
 }
 
+func (c *Client) NotifyReady() error {
+	r, err := c.client.NotifyReady(context.Background(), &pb.Empty{})
+	if err != nil {
+		return err
+	}
+
+	if r.Status != pb.Response_ACK {
+		return errors.New(r.Details)
+	}
+
+	return nil
+}
+
 func (c *Client) request(item *pb.Item) (int32, error) {
 	r, err := c.client.Request(context.Background(), item)
 	if err != nil {
