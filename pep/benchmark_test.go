@@ -14,201 +14,7 @@ import (
 )
 
 const (
-	oneStageBenchmarkPolicySet = `# Policy set for benchmark
-attributes:
-  k3: domain
-  x: string
-
-policies:
-  alg:
-    id: mapper
-    map:
-      selector:
-        uri: "local:content/second"
-        path:
-        - attr: k3
-        type: list of strings
-    default: DefaultRule
-    alg: FirstApplicableEffect
-  rules:
-  - id: DefaultRule
-    effect: Deny
-    obligations:
-    - x: DefaultRule
-  - id: First
-    effect: Permit
-    obligations:
-    - x: First
-  - id: Second
-    effect: Permit
-    obligations:
-    - x: Second
-  - id: Third
-    effect: Permit
-    obligations:
-    - x: Third
-  - id: Fourth
-    effect: Permit
-    obligations:
-    - x: Fourth
-  - id: Fifth
-    effect: Permit
-    obligations:
-    - x: Fifth
-`
-
-	twoStageBenchmarkPolicySet = `# Policy set for benchmark 2-level nesting policy
-attributes:
-  k2: string
-  k3: domain
-  x: string
-
-policies:
-  alg:
-    id: mapper
-    map:
-      selector:
-        uri: "local:content/first"
-        path:
-        - attr: k2
-        type: string
-    default: DefaultPolicy
-
-  policies:
-  - id: DefaultPolicy
-    alg: FirstApplicableEffect
-    rules:
-    - effect: Deny
-      obligations:
-      - x: DefaultPolicy
-
-  - id: P1
-    alg:
-      id: mapper
-      map:
-        selector:
-          uri: "local:content/second"
-          path:
-          - attr: k3
-          type: list of strings
-      default: DefaultRule
-      alg: FirstApplicableEffect
-    rules:
-    - id: DefaultRule
-      effect: Deny
-      obligations:
-      - x: P1.DefaultRule
-    - id: First
-      effect: Permit
-      obligations:
-      - x: P1.First
-    - id: Second
-      effect: Permit
-      obligations:
-      - x: P1.Second
-
-  - id: P2
-    alg:
-      id: mapper
-      map:
-        selector:
-          uri: "local:content/second"
-          path:
-          - attr: k3
-          type: list of strings
-      default: DefaultRule
-      alg: FirstApplicableEffect
-    rules:
-    - id: DefaultRule
-      effect: Deny
-      obligations:
-      - x: P2.DefaultRule
-    - id: Second
-      effect: Permit
-      obligations:
-      - x: P2.Second
-    - id: Third
-      effect: Permit
-      obligations:
-      - x: P2.Third
-
-  - id: P3
-    alg:
-      id: mapper
-      map:
-        selector:
-          uri: "local:content/second"
-          path:
-          - attr: k3
-          type: list of strings
-      default: DefaultRule
-      alg: FirstApplicableEffect
-    rules:
-    - id: DefaultRule
-      effect: Deny
-      obligations:
-      - x: P3.DefaultRule
-    - id: Third
-      effect: Permit
-      obligations:
-      - x: P3.Third
-    - id: Fourth
-      effect: Permit
-      obligations:
-      - x: P3.Fourth
-
-  - id: P4
-    alg:
-      id: mapper
-      map:
-        selector:
-          uri: "local:content/second"
-          path:
-          - attr: k3
-          type: list of strings
-      default: DefaultRule
-      alg: FirstApplicableEffect
-    rules:
-    - id: DefaultRule
-      effect: Deny
-      obligations:
-      - x: P4.DefaultRule
-    - id: Fourth
-      effect: Permit
-      obligations:
-      - x: P4.Fourth
-    - id: Fifth
-      effect: Permit
-      obligations:
-      - x: P4.Fifth
-
-  - id: P5
-    alg:
-      id: mapper
-      map:
-        selector:
-          uri: "local:content/second"
-          path:
-          - attr: k3
-          type: list of strings
-      default: DefaultRule
-      alg: FirstApplicableEffect
-    rules:
-    - id: DefaultRule
-      effect: Deny
-      obligations:
-      - x: P5.DefaultRule
-    - id: Fifth
-      effect: Permit
-      obligations:
-      - x: P5.Fifth
-    - id: First
-      effect: Permit
-      obligations:
-      - x: P5.First
-`
-
-	threeStageBenchmarkPolicySet = `# Policy set for benchmark 3-level nesting policy
+	policySet = `# Policy set for benchmark
 attributes:
   k1: string
   k2: string
@@ -623,7 +429,7 @@ func init() {
 
 func BenchmarkPolicySet(b *testing.B) {
 	ok := true
-	tmpYAST, tmpJCon, pdp, c := startPDPServer(threeStageBenchmarkPolicySet, b)
+	tmpYAST, tmpJCon, pdp, c := startPDPServer(policySet, b)
 	defer func() {
 		c.Close()
 
@@ -667,7 +473,7 @@ func startPDPServer(p string, b *testing.B) (string, string, *proc, Client) {
 		b.Fatalf("can't create content file: %s", err)
 	}
 
-	pdp, err := newProc("pdpserver", "-p", tmpYAST, "-j", tmpJCon)
+	pdp, err := newProc("../build/pdpserver", "-p", tmpYAST, "-j", tmpJCon)
 	if err != nil {
 		os.Remove(tmpYAST)
 		os.Remove(tmpJCon)
