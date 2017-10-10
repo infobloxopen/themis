@@ -6,6 +6,7 @@ service PDPControl {
   rpc Request (Item) returns (Response) {}
   rpc Upload (stream Chunk) returns (Response) {}
   rpc Apply (Update) returns (Response) {}
+  rpc NotifyReady (Empty) returns (Response) {}
 }
 
 message Item {
@@ -38,3 +39,5 @@ message Response {
   int32 id = 2;
   string details = 3;
 }
+
+message Empty {}
