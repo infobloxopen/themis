@@ -6,9 +6,7 @@ import (
 	"os"
 	"strings"
 
-	pb "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pep"
-
 	"github.com/infobloxopen/themis/pepcli/requests"
 )
 
@@ -36,7 +34,7 @@ func Exec(addr, in, out string, n int, v interface{}) error {
 		defer f.Close()
 	}
 
-	c := pep.NewClient(addr, nil)
+	c := pep.NewBalancedClient([]string{addr})
 	err = c.Connect()
 	if err != nil {
 		return fmt.Errorf("can't connect to %s: %s", addr, err)
@@ -47,8 +45,7 @@ func Exec(addr, in, out string, n int, v interface{}) error {
 		idx := i % len(reqs)
 		req := reqs[idx]
 
-		res := &pb.Response{}
-		err := c.ModalValidate(req, res)
+		res, err := c.Validate(&req)
 		if err != nil {
 			return fmt.Errorf("can't send request %d (%d): %s", idx, i, err)
 		}
@@ -62,15 +59,15 @@ func Exec(addr, in, out string, n int, v interface{}) error {
 	return nil
 }
 
-func dump(r *pb.Response, f io.Writer) error {
-	lines := []string{fmt.Sprintf("- effect: %s", r.Effect.String())}
+func dump(r *pep.Response, f io.Writer) error {
+	lines := []string{fmt.Sprintf("- effect: %s", pep.EffectName(r.Effect))}
 	if len(r.Reason) > 0 {
 		lines = append(lines, fmt.Sprintf("  reason: %q", r.Reason))
 	}
 
-	if len(r.Obligation) > 0 {
+	if len(r.Obligations) > 0 {
 		lines = append(lines, "  obligation:")
-		for _, attr := range r.Obligation {
+		for _, attr := range r.Obligations {
 			lines = append(lines, fmt.Sprintf("    - id: %q", attr.Id))
 			lines = append(lines, fmt.Sprintf("      type: %q", attr.Type))
 			lines = append(lines, fmt.Sprintf("      value: %q", attr.Value))

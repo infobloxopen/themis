@@ -5,57 +5,55 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"golang.org/x/net/context"
-
 	"github.com/infobloxopen/themis/pdp"
-	pb "github.com/infobloxopen/themis/pdp-service"
+	"github.com/infobloxopen/themis/pep"
 )
 
-func makeEffect(effect int) (pb.Response_Effect, error) {
+func makeEffect(effect int) (byte, error) {
 	switch effect {
 	case pdp.EffectDeny:
-		return pb.Response_DENY, nil
+		return pep.DENY, nil
 
 	case pdp.EffectPermit:
-		return pb.Response_PERMIT, nil
+		return pep.PERMIT, nil
 
 	case pdp.EffectNotApplicable:
-		return pb.Response_NOTAPPLICABLE, nil
+		return pep.NOTAPPLICABLE, nil
 
 	case pdp.EffectIndeterminate:
-		return pb.Response_INDETERMINATE, nil
+		return pep.INDETERMINATE, nil
 
 	case pdp.EffectIndeterminateD:
-		return pb.Response_INDETERMINATED, nil
+		return pep.INDETERMINATED, nil
 
 	case pdp.EffectIndeterminateP:
-		return pb.Response_INDETERMINATEP, nil
+		return pep.INDETERMINATEP, nil
 
 	case pdp.EffectIndeterminateDP:
-		return pb.Response_INDETERMINATEDP, nil
+		return pep.INDETERMINATEDP, nil
 	}
 
-	return pb.Response_INDETERMINATE, newUnknownEffectError(effect)
+	return pep.INDETERMINATE, newUnknownEffectError(effect)
 }
 
-func makeFailEffect(effect pb.Response_Effect) (pb.Response_Effect, error) {
+func makeFailEffect(effect byte) (byte, error) {
 	switch effect {
-	case pb.Response_DENY:
-		return pb.Response_INDETERMINATED, nil
+	case pep.DENY:
+		return pep.INDETERMINATED, nil
 
-	case pb.Response_PERMIT:
-		return pb.Response_INDETERMINATEP, nil
+	case pep.PERMIT:
+		return pep.INDETERMINATEP, nil
 
-	case pb.Response_NOTAPPLICABLE, pb.Response_INDETERMINATE, pb.Response_INDETERMINATED, pb.Response_INDETERMINATEP, pb.Response_INDETERMINATEDP:
+	case pep.NOTAPPLICABLE, pep.INDETERMINATE, pep.INDETERMINATED, pep.INDETERMINATEP, pep.INDETERMINATEDP:
 		return effect, nil
 	}
 
-	return pb.Response_INDETERMINATE, newUnknownEffectError(int(effect))
+	return pep.INDETERMINATE, newUnknownEffectError(int(effect))
 }
 
-type obligation []*pb.Attribute
+type obligations []*pep.Attribute
 
-func (o obligation) String() string {
+func (o obligations) String() string {
 	if len(o) <= 0 {
 		return "no attributes"
 	}
@@ -68,7 +66,7 @@ func (o obligation) String() string {
 	return strings.Join(lines, "\n")
 }
 
-func (s *server) newContext(c *pdp.LocalContentStorage, in *pb.Request) (*pdp.Context, error) {
+func (s *server) newContext(c *pdp.LocalContentStorage, in *pep.Request) (*pdp.Context, error) {
 	ctx, err := pdp.NewContext(c, len(in.Attributes), func(i int) (string, pdp.AttributeValue, error) {
 		a := in.Attributes[i]
 
@@ -91,15 +89,15 @@ func (s *server) newContext(c *pdp.LocalContentStorage, in *pb.Request) (*pdp.Co
 	return ctx, nil
 }
 
-func (s *server) newAttributes(obligations []pdp.AttributeAssignmentExpression, ctx *pdp.Context) ([]*pb.Attribute, error) {
-	attrs := make([]*pb.Attribute, len(obligations))
+func (s *server) newAttributes(obligations []pdp.AttributeAssignmentExpression, ctx *pdp.Context) ([]*pep.Attribute, error) {
+	attrs := make([]*pep.Attribute, len(obligations))
 	for i, e := range obligations {
 		ID, t, s, err := e.Serialize(ctx)
 		if err != nil {
 			return attrs[:i], err
 		}
 
-		attrs[i] = &pb.Attribute{
+		attrs[i] = &pep.Attribute{
 			Id:    ID,
 			Type:  t,
 			Value: s}
@@ -108,14 +106,14 @@ func (s *server) newAttributes(obligations []pdp.AttributeAssignmentExpression, 
 	return attrs, nil
 }
 
-func (s *server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in *pb.Request) (pb.Response_Effect, []error, []*pb.Attribute) {
+func (s *server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in *pep.Request) (byte, []error, []*pep.Attribute) {
 	if p == nil {
-		return pb.Response_INDETERMINATE, []error{newMissingPolicyError()}, nil
+		return pep.INDETERMINATE, []error{newMissingPolicyError()}, nil
 	}
 
 	ctx, err := s.newContext(c, in)
 	if err != nil {
-		return pb.Response_INDETERMINATE, []error{err}, nil
+		return pep.INDETERMINATE, []error{err}, nil
 	}
 
 	log.WithField("context", ctx).Debug("Request context")
@@ -148,15 +146,13 @@ func (s *server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, i
 	return re, errs, attrs
 }
 
-func (s *server) Validate(ctx context.Context, in *pb.Request) (*pb.Response, error) {
-	log.Info("Validating context")
-
+func (s *server) Validate(clientAddr string, request interface{}) interface{} {
 	s.RLock()
 	p := s.p
 	c := s.c
 	s.RUnlock()
 
-	effect, errs, attrs := s.rawValidate(p, c, in)
+	effect, errs, attrs := s.rawValidate(p, c, request.(*pep.Request))
 
 	status := "Ok"
 	if len(errs) > 1 {
@@ -165,15 +161,15 @@ func (s *server) Validate(ctx context.Context, in *pb.Request) (*pb.Response, er
 		status = errs[0].Error()
 	}
 
-	log.Info("Returning response")
 	log.WithFields(log.Fields{
-		"effect":     pb.Response_Effect_name[int32(effect)],
+		"effect":     pep.EffectName(effect),
 		"reason":     status,
-		"obligation": obligation(attrs),
+		"obligation": obligations(attrs),
 	}).Debug("Response")
 
-	return &pb.Response{
-		Effect:     effect,
-		Reason:     status,
-		Obligation: attrs}, nil
+	return &pep.Response{
+		Effect:      effect,
+		Reason:      status,
+		Obligations: attrs,
+	}
 }

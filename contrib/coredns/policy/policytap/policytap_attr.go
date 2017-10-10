@@ -3,17 +3,17 @@ package policytap
 import (
 	"net"
 
-	pb "github.com/infobloxopen/themis/pdp-service"
+	"github.com/infobloxopen/themis/pep"
 	"github.com/miekg/dns"
 )
 
 // PdpAttr2DnstapAttr converts service.Attribute to DnstapAttribute
-func PdpAttr2DnstapAttr(a *pb.Attribute) *DnstapAttribute {
+func PdpAttr2DnstapAttr(a *pep.Attribute) *DnstapAttribute {
 	return &DnstapAttribute{Id: &a.Id, Type: &a.Type, Value: &a.Value}
 }
 
 // ConvertAttrs converts slice of service.Attribute to slice of DnstapAttribute
-func ConvertAttrs(in []*pb.Attribute) []*DnstapAttribute {
+func ConvertAttrs(in []*pep.Attribute) []*DnstapAttribute {
 	out := make([]*DnstapAttribute, 0, len(in))
 	for _, a := range in {
 		out = append(out, PdpAttr2DnstapAttr(a))
@@ -27,7 +27,7 @@ func (phm *PolicyHitMessage) AddDnstapAttrs(attrs []*DnstapAttribute) {
 }
 
 // AddPdpAttrs adds service.Attribute to PolicyHitMessage
-func (phm *PolicyHitMessage) AddPdpAttrs(attrs []*pb.Attribute) {
+func (phm *PolicyHitMessage) AddPdpAttrs(attrs []*pep.Attribute) {
 	for _, a := range attrs {
 		if h, ok := specialAttrs[a.Id]; ok {
 			h(phm, a)
@@ -37,7 +37,7 @@ func (phm *PolicyHitMessage) AddPdpAttrs(attrs []*pb.Attribute) {
 	}
 }
 
-type attrHandler func(*PolicyHitMessage, *pb.Attribute)
+type attrHandler func(*PolicyHitMessage, *pep.Attribute)
 
 var specialAttrs = map[string]attrHandler{
 	"policy_id":   policyIDHandler,
@@ -45,11 +45,11 @@ var specialAttrs = map[string]attrHandler{
 	"redirect_to": redirectHandler,
 }
 
-func policyIDHandler(phm *PolicyHitMessage, a *pb.Attribute) {
+func policyIDHandler(phm *PolicyHitMessage, a *pep.Attribute) {
 	phm.PolicyId = []byte(a.Value)
 }
 
-func refuseHandler(phm *PolicyHitMessage, a *pb.Attribute) {
+func refuseHandler(phm *PolicyHitMessage, a *pep.Attribute) {
 	if a.Value != "" &&
 		*phm.PolicyAction != PolicyHitMessage_POLICY_ACTION_PASSTHROUGH &&
 		*phm.PolicyAction != PolicyHitMessage_POLICY_ACTION_REDIRECT {
@@ -59,7 +59,7 @@ func refuseHandler(phm *PolicyHitMessage, a *pb.Attribute) {
 	}
 }
 
-func redirectHandler(phm *PolicyHitMessage, a *pb.Attribute) {
+func redirectHandler(phm *PolicyHitMessage, a *pep.Attribute) {
 	if a.Value != "" {
 		if *phm.PolicyAction != PolicyHitMessage_POLICY_ACTION_PASSTHROUGH {
 			act := PolicyHitMessage_POLICY_ACTION_REDIRECT

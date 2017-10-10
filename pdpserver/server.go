@@ -1,7 +1,5 @@
 package main
 
-//go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-service && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/service.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-service && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-service"
-
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-control && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/control.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-control && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-control"
 
 import (
@@ -16,15 +14,15 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	ot "github.com/opentracing/opentracing-go"
 	"google.golang.org/grpc"
 
 	"github.com/infobloxopen/themis/pdp"
 	pbc "github.com/infobloxopen/themis/pdp-control"
-	pbs "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pdp/jcon"
 	"github.com/infobloxopen/themis/pdp/yast"
+	"github.com/infobloxopen/themis/pep"
+	"github.com/valyala/gorpc"
 )
 
 type transport struct {
@@ -35,7 +33,6 @@ type transport struct {
 type server struct {
 	sync.RWMutex
 
-	requests transport
 	control  transport
 	health   transport
 	profiler net.Listener
@@ -125,13 +122,14 @@ func (s *server) loadContent(paths []string) error {
 }
 
 func (s *server) listenRequests(addr string) {
+	gorpc.RegisterType(&pep.Request{})
+	gorpc.RegisterType(&pep.Response{})
 	log.WithField("address", addr).Info("Opening service port")
-	ln, err := net.Listen("tcp", addr)
+	server := gorpc.NewTCPServer(addr, s.Validate)
+	err := server.Start()
 	if err != nil {
 		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open service port")
 	}
-
-	s.requests.iface = ln
 }
 
 func (s *server) listenControl(addr string) {
@@ -173,15 +171,6 @@ func (s *server) listenProfiler(addr string) {
 }
 
 func (s *server) serve(tracer ot.Tracer) {
-	go func() {
-		log.Info("Creating control protocol handler")
-		s.control.proto = grpc.NewServer()
-		pbc.RegisterPDPControlServer(s.control.proto, s)
-
-		log.Info("Serving control requests")
-		s.control.proto.Serve(s.control.iface)
-	}()
-
 	if s.health.iface != nil {
 		healthMux := http.NewServeMux()
 		healthMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -199,18 +188,10 @@ func (s *server) serve(tracer ot.Tracer) {
 		}()
 	}
 
-	log.Info("Creating service protocol handler")
-	if tracer == nil {
-		s.requests.proto = grpc.NewServer()
-	} else {
-		onlyIfParent := func(parentSpanCtx ot.SpanContext, method string, req, resp interface{}) bool {
-			return parentSpanCtx != nil
-		}
-		intercept := otgrpc.OpenTracingServerInterceptor(tracer, otgrpc.IncludingSpans(onlyIfParent))
-		s.requests.proto = grpc.NewServer(grpc.UnaryInterceptor(intercept))
-	}
-	pbs.RegisterPDPServer(s.requests.proto, s)
+	log.Info("Creating control protocol handler")
+	s.control.proto = grpc.NewServer()
+	pbc.RegisterPDPControlServer(s.control.proto, s)
 
-	log.Info("Serving decision requests")
-	s.requests.proto.Serve(s.requests.iface)
+	log.Info("Serving control requests")
+	s.control.proto.Serve(s.control.iface)
 }

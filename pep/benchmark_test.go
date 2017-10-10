@@ -11,8 +11,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
 const (
@@ -563,18 +561,6 @@ policies:
 }`
 )
 
-type decisionRequest struct {
-	Direction string `pdp:"k1"`
-	Policy    string `pdp:"k2"`
-	Domain    string `pdp:"k3,domain"`
-}
-
-type decisionResponse struct {
-	Effect string `pdp:"Effect"`
-	Reason string `pdp:"Reason"`
-	X      string `pdp:"x"`
-}
-
 var (
 	directionOpts = []string{
 		"Left",
@@ -606,24 +592,14 @@ var (
 		"third.test.com",
 	}
 
-	decisionRequests []decisionRequest
-	rawRequests      []pb.Request
+	requests []*Request
 )
 
 func init() {
-	decisionRequests = make([]decisionRequest, 2000000)
-	for i := range decisionRequests {
-		decisionRequests[i] = decisionRequest{
-			Direction: directionOpts[rand.Intn(len(directionOpts))],
-			Policy:    policySetOpts[rand.Intn(len(policySetOpts))],
-			Domain:    domainOpts[rand.Intn(len(domainOpts))],
-		}
-	}
-
-	rawRequests = make([]pb.Request, 2000000)
-	for i := range rawRequests {
-		rawRequests[i] = pb.Request{
-			Attributes: []*pb.Attribute{
+	requests = make([]*Request, 2000000)
+	for i := range requests {
+		requests[i] = &Request{
+			Attributes: []*Attribute{
 				{
 					Id:    "k1",
 					Type:  "string",
@@ -645,49 +621,7 @@ func init() {
 
 }
 
-func benchmarkPolicySet(name, p string, b *testing.B) {
-	ok := true
-	tmpYAST, tmpJCon, pdp, c := startPDPServer(p, b)
-	defer func() {
-		c.Close()
-
-		_, errDump, _ := pdp.kill()
-		if !ok && len(errDump) > 0 {
-			b.Logf("PDP server dump:\n%s", strings.Join(errDump, "\n"))
-		}
-
-		os.Remove(tmpYAST)
-		os.Remove(tmpJCon)
-	}()
-
-	ok = b.Run(name, func(b *testing.B) {
-		for n := 0; n < b.N; n++ {
-			in := decisionRequests[n%len(decisionRequests)]
-
-			var out decisionResponse
-			c.ModalValidate(in, &out)
-
-			if (out.Effect != "DENY" && out.Effect != "PERMIT" && out.Effect != "NOTAPPLICABLE") ||
-				out.Reason != "Ok" {
-				b.Fatalf("unexpected response: %#v", out)
-			}
-		}
-	})
-}
-
-func BenchmarkOneStagePolicySet(b *testing.B) {
-	benchmarkPolicySet("BenchmarkOneStagePolicySet", oneStageBenchmarkPolicySet, b)
-}
-
-func BenchmarkTwoStagePolicySet(b *testing.B) {
-	benchmarkPolicySet("BenchmarkTwoStagePolicySet", twoStageBenchmarkPolicySet, b)
-}
-
-func BenchmarkThreeStagePolicySet(b *testing.B) {
-	benchmarkPolicySet("BenchmarkThreeStagePolicySet", threeStageBenchmarkPolicySet, b)
-}
-
-func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
+func BenchmarkPolicySet(b *testing.B) {
 	ok := true
 	tmpYAST, tmpJCon, pdp, c := startPDPServer(threeStageBenchmarkPolicySet, b)
 	defer func() {
@@ -702,16 +636,18 @@ func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
 		os.Remove(tmpJCon)
 	}()
 
-	ok = b.Run("BenchmarkThreeStagePolicySetRaw", func(b *testing.B) {
-		var out pb.Response
+	ok = b.Run("BenchmarkPolicySet", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
-			in := rawRequests[n%len(rawRequests)]
+			in := requests[n%len(requests)]
 
-			c.ModalValidate(in, &out)
+			out, err := c.Validate(in)
+			if err != nil {
+				b.Fatalf("unexpected error: %#v", err)
+			}
 
-			if (out.Effect != pb.Response_DENY &&
-				out.Effect != pb.Response_PERMIT &&
-				out.Effect != pb.Response_NOTAPPLICABLE) ||
+			if (out.Effect != DENY &&
+				out.Effect != PERMIT &&
+				out.Effect != NOTAPPLICABLE) ||
 				out.Reason != "Ok" {
 				b.Fatalf("unexpected response: %#v", out)
 			}
@@ -740,7 +676,7 @@ func startPDPServer(p string, b *testing.B) (string, string, *proc, Client) {
 
 	time.Sleep(time.Second)
 
-	c := NewClient("127.0.0.1:5555", nil)
+	c := NewBalancedClient([]string{"127.0.0.1:5555"})
 	err = c.Connect()
 	if err != nil {
 		os.Remove(tmpYAST)
