@@ -166,6 +166,57 @@ func TestPolicyConfigParse(t *testing.T) {
 			endpoints:  []string{"10.2.4.1:5555"},
 			errContent: "",
 		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							batch_interval 10
+							batch_limit 1024
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "",
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							batch_interval
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Wrong argument count or unexpected line ending",
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							batch_interval wrong_interval
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Could not parse batch_interval param",
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							batch_limit
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Wrong argument count or unexpected line ending",
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							batch_limit wrong_limit
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Could not parse batch_limit param",
+		},
 	}
 
 	for _, test := range tests {

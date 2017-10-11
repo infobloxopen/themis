@@ -3,16 +3,13 @@ package policy
 import (
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/pkg/dnstest"
 	"github.com/coredns/coredns/plugin/test"
-
 	pdp "github.com/infobloxopen/themis/pdp-service"
-
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
 )
@@ -45,22 +42,22 @@ func TestPolicy(t *testing.T) {
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			response:  &pdp.Response{Effect: pdp.Response_INDETERMINATE},
+			response:  &pdp.Response{Effect: pdp.INDETERMINATE},
 			status:    dns.RcodeServerFailure,
 			err:       errInvalidAction,
 		},
 		{
 			query:      "test.com.",
 			queryType:  dns.TypeA,
-			response:   &pdp.Response{Effect: pdp.Response_PERMIT},
-			responseIP: &pdp.Response{Effect: pdp.Response_INDETERMINATE},
+			response:   &pdp.Response{Effect: pdp.PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.INDETERMINATE},
 			status:     dns.RcodeServerFailure,
 			err:        errInvalidAction,
 		},
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
+			response:  &pdp.Response{Effect: pdp.PERMIT},
 			errRespIP: errFakePdp,
 			status:    dns.RcodeServerFailure,
 			err:       errFakePdp,
@@ -68,127 +65,127 @@ func TestPolicy(t *testing.T) {
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			response:  &pdp.Response{Effect: pdp.Response_DENY},
+			response:  &pdp.Response{Effect: pdp.DENY},
 			status:    dns.RcodeNameError,
 			err:       nil,
 		},
 		{
 			query:      "test.com.",
 			queryType:  dns.TypeA,
-			response:   &pdp.Response{Effect: pdp.Response_PERMIT},
-			responseIP: &pdp.Response{Effect: pdp.Response_PERMIT},
+			response:   &pdp.Response{Effect: pdp.PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.PERMIT},
 			status:     dns.RcodeSuccess,
 			err:        nil,
 		},
 		{
 			query:      "test.com.",
 			queryType:  dns.TypeA,
-			response:   &pdp.Response{Effect: pdp.Response_PERMIT},
-			responseIP: &pdp.Response{Effect: pdp.Response_DENY},
+			response:   &pdp.Response{Effect: pdp.PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.DENY},
 			status:     dns.RcodeNameError,
 			err:        nil,
 		},
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			response: &pdp.Response{Effect: pdp.Response_DENY,
-				Obligation: []*pdp.Attribute{{"redirect_to", "string", "221.228.88.194"}}},
+			response: &pdp.Response{Effect: pdp.DENY,
+				Obligations: []*pdp.Attribute{{"redirect_to", "string", "221.228.88.194"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
 		},
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			response: &pdp.Response{Effect: pdp.Response_DENY,
-				Obligation: []*pdp.Attribute{{"redirect_to", "string", "redirect.biz"}}},
+			response: &pdp.Response{Effect: pdp.DENY,
+				Obligations: []*pdp.Attribute{{"redirect_to", "string", "redirect.biz"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
 		},
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
-			responseIP: &pdp.Response{Effect: pdp.Response_DENY,
-				Obligation: []*pdp.Attribute{{"redirect_to", "string", "221.228.88.194"}}},
+			response:  &pdp.Response{Effect: pdp.PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.DENY,
+				Obligations: []*pdp.Attribute{{"redirect_to", "string", "221.228.88.194"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
 		},
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
-			responseIP: &pdp.Response{Effect: pdp.Response_DENY,
-				Obligation: []*pdp.Attribute{{"redirect_to", "string", "redirect.biz"}}},
+			response:  &pdp.Response{Effect: pdp.PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.DENY,
+				Obligations: []*pdp.Attribute{{"redirect_to", "string", "redirect.biz"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
 		},
 		{
 			query:     "test.org.",
 			queryType: dns.TypeAAAA,
-			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
-			responseIP: &pdp.Response{Effect: pdp.Response_DENY,
-				Obligation: []*pdp.Attribute{{"redirect_to", "string", "2001:db8:0:200:0:0:0:7"}}},
+			response:  &pdp.Response{Effect: pdp.PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.DENY,
+				Obligations: []*pdp.Attribute{{"redirect_to", "string", "2001:db8:0:200:0:0:0:7"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
 		},
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			response: &pdp.Response{Effect: pdp.Response_DENY,
-				Obligation: []*pdp.Attribute{{"redirect_to", "string", "test.net"}}},
+			response: &pdp.Response{Effect: pdp.DENY,
+				Obligations: []*pdp.Attribute{{"redirect_to", "string", "test.net"}}},
 			status: dns.RcodeServerFailure,
 			err:    errFakeResolver,
 		},
 		{
 			query:     "test.net.",
 			queryType: dns.TypeA,
-			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
+			response:  &pdp.Response{Effect: pdp.PERMIT},
 			status:    dns.RcodeServerFailure,
 			err:       errFakeResolver,
 		},
 		{
 			query:     "test.org.",
 			queryType: dns.TypeAAAA,
-			response:  &pdp.Response{Effect: pdp.Response_DENY},
+			response:  &pdp.Response{Effect: pdp.DENY},
 			status:    dns.RcodeNameError,
 			err:       nil,
 		},
 		{
 			query:     "test.org.",
 			queryType: dns.TypeAAAA,
-			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
+			response:  &pdp.Response{Effect: pdp.PERMIT},
 			status:    dns.RcodeSuccess,
 			err:       nil,
 		},
 		{
 			query:     "test.org.",
 			queryType: dns.TypeAAAA,
-			response: &pdp.Response{Effect: pdp.Response_DENY,
-				Obligation: []*pdp.Attribute{{"redirect_to", "string", "redirect.net"}}},
+			response: &pdp.Response{Effect: pdp.DENY,
+				Obligations: []*pdp.Attribute{{"redirect_to", "string", "redirect.net"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
 		},
 		{
 			query:     "test.org.",
 			queryType: dns.TypeA,
-			response: &pdp.Response{Effect: pdp.Response_DENY,
-				Obligation: []*pdp.Attribute{{"refuse", "string", "true"}}},
+			response: &pdp.Response{Effect: pdp.DENY,
+				Obligations: []*pdp.Attribute{{"refuse", "string", "true"}}},
 			status: dns.RcodeRefused,
 			err:    nil,
 		},
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
-			responseIP: &pdp.Response{Effect: pdp.Response_DENY,
-				Obligation: []*pdp.Attribute{{"refuse", "string", "true"}}},
+			response:  &pdp.Response{Effect: pdp.PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.DENY,
+				Obligations: []*pdp.Attribute{{"refuse", "string", "true"}}},
 			status: dns.RcodeRefused,
 			err:    nil,
 		},
 		{
 			query:     "nxdomain.org.",
 			queryType: dns.TypeA,
-			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
+			response:  &pdp.Response{Effect: pdp.PERMIT},
 			status:    dns.RcodeNameError,
 			err:       nil,
 		},
@@ -295,39 +292,24 @@ func newTestClientInit(nextResponse *pdp.Response, nextResponseIP *pdp.Response,
 
 func (c *testClient) Connect() error { return nil }
 func (c *testClient) Close()         {}
-func (c *testClient) Validate(ctx context.Context, in, out interface{}) error {
-	if in != nil {
-		p := in.(pdp.Request)
-		for _, a := range p.Attributes {
+func (c *testClient) Validate(request *pdp.Request) (*pdp.Response, error) {
+	if request != nil {
+		for _, a := range request.Attributes {
 			if a.Id == "address" {
 				if c.errResponseIP != nil {
-					return c.errResponseIP
+					return nil, c.errResponseIP
 				}
 				if c.nextResponseIP != nil {
-					return fillResponse(c.nextResponseIP, out)
+					return c.nextResponseIP, nil
 				}
 				continue
 			}
 		}
 	}
 	if c.errResponse != nil {
-		return c.errResponse
+		return nil, c.errResponse
 	}
-	return fillResponse(c.nextResponse, out)
-}
-
-func (c *testClient) ModalValidate(in, out interface{}) error {
-	return c.Validate(context.Background(), in, out)
-}
-
-func fillResponse(in *pdp.Response, out interface{}) error {
-	r, ok := out.(*pdp.Response)
-	if !ok {
-		return fmt.Errorf("testClient can only translate response to *pb.Response type but got %T", out)
-	}
-	r.Effect = in.Effect
-	r.Obligation = in.Obligation
-	return nil
+	return c.nextResponse, nil
 }
 
 func makeRequestWithEDNS0(code uint16, hexstring string, nonlocal bool) *dns.Msg {

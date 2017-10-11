@@ -1,59 +1,45 @@
 SRCROOT := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
-
+BUILDPATH = $(SRCROOT)/build
 COVEROUT=$(SRCROOT)/cover.out
+COVERTMP=/tmp/cover.out
 
 AT = cd $(SRCROOT)
 RM = rm -fv
 GOBUILD = go build -v
-GOFMTCHECK = test -z `gofmt -l -s *.go | tee /dev/stderr`
-GOTEST = go test -v
-GOCOVER = $(GOTEST) -race -coverprofile=/tmp/cover.out -covermode=atomic && cat /tmp/cover.out >> $(COVEROUT)
+GOFMTCHECK = test -z `gofmt -w -s *.go | tee /dev/stderr`
+COVER = go test -v -coverprofile=$(COVERTMP) -covermode=atomic
+JOINCOVER = cat $(COVERTMP) >> $(COVEROUT)
+GOTEST = $(COVER) -race && $(JOINCOVER)
+GOBENCH = $(COVER) -bench=. && $(JOINCOVER)
 
 .PHONY: all
-all: fmt build cover
+all: fmt build test
+
+.PHONY: build-dir
+build-dir:
+	mkdir -p $(BUILDPATH)
 
 .PHONY: bootstrap
 bootstrap:
 	glide install --strip-vendor
 
 .PHONY: clean
-clean: clean-cover clean-pepcli clean-papcli clean-pdpserver clean-egen
+clean:
+	@$(RM) $(COVEROUT)
+	@$(RM) $(BUILDPATH)
 
 .PHONY: fmt
 fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jcon fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver fmt-plugin fmt-egen
 
 .PHONY: build
-build: build-pepcli build-papcli build-pdpserver build-plugin build-egen
+build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-egen
 
 .PHONY: test
-test: test-pdp test-pdp-yast test-pdp-jcon test-pep test-plugin
+test: cover-out test-pdp test-pdp-yast test-pdp-jcon test-pep test-plugin
 
-.PHONY: cover
-cover: cover-pdp cover-pdp-yast cover-pdp-jcon cover-pep cover-plugin
-
-$(COVEROUT):
+.PHONY: cover-out
+cover-out:
 	echo > $(COVEROUT)
-
-# Per package clean targets
-.PHONY: clean-cover
-clean-cover:
-	@$(RM) $(COVEROUT)
-
-.PHONY: clean-pepcli
-clean-pepcli:
-	@$(AT)/pepcli && $(RM) pepcli
-
-.PHONY: clean-papcli
-clean-papcli:
-	@$(AT)/papcli && $(RM) papcli
-
-.PHONY: clean-pdpserver
-clean-pdpserver:
-	@$(AT)/pdpserver && $(RM) pdpserver
-
-.PHONY: clean-egen
-clean-egen:
-	@$(AT)/egen && $(RM) egen
 
 # Per package format targets
 .PHONY: fmt-pdp
@@ -124,65 +110,43 @@ fmt-egen:
 
 # Per package build targets
 .PHONY: build-pepcli
-build-pepcli:
-	$(AT)/pepcli && $(GOBUILD)
+build-pepcli: build-dir
+	$(AT)/pepcli && $(GOBUILD) -o $(BUILDPATH)/pepcli
 
 .PHONY: build-papcli
-build-papcli:
-	$(AT)/papcli && $(GOBUILD)
+build-papcli: build-dir
+	$(AT)/papcli && $(GOBUILD) -o $(BUILDPATH)/papcli
 
 .PHONY: build-pdpserver
-build-pdpserver:
-	$(AT)/pdpserver && $(GOBUILD)
+build-pdpserver: build-dir
+	$(AT)/pdpserver && $(GOBUILD) -o $(BUILDPATH)/pdpserver
 
 .PHONY: build-plugin
-build-plugin:
+build-plugin: build-dir
 	$(AT)/contrib/coredns/policy && $(GOBUILD)
 	$(AT)/contrib/coredns/policy/policytap && $(GOBUILD)
 
 .PHONY: build-egen
-build-egen:
-	$(AT)/egen && $(GOBUILD)
+build-egen: build-dir
+	$(AT)/egen && $(GOBUILD) -o $(BUILDPATH)/egen
 
 .PHONY: test-pdp
-test-pdp:
+test-pdp: cover-out
 	$(AT)/pdp && $(GOTEST)
 
 .PHONY: test-pdp-yast
-test-pdp-yast:
+test-pdp-yast: cover-out
 	$(AT)/pdp/yast && $(GOTEST)
 
 .PHONY: test-pdp-jcon
-test-pdp-jcon:
+test-pdp-jcon: cover-out
 	$(AT)/pdp/jcon && $(GOTEST)
 
 .PHONY: test-pep
-test-pep:
-	$(AT)/pep && $(GOTEST)
+test-pep: build-pdpserver cover-out
+	$(AT)/pep && $(GOBENCH)
 
 .PHONY: test-plugin
-test-plugin:
+test-plugin: cover-out
 	$(AT)/contrib/coredns/policy && $(GOTEST)
 	$(AT)/contrib/coredns/policy/policytap && $(GOTEST)
-
-# Per package test coverage targets
-.PHONY: cover-pdp
-cover-pdp: | $(COVEROUT)
-	$(AT)/pdp && $(GOCOVER)
-
-.PHONY: cover-pdp-yast
-cover-pdp-yast: | $(COVEROUT)
-	$(AT)/pdp/yast && $(GOCOVER)
-
-.PHONY: cover-pdp-jcon
-cover-pdp-jcon: | $(COVEROUT)
-	$(AT)/pdp/jcon && $(GOCOVER)
-
-.PHONY: cover-pep
-cover-pep: | $(COVEROUT)
-	$(AT)/pep && $(GOCOVER)
-
-.PHONY: cover-plugin
-cover-plugin: | $(COVEROUT)
-	$(AT)/contrib/coredns/policy && $(GOCOVER)
-	$(AT)/contrib/coredns/policy/policytap && $(GOCOVER)
