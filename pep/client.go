@@ -5,55 +5,9 @@ import (
 	"sync"
 	"time"
 
+	pdp "github.com/infobloxopen/themis/pdp-service"
 	"github.com/valyala/gorpc"
 )
-
-// Effect field values
-const (
-	DENY            = 0
-	PERMIT          = 1
-	NOTAPPLICABLE   = 2
-	INDETERMINATE   = 3
-	INDETERMINATED  = 4
-	INDETERMINATEP  = 5
-	INDETERMINATEDP = 6
-)
-
-func EffectName(effect byte) string {
-	switch effect {
-	case 0:
-		return "DENY"
-	case 1:
-		return "PERMIT"
-	case 2:
-		return "NOTAPPLICABLE"
-	case 3:
-		return "INDETERMINATE"
-	case 4:
-		return "INDETERMINATED"
-	case 5:
-		return "INDETERMINATEP"
-	case 6:
-		return "INDETERMINATEDP"
-	}
-	return "INVALID EFFECT"
-}
-
-type Attribute struct {
-	Id    string
-	Type  string
-	Value string
-}
-
-type Request struct {
-	Attributes []*Attribute
-}
-
-type Response struct {
-	Effect      byte
-	Reason      string
-	Obligations []*Attribute
-}
 
 const (
 	batchInterval = 100 * time.Microsecond
@@ -67,7 +21,7 @@ type Client interface {
 	// if it has been already closed.
 	Close()
 	// Validate sends decision request to PDP server and fills out response.
-	Validate(request *Request) (*Response, error)
+	Validate(request *pdp.Request) (*pdp.Response, error)
 }
 
 type rpc struct {
@@ -83,8 +37,6 @@ type client struct {
 
 // NewBalancedClient creates client instance bound to several PDP servers with random balancing.
 func NewBalancedClient(endpoints []string) Client {
-	gorpc.RegisterType(&Request{})
-	gorpc.RegisterType(&Response{})
 	return &client{
 		endpoints: endpoints,
 		rpcs:      make([]rpc, len(endpoints)),
@@ -117,7 +69,7 @@ func (c *client) Close() {
 	}
 }
 
-func (c *client) addCall(request *Request) *gorpc.BatchResult {
+func (c *client) addCall(request *pdp.Request) *gorpc.BatchResult {
 	l := len(c.rpcs)
 	i := 0
 	if l > 1 {
@@ -129,8 +81,8 @@ func (c *client) addCall(request *Request) *gorpc.BatchResult {
 	return c.rpcs[i].batch.Add(request)
 }
 
-func (c *client) Validate(request *Request) (*Response, error) {
+func (c *client) Validate(request *pdp.Request) (*pdp.Response, error) {
 	batch := c.addCall(request)
 	<-batch.Done
-	return batch.Response.(*Response), batch.Error
+	return batch.Response.(*pdp.Response), batch.Error
 }

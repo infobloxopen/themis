@@ -11,6 +11,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	pdp "github.com/infobloxopen/themis/pdp-service"
 )
 
 const (
@@ -398,14 +400,14 @@ var (
 		"third.test.com",
 	}
 
-	requests []*Request
+	requests []*pdp.Request
 )
 
 func init() {
-	requests = make([]*Request, 2000000)
+	requests = make([]*pdp.Request, 2000000)
 	for i := range requests {
-		requests[i] = &Request{
-			Attributes: []*Attribute{
+		requests[i] = &pdp.Request{
+			Attributes: []*pdp.Attribute{
 				{
 					Id:    "k1",
 					Type:  "string",
@@ -429,11 +431,11 @@ func init() {
 
 func BenchmarkPolicySet(b *testing.B) {
 	ok := true
-	tmpYAST, tmpJCon, pdp, c := startPDPServer(policySet, b)
+	tmpYAST, tmpJCon, server, c := startPDPServer(policySet, b)
 	defer func() {
 		c.Close()
 
-		_, errDump, _ := pdp.kill()
+		_, errDump, _ := server.kill()
 		if !ok && len(errDump) > 0 {
 			b.Logf("PDP server dump:\n%s", strings.Join(errDump, "\n"))
 		}
@@ -451,9 +453,9 @@ func BenchmarkPolicySet(b *testing.B) {
 				b.Fatalf("unexpected error: %#v", err)
 			}
 
-			if (out.Effect != DENY &&
-				out.Effect != PERMIT &&
-				out.Effect != NOTAPPLICABLE) ||
+			if (out.Effect != pdp.DENY &&
+				out.Effect != pdp.PERMIT &&
+				out.Effect != pdp.NOTAPPLICABLE) ||
 				out.Reason != "Ok" {
 				b.Fatalf("unexpected response: %#v", out)
 			}

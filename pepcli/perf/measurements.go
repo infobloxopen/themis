@@ -5,10 +5,11 @@ import (
 	"sync"
 	"time"
 
+	pdp "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pep"
 )
 
-func measurement(c pep.Client, n, routineLimit int, rateLimit int64, reqs []pep.Request) ([]timing, error) {
+func measurement(c pep.Client, n, routineLimit int, rateLimit int64, reqs []pdp.Request) ([]timing, error) {
 	var pause time.Duration
 	if rateLimit > 0 {
 		pause = time.Second / time.Duration(rateLimit)
@@ -37,7 +38,7 @@ func measurement(c pep.Client, n, routineLimit int, rateLimit int64, reqs []pep.
 	return sequential(c, n, reqs)
 }
 
-func sequential(c pep.Client, n int, reqs []pep.Request) ([]timing, error) {
+func sequential(c pep.Client, n int, reqs []pdp.Request) ([]timing, error) {
 	out := make([]timing, n)
 
 	for i := 0; i < n; i++ {
@@ -54,7 +55,7 @@ func sequential(c pep.Client, n int, reqs []pep.Request) ([]timing, error) {
 	return out, nil
 }
 
-func sequentialWithPause(c pep.Client, n int, p time.Duration, reqs []pep.Request) ([]timing, error) {
+func sequentialWithPause(c pep.Client, n int, p time.Duration, reqs []pdp.Request) ([]timing, error) {
 	out := make([]timing, n)
 
 	for i := 0; i < n; i++ {
@@ -73,13 +74,13 @@ func sequentialWithPause(c pep.Client, n int, p time.Duration, reqs []pep.Reques
 	return out, nil
 }
 
-func parallel(c pep.Client, n int, reqs []pep.Request) ([]timing, error) {
+func parallel(c pep.Client, n int, reqs []pdp.Request) ([]timing, error) {
 	out := make([]timing, n)
 
 	var wg sync.WaitGroup
 	for i := 0; i < n; i++ {
 		wg.Add(1)
-		go func(i int, req pep.Request) {
+		go func(i int, req pdp.Request) {
 			defer wg.Done()
 
 			out[i].setSend()
@@ -97,13 +98,13 @@ func parallel(c pep.Client, n int, reqs []pep.Request) ([]timing, error) {
 	return out, nil
 }
 
-func parallelWithPause(c pep.Client, n int, p time.Duration, reqs []pep.Request) ([]timing, error) {
+func parallelWithPause(c pep.Client, n int, p time.Duration, reqs []pdp.Request) ([]timing, error) {
 	out := make([]timing, n)
 
 	var wg sync.WaitGroup
 	for i := 0; i < n; i++ {
 		wg.Add(1)
-		go func(i int, req pep.Request) {
+		go func(i int, req pdp.Request) {
 			defer wg.Done()
 
 			out[i].setSend()
@@ -123,7 +124,7 @@ func parallelWithPause(c pep.Client, n int, p time.Duration, reqs []pep.Request)
 	return out, nil
 }
 
-func parallelWithLimit(c pep.Client, n, l int, reqs []pep.Request) ([]timing, error) {
+func parallelWithLimit(c pep.Client, n, l int, reqs []pdp.Request) ([]timing, error) {
 	out := make([]timing, n)
 
 	ch := make(chan int, l)
@@ -133,7 +134,7 @@ func parallelWithLimit(c pep.Client, n, l int, reqs []pep.Request) ([]timing, er
 		ch <- 0
 
 		wg.Add(1)
-		go func(i int, req pep.Request) {
+		go func(i int, req pdp.Request) {
 			defer func() {
 				wg.Done()
 				<-ch
@@ -154,7 +155,7 @@ func parallelWithLimit(c pep.Client, n, l int, reqs []pep.Request) ([]timing, er
 	return out, nil
 }
 
-func parallelWithLimitAndPause(c pep.Client, n, l int, p time.Duration, reqs []pep.Request) ([]timing, error) {
+func parallelWithLimitAndPause(c pep.Client, n, l int, p time.Duration, reqs []pdp.Request) ([]timing, error) {
 	out := make([]timing, n)
 
 	ch := make(chan int, l)
@@ -164,7 +165,7 @@ func parallelWithLimitAndPause(c pep.Client, n, l int, p time.Duration, reqs []p
 		ch <- 0
 
 		wg.Add(1)
-		go func(i int, req pep.Request) {
+		go func(i int, req pdp.Request) {
 			defer func() {
 				wg.Done()
 				<-ch

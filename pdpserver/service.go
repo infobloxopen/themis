@@ -6,52 +6,52 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/infobloxopen/themis/pdp"
-	"github.com/infobloxopen/themis/pep"
+	rpc "github.com/infobloxopen/themis/pdp-service"
 )
 
 func makeEffect(effect int) (byte, error) {
 	switch effect {
 	case pdp.EffectDeny:
-		return pep.DENY, nil
+		return rpc.DENY, nil
 
 	case pdp.EffectPermit:
-		return pep.PERMIT, nil
+		return rpc.PERMIT, nil
 
 	case pdp.EffectNotApplicable:
-		return pep.NOTAPPLICABLE, nil
+		return rpc.NOTAPPLICABLE, nil
 
 	case pdp.EffectIndeterminate:
-		return pep.INDETERMINATE, nil
+		return rpc.INDETERMINATE, nil
 
 	case pdp.EffectIndeterminateD:
-		return pep.INDETERMINATED, nil
+		return rpc.INDETERMINATED, nil
 
 	case pdp.EffectIndeterminateP:
-		return pep.INDETERMINATEP, nil
+		return rpc.INDETERMINATEP, nil
 
 	case pdp.EffectIndeterminateDP:
-		return pep.INDETERMINATEDP, nil
+		return rpc.INDETERMINATEDP, nil
 	}
 
-	return pep.INDETERMINATE, newUnknownEffectError(effect)
+	return rpc.INDETERMINATE, newUnknownEffectError(effect)
 }
 
 func makeFailEffect(effect byte) (byte, error) {
 	switch effect {
-	case pep.DENY:
-		return pep.INDETERMINATED, nil
+	case rpc.DENY:
+		return rpc.INDETERMINATED, nil
 
-	case pep.PERMIT:
-		return pep.INDETERMINATEP, nil
+	case rpc.PERMIT:
+		return rpc.INDETERMINATEP, nil
 
-	case pep.NOTAPPLICABLE, pep.INDETERMINATE, pep.INDETERMINATED, pep.INDETERMINATEP, pep.INDETERMINATEDP:
+	case rpc.NOTAPPLICABLE, rpc.INDETERMINATE, rpc.INDETERMINATED, rpc.INDETERMINATEP, rpc.INDETERMINATEDP:
 		return effect, nil
 	}
 
-	return pep.INDETERMINATE, newUnknownEffectError(int(effect))
+	return rpc.INDETERMINATE, newUnknownEffectError(int(effect))
 }
 
-type obligations []*pep.Attribute
+type obligations []*rpc.Attribute
 
 func (o obligations) String() string {
 	if len(o) <= 0 {
@@ -66,7 +66,7 @@ func (o obligations) String() string {
 	return strings.Join(lines, "\n")
 }
 
-func (s *server) newContext(c *pdp.LocalContentStorage, in *pep.Request) (*pdp.Context, error) {
+func (s *server) newContext(c *pdp.LocalContentStorage, in *rpc.Request) (*pdp.Context, error) {
 	ctx, err := pdp.NewContext(c, len(in.Attributes), func(i int) (string, pdp.AttributeValue, error) {
 		a := in.Attributes[i]
 
@@ -89,15 +89,15 @@ func (s *server) newContext(c *pdp.LocalContentStorage, in *pep.Request) (*pdp.C
 	return ctx, nil
 }
 
-func (s *server) newAttributes(obligations []pdp.AttributeAssignmentExpression, ctx *pdp.Context) ([]*pep.Attribute, error) {
-	attrs := make([]*pep.Attribute, len(obligations))
+func (s *server) newAttributes(obligations []pdp.AttributeAssignmentExpression, ctx *pdp.Context) ([]*rpc.Attribute, error) {
+	attrs := make([]*rpc.Attribute, len(obligations))
 	for i, e := range obligations {
 		ID, t, s, err := e.Serialize(ctx)
 		if err != nil {
 			return attrs[:i], err
 		}
 
-		attrs[i] = &pep.Attribute{
+		attrs[i] = &rpc.Attribute{
 			Id:    ID,
 			Type:  t,
 			Value: s}
@@ -106,14 +106,14 @@ func (s *server) newAttributes(obligations []pdp.AttributeAssignmentExpression, 
 	return attrs, nil
 }
 
-func (s *server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in *pep.Request) (byte, []error, []*pep.Attribute) {
+func (s *server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in *rpc.Request) (byte, []error, []*rpc.Attribute) {
 	if p == nil {
-		return pep.INDETERMINATE, []error{newMissingPolicyError()}, nil
+		return rpc.INDETERMINATE, []error{newMissingPolicyError()}, nil
 	}
 
 	ctx, err := s.newContext(c, in)
 	if err != nil {
-		return pep.INDETERMINATE, []error{err}, nil
+		return rpc.INDETERMINATE, []error{err}, nil
 	}
 
 	log.WithField("context", ctx).Debug("Request context")
@@ -152,7 +152,7 @@ func (s *server) Validate(clientAddr string, request interface{}) interface{} {
 	c := s.c
 	s.RUnlock()
 
-	effect, errs, attrs := s.rawValidate(p, c, request.(*pep.Request))
+	effect, errs, attrs := s.rawValidate(p, c, request.(*rpc.Request))
 
 	status := "Ok"
 	if len(errs) > 1 {
@@ -162,12 +162,12 @@ func (s *server) Validate(clientAddr string, request interface{}) interface{} {
 	}
 
 	log.WithFields(log.Fields{
-		"effect":     pep.EffectName(effect),
+		"effect":     rpc.EffectName(effect),
 		"reason":     status,
 		"obligation": obligations(attrs),
 	}).Debug("Response")
 
-	return &pep.Response{
+	return &rpc.Response{
 		Effect:      effect,
 		Reason:      status,
 		Obligations: attrs,

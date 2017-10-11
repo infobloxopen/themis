@@ -21,7 +21,6 @@ import (
 	pbc "github.com/infobloxopen/themis/pdp-control"
 	"github.com/infobloxopen/themis/pdp/jcon"
 	"github.com/infobloxopen/themis/pdp/yast"
-	"github.com/infobloxopen/themis/pep"
 	"github.com/valyala/gorpc"
 )
 
@@ -173,8 +172,6 @@ func (s *server) listenProfiler(addr string) {
 
 func (s *server) serveRequests() {
 	addr := conf.serviceEP
-	gorpc.RegisterType(&pep.Request{})
-	gorpc.RegisterType(&pep.Response{})
 	log.WithField("address", addr).Info("Opening service port")
 	server := gorpc.NewTCPServer(addr, s.Validate)
 	err := server.Serve()

@@ -7,7 +7,7 @@ import (
 
 	dnstap "github.com/dnstap/golang-dnstap"
 	"github.com/golang/protobuf/proto"
-	"github.com/infobloxopen/themis/pep"
+	pdp "github.com/infobloxopen/themis/pdp-service"
 	"github.com/miekg/dns"
 )
 
@@ -31,7 +31,7 @@ type testData struct {
 	qName string
 	qType uint16
 	attrs []testAttr
-	resp  pep.Response
+	resp  pdp.Response
 
 	//output
 	act     PolicyHitMessage_PolicyActionType
@@ -59,8 +59,8 @@ func TestSendPolicyHitMsg(t *testing.T) {
 		{
 			ttDomain, "test.com", dns.TypeA, []testAttr{
 				{"source_ip", "address", "127.0.0.7"},
-			}, pep.Response{
-				Effect: pep.PERMIT, Reason: "", Obligations: []*pep.Attribute{},
+			}, pdp.Response{
+				Effect: pdp.PERMIT, Reason: "", Obligations: []*pdp.Attribute{},
 			},
 			PolicyHitMessage_POLICY_ACTION_PASSTHROUGH, "", 0, "", map[string]string{
 				"source_ip": "127.0.0.7",
@@ -71,8 +71,8 @@ func TestSendPolicyHitMsg(t *testing.T) {
 				{"customer_id", "hex", "f3dbc96219ee5d44e7e318384088e7d4"},
 				{"source_ip", "address", "127.0.0.7"},
 				{"address", "address", "69.172.200.235"},
-			}, pep.Response{
-				Effect: pep.PERMIT, Reason: "", Obligations: []*pep.Attribute{},
+			}, pdp.Response{
+				Effect: pdp.PERMIT, Reason: "", Obligations: []*pdp.Attribute{},
 			},
 			PolicyHitMessage_POLICY_ACTION_PASSTHROUGH, "", 0, "", map[string]string{
 				"customer_id": "f3dbc96219ee5d44e7e318384088e7d4",
@@ -81,16 +81,16 @@ func TestSendPolicyHitMsg(t *testing.T) {
 			},
 		},
 		{
-			ttDomain, "test.com", dns.TypeAAAA, []testAttr{}, pep.Response{
-				Effect: pep.PERMIT, Reason: "", Obligations: []*pep.Attribute{
+			ttDomain, "test.com", dns.TypeAAAA, []testAttr{}, pdp.Response{
+				Effect: pdp.PERMIT, Reason: "", Obligations: []*pdp.Attribute{
 					{"policy_id", "string", "p#123"},
 				},
 			},
 			PolicyHitMessage_POLICY_ACTION_PASSTHROUGH, "p#123", 0, "", map[string]string{},
 		},
 		{
-			ttDomain, "test.com", dns.TypeA, []testAttr{}, pep.Response{
-				Effect: pep.PERMIT, Reason: "", Obligations: []*pep.Attribute{
+			ttDomain, "test.com", dns.TypeA, []testAttr{}, pdp.Response{
+				Effect: pdp.PERMIT, Reason: "", Obligations: []*pdp.Attribute{
 					{"policy_id", "string", "p#123"},
 					{"redirect_to", "string", "123.12.0.1"},
 				},
@@ -98,8 +98,8 @@ func TestSendPolicyHitMsg(t *testing.T) {
 			PolicyHitMessage_POLICY_ACTION_PASSTHROUGH, "p#123", 1, "123.12.0.1", map[string]string{},
 		},
 		{
-			ttDomain, "test.com", dns.TypeA, []testAttr{}, pep.Response{
-				Effect: pep.DENY, Reason: "", Obligations: []*pep.Attribute{
+			ttDomain, "test.com", dns.TypeA, []testAttr{}, pdp.Response{
+				Effect: pdp.DENY, Reason: "", Obligations: []*pdp.Attribute{
 					{"trigger_category", "string", "spam"},
 					{"redirect_to", "string", "fe80::a00:27ff:fe0b:bfde"},
 				},
@@ -109,8 +109,8 @@ func TestSendPolicyHitMsg(t *testing.T) {
 			},
 		},
 		{
-			ttDomain, "test.com", dns.TypeA, []testAttr{}, pep.Response{
-				Effect: pep.DENY, Reason: "", Obligations: []*pep.Attribute{
+			ttDomain, "test.com", dns.TypeA, []testAttr{}, pdp.Response{
+				Effect: pdp.DENY, Reason: "", Obligations: []*pdp.Attribute{
 					{"refuse", "string", "ok"},
 					{"redirect_to", "string", "fe80::a00:27ff:fe0b:bfde"},
 				},
@@ -118,30 +118,30 @@ func TestSendPolicyHitMsg(t *testing.T) {
 			PolicyHitMessage_POLICY_ACTION_REDIRECT, "", 28, "fe80::a00:27ff:fe0b:bfde", map[string]string{},
 		},
 		{
-			ttDomain, "test.com", dns.TypeA, []testAttr{}, pep.Response{
-				Effect: pep.DENY, Reason: "", Obligations: []*pep.Attribute{
+			ttDomain, "test.com", dns.TypeA, []testAttr{}, pdp.Response{
+				Effect: pdp.DENY, Reason: "", Obligations: []*pdp.Attribute{
 					{"redirect_to", "string", "test.org"},
 				},
 			},
 			PolicyHitMessage_POLICY_ACTION_REDIRECT, "", 5, "test.org", map[string]string{},
 		},
 		{
-			ttDomain, "test.com", dns.TypeA, []testAttr{}, pep.Response{
-				Effect: pep.DENY, Reason: "", Obligations: []*pep.Attribute{
+			ttDomain, "test.com", dns.TypeA, []testAttr{}, pdp.Response{
+				Effect: pdp.DENY, Reason: "", Obligations: []*pdp.Attribute{
 					{"refuse", "string", "ok"},
 				},
 			},
 			PolicyHitMessage_POLICY_ACTION_REFUSE, "", 0, "", map[string]string{},
 		},
 		{
-			ttDomain, "test.com", dns.TypeA, []testAttr{}, pep.Response{
-				Effect: pep.NOTAPPLICABLE, Reason: "", Obligations: []*pep.Attribute{},
+			ttDomain, "test.com", dns.TypeA, []testAttr{}, pdp.Response{
+				Effect: pdp.NOTAPPLICABLE, Reason: "", Obligations: []*pdp.Attribute{},
 			},
 			PolicyHitMessage_POLICY_ACTION_NXDOMAIN, "", 0, "", map[string]string{},
 		},
 		{
-			ttDomain, "test.com", dns.TypeA, []testAttr{}, pep.Response{
-				Effect: pep.DENY, Reason: "", Obligations: []*pep.Attribute{},
+			ttDomain, "test.com", dns.TypeA, []testAttr{}, pdp.Response{
+				Effect: pdp.DENY, Reason: "", Obligations: []*pdp.Attribute{},
 			},
 			PolicyHitMessage_POLICY_ACTION_NXDOMAIN, "", 0, "", map[string]string{},
 		},

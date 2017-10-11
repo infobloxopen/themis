@@ -20,6 +20,7 @@ import (
 	"github.com/coredns/coredns/request"
 
 	tap "github.com/infobloxopen/themis/contrib/coredns/policy/policytap"
+	pdp "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pep"
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
@@ -73,16 +74,16 @@ type Response struct {
 	Redirect string
 }
 
-func makeResponse(resp *pep.Response) (ret Response) {
+func makeResponse(resp *pdp.Response) (ret Response) {
 	if resp == nil {
 		log.Printf("[ERROR] PDP response pointer is nil")
 		ret.Action = typeInvalid
 		return
 	}
-	if resp.Effect == pep.PERMIT {
+	if resp.Effect == pdp.PERMIT {
 		ret.Action = typeAllow
 		return
-	} else if resp.Effect == pep.DENY {
+	} else if resp.Effect == pdp.DENY {
 		for _, item := range resp.Obligations {
 			switch item.Id {
 			case "refuse":
@@ -101,7 +102,7 @@ func makeResponse(resp *pep.Response) (ret Response) {
 		ret.Action = typeBlock
 		return
 	} else {
-		log.Printf("[ERROR] PDP Effect: %s", pep.EffectName(resp.Effect))
+		log.Printf("[ERROR] PDP Effect: %s", pdp.EffectName(resp.Effect))
 		ret.Action = typeInvalid
 		return
 	}
@@ -184,9 +185,9 @@ func parseHex(data []byte, option edns0Map) string {
 	return hex.EncodeToString(data[start:end])
 }
 
-func parseOptionGroup(data []byte, options []edns0Map) ([]*pep.Attribute, bool) {
+func parseOptionGroup(data []byte, options []edns0Map) ([]*pdp.Attribute, bool) {
 	srcIpFound := false
-	var attrs []*pep.Attribute
+	var attrs []*pdp.Attribute
 	for _, option := range options {
 		var value string
 		switch option.dataType {
@@ -204,18 +205,18 @@ func parseOptionGroup(data []byte, options []edns0Map) ([]*pep.Attribute, bool) 
 		if option.name == "source_ip" {
 			srcIpFound = true
 		}
-		attrs = append(attrs, &pep.Attribute{Id: option.name, Type: option.destType, Value: value})
+		attrs = append(attrs, &pdp.Attribute{Id: option.name, Type: option.destType, Value: value})
 	}
 	return attrs, srcIpFound
 }
 
-func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pep.Attribute {
+func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pdp.Attribute {
 	ipId := "source_ip"
-	var attrs []*pep.Attribute
+	var attrs []*pdp.Attribute
 
 	o := r.IsEdns0()
 	if o == nil {
-		return []*pep.Attribute{{Id: ipId, Type: "address", Value: ip}}
+		return []*pdp.Attribute{{Id: ipId, Type: "address", Value: ip}}
 	}
 
 	for _, opt := range o.Option {
@@ -233,7 +234,7 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pep.Attribute
 			ipId = "proxy_source_ip"
 		}
 	}
-	attrs = append(attrs, &pep.Attribute{Id: ipId, Type: "address", Value: ip})
+	attrs = append(attrs, &pdp.Attribute{Id: ipId, Type: "address", Value: ip})
 	return attrs
 }
 
@@ -247,17 +248,17 @@ func (p *PolicyPlugin) retRcode(w dns.ResponseWriter, r *dns.Msg, rcode int, err
 func join(key, value string) string { return "," + key + ":" + value }
 
 func (p *PolicyPlugin) retDebugInfo(r *dns.Msg, w dns.ResponseWriter,
-	respDomain *pep.Response, respIP *pep.Response, resolve string) (int, error) {
+	respDomain *pdp.Response, respIP *pdp.Response, resolve string) (int, error) {
 	hdr := dns.RR_Header{Name: r.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassCHAOS, Ttl: 0}
 	debugQueryInfo := "resolve:" + resolve
 	if respDomain != nil {
-		debugQueryInfo += join("query", pep.EffectName(respDomain.Effect))
+		debugQueryInfo += join("query", pdp.EffectName(respDomain.Effect))
 		for _, item := range respDomain.Obligations {
 			debugQueryInfo += join(item.Id, item.Value)
 		}
 	}
 	if respIP != nil {
-		debugQueryInfo += join("response", pep.EffectName(respIP.Effect))
+		debugQueryInfo += join("response", pdp.EffectName(respIP.Effect))
 		for _, item := range respIP.Obligations {
 			debugQueryInfo += join(item.Id, item.Value)
 		}
@@ -270,7 +271,7 @@ func (p *PolicyPlugin) retDebugInfo(r *dns.Msg, w dns.ResponseWriter,
 }
 
 func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
-	r *dns.Msg, tapAttrs []*tap.DnstapAttribute, respDomain *pep.Response, debugQuery bool) (int, error) {
+	r *dns.Msg, tapAttrs []*tap.DnstapAttribute, respDomain *pdp.Response, debugQuery bool) (int, error) {
 	req := r
 	responseWriter := nonwriter.New(w)
 	if debugQuery {
@@ -309,12 +310,12 @@ func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
 		return status, nil
 	}
 
-	attrs := []*pep.Attribute{{Id: "type", Type: "string", Value: "response"}}
-	addressAttr := &pep.Attribute{Id: "address", Type: "address", Value: address}
+	attrs := []*pdp.Attribute{{Id: "type", Type: "string", Value: "response"}}
+	addressAttr := &pdp.Attribute{Id: "address", Type: "address", Value: address}
 	attrs = append(attrs, addressAttr)
 	attrs = append(attrs, respDomain.Obligations...)
 
-	response, err := p.pdp.Validate(&pep.Request{Attributes: attrs})
+	response, err := p.pdp.Validate(&pdp.Request{Attributes: attrs})
 	if err != nil {
 		log.Printf("[ERROR] Policy validation failed due to error %s", err)
 		return p.retRcode(w, r, dns.RcodeServerFailure, err)
@@ -364,7 +365,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	}
 
 	// need to process OPT to get customer id
-	attrs := []*pep.Attribute{
+	attrs := []*pdp.Attribute{
 		{Id: "type", Type: "string", Value: "query"},
 		{Id: "domain_name", Type: "domain", Value: strings.TrimRight(domain, ".")},
 		{Id: "dns_qtype", Type: "string", Value: dns.TypeToString[state.QType()]},
@@ -374,7 +375,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	ednsAttrs := p.getAttrsFromEDNS0(r, state.IP())
 	attrs = append(attrs, ednsAttrs...)
 
-	response, err := p.pdp.Validate(&pep.Request{Attributes: attrs})
+	response, err := p.pdp.Validate(&pdp.Request{Attributes: attrs})
 	if err != nil {
 		log.Printf("[ERROR] Policy validation failed due to error %s", err)
 		return p.retRcode(w, r, dns.RcodeServerFailure, err)

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	pdp "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pep"
 	"github.com/infobloxopen/themis/pepcli/requests"
 )
@@ -59,8 +60,8 @@ func Exec(addr, in, out string, n int, v interface{}) error {
 	return nil
 }
 
-func dump(r *pep.Response, f io.Writer) error {
-	lines := []string{fmt.Sprintf("- effect: %s", pep.EffectName(r.Effect))}
+func dump(r *pdp.Response, f io.Writer) error {
+	lines := []string{fmt.Sprintf("- effect: %s", pdp.EffectName(r.Effect))}
 	if len(r.Reason) > 0 {
 		lines = append(lines, fmt.Sprintf("  reason: %q", r.Reason))
 	}

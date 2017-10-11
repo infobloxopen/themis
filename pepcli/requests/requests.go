@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/infobloxopen/themis/pdp"
-	"github.com/infobloxopen/themis/pep"
+	rpc "github.com/infobloxopen/themis/pdp-service"
 )
 
 type requests struct {
@@ -18,7 +18,7 @@ type requests struct {
 	Requests   []map[string]interface{}
 }
 
-func Load(name string) ([]pep.Request, error) {
+func Load(name string) ([]rpc.Request, error) {
 	b, err := ioutil.ReadFile(name)
 	if err != nil {
 		return nil, err
@@ -40,9 +40,9 @@ func Load(name string) ([]pep.Request, error) {
 		symbols[k] = t
 	}
 
-	out := make([]pep.Request, len(in.Requests))
+	out := make([]rpc.Request, len(in.Requests))
 	for i, r := range in.Requests {
-		attrs := make([]*pep.Attribute, len(r))
+		attrs := make([]*rpc.Attribute, len(r))
 		j := 0
 		for k, v := range r {
 			a, err := makeAttribute(k, v, symbols)
@@ -54,7 +54,7 @@ func Load(name string) ([]pep.Request, error) {
 			j++
 		}
 
-		out[i] = pep.Request{Attributes: attrs}
+		out[i] = rpc.Request{Attributes: attrs}
 	}
 
 	return out, nil
@@ -69,7 +69,7 @@ var marshallers = map[int]attributeMarshaller{
 	pdp.TypeNetwork: networkMarshaller,
 	pdp.TypeDomain:  domainMarshaller}
 
-func makeAttribute(name string, value interface{}, symbols map[string]int) (*pep.Attribute, error) {
+func makeAttribute(name string, value interface{}, symbols map[string]int) (*rpc.Attribute, error) {
 	t, ok := symbols[name]
 	var err error
 	if !ok {
@@ -90,7 +90,7 @@ func makeAttribute(name string, value interface{}, symbols map[string]int) (*pep
 		return nil, fmt.Errorf("can't marshal \"%s\" attribute as \"%s\": %s", name, pdp.TypeNames[t], err)
 	}
 
-	return &pep.Attribute{
+	return &rpc.Attribute{
 		Id:    name,
 		Type:  pdp.TypeKeys[t],
 		Value: s,
