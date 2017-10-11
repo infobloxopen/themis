@@ -8,14 +8,14 @@ import (
 	tapplg "github.com/coredns/coredns/plugin/dnstap"
 	dnstap "github.com/dnstap/golang-dnstap"
 	"github.com/golang/protobuf/proto"
-	pb "github.com/infobloxopen/themis/pdp-service"
+	pdp "github.com/infobloxopen/themis/pdp-service"
 	"github.com/miekg/dns"
 )
 
 // SendPolicyHitMsg creates PolicyHitMessage and asynchronously sends it to the provided IORoutine
 // Parameter tapIO must not be nil
 func SendPolicyHitMsg(tapIO tapplg.IORoutine, t time.Time, msg *dns.Msg, tt PolicyHitMessage_PolicyTriggerType,
-	attrs []*DnstapAttribute, r *pb.Response) {
+	attrs []*DnstapAttribute, r *pdp.Response) {
 
 	//write message asynchronously
 	go func() {
@@ -49,14 +49,14 @@ func (phm *PolicyHitMessage) updateFromMessage(msg *dns.Msg) {
 	}
 }
 
-func (phm *PolicyHitMessage) updateFromResponse(r *pb.Response) {
+func (phm *PolicyHitMessage) updateFromResponse(r *pdp.Response) {
 	act := PolicyHitMessage_POLICY_ACTION_NXDOMAIN
 	switch r.Effect {
-	case pb.Response_PERMIT:
+	case pdp.PERMIT:
 		act = PolicyHitMessage_POLICY_ACTION_PASSTHROUGH
 	}
 	phm.PolicyAction = &act
-	phm.AddPdpAttrs(r.Obligation)
+	phm.AddPdpAttrs(r.Obligations)
 }
 
 func writeMessage(tapIO tapplg.IORoutine, phm *PolicyHitMessage) {

@@ -12,205 +12,11 @@ import (
 	"testing"
 	"time"
 
-	pb "github.com/infobloxopen/themis/pdp-service"
+	pdp "github.com/infobloxopen/themis/pdp-service"
 )
 
 const (
-	oneStageBenchmarkPolicySet = `# Policy set for benchmark
-attributes:
-  k3: domain
-  x: string
-
-policies:
-  alg:
-    id: mapper
-    map:
-      selector:
-        uri: "local:content/second"
-        path:
-        - attr: k3
-        type: list of strings
-    default: DefaultRule
-    alg: FirstApplicableEffect
-  rules:
-  - id: DefaultRule
-    effect: Deny
-    obligations:
-    - x: DefaultRule
-  - id: First
-    effect: Permit
-    obligations:
-    - x: First
-  - id: Second
-    effect: Permit
-    obligations:
-    - x: Second
-  - id: Third
-    effect: Permit
-    obligations:
-    - x: Third
-  - id: Fourth
-    effect: Permit
-    obligations:
-    - x: Fourth
-  - id: Fifth
-    effect: Permit
-    obligations:
-    - x: Fifth
-`
-
-	twoStageBenchmarkPolicySet = `# Policy set for benchmark 2-level nesting policy
-attributes:
-  k2: string
-  k3: domain
-  x: string
-
-policies:
-  alg:
-    id: mapper
-    map:
-      selector:
-        uri: "local:content/first"
-        path:
-        - attr: k2
-        type: string
-    default: DefaultPolicy
-
-  policies:
-  - id: DefaultPolicy
-    alg: FirstApplicableEffect
-    rules:
-    - effect: Deny
-      obligations:
-      - x: DefaultPolicy
-
-  - id: P1
-    alg:
-      id: mapper
-      map:
-        selector:
-          uri: "local:content/second"
-          path:
-          - attr: k3
-          type: list of strings
-      default: DefaultRule
-      alg: FirstApplicableEffect
-    rules:
-    - id: DefaultRule
-      effect: Deny
-      obligations:
-      - x: P1.DefaultRule
-    - id: First
-      effect: Permit
-      obligations:
-      - x: P1.First
-    - id: Second
-      effect: Permit
-      obligations:
-      - x: P1.Second
-
-  - id: P2
-    alg:
-      id: mapper
-      map:
-        selector:
-          uri: "local:content/second"
-          path:
-          - attr: k3
-          type: list of strings
-      default: DefaultRule
-      alg: FirstApplicableEffect
-    rules:
-    - id: DefaultRule
-      effect: Deny
-      obligations:
-      - x: P2.DefaultRule
-    - id: Second
-      effect: Permit
-      obligations:
-      - x: P2.Second
-    - id: Third
-      effect: Permit
-      obligations:
-      - x: P2.Third
-
-  - id: P3
-    alg:
-      id: mapper
-      map:
-        selector:
-          uri: "local:content/second"
-          path:
-          - attr: k3
-          type: list of strings
-      default: DefaultRule
-      alg: FirstApplicableEffect
-    rules:
-    - id: DefaultRule
-      effect: Deny
-      obligations:
-      - x: P3.DefaultRule
-    - id: Third
-      effect: Permit
-      obligations:
-      - x: P3.Third
-    - id: Fourth
-      effect: Permit
-      obligations:
-      - x: P3.Fourth
-
-  - id: P4
-    alg:
-      id: mapper
-      map:
-        selector:
-          uri: "local:content/second"
-          path:
-          - attr: k3
-          type: list of strings
-      default: DefaultRule
-      alg: FirstApplicableEffect
-    rules:
-    - id: DefaultRule
-      effect: Deny
-      obligations:
-      - x: P4.DefaultRule
-    - id: Fourth
-      effect: Permit
-      obligations:
-      - x: P4.Fourth
-    - id: Fifth
-      effect: Permit
-      obligations:
-      - x: P4.Fifth
-
-  - id: P5
-    alg:
-      id: mapper
-      map:
-        selector:
-          uri: "local:content/second"
-          path:
-          - attr: k3
-          type: list of strings
-      default: DefaultRule
-      alg: FirstApplicableEffect
-    rules:
-    - id: DefaultRule
-      effect: Deny
-      obligations:
-      - x: P5.DefaultRule
-    - id: Fifth
-      effect: Permit
-      obligations:
-      - x: P5.Fifth
-    - id: First
-      effect: Permit
-      obligations:
-      - x: P5.First
-`
-
-	threeStageBenchmarkPolicySet = `# Policy set for benchmark 3-level nesting policy
+	policySet = `# Policy set for benchmark
 attributes:
   k1: string
   k2: string
@@ -563,18 +369,6 @@ policies:
 }`
 )
 
-type decisionRequest struct {
-	Direction string `pdp:"k1"`
-	Policy    string `pdp:"k2"`
-	Domain    string `pdp:"k3,domain"`
-}
-
-type decisionResponse struct {
-	Effect string `pdp:"Effect"`
-	Reason string `pdp:"Reason"`
-	X      string `pdp:"x"`
-}
-
 var (
 	directionOpts = []string{
 		"Left",
@@ -606,24 +400,14 @@ var (
 		"third.test.com",
 	}
 
-	decisionRequests []decisionRequest
-	rawRequests      []pb.Request
+	requests []*pdp.Request
 )
 
 func init() {
-	decisionRequests = make([]decisionRequest, 2000000)
-	for i := range decisionRequests {
-		decisionRequests[i] = decisionRequest{
-			Direction: directionOpts[rand.Intn(len(directionOpts))],
-			Policy:    policySetOpts[rand.Intn(len(policySetOpts))],
-			Domain:    domainOpts[rand.Intn(len(domainOpts))],
-		}
-	}
-
-	rawRequests = make([]pb.Request, 2000000)
-	for i := range rawRequests {
-		rawRequests[i] = pb.Request{
-			Attributes: []*pb.Attribute{
+	requests = make([]*pdp.Request, 2000000)
+	for i := range requests {
+		requests[i] = &pdp.Request{
+			Attributes: []*pdp.Attribute{
 				{
 					Id:    "k1",
 					Type:  "string",
@@ -645,13 +429,13 @@ func init() {
 
 }
 
-func benchmarkPolicySet(name, p string, b *testing.B) {
+func BenchmarkPolicySet(b *testing.B) {
 	ok := true
-	tmpYAST, tmpJCon, pdp, c := startPDPServer(p, b)
+	tmpYAST, tmpJCon, server, c := startPDPServer(policySet, b)
 	defer func() {
 		c.Close()
 
-		_, errDump, _ := pdp.kill()
+		_, errDump, _ := server.kill()
 		if !ok && len(errDump) > 0 {
 			b.Logf("PDP server dump:\n%s", strings.Join(errDump, "\n"))
 		}
@@ -660,58 +444,18 @@ func benchmarkPolicySet(name, p string, b *testing.B) {
 		os.Remove(tmpJCon)
 	}()
 
-	ok = b.Run(name, func(b *testing.B) {
+	ok = b.Run("BenchmarkPolicySet", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
-			in := decisionRequests[n%len(decisionRequests)]
+			in := requests[n%len(requests)]
 
-			var out decisionResponse
-			c.ModalValidate(in, &out)
-
-			if (out.Effect != "DENY" && out.Effect != "PERMIT" && out.Effect != "NOTAPPLICABLE") ||
-				out.Reason != "Ok" {
-				b.Fatalf("unexpected response: %#v", out)
+			out, err := c.Validate(in)
+			if err != nil {
+				b.Fatalf("unexpected error: %#v", err)
 			}
-		}
-	})
-}
 
-func BenchmarkOneStagePolicySet(b *testing.B) {
-	benchmarkPolicySet("BenchmarkOneStagePolicySet", oneStageBenchmarkPolicySet, b)
-}
-
-func BenchmarkTwoStagePolicySet(b *testing.B) {
-	benchmarkPolicySet("BenchmarkTwoStagePolicySet", twoStageBenchmarkPolicySet, b)
-}
-
-func BenchmarkThreeStagePolicySet(b *testing.B) {
-	benchmarkPolicySet("BenchmarkThreeStagePolicySet", threeStageBenchmarkPolicySet, b)
-}
-
-func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
-	ok := true
-	tmpYAST, tmpJCon, pdp, c := startPDPServer(threeStageBenchmarkPolicySet, b)
-	defer func() {
-		c.Close()
-
-		_, errDump, _ := pdp.kill()
-		if !ok && len(errDump) > 0 {
-			b.Logf("PDP server dump:\n%s", strings.Join(errDump, "\n"))
-		}
-
-		os.Remove(tmpYAST)
-		os.Remove(tmpJCon)
-	}()
-
-	ok = b.Run("BenchmarkThreeStagePolicySetRaw", func(b *testing.B) {
-		var out pb.Response
-		for n := 0; n < b.N; n++ {
-			in := rawRequests[n%len(rawRequests)]
-
-			c.ModalValidate(in, &out)
-
-			if (out.Effect != pb.Response_DENY &&
-				out.Effect != pb.Response_PERMIT &&
-				out.Effect != pb.Response_NOTAPPLICABLE) ||
+			if (out.Effect != pdp.DENY &&
+				out.Effect != pdp.PERMIT &&
+				out.Effect != pdp.NOTAPPLICABLE) ||
 				out.Reason != "Ok" {
 				b.Fatalf("unexpected response: %#v", out)
 			}
@@ -731,7 +475,7 @@ func startPDPServer(p string, b *testing.B) (string, string, *proc, Client) {
 		b.Fatalf("can't create content file: %s", err)
 	}
 
-	pdp, err := newProc("pdpserver", "-p", tmpYAST, "-j", tmpJCon)
+	pdp, err := newProc("../build/pdpserver", "-p", tmpYAST, "-j", tmpJCon)
 	if err != nil {
 		os.Remove(tmpYAST)
 		os.Remove(tmpJCon)
@@ -740,7 +484,7 @@ func startPDPServer(p string, b *testing.B) (string, string, *proc, Client) {
 
 	time.Sleep(time.Second)
 
-	c := NewClient("127.0.0.1:5555", nil)
+	c := NewBalancedClient([]string{"127.0.0.1:5555"})
 	err = c.Connect()
 	if err != nil {
 		os.Remove(tmpYAST)

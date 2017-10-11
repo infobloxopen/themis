@@ -1,5 +1,5 @@
 SRCROOT := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
-
+BUILDPATH = $(SRCROOT)/build
 COVEROUT=$(SRCROOT)/cover.out
 
 AT = cd $(SRCROOT)
@@ -8,9 +8,14 @@ GOBUILD = go build -v
 GOFMTCHECK = test -z `gofmt -l -s *.go | tee /dev/stderr`
 GOTEST = go test -v
 GOCOVER = $(GOTEST) -race -coverprofile=/tmp/cover.out -covermode=atomic && cat /tmp/cover.out >> $(COVEROUT)
+GOBENCH = $(GOTEST) -bench=. -coverprofile=/tmp/cover.out -covermode=atomic && cat /tmp/cover.out >> $(COVEROUT)
 
 .PHONY: all
 all: fmt build cover
+
+.PHONY: build-dir
+build-dir:
+	mkdir -p $(BUILDPATH)
 
 .PHONY: bootstrap
 bootstrap:
@@ -124,25 +129,25 @@ fmt-egen:
 
 # Per package build targets
 .PHONY: build-pepcli
-build-pepcli:
-	$(AT)/pepcli && $(GOBUILD)
+build-pepcli: build-dir
+	$(AT)/pepcli && $(GOBUILD) -o $(BUILDPATH)/pepcli
 
 .PHONY: build-papcli
-build-papcli:
-	$(AT)/papcli && $(GOBUILD)
+build-papcli: build-dir
+	$(AT)/papcli && $(GOBUILD) -o $(BUILDPATH)/papcli
 
 .PHONY: build-pdpserver
-build-pdpserver:
-	$(AT)/pdpserver && $(GOBUILD)
+build-pdpserver: build-dir
+	$(AT)/pdpserver && $(GOBUILD) -o $(BUILDPATH)/pdpserver
 
 .PHONY: build-plugin
-build-plugin:
+build-plugin: build-dir
 	$(AT)/contrib/coredns/policy && $(GOBUILD)
 	$(AT)/contrib/coredns/policy/policytap && $(GOBUILD)
 
 .PHONY: build-egen
-build-egen:
-	$(AT)/egen && $(GOBUILD)
+build-egen: build-dir
+	$(AT)/egen && $(GOBUILD) -o $(BUILDPATH)/egen
 
 .PHONY: test-pdp
 test-pdp:
@@ -180,7 +185,7 @@ cover-pdp-jcon: | $(COVEROUT)
 
 .PHONY: cover-pep
 cover-pep: | $(COVEROUT)
-	$(AT)/pep && $(GOCOVER)
+	$(AT)/pep && $(GOBENCH)
 
 .PHONY: cover-plugin
 cover-plugin: | $(COVEROUT)
