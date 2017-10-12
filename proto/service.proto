@@ -4,6 +4,7 @@ package service;
 
 service PDP {
   rpc Validate (Request) returns (Response) {}
+  rpc NewValidationStream (stream Request) returns (stream Response) {}
 }
 
 message Attribute {
