@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sync"
 
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	ot "github.com/opentracing/opentracing-go"
@@ -28,6 +29,8 @@ var (
 	ErrorConnected = errors.New("connection has been already established")
 	// ErrorNotConnected indicates that there is no connection established to PDP server.
 	ErrorNotConnected = errors.New("no connection")
+	// ErrorNoStreams occurs if method StreamValidate is called for client with no streams set.
+	ErrorNoStreams = errors.New("no streams")
 )
 
 // Client defines abstract PDP service client interface.
@@ -69,8 +72,9 @@ var (
 // name and type response attribute silently dropped. The same as for marshaling
 // `pdp` key can control unmarshaling.
 type Client interface {
-	// Connect establishes connection to PDP server.
-	Connect() error
+	// Connect establishes connection to given PDP server. It ignores address
+	// parameter if balancer is provided.
+	Connect(addr string) error
 	// Close terminates previously established connection if any.
 	// Close should silently return if connection hasn't been established yet or
 	// if it has been already closed.
@@ -80,46 +84,97 @@ type Client interface {
 	Validate(ctx context.Context, in, out interface{}) error
 	// ModalValidate is the same as Validate but uses context.Background.
 	ModalValidate(in, out interface{}) error
+	// StreamValidate sends decision request to PDP server using one of available
+	// gRPC stream. The method can be called concurrently. If all streams
+	// currently in use, StreamValidate blocks until one becomes free.
+	StreamValidate(in, out interface{}) error
+}
+
+// An Option sets such options as balancer, tracer and number of streams.
+type Option func(*options)
+
+// WithBalancer returns an Option which sets round-robing balancer with given set of servers.
+func WithBalancer(addresses ...string) Option {
+	return func(o *options) {
+		o.balancer = grpc.RoundRobin(newStaticResolver(virtualServerAddress, addresses...))
+	}
+}
+
+// WithTracer returns an Option which sets OpenTracing tracer.
+func WithTracer(tracer ot.Tracer) Option {
+	return func(o *options) {
+		o.tracer = tracer
+	}
+}
+
+// WithStreams returns an Option which sets number of gRPC streams to run in parallel.
+func WithStreams(n int) Option {
+	return func(o *options) {
+		o.maxStreams = n
+	}
+}
+
+type options struct {
+	balancer   grpc.Balancer
+	tracer     ot.Tracer
+	maxStreams int
 }
 
 type pdpClient struct {
-	addr     string
-	balancer grpc.Balancer
-	conn     *grpc.ClientConn
-	client   *pb.PDPClient
-	tracer   ot.Tracer
+	conn   *grpc.ClientConn
+	client *pb.PDPClient
+
+	streams     chan pb.PDP_NewValidationStreamClient
+	streamsLock *sync.RWMutex
+
+	opts options
 }
 
-// NewBalancedClient creates client instance bound to several PDP servers with round-robin balancing.
-func NewBalancedClient(addrs []string, tracer ot.Tracer) Client {
-	c := &pdpClient{addr: "pdp", tracer: tracer}
-	r := newStaticResolver("pdp", addrs...)
-	c.balancer = grpc.RoundRobin(r)
+// NewClient creates client instance.
+func NewClient(opts ...Option) Client {
+	c := &pdpClient{
+		streamsLock: &sync.RWMutex{},
+	}
+
+	for _, opt := range opts {
+		opt(&c.opts)
+	}
+
 	return c
 }
 
-// NewClient creates client instance bound to single PDP server.
-func NewClient(addr string, tracer ot.Tracer) Client {
-	return &pdpClient{addr: addr, tracer: tracer}
-}
+const virtualServerAddress = "pdp"
 
-func (c *pdpClient) Connect() error {
+func (c *pdpClient) Connect(addr string) error {
 	if c.conn != nil {
 		return ErrorConnected
 	}
-	var dialOpts []grpc.DialOption
-	dialOpts = append(dialOpts, grpc.WithInsecure())
-	if c.balancer != nil {
-		dialOpts = append(dialOpts, grpc.WithBalancer(c.balancer))
+
+	opts := []grpc.DialOption{
+		grpc.WithInsecure(),
 	}
-	if c.tracer != nil {
-		onlyIfParent := func(parentSpanCtx ot.SpanContext, method string, req, resp interface{}) bool {
-			return parentSpanCtx != nil
-		}
-		intercept := otgrpc.OpenTracingClientInterceptor(c.tracer, otgrpc.IncludingSpans(onlyIfParent))
-		dialOpts = append(dialOpts, grpc.WithUnaryInterceptor(intercept))
+
+	if c.opts.balancer != nil {
+		opts = append(opts, grpc.WithBalancer(c.opts.balancer))
+		addr = virtualServerAddress
 	}
-	conn, err := grpc.Dial(c.addr, dialOpts...)
+
+	if c.opts.tracer != nil {
+		opts = append(opts,
+			grpc.WithUnaryInterceptor(
+				otgrpc.OpenTracingClientInterceptor(
+					c.opts.tracer,
+					otgrpc.IncludingSpans(
+						func(parentSpanCtx ot.SpanContext, method string, req, resp interface{}) bool {
+							return parentSpanCtx != nil
+						},
+					),
+				),
+			),
+		)
+	}
+
+	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		return err
 	}
@@ -129,10 +184,56 @@ func (c *pdpClient) Connect() error {
 	client := pb.NewPDPClient(c.conn)
 	c.client = &client
 
+	err = c.makeStreams()
+	if err != nil {
+		c.Close()
+		return err
+	}
+
 	return nil
 }
 
+func (c *pdpClient) makeStreams() error {
+	if c.opts.maxStreams <= 0 {
+		return nil
+	}
+
+	c.streamsLock.Lock()
+	defer c.streamsLock.Unlock()
+
+	c.streams = make(chan pb.PDP_NewValidationStreamClient, c.opts.maxStreams)
+	for i := 0; i < c.opts.maxStreams; i++ {
+		s, err := (*c.client).NewValidationStream(context.TODO())
+		if err != nil {
+			return err
+		}
+
+		c.streams <- s
+	}
+
+	return nil
+}
+
+func (c *pdpClient) closeStreams() {
+	c.streamsLock.Lock()
+	defer c.streamsLock.Unlock()
+
+	if c.streams == nil {
+		return
+	}
+
+	for len(c.streams) > 0 {
+		s := <-c.streams
+		s.CloseSend()
+	}
+
+	close(c.streams)
+	c.streams = nil
+}
+
 func (c *pdpClient) Close() {
+	c.closeStreams()
+
 	if c.conn != nil {
 		c.conn.Close()
 		c.conn = nil
@@ -161,6 +262,52 @@ func (c *pdpClient) Validate(ctx context.Context, in, out interface{}) error {
 
 func (c *pdpClient) ModalValidate(in, out interface{}) error {
 	return c.Validate(context.Background(), in, out)
+}
+
+func (c *pdpClient) StreamValidate(in, out interface{}) error {
+	if c.client == nil {
+		return ErrorNotConnected
+	}
+
+	c.streamsLock.RLock()
+	streams := c.streams
+	c.streamsLock.RUnlock()
+
+	if streams == nil {
+		return ErrorNoStreams
+	}
+
+	s, ok := <-streams
+	if !ok {
+		return ErrorNoStreams
+	}
+	defer func() {
+		c.streamsLock.RLock()
+		defer c.streamsLock.RUnlock()
+
+		if c.streams == nil || c.streams != streams {
+			return
+		}
+
+		streams <- s
+	}()
+
+	req, err := makeRequest(in)
+	if err != nil {
+		return err
+	}
+
+	err = s.Send(&req)
+	if err != nil {
+		return err
+	}
+
+	res, err := s.Recv()
+	if err != nil {
+		return err
+	}
+
+	return fillResponse(res, out)
 }
 
 func makeRequest(v interface{}) (pb.Request, error) {

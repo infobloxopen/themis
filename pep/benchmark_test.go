@@ -719,7 +719,39 @@ func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
 	})
 }
 
-func startPDPServer(p string, b *testing.B) (string, string, *proc, Client) {
+func BenchmarkThreeStagePolicySetStreams(b *testing.B) {
+	ok := true
+	tmpYAST, tmpJCon, pdp, c := startPDPServer(threeStageBenchmarkPolicySet, b, WithStreams(100))
+	defer func() {
+		c.Close()
+
+		_, errDump, _ := pdp.kill()
+		if !ok && len(errDump) > 0 {
+			b.Logf("PDP server dump:\n%s", strings.Join(errDump, "\n"))
+		}
+
+		os.Remove(tmpYAST)
+		os.Remove(tmpJCon)
+	}()
+
+	ok = b.Run("BenchmarkThreeStagePolicySetStreams", func(b *testing.B) {
+		var out pb.Response
+		for n := 0; n < b.N; n++ {
+			in := rawRequests[n%len(rawRequests)]
+
+			c.StreamValidate(in, &out)
+
+			if (out.Effect != pb.Response_DENY &&
+				out.Effect != pb.Response_PERMIT &&
+				out.Effect != pb.Response_NOTAPPLICABLE) ||
+				out.Reason != "Ok" {
+				b.Fatalf("unexpected response: %#v", out)
+			}
+		}
+	})
+}
+
+func startPDPServer(p string, b *testing.B, opts ...Option) (string, string, *proc, Client) {
 	tmpYAST, err := makeTempFile(p, "policy")
 	if err != nil {
 		b.Fatalf("can't create policy file: %s", err)
@@ -740,8 +772,8 @@ func startPDPServer(p string, b *testing.B) (string, string, *proc, Client) {
 
 	time.Sleep(time.Second)
 
-	c := NewClient("127.0.0.1:5555", nil)
-	err = c.Connect()
+	c := NewClient(opts...)
+	err = c.Connect("127.0.0.1:5555")
 	if err != nil {
 		os.Remove(tmpYAST)
 		os.Remove(tmpJCon)
@@ -986,12 +1018,12 @@ func (p *pipe) cleanup() []string {
 	if p.w != nil {
 		p.w.Close()
 		p.w = nil
+		p.Wait()
 	}
 
 	if p.r != nil {
 		p.r.Close()
 		p.r = nil
-		p.Wait()
 	}
 
 	return p.storage.lines

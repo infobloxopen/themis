@@ -24,10 +24,8 @@ import (
 	pb "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pep"
 
+	"github.com/mholt/caddy"
 	"github.com/miekg/dns"
-
-	ot "github.com/opentracing/opentracing-go"
-
 	"golang.org/x/net/context"
 )
 
@@ -116,14 +114,14 @@ func makeResponse(resp *pb.Response) (ret Response) {
 // Connect establishes connection to PDP server.
 func (p *PolicyPlugin) Connect() error {
 	log.Printf("[DEBUG] Connecting %v", p)
-	var tracer ot.Tracer
+	opts := []pep.Option{pep.WithBalancer(p.Endpoints...)}
 	if p.Trace != nil {
 		if t, ok := p.Trace.(trace.Trace); ok {
-			tracer = t.Tracer()
+			opts = append(opts, pep.WithTracer(t.Tracer()))
 		}
 	}
-	p.pdp = pep.NewBalancedClient(p.Endpoints, tracer)
-	return p.pdp.Connect()
+	p.pdp = pep.NewClient(opts...)
+	return p.pdp.Connect("")
 }
 
 // Close terminates previously established connection.
@@ -131,8 +129,77 @@ func (p *PolicyPlugin) Close() {
 	p.pdp.Close()
 }
 
-// AddEDNS0Map adds new EDNS0 to table.
-func (p *PolicyPlugin) AddEDNS0Map(code, name, dataType, destType,
+func (p *PolicyPlugin) parseOption(c *caddy.Controller) error {
+	switch c.Val() {
+	case "endpoint":
+		return p.parseEndpoint(c)
+
+	case "edns0":
+		return p.parseEDNS0(c)
+
+	case "debug_query_suffix":
+		return p.parseDebugQuerySuffix(c)
+	}
+
+	return nil
+}
+
+func (p *PolicyPlugin) parseEndpoint(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) <= 0 {
+		return c.ArgErr()
+	}
+
+	p.Endpoints = args
+	return nil
+}
+
+func (p *PolicyPlugin) parseEDNS0(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	// Usage: edns0 <code> <name> [ <dataType> <destType> ] [ <size> <start> <end> ].
+	// Valid dataTypes are hex (default), bytes, ip.
+	// Valid destTypes depend on PDP (default string).
+	argsLen := len(args)
+	if argsLen != 2 && argsLen != 4 && argsLen != 7 {
+		return fmt.Errorf("Invalid edns0 directive")
+	}
+
+	dataType := "hex"
+	destType := "string"
+	size := "0"
+	start := "0"
+	end := "0"
+
+	if argsLen > 2 {
+		dataType = args[2]
+		destType = args[3]
+	}
+
+	if argsLen == 7 && dataType == "hex" {
+		size = args[4]
+		start = args[5]
+		end = args[6]
+	}
+
+	err := p.addEDNS0Map(args[0], args[1], dataType, destType, size, start, end)
+	if err != nil {
+		return fmt.Errorf("Could not add EDNS0 map for %s: %s", args[0], err)
+	}
+
+	return nil
+}
+
+func (p *PolicyPlugin) parseDebugQuerySuffix(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) != 1 {
+		return c.ArgErr()
+	}
+
+	p.DebugSuffix = args[0]
+	return nil
+}
+
+func (p *PolicyPlugin) addEDNS0Map(code, name, dataType, destType,
 	sizeStr, startStr, endStr string) error {
 	c, err := strconv.ParseUint(code, 0, 16)
 	if err != nil {

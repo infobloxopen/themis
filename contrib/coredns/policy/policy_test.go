@@ -297,8 +297,8 @@ func newTestClientInit(nextResponse *pdp.Response, nextResponseIP *pdp.Response,
 	}
 }
 
-func (c *testClient) Connect() error { return nil }
-func (c *testClient) Close()         {}
+func (c *testClient) Connect(addr string) error { return nil }
+func (c *testClient) Close()                    {}
 func (c *testClient) Validate(ctx context.Context, in, out interface{}) error {
 	if in != nil {
 		p := in.(pdp.Request)
@@ -322,6 +322,10 @@ func (c *testClient) Validate(ctx context.Context, in, out interface{}) error {
 
 func (c *testClient) ModalValidate(in, out interface{}) error {
 	return c.Validate(context.Background(), in, out)
+}
+
+func (c *testClient) StreamValidate(in, out interface{}) error {
+	return c.ModalValidate(in, out)
 }
 
 func fillResponse(in *pdp.Response, out interface{}) error {
@@ -359,25 +363,25 @@ func TestEdns(t *testing.T) {
 	pm := PolicyPlugin{options: make(map[uint16][]edns0Map)}
 
 	// Add EDNS mapping
-	if err := pm.AddEDNS0Map("0xfffa", "client_id", "hex", "string", "32", "0", "16"); err != nil {
+	if err := pm.addEDNS0Map("0xfffa", "client_id", "hex", "string", "32", "0", "16"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
-	if err := pm.AddEDNS0Map("0xfffa", "group_id", "hex", "string", "32", "16", "32"); err != nil {
+	if err := pm.addEDNS0Map("0xfffa", "group_id", "hex", "string", "32", "16", "32"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
-	if err := pm.AddEDNS0Map("0xfffb", "source_ip", "address", "address", "0", "0", "0"); err != nil {
+	if err := pm.addEDNS0Map("0xfffb", "source_ip", "address", "address", "0", "0", "0"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
-	if err := pm.AddEDNS0Map("0xfffc", "client_name", "bytes", "string", "0", "0", "0"); err != nil {
+	if err := pm.addEDNS0Map("0xfffc", "client_name", "bytes", "string", "0", "0", "0"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
-	if err := pm.AddEDNS0Map("0xfffd", "client_uid", "hex", "string", "0", "0", "0"); err != nil {
+	if err := pm.addEDNS0Map("0xfffd", "client_uid", "hex", "string", "0", "0", "0"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
-	if err := pm.AddEDNS0Map("0xfffe", "hex_name", "hex", "string", "0", "2", "0"); err != nil {
+	if err := pm.addEDNS0Map("0xfffe", "hex_name", "hex", "string", "0", "2", "0"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
-	if err := pm.AddEDNS0Map("0xffff", "var", "hex", "string", "0", "2", "6"); err != nil {
+	if err := pm.addEDNS0Map("0xffff", "var", "hex", "string", "0", "2", "6"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
 
