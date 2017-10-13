@@ -207,7 +207,7 @@ func TestPolicy(t *testing.T) {
 		// Init test mock client
 		pm.pdp = newTestClientInit(test.response, test.responseIP, test.errResp, test.errRespIP)
 		// Handle request
-		status, err := pm.ServeDNS(context.TODO(), rec, req)
+		status, err := pm.ServeDNS(context.Background(), rec, req)
 		// Check status
 		if test.status != status {
 			t.Errorf("Case test[%d]: expected status %q but got %q\n", i, test.status, status)
@@ -227,7 +227,7 @@ func TestPolicy(t *testing.T) {
 		// Init test mock client
 		pm.pdp = newTestClientInit(test.response, test.responseIP, test.errResp, test.errRespIP)
 		// Handle request
-		status, err := pm.ServeDNS(context.TODO(), rec, req)
+		status, err := pm.ServeDNS(context.Background(), rec, req)
 		var test_status int
 		var test_err error
 		if test.err == errFakePdp {
@@ -509,7 +509,7 @@ func TestPolicyWithDnstap(t *testing.T) {
 		ResponseWriter: &test.ResponseWriter{},
 		Tapper:         &trapper,
 	}
-	pm.ServeDNS(context.TODO(), &tapRW, req)
+	pm.ServeDNS(context.Background(), &tapRW, req)
 
 	msgCnt := 0
 	expCnt := 3 //PH on query, PH on Response, and CR
