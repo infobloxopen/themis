@@ -19,7 +19,6 @@ func init() {
 
 func setup(c *caddy.Controller) error {
 	policyPlugin, err := policyParse(c)
-
 	if err != nil {
 		return plugin.Error("policy", err)
 	}
@@ -27,12 +26,12 @@ func setup(c *caddy.Controller) error {
 	c.OnStartup(func() error {
 		if taph := dnsserver.GetConfig(c).Handler("dnstap"); taph != nil {
 			if tapPlugin, ok := taph.(dnstap.Dnstap); ok {
-				policyPlugin.TapIO = tapPlugin.IO
+				policyPlugin.tapIO = tapPlugin.IO
 			}
 		}
 
-		policyPlugin.Trace = dnsserver.GetConfig(c).Handler("trace")
-		err := policyPlugin.Connect()
+		policyPlugin.trace = dnsserver.GetConfig(c).Handler("trace")
+		err := policyPlugin.connect()
 		if err != nil {
 			return plugin.Error("policy", err)
 		}
@@ -40,17 +39,17 @@ func setup(c *caddy.Controller) error {
 	})
 
 	c.OnRestart(func() error {
-		policyPlugin.Close()
+		policyPlugin.closeConn()
 		return nil
 	})
 
 	c.OnFinalShutdown(func() error {
-		policyPlugin.Close()
+		policyPlugin.closeConn()
 		return nil
 	})
 
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
-		policyPlugin.Next = next
+		policyPlugin.next = next
 		return policyPlugin
 	})
 
@@ -58,7 +57,7 @@ func setup(c *caddy.Controller) error {
 }
 
 func policyParse(c *caddy.Controller) (*PolicyPlugin, error) {
-	p := &PolicyPlugin{options: make(map[uint16][]edns0Map)}
+	p := newPolicyPlugin()
 
 	for c.Next() {
 		if c.Val() == "policy" {
