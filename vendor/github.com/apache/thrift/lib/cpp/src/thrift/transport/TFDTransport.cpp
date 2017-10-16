@@ -31,7 +31,7 @@
 #include <io.h>
 #endif
 
-using std::string;
+using namespace std;
 
 namespace apache {
 namespace thrift {

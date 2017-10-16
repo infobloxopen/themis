@@ -23,7 +23,8 @@
 #include <thrift/concurrency/Exception.h>
 #include <thrift/concurrency/Util.h>
 #include <thrift/transport/PlatformSocket.h>
-#include <thrift/stdcxx.h>
+
+#include <boost/scoped_ptr.hpp>
 
 #include <assert.h>
 
@@ -33,11 +34,9 @@
 
 namespace apache {
 namespace thrift {
-
-using stdcxx::scoped_ptr;
-using stdcxx::shared_ptr;
-
 namespace concurrency {
+
+using boost::scoped_ptr;
 
 /**
  * Monitor implementation using the POSIX pthread library

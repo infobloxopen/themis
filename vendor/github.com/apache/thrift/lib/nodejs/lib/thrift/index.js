@@ -18,11 +18,6 @@
  */
 exports.Thrift = require('./thrift');
 
-var log = require('./log');
-exports.setLogFunc = log.setLogFunc;
-exports.setLogLevel = log.setLogLevel;
-exports.getLogLevel = log.getLogLevel;
-
 var connection = require('./connection');
 exports.Connection = connection.Connection;
 exports.createClient = connection.createClient;

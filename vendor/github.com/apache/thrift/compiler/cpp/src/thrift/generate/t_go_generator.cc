@@ -81,7 +81,6 @@ public:
     gen_package_prefix_ = "";
     package_flag = "";
     read_write_private_ = false;
-    legacy_context_ = false;
     ignore_initialisms_ = false;
     for( iter = parsed_options.begin(); iter != parsed_options.end(); ++iter) {
       if( iter->first.compare("package_prefix") == 0) {
@@ -92,8 +91,6 @@ public:
         package_flag = (iter->second);
       } else if( iter->first.compare("read_write_private") == 0) {
         read_write_private_ = true;
-      } else if( iter->first.compare("legacy_context") == 0) {
-        legacy_context_ = true;
       } else if( iter->first.compare("ignore_initialisms") == 0) {
         ignore_initialisms_ =  true;
       } else {
@@ -287,7 +284,6 @@ private:
   std::string gen_package_prefix_;
   std::string gen_thrift_import_;
   bool read_write_private_;
-  bool legacy_context_;
   bool ignore_initialisms_;
 
   /**
@@ -876,19 +872,11 @@ string t_go_generator::go_package() {
  */
 string t_go_generator::go_imports_begin(bool consts) {
   string extra;
-
   // If not writing constants, and there are enums, need extra imports.
   if (!consts && get_program()->get_enums().size() > 0) {
-    extra +=
+    extra =
       "\t\"database/sql/driver\"\n"
       "\t\"errors\"\n";
-  }
-  if (legacy_context_) {
-    extra +=
-      "\t\"golang.org/x/net/context\"\n";
-  } else {
-    extra +=
-      "\t\"context\"\n";
   }
   return string(
       "import (\n"
@@ -911,7 +899,6 @@ string t_go_generator::go_imports_end() {
       "// (needed to ensure safety because of naive import list construction.)\n"
       "var _ = thrift.ZERO\n"
       "var _ = fmt.Printf\n"
-      "var _ = context.Background\n"
       "var _ = reflect.DeepEqual\n"
       "var _ = bytes.Equal\n\n");
 }
@@ -1458,9 +1445,7 @@ void t_go_generator::generate_countsetfields_helper(ofstream& out,
     if ((*f_iter)->get_req() == t_field::T_REQUIRED)
       continue;
 
-    t_type* type = (*f_iter)->get_type()->get_true_type();
-
-    if (!(is_pointer_field(*f_iter) || type->is_map() || type->is_set() || type->is_list()))
+    if (!is_pointer_field(*f_iter))
       continue;
 
     const string field_name(publicize(escape_string((*f_iter)->get_name())));
@@ -2159,15 +2144,9 @@ void t_go_generator::generate_service_remote(t_service* tservice) {
 
   string unused_protection;
 
-  string ctxPackage = "context";
-  if (legacy_context_) {
-    ctxPackage = "golang.org/x/net/context";
-  }
-
   f_remote << go_autogen_comment();
   f_remote << indent() << "package main" << endl << endl;
   f_remote << indent() << "import (" << endl;
-  f_remote << indent() << "        \"" << ctxPackage << "\"" << endl;
   f_remote << indent() << "        \"flag\"" << endl;
   f_remote << indent() << "        \"fmt\"" << endl;
   f_remote << indent() << "        \"math\"" << endl;
@@ -2507,11 +2486,9 @@ void t_go_generator::generate_service_remote(t_service* tservice) {
     f_remote << indent() << "fmt.Print(client." << pubName << "(";
     bool argFirst = true;
 
-    f_remote << "context.Background()";
     for (std::vector<t_field*>::size_type i = 0; i < num_args; ++i) {
       if (argFirst) {
         argFirst = false;
-        f_remote << ", ";
       } else {
         f_remote << ", ";
       }
@@ -2645,12 +2622,12 @@ void t_go_generator::generate_service_server(t_service* tservice) {
     f_types_ << indent() << "return " << self << endl;
     f_types_ << indent() << "}" << endl << endl;
     f_types_ << indent() << "func (p *" << serviceName
-               << "Processor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err "
+               << "Processor) Process(iprot, oprot thrift.TProtocol) (success bool, err "
                   "thrift.TException) {" << endl;
     f_types_ << indent() << "  name, _, seqId, err := iprot.ReadMessageBegin()" << endl;
     f_types_ << indent() << "  if err != nil { return false, err }" << endl;
     f_types_ << indent() << "  if processor, ok := p.GetProcessorFunction(name); ok {" << endl;
-    f_types_ << indent() << "    return processor.Process(ctx, seqId, iprot, oprot)" << endl;
+    f_types_ << indent() << "    return processor.Process(seqId, iprot, oprot)" << endl;
     f_types_ << indent() << "  }" << endl;
     f_types_ << indent() << "  iprot.Skip(thrift.STRUCT)" << endl;
     f_types_ << indent() << "  iprot.ReadMessageEnd()" << endl;
@@ -2703,7 +2680,6 @@ void t_go_generator::generate_process_function(t_service* tservice, t_function* 
                          + publicize(tfunction->get_name());
   string argsname = publicize(tfunction->get_name() + "_args", true);
   string resultname = publicize(tfunction->get_name() + "_result", true);
-
   // t_struct* xs = tfunction->get_xceptions();
   // const std::vector<t_field*>& xceptions = xs->get_members();
   vector<t_field*>::const_iterator x_iter;
@@ -2711,7 +2687,7 @@ void t_go_generator::generate_process_function(t_service* tservice, t_function* 
   f_types_ << indent() << "  handler " << publicize(tservice->get_name()) << endl;
   f_types_ << indent() << "}" << endl << endl;
   f_types_ << indent() << "func (p *" << processorName
-             << ") Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err "
+             << ") Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err "
                 "thrift.TException) {" << endl;
   indent_up();
   f_types_ << indent() << "args := " << argsname << "{}" << endl;
@@ -2755,11 +2731,9 @@ void t_go_generator::generate_process_function(t_service* tservice, t_function* 
   f_types_ << "err2 = p.handler." << publicize(tfunction->get_name()) << "(";
   bool first = true;
 
-  f_types_ << "ctx";
   for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
     if (first) {
       first = false;
-      f_types_ << ", ";
     } else {
       f_types_ << ", ";
     }
@@ -3446,7 +3420,6 @@ string t_go_generator::function_signature(t_function* tfunction, string prefix) 
 string t_go_generator::function_signature_if(t_function* tfunction, string prefix, bool addError) {
   // TODO(mcslee): Nitpicky, no ',' if argument_list is empty
   string signature = publicize(prefix + tfunction->get_name()) + "(";
-  signature += "ctx context.Context, ";
   signature += argument_list(tfunction->get_arglist()) + ") (";
   t_type* ret = tfunction->get_returntype();
   t_struct* exceptions = tfunction->get_xceptions();
@@ -3703,7 +3676,7 @@ bool format_go_output(const string& file_path) {
   // before submitting a patch that enables this feature again. Thank you.
   (void) file_path;
   return false;
-
+  
   /*
   const string command = "gofmt -w " + file_path;
 
@@ -3723,6 +3696,4 @@ THRIFT_REGISTER_GENERATOR(go, "Go",
                           "    ignore_initialisms\n"
                           "                     Disable automatic spelling correction of initialisms (e.g. \"URL\")\n" \
                           "    read_write_private\n"
-                          "                     Make read/write methods private, default is public Read/Write\n" \
-                          "    legacy_context\n"
-                          "                     Use legacy x/net/context instead of context in go<1.7.\n")
+                          "                     Make read/write methods private, default is public Read/Write\n")

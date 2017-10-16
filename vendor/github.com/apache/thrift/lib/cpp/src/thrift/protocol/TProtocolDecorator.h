@@ -21,12 +21,12 @@
 #define THRIFT_TPROTOCOLDECORATOR_H_ 1
 
 #include <thrift/protocol/TProtocol.h>
-#include <thrift/stdcxx.h>
+#include <boost/shared_ptr.hpp>
 
 namespace apache {
 namespace thrift {
 namespace protocol {
-using stdcxx::shared_ptr;
+using boost::shared_ptr;
 
 /**
  * <code>TProtocolDecorator</code> forwards all requests to an enclosed

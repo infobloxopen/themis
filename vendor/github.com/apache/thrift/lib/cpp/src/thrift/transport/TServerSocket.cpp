@@ -46,7 +46,7 @@
 #include <thrift/transport/TSocket.h>
 #include <thrift/transport/TServerSocket.h>
 #include <thrift/transport/PlatformSocket.h>
-#include <thrift/stdcxx.h>
+#include <boost/shared_ptr.hpp>
 
 #ifndef AF_LOCAL
 #define AF_LOCAL AF_UNIX
@@ -75,13 +75,21 @@ void destroyer_of_fine_sockets(THRIFT_SOCKET* ssock) {
   delete ssock;
 }
 
-using std::string;
+class TGetAddrInfoWrapper {
+public:
+  TGetAddrInfoWrapper(const char* node, const char* service, const struct addrinfo* hints);
 
-namespace apache {
-namespace thrift {
-namespace transport {
+  virtual ~TGetAddrInfoWrapper();
 
-using stdcxx::shared_ptr;
+  int init();
+  const struct addrinfo* res();
+
+private:
+  const char* node_;
+  const char* service_;
+  const struct addrinfo* hints_;
+  struct addrinfo* res_;
+};
 
 TGetAddrInfoWrapper::TGetAddrInfoWrapper(const char* node,
                                          const char* service,
@@ -102,6 +110,13 @@ int TGetAddrInfoWrapper::init() {
 const struct addrinfo* TGetAddrInfoWrapper::res() {
   return this->res_;
 }
+
+namespace apache {
+namespace thrift {
+namespace transport {
+
+using namespace std;
+using boost::shared_ptr;
 
 TServerSocket::TServerSocket(int port)
   : interruptableChildren_(true),
@@ -249,7 +264,7 @@ void TServerSocket::listen() {
   } else {
     childInterruptSockWriter_ = sv[1];
     pChildInterruptSockReader_
-        = stdcxx::shared_ptr<THRIFT_SOCKET>(new THRIFT_SOCKET(sv[0]), destroyer_of_fine_sockets);
+        = boost::shared_ptr<THRIFT_SOCKET>(new THRIFT_SOCKET(sv[0]), destroyer_of_fine_sockets);
   }
 
   // Validate port number
@@ -658,21 +673,14 @@ void TServerSocket::notify(THRIFT_SOCKET notifySocket) {
 }
 
 void TServerSocket::interrupt() {
-  concurrency::Guard g(rwMutex_);
-  if (interruptSockWriter_ != THRIFT_INVALID_SOCKET) {
-    notify(interruptSockWriter_);
-  }
+  notify(interruptSockWriter_);
 }
 
 void TServerSocket::interruptChildren() {
-  concurrency::Guard g(rwMutex_);
-  if (childInterruptSockWriter_ != THRIFT_INVALID_SOCKET) {
-    notify(childInterruptSockWriter_);
-  }
+  notify(childInterruptSockWriter_);
 }
 
 void TServerSocket::close() {
-  concurrency::Guard g(rwMutex_);
   if (serverSocket_ != THRIFT_INVALID_SOCKET) {
     shutdown(serverSocket_, THRIFT_SHUT_RDWR);
     ::THRIFT_CLOSESOCKET(serverSocket_);

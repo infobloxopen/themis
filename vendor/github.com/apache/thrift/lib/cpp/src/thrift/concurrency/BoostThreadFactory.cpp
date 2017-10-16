@@ -23,20 +23,19 @@
 
 #include <thrift/concurrency/BoostThreadFactory.h>
 #include <thrift/concurrency/Exception.h>
-#include <thrift/stdcxx.h>
+
 #include <cassert>
 
+#include <boost/scoped_ptr.hpp>
 #include <boost/thread.hpp>
+#include <boost/weak_ptr.hpp>
 
 namespace apache {
 namespace thrift {
-
-using stdcxx::bind;
-using stdcxx::scoped_ptr;
-using stdcxx::shared_ptr;
-using stdcxx::weak_ptr;
-
 namespace concurrency {
+
+using boost::shared_ptr;
+using boost::weak_ptr;
 
 /**
  * The boost thread class.
@@ -50,8 +49,7 @@ public:
   static void* threadMain(void* arg);
 
 private:
-  scoped_ptr<boost::thread> thread_;
-  Monitor monitor_;
+  boost::scoped_ptr<boost::thread> thread_;
   STATE state_;
   weak_ptr<BoostThread> self_;
   bool detached_;
@@ -72,46 +70,25 @@ public:
     }
   }
 
-  STATE getState() const
-  {
-    Synchronized sync(monitor_);
-    return state_;
-  }
-
-  void setState(STATE newState)
-  {
-    Synchronized sync(monitor_);
-    state_ = newState;
-
-    // unblock start() with the knowledge that the thread has actually
-    // started running, which avoids a race in detached threads.
-    if (newState == started) {
-	  monitor_.notify();
-    }
-  }
-
   void start() {
+    if (state_ != uninitialized) {
+      return;
+    }
+
     // Create reference
     shared_ptr<BoostThread>* selfRef = new shared_ptr<BoostThread>();
     *selfRef = self_.lock();
 
-    setState(starting);
+    state_ = starting;
 
-	Synchronized sync(monitor_);
-	
-    thread_.reset(new boost::thread(bind(threadMain, (void*)selfRef)));
+    thread_.reset(new boost::thread(boost::bind(threadMain, (void*)selfRef)));
 
     if (detached_)
       thread_->detach();
-    
-    // Wait for the thread to start and get far enough to grab everything
-    // that it needs from the calling context, thus absolving the caller
-    // from being required to hold on to runnable indefinitely.
-    monitor_.wait();
   }
 
   void join() {
-    if (!detached_ && getState() != uninitialized) {
+    if (!detached_ && state_ != uninitialized) {
       thread_->join();
     }
   }
@@ -132,11 +109,19 @@ void* BoostThread::threadMain(void* arg) {
   shared_ptr<BoostThread> thread = *(shared_ptr<BoostThread>*)arg;
   delete reinterpret_cast<shared_ptr<BoostThread>*>(arg);
 
-  thread->setState(started);
+  if (!thread) {
+    return (void*)0;
+  }
+
+  if (thread->state_ != starting) {
+    return (void*)0;
+  }
+
+  thread->state_ = started;
   thread->runnable()->run();
 
-  if (thread->getState() != stopping && thread->getState() != stopped) {
-    thread->setState(stopping);
+  if (thread->state_ != stopping && thread->state_ != stopped) {
+    thread->state_ = stopping;
   }
   return (void*)0;
 }

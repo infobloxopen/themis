@@ -103,7 +103,7 @@ type
 
       private
         FHasData : Boolean;
-        FData    : Byte;
+        FData    : TBytes;
 
       public
         // Return and consume the next byte to be Read, either taking it from the
@@ -169,18 +169,18 @@ type
 
   public
     // IProtocol
-    procedure WriteMessageBegin( const aMsg : TThriftMessage); override;
+    procedure WriteMessageBegin( const aMsg : IMessage); override;
     procedure WriteMessageEnd; override;
-    procedure WriteStructBegin( const struc: TThriftStruct); override;
+    procedure WriteStructBegin( const struc: IStruct); override;
     procedure WriteStructEnd; override;
-    procedure WriteFieldBegin( const field: TThriftField); override;
+    procedure WriteFieldBegin( const field: IField); override;
     procedure WriteFieldEnd; override;
     procedure WriteFieldStop; override;
-    procedure WriteMapBegin( const map: TThriftMap); override;
+    procedure WriteMapBegin( const map: IMap); override;
     procedure WriteMapEnd; override;
-    procedure WriteListBegin( const list: TThriftList); override;
+    procedure WriteListBegin( const list: IList); override;
     procedure WriteListEnd(); override;
-    procedure WriteSetBegin( const set_: TThriftSet ); override;
+    procedure WriteSetBegin( const set_: ISet ); override;
     procedure WriteSetEnd(); override;
     procedure WriteBool( b: Boolean); override;
     procedure WriteByte( b: ShortInt); override;
@@ -191,17 +191,17 @@ type
     procedure WriteString( const s: string );   override;
     procedure WriteBinary( const b: TBytes); override;
     //
-    function ReadMessageBegin: TThriftMessage; override;
+    function ReadMessageBegin: IMessage; override;
     procedure ReadMessageEnd(); override;
-    function ReadStructBegin: TThriftStruct; override;
+    function ReadStructBegin: IStruct; override;
     procedure ReadStructEnd; override;
-    function ReadFieldBegin: TThriftField; override;
+    function ReadFieldBegin: IField; override;
     procedure ReadFieldEnd(); override;
-    function ReadMapBegin: TThriftMap; override;
+    function ReadMapBegin: IMap; override;
     procedure ReadMapEnd(); override;
-    function ReadListBegin: TThriftList; override;
+    function ReadListBegin: IList; override;
     procedure ReadListEnd(); override;
-    function ReadSetBegin: TThriftSet; override;
+    function ReadSetBegin: ISet; override;
     procedure ReadSetEnd(); override;
     function ReadBool: Boolean; override;
     function ReadByte: ShortInt; override;
@@ -437,19 +437,21 @@ begin
   if FHasData
   then FHasData := FALSE
   else begin
-    IJSONProtocol(FProto).Transport.ReadAll( @FData, SizeOf(FData), 0, 1);
+    SetLength( FData, 1);
+    IJSONProtocol(FProto).Transport.ReadAll( FData, 0, 1);
   end;
-  result := FData;
+  result := FData[0];
 end;
 
 
 function TJSONProtocolImpl.TLookaheadReader.Peek : Byte;
 begin
   if not FHasData then begin
-    IJSONProtocol(FProto).Transport.ReadAll( @FData, SizeOf(FData), 0, 1);
+    SetLength( FData, 1);
+    IJSONProtocol(FProto).Transport.ReadAll( FData, 0, 1);
     FHasData := TRUE;
   end;
-  result := FData;
+  result := FData[0];
 end;
 
 
@@ -679,7 +681,7 @@ begin
 end;
 
 
-procedure TJSONProtocolImpl.WriteMessageBegin( const aMsg : TThriftMessage);
+procedure TJSONProtocolImpl.WriteMessageBegin( const aMsg : IMessage);
 begin
   ResetContextStack;  // THRIFT-1473
 
@@ -698,7 +700,7 @@ begin
 end;
 
 
-procedure TJSONProtocolImpl.WriteStructBegin( const struc: TThriftStruct);
+procedure TJSONProtocolImpl.WriteStructBegin( const struc: IStruct);
 begin
   WriteJSONObjectStart;
 end;
@@ -710,7 +712,7 @@ begin
 end;
 
 
-procedure TJSONProtocolImpl.WriteFieldBegin( const field : TThriftField);
+procedure TJSONProtocolImpl.WriteFieldBegin( const field : IField);
 begin
   WriteJSONInteger(field.ID);
   WriteJSONObjectStart;
@@ -729,7 +731,7 @@ begin
   // nothing to do
 end;
 
-procedure TJSONProtocolImpl.WriteMapBegin( const map: TThriftMap);
+procedure TJSONProtocolImpl.WriteMapBegin( const map: IMap);
 begin
   WriteJSONArrayStart;
   WriteJSONString( GetTypeNameForTypeID( map.KeyType));
@@ -746,7 +748,7 @@ begin
 end;
 
 
-procedure TJSONProtocolImpl.WriteListBegin( const list: TThriftList);
+procedure TJSONProtocolImpl.WriteListBegin( const list: IList);
 begin
   WriteJSONArrayStart;
   WriteJSONString( GetTypeNameForTypeID( list.ElementType));
@@ -760,7 +762,7 @@ begin
 end;
 
 
-procedure TJSONProtocolImpl.WriteSetBegin( const set_: TThriftSet);
+procedure TJSONProtocolImpl.WriteSetBegin( const set_: ISet);
 begin
   WriteJSONArrayStart;
   WriteJSONString( GetTypeNameForTypeID( set_.ElementType));
@@ -1049,11 +1051,11 @@ begin
 end;
 
 
-function TJSONProtocolImpl.ReadMessageBegin: TThriftMessage;
+function TJSONProtocolImpl.ReadMessageBegin: IMessage;
 begin
   ResetContextStack;  // THRIFT-1473
 
-  Init( result);
+  result := TMessageImpl.Create;
   ReadJSONArrayStart;
 
   if ReadJSONInteger <> VERSION
@@ -1071,10 +1073,10 @@ begin
 end;
 
 
-function TJSONProtocolImpl.ReadStructBegin : TThriftStruct ;
+function TJSONProtocolImpl.ReadStructBegin : IStruct ;
 begin
   ReadJSONObjectStart;
-  Init( result);
+  result := TStructImpl.Create('');
 end;
 
 
@@ -1084,11 +1086,11 @@ begin
 end;
 
 
-function TJSONProtocolImpl.ReadFieldBegin : TThriftField;
+function TJSONProtocolImpl.ReadFieldBegin : IField;
 var ch : Byte;
     str : string;
 begin
-  Init( result);
+  result := TFieldImpl.Create;
   ch := FReader.Peek;
   if ch = RBRACE[0]
   then result.Type_ := TType.Stop
@@ -1108,10 +1110,10 @@ begin
 end;
 
 
-function TJSONProtocolImpl.ReadMapBegin : TThriftMap;
+function TJSONProtocolImpl.ReadMapBegin : IMap;
 var str : string;
 begin
-  Init( result);
+  result := TMapImpl.Create;
   ReadJSONArrayStart;
 
   str := SysUtils.TEncoding.UTF8.GetString( ReadJSONString(FALSE));
@@ -1132,10 +1134,10 @@ begin
 end;
 
 
-function TJSONProtocolImpl.ReadListBegin : TThriftList;
+function TJSONProtocolImpl.ReadListBegin : IList;
 var str : string;
 begin
-  Init( result);
+  result := TListImpl.Create;
   ReadJSONArrayStart;
 
   str := SysUtils.TEncoding.UTF8.GetString( ReadJSONString(FALSE));
@@ -1150,10 +1152,10 @@ begin
 end;
 
 
-function TJSONProtocolImpl.ReadSetBegin : TThriftSet;
+function TJSONProtocolImpl.ReadSetBegin : ISet;
 var str : string;
 begin
-  Init( result);
+  result := TSetImpl.Create;
   ReadJSONArrayStart;
 
   str := SysUtils.TEncoding.UTF8.GetString( ReadJSONString(FALSE));

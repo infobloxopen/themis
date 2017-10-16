@@ -58,7 +58,6 @@ public:
     gen_dynbase_ = false;
     gen_slots_ = false;
     gen_tornado_ = false;
-    gen_zope_interface_ = false;
     gen_twisted_ = false;
     gen_dynamic_ = false;
     coding_ = "";
@@ -106,11 +105,8 @@ public:
       } else if( iter->first.compare("dynimport") == 0) {
         gen_dynbase_ = true;
         import_dynbase_ = (iter->second);
-      } else if( iter->first.compare("zope.interface") == 0) {
-        gen_zope_interface_ = true;
       } else if( iter->first.compare("twisted") == 0) {
         gen_twisted_ = true;
-        gen_zope_interface_ = true;
       } else if( iter->first.compare("tornado") == 0) {
         gen_tornado_ = true;
       } else if( iter->first.compare("coding") == 0) {
@@ -154,7 +150,6 @@ public:
   void generate_enum(t_enum* tenum);
   void generate_const(t_const* tconst);
   void generate_struct(t_struct* tstruct);
-  void generate_forward_declaration(t_struct* tstruct);
   void generate_xception(t_struct* txception);
   void generate_service(t_service* tservice);
 
@@ -165,7 +160,6 @@ public:
    */
 
   void generate_py_struct(t_struct* tstruct, bool is_exception);
-  void generate_py_thrift_spec(std::ofstream& out, t_struct* tstruct, bool is_exception);
   void generate_py_struct_definition(std::ofstream& out,
                                      t_struct* tstruct,
                                      bool is_xception = false);
@@ -295,11 +289,6 @@ private:
   std::string copy_options_;
 
   /**
-   * True if we should generate code for use with zope.interface.
-   */
-  bool gen_zope_interface_;
-
-  /**
    * True if we should generate Twisted-friendly RPC services.
    */
   bool gen_twisted_;
@@ -391,8 +380,6 @@ void t_py_generator::init_generator() {
            << "from thrift.transport import TTransport" << endl
            << import_dynbase_;
 
-  f_types_ << "all_structs = []" << endl;
-
   f_consts_ <<
     py_autogen_comment() << endl <<
     py_imports() << endl <<
@@ -432,11 +419,7 @@ string t_py_generator::py_imports() {
   ss << "from thrift.Thrift import TType, TMessageType, TFrozenDict, TException, "
         "TApplicationException"
      << endl
-     << "from thrift.protocol.TProtocol import TProtocolException"
-     << endl
-     << "from thrift.TRecursive import fix_spec"
-     << endl;
-
+     << "from thrift.protocol.TProtocol import TProtocolException";
   if (gen_utf8strings_) {
     ss << endl << "import sys";
   }
@@ -447,11 +430,6 @@ string t_py_generator::py_imports() {
  * Closes the type files
  */
 void t_py_generator::close_generator() {
-
-  // Fix thrift_spec definitions for recursive structs.
-  f_types_ << "fix_spec(all_structs)" << endl;
-  f_types_ << "del all_structs" << endl;
-
   // Close types file
   f_types_.close();
   f_consts_.close();
@@ -633,20 +611,10 @@ string t_py_generator::render_const_value(t_type* type, t_const_value* value) {
 }
 
 /**
- * Generates the "forward declarations" for python structs.
- * These are actually full class definitions so that calls to generate_struct
- * can add the thrift_spec field.  This is needed so that all thrift_spec
- * definitions are grouped at the end of the file to enable co-recursive structs.
- */
-void t_py_generator::generate_forward_declaration(t_struct* tstruct) {
-    generate_py_struct(tstruct, tstruct->is_xception());
-}
-
-/**
  * Generates a python struct
  */
 void t_py_generator::generate_struct(t_struct* tstruct) {
-  generate_py_thrift_spec(f_types_, tstruct, false);
+  generate_py_struct(tstruct, false);
 }
 
 /**
@@ -656,7 +624,7 @@ void t_py_generator::generate_struct(t_struct* tstruct) {
  * @param txception The struct definition
  */
 void t_py_generator::generate_xception(t_struct* txception) {
-  generate_py_thrift_spec(f_types_, txception, true);
+  generate_py_struct(txception, true);
 }
 
 /**
@@ -664,54 +632,6 @@ void t_py_generator::generate_xception(t_struct* txception) {
  */
 void t_py_generator::generate_py_struct(t_struct* tstruct, bool is_exception) {
   generate_py_struct_definition(f_types_, tstruct, is_exception);
-}
-
-
-/**
- * Generate the thrift_spec for a struct
- * For example,
- *   all_structs.append(Recursive)
- *   Recursive.thrift_spec = (
- *       None,  # 0
- *       (1, TType.LIST, 'Children', (TType.STRUCT, (Recursive, None), False), None, ),  # 1
- *   )
- */
-void t_py_generator::generate_py_thrift_spec(ofstream& out,
-                                             t_struct* tstruct,
-                                             bool /*is_exception*/) {
-  const vector<t_field*>& sorted_members = tstruct->get_sorted_members();
-  vector<t_field*>::const_iterator m_iter;
-
-  // Add struct definition to list so thrift_spec can be fixed for recursive structures.
-  indent(out) << "all_structs.append(" << tstruct->get_name() << ")" << endl;
-
-  if (sorted_members.empty() || (sorted_members[0]->get_key() >= 0)) {
-    indent(out) << tstruct->get_name() << ".thrift_spec = (" << endl;
-    indent_up();
-
-    int sorted_keys_pos = 0;
-    for (m_iter = sorted_members.begin(); m_iter != sorted_members.end(); ++m_iter) {
-
-      for (; sorted_keys_pos != (*m_iter)->get_key(); sorted_keys_pos++) {
-        indent(out) << "None,  # " << sorted_keys_pos << endl;
-      }
-
-      indent(out) << "(" << (*m_iter)->get_key() << ", " << type_to_enum((*m_iter)->get_type())
-                  << ", "
-                  << "'" << (*m_iter)->get_name() << "'"
-                  << ", " << type_to_spec_args((*m_iter)->get_type()) << ", "
-                  << render_field_default_value(*m_iter) << ", "
-                  << "),"
-                  << "  # " << sorted_keys_pos << endl;
-
-      sorted_keys_pos++;
-    }
-
-    indent_down();
-    indent(out) << ")" << endl;
-  } else {
-    indent(out) << tstruct->get_name() << ".thrift_spec = ()" << endl;
-  }
 }
 
 /**
@@ -782,14 +702,43 @@ void t_py_generator::generate_py_struct_definition(ofstream& out,
   // for structures with no members.
   // TODO(dreiss): Test encoding of structs where some inner structs
   // don't have thrift_spec.
+  if (sorted_members.empty() || (sorted_members[0]->get_key() >= 0)) {
+    indent(out) << "thrift_spec = (" << endl;
+    indent_up();
+
+    int sorted_keys_pos = 0;
+    for (m_iter = sorted_members.begin(); m_iter != sorted_members.end(); ++m_iter) {
+
+      for (; sorted_keys_pos != (*m_iter)->get_key(); sorted_keys_pos++) {
+        indent(out) << "None,  # " << sorted_keys_pos << endl;
+      }
+
+      indent(out) << "(" << (*m_iter)->get_key() << ", " << type_to_enum((*m_iter)->get_type())
+                  << ", "
+                  << "'" << (*m_iter)->get_name() << "'"
+                  << ", " << type_to_spec_args((*m_iter)->get_type()) << ", "
+                  << render_field_default_value(*m_iter) << ", "
+                  << "),"
+                  << "  # " << sorted_keys_pos << endl;
+
+      sorted_keys_pos++;
+    }
+
+    indent_down();
+    indent(out) << ")" << endl;
+  } else {
+    indent(out) << "thrift_spec = None" << endl;
+  }
 
   if (members.size() > 0) {
     out << endl;
     out << indent() << "def __init__(self,";
 
     for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
+      // This fills in default values, as opposed to nulls
       out << " " << declare_argument(*m_iter) << ",";
     }
+
     out << "):" << endl;
 
     indent_up();
@@ -938,9 +887,9 @@ void t_py_generator::generate_py_struct_reader(ofstream& out, t_struct* tstruct)
   indent_up();
 
   if (is_immutable(tstruct)) {
-    indent(out) << "return iprot._fast_decode(None, iprot, [cls, cls.thrift_spec])" << endl;
+    indent(out) << "return iprot._fast_decode(None, iprot, (cls, cls.thrift_spec))" << endl;
   } else {
-    indent(out) << "iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])" << endl;
+    indent(out) << "iprot._fast_decode(self, iprot, (self.__class__, self.thrift_spec))" << endl;
     indent(out) << "return" << endl;
   }
   indent_down();
@@ -1021,7 +970,7 @@ void t_py_generator::generate_py_struct_writer(ofstream& out, t_struct* tstruct)
   indent_up();
 
   indent(out)
-      << "oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))"
+      << "oprot.trans.write(oprot._fast_encode(self, (self.__class__, self.thrift_spec)))"
       << endl;
   indent(out) << "return" << endl;
   indent_down();
@@ -1100,19 +1049,15 @@ void t_py_generator::generate_service(t_service* tservice) {
              << "from thrift.Thrift import TProcessor" << endl
              << "from thrift.transport import TTransport" << endl
              << import_dynbase_;
-  if (gen_zope_interface_) {
-    f_service_ << "from zope.interface import Interface, implementer" << endl;
-  }
 
   if (gen_twisted_) {
-    f_service_ << "from twisted.internet import defer" << endl
+    f_service_ << "from zope.interface import Interface, implementer" << endl
+               << "from twisted.internet import defer" << endl
                << "from thrift.transport import TTwisted" << endl;
   } else if (gen_tornado_) {
     f_service_ << "from tornado import gen" << endl;
     f_service_ << "from tornado import concurrent" << endl;
   }
-
-  f_service_ << "all_structs = []" << endl;
 
   // Generate the three main parts of the service
   generate_service_interface(tservice);
@@ -1122,8 +1067,6 @@ void t_py_generator::generate_service(t_service* tservice) {
   generate_service_remote(tservice);
 
   // Close service file
-  f_service_ << "fix_spec(all_structs)" << endl
-             << "del all_structs" << endl << endl;
   f_service_.close();
 }
 
@@ -1141,7 +1084,6 @@ void t_py_generator::generate_service_helpers(t_service* tservice) {
   for (f_iter = functions.begin(); f_iter != functions.end(); ++f_iter) {
     t_struct* ts = (*f_iter)->get_arglist();
     generate_py_struct_definition(f_service_, ts, false);
-    generate_py_thrift_spec(f_service_, ts, false);
     generate_py_function_helpers(*f_iter);
   }
 }
@@ -1166,7 +1108,6 @@ void t_py_generator::generate_py_function_helpers(t_function* tfunction) {
       result.append(*f_iter);
     }
     generate_py_struct_definition(f_service_, &result, false);
-    generate_py_thrift_spec(f_service_, &result, false);
   }
 }
 
@@ -1182,7 +1123,7 @@ void t_py_generator::generate_service_interface(t_service* tservice) {
     extends = type_name(tservice->get_extends());
     extends_if = "(" + extends + ".Iface)";
   } else {
-    if (gen_zope_interface_) {
+    if (gen_twisted_) {
       extends_if = "(Interface)";
     } else if (gen_newstyle_ || gen_dynamic_ || gen_tornado_) {
       extends_if = "(object)";
@@ -1225,20 +1166,20 @@ void t_py_generator::generate_service_client(t_service* tservice) {
   string extends_client = "";
   if (tservice->get_extends() != NULL) {
     extends = type_name(tservice->get_extends());
-    if (gen_zope_interface_) {
+    if (gen_twisted_) {
       extends_client = "(" + extends + ".Client)";
     } else {
       extends_client = extends + ".Client, ";
     }
   } else {
-    if (gen_zope_interface_ && (gen_newstyle_ || gen_dynamic_)) {
+    if (gen_twisted_ && (gen_newstyle_ || gen_dynamic_)) {
       extends_client = "(object)";
     }
   }
 
   f_service_ << endl << endl;
 
-  if (gen_zope_interface_) {
+  if (gen_twisted_) {
     f_service_ << "@implementer(Iface)" << endl
                << "class Client" << extends_client << ":" << endl
                << endl;
@@ -1778,7 +1719,7 @@ void t_py_generator::generate_service_server(t_service* tservice) {
   f_service_ << endl << endl;
 
   // Generate the header portion
-  if (gen_zope_interface_) {
+  if (gen_twisted_) {
     f_service_ << "@implementer(Iface)" << endl
                << "class Processor(" << extends_processor << "TProcessor):" << endl;
   } else {
@@ -1790,7 +1731,7 @@ void t_py_generator::generate_service_server(t_service* tservice) {
   indent(f_service_) << "def __init__(self, handler):" << endl;
   indent_up();
   if (extends.empty()) {
-    if (gen_zope_interface_) {
+    if (gen_twisted_) {
       f_service_ << indent() << "self._handler = Iface(handler)" << endl;
     } else {
       f_service_ << indent() << "self._handler = handler" << endl;
@@ -1798,7 +1739,7 @@ void t_py_generator::generate_service_server(t_service* tservice) {
 
     f_service_ << indent() << "self._processMap = {}" << endl;
   } else {
-    if (gen_zope_interface_) {
+    if (gen_twisted_) {
       f_service_ << indent() << extends << ".Processor.__init__(self, Iface(handler))" << endl;
     } else {
       f_service_ << indent() << extends << ".Processor.__init__(self, handler)" << endl;
@@ -2515,7 +2456,7 @@ string t_py_generator::declare_argument(t_field* tfield) {
   std::ostringstream result;
   result << tfield->get_name() << "=";
   if (tfield->get_value() != NULL) {
-    result << render_field_default_value(tfield);
+    result << "thrift_spec[" << tfield->get_key() << "][4]";
   } else {
     result << "None";
   }
@@ -2547,7 +2488,7 @@ string t_py_generator::function_signature(t_function* tfunction, bool interface)
   vector<string> post;
   string signature = tfunction->get_name() + "(";
 
-  if (!(gen_zope_interface_ && interface)) {
+  if (!(gen_twisted_ && interface)) {
     pre.push_back("self");
   }
 
@@ -2666,7 +2607,7 @@ string t_py_generator::type_to_spec_args(t_type* ttype) {
   } else if (ttype->is_base_type() || ttype->is_enum()) {
     return  "None";
   } else if (ttype->is_struct() || ttype->is_xception()) {
-    return "[" + type_name(ttype) + ", None]";
+    return "(" + type_name(ttype) + ", " + type_name(ttype) + ".thrift_spec)";
   } else if (ttype->is_map()) {
     return "(" + type_to_enum(((t_map*)ttype)->get_key_type()) + ", "
            + type_to_spec_args(((t_map*)ttype)->get_key_type()) + ", "
@@ -2691,7 +2632,6 @@ string t_py_generator::type_to_spec_args(t_type* ttype) {
 THRIFT_REGISTER_GENERATOR(
     py,
     "Python",
-    "    zope.interface:  Generate code for use with zope.interface.\n"
     "    twisted:         Generate Twisted-friendly RPC services.\n"
     "    tornado:         Generate code for use with Tornado.\n"
     "    no_utf8strings:  Do not Encode/decode strings using utf8 in the generated code. Basically no effect for Python 3.\n"

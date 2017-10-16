@@ -17,71 +17,10 @@
  * under the License.
  */
 
-var util = require('util');
-
-var disabled = function () {};
-var logFunc = console.log;
-var logLevel = 'error'; // default level
-
-function factory(level) {
-  return function () {
-    // better use spread syntax, but due to compatibility,
-    // use legacy method here.
-    var args = ['thrift: [' + level + '] '].concat(Array.from(arguments));
-    return logFunc(util.format.apply(null, args));
-  };
-}
-
-var trace = disabled;
-var debug = disabled;
-var error = disabled;
-var warning = disabled;
-var info = disabled;
-
-exports.setLogFunc = function (func) {
-  logFunc = func;
-};
-
-var setLogLevel = exports.setLogLevel = function (level) {
-  trace = debug = error = warning = info = disabled;
-  logLevel = level;
-  switch (logLevel) {
-  case 'trace':
-    trace = factory('TRACE');
-  case 'debug':
-    debug = factory('DEBUG');
-  case 'error':
-    error = factory('ERROR');
-  case 'warning':
-    warning = factory('WARN');
-  case 'info':
-    info = factory('INFO');
-  }
-};
-
-// set default
-setLogLevel(logLevel);
-
-exports.getLogLevel = function () {
-  return logLevel;
-};
-
-exports.trace = function () {
-  return trace.apply(null, arguments);
-};
-
-exports.debug = function () {
-  return debug.apply(null, arguments);
-};
-
-exports.error = function () {
-  return error.apply(null, arguments);
-};
-
-exports.warning = function () {
-  return warning.apply(null, arguments);
-};
-
-exports.info = function () {
-  return info.apply(null, arguments);
+module.exports = {
+  'info' : function logInfo() {},
+  'warning' : function logWarning() {},
+  'error' : function logError() {},
+  'debug' : function logDebug() {},
+  'trace' : function logTrace() {}
 };

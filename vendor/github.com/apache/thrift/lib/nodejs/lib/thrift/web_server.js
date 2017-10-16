@@ -22,7 +22,6 @@ var url = require("url");
 var path = require("path");
 var fs = require("fs");
 var crypto = require("crypto");
-var log = require('./log');
 
 var MultiplexedProcessor = require('./multiplexed_processor').MultiplexedProcessor;
 
@@ -285,7 +284,7 @@ exports.createWebServer = function(options) {
     '.jpeg': 'image/jpeg',
     '.gif': 'image/gif',
     '.png': 'image/png',
-    '.svg': 'image/svg+xml'
+    '.svg': 'image/svg+xml'
   };
 
   //Setup all of the services
@@ -548,7 +547,7 @@ exports.createWebServer = function(options) {
           frame = result.nextFrame;
         }
       } catch(e) {
-        log.error('TWebSocketTransport Exception: ' + e);
+        console.log("TWebSocketTransport Exception: " + e);
         socket.destroy();
       }
     });
@@ -557,3 +556,9 @@ exports.createWebServer = function(options) {
   //Return the server
   return server;
 };
+
+
+
+
+
+

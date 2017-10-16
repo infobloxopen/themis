@@ -62,8 +62,7 @@ when is_integer(Len), Len >= 0 ->
           Give = min(iolist_size(NewBinary), Len),
           {Result, Remaining} = split_binary(NewBinary, Give),
           {State#t_framed{wrapped = NewState, read_buffer = Remaining}, {ok, Result}};
-        {NewState, Error} ->
-          {State#t_framed{wrapped = NewState}, Error}
+        Error -> Error
       end;
     %% read of zero bytes
     <<>> -> {State, {ok, <<>>}};

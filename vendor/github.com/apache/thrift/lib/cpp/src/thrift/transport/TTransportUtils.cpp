@@ -94,8 +94,8 @@ void TPipedTransport::flush() {
 }
 
 TPipedFileReaderTransport::TPipedFileReaderTransport(
-    stdcxx::shared_ptr<TFileReaderTransport> srcTrans,
-    stdcxx::shared_ptr<TTransport> dstTrans)
+    boost::shared_ptr<TFileReaderTransport> srcTrans,
+    boost::shared_ptr<TTransport> dstTrans)
   : TPipedTransport(srcTrans, dstTrans), srcTrans_(srcTrans) {
 }
 

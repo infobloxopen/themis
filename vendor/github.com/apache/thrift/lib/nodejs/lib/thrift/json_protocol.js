@@ -17,6 +17,7 @@
  * under the License.
  */
 
+var log = require('./log');
 var Int64 = require('node-int64');
 var InputBufferUnderrunError = require('./transport').InputBufferUnderrunError;
 var Thrift = require('./thrift');

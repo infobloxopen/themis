@@ -24,6 +24,7 @@
 #include <thrift/transport/PlatformSocket.h>
 #include <thrift/concurrency/FunctionRunner.h>
 
+#include <boost/scoped_ptr.hpp>
 #include <boost/version.hpp>
 #if (BOOST_VERSION >= 105700)
 #include <boost/move/unique_ptr.hpp>
@@ -61,7 +62,7 @@ namespace apache {
 namespace thrift {
 namespace transport {
 
-using stdcxx::shared_ptr;
+using boost::shared_ptr;
 using std::cerr;
 using std::cout;
 using std::endl;
@@ -852,7 +853,7 @@ void TFileTransport::seekToChunk(int32_t chunk) {
     uint32_t oldReadTimeout = getReadTimeout();
     setReadTimeout(NO_TAIL_READ_TIMEOUT);
     // keep on reading unti the last event at point of seekChunk call
-    shared_ptr<eventInfo> event;
+    boost::scoped_ptr<eventInfo> event;
     while ((offset_ + readState_.bufferPtr_) < minEndOffset) {
       event.reset(readEvent());
       if (event.get() == NULL) {

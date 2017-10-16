@@ -3,8 +3,9 @@
 package svc1
 
 import (
-	"context"
 	"errors"
+
+	"golang.org/x/net/context"
 )
 
 // Service constants

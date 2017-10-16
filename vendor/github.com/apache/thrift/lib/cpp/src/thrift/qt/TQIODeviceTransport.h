@@ -20,7 +20,7 @@
 #ifndef _THRIFT_ASYNC_TQIODEVICE_TRANSPORT_H_
 #define _THRIFT_ASYNC_TQIODEVICE_TRANSPORT_H_ 1
 
-#include <thrift/stdcxx.h>
+#include <boost/shared_ptr.hpp>
 
 #include <thrift/transport/TVirtualTransport.h>
 
@@ -36,7 +36,7 @@ namespace transport {
 class TQIODeviceTransport
     : public apache::thrift::transport::TVirtualTransport<TQIODeviceTransport> {
 public:
-  explicit TQIODeviceTransport(stdcxx::shared_ptr<QIODevice> dev);
+  explicit TQIODeviceTransport(boost::shared_ptr<QIODevice> dev);
   virtual ~TQIODeviceTransport();
 
   void open();
@@ -59,7 +59,7 @@ private:
   TQIODeviceTransport(const TQIODeviceTransport&);
   TQIODeviceTransport& operator=(const TQIODeviceTransport&);
 
-  stdcxx::shared_ptr<QIODevice> dev_;
+  boost::shared_ptr<QIODevice> dev_;
 };
 }
 }

@@ -23,7 +23,7 @@
 #include <queue>
 #include <string>
 #include <utility>
-#include <thrift/stdcxx.h>
+#include <boost/shared_ptr.hpp>
 #include <thrift/async/TAsyncChannel.h>
 
 struct event_base;

@@ -1483,20 +1483,11 @@ void t_js_generator::generate_service_client(t_service* tservice) {
                  << "', " << messageType << ", this.seqid);" << endl;
     }
 
-    if (fields.size() > 0){
-      f_service_ << indent() << "var params = {" << endl;
-      for (fld_iter = fields.begin(); fld_iter != fields.end(); ++fld_iter) {
-        f_service_ << indent() << indent() << (*fld_iter)->get_name() << ": " << (*fld_iter)->get_name();
-        if (fld_iter != fields.end()-1) {
-          f_service_ << "," << endl;
-        } else {
-          f_service_ << endl;
-        }
-      }
-      f_service_ << indent() << "};" << endl;
-      f_service_ << indent() << "var args = new " << argsname << "(params);" << endl;
-    } else {
-      f_service_ << indent() << "var args = new " << argsname << "();" << endl;
+    f_service_ << indent() << "var args = new " << argsname << "();" << endl;
+
+    for (fld_iter = fields.begin(); fld_iter != fields.end(); ++fld_iter) {
+      f_service_ << indent() << "args." << (*fld_iter)->get_name() << " = "
+                 << (*fld_iter)->get_name() << ";" << endl;
     }
 
     // Write to the stream
@@ -1510,20 +1501,16 @@ void t_js_generator::generate_service_client(t_service* tservice) {
         f_service_ << indent() << "return this.output.getTransport().flush(callback);" << endl;
       } else {
         f_service_ << indent() << "if (callback) {" << endl;
-        if((*f_iter)->is_oneway()) {
-          f_service_ << indent() << "  this.output.getTransport().flush(true, null);" << endl;
-        } else {
-          f_service_ << indent() << "  var self = this;" << endl;
-          f_service_ << indent() << "  this.output.getTransport().flush(true, function() {" << endl;
-          f_service_ << indent() << "    var result = null;" << endl;
-          f_service_ << indent() << "    try {" << endl;
-          f_service_ << indent() << "      result = self.recv_" << funname << "();" << endl;
-          f_service_ << indent() << "    } catch (e) {" << endl;
-          f_service_ << indent() << "      result = e;" << endl;
-          f_service_ << indent() << "    }" << endl;
-          f_service_ << indent() << "    callback(result);" << endl;
-          f_service_ << indent() << "  });" << endl;
-        }
+        f_service_ << indent() << "  var self = this;" << endl;
+        f_service_ << indent() << "  this.output.getTransport().flush(true, function() {" << endl;
+        f_service_ << indent() << "    var result = null;" << endl;
+        f_service_ << indent() << "    try {" << endl;
+        f_service_ << indent() << "      result = self.recv_" << funname << "();" << endl;
+        f_service_ << indent() << "    } catch (e) {" << endl;
+        f_service_ << indent() << "      result = e;" << endl;
+        f_service_ << indent() << "    }" << endl;
+        f_service_ << indent() << "    callback(result);" << endl;
+        f_service_ << indent() << "  });" << endl;
         f_service_ << indent() << "} else {" << endl;
         f_service_ << indent() << "  return this.output.getTransport().flush();" << endl;
         f_service_ << indent() << "}" << endl;
@@ -2231,10 +2218,10 @@ std::string t_js_generator::ts_function_signature(t_function* tfunction, bool in
   }
 
   if (include_callback) {
-    str += "callback: (data: " + ts_get_type(tfunction->get_returntype()) + ")=>void): ";
+    str += "callback: Function): ";
 
     if (gen_jquery_) {
-      str += "JQueryPromise<" + ts_get_type(tfunction->get_returntype()) +">;";
+      str += "JQueryXHR;";
     } else {
       str += "void;";
     }

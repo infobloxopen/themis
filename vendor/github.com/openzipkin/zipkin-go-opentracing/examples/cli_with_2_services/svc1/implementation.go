@@ -3,9 +3,8 @@
 package svc1
 
 import (
-	"context"
-
 	opentracing "github.com/opentracing/opentracing-go"
+	"golang.org/x/net/context"
 
 	"github.com/openzipkin/zipkin-go-opentracing/examples/cli_with_2_services/svc2"
 )
