@@ -4,13 +4,10 @@ import "testing"
 
 func TestPolicySet(t *testing.T) {
 	c := &Context{
-		a: map[string]map[int]AttributeValue{
-			"missing-type": {
-				TypeBoolean: MakeBooleanValue(false)},
-			"test-string": {
-				TypeString: MakeStringValue("test")},
-			"example-string": {
-				TypeString: MakeStringValue("example")}}}
+		a: map[string]interface{}{
+			"missing-type":   MakeBooleanValue(false),
+			"test-string":    MakeStringValue("test"),
+			"example-string": MakeStringValue("example")}}
 
 	testID := "Test Policy"
 
@@ -131,9 +128,9 @@ func TestPolicySet(t *testing.T) {
 						Argument: AttributeDesignator{a: Attribute{id: "y", t: TypeString}}})})}
 
 	c = &Context{
-		a: map[string]map[int]AttributeValue{
-			"x": {TypeSetOfStrings: MakeSetOfStringsValue(newStrTree("Permit", "Default"))},
-			"y": {TypeString: MakeStringValue("Permit")}}}
+		a: map[string]interface{}{
+			"x": MakeSetOfStringsValue(newStrTree("Permit", "Default")),
+			"y": MakeStringValue("Permit")}}
 
 	r = p.Calculate(c)
 	if r.Effect != EffectPermit {
@@ -147,9 +144,9 @@ func TestPolicySet(t *testing.T) {
 	}
 
 	c = &Context{
-		a: map[string]map[int]AttributeValue{
-			"x": {TypeSetOfStrings: MakeSetOfStringsValue(newStrTree("Permit", "Default"))},
-			"y": {TypeSetOfStrings: MakeSetOfStringsValue(newStrTree("Permit", "Default"))}}}
+		a: map[string]interface{}{
+			"x": MakeSetOfStringsValue(newStrTree("Permit", "Default")),
+			"y": MakeSetOfStringsValue(newStrTree("Permit", "Default"))}}
 
 	r = p.Calculate(c)
 	if r.Effect != EffectIndeterminate {

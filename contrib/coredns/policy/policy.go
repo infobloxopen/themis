@@ -376,6 +376,13 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	ednsAttrs := p.getAttrsFromEDNS0(r, state.IP())
 	attrs = append(attrs, ednsAttrs...)
 
+	if p.TapIO != nil {
+		if pw := tap.NewProxyWriter(w); pw != nil {
+			w = pw
+			defer tap.SendCRExtraMsg(p.TapIO, time.Now(), pw, ednsAttrs)
+		}
+	}
+
 	response, err := p.pdp.Validate(&pdp.Request{Attributes: attrs})
 	if err != nil {
 		log.Printf("[ERROR] Policy validation failed due to error %s", err)
