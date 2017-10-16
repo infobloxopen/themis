@@ -513,7 +513,7 @@ func TestPolicyWithDnstap(t *testing.T) {
 	req := new(dns.Msg)
 	req.SetQuestion("test.com.", dns.TypeA)
 
-	permit := &pdp.Response{Effect: pdp.Response_PERMIT}
+	permit := &pdp.Response{Effect: pdp.PERMIT}
 	pm.pdp = newTestClientInit(permit, permit, nil, nil)
 
 	trapper := dtest.TrapTapper{Full: true}

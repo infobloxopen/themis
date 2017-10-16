@@ -44,7 +44,7 @@ func (w *ProxyWriter) WriteMsg(msg *dns.Msg) error {
 // of extra attributes to Dnstap.Extra field. Then it asynchronously sends the
 // message with IORoutine interface
 // Parameter tapIO must not be nil
-func SendCRExtraMsg(tapIO tapplg.IORoutine, t time.Time, pw *ProxyWriter, attrs []*pb.Attribute) {
+func SendCRExtraMsg(tapIO tapplg.IORoutine, t time.Time, pw *ProxyWriter, attrs []*pdp.Attribute) {
 	go func() {
 		if pw == nil || pw.msg == nil {
 			log.Printf("[ERROR] Failed to create dnstap CR message - no DNS response message found")
