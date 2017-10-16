@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
@@ -21,6 +22,16 @@ var (
 	// ErrorInvalidDestination indicates that output value of validate method is
 	// not a structure.
 	ErrorInvalidDestination = errors.New("given value is not a pointer to structure")
+)
+
+type resFieldsInfo struct {
+	fields map[string]string
+	err    error
+}
+
+var (
+	resTypeCache     = map[string]resFieldsInfo{}
+	resTypeCacheLock = sync.RWMutex{}
 )
 
 func unmarshalToValue(res *pb.Response, v reflect.Value) error {
@@ -81,8 +92,16 @@ func parseTag(tag string, f reflect.StructField, t reflect.Type) (string, error)
 }
 
 func makeFieldMap(t reflect.Type) (map[string]string, error) {
-	m := make(map[string]string)
+	key := t.PkgPath() + "." + t.Name()
+	resTypeCacheLock.RLock()
+	if info, ok := resTypeCache[key]; ok {
+		resTypeCacheLock.RUnlock()
+		return info.fields, info.err
+	}
+	resTypeCacheLock.RUnlock()
 
+	m := make(map[string]string)
+	var err error
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 
@@ -98,15 +117,22 @@ func makeFieldMap(t reflect.Type) (map[string]string, error) {
 			}
 		}
 
-		tag, err := parseTag(tag, f, t)
+		tag, err = parseTag(tag, f, t)
 		if err != nil {
-			return nil, err
+			break
 		}
 
 		m[tag] = f.Name
 	}
 
-	return m, nil
+	resTypeCacheLock.Lock()
+	resTypeCache[key] = resFieldsInfo{
+		fields: m,
+		err:    err,
+	}
+	resTypeCacheLock.Unlock()
+
+	return m, err
 }
 
 type fieldUnmarshaller func(attr *pb.Attribute, v reflect.Value) error
