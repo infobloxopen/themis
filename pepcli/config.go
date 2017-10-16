@@ -12,10 +12,11 @@ import (
 )
 
 type config struct {
-	server string
-	input  string
-	count  int
-	output string
+	server  string
+	input   string
+	count   int
+	streams int
+	output  string
 
 	cmdConf interface{}
 	cmd     cmdExec
@@ -24,7 +25,7 @@ type config struct {
 var conf = config{}
 
 type (
-	cmdExec       func(addr, in, out string, n int, conf interface{}) error
+	cmdExec       func(addr, in, out string, n, s int, conf interface{}) error
 	cmdFlagParser func(args []string) interface{}
 
 	command struct {
@@ -69,6 +70,7 @@ func init() {
 	flag.StringVar(&conf.input, "i", "requests.yaml", "file with YAML formatted list of requests to send to PDP")
 	flag.IntVar(&conf.count, "n", 0, "number or requests to send\n\t"+
 		"(default and value less than one means all requests from file)")
+	flag.IntVar(&conf.streams, "streams", 0, "number of streams to use with gRPC streaming (< 1 unary gRPC)")
 	flag.StringVar(&conf.output, "o", "", "file to write command output (default stdout)")
 
 	flag.Parse()

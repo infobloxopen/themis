@@ -17,7 +17,7 @@ const (
 	Description = "evaluates given requests on PDP server"
 )
 
-func Exec(addr, in, out string, n int, v interface{}) error {
+func Exec(addr, in, out string, n, s int, v interface{}) error {
 	reqs, err := requests.Load(in)
 	if err != nil {
 		return fmt.Errorf("can't load requests from \"%s\"", in)
@@ -36,19 +36,31 @@ func Exec(addr, in, out string, n int, v interface{}) error {
 		defer f.Close()
 	}
 
-	c := pep.NewClient(addr, nil)
-	err = c.Connect()
+	opts := []pep.Option{}
+	if s > 0 {
+		opts = append(opts,
+			pep.WithStreams(s),
+		)
+	}
+
+	c := pep.NewClient(opts...)
+	err = c.Connect(addr)
 	if err != nil {
 		return fmt.Errorf("can't connect to %s: %s", addr, err)
 	}
 	defer c.Close()
+
+	validate := c.ModalValidate
+	if s > 0 {
+		validate = c.StreamValidate
+	}
 
 	for i := 0; i < n; i++ {
 		idx := i % len(reqs)
 		req := reqs[idx]
 
 		res := &pb.Response{}
-		err := c.ModalValidate(req, res)
+		err := validate(req, res)
 		if err != nil {
 			return fmt.Errorf("can't send request %d (%d): %s", idx, i, err)
 		}

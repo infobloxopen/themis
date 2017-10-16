@@ -24,10 +24,8 @@ import (
 	pb "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pep"
 
+	"github.com/mholt/caddy"
 	"github.com/miekg/dns"
-
-	ot "github.com/opentracing/opentracing-go"
-
 	"golang.org/x/net/context"
 )
 
@@ -64,75 +62,136 @@ type edns0Map struct {
 // PolicyPlugin represents a plugin instance that can validate DNS
 // requests and replies using PDP server.
 type PolicyPlugin struct {
-	Endpoints   []string
+	endpoints   []string
 	options     map[uint16][]edns0Map
-	TapIO       tapplg.IORoutine
-	Trace       plugin.Handler
-	Next        plugin.Handler
+	tapIO       tapplg.IORoutine
+	trace       plugin.Handler
+	next        plugin.Handler
 	pdp         pep.Client
-	DebugSuffix string
-	ErrorFunc   func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
+	debugSuffix string
+	streams     int
+	errorFunc   func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
 }
 
-type Response struct {
-	Action   int
-	Redirect string
+func newPolicyPlugin() *PolicyPlugin {
+	return &PolicyPlugin{options: make(map[uint16][]edns0Map)}
 }
 
-func makeResponse(resp *pb.Response) (ret Response) {
-	if resp == nil {
-		log.Printf("[ERROR] PDP response pointer is nil")
-		ret.Action = typeInvalid
-		return
-	}
-	if resp.Effect == pb.Response_PERMIT {
-		ret.Action = typeAllow
-		return
-	} else if resp.Effect == pb.Response_DENY {
-		for _, item := range resp.Obligation {
-			switch item.Id {
-			case "refuse":
-				if item.Value == "true" {
-					ret.Action = typeRefuse
-					return
-				}
-			case "redirect_to":
-				if item.Value != "" {
-					ret.Action = typeRedirect
-					ret.Redirect = item.Value
-					return
-				}
-			}
-		}
-		ret.Action = typeBlock
-		return
-	} else {
-		log.Printf("[ERROR] PDP Effect: %s", resp.Effect)
-		ret.Action = typeInvalid
-		return
-	}
-}
-
-// Connect establishes connection to PDP server.
-func (p *PolicyPlugin) Connect() error {
+func (p *PolicyPlugin) connect() error {
 	log.Printf("[DEBUG] Connecting %v", p)
-	var tracer ot.Tracer
-	if p.Trace != nil {
-		if t, ok := p.Trace.(trace.Trace); ok {
-			tracer = t.Tracer()
+
+	opts := []pep.Option{pep.WithBalancer(p.endpoints...)}
+
+	if p.trace != nil {
+		if t, ok := p.trace.(trace.Trace); ok {
+			opts = append(opts, pep.WithTracer(t.Tracer()))
 		}
 	}
-	p.pdp = pep.NewBalancedClient(p.Endpoints, tracer)
-	return p.pdp.Connect()
+
+	if p.streams > 0 {
+		opts = append(opts, pep.WithStreams(p.streams))
+	}
+
+	p.pdp = pep.NewClient(opts...)
+	return p.pdp.Connect("")
 }
 
-// Close terminates previously established connection.
-func (p *PolicyPlugin) Close() {
+func (p *PolicyPlugin) closeConn() {
 	p.pdp.Close()
 }
 
-// AddEDNS0Map adds new EDNS0 to table.
-func (p *PolicyPlugin) AddEDNS0Map(code, name, dataType, destType,
+func (p *PolicyPlugin) parseOption(c *caddy.Controller) error {
+	switch c.Val() {
+	case "endpoint":
+		return p.parseEndpoint(c)
+
+	case "edns0":
+		return p.parseEDNS0(c)
+
+	case "debug_query_suffix":
+		return p.parseDebugQuerySuffix(c)
+
+	case "streams":
+		return p.parseStreams(c)
+	}
+
+	return nil
+}
+
+func (p *PolicyPlugin) parseEndpoint(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) <= 0 {
+		return c.ArgErr()
+	}
+
+	p.endpoints = args
+	return nil
+}
+
+func (p *PolicyPlugin) parseEDNS0(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	// Usage: edns0 <code> <name> [ <dataType> <destType> ] [ <size> <start> <end> ].
+	// Valid dataTypes are hex (default), bytes, ip.
+	// Valid destTypes depend on PDP (default string).
+	argsLen := len(args)
+	if argsLen != 2 && argsLen != 4 && argsLen != 7 {
+		return fmt.Errorf("Invalid edns0 directive")
+	}
+
+	dataType := "hex"
+	destType := "string"
+	size := "0"
+	start := "0"
+	end := "0"
+
+	if argsLen > 2 {
+		dataType = args[2]
+		destType = args[3]
+	}
+
+	if argsLen == 7 && dataType == "hex" {
+		size = args[4]
+		start = args[5]
+		end = args[6]
+	}
+
+	err := p.addEDNS0Map(args[0], args[1], dataType, destType, size, start, end)
+	if err != nil {
+		return fmt.Errorf("Could not add EDNS0 map for %s: %s", args[0], err)
+	}
+
+	return nil
+}
+
+func (p *PolicyPlugin) parseDebugQuerySuffix(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) != 1 {
+		return c.ArgErr()
+	}
+
+	p.debugSuffix = args[0]
+	return nil
+}
+
+func (p *PolicyPlugin) parseStreams(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) != 1 {
+		return c.ArgErr()
+	}
+
+	streams, err := strconv.ParseInt(args[0], 10, 32)
+	if err != nil {
+		return fmt.Errorf("Could not parse number of streams: %s", err)
+	}
+	if streams < 1 {
+		return fmt.Errorf("Expected at least one stream got %d", streams)
+	}
+
+	p.streams = int(streams)
+	return nil
+}
+
+func (p *PolicyPlugin) addEDNS0Map(code, name, dataType, destType,
 	sizeStr, startStr, endStr string) error {
 	c, err := strconv.ParseUint(code, 0, 16)
 	if err != nil {
@@ -197,7 +256,7 @@ func parseHex(data []byte, option edns0Map) string {
 }
 
 func parseOptionGroup(data []byte, options []edns0Map) ([]*pb.Attribute, bool) {
-	srcIpFound := false
+	srcIPFound := false
 	var attrs []*pb.Attribute
 	for _, option := range options {
 		var value string
@@ -214,20 +273,20 @@ func parseOptionGroup(data []byte, options []edns0Map) ([]*pb.Attribute, bool) {
 			value = ip.String()
 		}
 		if option.name == "source_ip" {
-			srcIpFound = true
+			srcIPFound = true
 		}
 		attrs = append(attrs, &pb.Attribute{Id: option.name, Type: option.destType, Value: value})
 	}
-	return attrs, srcIpFound
+	return attrs, srcIPFound
 }
 
 func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pb.Attribute {
-	ipId := "source_ip"
+	ipID := "source_ip"
 	var attrs []*pb.Attribute
 
 	o := r.IsEdns0()
 	if o == nil {
-		return []*pb.Attribute{{Id: ipId, Type: "address", Value: ip}}
+		return []*pb.Attribute{{Id: ipID, Type: "address", Value: ip}}
 	}
 
 	for _, opt := range o.Option {
@@ -239,13 +298,13 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pb.Attribute 
 		if !ok {
 			continue
 		}
-		group, srcIpFound := parseOptionGroup(optLocal.Data, options)
+		group, srcIPFound := parseOptionGroup(optLocal.Data, options)
 		attrs = append(attrs, group...)
-		if srcIpFound {
-			ipId = "proxy_source_ip"
+		if srcIPFound {
+			ipID = "proxy_source_ip"
 		}
 	}
-	attrs = append(attrs, &pb.Attribute{Id: ipId, Type: "address", Value: ip})
+	attrs = append(attrs, &pb.Attribute{Id: ipID, Type: "address", Value: ip})
 	return attrs
 }
 
@@ -287,10 +346,10 @@ func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
 	responseWriter := nonwriter.New(w)
 	if debugQuery {
 		req = new(dns.Msg)
-		name := strings.TrimSuffix(r.Question[0].Name, p.DebugSuffix)
+		name := strings.TrimSuffix(r.Question[0].Name, p.debugSuffix)
 		req.SetQuestion(name, dns.TypeA)
 	}
-	status, err := plugin.NextOrFailure(p.Name(), p.Next, ctx, responseWriter, req)
+	status, err := plugin.NextOrFailure(p.Name(), p.next, ctx, responseWriter, req)
 	if err != nil {
 		if debugQuery {
 			return p.retDebugInfo(r, w, respDomain, nil, "failed")
@@ -327,15 +386,19 @@ func (p *PolicyPlugin) handlePermit(ctx context.Context, w dns.ResponseWriter,
 	attrs = append(attrs, respDomain.Obligation...)
 
 	response := new(pb.Response)
-	err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, response)
+	if p.streams > 0 {
+		err = p.pdp.StreamValidate(pb.Request{Attributes: attrs}, response)
+	} else {
+		err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, response)
+	}
 	if err != nil {
 		log.Printf("[ERROR] Policy validation failed due to error %s", err)
 		return p.retRcode(w, r, dns.RcodeServerFailure, err)
 	}
 
-	if p.TapIO != nil {
+	if p.tapIO != nil {
 		tapAttrs = append(tapAttrs, tap.PdpAttr2DnstapAttr(addressAttr))
-		tap.SendPolicyHitMsg(p.TapIO, time.Now(), r, tap.PolicyHitMessage_POLICY_TRIGGER_ADDRESS, tapAttrs, response)
+		tap.SendPolicyHitMsg(p.tapIO, time.Now(), r, tap.PolicyHitMessage_POLICY_TRIGGER_ADDRESS, tapAttrs, response)
 	}
 
 	resp := makeResponse(response)
@@ -370,9 +433,9 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 
 	domain = state.Name()
 	if state.QClass() == dns.ClassCHAOS && state.QType() == dns.TypeTXT {
-		if strings.HasSuffix(domain, p.DebugSuffix) {
+		if strings.HasSuffix(domain, p.debugSuffix) {
 			debugQuery = true
-			domain = strings.TrimSuffix(domain, p.DebugSuffix)
+			domain = strings.TrimSuffix(domain, p.debugSuffix)
 		}
 	}
 
@@ -395,16 +458,21 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	}
 
 	response := new(pb.Response)
-	err := p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, response)
+	var err error
+	if p.streams > 0 {
+		err = p.pdp.StreamValidate(pb.Request{Attributes: attrs}, response)
+	} else {
+		err = p.pdp.Validate(ctx, pb.Request{Attributes: attrs}, response)
+	}
 	if err != nil {
 		log.Printf("[ERROR] Policy validation failed due to error %s", err)
 		return p.retRcode(w, r, dns.RcodeServerFailure, err)
 	}
 
 	tapAttrs := []*tap.DnstapAttribute{}
-	if p.TapIO != nil {
+	if p.tapIO != nil {
 		tapAttrs = tap.ConvertAttrs(attrs[ednsStart:])
-		tap.SendPolicyHitMsg(p.TapIO, time.Now(), r, tap.PolicyHitMessage_POLICY_TRIGGER_DOMAIN, tapAttrs, response)
+		tap.SendPolicyHitMsg(p.tapIO, time.Now(), r, tap.PolicyHitMessage_POLICY_TRIGGER_DOMAIN, tapAttrs, response)
 	}
 
 	resp := makeResponse(response)
@@ -461,7 +529,7 @@ func (p *PolicyPlugin) redirect(ctx context.Context, w dns.ResponseWriter, r *dn
 		msg.SetQuestion(dst, state.QType())
 
 		responseWriter := nonwriter.New(w)
-		status, err := plugin.NextOrFailure(p.Name(), p.Next, ctx, responseWriter, msg)
+		status, err := plugin.NextOrFailure(p.Name(), p.next, ctx, responseWriter, msg)
 		if err != nil {
 			return p.retRcode(w, r, dns.RcodeServerFailure, err)
 		}
@@ -476,4 +544,43 @@ func (p *PolicyPlugin) redirect(ctx context.Context, w dns.ResponseWriter, r *dn
 	w.WriteMsg(a)
 
 	return a.Rcode, nil
+}
+
+type response struct {
+	Action   int
+	Redirect string
+}
+
+func makeResponse(resp *pb.Response) (ret response) {
+	if resp == nil {
+		log.Printf("[ERROR] PDP response pointer is nil")
+		ret.Action = typeInvalid
+		return
+	}
+	if resp.Effect == pb.Response_PERMIT {
+		ret.Action = typeAllow
+		return
+	} else if resp.Effect == pb.Response_DENY {
+		for _, item := range resp.Obligation {
+			switch item.Id {
+			case "refuse":
+				if item.Value == "true" {
+					ret.Action = typeRefuse
+					return
+				}
+			case "redirect_to":
+				if item.Value != "" {
+					ret.Action = typeRedirect
+					ret.Redirect = item.Value
+					return
+				}
+			}
+		}
+		ret.Action = typeBlock
+		return
+	} else {
+		log.Printf("[ERROR] PDP Effect: %s", resp.Effect)
+		ret.Action = typeInvalid
+		return
+	}
 }

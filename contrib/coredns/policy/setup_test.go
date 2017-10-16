@@ -33,8 +33,7 @@ func TestPolicyConfigParse(t *testing.T) {
 							endpoint 10.2.4.1:5555
 						}
 					}`,
-			endpoints:  []string{"10.2.4.1:5555"},
-			errContent: "",
+			endpoints: []string{"10.2.4.1:5555"},
 		},
 		{
 			input: `.:53 {
@@ -42,8 +41,7 @@ func TestPolicyConfigParse(t *testing.T) {
 							endpoint 10.2.4.1:5555 10.2.4.2:5555
 						}
 					}`,
-			endpoints:  []string{"10.2.4.1:5555", "10.2.4.2:5555"},
-			errContent: "",
+			endpoints: []string{"10.2.4.1:5555", "10.2.4.2:5555"},
 		},
 		{
 			input: `.:53 {
@@ -62,8 +60,7 @@ func TestPolicyConfigParse(t *testing.T) {
 							edns0 0xfff0 uid hex string 32 0 32
 						}
 					}`,
-			endpoints:  []string{"10.2.4.1:5555"},
-			errContent: "",
+			endpoints: []string{"10.2.4.1:5555"},
 		},
 		{
 			input: `.:53 {
@@ -103,8 +100,7 @@ func TestPolicyConfigParse(t *testing.T) {
 							edns0 0xfff0 id hex string 32 16 32
 						}
 					}`,
-			endpoints:  []string{"10.2.4.1:5555"},
-			errContent: "",
+			endpoints: []string{"10.2.4.1:5555"},
 		},
 		{
 			input: `.:53 {
@@ -163,30 +159,60 @@ func TestPolicyConfigParse(t *testing.T) {
 							debug_query_suffix debug.local.
 						}
 					}`,
+			endpoints: []string{"10.2.4.1:5555"},
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							streams 10
+						}
+					}`,
+			endpoints: []string{"10.2.4.1:5555"},
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							streams Ten
+						}
+					}`,
 			endpoints:  []string{"10.2.4.1:5555"},
-			errContent: "",
+			errContent: "Could not parse number of streams",
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							streams -1
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Expected at least one stream got -1",
 		},
 	}
 
 	for _, test := range tests {
 		c := caddy.NewTestController("dns", test.input)
 		mw, err := policyParse(c)
-		if test.errContent != "" {
-			if err != nil {
+		if err != nil {
+			if len(test.errContent) > 0 {
 				if !strings.Contains(err.Error(), test.errContent) {
 					t.Errorf("Expected error '%v' but got '%v'\n", test.errContent, err)
 				}
-				continue
 			} else {
-				t.Errorf("Expected error '%v' but got 'nil'\n", test.errContent)
+				t.Errorf("Expected no error but got '%v'\n", err)
 			}
-		}
-		if len(test.endpoints) != len(mw.Endpoints) {
-			t.Errorf("Expected endpoints %v but got %v\n", test.endpoints, mw.Endpoints)
 		} else {
-			for i := 0; i < len(test.endpoints); i++ {
-				if test.endpoints[i] != mw.Endpoints[i] {
-					t.Errorf("Expected endpoint '%s' but got '%s'\n", test.endpoints[i], mw.Endpoints[i])
+			if len(test.errContent) > 0 {
+				t.Errorf("Expected error '%v' but got 'nil'\n", test.errContent)
+			} else if len(test.endpoints) != len(mw.endpoints) {
+				t.Errorf("Expected endpoints %v but got %v\n", test.endpoints, mw.endpoints)
+			} else {
+				for i := 0; i < len(test.endpoints); i++ {
+					if test.endpoints[i] != mw.endpoints[i] {
+						t.Errorf("Expected endpoint '%s' but got '%s'\n", test.endpoints[i], mw.endpoints[i])
+					}
 				}
 			}
 		}
