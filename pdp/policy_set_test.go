@@ -5,9 +5,9 @@ import "testing"
 func TestPolicySet(t *testing.T) {
 	c := &Context{
 		a: map[string]interface{}{
-				"missing-type":   MakeBooleanValue(false),
-				"test-string":    MakeStringValue("test"),
-				"example-string": MakeStringValue("example")}}
+			"missing-type":   MakeBooleanValue(false),
+			"test-string":    MakeStringValue("test"),
+			"example-string": MakeStringValue("example")}}
 
 	testID := "Test Policy"
 

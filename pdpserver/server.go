@@ -54,6 +54,8 @@ type server struct {
 	fragMemWarn *time.Time
 	gcMax       int
 	gcPercent   int
+
+	logLevel log.Level
 }
 
 func newServer() *server {
@@ -77,7 +79,8 @@ func newServer() *server {
 		q:         newQueue(),
 		c:         pdp.NewLocalContentStorage(nil),
 		gcMax:     gcp,
-		gcPercent: gcp}
+		gcPercent: gcp,
+		logLevel:  log.GetLevel()}
 }
 
 func (s *server) loadPolicies(path string) error {
