@@ -1,2 +1,0 @@
-syntax = "proto2";
-import public "github.com/dnstap/golang-dnstap/dnstap.pb/dnstap.proto";
