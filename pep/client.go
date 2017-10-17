@@ -103,10 +103,14 @@ func (c *client) Connect() error {
 		c.rpcs[i].limit = c.batchLimit
 		c.rpcs[i].batch = client.NewBatch()
 		if c.batchInterval > 0 {
-			ticker := time.NewTicker(time.Duration(c.batchInterval) * time.Microsecond)
+			timeout := time.After(time.Duration(c.batchInterval) * time.Microsecond)
 			go func(i int) {
-				for range ticker.C {
-					c.rpcs[i].callBatch()
+				for {
+					select {
+					case <-timeout:
+						c.rpcs[i].callBatch()
+						timeout = time.After(time.Duration(c.batchInterval) * time.Microsecond)
+					}
 				}
 			}(i)
 		}
