@@ -1,7 +1,6 @@
 package yast
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/infobloxopen/themis/pdp"
@@ -42,8 +41,5 @@ func makePIPSelector(ctx context, loc []string, m map[interface{}]interface{}) (
 		return pdp.PIPSelector{}, bindErrorf(pip_err, "selector(%s.%s)", loc[0], loc[1])
 	}
 
-	fmt.Printf("Res is %v\n", res)
-	fmt.Printf("Type of path[0] is %T\n", path[0])
-	fmt.Printf("Value of path[0] is %#v\n", path[0])
 	return res, nil
 }

@@ -334,7 +334,7 @@ func TestUnmarshal(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
-		ctx, err := pdp.NewContext(nil, 5, func(i int) (string, pdp.AttributeValue, error) {
+		ctx, err := pdp.NewContext(nil, nil, 5, func(i int) (string, pdp.AttributeValue, error) {
 			switch i {
 			case 0:
 				v, err := pdp.MakeValueFromString(pdp.TypeBoolean, "true")
@@ -504,7 +504,7 @@ func newStringContext(m map[string]string) (*pdp.Context, error) {
 		i++
 	}
 
-	return pdp.NewContext(nil, len(m), func(i int) (string, pdp.AttributeValue, error) {
+	return pdp.NewContext(nil, nil, len(m), func(i int) (string, pdp.AttributeValue, error) {
 		if i >= len(names) {
 			return "", pdp.AttributeValue{}, fmt.Errorf("no attribute name for index %d", i)
 		}

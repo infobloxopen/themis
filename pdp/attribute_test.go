@@ -10,7 +10,7 @@ import (
 )
 
 func TestAttribute(t *testing.T) {
-	ctx, err := NewContext(nil, 0, nil)
+	ctx, err := NewContext(nil, nil, 0, nil)
 	if err != nil {
 		t.Fatalf("Expected context but got error %s", err)
 	}
@@ -684,7 +684,7 @@ func TestAttributeValueSerialize(t *testing.T) {
 }
 
 func TestAttributeAssignmentExpression(t *testing.T) {
-	ctx, err := NewContext(nil, 0, nil)
+	ctx, err := NewContext(nil, nil, 0, nil)
 	if err != nil {
 		t.Fatalf("Expected context but got error %s", err)
 	}
@@ -745,7 +745,7 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 }
 
 func TestAttributeDesignator(t *testing.T) {
-	ctx, err := NewContext(nil, 1, func(i int) (string, AttributeValue, error) {
+	ctx, err := NewContext(nil, nil, 1, func(i int) (string, AttributeValue, error) {
 		return "test-id", MakeStringValue("test-value"), nil
 	})
 	if err != nil {

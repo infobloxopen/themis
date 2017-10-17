@@ -10,6 +10,8 @@ import (
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
+
+	ps "github.com/infobloxopen/themis/pip-service"
 )
 
 // Effect* constants define possible consequences of decision evaluation.
@@ -59,6 +61,7 @@ var (
 type Context struct {
 	a map[string]interface{}
 	c *LocalContentStorage
+	p *ps.ConnectionManager
 }
 
 // NewContext creates new instance of context. It requires pointer to local
@@ -70,8 +73,8 @@ type Context struct {
 // name and value. If "f" function returns error NewContext stops iterations
 // and returns the same error. All pairs of attribute name and type should be
 // unique.
-func NewContext(c *LocalContentStorage, count int, f func(i int) (string, AttributeValue, error)) (*Context, error) {
-	ctx := &Context{a: make(map[string]interface{}, count), c: c}
+func NewContext(c *LocalContentStorage, p *ps.ConnectionManager, count int, f func(i int) (string, AttributeValue, error)) (*Context, error) {
+	ctx := &Context{a: make(map[string]interface{}, count), c: c, p: p}
 
 	for i := 0; i < count; i++ {
 		ID, av, err := f(i)

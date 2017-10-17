@@ -6,31 +6,25 @@ import (
 	"strings"
 
 	ps "github.com/infobloxopen/themis/pip-service"
-	"google.golang.org/grpc"
+	//	"google.golang.org/grpc"
 )
 
 const pIPServicePort = ":5356"
 
 type PIPSelector struct {
-	service     string
-	serviceAddr string
-	queryType   string
-	path        []Expression
-	t           int
+	service string
+
+	queryType string
+	path      []Expression
+	t         int
 }
 
 func MakePIPSelector(service, queryType string, path []Expression, t int) (PIPSelector, error) {
-	addr, err := ps.GetPIPConnection(service)
-	if err != nil {
-		return PIPSelector{}, err
-	}
-
 	return PIPSelector{
-		service:     service,
-		serviceAddr: addr,
-		queryType:   queryType,
-		path:        path,
-		t:           t}, nil
+		service:   service,
+		queryType: queryType,
+		path:      path,
+		t:         t}, nil
 }
 
 func (s PIPSelector) GetResultType() int {
@@ -58,12 +52,10 @@ func (s PIPSelector) getAttributeValue(ctx *Context) (AttributeValue, error) {
 		attrList = append(attrList, &attr)
 	}
 
-	conn, err := grpc.Dial(s.serviceAddr, grpc.WithInsecure())
+	conn, err := ctx.p.GetConnection(s.service)
 	if err != nil {
 		return undefinedValue, bindError(fmt.Errorf("cannot connect to pip, err: '%s'", err), s.describe())
 	}
-	defer conn.Close()
-
 	c := ps.NewPIPClient(conn)
 	request := &ps.Request{QueryType: s.queryType, Attributes: attrList}
 

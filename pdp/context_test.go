@@ -20,7 +20,7 @@ func TestContext(t *testing.T) {
 	ct.InplaceInsert("test-content", &LocalContent{id: "test-content", tag: &tag})
 	lcs := &LocalContentStorage{r: ct}
 
-	ctx, err := NewContext(lcs, 9, func(i int) (string, AttributeValue, error) {
+	ctx, err := NewContext(lcs, nil, 9, func(i int) (string, AttributeValue, error) {
 		switch i {
 		default:
 			return "", undefinedValue, fmt.Errorf("no attribute for index: %d", i)
