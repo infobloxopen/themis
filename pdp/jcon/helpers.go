@@ -14,7 +14,7 @@ const (
 	delimArrayEnd   = "]"
 )
 
-func checkRootObjectStart(d *json.Decoder) (bool, error) {
+func CheckRootObjectStart(d *json.Decoder) (bool, error) {
 	t, err := d.Token()
 	if err == io.EOF {
 		return false, nil
@@ -58,7 +58,7 @@ func checkRootArrayStart(d *json.Decoder) (bool, error) {
 	return true, nil
 }
 
-func checkObjectStart(d *json.Decoder, desc string) error {
+func CheckObjectStart(d *json.Decoder, desc string) error {
 	t, err := d.Token()
 	if err != nil {
 		return err
@@ -76,7 +76,7 @@ func checkObjectStart(d *json.Decoder, desc string) error {
 	return nil
 }
 
-func checkArrayStart(d *json.Decoder, desc string) error {
+func CheckArrayStart(d *json.Decoder, desc string) error {
 	t, err := d.Token()
 	if err != nil {
 		return err
@@ -116,7 +116,7 @@ func checkObjectArrayStart(d *json.Decoder, desc string) (bool, error) {
 	return false, newObjectArrayStartDelimiterError(delim, delimObjectStart, delimArrayStart, desc)
 }
 
-func checkEOF(d *json.Decoder) error {
+func CheckEOF(d *json.Decoder) error {
 	t, err := d.Token()
 	if err == io.EOF {
 		return nil
@@ -216,12 +216,12 @@ func skipArray(d *json.Decoder, desc string) error {
 	}
 }
 
-type pair struct {
-	k string
-	v interface{}
+type Pair struct {
+	K string
+	V interface{}
 }
 
-func getUndefined(d *json.Decoder, desc string) (interface{}, error) {
+func GetUndefined(d *json.Decoder, desc string) (interface{}, error) {
 	t, err := d.Token()
 	if err != nil {
 		return nil, err
@@ -232,10 +232,10 @@ func getUndefined(d *json.Decoder, desc string) (interface{}, error) {
 		s := t.String()
 		switch s {
 		case delimObjectStart:
-			return getObject(d, desc)
+			return GetObject(d, desc)
 
 		case delimArrayStart:
-			return getArray(d, desc)
+			return GetArray(d, desc)
 		}
 
 		return nil, newUnexpectedDelimiterError(s, desc)
@@ -256,8 +256,8 @@ func getUndefined(d *json.Decoder, desc string) (interface{}, error) {
 	return t, nil
 }
 
-func getObject(d *json.Decoder, desc string) ([]pair, error) {
-	obj := []pair{}
+func GetObject(d *json.Decoder, desc string) ([]Pair, error) {
+	obj := []Pair{}
 
 	for {
 		t, err := d.Token()
@@ -270,12 +270,12 @@ func getObject(d *json.Decoder, desc string) ([]pair, error) {
 			return nil, newObjectTokenError(t, delimObjectEnd, desc)
 
 		case string:
-			v, err := getUndefined(d, desc)
+			v, err := GetUndefined(d, desc)
 			if err != nil {
 				return nil, bindError(err, t)
 			}
 
-			obj = append(obj, pair{k: t, v: v})
+			obj = append(obj, Pair{K: t, V: v})
 
 		case json.Delim:
 			if t.String() != delimObjectEnd {
@@ -287,7 +287,7 @@ func getObject(d *json.Decoder, desc string) ([]pair, error) {
 	}
 }
 
-func getArray(d *json.Decoder, desc string) ([]interface{}, error) {
+func GetArray(d *json.Decoder, desc string) ([]interface{}, error) {
 	arr := []interface{}{}
 	i := 1
 	for {
@@ -308,7 +308,7 @@ func getArray(d *json.Decoder, desc string) ([]interface{}, error) {
 				return arr, nil
 
 			case delimObjectStart:
-				v, err := getObject(d, desc)
+				v, err := GetObject(d, desc)
 				if err != nil {
 					return nil, bindError(err, src)
 				}
@@ -316,7 +316,7 @@ func getArray(d *json.Decoder, desc string) ([]interface{}, error) {
 				arr = append(arr, v)
 
 			case delimArrayStart:
-				v, err := getArray(d, desc)
+				v, err := GetArray(d, desc)
 				if err != nil {
 					return nil, bindError(err, src)
 				}
@@ -345,7 +345,7 @@ func getBoolean(d *json.Decoder, desc string) (bool, error) {
 	return b, nil
 }
 
-func getString(d *json.Decoder, desc string) (string, error) {
+func GetString(d *json.Decoder, desc string) (string, error) {
 	t, err := d.Token()
 	if err != nil {
 		return "", err
@@ -359,7 +359,7 @@ func getString(d *json.Decoder, desc string) (string, error) {
 	return s, nil
 }
 
-func getStringSequence(d *json.Decoder, desc string, f func(s string) error) error {
+func GetStringSequence(d *json.Decoder, desc string, f func(s string) error) error {
 	obj, err := checkObjectArrayStart(d, desc)
 	if err != nil {
 		return err
@@ -437,7 +437,7 @@ func getStringSequenceFromArray(d *json.Decoder, desc string, f func(s string) e
 	}
 }
 
-func unmarshalObject(d *json.Decoder, u func(string, *json.Decoder) error, desc string) error {
+func UnmarshalObject(d *json.Decoder, u func(string, *json.Decoder) error, desc string) error {
 	for {
 		t, err := d.Token()
 		if err != nil {
@@ -464,7 +464,7 @@ func unmarshalObject(d *json.Decoder, u func(string, *json.Decoder) error, desc 
 	}
 }
 
-func unmarshalObjectArray(d *json.Decoder, u func(*json.Decoder) error, desc string) error {
+func UnmarshalObjectArray(d *json.Decoder, u func(*json.Decoder) error, desc string) error {
 	i := 1
 	for {
 		src := fmt.Sprintf("%d", i)

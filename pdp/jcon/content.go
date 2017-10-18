@@ -21,7 +21,7 @@ func (c *content) bindError(err error) error {
 }
 
 func (c *content) unmarshal(d *json.Decoder) error {
-	ok, err := checkRootObjectStart(d)
+	ok, err := CheckRootObjectStart(d)
 	if err != nil {
 		return c.bindError(err)
 	}
@@ -30,7 +30,7 @@ func (c *content) unmarshal(d *json.Decoder) error {
 		return nil
 	}
 
-	err = unmarshalObject(d, func(k string, d *json.Decoder) error {
+	err = UnmarshalObject(d, func(k string, d *json.Decoder) error {
 		switch strings.ToLower(k) {
 		case "id":
 			return c.unmarshalIDField(d)
@@ -45,7 +45,7 @@ func (c *content) unmarshal(d *json.Decoder) error {
 		return c.bindError(err)
 	}
 
-	err = checkEOF(d)
+	err = CheckEOF(d)
 	if err != nil {
 		return c.bindError(err)
 	}
@@ -54,7 +54,7 @@ func (c *content) unmarshal(d *json.Decoder) error {
 }
 
 func (c *content) unmarshalIDField(d *json.Decoder) error {
-	id, err := getString(d, "content id")
+	id, err := GetString(d, "content id")
 	if err != nil {
 		return err
 	}
@@ -64,13 +64,13 @@ func (c *content) unmarshalIDField(d *json.Decoder) error {
 }
 
 func (c *content) unmarshalItemsField(d *json.Decoder) error {
-	err := checkObjectStart(d, "content items")
+	err := CheckObjectStart(d, "content items")
 	if err != nil {
 		return err
 	}
 
 	items := []*pdp.ContentItem{}
-	err = unmarshalObject(d, func(k string, d *json.Decoder) error {
+	err = UnmarshalObject(d, func(k string, d *json.Decoder) error {
 		v, err := unmarshalContentItem(k, d)
 		if err != nil {
 			return bindError(err, k)

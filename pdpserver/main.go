@@ -1,9 +1,9 @@
 package main
 
 import (
-	log "github.com/Sirupsen/logrus"
-	"os"
 	"runtime"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 func main() {
@@ -13,8 +13,13 @@ func main() {
 	pdp := newServer()
 
 	if pdp == nil {
-		log.Error("Failed to create Server.")
-		os.Exit(1)
+		log.Fatal("Failed to create Server.")
+	}
+
+	if err := pdp.setPolicyFormat(conf.policyFmt); err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Fatal("Failed to initialize Server.")
 	}
 
 	pdp.loadPolicies(conf.policy)

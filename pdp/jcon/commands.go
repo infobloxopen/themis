@@ -17,14 +17,14 @@ func unmarshalCommand(d *json.Decoder, u *pdp.ContentUpdate) error {
 	var entity *pdp.ContentItem
 	entityOk := false
 
-	err := unmarshalObject(d, func(k string, d *json.Decoder) error {
+	err := UnmarshalObject(d, func(k string, d *json.Decoder) error {
 		switch strings.ToLower(k) {
 		case "op":
 			if opOk {
 				return newDuplicateCommandFieldError(k)
 			}
 
-			s, err := getString(d, "operation")
+			s, err := GetString(d, "operation")
 			if err != nil {
 				return err
 			}
@@ -41,7 +41,7 @@ func unmarshalCommand(d *json.Decoder, u *pdp.ContentUpdate) error {
 				return newDuplicateCommandFieldError(k)
 			}
 			path = []string{}
-			err := getStringSequence(d, "path", func(s string) error {
+			err := GetStringSequence(d, "path", func(s string) error {
 				path = append(path, s)
 				return nil
 			})
@@ -99,7 +99,7 @@ func unmarshalCommands(d *json.Decoder, u *pdp.ContentUpdate) error {
 		return nil
 	}
 
-	err = unmarshalObjectArray(d, func(d *json.Decoder) error {
+	err = UnmarshalObjectArray(d, func(d *json.Decoder) error {
 		return unmarshalCommand(d, u)
 	}, "update")
 
@@ -107,5 +107,5 @@ func unmarshalCommands(d *json.Decoder, u *pdp.ContentUpdate) error {
 		return err
 	}
 
-	return checkEOF(d)
+	return CheckEOF(d)
 }

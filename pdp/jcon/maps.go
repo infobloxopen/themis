@@ -13,7 +13,7 @@ import (
 type mapUnmarshaller interface {
 	get() interface{}
 	unmarshal(k string, d *json.Decoder) error
-	postProcess(p pair) error
+	postProcess(p Pair) error
 }
 
 func newTypedMap(c *contentItem, keyIdx int) (mapUnmarshaller, error) {
@@ -62,13 +62,13 @@ func (m *stringMap) unmarshal(k string, d *json.Decoder) error {
 	return nil
 }
 
-func (m *stringMap) postProcess(p pair) error {
-	v, err := m.c.postProcess(p.v, m.i+1)
+func (m *stringMap) postProcess(p Pair) error {
+	v, err := m.c.postProcess(p.V, m.i+1)
 	if err != nil {
-		return bindError(err, p.k)
+		return bindError(err, p.K)
 	}
 
-	m.m.InplaceInsert(p.k, v)
+	m.m.InplaceInsert(p.K, v)
 
 	return nil
 }
@@ -106,23 +106,23 @@ func (m *networkMap) unmarshal(k string, d *json.Decoder) error {
 	return nil
 }
 
-func (m *networkMap) postProcess(p pair) error {
+func (m *networkMap) postProcess(p Pair) error {
 	var (
 		n   *net.IPNet
 		err error
 	)
 
-	a := net.ParseIP(p.k)
+	a := net.ParseIP(p.K)
 	if a == nil {
-		_, n, err = net.ParseCIDR(p.k)
+		_, n, err = net.ParseCIDR(p.K)
 		if err != nil {
-			return newAddressNetworkCastError(p.k, err)
+			return newAddressNetworkCastError(p.K, err)
 		}
 	}
 
-	v, err := m.c.postProcess(p.v, m.i+1)
+	v, err := m.c.postProcess(p.V, m.i+1)
 	if err != nil {
-		return bindError(err, p.k)
+		return bindError(err, p.K)
 	}
 
 	if a != nil {
@@ -159,15 +159,15 @@ func (m *domainMap) unmarshal(k string, d *json.Decoder) error {
 	return nil
 }
 
-func (m *domainMap) postProcess(p pair) error {
-	n, err := pdp.AdjustDomainName(p.k)
+func (m *domainMap) postProcess(p Pair) error {
+	n, err := pdp.AdjustDomainName(p.K)
 	if err != nil {
-		return newDomainCastError(p.k, err)
+		return newDomainCastError(p.K, err)
 	}
 
-	v, err := m.c.postProcess(p.v, m.i+1)
+	v, err := m.c.postProcess(p.V, m.i+1)
 	if err != nil {
-		return bindError(err, p.k)
+		return bindError(err, p.K)
 	}
 
 	m.m.InplaceInsert(n, v)

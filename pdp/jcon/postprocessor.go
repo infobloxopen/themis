@@ -11,7 +11,7 @@ import (
 )
 
 func (c *contentItem) ppMap(v interface{}, keyIdx int) (interface{}, error) {
-	pairs, ok := v.([]pair)
+	pairs, ok := v.([]Pair)
 	if !ok {
 		return nil, newInvalidMapContentItemNodeError(v, fmt.Sprintf("level %d map", keyIdx+1))
 	}
@@ -31,9 +31,9 @@ func (c *contentItem) ppMap(v interface{}, keyIdx int) (interface{}, error) {
 	return m.get(), nil
 }
 
-func ppStringSequenceFromPairs(v []pair, desc string, f func(s string) error) error {
+func ppStringSequenceFromPairs(v []Pair, desc string, f func(s string) error) error {
 	for i, p := range v {
-		err := f(p.k)
+		err := f(p.K)
 		if err != nil {
 			return bindErrorf(err, "%d", i+1)
 		}
@@ -60,7 +60,7 @@ func ppStringSequenceFromArray(v []interface{}, desc string, f func(s string) er
 
 func ppStringSequence(v interface{}, desc string, f func(s string) error) error {
 	switch v := v.(type) {
-	case []pair:
+	case []Pair:
 		return ppStringSequenceFromPairs(v, desc, f)
 
 	case []interface{}:

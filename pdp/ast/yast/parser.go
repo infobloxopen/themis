@@ -2,6 +2,9 @@
 package yast
 
 import (
+	"io"
+	"io/ioutil"
+
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v2"
 
@@ -37,13 +40,16 @@ const (
 	yastTagDenyOverridesAlg         = "denyoverrides"
 )
 
-// Unmarshal parses YAML policies representation to PDP's internal
-// representation and returns pointer to PolicyStorage with the policies.
-// It sets given tag to the policies. Policies with no tag can't be updated
-// incrementally.
-func Unmarshal(in []byte, tag *uuid.UUID) (*pdp.PolicyStorage, error) {
+type Parser struct{}
+
+func (p Parser) Unmarshal(in io.Reader, tag *uuid.UUID) (*pdp.PolicyStorage, error) {
+	b, err := ioutil.ReadAll(in)
+	if err != nil {
+		return nil, err
+	}
+
 	m := make(map[interface{}]interface{})
-	err := yaml.Unmarshal(in, &m)
+	err = yaml.Unmarshal(b, &m)
 	if err != nil {
 		return nil, err
 	}
@@ -58,26 +64,26 @@ func Unmarshal(in []byte, tag *uuid.UUID) (*pdp.PolicyStorage, error) {
 		return nil, err
 	}
 
-	p, err := ctx.unmarshalRootPolicy(m)
+	rp, err := ctx.unmarshalRootPolicy(m)
 	if err != nil {
 		return nil, err
 	}
 
-	if p != nil {
-		return pdp.NewPolicyStorage(p, ctx.attrs, tag), nil
+	if rp != nil {
+		return pdp.NewPolicyStorage(rp, ctx.attrs, tag), nil
 	}
 
 	return nil, newRootKeysError(m)
 }
 
-// UnmarshalUpdate parses YAML policies update representation to PDP's internal
-// representation. Requires attribute symbols table as attrs argument which maps
-// attribute name to its specification. Argument oldTag should match current
-// policies tag to make update applicable. Value of newTag is set to policies
-// when update is applied.
-func UnmarshalUpdate(in []byte, attrs map[string]pdp.Attribute, oldTag, newTag uuid.UUID) (*pdp.PolicyUpdate, error) {
+func (p Parser) UnmarshalUpdate(in io.Reader, attrs map[string]pdp.Attribute, oldTag, newTag uuid.UUID) (*pdp.PolicyUpdate, error) {
+	b, err := ioutil.ReadAll(in)
+	if err != nil {
+		return nil, err
+	}
+
 	a := []interface{}{}
-	err := yaml.Unmarshal(in, &a)
+	err = yaml.Unmarshal(b, &a)
 	if err != nil {
 		return nil, err
 	}

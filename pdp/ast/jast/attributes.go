@@ -1,0 +1,37 @@
+package jast
+
+import (
+	"encoding/json"
+	"strings"
+
+	"github.com/infobloxopen/themis/pdp"
+	"github.com/infobloxopen/themis/pdp/jcon"
+)
+
+func (ctx *context) decodeAttributeDeclarations(d *json.Decoder) boundError {
+	err := jcon.CheckObjectStart(d, "attribute declarations")
+	if err != nil {
+		return bindError(err, yastTagAttributes)
+	}
+
+	err = jcon.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+		tstr, err := jcon.GetString(d, "attribute data type")
+		if err != nil {
+			return err
+		}
+
+		t, ok := pdp.TypeIDs[strings.ToLower(tstr)]
+		if !ok {
+			return bindError(newAttributeTypeError(tstr), k)
+		}
+
+		ctx.attrs[k] = pdp.MakeAttribute(k, t)
+
+		return nil
+	}, "attribute declarations")
+	if err != nil {
+		return bindError(err, yastTagAttributes)
+	}
+
+	return nil
+}

@@ -2,6 +2,7 @@ package yast
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -293,12 +294,13 @@ policies:
 )
 
 func TestUnmarshal(t *testing.T) {
-	_, err := Unmarshal([]byte(invalidYAML), nil)
+	p := Parser{}
+	_, err := p.Unmarshal(strings.NewReader(invalidYAML), nil)
 	if err == nil {
 		t.Errorf("Expected error for invalid YAML but got nothing")
 	}
 
-	_, err = Unmarshal([]byte(invalidRootKeysPolicy), nil)
+	_, err = p.Unmarshal(strings.NewReader(invalidRootKeysPolicy), nil)
 	if err == nil {
 		t.Errorf("Expected error for policy with invalid keys but got nothing")
 	} else {
@@ -308,7 +310,7 @@ func TestUnmarshal(t *testing.T) {
 		}
 	}
 
-	s, err := Unmarshal([]byte(simpleAllPermitPolicy), nil)
+	s, err := p.Unmarshal(strings.NewReader(simpleAllPermitPolicy), nil)
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
@@ -330,7 +332,7 @@ func TestUnmarshal(t *testing.T) {
 		}
 	}
 
-	s, err = Unmarshal([]byte(allFeaturePolicies), nil)
+	s, err = p.Unmarshal(strings.NewReader(allFeaturePolicies), nil)
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
@@ -410,8 +412,9 @@ func TestUnmarshal(t *testing.T) {
 }
 
 func TestUnmarshalUpdate(t *testing.T) {
+	p := Parser{}
 	tag := uuid.New()
-	s, err := Unmarshal([]byte(policyToUpdate), &tag)
+	s, err := p.Unmarshal(strings.NewReader(policyToUpdate), &tag)
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 		return
@@ -431,7 +434,7 @@ func TestUnmarshalUpdate(t *testing.T) {
 		return
 	}
 
-	u, err := UnmarshalUpdate([]byte(simpleUpdate), tr.Attributes(), tag, uuid.New())
+	u, err := p.UnmarshalUpdate(strings.NewReader(simpleUpdate), tr.Attributes(), tag, uuid.New())
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 		return

@@ -20,16 +20,16 @@ bootstrap:
 clean: clean-cover clean-pepcli clean-papcli clean-pdpserver clean-egen
 
 .PHONY: fmt
-fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jcon fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver fmt-plugin fmt-egen
+fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver fmt-plugin fmt-egen
 
 .PHONY: build
 build: build-pepcli build-papcli build-pdpserver build-plugin build-egen
 
 .PHONY: test
-test: test-pdp test-pdp-yast test-pdp-jcon test-pep test-plugin
+test: test-pdp test-pdp-yast test-pdp-jast test-pdp-jcon test-pep test-plugin
 
 .PHONY: cover
-cover: cover-pdp cover-pdp-yast cover-pdp-jcon cover-pep cover-plugin
+cover: cover-pdp cover-pdp-yast cover-pdp-jast cover-pdp-jcon cover-pep cover-plugin
 
 $(COVEROUT):
 	echo > $(COVEROUT)
@@ -64,7 +64,12 @@ fmt-pdp:
 .PHONY: fmt-pdp-yast
 fmt-pdp-yast:
 	@echo "Checking PDP YAST format..."
-	@$(AT)/pdp/yast && $(GOFMTCHECK)
+	@$(AT)/pdp/ast/yast && $(GOFMTCHECK)
+
+.PHONY: fmt-pdp-jast
+fmt-pdp-jast:
+	@echo "Checking PDP JAST format..."
+	@$(AT)/pdp/ast/jast && $(GOFMTCHECK)
 
 .PHONY: fmt-pdp-jcon
 fmt-pdp-jcon:
@@ -150,7 +155,11 @@ test-pdp:
 
 .PHONY: test-pdp-yast
 test-pdp-yast:
-	$(AT)/pdp/yast && $(GOTEST)
+	$(AT)/pdp/ast/yast && $(GOTEST)
+
+.PHONY: test-pdp-jast
+test-pdp-jast:
+	$(AT)/pdp/ast/jast && $(GOTEST)
 
 .PHONY: test-pdp-jcon
 test-pdp-jcon:
@@ -172,7 +181,11 @@ cover-pdp: | $(COVEROUT)
 
 .PHONY: cover-pdp-yast
 cover-pdp-yast: | $(COVEROUT)
-	$(AT)/pdp/yast && $(GOCOVER)
+	$(AT)/pdp/ast/yast && $(GOCOVER)
+
+.PHONY: cover-pdp-jast
+cover-pdp-jast: | $(COVEROUT)
+	$(AT)/pdp/ast/jast && $(GOCOVER)
 
 .PHONY: cover-pdp-jcon
 cover-pdp-jcon: | $(COVEROUT)
