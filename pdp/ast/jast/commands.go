@@ -54,27 +54,33 @@ func (ctx *context) decodeEntity(d *json.Decoder) (interface{}, error) {
 		case yastTagPolicies:
 			isPolicySet = true
 			policies, err = ctx.decodePolicies(d)
-			return err
+			if err != nil {
+				return bindError(err, makeSource("policy set", id, hidden))
+			}
+			return nil
 
 		case yastTagRules:
 			isPolicy = true
 			rules, err = ctx.decodeRules(d)
-			return err
+			if err != nil {
+				return bindError(err, makeSource("policy", id, hidden))
+			}
+			return nil
 
 		case yastTagEffect:
 			isRule = true
 			var s string
+			src := makeSource("rule", id, hidden)
 			s, err = jparser.GetString(d, "effect")
 			if err != nil {
-				return err
+				return bindError(err, src)
 			}
 
 			var ok bool
 			effect, ok = pdp.EffectIDs[strings.ToLower(s)]
 			if !ok {
-				return newUnknownEffectError(s)
+				return bindError(newUnknownEffectError(s), src)
 			}
-
 			return nil
 
 		case yastTagCondition:
@@ -96,8 +102,6 @@ func (ctx *context) decodeEntity(d *json.Decoder) (interface{}, error) {
 		return nil, err
 	}
 
-	src := makeSource("policy or set or rule", id, hidden, 0)
-
 	if isRule && isPolicy || isRule && isPolicySet || isPolicy && isPolicySet {
 		tags := []string{}
 		if isPolicy {
@@ -112,13 +116,13 @@ func (ctx *context) decodeEntity(d *json.Decoder) (interface{}, error) {
 			tags = append(tags, yastTagEffect)
 		}
 
-		return nil, bindError(newEntityAmbiguityError(tags), src)
+		return nil, newEntityAmbiguityError(tags)
 	}
 
 	if isPolicySet {
 		alg, params, err := ctx.unmarshalPolicyCombiningAlg(algObj, policies)
 		if err != nil {
-			return nil, err
+			return nil, bindError(err, makeSource("policy set", id, hidden))
 		}
 
 		return pdp.NewPolicySet(id, hidden, target, policies, alg, params, obligs), nil
@@ -127,7 +131,7 @@ func (ctx *context) decodeEntity(d *json.Decoder) (interface{}, error) {
 	if isPolicy {
 		alg, params, err := ctx.unmarshalRuleCombiningAlg(algObj, rules)
 		if err != nil {
-			return nil, err
+			return nil, bindError(err, makeSource("policy", id, hidden))
 		}
 
 		return pdp.NewPolicy(id, hidden, target, rules, alg, params, obligs), nil
@@ -137,7 +141,7 @@ func (ctx *context) decodeEntity(d *json.Decoder) (interface{}, error) {
 		return pdp.NewRule(id, hidden, target, cond, effect, obligs), nil
 	}
 
-	return nil, bindError(newEntityMissingKeyError(), src)
+	return nil, newEntityMissingKeyError()
 }
 
 func (ctx *context) decodeCommand(d *json.Decoder, u *pdp.PolicyUpdate) error {
@@ -201,7 +205,7 @@ func (ctx *context) decodeCommands(d *json.Decoder, u *pdp.PolicyUpdate) error {
 
 	if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
 		if err := ctx.decodeCommand(d, u); err != nil {
-			return bindErrorf(err, "%d", idx+1)
+			return bindErrorf(err, "%d", idx)
 		}
 
 		return nil

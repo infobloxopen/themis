@@ -9,17 +9,11 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 )
 
-func makeSource(desc string, ID string, hidden bool, idx int) string {
-	src := fmt.Sprintf("hidden %s", desc)
-	if !hidden {
-		src = fmt.Sprintf("%s \"%s\"", desc, ID)
+func makeSource(desc string, id string, hidden bool) string {
+	if hidden {
+		return fmt.Sprintf("hidden %s", desc)
 	}
-
-	if idx > 0 {
-		src = fmt.Sprintf("(%d) %s", idx, src)
-	}
-
-	return src
+	return fmt.Sprintf("%s \"%s\"", desc, id)
 }
 
 func (ctx *context) decodePolicies(d *json.Decoder) ([]pdp.Evaluable, error) {
@@ -29,7 +23,7 @@ func (ctx *context) decodePolicies(d *json.Decoder) ([]pdp.Evaluable, error) {
 
 	policies := []pdp.Evaluable{}
 	if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
-		e, err := ctx.decodeEvaluable(d, idx+1)
+		e, err := ctx.decodeEvaluable(d)
 		if err != nil {
 			return bindErrorf(err, "%d", idx)
 		}
@@ -44,7 +38,7 @@ func (ctx *context) decodePolicies(d *json.Decoder) ([]pdp.Evaluable, error) {
 	return policies, nil
 }
 
-func (ctx *context) decodeEvaluable(d *json.Decoder, i int) (pdp.Evaluable, error) {
+func (ctx *context) decodeEvaluable(d *json.Decoder) (pdp.Evaluable, error) {
 	var (
 		hidden      bool = true
 		isPolicy    bool
@@ -83,16 +77,22 @@ func (ctx *context) decodeEvaluable(d *json.Decoder, i int) (pdp.Evaluable, erro
 		case yastTagPolicies:
 			isPolicySet = true
 			policies, err = ctx.decodePolicies(d)
-			return err
+			if err != nil {
+				return bindError(err, makeSource("policy set", pid, hidden))
+			}
+			return nil
 
 		case yastTagRules:
 			isPolicy = true
 			rules, err = ctx.decodeRules(d)
-			return err
+			if err != nil {
+				return bindError(err, makeSource("policy", pid, hidden))
+			}
+			return nil
 		}
 
 		return newUnknownAttributeError(k)
-	}, "root")
+	}, "policy or policy set")
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (ctx *context) decodeEvaluable(d *json.Decoder, i int) (pdp.Evaluable, erro
 	if isPolicySet {
 		alg, params, err := ctx.unmarshalPolicyCombiningAlg(algObj, policies)
 		if err != nil {
-			return nil, err
+			return nil, bindError(err, makeSource("policy set", pid, hidden))
 		}
 
 		return pdp.NewPolicySet(pid, hidden, target, policies, alg, params, obligs), nil
@@ -113,7 +113,7 @@ func (ctx *context) decodeEvaluable(d *json.Decoder, i int) (pdp.Evaluable, erro
 	if isPolicy {
 		alg, params, err := ctx.unmarshalRuleCombiningAlg(algObj, rules)
 		if err != nil {
-			return nil, err
+			return nil, bindError(err, makeSource("policy", pid, hidden))
 		}
 
 		return pdp.NewPolicy(pid, hidden, target, rules, alg, params, obligs), nil
@@ -127,7 +127,7 @@ func (ctx *context) decodeRootPolicy(d *json.Decoder) error {
 		return err
 	}
 
-	e, err := ctx.decodeEvaluable(d, 0)
+	e, err := ctx.decodeEvaluable(d)
 	if err != nil {
 		return err
 	}

@@ -27,13 +27,13 @@ func (ctx context) unmarshalCondition(m map[interface{}]interface{}) (pdp.Expres
 	return e, nil
 }
 
-func (ctx context) unmarshalRule(m map[interface{}]interface{}, i int) (*pdp.Rule, boundError) {
+func (ctx context) unmarshalRule(m map[interface{}]interface{}) (*pdp.Rule, boundError) {
 	ID, ok, err := ctx.extractStringOpt(m, yastTagID, "id")
 	if err != nil {
-		return nil, bindErrorf(err, "%d", i)
+		return nil, err
 	}
 
-	src := makeSource("rule", ID, !ok, i)
+	src := makeSource("rule", ID, !ok)
 
 	target, err := ctx.unmarshalTarget(m)
 	if err != nil {
@@ -64,7 +64,7 @@ func (ctx context) unmarshalRule(m map[interface{}]interface{}, i int) (*pdp.Rul
 }
 
 func (ctx context) unmarshalRuleEntity(m map[interface{}]interface{}, ID string, hidden bool, effect interface{}) (*pdp.Rule, boundError) {
-	src := makeSource("rule", ID, hidden, 0)
+	src := makeSource("rule", ID, hidden)
 
 	target, err := ctx.unmarshalTarget(m)
 	if err != nil {
@@ -94,13 +94,13 @@ func (ctx context) unmarshalRuleEntity(m map[interface{}]interface{}, ID string,
 	return pdp.NewRule(ID, !ok, target, cond, eff, obls), nil
 }
 
-func (ctx context) decodeRuleItem(d *json.Decoder, i int) (*pdp.Rule, error) {
+func (ctx context) decodeRuleItem(d *json.Decoder) (*pdp.Rule, error) {
 	m, err := ctx.decodeObject(d, "rule")
 	if err != nil {
 		return nil, err
 	}
 
-	return ctx.unmarshalRule(m, i)
+	return ctx.unmarshalRule(m)
 }
 
 func (ctx *context) decodeRules(d *json.Decoder) ([]*pdp.Rule, error) {
@@ -112,7 +112,7 @@ func (ctx *context) decodeRules(d *json.Decoder) ([]*pdp.Rule, error) {
 	rules := []*pdp.Rule{}
 
 	err = jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
-		e, err := ctx.decodeRuleItem(d, idx+1)
+		e, err := ctx.decodeRuleItem(d)
 		if err != nil {
 			return bindErrorf(err, "%d", idx)
 		}
