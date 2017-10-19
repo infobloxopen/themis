@@ -1,77 +1,22 @@
 syntax = "proto2";
 
-import "github.com/dnstap/golang-dnstap/dnstap.proto";
+package dnstap;
 
-package policytap;
+
+// PolicyAction defines available policy action type
+enum PolicyAction {
+    DENY = 1;
+    PASSTHROUGH = 2;
+    NXDOMAIN = 3;
+    REDIRECT = 4;
+    REFUSE = 5;
+}
 
 message DnstapAttribute {
 	required string id = 1;
-	required string type = 2;
-	required string value = 3;
+	required bytes value = 2;
 }
 
-message PolicyHitMessage {
-
-	// policy actions of interest
-	enum PolicyActionType {
-		POLICY_ACTION_DENY = 1;
-		POLICY_ACTION_PASSTHROUGH = 2;
-		POLICY_ACTION_NXDOMAIN = 3;
-		POLICY_ACTION_REDIRECT = 4;
-		POLICY_ACTION_REFUSE = 5;
-	}
-
-	// two types of policy trigger
-	enum PolicyTriggerType {
-		POLICY_TRIGGER_ADDRESS = 1;
-		POLICY_TRIGGER_DOMAIN = 2;
-	}
-
-	// Policy hit time, in seconds and nanoseconds since the UNIX epoch.
-	required uint64 time_sec = 1;
-	required fixed32 time_nsec = 2;
-
-	// DNS query/transaction id; this is a 16-bit value, but
-	// ProtocolBuffers interface defines only longer integers.
-	required uint32 query_id = 3;
-
-	// Policy Trigger Type -- domain name or address
-	required PolicyTriggerType trigger_type = 4;
-
-	// DNS query type, which is one of standard DNS resource record types;
-	// see http://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-4
-	required uint32 query_type = 5;
-
-	// Name of the queried domain
-	required string query_name = 6;
-
-	// Policy action taken
-	required PolicyActionType policy_action = 7;
-
-	// Policy ID
-	optional bytes policy_id = 8;
-
-	// Redirect record type, one of the values from the standard
-	// set (see comment for query_type above) if policy type is
-	// POLICY_ACTION_REDIRECT
-	optional uint32 redirect_rr_type = 9;
-
-	// Redirect record data (in conjunction with
-	// POLICY_ACTION_REDIRECT, see above)
-	optional string redirect_rr_data = 10;
-
-	repeated DnstapAttribute attributes = 15;
-}
-
-extend dnstap.Dnstap {
-	optional PolicyHitMessage policy_hit = 1001;
-}
-
-message PolicyHitMessageWrapper {
-	required PolicyHitMessage policy_hit = 1001;
-}
-
-// Collection of attributes to be stored in Dnstap.extra (in wire format)
-message ExtraAttributes {
-	repeated DnstapAttribute attributes = 1;
+message Extra {
+  repeated DnstapAttribute attrs = 1;
 }

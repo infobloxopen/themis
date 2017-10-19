@@ -1,2 +1,2 @@
 #!/bin/bash
-protoc -I ../../../vendor/ -I . --go_out=. policytap/policytap.proto
+protoc --go_out=.. policytap.proto

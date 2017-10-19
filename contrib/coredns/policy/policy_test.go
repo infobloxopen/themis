@@ -13,8 +13,8 @@ import (
 	dtest "github.com/coredns/coredns/plugin/dnstap/test"
 	"github.com/coredns/coredns/plugin/pkg/dnstest"
 	"github.com/coredns/coredns/plugin/test"
-	dnstap "github.com/dnstap/golang-dnstap"
 
+	"github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 	pdp "github.com/infobloxopen/themis/pdp-service"
 
 	"github.com/miekg/dns"
@@ -38,6 +38,7 @@ func TestPolicy(t *testing.T) {
 		errRespIP  error
 		status     int
 		err        error
+		attrs      []*pdp.Attribute
 	}{
 		{
 			query:     "test.com.",
@@ -75,6 +76,13 @@ func TestPolicy(t *testing.T) {
 			response:  &pdp.Response{Effect: pdp.Response_DENY},
 			status:    dns.RcodeNameError,
 			err:       nil,
+			attrs: []*pdp.Attribute{
+				{Id: "type", Value: "query"},
+				{Id: "domain_name", Value: "test.com"},
+				{Id: "dns_qtype", Value: "1"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "policy_action", Value: "3"},
+			},
 		},
 		{
 			query:      "test.com.",
@@ -91,6 +99,14 @@ func TestPolicy(t *testing.T) {
 			responseIP: &pdp.Response{Effect: pdp.Response_DENY},
 			status:     dns.RcodeNameError,
 			err:        nil,
+			attrs: []*pdp.Attribute{
+				{Id: "type", Value: "response"},
+				{Id: "domain_name", Value: "test.com"},
+				{Id: "dns_qtype", Value: "1"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "address", Value: "10.240.0.1"},
+				{Id: "policy_action", Value: "3"},
+			},
 		},
 		{
 			query:     "test.com.",
@@ -99,6 +115,14 @@ func TestPolicy(t *testing.T) {
 				Obligation: []*pdp.Attribute{{"redirect_to", "string", "221.228.88.194"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
+			attrs: []*pdp.Attribute{
+				{Id: "type", Value: "query"},
+				{Id: "domain_name", Value: "test.com"},
+				{Id: "dns_qtype", Value: "1"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "redirect_to", Value: "221.228.88.194"},
+				{Id: "policy_action", Value: "4"},
+			},
 		},
 		{
 			query:     "test.com.",
@@ -107,6 +131,14 @@ func TestPolicy(t *testing.T) {
 				Obligation: []*pdp.Attribute{{"redirect_to", "string", "redirect.biz"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
+			attrs: []*pdp.Attribute{
+				{Id: "type", Value: "query"},
+				{Id: "domain_name", Value: "test.com"},
+				{Id: "dns_qtype", Value: "1"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "redirect_to", Value: "redirect.biz"},
+				{Id: "policy_action", Value: "4"},
+			},
 		},
 		{
 			query:     "test.com.",
@@ -116,6 +148,15 @@ func TestPolicy(t *testing.T) {
 				Obligation: []*pdp.Attribute{{"redirect_to", "string", "221.228.88.194"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
+			attrs: []*pdp.Attribute{
+				{Id: "type", Value: "response"},
+				{Id: "domain_name", Value: "test.com"},
+				{Id: "dns_qtype", Value: "1"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "address", Value: "10.240.0.1"},
+				{Id: "redirect_to", Value: "221.228.88.194"},
+				{Id: "policy_action", Value: "4"},
+			},
 		},
 		{
 			query:     "test.com.",
@@ -125,6 +166,15 @@ func TestPolicy(t *testing.T) {
 				Obligation: []*pdp.Attribute{{"redirect_to", "string", "redirect.biz"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
+			attrs: []*pdp.Attribute{
+				{Id: "type", Value: "response"},
+				{Id: "domain_name", Value: "test.com"},
+				{Id: "dns_qtype", Value: "1"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "address", Value: "10.240.0.1"},
+				{Id: "redirect_to", Value: "redirect.biz"},
+				{Id: "policy_action", Value: "4"},
+			},
 		},
 		{
 			query:     "test.org.",
@@ -134,6 +184,15 @@ func TestPolicy(t *testing.T) {
 				Obligation: []*pdp.Attribute{{"redirect_to", "string", "2001:db8:0:200:0:0:0:7"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
+			attrs: []*pdp.Attribute{
+				{Id: "type", Value: "response"},
+				{Id: "domain_name", Value: "test.org"},
+				{Id: "dns_qtype", Value: "1c"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "address", Value: "21da:d3:0:2f3b:2aa:ff:fe28:9c5a"},
+				{Id: "redirect_to", Value: "2001:db8:0:200:0:0:0:7"},
+				{Id: "policy_action", Value: "4"},
+			},
 		},
 		{
 			query:     "test.com.",
@@ -142,6 +201,14 @@ func TestPolicy(t *testing.T) {
 				Obligation: []*pdp.Attribute{{"redirect_to", "string", "test.net"}}},
 			status: dns.RcodeServerFailure,
 			err:    errFakeResolver,
+			attrs: []*pdp.Attribute{
+				{Id: "type", Value: "query"},
+				{Id: "domain_name", Value: "test.com"},
+				{Id: "dns_qtype", Value: "1"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "redirect_to", Value: "test.net"},
+				{Id: "policy_action", Value: "4"},
+			},
 		},
 		{
 			query:     "test.net.",
@@ -156,6 +223,13 @@ func TestPolicy(t *testing.T) {
 			response:  &pdp.Response{Effect: pdp.Response_DENY},
 			status:    dns.RcodeNameError,
 			err:       nil,
+			attrs: []*pdp.Attribute{
+				{Id: "type", Value: "query"},
+				{Id: "domain_name", Value: "test.org"},
+				{Id: "dns_qtype", Value: "1c"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "policy_action", Value: "3"},
+			},
 		},
 		{
 			query:     "test.org.",
@@ -171,6 +245,14 @@ func TestPolicy(t *testing.T) {
 				Obligation: []*pdp.Attribute{{"redirect_to", "string", "redirect.net"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
+			attrs: []*pdp.Attribute{
+				{Id: "type", Value: "query"},
+				{Id: "domain_name", Value: "test.org"},
+				{Id: "dns_qtype", Value: "1c"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "policy_action", Value: "4"},
+				{Id: "redirect_to", Value: "redirect.net"},
+			},
 		},
 		{
 			query:     "test.org.",
@@ -179,6 +261,14 @@ func TestPolicy(t *testing.T) {
 				Obligation: []*pdp.Attribute{{"refuse", "string", "true"}}},
 			status: dns.RcodeRefused,
 			err:    nil,
+			attrs: []*pdp.Attribute{
+				{Id: "type", Value: "query"},
+				{Id: "domain_name", Value: "test.org"},
+				{Id: "dns_qtype", Value: "1"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "policy_action", Value: "5"},
+				{Id: "refuse", Value: "true"},
+			},
 		},
 		{
 			query:     "test.com.",
@@ -188,6 +278,15 @@ func TestPolicy(t *testing.T) {
 				Obligation: []*pdp.Attribute{{"refuse", "string", "true"}}},
 			status: dns.RcodeRefused,
 			err:    nil,
+			attrs: []*pdp.Attribute{
+				{Id: "type", Value: "response"},
+				{Id: "domain_name", Value: "test.com"},
+				{Id: "dns_qtype", Value: "1"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "address", Value: "10.240.0.1"},
+				{Id: "refuse", Value: "true"},
+				{Id: "policy_action", Value: "5"},
+			},
 		},
 		{
 			query:     "nxdomain.org.",
@@ -200,6 +299,7 @@ func TestPolicy(t *testing.T) {
 
 	rec := dnstest.NewRecorder(&test.ResponseWriter{})
 
+	// no debug, no dnstap
 	for i, test := range tests {
 		// Make request
 		req := new(dns.Msg)
@@ -218,6 +318,7 @@ func TestPolicy(t *testing.T) {
 		}
 	}
 
+	// debug, no dnstap
 	pm.DebugSuffix = "debug."
 	for i, test := range tests {
 		// Make request
@@ -247,6 +348,70 @@ func TestPolicy(t *testing.T) {
 			t.Errorf("Case debug[%d]: expected error %v but got %v\n", i, test_err, err)
 		}
 	}
+
+	// debug, dnstap
+	sender := &testDnstapSender{}
+	pm.TapIO = sender
+	trapper := dtest.TrapTapper{Full: true}
+	tapRW := &taprw.ResponseWriter{
+		Query:          new(dns.Msg),
+		ResponseWriter: &test.ResponseWriter{},
+		Tapper:         &trapper,
+	}
+
+	for i, test := range tests {
+		sender.reset()
+		// Make request
+		req := new(dns.Msg)
+		req.Question = make([]dns.Question, 1)
+		req.Question[0] = dns.Question{test.query + pm.DebugSuffix, dns.TypeTXT, dns.ClassCHAOS}
+		// Init test mock client
+		pm.pdp = newTestClientInit(test.response, test.responseIP, test.errResp, test.errRespIP)
+		// Handle request
+		status, err := pm.ServeDNS(context.Background(), tapRW, req)
+		var test_status int
+		var test_err error
+		if test.err == errFakePdp {
+			test_err = errFakePdp
+			test_status = dns.RcodeServerFailure
+		}
+		if test.status == dns.RcodeRefused {
+			test_status = dns.RcodeRefused
+			test_err = nil
+		}
+		// Check status
+		if test_status != status {
+			t.Errorf("Case debug[%d]: expected status %q but got %q\n", i, test_status, status)
+		}
+		// Check error
+		if test_err != err {
+			t.Errorf("Case debug[%d]: expected error %v but got %v\n", i, test_err, err)
+		}
+		sender.checkAttributes(t, i, nil)
+	}
+
+	// no debug, dnstap
+	pm.DebugSuffix = ""
+	for i, test := range tests {
+		sender.reset()
+		// Make request
+		req := new(dns.Msg)
+		req.SetQuestion(test.query, test.queryType)
+		// Init test mock client
+		pm.pdp = newTestClientInit(test.response, test.responseIP, test.errResp, test.errRespIP)
+		// Handle request
+		status, err := pm.ServeDNS(context.Background(), tapRW, req)
+		// Check status
+		if test.status != status {
+			t.Errorf("Case test[%d]: expected status %q but got %q\n", i, test.status, status)
+		}
+		// Check error
+		if test.err != err {
+			t.Errorf("Case test[%d]: expected error %v but got %v\n", i, test.err, err)
+		}
+		sender.checkAttributes(t, i, test.attrs)
+	}
+
 }
 
 func handler() plugin.Handler {
@@ -502,59 +667,45 @@ func TestEdns(t *testing.T) {
 	}
 }
 
-// dnstap test
-
-type testIORoutine struct {
-	dnstapChan chan dnstap.Dnstap
+type testDnstapSender struct {
+	attrs []*pdp.Attribute
 }
 
-func newIORoutine() testIORoutine {
-	ch := make(chan dnstap.Dnstap, 3)
-	io := testIORoutine{dnstapChan: ch}
-	// close channel by timeout to prevent checker from waiting forever
-	go func() {
-		time.Sleep(5 * time.Second)
-		close(ch)
-	}()
-	return io
+func (s *testDnstapSender) reset() {
+	s.attrs = nil
 }
 
-func (io testIORoutine) Dnstap(msg dnstap.Dnstap) {
-	io.dnstapChan <- msg
+func (s *testDnstapSender) SendCRExtraMsg(t time.Time, pw *dnstap.ProxyWriter, attrs []*pdp.Attribute) {
+	s.attrs = attrs
 }
 
-func TestPolicyWithDnstap(t *testing.T) {
-	tapIO := newIORoutine()
-	pm := PolicyPlugin{Next: handler(), TapIO: tapIO, options: make(map[uint16][]edns0Map)}
-
-	req := new(dns.Msg)
-	req.SetQuestion("test.com.", dns.TypeA)
-
-	permit := &pdp.Response{Effect: pdp.Response_PERMIT}
-	pm.pdp = newTestClientInit(permit, permit, nil, nil)
-
-	trapper := dtest.TrapTapper{Full: true}
-	tapRW := taprw.ResponseWriter{
-		Query:          new(dns.Msg),
-		ResponseWriter: &test.ResponseWriter{},
-		Tapper:         &trapper,
-	}
-	pm.ServeDNS(context.Background(), &tapRW, req)
-
-	msgCnt := 0
-	expCnt := 3 //PH on query, PH on Response, and CR
-	for range tapIO.dnstapChan {
-		msgCnt++
-		if msgCnt == expCnt {
-			break
+func (s *testDnstapSender) checkAttributes(t *testing.T, i int, attrs []*pdp.Attribute) {
+	if attrs == nil {
+		if s.attrs != nil {
+			t.Errorf("SendCRExtraMsg was unexpectedly called in test %d", i)
 		}
+		return
 	}
-	if msgCnt != expCnt {
-		t.Errorf("Unexpected number of Dnstap messages: expected %d, actual %d", expCnt, msgCnt)
+	if s.attrs == nil {
+		t.Errorf("SendCRExtraMsg was unexpectedly not called in test %d", i)
+		return
 	}
 
-	if l := len(trapper.Trap); l != 0 {
-		t.Errorf("Dnstap unexpectedly sent %d messages", l)
-		return
+	if len(attrs) != len(s.attrs) {
+		t.Errorf("Not expected number of attributes in test %d", i)
+	}
+
+checkAttr:
+	for _, a := range s.attrs {
+		for _, e := range attrs {
+			if e.GetId() == a.GetId() {
+				if e.GetValue() != a.GetValue() {
+					t.Errorf("Attribute %s: expected %q , found %q in test %d", e.GetId(), e.GetValue(), a.GetValue(), i)
+					return
+				}
+				continue checkAttr
+			}
+		}
+		t.Errorf("Unexpected attribute found %q in test %d", a, i)
 	}
 }
