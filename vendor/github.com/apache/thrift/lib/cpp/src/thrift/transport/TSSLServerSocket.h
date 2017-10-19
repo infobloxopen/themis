@@ -20,7 +20,7 @@
 #ifndef _THRIFT_TRANSPORT_TSSLSERVERSOCKET_H_
 #define _THRIFT_TRANSPORT_TSSLSERVERSOCKET_H_ 1
 
-#include <thrift/stdcxx.h>
+#include <boost/shared_ptr.hpp>
 #include <thrift/transport/TServerSocket.h>
 
 namespace apache {
@@ -40,7 +40,7 @@ public:
    * @param port    Listening port
    * @param factory SSL socket factory implementation
    */
-  TSSLServerSocket(int port, stdcxx::shared_ptr<TSSLSocketFactory> factory);
+  TSSLServerSocket(int port, boost::shared_ptr<TSSLSocketFactory> factory);
 
   /**
    * Constructor.  Binds to the specified address.
@@ -51,7 +51,7 @@ public:
    */
   TSSLServerSocket(const std::string& address,
                    int port,
-                   stdcxx::shared_ptr<TSSLSocketFactory> factory);
+                   boost::shared_ptr<TSSLSocketFactory> factory);
 
   /**
    * Constructor.  Binds to all interfaces.
@@ -64,11 +64,11 @@ public:
   TSSLServerSocket(int port,
                    int sendTimeout,
                    int recvTimeout,
-                   stdcxx::shared_ptr<TSSLSocketFactory> factory);
+                   boost::shared_ptr<TSSLSocketFactory> factory);
 
 protected:
-  stdcxx::shared_ptr<TSocket> createSocket(THRIFT_SOCKET socket);
-  stdcxx::shared_ptr<TSSLSocketFactory> factory_;
+  boost::shared_ptr<TSocket> createSocket(THRIFT_SOCKET socket);
+  boost::shared_ptr<TSSLSocketFactory> factory_;
 };
 }
 }

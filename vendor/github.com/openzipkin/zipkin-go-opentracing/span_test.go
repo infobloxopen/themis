@@ -16,7 +16,6 @@ func TestSpan_Baggage(t *testing.T) {
 	tracer, err := NewTracer(
 		recorder,
 		WithSampler(func(_ uint64) bool { return true }),
-		WithLogger(&nopLogger{}),
 	)
 	if err != nil {
 		t.Fatalf("Unable to create Tracer: %+v", err)

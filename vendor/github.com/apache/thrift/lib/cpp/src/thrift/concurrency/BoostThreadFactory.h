@@ -20,9 +20,9 @@
 #ifndef _THRIFT_CONCURRENCY_BOOSTTHREADFACTORY_H_
 #define _THRIFT_CONCURRENCY_BOOSTTHREADFACTORY_H_ 1
 
-#include <thrift/concurrency/Monitor.h>
 #include <thrift/concurrency/Thread.h>
-#include <thrift/stdcxx.h>
+
+#include <boost/shared_ptr.hpp>
 
 namespace apache {
 namespace thrift {
@@ -38,8 +38,9 @@ class BoostThreadFactory : public ThreadFactory {
 public:
   /**
    * Boost thread factory.  All threads created by a factory are reference-counted
-   * via stdcxx::shared_ptr.  The factory guarantees that threads and the Runnable tasks they
-   * host will be properly cleaned up once the last strong reference to both is given up.
+   * via boost::shared_ptr and boost::weak_ptr.  The factory guarantees that threads and
+   * the Runnable tasks they host will be properly cleaned up once the last strong reference
+   * to both is given up.
    *
    * Threads are created with the specified boost policy, priority, stack-size. A detachable thread
    * is not joinable.
@@ -50,7 +51,7 @@ public:
   BoostThreadFactory(bool detached = true);
 
   // From ThreadFactory;
-  stdcxx::shared_ptr<Thread> newThread(stdcxx::shared_ptr<Runnable> runnable) const;
+  boost::shared_ptr<Thread> newThread(boost::shared_ptr<Runnable> runnable) const;
 
   // From ThreadFactory;
   Thread::id_t getCurrentThreadId() const;

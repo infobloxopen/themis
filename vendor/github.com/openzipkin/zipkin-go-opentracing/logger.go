@@ -11,9 +11,8 @@ import (
 // not even in number
 var ErrMissingValue = errors.New("(MISSING)")
 
-// Logger is the fundamental interface for all log operations. Log creates a
-// log event from keyvals, a variadic sequence of alternating keys and values.
-// The signature is compatible with the Go kit log package.
+// Logger interface used by this package.
+// This means that we accept Go kit Log compatible loggers
 type Logger interface {
 	Log(keyvals ...interface{}) error
 }

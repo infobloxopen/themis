@@ -70,3 +70,8 @@ extend dnstap.Dnstap {
 message PolicyHitMessageWrapper {
 	required PolicyHitMessage policy_hit = 1001;
 }
+
+// Collection of attributes to be stored in Dnstap.extra (in wire format)
+message ExtraAttributes {
+	repeated DnstapAttribute attributes = 1;
+}

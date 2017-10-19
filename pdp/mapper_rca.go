@@ -39,18 +39,29 @@ type MapperRCAParams struct {
 }
 
 func getSetOfIDs(v AttributeValue) ([]string, error) {
-	ID, err := v.str()
-	if err == nil {
+	switch v.t {
+	case TypeString:
+		ID, err := v.str()
+		if err != nil {
+			panic(err)
+		}
+
 		return []string{ID}, nil
-	}
 
-	setIDs, err := v.setOfStrings()
-	if err == nil {
+	case TypeSetOfStrings:
+		setIDs, err := v.setOfStrings()
+		if err != nil {
+			panic(err)
+		}
+
 		return sortSetOfStrings(setIDs), nil
-	}
 
-	listIDs, err := v.listOfStrings()
-	if err == nil {
+	case TypeListOfStrings:
+		listIDs, err := v.listOfStrings()
+		if err != nil {
+			panic(err)
+		}
+
 		return listIDs, nil
 	}
 

@@ -69,9 +69,8 @@ type
   end;
 
 
-{$IFDEF Win64}
-function InterlockedExchangeAdd64( var Addend : Int64; Value : Int64) : Int64;  
-{$ENDIF}
+function InterlockedCompareExchange64( var Target : Int64; Exchange, Comparand : Int64) : Int64; stdcall;
+function InterlockedExchangeAdd64( var Addend : Int64; Value : Int64) : Int64; stdcall;
 
 
 implementation
@@ -224,19 +223,14 @@ begin
 end;
 
 
-{$IFDEF Win64}
-
-function InterlockedCompareExchange64( var Target : Int64; Exchange, Comparand : Int64) : Int64;  inline;
-begin
-  {$IFDEF OLD_UNIT_NAMES}
-  result := Windows.InterlockedCompareExchange64( Target, Exchange, Comparand);
-  {$ELSE}
-  result := WinApi.Windows.InterlockedCompareExchange64( Target, Exchange, Comparand);
-  {$ENDIF}
-end;
+// natively available since stone age
+function InterlockedCompareExchange64;
+external KERNEL32 name 'InterlockedCompareExchange64';
 
 
-function InterlockedExchangeAdd64( var Addend : Int64; Value : Int64) : Int64;
+// natively available >= Vista
+// implemented this way since there are still some people running Windows XP :-(
+function InterlockedExchangeAdd64( var Addend : Int64; Value : Int64) : Int64; stdcall;
 var old : Int64;
 begin
   repeat
@@ -245,7 +239,6 @@ begin
   result := Old;
 end;
 
-{$ENDIF}
 
 
 end.

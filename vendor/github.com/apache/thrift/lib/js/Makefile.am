@@ -23,6 +23,5 @@ SUBDIRS = test
 
 check-local: all
 	npm install
-	npm list
 	./node_modules/.bin/grunt
 

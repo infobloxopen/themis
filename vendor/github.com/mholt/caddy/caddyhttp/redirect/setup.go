@@ -101,12 +101,9 @@ func redirParse(c *caddy.Controller) ([]Rule, error) {
 			return c.Err("'from' and 'to' values of redirect rule cannot be the same")
 		}
 
-		// prevent obvious duplicates (rules with if statements exempt)
-		if ifm, ok := rule.RequestMatcher.(httpserver.IfMatcher); !ok || !ifm.Enabled {
-			for _, otherRule := range redirects {
-				if otherRule.FromPath == rule.FromPath {
-					return c.Errf("rule with duplicate 'from' value: %s -> %s", otherRule.FromPath, otherRule.To)
-				}
+		for _, otherRule := range redirects {
+			if otherRule.FromPath == rule.FromPath {
+				return c.Errf("rule with duplicate 'from' value: %s -> %s", otherRule.FromPath, otherRule.To)
 			}
 		}
 

@@ -71,7 +71,7 @@ type
     { Prepends the service name to the function name, separated by SEPARATOR.
       Args: The original message.
     }
-    procedure WriteMessageBegin( const msg: TThriftMessage); override;
+    procedure WriteMessageBegin( const msg: IMessage); override;
   end;
 
 
@@ -86,14 +86,14 @@ begin
 end;
 
 
-procedure TMultiplexedProtocol.WriteMessageBegin( const msg: TThriftMessage);
+procedure TMultiplexedProtocol.WriteMessageBegin( const msg: IMessage);
 // Prepends the service name to the function name, separated by TMultiplexedProtocol.SEPARATOR.
-var newMsg : TThriftMessage;
+var newMsg : IMessage;
 begin
   case msg.Type_ of
     TMessageType.Call,
     TMessageType.Oneway : begin
-      Init( newMsg, FServiceName + SEPARATOR + msg.Name, msg.Type_, msg.SeqID);
+      newMsg := TMessageImpl.Create( FServiceName + SEPARATOR + msg.Name, msg.Type_, msg.SeqID);
       inherited WriteMessageBegin( newMsg);
     end;
 

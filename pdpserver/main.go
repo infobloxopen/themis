@@ -8,32 +8,27 @@ import (
 
 func main() {
 	initLogging(conf.verbose)
-	log.Info("Starting PDP server")
+	log.Info("Starting PDP server.")
 
 	pdp := newServer()
 
 	if pdp == nil {
-		log.Fatal("Failed to create Server.")
+		log.Fatal("Failed to create PDP server.")
 	}
 
 	if err := pdp.setPolicyFormat(conf.policyFmt); err != nil {
 		log.WithFields(log.Fields{
 			"err": err,
-		}).Fatal("Failed to initialize Server.")
+		}).Fatal("Failed to initialize PDP server.")
 	}
 
 	pdp.loadPolicies(conf.policy)
 	pdp.loadContent(conf.content)
 	runtime.GC()
 
-	pdp.listenRequests(conf.serviceEP)
-	pdp.listenControl(conf.controlEP)
-	pdp.listenHealthCheck(conf.healthEP)
-	pdp.listenProfiler(conf.profilerEP)
+	pdp.serve()
 
-	tracer, err := initTracing("zipkin", conf.tracingEP)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Warning("Could not initialize tracing.")
-	}
-	pdp.serve(tracer)
+	// Prevent the main Go-routine to be finished,
+	// while other Go-routines are serving requests.
+	select {}
 }

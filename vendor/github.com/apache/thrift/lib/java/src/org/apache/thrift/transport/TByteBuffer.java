@@ -35,7 +35,7 @@ public final class TByteBuffer extends TTransport {
     final int n = Math.min(byteBuffer.remaining(), len);
     if (n > 0) {
       try {
-        byteBuffer.get(buf, off, n);
+        byteBuffer.get(buf, off, len);
       } catch (BufferUnderflowException e) {
         throw new TTransportException("Unexpected end of input buffer", e);
       }

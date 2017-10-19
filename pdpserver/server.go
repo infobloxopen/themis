@@ -40,6 +40,10 @@ type transport struct {
 type server struct {
 	sync.RWMutex
 
+	tracer ot.Tracer
+
+	startOnce sync.Once
+
 	requests transport
 	control  transport
 	health   transport
@@ -57,9 +61,18 @@ type server struct {
 	gcPercent   int
 
 	astParser ast.Parser
+
+	logLevel log.Level
 }
 
 func newServer() *server {
+
+	tracer, err := initTracing("zipkin", conf.tracingEP)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Warning("Cannot initialize tracing.")
+		tracer = nil
+	}
+
 	gcp := debug.SetGCPercent(-1)
 	if gcp != -1 {
 		debug.SetGCPercent(gcp)
@@ -69,10 +82,12 @@ func newServer() *server {
 	}
 
 	return &server{
+		tracer:    tracer,
 		q:         newQueue(),
 		c:         pdp.NewLocalContentStorage(nil),
 		gcMax:     gcp,
-		gcPercent: gcp}
+		gcPercent: gcp,
+		logLevel:  log.GetLevel()}
 }
 
 func (s *server) setPolicyFormat(format string) error {
@@ -192,7 +207,29 @@ func (s *server) listenProfiler(addr string) {
 	s.profiler = ln
 }
 
-func (s *server) serve(tracer ot.Tracer) {
+func (s *server) serveRequests() {
+	s.listenRequests(conf.serviceEP)
+
+	log.Info("Creating service protocol handler")
+	if s.tracer == nil {
+		s.requests.proto = grpc.NewServer()
+	} else {
+		onlyIfParent := func(parentSpanCtx ot.SpanContext, method string, req, resp interface{}) bool {
+			return parentSpanCtx != nil
+		}
+		intercept := otgrpc.OpenTracingServerInterceptor(s.tracer, otgrpc.IncludingSpans(onlyIfParent))
+		s.requests.proto = grpc.NewServer(grpc.UnaryInterceptor(intercept))
+	}
+	pbs.RegisterPDPServer(s.requests.proto, s)
+
+	log.Info("Serving decision requests")
+	s.requests.proto.Serve(s.requests.iface)
+}
+
+func (s *server) serve() {
+	s.listenControl(conf.controlEP)
+	s.listenHealthCheck(conf.healthEP)
+	s.listenProfiler(conf.profilerEP)
 	go func() {
 		log.Info("Creating control protocol handler")
 		s.control.proto = grpc.NewServer()
@@ -219,18 +256,12 @@ func (s *server) serve(tracer ot.Tracer) {
 		}()
 	}
 
-	log.Info("Creating service protocol handler")
-	if tracer == nil {
-		s.requests.proto = grpc.NewServer()
+	if len(conf.policy) != 0 || len(conf.content) != 0 {
+		// We already have policy info applied; supplied from local files,
+		// pointed to by CLI options.
+		s.startOnce.Do(s.serveRequests)
 	} else {
-		onlyIfParent := func(parentSpanCtx ot.SpanContext, method string, req, resp interface{}) bool {
-			return parentSpanCtx != nil
-		}
-		intercept := otgrpc.OpenTracingServerInterceptor(tracer, otgrpc.IncludingSpans(onlyIfParent))
-		s.requests.proto = grpc.NewServer(grpc.UnaryInterceptor(intercept))
+		// serveRequests() will be executed by external request.
+		log.Info("Waiting for policies to be applied.")
 	}
-	pbs.RegisterPDPServer(s.requests.proto, s)
-
-	log.Info("Serving decision requests")
-	s.requests.proto.Serve(s.requests.iface)
 }

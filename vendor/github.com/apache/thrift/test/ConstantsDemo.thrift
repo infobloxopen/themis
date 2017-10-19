@@ -18,7 +18,6 @@
  */
 
 namespace cpp yozone
-namespace erl consts_
 
 struct thing {
   1: i32 hello,

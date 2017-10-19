@@ -20,40 +20,16 @@
 #ifndef _THRIFT_TRANSPORT_TSERVERSOCKET_H_
 #define _THRIFT_TRANSPORT_TSERVERSOCKET_H_ 1
 
-#include <thrift/concurrency/Mutex.h>
-#include <thrift/stdcxx.h>
-#include <thrift/transport/PlatformSocket.h>
 #include <thrift/transport/TServerTransport.h>
-
-#include <sys/types.h>
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-#ifdef HAVE_NETDB_H
-#include <netdb.h>
-#endif
+#include <thrift/transport/PlatformSocket.h>
+#include <thrift/cxxfunctional.h>
+#include <boost/shared_ptr.hpp>
 
 namespace apache {
 namespace thrift {
 namespace transport {
 
 class TSocket;
-
-class TGetAddrInfoWrapper {
-public:
-  TGetAddrInfoWrapper(const char* node, const char* service, const struct addrinfo* hints);
-
-  virtual ~TGetAddrInfoWrapper();
-
-  int init();
-  const struct addrinfo* res();
-
-private:
-  const char* node_;
-  const char* service_;
-  const struct addrinfo* hints_;
-  struct addrinfo* res_;
-};
 
 /**
  * Server socket implementation of TServerTransport. Wrapper around a unix
@@ -137,8 +113,6 @@ public:
   // \throws std::logic_error if listen() has been called
   void setInterruptableChildren(bool enable);
 
-  THRIFT_SOCKET getSocketFD() { return serverSocket_; }
-
   int getPort();
 
   void listen();
@@ -147,10 +121,10 @@ public:
   void close();
 
 protected:
-  stdcxx::shared_ptr<TTransport> acceptImpl();
-  virtual stdcxx::shared_ptr<TSocket> createSocket(THRIFT_SOCKET client);
+  boost::shared_ptr<TTransport> acceptImpl();
+  virtual boost::shared_ptr<TSocket> createSocket(THRIFT_SOCKET client);
   bool interruptableChildren_;
-  stdcxx::shared_ptr<THRIFT_SOCKET> pChildInterruptSockReader_; // if interruptableChildren_ this is shared with child TSockets
+  boost::shared_ptr<THRIFT_SOCKET> pChildInterruptSockReader_; // if interruptableChildren_ this is shared with child TSockets
 
 private:
   void notify(THRIFT_SOCKET notifySock);
@@ -170,7 +144,6 @@ private:
   bool keepAlive_;
   bool listening_;
 
-  concurrency::Mutex rwMutex_;                                 // thread-safe interrupt
   THRIFT_SOCKET interruptSockWriter_;                          // is notified on interrupt()
   THRIFT_SOCKET interruptSockReader_;                          // is used in select/poll with serverSocket_ for interruptability
   THRIFT_SOCKET childInterruptSockWriter_;                     // is notified on interruptChildren()

@@ -5,6 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coredns/coredns/plugin/dnstap/taprw"
+	dtest "github.com/coredns/coredns/plugin/dnstap/test"
+	"github.com/coredns/coredns/plugin/test"
 	dnstap "github.com/dnstap/golang-dnstap"
 	"github.com/golang/protobuf/proto"
 	pb "github.com/infobloxopen/themis/pdp-service"
@@ -13,6 +16,17 @@ import (
 
 type testIORoutine struct {
 	dnstapChan chan dnstap.Dnstap
+}
+
+func newIORoutine() testIORoutine {
+	ch := make(chan dnstap.Dnstap, 1)
+	tapIO := testIORoutine{dnstapChan: ch}
+	// close channel by timeout to prevent checker from waiting forever
+	go func() {
+		time.Sleep(5 * time.Second)
+		close(ch)
+	}()
+	return tapIO
 }
 
 func (tapIO testIORoutine) Dnstap(msg dnstap.Dnstap) {
@@ -147,8 +161,7 @@ func TestSendPolicyHitMsg(t *testing.T) {
 		},
 	}
 	for _, td := range tests {
-		dnstapChan := make(chan dnstap.Dnstap, 1)
-		tapIO := testIORoutine{dnstapChan: dnstapChan}
+		tapIO := newIORoutine()
 		msg := dns.Msg{}
 		msg.SetQuestion(td.qName, td.qType)
 		msg.Id = common.qID
@@ -164,7 +177,11 @@ func TestSendPolicyHitMsg(t *testing.T) {
 }
 
 func checkResult(t *testing.T, tapIO testIORoutine, c *commonData, td *testData) {
-	dnstapMsg := <-tapIO.dnstapChan
+	dnstapMsg, ok := <-tapIO.dnstapChan
+	if !ok {
+		t.Errorf("Receiving Dnstap message was timed out")
+		return
+	}
 	phMsg, err := extractPhm(t, &dnstapMsg)
 	if err != nil || phMsg == nil {
 		return
@@ -233,4 +250,94 @@ func extractPhm(t *testing.T, dMsg *dnstap.Dnstap) (*PolicyHitMessage, error) {
 		return nil, err
 	}
 	return phMsg, nil
+}
+
+func TestSendCRExtraMsg(t *testing.T) {
+	now := time.Now()
+	tapIO := newIORoutine()
+
+	msg := dns.Msg{}
+	msg.SetQuestion("test.com.", dns.TypeA)
+	msg.Answer = []dns.RR{
+		test.A("test.com.		600	IN	A			10.240.0.1"),
+	}
+
+	trapper := dtest.TrapTapper{Full: true}
+	tapRW := taprw.ResponseWriter{
+		Query:          new(dns.Msg),
+		ResponseWriter: &test.ResponseWriter{},
+		Tapper:         &trapper,
+	}
+	proxyRW := NewProxyWriter(&tapRW)
+	proxyRW.WriteMsg(&msg)
+
+	attrs := []*pb.Attribute{
+		{Id: "attr1", Type: "address", Value: "10.240.0.1"},
+		{Id: "attr2", Type: "string", Value: "value2"},
+	}
+
+	SendCRExtraMsg(tapIO, now, proxyRW, attrs)
+	checkCRExtraResult(t, tapIO, now, proxyRW, attrs)
+
+	if l := len(trapper.Trap); l != 0 {
+		t.Errorf("Dnstap unexpectedly sent %d messages", l)
+		return
+	}
+}
+
+func checkCRExtraResult(t *testing.T, tapIO testIORoutine, crTime time.Time, proxyRW *ProxyWriter, attrs []*pb.Attribute) {
+	dnstapMsg, ok := <-tapIO.dnstapChan
+	if !ok {
+		t.Errorf("Receiving Dnstap message was timed out")
+		return
+	}
+	extra := &ExtraAttributes{}
+	err := proto.Unmarshal(dnstapMsg.Extra, extra)
+	if err != nil {
+		t.Errorf("Failed to unmarshal Extra (%v)", err)
+		return
+	}
+
+	checkExtraAttrs(t, extra.GetAttributes(), attrs)
+	checkCRMessage(t, dnstapMsg.Message, proxyRW)
+}
+
+func checkExtraAttrs(t *testing.T, actual []*DnstapAttribute, expected []*pb.Attribute) {
+	if len(actual) != len(expected) {
+		t.Errorf("Expected %d attributes, found %d", len(expected), len(actual))
+		return
+	}
+
+checkAttr:
+	for _, ea := range actual {
+		for _, a := range expected {
+			if ea.GetId() == a.GetId() {
+				if ea.GetValue() != a.GetValue() || ea.GetType() != a.GetType() {
+					t.Errorf("Attribute %s: expected %v , found %v", ea.GetId(), a, ea)
+					return
+				}
+				continue checkAttr
+			}
+		}
+		t.Errorf("Unexpected attribute found %v", ea)
+	}
+}
+
+func checkCRMessage(t *testing.T, msg *dnstap.Message, proxyRW *ProxyWriter) {
+	if msg == nil {
+		t.Errorf("CR message not found")
+		return
+	}
+
+	d := dtest.TestingData()
+	bin, err := proxyRW.msg.Pack()
+	if err != nil {
+		t.Errorf("Failed to pack message (%v)", err)
+		return
+	}
+	d.Packed = bin
+	expMsg := d.ToClientResponse()
+	if !dtest.MsgEqual(expMsg, msg) {
+		t.Errorf("Unexpected message: expected: %v\nactual: %v", expMsg, msg)
+	}
 }

@@ -19,21 +19,22 @@
 
 // This is linked into the UnitTests test executable
 
+#include <boost/shared_ptr.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include "thrift/concurrency/Mutex.h"
 #include "thrift/concurrency/PosixThreadFactory.h"
-#include <thrift/stdcxx.h>
 
-using apache::thrift::stdcxx::shared_ptr;
+using boost::shared_ptr;
 using boost::unit_test::test_suite;
 using boost::unit_test::framework::master_test_suite;
 
 using namespace apache::thrift::concurrency;
+using namespace std;
 
 class Locker : public Runnable {
 protected:
-  Locker(shared_ptr<ReadWriteMutex> rwlock, bool writer)
+  Locker(boost::shared_ptr<ReadWriteMutex> rwlock, bool writer)
     : rwlock_(rwlock), writer_(writer), started_(false), gotLock_(false), signaled_(false) {}
 
 public:
@@ -56,7 +57,7 @@ public:
   void signal() { signaled_ = true; }
 
 protected:
-  shared_ptr<ReadWriteMutex> rwlock_;
+  boost::shared_ptr<ReadWriteMutex> rwlock_;
   bool writer_;
   volatile bool started_;
   volatile bool gotLock_;
@@ -65,12 +66,12 @@ protected:
 
 class Reader : public Locker {
 public:
-  Reader(shared_ptr<ReadWriteMutex> rwlock) : Locker(rwlock, false) {}
+  Reader(boost::shared_ptr<ReadWriteMutex> rwlock) : Locker(rwlock, false) {}
 };
 
 class Writer : public Locker {
 public:
-  Writer(shared_ptr<ReadWriteMutex> rwlock) : Locker(rwlock, true) {}
+  Writer(boost::shared_ptr<ReadWriteMutex> rwlock) : Locker(rwlock, true) {}
 };
 
 void test_starve(PosixThreadFactory::POLICY policy) {
@@ -80,15 +81,15 @@ void test_starve(PosixThreadFactory::POLICY policy) {
   PosixThreadFactory factory(policy);
   factory.setDetached(false);
 
-  shared_ptr<ReadWriteMutex> rwlock(new NoStarveReadWriteMutex());
+  boost::shared_ptr<ReadWriteMutex> rwlock(new NoStarveReadWriteMutex());
 
-  shared_ptr<Reader> reader1(new Reader(rwlock));
-  shared_ptr<Reader> reader2(new Reader(rwlock));
-  shared_ptr<Writer> writer(new Writer(rwlock));
+  boost::shared_ptr<Reader> reader1(new Reader(rwlock));
+  boost::shared_ptr<Reader> reader2(new Reader(rwlock));
+  boost::shared_ptr<Writer> writer(new Writer(rwlock));
 
-  shared_ptr<Thread> treader1 = factory.newThread(reader1);
-  shared_ptr<Thread> treader2 = factory.newThread(reader2);
-  shared_ptr<Thread> twriter = factory.newThread(writer);
+  boost::shared_ptr<Thread> treader1 = factory.newThread(reader1);
+  boost::shared_ptr<Thread> treader2 = factory.newThread(reader2);
+  boost::shared_ptr<Thread> twriter = factory.newThread(writer);
 
   // launch a reader and make sure he has the lock
   treader1->start();

@@ -33,7 +33,7 @@ set(haskell_sources
     src/Thrift/Transport/HttpClient.hs
     src/Thrift/Transport/IOBuffer.hs
     src/Thrift/Types.hs
-    thrift.cabal
+    Thrift.cabal
 )
 
 if(BUILD_TESTING)

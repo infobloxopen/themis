@@ -36,7 +36,7 @@
           terminate/2,
           code_change/3 ]).
 
--record( state, { client = nil,
+-record( state, { client = nil, 
                   host,
                   port,
                   thrift_svc,
@@ -226,9 +226,9 @@ timer_fun() ->
   end.
 -else.
 timer_fun() ->
-  T1 = erlang:timestamp(),
+  T1 = erlang:now(),
   fun() ->
-    T2 = erlang:timestamp(),
+    T2 = erlang:now(),
     timer:now_diff(T2, T1)
   end.
 -endif.

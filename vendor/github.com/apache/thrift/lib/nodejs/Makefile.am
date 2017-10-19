@@ -16,6 +16,8 @@
 # under the License.
 
 
+THRIFT = $(top_builddir)/compiler/cpp/thrift
+
 stubs: $(top_srcdir)/test/ThriftTest.thrift
 	$(THRIFT) --gen js:node -o test/ $(top_srcdir)/test/ThriftTest.thrift
 

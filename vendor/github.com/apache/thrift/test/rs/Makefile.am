@@ -17,6 +17,8 @@
 # under the License.
 #
 
+THRIFT = $(top_builddir)/compiler/cpp/thrift
+
 stubs: ../ThriftTest.thrift
 	$(THRIFT) -I ./thrifts -out src --gen rs ../ThriftTest.thrift
 
