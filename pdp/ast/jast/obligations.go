@@ -3,8 +3,8 @@ package jast
 import (
 	"encoding/json"
 
+	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
-	"github.com/infobloxopen/themis/pdp/jcon"
 )
 
 func (ctx context) unmarshalObligationItem(v interface{}) (pdp.AttributeAssignmentExpression, boundError) {
@@ -60,7 +60,7 @@ func (ctx context) unmarshalObligations(m map[interface{}]interface{}) ([]pdp.At
 }
 
 func (ctx *context) decodeObligations(d *json.Decoder) ([]pdp.AttributeAssignmentExpression, error) {
-	if err := jcon.CheckArrayStart(d, "obligations"); err != nil {
+	if err := jparser.CheckArrayStart(d, "obligations"); err != nil {
 		return nil, err
 	}
 

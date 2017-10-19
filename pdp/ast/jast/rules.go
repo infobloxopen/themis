@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
-	"github.com/infobloxopen/themis/pdp/jcon"
 )
 
 func (ctx context) unmarshalCondition(m map[interface{}]interface{}) (pdp.Expression, boundError) {
@@ -104,20 +104,17 @@ func (ctx context) decodeRuleItem(d *json.Decoder, i int) (*pdp.Rule, error) {
 }
 
 func (ctx *context) decodeRules(d *json.Decoder) ([]*pdp.Rule, error) {
-	err := jcon.CheckArrayStart(d, "rules")
+	err := jparser.CheckArrayStart(d, "rules")
 	if err != nil {
 		return nil, err
 	}
 
 	rules := []*pdp.Rule{}
-	idx := 0
 
-	err = jcon.UnmarshalObjectArray(d, func(d *json.Decoder) error {
-		idx++
-
-		e, err := ctx.decodeRuleItem(d, idx)
+	err = jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
+		e, err := ctx.decodeRuleItem(d, idx+1)
 		if err != nil {
-			return err
+			return bindErrorf(err, "%d", idx)
 		}
 
 		rules = append(rules, e)

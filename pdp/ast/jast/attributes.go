@@ -4,18 +4,18 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
-	"github.com/infobloxopen/themis/pdp/jcon"
 )
 
 func (ctx *context) decodeAttributeDeclarations(d *json.Decoder) boundError {
-	err := jcon.CheckObjectStart(d, "attribute declarations")
+	err := jparser.CheckObjectStart(d, "attribute declarations")
 	if err != nil {
 		return bindError(err, yastTagAttributes)
 	}
 
-	err = jcon.UnmarshalObject(d, func(k string, d *json.Decoder) error {
-		tstr, err := jcon.GetString(d, "attribute data type")
+	err = jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+		tstr, err := jparser.GetString(d, "attribute data type")
 		if err != nil {
 			return err
 		}

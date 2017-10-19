@@ -7,11 +7,12 @@ import (
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
+	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
 )
 
 func (c *contentItem) ppMap(v interface{}, keyIdx int) (interface{}, error) {
-	pairs, ok := v.([]Pair)
+	pairs, ok := v.([]jparser.Pair)
 	if !ok {
 		return nil, newInvalidMapContentItemNodeError(v, fmt.Sprintf("level %d map", keyIdx+1))
 	}
@@ -31,7 +32,7 @@ func (c *contentItem) ppMap(v interface{}, keyIdx int) (interface{}, error) {
 	return m.get(), nil
 }
 
-func ppStringSequenceFromPairs(v []Pair, desc string, f func(s string) error) error {
+func ppStringSequenceFromPairs(v []jparser.Pair, desc string, f func(s string) error) error {
 	for i, p := range v {
 		err := f(p.K)
 		if err != nil {
@@ -60,7 +61,7 @@ func ppStringSequenceFromArray(v []interface{}, desc string, f func(s string) er
 
 func ppStringSequence(v interface{}, desc string, f func(s string) error) error {
 	switch v := v.(type) {
-	case []Pair:
+	case []jparser.Pair:
 		return ppStringSequenceFromPairs(v, desc, f)
 
 	case []interface{}:

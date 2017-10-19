@@ -1,4 +1,5 @@
-package jcon
+// Package jparser provides helper methods to parse JSON from stream.
+package jparser
 
 import (
 	"encoding/json"
@@ -36,7 +37,7 @@ func CheckRootObjectStart(d *json.Decoder) (bool, error) {
 	return true, nil
 }
 
-func checkRootArrayStart(d *json.Decoder) (bool, error) {
+func CheckRootArrayStart(d *json.Decoder) (bool, error) {
 	t, err := d.Token()
 	if err == io.EOF {
 		return false, nil
@@ -94,7 +95,7 @@ func CheckArrayStart(d *json.Decoder, desc string) error {
 	return nil
 }
 
-func checkObjectArrayStart(d *json.Decoder, desc string) (bool, error) {
+func CheckObjectArrayStart(d *json.Decoder, desc string) (bool, error) {
 	t, err := d.Token()
 	if err != nil {
 		return false, err
@@ -129,7 +130,7 @@ func CheckEOF(d *json.Decoder) error {
 	return newMissingEOFError(t)
 }
 
-func skipValue(d *json.Decoder, desc string) error {
+func SkipValue(d *json.Decoder, desc string) error {
 	t, err := d.Token()
 	if err != nil {
 		return err
@@ -142,17 +143,17 @@ func skipValue(d *json.Decoder, desc string) error {
 			return newUnexpectedDelimiterError(s, desc)
 
 		case delimObjectStart:
-			return skipObject(d, desc)
+			return SkipObject(d, desc)
 
 		case delimArrayStart:
-			return skipArray(d, desc)
+			return SkipArray(d, desc)
 		}
 	}
 
 	return nil
 }
 
-func skipObject(d *json.Decoder, desc string) error {
+func SkipObject(d *json.Decoder, desc string) error {
 	for {
 		t, err := d.Token()
 		if err != nil {
@@ -164,7 +165,7 @@ func skipObject(d *json.Decoder, desc string) error {
 			return newObjectTokenError(t, delimObjectEnd, desc)
 
 		case string:
-			err := skipValue(d, desc)
+			err := SkipValue(d, desc)
 			if err != nil {
 				return bindError(err, t)
 			}
@@ -179,7 +180,7 @@ func skipObject(d *json.Decoder, desc string) error {
 	}
 }
 
-func skipArray(d *json.Decoder, desc string) error {
+func SkipArray(d *json.Decoder, desc string) error {
 	i := 1
 	for {
 		src := fmt.Sprintf("%d", i)
@@ -199,13 +200,13 @@ func skipArray(d *json.Decoder, desc string) error {
 				return nil
 
 			case delimObjectStart:
-				err := skipObject(d, desc)
+				err := SkipObject(d, desc)
 				if err != nil {
 					return bindError(err, src)
 				}
 
 			case delimArrayStart:
-				err := skipArray(d, desc)
+				err := SkipArray(d, desc)
 				if err != nil {
 					return bindError(err, src)
 				}
@@ -331,7 +332,7 @@ func GetArray(d *json.Decoder, desc string) ([]interface{}, error) {
 	}
 }
 
-func getBoolean(d *json.Decoder, desc string) (bool, error) {
+func GetBoolean(d *json.Decoder, desc string) (bool, error) {
 	t, err := d.Token()
 	if err != nil {
 		return false, err
@@ -359,20 +360,20 @@ func GetString(d *json.Decoder, desc string) (string, error) {
 	return s, nil
 }
 
-func GetStringSequence(d *json.Decoder, desc string, f func(s string) error) error {
-	obj, err := checkObjectArrayStart(d, desc)
+func GetStringSequence(d *json.Decoder, desc string, f func(idx int, s string) error) error {
+	ok, err := CheckObjectArrayStart(d, desc)
 	if err != nil {
 		return err
 	}
 
-	if obj {
-		return getStringSequenceFromObject(d, desc, f)
+	if ok {
+		return GetStringSequenceFromObject(d, desc, f)
 	}
 
-	return getStringSequenceFromArray(d, desc, f)
+	return GetStringSequenceFromArray(d, desc, f)
 }
 
-func getStringSequenceFromObject(d *json.Decoder, desc string, f func(s string) error) error {
+func GetStringSequenceFromObject(d *json.Decoder, desc string, f func(idx int, s string) error) error {
 	i := 1
 	for {
 		t, err := d.Token()
@@ -385,12 +386,12 @@ func getStringSequenceFromObject(d *json.Decoder, desc string, f func(s string) 
 			return bindErrorf(newObjectTokenError(t, delimObjectEnd, desc), "%d", i)
 
 		case string:
-			err := f(t)
+			err := f(i, t)
 			if err != nil {
-				return bindErrorf(err, "%d", i)
+				return err
 			}
 
-			err = skipValue(d, desc)
+			err = SkipValue(d, desc)
 			if err != nil {
 				return bindErrorf(err, "%d", i)
 			}
@@ -407,7 +408,7 @@ func getStringSequenceFromObject(d *json.Decoder, desc string, f func(s string) 
 	}
 }
 
-func getStringSequenceFromArray(d *json.Decoder, desc string, f func(s string) error) error {
+func GetStringSequenceFromArray(d *json.Decoder, desc string, f func(idx int, s string) error) error {
 	i := 1
 	for {
 		t, err := d.Token()
@@ -420,9 +421,9 @@ func getStringSequenceFromArray(d *json.Decoder, desc string, f func(s string) e
 			return bindErrorf(newStringArrayTokenError(t, delimArrayEnd, desc), "%d", i)
 
 		case string:
-			err := f(t)
+			err := f(i, t)
 			if err != nil {
-				return bindErrorf(err, "%d", i)
+				return err
 			}
 
 		case json.Delim:
@@ -437,7 +438,7 @@ func getStringSequenceFromArray(d *json.Decoder, desc string, f func(s string) e
 	}
 }
 
-func UnmarshalObject(d *json.Decoder, u func(string, *json.Decoder) error, desc string) error {
+func UnmarshalObject(d *json.Decoder, u func(key string, d *json.Decoder) error, desc string) error {
 	for {
 		t, err := d.Token()
 		if err != nil {
@@ -464,7 +465,7 @@ func UnmarshalObject(d *json.Decoder, u func(string, *json.Decoder) error, desc 
 	}
 }
 
-func UnmarshalObjectArray(d *json.Decoder, u func(*json.Decoder) error, desc string) error {
+func UnmarshalObjectArray(d *json.Decoder, u func(idx int, d *json.Decoder) error, desc string) error {
 	i := 1
 	for {
 		src := fmt.Sprintf("%d", i)
@@ -488,9 +489,9 @@ func UnmarshalObjectArray(d *json.Decoder, u func(*json.Decoder) error, desc str
 			return nil
 
 		case delimObjectStart:
-			err := u(d)
+			err := u(i, d)
 			if err != nil {
-				return bindError(err, src)
+				return err
 			}
 		}
 

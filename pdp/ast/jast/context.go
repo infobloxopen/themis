@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
-	"github.com/infobloxopen/themis/pdp/jcon"
 )
 
 type context struct {
@@ -108,7 +108,7 @@ func (ctx context) getSingleMapPair(m map[interface{}]interface{}, desc string) 
 }
 
 func (ctx *context) decode(d *json.Decoder) error {
-	ok, err := jcon.CheckRootObjectStart(d)
+	ok, err := jparser.CheckRootObjectStart(d)
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func (ctx *context) decode(d *json.Decoder) error {
 		return nil
 	}
 
-	err = jcon.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+	err = jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
 		switch strings.ToLower(k) {
 		case yastTagAttributes:
 			return ctx.decodeAttributeDeclarations(d)
@@ -132,7 +132,7 @@ func (ctx *context) decode(d *json.Decoder) error {
 		return err
 	}
 
-	err = jcon.CheckEOF(d)
+	err = jparser.CheckEOF(d)
 	if err != nil {
 		return err
 	}
@@ -140,15 +140,15 @@ func (ctx *context) decode(d *json.Decoder) error {
 	return nil
 }
 
-func pairs2map(pairs []jcon.Pair) map[interface{}]interface{} {
+func pairs2map(pairs []jparser.Pair) map[interface{}]interface{} {
 	m := make(map[interface{}]interface{}, len(pairs))
 	for _, p := range pairs {
 		switch v := p.V.(type) {
-		case []jcon.Pair:
+		case []jparser.Pair:
 			m[p.K] = pairs2map(v)
 		case []interface{}:
 			for i, item := range v {
-				if pairs, ok := item.([]jcon.Pair); ok {
+				if pairs, ok := item.([]jparser.Pair); ok {
 					v[i] = pairs2map(pairs)
 				}
 			}
@@ -161,7 +161,7 @@ func pairs2map(pairs []jcon.Pair) map[interface{}]interface{} {
 }
 
 func (ctx *context) decodeObject(d *json.Decoder, desc string) (map[interface{}]interface{}, error) {
-	pairs, err := jcon.GetObject(d, desc)
+	pairs, err := jparser.GetObject(d, desc)
 	if err != nil {
 		return nil, err
 	}
@@ -170,13 +170,13 @@ func (ctx *context) decodeObject(d *json.Decoder, desc string) (map[interface{}]
 }
 
 func (ctx *context) decodeArray(d *json.Decoder, desc string) ([]interface{}, error) {
-	arr, err := jcon.GetArray(d, desc)
+	arr, err := jparser.GetArray(d, desc)
 	if err != nil {
 		return nil, err
 	}
 
 	for i, item := range arr {
-		if pairs, ok := item.([]jcon.Pair); ok {
+		if pairs, ok := item.([]jparser.Pair); ok {
 			arr[i] = pairs2map(pairs)
 		}
 	}
@@ -185,17 +185,17 @@ func (ctx *context) decodeArray(d *json.Decoder, desc string) ([]interface{}, er
 }
 
 func (ctx *context) decodeUndefined(d *json.Decoder, desc string) (interface{}, error) {
-	v, err := jcon.GetUndefined(d, desc)
+	v, err := jparser.GetUndefined(d, desc)
 	if err != nil {
 		return nil, err
 	}
 
 	switch v := v.(type) {
-	case []jcon.Pair:
+	case []jparser.Pair:
 		return pairs2map(v), nil
 	case []interface{}:
 		for i, item := range v {
-			if pairs, ok := item.([]jcon.Pair); ok {
+			if pairs, ok := item.([]jparser.Pair); ok {
 				v[i] = pairs2map(pairs)
 			}
 		}

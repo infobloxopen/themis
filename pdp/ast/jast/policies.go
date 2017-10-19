@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
-	"github.com/infobloxopen/themis/pdp/jcon"
 )
 
 func makeSource(desc string, ID string, hidden bool, idx int) string {
@@ -23,26 +23,21 @@ func makeSource(desc string, ID string, hidden bool, idx int) string {
 }
 
 func (ctx *context) decodePolicies(d *json.Decoder) ([]pdp.Evaluable, error) {
-	if err := jcon.CheckArrayStart(d, "policy set"); err != nil {
+	if err := jparser.CheckArrayStart(d, "policy set"); err != nil {
 		return nil, err
 	}
 
 	policies := []pdp.Evaluable{}
-	idx := 0
-
-	err := jcon.UnmarshalObjectArray(d, func(d *json.Decoder) error {
-		idx++
-
-		e, err := ctx.decodeEvaluable(d, idx)
+	if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
+		e, err := ctx.decodeEvaluable(d, idx+1)
 		if err != nil {
-			return err
+			return bindErrorf(err, "%d", idx)
 		}
 
 		policies = append(policies, e)
 
 		return nil
-	}, "policy set")
-	if err != nil {
+	}, "policy set"); err != nil {
 		return nil, err
 	}
 
@@ -64,13 +59,13 @@ func (ctx *context) decodeEvaluable(d *json.Decoder, i int) (pdp.Evaluable, erro
 		algObj map[interface{}]interface{}
 	)
 
-	err := jcon.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+	err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
 		var err error
 
 		switch strings.ToLower(k) {
 		case yastTagID:
 			hidden = false
-			pid, err = jcon.GetString(d, "policy or policy set id")
+			pid, err = jparser.GetString(d, "policy or policy set id")
 			return err
 
 		case yastTagAlg:
@@ -128,7 +123,7 @@ func (ctx *context) decodeEvaluable(d *json.Decoder, i int) (pdp.Evaluable, erro
 }
 
 func (ctx *context) decodeRootPolicy(d *json.Decoder) error {
-	if err := jcon.CheckObjectStart(d, "root policy or policy set"); err != nil {
+	if err := jparser.CheckObjectStart(d, "root policy or policy set"); err != nil {
 		return err
 	}
 

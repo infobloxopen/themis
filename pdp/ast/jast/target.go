@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
-	"github.com/infobloxopen/themis/pdp/jcon"
 )
 
 func (ctx context) getAdjustedArguments(v interface{}, val pdp.Expression, attr pdp.Expression) (pdp.Expression, pdp.Expression, boundError) {
@@ -227,7 +227,7 @@ func (ctx context) unmarshalTarget(m map[interface{}]interface{}) (pdp.Target, b
 }
 
 func (ctx *context) decodeTarget(d *json.Decoder) (pdp.Target, error) {
-	if err := jcon.CheckArrayStart(d, "target"); err != nil {
+	if err := jparser.CheckArrayStart(d, "target"); err != nil {
 		panic(err)
 		return pdp.Target{}, err
 	}

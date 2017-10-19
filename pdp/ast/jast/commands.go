@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
-	"github.com/infobloxopen/themis/pdp/jcon"
 )
 
 func (ctx *context) decodeEntity(d *json.Decoder) (interface{}, error) {
-	if err := jcon.CheckObjectStart(d, "entity"); err != nil {
+	if err := jparser.CheckObjectStart(d, "entity"); err != nil {
 		return nil, err
 	}
 
@@ -30,13 +30,13 @@ func (ctx *context) decodeEntity(d *json.Decoder) (interface{}, error) {
 		algObj map[interface{}]interface{}
 	)
 
-	err := jcon.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+	err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
 		var err error
 
 		switch strings.ToLower(k) {
 		case yastTagID:
 			hidden = false
-			id, err = jcon.GetString(d, "policy or set or rule id")
+			id, err = jparser.GetString(d, "policy or set or rule id")
 			return err
 
 		case yastTagAlg:
@@ -64,7 +64,7 @@ func (ctx *context) decodeEntity(d *json.Decoder) (interface{}, error) {
 		case yastTagEffect:
 			isRule = true
 			var s string
-			s, err = jcon.GetString(d, "effect")
+			s, err = jparser.GetString(d, "effect")
 			if err != nil {
 				return err
 			}
@@ -147,13 +147,13 @@ func (ctx *context) decodeCommand(d *json.Decoder, u *pdp.PolicyUpdate) error {
 		entity interface{}
 	)
 
-	err := jcon.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+	err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
 		var err error
 
 		switch strings.ToLower(k) {
 		case yastTagOp:
 			var s string
-			s, err = jcon.GetString(d, "operation")
+			s, err = jparser.GetString(d, "operation")
 			if err != nil {
 				return err
 			}
@@ -168,7 +168,7 @@ func (ctx *context) decodeCommand(d *json.Decoder, u *pdp.PolicyUpdate) error {
 
 		case yastTagPath:
 			path = []string{}
-			err = jcon.GetStringSequence(d, "path", func(s string) error {
+			err = jparser.GetStringSequence(d, "path", func(idx int, s string) error {
 				path = append(path, s)
 				return nil
 			})
@@ -195,16 +195,13 @@ func (ctx *context) decodeCommand(d *json.Decoder, u *pdp.PolicyUpdate) error {
 }
 
 func (ctx *context) decodeCommands(d *json.Decoder, u *pdp.PolicyUpdate) error {
-	if err := jcon.CheckArrayStart(d, "commands"); err != nil {
+	if err := jparser.CheckArrayStart(d, "commands"); err != nil {
 		return err
 	}
 
-	idx := 0
-	if err := jcon.UnmarshalObjectArray(d, func(d *json.Decoder) error {
-		idx++
-
+	if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
 		if err := ctx.decodeCommand(d, u); err != nil {
-			return bindErrorf(err, "%d", idx)
+			return bindErrorf(err, "%d", idx+1)
 		}
 
 		return nil

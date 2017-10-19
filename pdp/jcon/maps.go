@@ -7,13 +7,14 @@ import (
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
+	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
 )
 
 type mapUnmarshaller interface {
 	get() interface{}
 	unmarshal(k string, d *json.Decoder) error
-	postProcess(p Pair) error
+	postProcess(p jparser.Pair) error
 }
 
 func newTypedMap(c *contentItem, keyIdx int) (mapUnmarshaller, error) {
@@ -62,7 +63,7 @@ func (m *stringMap) unmarshal(k string, d *json.Decoder) error {
 	return nil
 }
 
-func (m *stringMap) postProcess(p Pair) error {
+func (m *stringMap) postProcess(p jparser.Pair) error {
 	v, err := m.c.postProcess(p.V, m.i+1)
 	if err != nil {
 		return bindError(err, p.K)
@@ -106,7 +107,7 @@ func (m *networkMap) unmarshal(k string, d *json.Decoder) error {
 	return nil
 }
 
-func (m *networkMap) postProcess(p Pair) error {
+func (m *networkMap) postProcess(p jparser.Pair) error {
 	var (
 		n   *net.IPNet
 		err error
@@ -159,7 +160,7 @@ func (m *domainMap) unmarshal(k string, d *json.Decoder) error {
 	return nil
 }
 
-func (m *domainMap) postProcess(p Pair) error {
+func (m *domainMap) postProcess(p jparser.Pair) error {
 	n, err := pdp.AdjustDomainName(p.K)
 	if err != nil {
 		return newDomainCastError(p.K, err)
