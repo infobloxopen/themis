@@ -98,6 +98,7 @@ func (c *client) Connect() error {
 		client := &gorpc.Client{Addr: endpoint}
 		c.rpcs[i].ready.Store(false)
 		client.OnConnect = newOnConnectFunc(&c.rpcs[i])
+		client.DisableCompression = true
 		client.Start()
 		c.rpcs[i].client = client
 		c.rpcs[i].limit = c.batchLimit
