@@ -126,6 +126,140 @@ public:
     return true;
   }
 
+  /**
+   * This test creates two tasks, removes the first one then waits for the second one. It then
+   * verifies that the timer manager properly clean up itself and the remaining orphaned timeout
+   * task when the manager goes out of scope and its destructor is called.
+   */
+  bool test01(int64_t timeout = 1000LL) {
+    TimerManager timerManager;
+    timerManager.threadFactory(shared_ptr<PlatformThreadFactory>(new PlatformThreadFactory()));
+    timerManager.start();
+    assert(timerManager.state() == TimerManager::STARTED);
+
+    Synchronized s(_monitor);
+
+    // Setup the two tasks
+    shared_ptr<TimerManagerTests::Task> taskToRemove
+      = shared_ptr<TimerManagerTests::Task>(new TimerManagerTests::Task(_monitor, timeout / 2));
+    timerManager.add(taskToRemove, taskToRemove->_timeout);
+
+    shared_ptr<TimerManagerTests::Task> task
+      = shared_ptr<TimerManagerTests::Task>(new TimerManagerTests::Task(_monitor, timeout));
+    timerManager.add(task, task->_timeout);
+
+    // Remove one task and wait until the other has completed
+    timerManager.remove(taskToRemove);
+    _monitor.wait(timeout * 2);
+
+    assert(!taskToRemove->_done);
+    assert(task->_done);
+
+    return true;
+  }
+
+  /**
+   * This test creates two tasks with the same callback and another one, then removes the two
+   * duplicated then waits for the last one. It then verifies that the timer manager properly
+   * clean up itself and the remaining orphaned timeout task when the manager goes out of scope
+   * and its destructor is called.
+   */
+  bool test02(int64_t timeout = 1000LL) {
+    TimerManager timerManager;
+    timerManager.threadFactory(shared_ptr<PlatformThreadFactory>(new PlatformThreadFactory()));
+    timerManager.start();
+    assert(timerManager.state() == TimerManager::STARTED);
+
+    Synchronized s(_monitor);
+
+    // Setup the one tasks and add it twice
+    shared_ptr<TimerManagerTests::Task> taskToRemove
+      = shared_ptr<TimerManagerTests::Task>(new TimerManagerTests::Task(_monitor, timeout / 3));
+    timerManager.add(taskToRemove, taskToRemove->_timeout);
+    timerManager.add(taskToRemove, taskToRemove->_timeout * 2);
+
+    shared_ptr<TimerManagerTests::Task> task
+      = shared_ptr<TimerManagerTests::Task>(new TimerManagerTests::Task(_monitor, timeout));
+    timerManager.add(task, task->_timeout);
+
+    // Remove the first task (e.g. two timers) and wait until the other has completed
+    timerManager.remove(taskToRemove);
+    _monitor.wait(timeout * 2);
+
+    assert(!taskToRemove->_done);
+    assert(task->_done);
+
+    return true;
+  }
+
+  /**
+   * This test creates two tasks, removes the first one then waits for the second one. It then
+   * verifies that the timer manager properly clean up itself and the remaining orphaned timeout
+   * task when the manager goes out of scope and its destructor is called.
+   */
+  bool test03(int64_t timeout = 1000LL) {
+    TimerManager timerManager;
+    timerManager.threadFactory(shared_ptr<PlatformThreadFactory>(new PlatformThreadFactory()));
+    timerManager.start();
+    assert(timerManager.state() == TimerManager::STARTED);
+
+    Synchronized s(_monitor);
+
+    // Setup the two tasks
+    shared_ptr<TimerManagerTests::Task> taskToRemove
+        = shared_ptr<TimerManagerTests::Task>(new TimerManagerTests::Task(_monitor, timeout / 2));
+    TimerManager::Timer timer = timerManager.add(taskToRemove, taskToRemove->_timeout);
+
+    shared_ptr<TimerManagerTests::Task> task
+      = shared_ptr<TimerManagerTests::Task>(new TimerManagerTests::Task(_monitor, timeout));
+    timerManager.add(task, task->_timeout);
+
+    // Remove one task and wait until the other has completed
+    timerManager.remove(timer);
+    _monitor.wait(timeout * 2);
+
+    assert(!taskToRemove->_done);
+    assert(task->_done);
+
+    // Verify behavior when removing the removed task
+    try {
+      timerManager.remove(timer);
+      assert(0 == "ERROR: This remove should send a NoSuchTaskException exception.");
+    } catch (NoSuchTaskException&) {
+    }
+
+    return true;
+  }
+
+  /**
+   * This test creates one tasks, and tries to remove it after it has expired.
+   */
+  bool test04(int64_t timeout = 1000LL) {
+    TimerManager timerManager;
+    timerManager.threadFactory(shared_ptr<PlatformThreadFactory>(new PlatformThreadFactory()));
+    timerManager.start();
+    assert(timerManager.state() == TimerManager::STARTED);
+
+    Synchronized s(_monitor);
+
+    // Setup the task
+    shared_ptr<TimerManagerTests::Task> task
+      = shared_ptr<TimerManagerTests::Task>(new TimerManagerTests::Task(_monitor, timeout / 10));
+    TimerManager::Timer timer = timerManager.add(task, task->_timeout);
+
+    // Wait until the task has completed
+    _monitor.wait(timeout);
+
+    // Verify behavior when removing the expired task
+    try {
+      timerManager.remove(timer);
+      assert(0 == "ERROR: This remove should send a NoSuchTaskException exception.");
+    } catch (NoSuchTaskException&) {
+    }
+
+    return true;
+  }
+
   friend class TestTask;
 
   Monitor _monitor;

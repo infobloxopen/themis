@@ -260,7 +260,8 @@ private:
   void render_struct_sync_read(const string &struct_name, t_struct *tstruct, t_rs_generator::e_struct_type struct_type);
 
   // Write the rust function that deserializes a single type (i.e. i32 etc.) from its wire representation.
-  void render_type_sync_read(const string &type_var, t_type *ttype);
+  // Set `is_boxed` to `true` if the resulting value should be wrapped in a `Box::new(...)`.
+  void render_type_sync_read(const string &type_var, t_type *ttype, bool is_boxed = false);
 
   // Read the wire representation of a list and convert it to its corresponding rust implementation.
   // The deserialized list is stored in `list_variable`.
@@ -353,12 +354,28 @@ private:
 
   string handler_successful_return_struct(t_function* tfunc);
 
+  // Writes the result of `render_rift_error_struct` wrapped in an `Err(thrift::Error(...))`.
   void render_rift_error(
     const string& error_kind,
     const string& error_struct,
     const string& sub_error_kind,
     const string& error_message
   );
+
+  // Write a thrift::Error variant struct. Error structs take the form:
+  // ```
+  // pub struct error_struct {
+  //   kind: sub_error_kind,
+  //   message: error_message,
+  // }
+  // ```
+  // A concrete example is:
+  // ```
+  //  pub struct ApplicationError {
+  //    kind: ApplicationErrorKind::Unknown,
+  //    message: "This is some error message",
+  //  }
+  // ```
   void render_rift_error_struct(
     const string& error_struct,
     const string& sub_error_kind,
@@ -512,6 +529,8 @@ void t_rs_generator::render_attributes_and_includes() {
 
   // code always includes BTreeMap/BTreeSet/OrderedFloat
   f_gen_ << "#![allow(unused_imports)]" << endl;
+  // code might not include imports from crates
+  f_gen_ << "#![allow(unused_extern_crates)]" << endl;
   // constructors take *all* struct parameters, which can trigger the "too many arguments" warning
   // some auto-gen'd types can be deeply nested. clippy recommends factoring them out which is hard to autogen
   f_gen_ << "#![cfg_attr(feature = \"cargo-clippy\", allow(too_many_arguments, type_complexity))]" << endl;
@@ -1858,7 +1877,7 @@ void t_rs_generator::render_union_sync_read(const string &union_name, t_struct *
 }
 
 // Construct the rust representation of all supported types from the wire.
-void t_rs_generator::render_type_sync_read(const string &type_var, t_type *ttype) {
+void t_rs_generator::render_type_sync_read(const string &type_var, t_type *ttype, bool is_boxed) {
   if (ttype->is_base_type()) {
     t_base_type* tbase_type = (t_base_type*)ttype;
     switch (tbase_type->get_base()) {
@@ -1891,13 +1910,23 @@ void t_rs_generator::render_type_sync_read(const string &type_var, t_type *ttype
       return;
     }
   } else if (ttype->is_typedef()) {
+    // FIXME: not a fan of separate `is_boxed` parameter
+    // This is problematic because it's an optional parameter, and only comes
+    // into play once. The core issue is that I lose an important piece of type
+    // information (whether the type is a fwd ref) by unwrapping the typedef'd
+    // type and making the recursive call using it. I can't modify or wrap the
+    // generated string after the fact because it's written directly into the file,
+    // so I have to pass this parameter along. Going with this approach because it
+    // seems like the lowest-cost option to easily support recursive types.
     t_typedef* ttypedef = (t_typedef*)ttype;
-    render_type_sync_read(type_var, ttypedef->get_type());
+    render_type_sync_read(type_var, ttypedef->get_type(), ttypedef->is_forward_typedef());
     return;
   } else if (ttype->is_enum() || ttype->is_struct() || ttype->is_xception()) {
+    string read_call(to_rust_type(ttype) + "::read_from_in_protocol(i_prot)?");
+    read_call = is_boxed ? "Box::new(" + read_call + ")" : read_call;
     f_gen_
       << indent()
-      << "let " << type_var << " = " <<  to_rust_type(ttype) << "::read_from_in_protocol(i_prot)?;"
+      << "let " << type_var << " = " <<  read_call << ";"
       << endl;
     return;
   } else if (ttype->is_map()) {
@@ -2519,8 +2548,10 @@ void t_rs_generator::render_sync_processor_definition_and_impl(t_service *tservi
     << "fn process(&self, i_prot: &mut TInputProtocol, o_prot: &mut TOutputProtocol) -> thrift::Result<()> {"
     << endl;
   indent_up();
+
   f_gen_ << indent() << "let message_ident = i_prot.read_message_begin()?;" << endl;
-  f_gen_ << indent() << "match &*message_ident.name {" << endl; // [sigh] explicit deref coercion
+
+  f_gen_ << indent() << "let res = match &*message_ident.name {" << endl; // [sigh] explicit deref coercion
   indent_up();
   render_process_match_statements(tservice);
   f_gen_ << indent() << "method => {" << endl;
@@ -2535,7 +2566,9 @@ void t_rs_generator::render_sync_processor_definition_and_impl(t_service *tservi
   f_gen_ << indent() << "}," << endl;
 
   indent_down();
-  f_gen_ << indent() << "}" << endl;
+  f_gen_ << indent() << "};" << endl;
+  f_gen_ << indent() << "thrift::server::handle_process_result(&message_ident, res, o_prot)" << endl;
+
   indent_down();
   f_gen_ << indent() << "}" << endl;
 
@@ -2975,7 +3008,10 @@ string t_rs_generator::to_rust_type(t_type* ttype, bool ordered_float) {
       }
     }
   } else if (ttype->is_typedef()) {
-    return rust_namespace(ttype) + ((t_typedef*)ttype)->get_symbolic();
+    t_typedef* ttypedef = (t_typedef*)ttype;
+    string rust_type = rust_namespace(ttype) + ttypedef->get_symbolic();
+    rust_type =  ttypedef->is_forward_typedef() ? "Box<" + rust_type + ">" : rust_type;
+    return rust_type;
   } else if (ttype->is_enum()) {
     return rust_namespace(ttype) + ttype->get_name();
   } else if (ttype->is_struct() || ttype->is_xception()) {

@@ -1,6 +1,6 @@
 # autopath
 
-*autopath* allows CoreDNS to perform server side search path completion.
+*autopath* allows for server side search path completion.
 
 If it sees a query that matches the first element of the configured search path, *autopath* will
 follow the chain of search path elements and returns the first reply that is not NXDOMAIN. On any
@@ -11,7 +11,7 @@ element in it) to the name of this answer.
 ## Syntax
 
 ~~~
-autopath [ZONE..] RESOLV-CONF
+autopath [ZONE...] RESOLV-CONF
 ~~~
 
 * **ZONES** zones *autopath* should be authoritative for.
@@ -23,6 +23,12 @@ Currently the following set of plugin has implemented *autopath*:
 
 * *kubernetes*
 * *erratic*
+
+## Metrics
+ 
+If monitoring is enabled (via the *prometheus* directive) then the following metric is exported:
+ 
+* `coredns_autopath_success_count_total{}` - counter of successfully autopath-ed queries.
 
 ## Examples
 
@@ -38,8 +44,3 @@ autopath @kubernetes
 ~~~
 
 Use the search path dynamically retrieved from the kubernetes plugin.
-
-## Bugs
-
-When the *cache* plugin is enabled it is possible for pods in different namespaces to get the
-same answer.
