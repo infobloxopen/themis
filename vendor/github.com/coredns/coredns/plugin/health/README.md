@@ -1,6 +1,8 @@
 # health
 
-*health* enables a simple health check endpoint. By default, it listens on port 8080.
+*health* enables a simple health check endpoint.
+
+By default, it listens on port 8080.
 
 ## Syntax
 
@@ -18,6 +20,8 @@ supports health checks has a section "Health" in their README.
 
 Run another health endpoint on http://localhost:8091.
 
-~~~
-health localhost:8091
+~~~ corefile
+. {
+    health localhost:8091
+}
 ~~~

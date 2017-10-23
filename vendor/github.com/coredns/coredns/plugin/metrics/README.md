@@ -1,17 +1,17 @@
 # prometheus
 
-*prometheus* enables [Prometheus](https://prometheus.io/) metrics for CoreDNS.
+*prometheus* enables [Prometheus](https://prometheus.io/) metrics.
 
 The default location for the metrics is `localhost:9153`. The metrics path is fixed to `/metrics`.
 The following metrics are exported:
 
-* coredns_dns_request_count_total{zone, proto, family}
-* coredns_dns_request_duration_milliseconds{zone}
-* coredns_dns_request_size_bytes{zone, proto}
-* coredns_dns_request_do_count_total{zone}
-* coredns_dns_request_type_count_total{zone, type}
-* coredns_dns_response_size_bytes{zone, proto}
-* coredns_dns_response_rcode_count_total{zone, rcode}
+* `coredns_dns_request_count_total{zone, proto, family}` - total query count.
+* `coredns_dns_request_duration_milliseconds{zone}` - duration to process each query.
+* `coredns_dns_request_size_bytes{zone, proto}` - size of the request in bytes.
+* `coredns_dns_request_do_count_total{zone}` -  queries that have the DO bit set
+* `coredns_dns_request_type_count_total{zone, type}` - counter of queries per zone and type.
+* `coredns_dns_response_size_bytes{zone, proto}` - response size in bytes.
+* `coredns_dns_response_rcode_count_total{zone, rcode}` - response per zone and rcode.
 
 Each counter has a label `zone` which is the zonename used for the request/response.
 
@@ -26,7 +26,6 @@ Extra labels used are:
 
 If monitoring is enabled, queries that do not enter the plugin chain are exported under the fake
 name "dropped" (without a closing dot - this is never a valid domain name).
-
 
 ## Syntax
 
@@ -46,6 +45,15 @@ Use an alternative address:
 ~~~ corefile
 . {
     prometheus localhost:9253
+}
+~~~
+
+Or via an enviroment variable (this is supported throughout the Corefile): `export PORT=9253`, and
+then:
+
+~~~ corefile
+. {
+    prometheus localhost:{$PORT}
 }
 ~~~
 

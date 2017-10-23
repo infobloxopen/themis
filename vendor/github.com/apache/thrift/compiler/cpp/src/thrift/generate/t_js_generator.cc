@@ -558,7 +558,7 @@ string t_js_generator::render_const_value(t_type* type, t_const_value* value) {
   } else if (type->is_enum()) {
     out << value->get_integer();
   } else if (type->is_struct() || type->is_xception()) {
-    out << "new " << js_type_namespace(type->get_program()) << type->get_name() << "({" << endl;
+    out << "new " << js_type_namespace(type->get_program()) << type->get_name() << "({";
     indent_up();
     const vector<t_field*>& fields = ((t_struct*)type)->get_members();
     vector<t_field*>::const_iterator f_iter;
@@ -576,12 +576,12 @@ string t_js_generator::render_const_value(t_type* type, t_const_value* value) {
       }
       if (v_iter != val.begin())
         out << ",";
-      out << render_const_value(g_type_string, v_iter->first);
+      out << endl << indent() << render_const_value(g_type_string, v_iter->first);
       out << " : ";
       out << render_const_value(field_type, v_iter->second);
     }
-
-    out << "})";
+    indent_down();
+    out << endl << indent() << "})";
   } else if (type->is_map()) {
     t_type* ktype = ((t_map*)type)->get_key_type();
 
@@ -600,9 +600,8 @@ string t_js_generator::render_const_value(t_type* type, t_const_value* value) {
       out << " : ";
       out << render_const_value(vtype, v_iter->second);
     }
-
     indent_down();
-    out << endl << "}";
+    out << endl << indent() << "}";
   } else if (type->is_list() || type->is_set()) {
     t_type* etype;
     if (type->is_list()) {
@@ -1483,11 +1482,20 @@ void t_js_generator::generate_service_client(t_service* tservice) {
                  << "', " << messageType << ", this.seqid);" << endl;
     }
 
-    f_service_ << indent() << "var args = new " << argsname << "();" << endl;
-
-    for (fld_iter = fields.begin(); fld_iter != fields.end(); ++fld_iter) {
-      f_service_ << indent() << "args." << (*fld_iter)->get_name() << " = "
-                 << (*fld_iter)->get_name() << ";" << endl;
+    if (fields.size() > 0){
+      f_service_ << indent() << "var params = {" << endl;
+      for (fld_iter = fields.begin(); fld_iter != fields.end(); ++fld_iter) {
+        f_service_ << indent() << indent() << (*fld_iter)->get_name() << ": " << (*fld_iter)->get_name();
+        if (fld_iter != fields.end()-1) {
+          f_service_ << "," << endl;
+        } else {
+          f_service_ << endl;
+        }
+      }
+      f_service_ << indent() << "};" << endl;
+      f_service_ << indent() << "var args = new " << argsname << "(params);" << endl;
+    } else {
+      f_service_ << indent() << "var args = new " << argsname << "();" << endl;
     }
 
     // Write to the stream
@@ -1501,16 +1509,20 @@ void t_js_generator::generate_service_client(t_service* tservice) {
         f_service_ << indent() << "return this.output.getTransport().flush(callback);" << endl;
       } else {
         f_service_ << indent() << "if (callback) {" << endl;
-        f_service_ << indent() << "  var self = this;" << endl;
-        f_service_ << indent() << "  this.output.getTransport().flush(true, function() {" << endl;
-        f_service_ << indent() << "    var result = null;" << endl;
-        f_service_ << indent() << "    try {" << endl;
-        f_service_ << indent() << "      result = self.recv_" << funname << "();" << endl;
-        f_service_ << indent() << "    } catch (e) {" << endl;
-        f_service_ << indent() << "      result = e;" << endl;
-        f_service_ << indent() << "    }" << endl;
-        f_service_ << indent() << "    callback(result);" << endl;
-        f_service_ << indent() << "  });" << endl;
+        if((*f_iter)->is_oneway()) {
+          f_service_ << indent() << "  this.output.getTransport().flush(true, null);" << endl;
+        } else {
+          f_service_ << indent() << "  var self = this;" << endl;
+          f_service_ << indent() << "  this.output.getTransport().flush(true, function() {" << endl;
+          f_service_ << indent() << "    var result = null;" << endl;
+          f_service_ << indent() << "    try {" << endl;
+          f_service_ << indent() << "      result = self.recv_" << funname << "();" << endl;
+          f_service_ << indent() << "    } catch (e) {" << endl;
+          f_service_ << indent() << "      result = e;" << endl;
+          f_service_ << indent() << "    }" << endl;
+          f_service_ << indent() << "    callback(result);" << endl;
+          f_service_ << indent() << "  });" << endl;
+        }
         f_service_ << indent() << "} else {" << endl;
         f_service_ << indent() << "  return this.output.getTransport().flush();" << endl;
         f_service_ << indent() << "}" << endl;
@@ -2218,10 +2230,10 @@ std::string t_js_generator::ts_function_signature(t_function* tfunction, bool in
   }
 
   if (include_callback) {
-    str += "callback: Function): ";
+    str += "callback: (data: " + ts_get_type(tfunction->get_returntype()) + ")=>void): ";
 
     if (gen_jquery_) {
-      str += "JQueryXHR;";
+      str += "JQueryPromise<" + ts_get_type(tfunction->get_returntype()) +">;";
     } else {
       str += "void;";
     }

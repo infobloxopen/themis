@@ -159,7 +159,7 @@ thrift_ssl_socket_peek (ThriftTransport *transport, GError **error)
       gchar byte;
       rc = SSL_peek(ssl_socket->ssl, &byte, 1);
       if (rc < 0) {
-	  g_set_error (error,
+	        g_set_error (error,
 		       THRIFT_TRANSPORT_ERROR,
 		       THRIFT_SSL_SOCKET_ERROR_SSL,
 		       "failed to peek at socket - id?");
@@ -215,7 +215,10 @@ thrift_ssl_socket_read (ThriftTransport *transport, gpointer buf,
   ThriftSSLSocket *ssl_socket = THRIFT_SSL_SOCKET (transport);
   guint bytes = 0;
   guint retries = 0;
-  for (retries=0; retries < maxRecvRetries_; retries++) {
+  ThriftSocket *socket = THRIFT_SOCKET (transport);
+  g_return_val_if_fail (socket->sd != THRIFT_INVALID_SOCKET, FALSE);
+
+    for (retries=0; retries < maxRecvRetries_; retries++) {
       bytes = SSL_read(ssl_socket->ssl, buf, len);
       if (bytes >= 0)
 	break;
@@ -252,7 +255,7 @@ thrift_ssl_socket_write (ThriftTransport *transport, const gpointer buf,
   ThriftSSLSocket *ssl_socket = THRIFT_SSL_SOCKET (transport);
   gint ret = 0;
   guint sent = 0;
-  ThriftSocket *socket = THRIFT_SSL_SOCKET (transport);
+  ThriftSocket *socket = THRIFT_SOCKET (transport);
   g_return_val_if_fail (socket->sd != THRIFT_INVALID_SOCKET, FALSE);
 
   while (sent < len)
@@ -290,6 +293,10 @@ thrift_ssl_socket_flush (ThriftTransport *transport, GError **error)
   ThriftSSLSocket *ssl_socket = THRIFT_SSL_SOCKET (transport);
   gint ret = 0;
   guint sent = 0;
+
+  ThriftSocket *socket = THRIFT_SOCKET (transport);
+  g_return_val_if_fail (socket->sd != THRIFT_INVALID_SOCKET, FALSE);
+
   BIO* bio = SSL_get_wbio(ssl_socket->ssl);
   if (bio == NULL) {
       g_set_error (error, THRIFT_TRANSPORT_ERROR,
@@ -383,17 +390,16 @@ gboolean thrift_ssl_load_cert_from_buffer(ThriftSSLSocket *ssl_socket, const cha
   X509_STORE *cert_store = SSL_CTX_get_cert_store(ssl_socket->ctx);
 
   if(cert_store!=NULL){
-      int index = 0;
-      while ((cacert = PEM_read_bio_X509(mem, NULL, 0, NULL))!=NULL) {
-	  if(cacert) {
-	      g_debug("Our certificate name is %s", cacert->name);
-	      X509_STORE_add_cert(cert_store, cacert);
-	      X509_free(cacert);
-	      cacert=NULL;
-	  } /* Free immediately */
-	  index++;
-      }
-      retval=TRUE;
+    int index = 0;
+    while ((cacert = PEM_read_bio_X509(mem, NULL, 0, NULL))!=NULL) {
+      if(cacert) {
+        X509_STORE_add_cert(cert_store, cacert);
+        X509_free(cacert);
+        cacert=NULL;
+      } /* Free immediately */
+      index++;
+    }
+    retval=TRUE;
   }
   BIO_free(mem);
   return retval;
@@ -410,44 +416,46 @@ thrift_ssl_socket_authorize(ThriftTransport * transport, GError **error)
   if(cls!=NULL && ssl_socket->ssl!=NULL){
       int rc = SSL_get_verify_result(ssl_socket->ssl);
       if (rc != X509_V_OK) { /* verify authentication result */
-	  if (rc == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT && ssl_socket->allow_selfsigned) {
-	      g_debug("The certificate is a self-signed certificate and configuration allows it");
-	  } else {
-	      g_error("The certificate verification failed: %s (%d)", X509_verify_cert_error_string(rc), rc);
-	      return FALSE;
-	  }
+	      if (rc == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT && ssl_socket->allow_selfsigned) {
+	          g_debug("The certificate is a self-signed certificate and configuration allows it");
+	      } else {
+          	g_set_error (error,
+              THRIFT_TRANSPORT_ERROR,
+		          THRIFT_SSL_SOCKET_ERROR_SSL_CERT_VALIDATION_FAILED,
+		          "The certificate verification failed: %s (%d)", X509_verify_cert_error_string(rc), rc);
+	          return FALSE;
+	      }
       }
 
       X509* cert = SSL_get_peer_certificate(ssl_socket->ssl);
       if (cert == NULL) {
-	  if (SSL_get_verify_mode(ssl_socket->ssl) & SSL_VERIFY_FAIL_IF_NO_PEER_CERT) {
-	      g_error("No certificate present");
-	      return FALSE;
-	  }
-
-	  g_debug("No certificate required");
-	  return TRUE;
+	      if (SSL_get_verify_mode(ssl_socket->ssl) & SSL_VERIFY_FAIL_IF_NO_PEER_CERT) {
+          	g_set_error (error,
+              THRIFT_TRANSPORT_ERROR,
+		          THRIFT_SSL_SOCKET_ERROR_SSL_CERT_VALIDATION_FAILED,
+		          "No certificate present. Are you connecting SSL server?");
+	          return FALSE;
+	      }
+	      g_debug("No certificate required");
+	      return TRUE;
       }
 
       /* certificate is present, since we don't support access manager we are done */
       if (cls->authorize_peer == NULL) {
-	  X509_free(cert);
-	  g_debug("Certificate presented but we're not checking it");
-	  return TRUE;
+	      X509_free(cert);
+	      g_debug("Certificate presented but we're not checking it");
+	      return TRUE;
       } else {
-	  /* both certificate and access manager are present */
-	  struct sockaddr_storage sa;
-	  socklen_t saLength = sizeof(struct sockaddr_storage);
-
-	  if (getpeername(socket->sd, (struct sockaddr*)&sa, &saLength) != 0) {
-	      sa.ss_family = AF_UNSPEC;
-	  }
-
-	  authorization_result = cls->authorize_peer(transport, cert, &sa, error);
+	      /* both certificate and access manager are present */
+	      struct sockaddr_storage sa;
+	      socklen_t saLength = sizeof(struct sockaddr_storage);
+        if (getpeername(socket->sd, (struct sockaddr*)&sa, &saLength) != 0) {
+            sa.ss_family = AF_UNSPEC;
+        }
+	      authorization_result = cls->authorize_peer(transport, cert, &sa, error);
       }
-
       if(cert != NULL) {
-	  X509_free(cert);
+        X509_free(cert);
       }
   }
 

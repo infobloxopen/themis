@@ -80,9 +80,6 @@ func (p Proxy) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 		for time.Since(start) < tryDuration {
 			host := upstream.Select()
 			if host == nil {
-
-				RequestDuration.WithLabelValues(state.Proto(), upstream.Exchanger().Protocol(), upstream.From()).Observe(float64(time.Since(start) / time.Millisecond))
-
 				return dns.RcodeServerFailure, fmt.Errorf("%s: %s", errUnreachable, "no upstream host")
 			}
 
@@ -93,6 +90,8 @@ func (p Proxy) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 
 			atomic.AddInt64(&host.Conns, 1)
 			queryEpoch := msg.Epoch()
+
+			RequestCount.WithLabelValues(state.Proto(), upstream.Exchanger().Protocol(), familyToString(state.Family()), host.Name).Add(1)
 
 			reply, backendErr = upstream.Exchanger().Exchange(ctx, host.Name, state)
 
@@ -108,7 +107,7 @@ func (p Proxy) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 			if backendErr == nil {
 				w.WriteMsg(reply)
 
-				RequestDuration.WithLabelValues(state.Proto(), upstream.Exchanger().Protocol(), upstream.From()).Observe(float64(time.Since(start) / time.Millisecond))
+				RequestDuration.WithLabelValues(state.Proto(), upstream.Exchanger().Protocol(), familyToString(state.Family()), host.Name).Observe(float64(time.Since(start) / time.Millisecond))
 
 				return 0, taperr
 			}
@@ -128,18 +127,21 @@ func (p Proxy) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 
 			timeout := host.FailTimeout
 			if timeout == 0 {
-				timeout = 2 * time.Second
+				timeout = defaultFailTimeout
 			}
 
 			atomic.AddInt32(&host.Fails, 1)
+			fails := atomic.LoadInt32(&host.Fails)
 
 			go func(host *healthcheck.UpstreamHost, timeout time.Duration) {
 				time.Sleep(timeout)
+				// we may go negative here, should be rectified by the HC.
 				atomic.AddInt32(&host.Fails, -1)
+				if fails%failureCheck == 0 { // Kick off healthcheck on eveyry third failure.
+					host.HealthCheckURL()
+				}
 			}(host, timeout)
 		}
-
-		RequestDuration.WithLabelValues(state.Proto(), upstream.Exchanger().Protocol(), upstream.From()).Observe(float64(time.Since(start) / time.Millisecond))
 
 		return dns.RcodeServerFailure, fmt.Errorf("%s: %s", errUnreachable, backendErr)
 	}
@@ -169,9 +171,6 @@ func (p Proxy) match(state request.Request) (u Upstream) {
 
 // Name implements the Handler interface.
 func (p Proxy) Name() string { return "proxy" }
-
-// defaultTimeout is the default networking timeout for DNS requests.
-const defaultTimeout = 5 * time.Second
 
 func toDnstap(ctx context.Context, host string, ex Exchanger, state request.Request, reply *dns.Msg, queryEpoch, respEpoch uint64) (err error) {
 	if tapper := dnstap.TapperFromContext(ctx); tapper != nil {
@@ -209,3 +208,9 @@ func toDnstap(ctx context.Context, host string, ex Exchanger, state request.Requ
 	}
 	return
 }
+
+const (
+	defaultFailTimeout = 2 * time.Second
+	defaultTimeout     = 5 * time.Second
+	failureCheck       = 3
+)

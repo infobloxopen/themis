@@ -160,7 +160,7 @@
       ]
     },
     "client": {
-      "timeout": 2.9,
+      "timeout": 6,
       "command": [
         "node",
         "client.js",
@@ -397,15 +397,25 @@
       "compact",
       "json"
     ],
-    "server": {
+    "server-disabled": {
       "command": [
-        "dotnet restore && dotnet run server"
+        "dotnet",
+        "run",
+	"--no-build",
+	"--no-restore",
+	"--",
+        "server"
       ]
     },
     "client": {
       "timeout": 10,
       "command": [
-        "dotnet run client"
+        "dotnet",
+        "run",
+	"--no-build",
+	"--no-restore",
+	"--",
+        "client"
       ]
     },
     "workdir": "netcore/ThriftTest"
@@ -465,8 +475,8 @@
       ],
       "command": [
         "php",
-        "-dextension_dir=../../lib/php/src/ext/thrift_protocol/modules/",
-        "--php-ini=../../lib/php/thrift_protocol.ini",
+        "-dextension_dir=php_ext_dir",
+        "--php-ini=test_php.ini",
         "--no-php-ini",
         "-ddisplay_errors=stderr",
         "-dlog_errors=0",
@@ -598,6 +608,10 @@
   },
   {
     "name": "rs",
+    "env": {
+      "RUST_BACKTRACE": "1",
+      "RUST_LOG": "info"
+    },
     "server": {
       "command": [
         "test_server"
@@ -609,16 +623,18 @@
         "test_client"
       ]
     },
+    "sockets": [
+      "ip"
+    ],
     "transports": [
       "buffered",
       "framed"
     ],
-    "sockets": [
-      "ip"
-    ],
     "protocols": [
       "binary",
-      "compact"
+      "compact",
+      "multi",
+      "multic"
     ],
     "workdir": "rs/bin"
   }
