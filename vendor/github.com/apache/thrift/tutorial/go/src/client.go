@@ -27,17 +27,17 @@ import (
 )
 
 func handleClient(client *tutorial.CalculatorClient) (err error) {
-	client.Ping()
+	client.Ping(defaultCtx)
 	fmt.Println("ping()")
 
-	sum, _ := client.Add(1, 1)
+	sum, _ := client.Add(defaultCtx, 1, 1)
 	fmt.Print("1+1=", sum, "\n")
 
 	work := tutorial.NewWork()
 	work.Op = tutorial.Operation_DIVIDE
 	work.Num1 = 1
 	work.Num2 = 0
-	quotient, err := client.Calculate(1, work)
+	quotient, err := client.Calculate(defaultCtx, 1, work)
 	if err != nil {
 		switch v := err.(type) {
 		case *tutorial.InvalidOperation:
@@ -53,7 +53,7 @@ func handleClient(client *tutorial.CalculatorClient) (err error) {
 	work.Op = tutorial.Operation_SUBTRACT
 	work.Num1 = 15
 	work.Num2 = 10
-	diff, err := client.Calculate(1, work)
+	diff, err := client.Calculate(defaultCtx, 1, work)
 	if err != nil {
 		switch v := err.(type) {
 		case *tutorial.InvalidOperation:
@@ -66,7 +66,7 @@ func handleClient(client *tutorial.CalculatorClient) (err error) {
 		fmt.Print("15-10=", diff, "\n")
 	}
 
-	log, err := client.GetStruct(1)
+	log, err := client.GetStruct(defaultCtx, 1)
 	if err != nil {
 		fmt.Println("Unable to get struct:", err)
 		return err
@@ -90,7 +90,10 @@ func runClient(transportFactory thrift.TTransportFactory, protocolFactory thrift
 		fmt.Println("Error opening socket:", err)
 		return err
 	}
-	transport = transportFactory.GetTransport(transport)
+	transport, err = transportFactory.GetTransport(transport)
+	if err != nil {
+		return err
+	}
 	defer transport.Close()
 	if err := transport.Open(); err != nil {
 		return err

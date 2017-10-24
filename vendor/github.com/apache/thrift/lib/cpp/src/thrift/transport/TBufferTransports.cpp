@@ -361,9 +361,13 @@ void TMemoryBuffer::ensureCanWrite(uint32_t len) {
   }
 
   // Grow the buffer as necessary.
-  uint32_t new_size = bufferSize_;
+  uint64_t new_size = bufferSize_;
   while (len > avail) {
     new_size = new_size > 0 ? new_size * 2 : 1;
+    if (new_size > maxBufferSize_) {
+      throw TTransportException(TTransportException::BAD_ARGS,
+                                "Internal buffer size overflow");
+    }
     avail = available_write() + (new_size - bufferSize_);
   }
 

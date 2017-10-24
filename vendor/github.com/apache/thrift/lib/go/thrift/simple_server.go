@@ -23,6 +23,7 @@ import (
 	"log"
 	"runtime/debug"
 	"sync"
+	"sync/atomic"
 )
 
 /*
@@ -31,7 +32,9 @@ import (
  * This will work if golang user implements a conn-pool like thing in client side.
  */
 type TSimpleServer struct {
-	quit chan struct{}
+	closed int32
+	wg     sync.WaitGroup
+	mu     sync.Mutex
 
 	processorFactory       TProcessorFactory
 	serverTransport        TServerTransport
@@ -91,7 +94,6 @@ func NewTSimpleServerFactory6(processorFactory TProcessorFactory, serverTranspor
 		outputTransportFactory: outputTransportFactory,
 		inputProtocolFactory:   inputProtocolFactory,
 		outputProtocolFactory:  outputProtocolFactory,
-		quit: make(chan struct{}, 1),
 	}
 }
 
@@ -126,21 +128,23 @@ func (p *TSimpleServer) Listen() error {
 func (p *TSimpleServer) AcceptLoop() error {
 	for {
 		client, err := p.serverTransport.Accept()
+		p.mu.Lock()
+		if atomic.LoadInt32(&p.closed) != 0 {
+			return nil
+		}
 		if err != nil {
-			select {
-			case <-p.quit:
-				return nil
-			default:
-			}
 			return err
 		}
 		if client != nil {
+			p.wg.Add(1)
 			go func() {
+				defer p.wg.Done()
 				if err := p.processRequests(client); err != nil {
 					log.Println("error processing request:", err)
 				}
 			}()
 		}
+		p.mu.Unlock()
 	}
 }
 
@@ -153,21 +157,28 @@ func (p *TSimpleServer) Serve() error {
 	return nil
 }
 
-var once sync.Once
-
 func (p *TSimpleServer) Stop() error {
-	q := func() {
-		p.quit <- struct{}{}
-		p.serverTransport.Interrupt()
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if atomic.LoadInt32(&p.closed) != 0 {
+		return nil
 	}
-	once.Do(q)
+	atomic.StoreInt32(&p.closed, 1)
+	p.serverTransport.Interrupt()
+	p.wg.Wait()
 	return nil
 }
 
 func (p *TSimpleServer) processRequests(client TTransport) error {
 	processor := p.processorFactory.GetProcessor(client)
-	inputTransport := p.inputTransportFactory.GetTransport(client)
-	outputTransport := p.outputTransportFactory.GetTransport(client)
+	inputTransport, err := p.inputTransportFactory.GetTransport(client)
+	if err != nil {
+		return err
+	}
+	outputTransport, err := p.outputTransportFactory.GetTransport(client)
+	if err != nil {
+		return err
+	}
 	inputProtocol := p.inputProtocolFactory.GetProtocol(inputTransport)
 	outputProtocol := p.outputProtocolFactory.GetProtocol(outputTransport)
 	defer func() {
@@ -175,6 +186,7 @@ func (p *TSimpleServer) processRequests(client TTransport) error {
 			log.Printf("panic in processor: %s: %s", e, debug.Stack())
 		}
 	}()
+
 	if inputTransport != nil {
 		defer inputTransport.Close()
 	}
@@ -182,7 +194,11 @@ func (p *TSimpleServer) processRequests(client TTransport) error {
 		defer outputTransport.Close()
 	}
 	for {
-		ok, err := processor.Process(inputProtocol, outputProtocol)
+		if atomic.LoadInt32(&p.closed) != 0 {
+			return nil
+		}
+
+		ok, err := processor.Process(defaultCtx, inputProtocol, outputProtocol)
 		if err, ok := err.(TTransportException); ok && err.TypeId() == END_OF_FILE {
 			return nil
 		} else if err != nil {
@@ -191,7 +207,7 @@ func (p *TSimpleServer) processRequests(client TTransport) error {
 		if err, ok := err.(TApplicationException); ok && err.TypeId() == UNKNOWN_METHOD {
 			continue
 		}
- 		if !ok {
+		if !ok {
 			break
 		}
 	}
