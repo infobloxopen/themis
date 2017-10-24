@@ -357,3 +357,5 @@ errors:
   args:
   - field: op
 
+- id: missingContentTypeError
+  msg: "Value 'type' attribute is missing or placed after 'content' attribute"

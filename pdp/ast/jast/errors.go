@@ -53,6 +53,7 @@ const (
 	entityAmbiguityErrorID              = 40
 	entityMissingKeyErrorID             = 41
 	unknownPolicyUpdateOperationErrorID = 42
+	missingContentTypeErrorID           = 43
 )
 
 type externalError struct {
@@ -713,4 +714,17 @@ func newUnknownPolicyUpdateOperationError(op string) *unknownPolicyUpdateOperati
 
 func (e *unknownPolicyUpdateOperationError) Error() string {
 	return e.errorf("Unknown policy update operation %q", e.op)
+}
+
+type missingContentTypeError struct {
+	errorLink
+}
+
+func newMissingContentTypeError() *missingContentTypeError {
+	return &missingContentTypeError{
+		errorLink: errorLink{id: missingContentTypeErrorID}}
+}
+
+func (e *missingContentTypeError) Error() string {
+	return e.errorf("Value 'type' attribute is missing or placed after 'content' attribute")
 }

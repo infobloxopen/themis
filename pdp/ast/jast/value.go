@@ -179,7 +179,7 @@ func (ctx context) decodeValue(d *json.Decoder) (pdp.AttributeValue, error) {
 	var (
 		cOk bool
 		a   pdp.AttributeValue
-		t   int
+		t   int = -1
 	)
 
 	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
@@ -205,6 +205,10 @@ func (ctx context) decodeValue(d *json.Decoder) (pdp.AttributeValue, error) {
 			return nil
 
 		case yastTagContent:
+			if t == -1 {
+				return newMissingContentTypeError()
+			}
+
 			cOk = true
 			var err error
 			a, err = ctx.decodeValueByType(t, d)
