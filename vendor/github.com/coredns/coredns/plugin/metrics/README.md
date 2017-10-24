@@ -1,6 +1,6 @@
 # prometheus
 
-*prometheus* enables [Prometheus](https://prometheus.io/) metrics for CoreDNS.
+*prometheus* enables [Prometheus](https://prometheus.io/) metrics.
 
 The default location for the metrics is `localhost:9153`. The metrics path is fixed to `/metrics`.
 The following metrics are exported:
@@ -45,6 +45,15 @@ Use an alternative address:
 ~~~ corefile
 . {
     prometheus localhost:9253
+}
+~~~
+
+Or via an enviroment variable (this is supported throughout the Corefile): `export PORT=9253`, and
+then:
+
+~~~ corefile
+. {
+    prometheus localhost:{$PORT}
 }
 ~~~
 

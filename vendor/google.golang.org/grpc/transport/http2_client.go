@@ -44,7 +44,6 @@ import (
 type http2Client struct {
 	ctx        context.Context
 	cancel     context.CancelFunc
-	target     string // server name/addr
 	userAgent  string
 	md         interface{}
 	conn       net.Conn // underlying communication channel
@@ -109,7 +108,7 @@ func dial(ctx context.Context, fn func(context.Context, string) (net.Conn, error
 	if fn != nil {
 		return fn(ctx, addr)
 	}
-	return (&net.Dialer{}).DialContext(ctx, "tcp", addr)
+	return dialContext(ctx, "tcp", addr)
 }
 
 func isTemporary(err error) bool {
@@ -148,9 +147,11 @@ func newHTTP2Client(ctx context.Context, addr TargetInfo, opts ConnectOptions, t
 	ctx, cancel := context.WithCancel(ctx)
 	connectCtx, connectCancel := context.WithTimeout(ctx, timeout)
 	defer func() {
-		connectCancel()
 		if err != nil {
 			cancel()
+			// Don't call connectCancel in success path due to a race in Go 1.6:
+			// https://github.com/golang/go/issues/15078.
+			connectCancel()
 		}
 	}()
 
@@ -173,7 +174,7 @@ func newHTTP2Client(ctx context.Context, addr TargetInfo, opts ConnectOptions, t
 	)
 	if creds := opts.TransportCredentials; creds != nil {
 		scheme = "https"
-		conn, authInfo, err = creds.ClientHandshake(connectCtx, addr.Addr, conn)
+		conn, authInfo, err = creds.ClientHandshake(connectCtx, addr.Authority, conn)
 		if err != nil {
 			// Credentials handshake errors are typically considered permanent
 			// to avoid retrying on e.g. bad certificates.
@@ -208,7 +209,6 @@ func newHTTP2Client(ctx context.Context, addr TargetInfo, opts ConnectOptions, t
 	t := &http2Client{
 		ctx:        ctx,
 		cancel:     cancel,
-		target:     addr.Addr,
 		userAgent:  opts.UserAgent,
 		md:         addr.Metadata,
 		conn:       conn,
@@ -417,7 +417,7 @@ func (t *http2Client) NewStream(ctx context.Context, callHdr *CallHdr) (_ *Strea
 	if sq > 1 {
 		t.streamsQuota.add(sq - 1)
 	}
-	// TODO(mmukhi): Benchmark if the perfomance gets better if count the metadata and other header fields
+	// TODO(mmukhi): Benchmark if the performance gets better if count the metadata and other header fields
 	// first and create a slice of that exact size.
 	// Make the slice of certain predictable size to reduce allocations made by append.
 	hfLen := 7 // :method, :scheme, :path, :authority, content-type, user-agent, te
@@ -1253,7 +1253,7 @@ func (t *http2Client) itemHandler(i item) error {
 		}
 		err = t.framer.fr.WritePing(i.ack, i.data)
 	default:
-		errorf("transport: http2Client.controller got unexpected item type %v\n", i)
+		errorf("transport: http2Client.controller got unexpected item type %v", i)
 	}
 	return err
 }

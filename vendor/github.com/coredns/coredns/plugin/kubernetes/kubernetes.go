@@ -175,7 +175,6 @@ func (k *Kubernetes) getClientConfig() (*rest.Config, error) {
 				HealthCheck: healthcheck.HealthCheck{
 					FailTimeout: 3 * time.Second,
 					MaxFails:    1,
-					Future:      10 * time.Second,
 					Path:        "/",
 					Interval:    5 * time.Second,
 				},
@@ -190,21 +189,11 @@ func (k *Kubernetes) getClientConfig() (*rest.Config, error) {
 				CheckDown: func(upstream *proxyHandler) healthcheck.UpstreamHostDownFunc {
 					return func(uh *healthcheck.UpstreamHost) bool {
 
-						down := false
-
-						uh.Lock()
-						until := uh.OkUntil
-						uh.Unlock()
-
-						if !until.IsZero() && time.Now().After(until) {
-							down = true
-						}
-
 						fails := atomic.LoadInt32(&uh.Fails)
 						if fails >= upstream.MaxFails && upstream.MaxFails != 0 {
-							down = true
+							return true
 						}
-						return down
+						return false
 					}
 				}(&k.APIProxy.handler),
 			}
@@ -343,7 +332,22 @@ func (k *Kubernetes) findServices(r recordRequest, zone string) (services []msg.
 	zonePath := msg.Path(zone, "coredns")
 	err = errNoItems // Set to errNoItems to signal really nothing found, gets reset when name is matched.
 
-	for _, svc := range k.APIConn.ServiceList() {
+	var (
+		endpointsListFunc func() []*api.Endpoints
+		endpointsList     []*api.Endpoints
+		serviceList       []*api.Service
+	)
+
+	if wildcard(r.service) || wildcard(r.namespace) {
+		serviceList = k.APIConn.ServiceList()
+		endpointsListFunc = func() []*api.Endpoints { return k.APIConn.EndpointsList() }
+	} else {
+		idx := r.service + "." + r.namespace
+		serviceList = k.APIConn.SvcIndex(idx)
+		endpointsListFunc = func() []*api.Endpoints { return k.APIConn.EpIndex(idx) }
+	}
+
+	for _, svc := range serviceList {
 
 		if !(match(r.namespace, svc.Namespace) && match(r.service, svc.Name)) {
 			continue
@@ -357,8 +361,10 @@ func (k *Kubernetes) findServices(r recordRequest, zone string) (services []msg.
 
 		// Endpoint query or headless service
 		if svc.Spec.ClusterIP == api.ClusterIPNone || r.endpoint != "" {
-
-			for _, ep := range k.APIConn.EndpointsList() {
+			if endpointsList == nil {
+				endpointsList = endpointsListFunc()
+			}
+			for _, ep := range endpointsList {
 				if ep.ObjectMeta.Name != svc.Name || ep.ObjectMeta.Namespace != svc.Namespace {
 					continue
 				}
