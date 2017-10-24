@@ -34,9 +34,6 @@ const (
 	yastTagPath       = "path"
 	yastTagOp         = "op"
 	yastTagEntity     = "entity"
-
-	yastTagFirstApplicableEffectAlg = "firstapplicableeffect"
-	yastTagDenyOverridesAlg         = "denyoverrides"
 )
 
 type Parser struct{}

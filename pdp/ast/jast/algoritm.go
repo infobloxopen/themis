@@ -4,22 +4,33 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
 )
 
 type (
-	policyCombiningAlgParamUnmarshaler func(ctx context, m map[interface{}]interface{}, policies []pdp.Evaluable) (interface{}, boundError)
-	ruleCombiningAlgParamUnmarshaler   func(ctx context, m map[interface{}]interface{}, rules []*pdp.Rule) (interface{}, boundError)
+	policyCombiningAlgParamBuilder func(ctx context, alg *caParams, policies []pdp.Evaluable) (interface{}, boundError)
+	ruleCombiningAlgParamBuilder   func(ctx context, alg *caParams, rules []*pdp.Rule) (interface{}, boundError)
 )
 
 var (
-	policyCombiningAlgParamUnmarshalers = map[string]policyCombiningAlgParamUnmarshaler{}
-	ruleCombiningAlgParamUnmarshalers   = map[string]ruleCombiningAlgParamUnmarshaler{}
+	policyCombiningAlgParamBuilders = map[string]policyCombiningAlgParamBuilder{}
+	ruleCombiningAlgParamBuilders   = map[string]ruleCombiningAlgParamBuilder{}
 )
 
 func init() {
-	policyCombiningAlgParamUnmarshalers["mapper"] = unmarshalMapperPolicyCombiningAlgParams
-	ruleCombiningAlgParamUnmarshalers["mapper"] = unmarshalMapperRuleCombiningAlgParams
+	policyCombiningAlgParamBuilders["mapper"] = buildMapperPolicyCombiningAlgParams
+	ruleCombiningAlgParamBuilders["mapper"] = buildMapperRuleCombiningAlgParams
+}
+
+type caParams struct {
+	id     string
+	defOk  bool
+	defID  string
+	errOk  bool
+	errID  string
+	arg    pdp.Expression
+	subAlg interface{}
 }
 
 func checkPolicyID(ID string, policies []pdp.Evaluable) bool {
@@ -32,47 +43,22 @@ func checkPolicyID(ID string, policies []pdp.Evaluable) bool {
 	return false
 }
 
-func unmarshalMapperPolicyCombiningAlgParams(ctx context, m map[interface{}]interface{}, policies []pdp.Evaluable) (interface{}, boundError) {
-	v, ok := m[yastTagMap]
-	if !ok {
-		return nil, newMissingMapPCAParamError()
-	}
-
-	arg, err := ctx.unmarshalExpression(v)
-	if err != nil {
-		return nil, err
-	}
-
-	t := arg.GetResultType()
-	if t != pdp.TypeString && t != pdp.TypeSetOfStrings && t != pdp.TypeListOfStrings {
-		return nil, newMapperArgumentTypeError(t)
-	}
-
-	defID, defOk, err := ctx.extractStringOpt(m, yastTagDefault, "default policy id")
-	if err != nil {
-		return nil, err
-	}
-
-	if defOk {
-		if !checkPolicyID(defID, policies) {
-			return nil, newMissingDefaultPolicyPCAError(defID)
+func buildMapperPolicyCombiningAlgParams(ctx context, alg *caParams, policies []pdp.Evaluable) (interface{}, boundError) {
+	if alg.defOk {
+		if !checkPolicyID(alg.defID, policies) {
+			return nil, newMissingDefaultPolicyPCAError(alg.defID)
 		}
 	}
 
-	errID, errOk, err := ctx.extractStringOpt(m, yastTagError, "on error policy id")
-	if err != nil {
-		return nil, err
-	}
-
-	if errOk {
-		if !checkPolicyID(errID, policies) {
-			return nil, newMissingErrorPolicyPCAError(errID)
+	if alg.errOk {
+		if !checkPolicyID(alg.errID, policies) {
+			return nil, newMissingErrorPolicyPCAError(alg.errID)
 		}
 	}
 
 	var subAlg pdp.PolicyCombiningAlg
-	if t == pdp.TypeSetOfStrings || t == pdp.TypeListOfStrings {
-		maker, params, err := ctx.unmarshalPolicyCombiningAlg(m, nil)
+	if alg.subAlg != nil {
+		maker, params, err := ctx.buildPolicyCombiningAlg(alg.subAlg, policies)
 		if err != nil {
 			return nil, err
 		}
@@ -80,59 +66,12 @@ func unmarshalMapperPolicyCombiningAlgParams(ctx context, m map[interface{}]inte
 	}
 
 	return pdp.MapperPCAParams{
-		Argument:  arg,
-		DefOk:     defOk,
-		Def:       defID,
-		ErrOk:     errOk,
-		Err:       errID,
+		Argument:  alg.arg,
+		DefOk:     alg.defOk,
+		Def:       alg.defID,
+		ErrOk:     alg.errOk,
+		Err:       alg.errID,
 		Algorithm: subAlg}, nil
-}
-
-func (ctx context) unmarshalPolicyCombiningAlgObj(m map[interface{}]interface{}, policies []pdp.Evaluable) (pdp.PolicyCombiningAlgMaker, interface{}, boundError) {
-	ID, err := ctx.extractString(m, yastTagID, "algorithm id")
-	if err != nil {
-		return nil, nil, err
-	}
-
-	s := strings.ToLower(ID)
-	maker, ok := pdp.PolicyCombiningParamAlgs[s]
-	if !ok {
-		return nil, nil, newUnknownPCAError(ID)
-	}
-
-	paramUnmarshaler, ok := policyCombiningAlgParamUnmarshalers[s]
-	if !ok {
-		return nil, nil, newNotImplementedPCAError(ID)
-	}
-
-	params, err := paramUnmarshaler(ctx, m, policies)
-	if err != nil {
-		return nil, nil, bindError(err, ID)
-	}
-
-	return maker, params, nil
-}
-
-func (ctx context) unmarshalPolicyCombiningAlg(m map[interface{}]interface{}, policies []pdp.Evaluable) (pdp.PolicyCombiningAlgMaker, interface{}, boundError) {
-	v, ok := m[yastTagAlg]
-	if !ok {
-		return nil, nil, newMissingPCAError()
-	}
-
-	switch alg := v.(type) {
-	case string:
-		maker, ok := pdp.PolicyCombiningAlgs[strings.ToLower(alg)]
-		if !ok {
-			return nil, nil, newUnknownPCAError(alg)
-		}
-
-		return maker, nil, nil
-
-	case map[interface{}]interface{}:
-		return ctx.unmarshalPolicyCombiningAlgObj(alg, policies)
-	}
-
-	return nil, nil, newInvalidPCAError(v)
 }
 
 func checkRuleID(ID string, rules []*pdp.Rule) bool {
@@ -145,47 +84,22 @@ func checkRuleID(ID string, rules []*pdp.Rule) bool {
 	return false
 }
 
-func unmarshalMapperRuleCombiningAlgParams(ctx context, m map[interface{}]interface{}, rules []*pdp.Rule) (interface{}, boundError) {
-	v, ok := m[yastTagMap]
-	if !ok {
-		return nil, newMissingMapRCAParamError()
-	}
-
-	arg, err := ctx.unmarshalExpression(v)
-	if err != nil {
-		return nil, err
-	}
-
-	t := arg.GetResultType()
-	if t != pdp.TypeString && t != pdp.TypeSetOfStrings && t != pdp.TypeListOfStrings {
-		return nil, newMapperArgumentTypeError(t)
-	}
-
-	defID, defOk, err := ctx.extractStringOpt(m, yastTagDefault, "default rule id")
-	if err != nil {
-		return nil, err
-	}
-
-	if defOk {
-		if !checkRuleID(defID, rules) {
-			return nil, newMissingDefaultRuleRCAError(defID)
+func buildMapperRuleCombiningAlgParams(ctx context, alg *caParams, rules []*pdp.Rule) (interface{}, boundError) {
+	if alg.defOk {
+		if !checkRuleID(alg.defID, rules) {
+			return nil, newMissingDefaultRuleRCAError(alg.defID)
 		}
 	}
 
-	errID, errOk, err := ctx.extractStringOpt(m, yastTagError, "on error rule id")
-	if err != nil {
-		return nil, err
-	}
-
-	if errOk {
-		if !checkRuleID(errID, rules) {
-			return nil, newMissingErrorRuleRCAError(errID)
+	if alg.errOk {
+		if !checkRuleID(alg.errID, rules) {
+			return nil, newMissingErrorRuleRCAError(alg.errID)
 		}
 	}
 
 	var subAlg pdp.RuleCombiningAlg
-	if t == pdp.TypeSetOfStrings || t == pdp.TypeListOfStrings {
-		maker, params, err := ctx.unmarshalRuleCombiningAlg(m, nil)
+	if alg.subAlg != nil {
+		maker, params, err := ctx.buildRuleCombiningAlg(alg.subAlg, rules)
 		if err != nil {
 			return nil, err
 		}
@@ -193,46 +107,34 @@ func unmarshalMapperRuleCombiningAlgParams(ctx context, m map[interface{}]interf
 	}
 
 	return pdp.MapperRCAParams{
-		Argument:  arg,
-		DefOk:     defOk,
-		Def:       defID,
-		ErrOk:     errOk,
-		Err:       errID,
+		Argument:  alg.arg,
+		DefOk:     alg.defOk,
+		Def:       alg.defID,
+		ErrOk:     alg.errOk,
+		Err:       alg.errID,
 		Algorithm: subAlg}, nil
 }
 
-func (ctx context) unmarshalRuleCombiningAlgObj(m map[interface{}]interface{}, rules []*pdp.Rule) (pdp.RuleCombiningAlgMaker, interface{}, boundError) {
-	ID, err := ctx.extractString(m, yastTagID, "algorithm id")
-	if err != nil {
-		return nil, nil, err
-	}
+func (ctx context) buildRuleCombiningAlg(alg interface{}, rules []*pdp.Rule) (pdp.RuleCombiningAlgMaker, interface{}, boundError) {
+	switch alg := alg.(type) {
+	case *caParams:
+		id := strings.ToLower(alg.id)
+		maker, ok := pdp.RuleCombiningParamAlgs[id]
+		if !ok {
+			return nil, nil, newUnknownRCAError(alg.id)
+		}
 
-	s := strings.ToLower(ID)
-	maker, ok := pdp.RuleCombiningParamAlgs[s]
-	if !ok {
-		return nil, nil, newUnknownRCAError(ID)
-	}
+		paramBuilder, ok := ruleCombiningAlgParamBuilders[id]
+		if !ok {
+			return nil, nil, newNotImplementedRCAError(alg.id)
+		}
 
-	paramUnmarshaler, ok := ruleCombiningAlgParamUnmarshalers[s]
-	if !ok {
-		return nil, nil, newNotImplementedRCAError(ID)
-	}
+		params, err := paramBuilder(ctx, alg, rules)
+		if err != nil {
+			return nil, nil, bindError(err, alg.id)
+		}
 
-	params, err := paramUnmarshaler(ctx, m, rules)
-	if err != nil {
-		return nil, nil, bindError(err, ID)
-	}
-
-	return maker, params, nil
-}
-
-func (ctx context) unmarshalRuleCombiningAlg(m map[interface{}]interface{}, rules []*pdp.Rule) (pdp.RuleCombiningAlgMaker, interface{}, boundError) {
-	v, ok := m[yastTagAlg]
-	if !ok {
-		return nil, nil, newMissingRCAError()
-	}
-
-	switch alg := v.(type) {
+		return maker, params, nil
 	case string:
 		maker, ok := pdp.RuleCombiningAlgs[strings.ToLower(alg)]
 		if !ok {
@@ -240,19 +142,138 @@ func (ctx context) unmarshalRuleCombiningAlg(m map[interface{}]interface{}, rule
 		}
 
 		return maker, nil, nil
-
-	case map[interface{}]interface{}:
-		return ctx.unmarshalRuleCombiningAlgObj(alg, rules)
 	}
 
-	return nil, nil, newInvalidRCAError(v)
+	return nil, nil, newInvalidRCAError(alg)
 }
 
-func (ctx *context) decodeCombiningAlg(d *json.Decoder) (map[interface{}]interface{}, error) {
-	v, err := ctx.decodeUndefined(d, "algorithm")
+func (ctx context) buildPolicyCombiningAlg(alg interface{}, policies []pdp.Evaluable) (pdp.PolicyCombiningAlgMaker, interface{}, boundError) {
+	switch alg := alg.(type) {
+	case *caParams:
+		id := strings.ToLower(alg.id)
+		maker, ok := pdp.PolicyCombiningParamAlgs[id]
+		if !ok {
+			return nil, nil, newUnknownPCAError(alg.id)
+		}
+
+		paramBuilder, ok := policyCombiningAlgParamBuilders[id]
+		if !ok {
+			return nil, nil, newNotImplementedPCAError(alg.id)
+		}
+
+		params, err := paramBuilder(ctx, alg, policies)
+		if err != nil {
+			return nil, nil, bindError(err, alg.id)
+		}
+
+		return maker, params, nil
+	case string:
+		maker, ok := pdp.PolicyCombiningAlgs[strings.ToLower(alg)]
+		if !ok {
+			return nil, nil, newUnknownPCAError(alg)
+		}
+
+		return maker, nil, nil
+	}
+
+	return nil, nil, newInvalidPCAError(alg)
+}
+
+func (ctx context) decodeCombiningAlgObj(d *json.Decoder) (*caParams, error) {
+	var (
+		mapOk  bool
+		params caParams
+		id     string
+	)
+
+	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+		var err error
+
+		switch strings.ToLower(k) {
+		case yastTagID:
+			id, err = jparser.GetString(d, "algorithm id")
+			return err
+
+		case yastTagMap:
+			mapOk = true
+			err = jparser.CheckObjectStart(d, "expression")
+			if err != nil {
+				return bindErrorf(err, "%s", id)
+			}
+
+			params.arg, err = ctx.decodeExpression(d)
+			if err != nil {
+				return bindErrorf(err, "%s", id)
+			}
+
+			t := params.arg.GetResultType()
+			if t != pdp.TypeString && t != pdp.TypeSetOfStrings && t != pdp.TypeListOfStrings {
+				return bindErrorf(newMapperArgumentTypeError(t), "%s", id)
+			}
+
+			return nil
+
+		case yastTagDefault:
+			params.defOk = true
+			params.defID, err = jparser.GetString(d, "algorithm default id")
+			if err != nil {
+				return bindErrorf(err, "%s", id)
+			}
+
+			return nil
+
+		case yastTagError:
+			params.errOk = true
+			params.errID, err = jparser.GetString(d, "algorithm error id")
+			if err != nil {
+				return bindErrorf(err, "%s", id)
+			}
+
+			return nil
+
+		case yastTagAlg:
+			params.subAlg, err = ctx.decodeCombiningAlg(d)
+			if err != nil {
+				return bindErrorf(err, "%s", id)
+			}
+
+			return nil
+		}
+
+		return newUnknownAttributeError(k)
+	}, "algorithm"); err != nil {
+		return nil, err
+	}
+
+	if id == "" {
+		return nil, newMissingAttributeError(yastTagID, "algorithm")
+	}
+
+	if !mapOk {
+		return nil, newMissingAttributeError(yastTagMap, "algorithm")
+	}
+
+	params.id = id
+
+	return &params, nil
+}
+
+func (ctx context) decodeCombiningAlg(d *json.Decoder) (interface{}, error) {
+	t, err := d.Token()
 	if err != nil {
 		return nil, err
 	}
 
-	return map[interface{}]interface{}{yastTagAlg: v}, nil
+	switch t := t.(type) {
+	case json.Delim:
+		if t.String() == jparser.DelimObjectStart {
+			return ctx.decodeCombiningAlgObj(d)
+		}
+
+		return nil, newParseCAError(t)
+	case string:
+		return t, nil
+	default:
+		return nil, newParseCAError(t)
+	}
 }

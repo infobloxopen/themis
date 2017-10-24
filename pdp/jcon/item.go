@@ -13,10 +13,6 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 )
 
-const (
-	delimArrayEnd = "]"
-)
-
 type contentItem struct {
 	id string
 
@@ -93,8 +89,8 @@ func (c *contentItem) unmarshalKeysField(d *json.Decoder) error {
 			i++
 
 		case json.Delim:
-			if s.String() != delimArrayEnd {
-				return newArrayEndDelimiterError(s, delimArrayEnd, src)
+			if s.String() != jparser.DelimArrayEnd {
+				return newArrayEndDelimiterError(s, jparser.DelimArrayEnd, src)
 			}
 
 			c.k = k
@@ -175,14 +171,14 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 	case pdp.TypeSetOfStrings:
 		m := strtree.NewTree()
 		i := 0
-		err := jparser.GetStringSequence(d, "set of strings value", func(idx int, s string) error {
+		err := jparser.GetStringSequence(d, func(idx int, s string) error {
 			if _, ok := m.Get(s); !ok {
 				m.InplaceInsert(s, i)
 				i++
 			}
 
 			return nil
-		})
+		}, "set of strings value")
 		if err != nil {
 			return nil, err
 		}
@@ -191,7 +187,7 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 
 	case pdp.TypeSetOfNetworks:
 		m := iptree.NewTree()
-		err := jparser.GetStringSequence(d, "set of networks value", func(idx int, s string) error {
+		err := jparser.GetStringSequence(d, func(idx int, s string) error {
 			a := net.ParseIP(s)
 			if a != nil {
 				m.InplaceInsertIP(a, nil)
@@ -205,7 +201,7 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 			}
 
 			return nil
-		})
+		}, "set of networks value")
 		if err != nil {
 			return nil, err
 		}
@@ -214,7 +210,7 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 
 	case pdp.TypeSetOfDomains:
 		m := &domaintree.Node{}
-		err := jparser.GetStringSequence(d, "set of domains value", func(idx int, s string) error {
+		err := jparser.GetStringSequence(d, func(idx int, s string) error {
 			d, err := pdp.AdjustDomainName(s)
 			if err != nil {
 				return bindErrorf(newDomainCastError(s, err), "%d", idx)
@@ -223,7 +219,7 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 			m.InplaceInsert(d, nil)
 
 			return nil
-		})
+		}, "set of domains value")
 		if err != nil {
 			return nil, err
 		}
@@ -232,10 +228,10 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 
 	case pdp.TypeListOfStrings:
 		lst := []string{}
-		err := jparser.GetStringSequence(d, "list of strings value", func(idx int, s string) error {
+		err := jparser.GetStringSequence(d, func(idx int, s string) error {
 			lst = append(lst, s)
 			return nil
-		})
+		}, "list of strings value")
 		if err != nil {
 			return nil, err
 		}

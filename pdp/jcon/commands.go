@@ -42,10 +42,10 @@ func unmarshalCommand(d *json.Decoder, u *pdp.ContentUpdate) error {
 				return newDuplicateCommandFieldError(k)
 			}
 			path = []string{}
-			err := jparser.GetStringSequence(d, "path", func(idx int, s string) error {
+			err := jparser.GetStringSequence(d, func(idx int, s string) error {
 				path = append(path, s)
 				return nil
-			})
+			}, "path")
 			if err != nil {
 				return err
 			}

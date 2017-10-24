@@ -1,17 +1,20 @@
 package jast
 
 import (
+	"encoding/json"
 	"net"
 	"strings"
+
+	"github.com/infobloxopen/themis/jparser"
+	"github.com/infobloxopen/themis/pdp"
 
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
-	"github.com/infobloxopen/themis/pdp"
 )
 
-func (ctx context) unmarshalStringValue(v interface{}) (pdp.AttributeValue, boundError) {
-	s, err := ctx.validateString(v, "value of string type")
+func (ctx context) decodeStringValue(d *json.Decoder) (pdp.AttributeValue, error) {
+	s, err := jparser.GetString(d, "value of string type")
 	if err != nil {
 		return pdp.AttributeValue{}, err
 	}
@@ -19,8 +22,8 @@ func (ctx context) unmarshalStringValue(v interface{}) (pdp.AttributeValue, boun
 	return pdp.MakeStringValue(s), nil
 }
 
-func (ctx context) unmarshalAddressValue(v interface{}) (pdp.AttributeValue, boundError) {
-	s, err := ctx.validateString(v, "value of address type")
+func (ctx context) decodeAddressValue(d *json.Decoder) (pdp.AttributeValue, error) {
+	s, err := jparser.GetString(d, "value of address type")
 	if err != nil {
 		return pdp.AttributeValue{}, err
 	}
@@ -33,8 +36,8 @@ func (ctx context) unmarshalAddressValue(v interface{}) (pdp.AttributeValue, bou
 	return pdp.MakeAddressValue(a), nil
 }
 
-func (ctx context) unmarshalNetworkValue(v interface{}) (pdp.AttributeValue, boundError) {
-	s, err := ctx.validateString(v, "value of network type")
+func (ctx context) decodeNetworkValue(d *json.Decoder) (pdp.AttributeValue, error) {
+	s, err := jparser.GetString(d, "value of network type")
 	if err != nil {
 		return pdp.AttributeValue{}, err
 	}
@@ -47,53 +50,33 @@ func (ctx context) unmarshalNetworkValue(v interface{}) (pdp.AttributeValue, bou
 	return pdp.MakeNetworkValue(n), nil
 }
 
-func (ctx context) unmarshalDomainValue(v interface{}) (pdp.AttributeValue, boundError) {
-	s, err := ctx.validateString(v, "value of domain type")
+func (ctx context) decodeDomainValue(d *json.Decoder) (pdp.AttributeValue, error) {
+	s, err := jparser.GetString(d, "value of domain type")
 	if err != nil {
 		return pdp.AttributeValue{}, err
 	}
 
-	d, ierr := pdp.AdjustDomainName(s)
+	dom, ierr := pdp.AdjustDomainName(s)
 	if ierr != nil {
 		return pdp.AttributeValue{}, newInvalidDomainError(s, ierr)
 	}
 
-	return pdp.MakeDomainValue(d), nil
+	return pdp.MakeDomainValue(dom), nil
 }
 
-func (ctx context) unmarshalSetOfStringsValueItem(v interface{}, i int, set *strtree.Tree) boundError {
-	s, err := ctx.validateString(v, "element")
-	if err != nil {
-		return err
-	}
-
-	set.InplaceInsert(s, i)
-	return nil
-}
-
-func (ctx context) unmarshalSetOfStringsValue(v interface{}) (pdp.AttributeValue, boundError) {
-	items, err := ctx.validateList(v, "set of strings")
-	if err != nil {
-		return pdp.AttributeValue{}, err
-	}
-
+func (ctx context) decodeSetOfStringsValue(d *json.Decoder) (pdp.AttributeValue, error) {
 	set := strtree.NewTree()
-	for i, item := range items {
-		err = ctx.unmarshalSetOfStringsValueItem(item, i, set)
-		if err != nil {
-			return pdp.AttributeValue{}, bindError(bindErrorf(err, "%d", i), "set of strings")
-		}
+	if err := jparser.GetStringSequence(d, func(idx int, s string) error {
+		set.InplaceInsert(s, idx)
+		return nil
+	}, "set of strings"); err != nil {
+		return pdp.AttributeValue{}, err
 	}
 
 	return pdp.MakeSetOfStringsValue(set), nil
 }
 
-func (ctx context) unmarshalSetOfNetworksValueItem(v interface{}, i int, set *iptree.Tree) boundError {
-	s, err := ctx.validateString(v, "element")
-	if err != nil {
-		return err
-	}
-
+func (ctx context) decodeSetOfNetworksValueItem(s string, i int, set *iptree.Tree) error {
 	_, n, ierr := net.ParseCIDR(s)
 	if ierr != nil {
 		return newInvalidNetworkError(s, ierr)
@@ -104,136 +87,138 @@ func (ctx context) unmarshalSetOfNetworksValueItem(v interface{}, i int, set *ip
 	return nil
 }
 
-func (ctx context) unmarshalSetOfNetworksValue(v interface{}) (pdp.AttributeValue, boundError) {
-	items, err := ctx.validateList(v, "set of networks")
-	if err != nil {
-		return pdp.AttributeValue{}, err
-	}
-
+func (ctx context) decodeSetOfNetworksValue(d *json.Decoder) (pdp.AttributeValue, error) {
 	set := iptree.NewTree()
-	for i, item := range items {
-		err = ctx.unmarshalSetOfNetworksValueItem(item, i, set)
-		if err != nil {
-			return pdp.AttributeValue{}, bindError(bindErrorf(err, "%d", i), "set of networks")
+	if err := jparser.GetStringSequence(d, func(idx int, s string) error {
+		if err := ctx.decodeSetOfNetworksValueItem(s, idx, set); err != nil {
+			bindError(bindErrorf(err, "%d", idx), "set of networks")
 		}
+
+		return nil
+	}, "set of networks"); err != nil {
+		return pdp.AttributeValue{}, err
 	}
 
 	return pdp.MakeSetOfNetworksValue(set), nil
 }
 
-func (ctx context) unmarshalSetOfDomainsValueItem(v interface{}, i int, set *domaintree.Node) boundError {
-	s, err := ctx.validateString(v, "element")
+func (ctx context) decodeSetOfDomainsValueItem(s string, i int, set *domaintree.Node) error {
+	dom, err := pdp.AdjustDomainName(s)
 	if err != nil {
-		return err
+		return newInvalidDomainError(s, err)
 	}
 
-	d, ierr := pdp.AdjustDomainName(s)
-	if ierr != nil {
-		return newInvalidDomainError(s, ierr)
-	}
-
-	set.InplaceInsert(d, i)
+	set.InplaceInsert(dom, i)
 
 	return nil
 }
 
-func (ctx context) unmarshalSetOfDomainsValue(v interface{}) (pdp.AttributeValue, boundError) {
-	items, err := ctx.validateList(v, "")
-	if err != nil {
-		return pdp.AttributeValue{}, nil
-	}
-
+func (ctx context) decodeSetOfDomainsValue(d *json.Decoder) (pdp.AttributeValue, error) {
 	set := &domaintree.Node{}
-	for i, item := range items {
-		err = ctx.unmarshalSetOfDomainsValueItem(item, i, set)
-		if err != nil {
-			return pdp.AttributeValue{}, bindError(bindErrorf(err, "%d", i), "set of domains")
+	if err := jparser.GetStringSequence(d, func(idx int, s string) error {
+		if err := ctx.decodeSetOfDomainsValueItem(s, idx, set); err != nil {
+			bindError(bindErrorf(err, "%d", idx), "set of domains")
 		}
+
+		return nil
+	}, "set of domains"); err != nil {
+		return pdp.AttributeValue{}, err
 	}
 
 	return pdp.MakeSetOfDomainsValue(set), nil
 }
 
-func (ctx context) unmarshalListOfStringsValueItem(v interface{}, list []string) ([]string, boundError) {
-	s, err := ctx.validateString(v, "element")
-	if err != nil {
-		return list, err
-	}
-
-	return append(list, s), nil
-}
-
-func (ctx context) unmarshalListOfStringsValue(v interface{}) (pdp.AttributeValue, boundError) {
-	items, err := ctx.validateList(v, "list of strings")
-	if err != nil {
-		return pdp.AttributeValue{}, err
-	}
-
+func (ctx context) decodeListOfStringsValue(d *json.Decoder) (pdp.AttributeValue, error) {
 	list := []string{}
-	for i, item := range items {
-		list, err = ctx.unmarshalListOfStringsValueItem(item, list)
-		if err != nil {
-			return pdp.AttributeValue{}, bindError(bindErrorf(err, "%d", i), "list of strings")
-		}
+	if err := jparser.GetStringSequence(d, func(idx int, s string) error {
+		list = append(list, s)
+
+		return nil
+	}, "list of strings"); err != nil {
+		return pdp.AttributeValue{}, err
 	}
 
 	return pdp.MakeListOfStringsValue(list), nil
 }
 
-func (ctx context) unmarshalValueByType(t int, v interface{}) (pdp.AttributeValue, boundError) {
+func (ctx context) decodeValueByType(t int, d *json.Decoder) (pdp.AttributeValue, error) {
 	switch t {
 	case pdp.TypeString:
-		return ctx.unmarshalStringValue(v)
+		return ctx.decodeStringValue(d)
 
 	case pdp.TypeAddress:
-		return ctx.unmarshalAddressValue(v)
+		return ctx.decodeAddressValue(d)
 
 	case pdp.TypeNetwork:
-		return ctx.unmarshalNetworkValue(v)
+		return ctx.decodeNetworkValue(d)
 
 	case pdp.TypeDomain:
-		return ctx.unmarshalDomainValue(v)
+		return ctx.decodeDomainValue(d)
 
 	case pdp.TypeSetOfStrings:
-		return ctx.unmarshalSetOfStringsValue(v)
+		return ctx.decodeSetOfStringsValue(d)
 
 	case pdp.TypeSetOfNetworks:
-		return ctx.unmarshalSetOfNetworksValue(v)
+		return ctx.decodeSetOfNetworksValue(d)
 
 	case pdp.TypeSetOfDomains:
-		return ctx.unmarshalSetOfDomainsValue(v)
+		return ctx.decodeSetOfDomainsValue(d)
 
 	case pdp.TypeListOfStrings:
-		return ctx.unmarshalListOfStringsValue(v)
+		return ctx.decodeListOfStringsValue(d)
 	}
 
 	return pdp.AttributeValue{}, newNotImplementedValueTypeError(t)
 }
 
-func (ctx context) unmarshalValue(v interface{}) (pdp.AttributeValue, boundError) {
-	m, err := ctx.validateMap(v, "value attributes")
-	if err != nil {
+func (ctx context) decodeValue(d *json.Decoder) (pdp.AttributeValue, error) {
+	if err := jparser.CheckObjectStart(d, "value"); err != nil {
 		return pdp.AttributeValue{}, err
 	}
 
-	strT, err := ctx.extractString(m, yastTagType, "type")
-	if err != nil {
+	var (
+		cOk bool
+		a   pdp.AttributeValue
+		t   int
+	)
+
+	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+		k = strings.ToLower(k)
+
+		switch k {
+		case yastTagType:
+			s, err := jparser.GetString(d, "value type")
+			if err != nil {
+				return err
+			}
+
+			var ok bool
+			t, ok = pdp.TypeIDs[strings.ToLower(s)]
+			if !ok {
+				return newUnknownTypeError(s)
+			}
+
+			if t == pdp.TypeUndefined {
+				return newInvalidTypeError(t)
+			}
+
+			return nil
+
+		case yastTagContent:
+			cOk = true
+			var err error
+			a, err = ctx.decodeValueByType(t, d)
+			return err
+		}
+
+		return newUnknownAttributeError(k)
+	}, "value"); err != nil {
 		return pdp.AttributeValue{}, err
 	}
 
-	t, ok := pdp.TypeIDs[strings.ToLower(strT)]
-	if !ok {
-		return pdp.AttributeValue{}, newUnknownTypeError(strT)
-	}
-
-	if t == pdp.TypeUndefined {
-		return pdp.AttributeValue{}, newInvalidTypeError(t)
-	}
-
-	c, ok := m[yastTagContent]
-	if !ok {
+	if !cOk {
 		return pdp.AttributeValue{}, newMissingContentError()
 	}
 
-	return ctx.unmarshalValueByType(t, c)
+	return a, nil
 }

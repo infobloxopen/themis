@@ -14,7 +14,7 @@ func (ctx *context) decodeAttributeDeclarations(d *json.Decoder) boundError {
 		return bindError(err, yastTagAttributes)
 	}
 
-	err = jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+	if err = jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
 		tstr, err := jparser.GetString(d, "attribute data type")
 		if err != nil {
 			return err
@@ -28,8 +28,7 @@ func (ctx *context) decodeAttributeDeclarations(d *json.Decoder) boundError {
 		ctx.attrs[k] = pdp.MakeAttribute(k, t)
 
 		return nil
-	}, "attribute declarations")
-	if err != nil {
+	}, "attribute declarations"); err != nil {
 		return bindError(err, yastTagAttributes)
 	}
 

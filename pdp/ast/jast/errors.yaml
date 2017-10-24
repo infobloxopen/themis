@@ -1,6 +1,7 @@
 package: jast
 
 import:
+- encoding/json
 - fmt
 - strings
 - "github.com/infobloxopen/themis/pdp"
@@ -13,63 +14,6 @@ errors:
   msg: "%s"
   args:
   - field: err
-
-- id: stringError
-  fields:
-  - id: v
-    type: interface{}
-  - id: desc
-    type: string
-  msg: "Expected %s but got %T"
-  args:
-  - field: desc
-  - field: v
-
-- id: missingStringError
-  fields:
-  - id: desc
-    type: string
-  msg: "Missing %s"
-  args:
-  - field: desc
-
-- id: mapError
-  fields:
-  - id: v
-    type: interface{}
-  - id: desc
-    type: string
-  msg: "Expected %s but got %T"
-  args:
-  - field: desc
-  - field: v
-
-- id: missingMapError
-  fields:
-  - id: desc
-    type: string
-  msg: "Missing %s"
-  args:
-  - field: desc
-
-- id: listError
-  fields:
-  - id: v
-    type: interface{}
-  - id: desc
-    type: string
-  msg: "Expected %s but got %T"
-  args:
-  - field: desc
-  - field: v
-
-- id: missingListError
-  fields:
-  - id: desc
-    type: string
-  msg: "Missing %s"
-  args:
-  - field: desc
 
 - id: attributeTypeError
   fields:
@@ -96,16 +40,22 @@ errors:
 - id: missingRCAError
   msg: "Missing policy combinig algorithm"
 
+- id: parseCAError
+  fields:
+  - id: token
+    type: json.Token
+  msg: "Expected string or { object delimiter for combinig algorithm but got %T (%#v)"
+  args:
+  - field: token
+  - field: token
+
 - id: invalidRCAError
   fields:
   - id: v
     type: interface{}
-  msg: "Expected string or map as policy combinig algorithm but got %T"
+  msg: "Expected string or *caParams as policy combinig algorithm but got %T"
   args:
   - field: v
-
-- id: missingMapRCAParamError
-  msg: "Missing map parameter"
 
 - id: missingDefaultRuleRCAError
   fields:
@@ -146,12 +96,9 @@ errors:
   fields:
   - id: v
     type: interface{}
-  msg: "Expected string or map as policy combinig algorithm but got %T"
+  msg: "Expected string or *caParams as policy combinig algorithm but got %T"
   args:
   - field: v
-
-- id: missingMapPCAParamError
-  msg: "Missing map parameter"
 
 - id: missingDefaultPolicyPCAError
   fields:
@@ -204,28 +151,6 @@ errors:
   msg: "Unknown rule effect %q"
   args:
   - field: e
-
-- id: noSMPItemsError
-  fields:
-  - id: desc
-    type: string
-  - id: n
-    type: int
-  msg: "Expected at least one entry in %s got %d"
-  args:
-  - field: desc
-  - field: n
-
-- id: tooManySMPItemsError
-  fields:
-  - id: desc
-    type: string
-  - id: n
-    type: int
-  msg: "Expected only one entry in %s got %d"
-  args:
-  - field: desc
-  - field: n
 
 - id: unknownMatchFunctionError
   fields:
@@ -311,6 +236,17 @@ errors:
   msg: "Unknown attribute %q"
   args:
   - field: ID
+
+- id: missingAttributeError
+  fields:
+  - id: attr
+    type: string
+  - id: obj
+    type: string
+  msg: "Missing %q attribute %q"
+  args:
+  - field: obj
+  - field: attr
 
 - id: unknownTypeError
   fields:
@@ -421,13 +357,3 @@ errors:
   args:
   - field: op
 
-- id: invalidPolicyUpdatePathElementError
-  fields:
-  - id: v
-    type: interface{}
-  - id: idx
-    type: int
-  msg: "Expected string as %d path element but got %T"
-  args:
-  - field: idx
-  - field: v

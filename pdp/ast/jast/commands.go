@@ -20,17 +20,16 @@ func (ctx *context) decodeEntity(d *json.Decoder) (interface{}, error) {
 		isRule      bool
 
 		id       string
-		effect   int
+		effect   int = -1
 		policies []pdp.Evaluable
 		rules    []*pdp.Rule
 		target   pdp.Target
 		cond     pdp.Expression
 		obligs   []pdp.AttributeAssignmentExpression
-
-		algObj map[interface{}]interface{}
+		alg      interface{}
 	)
 
-	err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
 		var err error
 
 		switch strings.ToLower(k) {
@@ -40,7 +39,7 @@ func (ctx *context) decodeEntity(d *json.Decoder) (interface{}, error) {
 			return err
 
 		case yastTagAlg:
-			algObj, err = ctx.decodeCombiningAlg(d)
+			alg, err = ctx.decodeCombiningAlg(d)
 			return err
 
 		case yastTagTarget:
@@ -84,21 +83,12 @@ func (ctx *context) decodeEntity(d *json.Decoder) (interface{}, error) {
 			return nil
 
 		case yastTagCondition:
-			var v interface{}
-			v, err = ctx.decodeUndefined(d, "condition")
-			if err != nil {
-				return err
-			}
-
-			m := map[interface{}]interface{}{yastTagCondition: v}
-			cond, err = ctx.unmarshalCondition(m)
-
+			cond, err = ctx.decodeCondition(d)
 			return err
 		}
 
 		return newUnknownAttributeError(k)
-	}, "entity")
-	if err != nil {
+	}, "entity"); err != nil {
 		return nil, err
 	}
 
@@ -120,24 +110,40 @@ func (ctx *context) decodeEntity(d *json.Decoder) (interface{}, error) {
 	}
 
 	if isPolicySet {
-		alg, params, err := ctx.unmarshalPolicyCombiningAlg(algObj, policies)
-		if err != nil {
-			return nil, bindError(err, makeSource("policy set", id, hidden))
+		src := makeSource("policy set", id, hidden)
+
+		if alg == nil {
+			return nil, bindError(newMissingPCAError(), src)
 		}
 
-		return pdp.NewPolicySet(id, hidden, target, policies, alg, params, obligs), nil
+		maker, params, err := ctx.buildPolicyCombiningAlg(alg, policies)
+		if err != nil {
+			return nil, bindError(err, src)
+		}
+
+		return pdp.NewPolicySet(id, hidden, target, policies, maker, params, obligs), nil
 	}
 
 	if isPolicy {
-		alg, params, err := ctx.unmarshalRuleCombiningAlg(algObj, rules)
-		if err != nil {
-			return nil, bindError(err, makeSource("policy", id, hidden))
+		src := makeSource("policy", id, hidden)
+
+		if alg == nil {
+			return nil, bindError(newMissingRCAError(), src)
 		}
 
-		return pdp.NewPolicy(id, hidden, target, rules, alg, params, obligs), nil
+		maker, params, err := ctx.buildRuleCombiningAlg(alg, rules)
+		if err != nil {
+			return nil, bindError(err, src)
+		}
+
+		return pdp.NewPolicy(id, hidden, target, rules, maker, params, obligs), nil
 	}
 
 	if isRule {
+		if effect == -1 {
+			return nil, bindError(newMissingAttributeError(yastTagEffect, "rule"), makeSource("rule", id, hidden))
+		}
+
 		return pdp.NewRule(id, hidden, target, cond, effect, obligs), nil
 	}
 
@@ -151,7 +157,7 @@ func (ctx *context) decodeCommand(d *json.Decoder, u *pdp.PolicyUpdate) error {
 		entity interface{}
 	)
 
-	err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
 		var err error
 
 		switch strings.ToLower(k) {
@@ -172,10 +178,10 @@ func (ctx *context) decodeCommand(d *json.Decoder, u *pdp.PolicyUpdate) error {
 
 		case yastTagPath:
 			path = []string{}
-			err = jparser.GetStringSequence(d, "path", func(idx int, s string) error {
+			err = jparser.GetStringSequence(d, func(idx int, s string) error {
 				path = append(path, s)
 				return nil
-			})
+			}, "path")
 
 			return err
 
@@ -188,8 +194,7 @@ func (ctx *context) decodeCommand(d *json.Decoder, u *pdp.PolicyUpdate) error {
 		}
 
 		return newUnknownAttributeError(k)
-	}, "command")
-	if err != nil {
+	}, "command"); err != nil {
 		return err
 	}
 

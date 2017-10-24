@@ -49,11 +49,10 @@ func (ctx *context) decodeEvaluable(d *json.Decoder) (pdp.Evaluable, error) {
 		rules    []*pdp.Rule
 		target   pdp.Target
 		obligs   []pdp.AttributeAssignmentExpression
-
-		algObj map[interface{}]interface{}
+		alg      interface{}
 	)
 
-	err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
 		var err error
 
 		switch strings.ToLower(k) {
@@ -63,16 +62,25 @@ func (ctx *context) decodeEvaluable(d *json.Decoder) (pdp.Evaluable, error) {
 			return err
 
 		case yastTagAlg:
-			algObj, err = ctx.decodeCombiningAlg(d)
+			alg, err = ctx.decodeCombiningAlg(d)
+			if err != nil {
+				return bindError(err, makeSource("policy or policy set", pid, hidden))
+			}
 			return err
 
 		case yastTagTarget:
 			target, err = ctx.decodeTarget(d)
-			return err
+			if err != nil {
+				return bindError(err, makeSource("policy or policy set", pid, hidden))
+			}
+			return nil
 
 		case yastTagObligation:
 			obligs, err = ctx.decodeObligations(d)
-			return err
+			if err != nil {
+				return bindError(err, makeSource("policy or policy set", pid, hidden))
+			}
+			return nil
 
 		case yastTagPolicies:
 			isPolicySet = true
@@ -92,8 +100,7 @@ func (ctx *context) decodeEvaluable(d *json.Decoder) (pdp.Evaluable, error) {
 		}
 
 		return newUnknownAttributeError(k)
-	}, "policy or policy set")
-	if err != nil {
+	}, "policy or policy set"); err != nil {
 		return nil, err
 	}
 
@@ -102,21 +109,33 @@ func (ctx *context) decodeEvaluable(d *json.Decoder) (pdp.Evaluable, error) {
 	}
 
 	if isPolicySet {
-		alg, params, err := ctx.unmarshalPolicyCombiningAlg(algObj, policies)
-		if err != nil {
-			return nil, bindError(err, makeSource("policy set", pid, hidden))
+		src := makeSource("policy set", pid, hidden)
+
+		if alg == nil {
+			return nil, bindError(newMissingPCAError(), src)
 		}
 
-		return pdp.NewPolicySet(pid, hidden, target, policies, alg, params, obligs), nil
+		maker, params, err := ctx.buildPolicyCombiningAlg(alg, policies)
+		if err != nil {
+			return nil, bindError(err, src)
+		}
+
+		return pdp.NewPolicySet(pid, hidden, target, policies, maker, params, obligs), nil
 	}
 
 	if isPolicy {
-		alg, params, err := ctx.unmarshalRuleCombiningAlg(algObj, rules)
-		if err != nil {
-			return nil, bindError(err, makeSource("policy", pid, hidden))
+		src := makeSource("policy", pid, hidden)
+
+		if alg == nil {
+			return nil, bindError(newMissingRCAError(), src)
 		}
 
-		return pdp.NewPolicy(pid, hidden, target, rules, alg, params, obligs), nil
+		maker, params, err := ctx.buildRuleCombiningAlg(alg, rules)
+		if err != nil {
+			return nil, bindError(err, src)
+		}
+
+		return pdp.NewPolicy(pid, hidden, target, rules, maker, params, obligs), nil
 	}
 
 	return nil, newPolicyMissingKeyError()

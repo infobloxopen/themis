@@ -3,64 +3,56 @@ package jast
 /* AUTOMATICALLY GENERATED FROM errors.yaml - DO NOT EDIT */
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/infobloxopen/themis/pdp"
 	"strings"
 )
 
 const (
-	externalErrorID                       = 0
-	stringErrorID                         = 1
-	missingStringErrorID                  = 2
-	mapErrorID                            = 3
-	missingMapErrorID                     = 4
-	listErrorID                           = 5
-	missingListErrorID                    = 6
-	attributeTypeErrorID                  = 7
-	policyAmbiguityErrorID                = 8
-	policyMissingKeyErrorID               = 9
-	unknownRCAErrorID                     = 10
-	missingRCAErrorID                     = 11
-	invalidRCAErrorID                     = 12
-	missingMapRCAParamErrorID             = 13
-	missingDefaultRuleRCAErrorID          = 14
-	missingErrorRuleRCAErrorID            = 15
-	notImplementedRCAErrorID              = 16
-	unknownPCAErrorID                     = 17
-	missingPCAErrorID                     = 18
-	invalidPCAErrorID                     = 19
-	missingMapPCAParamErrorID             = 20
-	missingDefaultPolicyPCAErrorID        = 21
-	missingErrorPolicyPCAErrorID          = 22
-	notImplementedPCAErrorID              = 23
-	mapperArgumentTypeErrorID             = 24
-	conditionTypeErrorID                  = 25
-	unknownEffectErrorID                  = 26
-	noSMPItemsErrorID                     = 27
-	tooManySMPItemsErrorID                = 28
-	unknownMatchFunctionErrorID           = 29
-	matchFunctionCastErrorID              = 30
-	matchFunctionArgsNumberErrorID        = 31
-	invalidMatchFunctionArgErrorID        = 32
-	matchFunctionBothValuesErrorID        = 33
-	matchFunctionBothAttrsErrorID         = 34
-	unknownFunctionErrorID                = 35
-	functionCastErrorID                   = 36
-	unknownAttributeErrorID               = 37
-	unknownTypeErrorID                    = 38
-	invalidTypeErrorID                    = 39
-	missingContentErrorID                 = 40
-	notImplementedValueTypeErrorID        = 41
-	invalidAddressErrorID                 = 42
-	invalidNetworkErrorID                 = 43
-	invalidDomainErrorID                  = 44
-	selectorURIErrorID                    = 45
-	selectorLocationErrorID               = 46
-	unsupportedSelectorSchemeErrorID      = 47
-	entityAmbiguityErrorID                = 48
-	entityMissingKeyErrorID               = 49
-	unknownPolicyUpdateOperationErrorID   = 50
-	invalidPolicyUpdatePathElementErrorID = 51
+	externalErrorID                     = 0
+	attributeTypeErrorID                = 1
+	policyAmbiguityErrorID              = 2
+	policyMissingKeyErrorID             = 3
+	unknownRCAErrorID                   = 4
+	missingRCAErrorID                   = 5
+	parseCAErrorID                      = 6
+	invalidRCAErrorID                   = 7
+	missingDefaultRuleRCAErrorID        = 8
+	missingErrorRuleRCAErrorID          = 9
+	notImplementedRCAErrorID            = 10
+	unknownPCAErrorID                   = 11
+	missingPCAErrorID                   = 12
+	invalidPCAErrorID                   = 13
+	missingDefaultPolicyPCAErrorID      = 14
+	missingErrorPolicyPCAErrorID        = 15
+	notImplementedPCAErrorID            = 16
+	mapperArgumentTypeErrorID           = 17
+	conditionTypeErrorID                = 18
+	unknownEffectErrorID                = 19
+	unknownMatchFunctionErrorID         = 20
+	matchFunctionCastErrorID            = 21
+	matchFunctionArgsNumberErrorID      = 22
+	invalidMatchFunctionArgErrorID      = 23
+	matchFunctionBothValuesErrorID      = 24
+	matchFunctionBothAttrsErrorID       = 25
+	unknownFunctionErrorID              = 26
+	functionCastErrorID                 = 27
+	unknownAttributeErrorID             = 28
+	missingAttributeErrorID             = 29
+	unknownTypeErrorID                  = 30
+	invalidTypeErrorID                  = 31
+	missingContentErrorID               = 32
+	notImplementedValueTypeErrorID      = 33
+	invalidAddressErrorID               = 34
+	invalidNetworkErrorID               = 35
+	invalidDomainErrorID                = 36
+	selectorURIErrorID                  = 37
+	selectorLocationErrorID             = 38
+	unsupportedSelectorSchemeErrorID    = 39
+	entityAmbiguityErrorID              = 40
+	entityMissingKeyErrorID             = 41
+	unknownPolicyUpdateOperationErrorID = 42
 )
 
 type externalError struct {
@@ -76,102 +68,6 @@ func newExternalError(err error) *externalError {
 
 func (e *externalError) Error() string {
 	return e.errorf("%s", e.err)
-}
-
-type stringError struct {
-	errorLink
-	v    interface{}
-	desc string
-}
-
-func newStringError(v interface{}, desc string) *stringError {
-	return &stringError{
-		errorLink: errorLink{id: stringErrorID},
-		v:         v,
-		desc:      desc}
-}
-
-func (e *stringError) Error() string {
-	return e.errorf("Expected %s but got %T", e.desc, e.v)
-}
-
-type missingStringError struct {
-	errorLink
-	desc string
-}
-
-func newMissingStringError(desc string) *missingStringError {
-	return &missingStringError{
-		errorLink: errorLink{id: missingStringErrorID},
-		desc:      desc}
-}
-
-func (e *missingStringError) Error() string {
-	return e.errorf("Missing %s", e.desc)
-}
-
-type mapError struct {
-	errorLink
-	v    interface{}
-	desc string
-}
-
-func newMapError(v interface{}, desc string) *mapError {
-	return &mapError{
-		errorLink: errorLink{id: mapErrorID},
-		v:         v,
-		desc:      desc}
-}
-
-func (e *mapError) Error() string {
-	return e.errorf("Expected %s but got %T", e.desc, e.v)
-}
-
-type missingMapError struct {
-	errorLink
-	desc string
-}
-
-func newMissingMapError(desc string) *missingMapError {
-	return &missingMapError{
-		errorLink: errorLink{id: missingMapErrorID},
-		desc:      desc}
-}
-
-func (e *missingMapError) Error() string {
-	return e.errorf("Missing %s", e.desc)
-}
-
-type listError struct {
-	errorLink
-	v    interface{}
-	desc string
-}
-
-func newListError(v interface{}, desc string) *listError {
-	return &listError{
-		errorLink: errorLink{id: listErrorID},
-		v:         v,
-		desc:      desc}
-}
-
-func (e *listError) Error() string {
-	return e.errorf("Expected %s but got %T", e.desc, e.v)
-}
-
-type missingListError struct {
-	errorLink
-	desc string
-}
-
-func newMissingListError(desc string) *missingListError {
-	return &missingListError{
-		errorLink: errorLink{id: missingListErrorID},
-		desc:      desc}
-}
-
-func (e *missingListError) Error() string {
-	return e.errorf("Missing %s", e.desc)
 }
 
 type attributeTypeError struct {
@@ -243,6 +139,21 @@ func (e *missingRCAError) Error() string {
 	return e.errorf("Missing policy combinig algorithm")
 }
 
+type parseCAError struct {
+	errorLink
+	token json.Token
+}
+
+func newParseCAError(token json.Token) *parseCAError {
+	return &parseCAError{
+		errorLink: errorLink{id: parseCAErrorID},
+		token:     token}
+}
+
+func (e *parseCAError) Error() string {
+	return e.errorf("Expected string or { object delimiter for combinig algorithm but got %T (%#v)", e.token, e.token)
+}
+
 type invalidRCAError struct {
 	errorLink
 	v interface{}
@@ -255,20 +166,7 @@ func newInvalidRCAError(v interface{}) *invalidRCAError {
 }
 
 func (e *invalidRCAError) Error() string {
-	return e.errorf("Expected string or map as policy combinig algorithm but got %T", e.v)
-}
-
-type missingMapRCAParamError struct {
-	errorLink
-}
-
-func newMissingMapRCAParamError() *missingMapRCAParamError {
-	return &missingMapRCAParamError{
-		errorLink: errorLink{id: missingMapRCAParamErrorID}}
-}
-
-func (e *missingMapRCAParamError) Error() string {
-	return e.errorf("Missing map parameter")
+	return e.errorf("Expected string or *caParams as policy combinig algorithm but got %T", e.v)
 }
 
 type missingDefaultRuleRCAError struct {
@@ -356,20 +254,7 @@ func newInvalidPCAError(v interface{}) *invalidPCAError {
 }
 
 func (e *invalidPCAError) Error() string {
-	return e.errorf("Expected string or map as policy combinig algorithm but got %T", e.v)
-}
-
-type missingMapPCAParamError struct {
-	errorLink
-}
-
-func newMissingMapPCAParamError() *missingMapPCAParamError {
-	return &missingMapPCAParamError{
-		errorLink: errorLink{id: missingMapPCAParamErrorID}}
-}
-
-func (e *missingMapPCAParamError) Error() string {
-	return e.errorf("Missing map parameter")
+	return e.errorf("Expected string or *caParams as policy combinig algorithm but got %T", e.v)
 }
 
 type missingDefaultPolicyPCAError struct {
@@ -460,40 +345,6 @@ func newUnknownEffectError(e string) *unknownEffectError {
 
 func (e *unknownEffectError) Error() string {
 	return e.errorf("Unknown rule effect %q", e.e)
-}
-
-type noSMPItemsError struct {
-	errorLink
-	desc string
-	n    int
-}
-
-func newNoSMPItemsError(desc string, n int) *noSMPItemsError {
-	return &noSMPItemsError{
-		errorLink: errorLink{id: noSMPItemsErrorID},
-		desc:      desc,
-		n:         n}
-}
-
-func (e *noSMPItemsError) Error() string {
-	return e.errorf("Expected at least one entry in %s got %d", e.desc, e.n)
-}
-
-type tooManySMPItemsError struct {
-	errorLink
-	desc string
-	n    int
-}
-
-func newTooManySMPItemsError(desc string, n int) *tooManySMPItemsError {
-	return &tooManySMPItemsError{
-		errorLink: errorLink{id: tooManySMPItemsErrorID},
-		desc:      desc,
-		n:         n}
-}
-
-func (e *tooManySMPItemsError) Error() string {
-	return e.errorf("Expected only one entry in %s got %d", e.desc, e.n)
 }
 
 type unknownMatchFunctionError struct {
@@ -644,6 +495,23 @@ func newUnknownAttributeError(ID string) *unknownAttributeError {
 
 func (e *unknownAttributeError) Error() string {
 	return e.errorf("Unknown attribute %q", e.ID)
+}
+
+type missingAttributeError struct {
+	errorLink
+	attr string
+	obj  string
+}
+
+func newMissingAttributeError(attr, obj string) *missingAttributeError {
+	return &missingAttributeError{
+		errorLink: errorLink{id: missingAttributeErrorID},
+		attr:      attr,
+		obj:       obj}
+}
+
+func (e *missingAttributeError) Error() string {
+	return e.errorf("Missing %q attribute %q", e.obj, e.attr)
 }
 
 type unknownTypeError struct {
@@ -845,21 +713,4 @@ func newUnknownPolicyUpdateOperationError(op string) *unknownPolicyUpdateOperati
 
 func (e *unknownPolicyUpdateOperationError) Error() string {
 	return e.errorf("Unknown policy update operation %q", e.op)
-}
-
-type invalidPolicyUpdatePathElementError struct {
-	errorLink
-	v   interface{}
-	idx int
-}
-
-func newInvalidPolicyUpdatePathElementError(v interface{}, idx int) *invalidPolicyUpdatePathElementError {
-	return &invalidPolicyUpdatePathElementError{
-		errorLink: errorLink{id: invalidPolicyUpdatePathElementErrorID},
-		v:         v,
-		idx:       idx}
-}
-
-func (e *invalidPolicyUpdatePathElementError) Error() string {
-	return e.errorf("Expected string as %d path element but got %T", e.idx, e.v)
 }

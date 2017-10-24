@@ -1,82 +1,92 @@
 package jast
 
-import "github.com/infobloxopen/themis/pdp"
+import (
+	"encoding/json"
+	"strings"
 
-func (ctx context) unmarshalAttributeDesignator(v interface{}) (pdp.AttributeDesignator, boundError) {
-	ID, err := ctx.validateString(v, "attribute ID")
+	"github.com/infobloxopen/themis/jparser"
+	"github.com/infobloxopen/themis/pdp"
+)
+
+func (ctx context) decodeAttributeDesignator(d *json.Decoder) (pdp.AttributeDesignator, error) {
+	id, err := jparser.GetString(d, "attribute ID")
 	if err != nil {
 		return pdp.AttributeDesignator{}, err
 	}
 
-	a, ok := ctx.attrs[ID]
+	a, ok := ctx.attrs[id]
 	if !ok {
-		return pdp.AttributeDesignator{}, newUnknownAttributeError(ID)
+		return pdp.AttributeDesignator{}, newUnknownAttributeError(id)
 	}
 
 	return pdp.MakeAttributeDesignator(a), nil
 }
 
-func (ctx context) unmarshalArguments(v interface{}) ([]pdp.Expression, boundError) {
-	items, err := ctx.validateList(v, "arguments")
+func (ctx context) decodeArguments(d *json.Decoder) ([]pdp.Expression, error) {
+	err := jparser.CheckArrayStart(d, "arguments")
 	if err != nil {
 		return nil, err
 	}
 
-	args := make([]pdp.Expression, len(items))
-	for i, item := range items {
-		arg, err := ctx.unmarshalExpression(item)
+	args := []pdp.Expression{}
+	if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
+		arg, err := ctx.decodeExpression(d)
 		if err != nil {
-			return nil, bindErrorf(err, "%d", i)
+			return bindErrorf(err, "%d", idx)
 		}
 
-		args[i] = arg
+		args = append(args, arg)
+
+		return nil
+	}, "arguments"); err != nil {
+		return nil, err
 	}
 
 	return args, nil
 }
 
-func (ctx context) unmarshalExpression(v interface{}) (pdp.Expression, boundError) {
-	m, err := ctx.validateMap(v, "expression")
-	if err != nil {
-		return nil, err
-	}
+func (ctx context) decodeExpression(d *json.Decoder) (pdp.Expression, error) {
+	var expr pdp.Expression
 
-	k, v, err := ctx.getSingleMapPair(m, "expression map")
-	if err != nil {
-		return nil, err
-	}
+	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+		var err error
 
-	ID, err := ctx.validateString(k, "specificator or function name")
-	if err != nil {
-		return nil, err
-	}
+		switch strings.ToLower(k) {
+		case yastTagAttribute:
+			expr, err = ctx.decodeAttributeDesignator(d)
+			return err
 
-	switch ID {
-	case yastTagAttribute:
-		return ctx.unmarshalAttributeDesignator(v)
+		case yastTagValue:
+			expr, err = ctx.decodeValue(d)
+			return err
 
-	case yastTagValue:
-		return ctx.unmarshalValue(v)
+		case yastTagSelector:
+			expr, err = ctx.decodeSelector(d)
+			return err
 
-	case yastTagSelector:
-		return ctx.unmarshalSelector(v)
-	}
+		default:
+			validators, ok := pdp.FunctionArgumentValidators[k]
+			if !ok {
+				return newUnknownFunctionError(k)
+			}
 
-	validators, ok := pdp.FunctionArgumentValidators[ID]
-	if !ok {
-		return nil, newUnknownFunctionError(ID)
-	}
+			args, err := ctx.decodeArguments(d)
+			if err != nil {
+				return bindError(err, k)
+			}
 
-	args, err := ctx.unmarshalArguments(v)
-	if err != nil {
-		return nil, bindError(err, ID)
-	}
+			for _, validator := range validators {
+				if maker := validator(args); maker != nil {
+					expr = maker(args)
+					return nil
+				}
+			}
 
-	for _, validator := range validators {
-		if maker := validator(args); maker != nil {
-			return maker(args), nil
+			return newFunctionCastError(k, args)
 		}
+	}, "expression"); err != nil {
+		return nil, err
 	}
 
-	return nil, newFunctionCastError(ID, args)
+	return expr, nil
 }

@@ -1,57 +1,82 @@
 package jast
 
 import (
+	"encoding/json"
 	"net/url"
 	"strings"
 
+	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
 )
 
-func (ctx context) unmarshalSelector(v interface{}) (pdp.LocalSelector, boundError) {
-	m, err := ctx.validateMap(v, "selector attributes")
-	if err != nil {
+func (ctx context) decodeSelector(d *json.Decoder) (pdp.LocalSelector, error) {
+	if err := jparser.CheckObjectStart(d, "selector"); err != nil {
 		return pdp.LocalSelector{}, err
 	}
 
-	s, err := ctx.extractString(m, yastTagURI, "selector URI")
-	if err != nil {
-		return pdp.LocalSelector{}, err
-	}
+	var (
+		uri  string
+		path []pdp.Expression
+		st   string
+	)
 
-	ID, ierr := url.Parse(s)
-	if ierr != nil {
-		return pdp.LocalSelector{}, newSelectorURIError(s, ierr)
-	}
+	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+		var err error
 
-	if strings.ToLower(ID.Scheme) == "local" {
-		loc := strings.Split(ID.Opaque, "/")
-		if len(loc) != 2 {
-			return pdp.LocalSelector{}, newSelectorLocationError(ID.Opaque, s)
-		}
+		switch strings.ToLower(k) {
+		case yastTagURI:
+			uri, err = jparser.GetString(d, "selector URI")
+			return err
 
-		items, err := ctx.extractList(m, yastTagPath, "path")
-		if err != nil {
-			return pdp.LocalSelector{}, bindErrorf(err, "selector(%s.%s)", loc[0], loc[1])
-		}
-
-		path := make([]pdp.Expression, len(items))
-		for i, item := range items {
-			e, err := ctx.unmarshalExpression(item)
-			if err != nil {
-				return pdp.LocalSelector{}, bindErrorf(bindErrorf(err, "%d", i), "selector(%s.%s)", loc[0], loc[1])
+		case yastTagPath:
+			if err = jparser.CheckArrayStart(d, "selector path"); err != nil {
+				return err
 			}
 
-			path[i] = e
+			path = []pdp.Expression{}
+			if err = jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
+				e, err := ctx.decodeExpression(d)
+				if err != nil {
+					return bindError(bindErrorf(err, "%d", idx), "selector path")
+				}
+
+				path = append(path, e)
+
+				return nil
+			}, "selector path"); err != nil {
+				return err
+			}
+
+			return nil
+
+		case yastTagType:
+			st, err = jparser.GetString(d, "selector type")
+			if err != nil {
+				return err
+			}
+
+			return nil
 		}
 
-		s, err := ctx.extractString(m, yastTagType, "type")
-		if err != nil {
-			return pdp.LocalSelector{}, bindErrorf(err, "selector(%s.%s)", loc[0], loc[1])
+		return newUnknownAttributeError(k)
+	}, "selector"); err != nil {
+		return pdp.LocalSelector{}, err
+	}
+
+	id, err := url.Parse(uri)
+	if err != nil {
+		return pdp.LocalSelector{}, newSelectorURIError(uri, err)
+	}
+
+	if strings.ToLower(id.Scheme) == "local" {
+		loc := strings.Split(id.Opaque, "/")
+		if len(loc) != 2 {
+			return pdp.LocalSelector{}, newSelectorLocationError(id.Opaque, uri)
 		}
 
-		t, ok := pdp.TypeIDs[strings.ToLower(s)]
+		t, ok := pdp.TypeIDs[strings.ToLower(st)]
 		if !ok {
-			return pdp.LocalSelector{}, bindErrorf(newUnknownTypeError(s), "selector(%s.%s)", loc[0], loc[1])
+			return pdp.LocalSelector{}, bindErrorf(newUnknownTypeError(uri), "selector(%s.%s)", loc[0], loc[1])
 		}
 
 		if t == pdp.TypeUndefined {
@@ -61,5 +86,5 @@ func (ctx context) unmarshalSelector(v interface{}) (pdp.LocalSelector, boundErr
 		return pdp.MakeLocalSelector(loc[0], loc[1], path, t), nil
 	}
 
-	return pdp.LocalSelector{}, newUnsupportedSelectorSchemeError(ID.Scheme, s)
+	return pdp.LocalSelector{}, newUnsupportedSelectorSchemeError(id.Scheme, uri)
 }

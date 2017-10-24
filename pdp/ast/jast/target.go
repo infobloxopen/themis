@@ -8,8 +8,8 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 )
 
-func (ctx context) getAdjustedArguments(v interface{}, val pdp.Expression, attr pdp.Expression) (pdp.Expression, pdp.Expression, boundError) {
-	e, err := ctx.unmarshalExpression(v)
+func (ctx context) decodeAdjustedArguments(val pdp.Expression, attr pdp.Expression, d *json.Decoder) (pdp.Expression, pdp.Expression, error) {
+	e, err := ctx.decodeExpression(d)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -40,34 +40,42 @@ func (ctx context) getAdjustedArguments(v interface{}, val pdp.Expression, attr 
 	return nil, nil, newInvalidMatchFunctionArgError(e)
 }
 
-func (ctx context) getAdjustedArgumentPair(v interface{}) (pdp.Expression, pdp.Expression, boundError) {
-	args, err := ctx.validateList(v, "function arguments")
-	if len(args) != 2 {
-		return nil, nil, newMatchFunctionArgsNumberError(len(args))
-	}
-
-	first, second, err := ctx.getAdjustedArguments(args[0], nil, nil)
-	if err != nil {
+func (ctx context) decodeAdjustedArgumentPair(d *json.Decoder) (pdp.Expression, pdp.Expression, error) {
+	if err := jparser.CheckArrayStart(d, "function arguments"); err != nil {
 		return nil, nil, err
 	}
 
-	first, second, err = ctx.getAdjustedArguments(args[1], first, second)
-	if err != nil {
+	var first, second pdp.Expression
+
+	if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
+		var err error
+
+		switch idx {
+		case 1:
+			first, second, err = ctx.decodeAdjustedArguments(nil, nil, d)
+			return err
+		case 2:
+			first, second, err = ctx.decodeAdjustedArguments(first, second, d)
+			return err
+		default:
+			return newMatchFunctionArgsNumberError(idx)
+		}
+	}, "function arguments"); err != nil {
 		return nil, nil, err
 	}
 
 	return first, second, nil
 }
 
-func (ctx context) unmarshalTargetMatchExpression(ID string, v interface{}) (pdp.Expression, boundError) {
-	typeFunctionMap, ok := pdp.TargetCompatibleExpressions[strings.ToLower(ID)]
+func (ctx context) decodeTargetMatchExpression(id string, d *json.Decoder) (pdp.Expression, error) {
+	typeFunctionMap, ok := pdp.TargetCompatibleExpressions[strings.ToLower(id)]
 	if !ok {
-		return nil, newUnknownMatchFunctionError(ID)
+		return nil, newUnknownMatchFunctionError(id)
 	}
 
-	first, second, err := ctx.getAdjustedArgumentPair(v)
+	first, second, err := ctx.decodeAdjustedArgumentPair(d)
 	if err != nil {
-		return nil, bindError(err, ID)
+		return nil, bindError(err, id)
 	}
 
 	firstType := first.GetResultType()
@@ -75,169 +83,133 @@ func (ctx context) unmarshalTargetMatchExpression(ID string, v interface{}) (pdp
 
 	subTypeFunctionMap, ok := typeFunctionMap[firstType]
 	if !ok {
-		return nil, newMatchFunctionCastError(ID, firstType, secondType)
+		return nil, newMatchFunctionCastError(id, firstType, secondType)
 	}
 
 	maker, ok := subTypeFunctionMap[secondType]
 	if !ok {
-		return nil, newMatchFunctionCastError(ID, firstType, secondType)
+		return nil, newMatchFunctionCastError(id, firstType, secondType)
 	}
 
 	return maker(first, second), nil
 }
 
-func (ctx context) unmarshalTargetAllOfItem(v interface{}) (pdp.Match, boundError) {
-	m, err := ctx.validateMap(v, "expression")
-	if err != nil {
-		return pdp.Match{}, err
-	}
+func (ctx context) decodeTargetAllOfItem(d *json.Decoder) (pdp.Match, error) {
+	m := pdp.Match{}
+	var exp pdp.Expression
 
-	k, v, err := ctx.getSingleMapPair(m, "expression")
-	if err != nil {
-		return pdp.Match{}, err
-	}
-
-	ID, err := ctx.validateString(k, "function identifier")
-	if err != nil {
-		return pdp.Match{}, err
-	}
-
-	e, err := ctx.unmarshalTargetMatchExpression(ID, v)
-	if err != nil {
-		return pdp.Match{}, err
-	}
-
-	return pdp.MakeMatch(e), nil
-}
-
-func (ctx context) unmarshalTargetAnyOfItem(v interface{}) (pdp.AllOf, boundError) {
-	al := pdp.MakeAllOf()
-
-	m, err := ctx.validateMap(v, "expression")
-	if err != nil {
-		return al, err
-	}
-
-	k, v, err := ctx.getSingleMapPair(m, "expression")
-	if err != nil {
-		return al, err
-	}
-
-	ID, err := ctx.validateString(k, "function identifier")
-	if err != nil {
-		return al, err
-	}
-
-	if strings.ToLower(ID) == yastTagAll {
-		items, err := ctx.validateList(v, "list of all expressions")
+	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+		var err error
+		exp, err = ctx.decodeTargetMatchExpression(k, d)
 		if err != nil {
-			return al, bindError(err, ID)
+			return bindError(err, k)
 		}
 
-		for i, item := range items {
-			m, err := ctx.unmarshalTargetAllOfItem(item)
-			if err != nil {
-				return al, bindError(bindErrorf(err, "%d", i+1), ID)
+		return nil
+	}, "function identifier"); err != nil {
+		return m, err
+	}
+
+	return pdp.MakeMatch(exp), nil
+}
+
+func (ctx context) decodeTargetAnyOfItem(d *json.Decoder) (pdp.AllOf, error) {
+	all := pdp.MakeAllOf()
+
+	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+		if strings.ToLower(k) == yastTagAll {
+			if err := jparser.CheckArrayStart(d, "list of all expressions"); err != nil {
+				return err
 			}
 
-			al.Append(m)
-		}
-	} else {
-		e, err := ctx.unmarshalTargetMatchExpression(ID, v)
-		if err != nil {
-			return al, err
-		}
+			if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
+				m, err := ctx.decodeTargetAllOfItem(d)
+				if err != nil {
+					return bindError(bindErrorf(err, "%d", idx), k)
+				}
 
-		m := pdp.MakeMatch(e)
-		al.Append(m)
-	}
+				all.Append(m)
 
-	return al, nil
-}
-
-func (ctx context) unmarshalTargetItem(v interface{}) (pdp.AnyOf, boundError) {
-	an := pdp.MakeAnyOf()
-
-	m, err := ctx.validateMap(v, "expression")
-	if err != nil {
-		return an, err
-	}
-
-	k, v, err := ctx.getSingleMapPair(m, "expression")
-	if err != nil {
-		return an, err
-	}
-
-	ID, err := ctx.validateString(k, "function identifier")
-	if err != nil {
-		return an, err
-	}
-
-	if strings.ToLower(ID) == yastTagAny {
-		items, err := ctx.validateList(v, "list of any expressions")
-		if err != nil {
-			return an, bindError(err, ID)
-		}
-
-		for i, item := range items {
-			al, err := ctx.unmarshalTargetAnyOfItem(item)
+				return nil
+			}, "list of all expressions"); err != nil {
+				return err
+			}
+		} else {
+			e, err := ctx.decodeTargetMatchExpression(k, d)
 			if err != nil {
-				return an, bindError(bindErrorf(err, "%d", i+1), ID)
+				return err
 			}
 
-			an.Append(al)
-		}
-	} else {
-		e, err := ctx.unmarshalTargetMatchExpression(ID, v)
-		if err != nil {
-			return an, err
+			m := pdp.MakeMatch(e)
+			all.Append(m)
 		}
 
-		m := pdp.MakeMatch(e)
-		al := pdp.MakeAllOf()
-		al.Append(m)
-		an.Append(al)
+		return nil
+	}, "function identifier"); err != nil {
+		return all, err
 	}
 
-	return an, nil
+	return all, nil
 }
 
-func (ctx context) unmarshalTarget(m map[interface{}]interface{}) (pdp.Target, boundError) {
-	t := pdp.MakeTarget()
-	v, ok := m[yastTagTarget]
-	if !ok {
-		return t, nil
-	}
+func (ctx context) decodeTargetItem(d *json.Decoder) (pdp.AnyOf, error) {
+	any := pdp.MakeAnyOf()
 
-	items, err := ctx.validateList(v, "target")
-	if err != nil {
-		return t, err
-	}
+	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+		if strings.ToLower(k) == yastTagAny {
+			if err := jparser.CheckArrayStart(d, "list of any expressions"); err != nil {
+				return err
+			}
 
-	for i, item := range items {
-		a, err := ctx.unmarshalTargetItem(item)
-		if err != nil {
-			return t, bindError(bindErrorf(err, "%d", i+1), "target")
+			if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
+				all, err := ctx.decodeTargetAnyOfItem(d)
+				if err != nil {
+					return bindError(bindErrorf(err, "%d", idx), k)
+				}
+
+				any.Append(all)
+
+				return nil
+			}, "list of any expressions"); err != nil {
+				return err
+			}
+		} else {
+			e, err := ctx.decodeTargetMatchExpression(k, d)
+			if err != nil {
+				return err
+			}
+
+			all := pdp.MakeAllOf()
+			all.Append(pdp.MakeMatch(e))
+			any.Append(all)
 		}
 
-		t.Append(a)
+		return nil
+	}, "function identifier"); err != nil {
+		return any, err
 	}
 
-	return t, nil
+	return any, nil
 }
 
 func (ctx *context) decodeTarget(d *json.Decoder) (pdp.Target, error) {
+	t := pdp.MakeTarget()
 	if err := jparser.CheckArrayStart(d, "target"); err != nil {
-		panic(err)
-		return pdp.Target{}, err
+		return t, err
 	}
 
-	v, err := ctx.decodeArray(d, "target")
-	if err != nil {
-		panic(err)
-		return pdp.Target{}, err
+	if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
+		item, err := ctx.decodeTargetItem(d)
+		if err != nil {
+			return bindErrorf(bindErrorf(err, "%d", idx), "target")
+		}
+
+		t.Append(item)
+
+		return nil
+	}, "target"); err != nil {
+		return t, err
 	}
 
-	m := map[interface{}]interface{}{yastTagTarget: v}
-	return ctx.unmarshalTarget(m)
+	return t, nil
 }
