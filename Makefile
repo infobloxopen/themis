@@ -101,7 +101,7 @@ fmt-pdpserver:
 fmt-plugin:
 	@echo "Checking PE-CoreDNS Middleware format..."
 	@$(AT)/contrib/coredns/policy && $(GOFMTCHECK)
-	@$(AT)/contrib/coredns/policy/policytap && $(GOFMTCHECK)
+	@$(AT)/contrib/coredns/policy/dnstap && $(GOFMTCHECK)
 
 .PHONY: fmt-egen
 fmt-egen:
@@ -124,7 +124,7 @@ build-pdpserver: build-dir
 .PHONY: build-plugin
 build-plugin: build-dir
 	$(AT)/contrib/coredns/policy && $(GOBUILD)
-	$(AT)/contrib/coredns/policy/policytap && $(GOBUILD)
+	$(AT)/contrib/coredns/policy/dnstap && $(GOBUILD)
 
 .PHONY: build-egen
 build-egen: build-dir
@@ -149,4 +149,4 @@ test-pep: build-pdpserver cover-out
 .PHONY: test-plugin
 test-plugin: cover-out
 	$(AT)/contrib/coredns/policy && $(GOTEST)
-	$(AT)/contrib/coredns/policy/policytap && $(GOTEST)
+	$(AT)/contrib/coredns/policy/dnstap && $(GOTEST)
