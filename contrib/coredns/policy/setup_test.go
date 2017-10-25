@@ -170,8 +170,8 @@ func TestPolicyConfigParse(t *testing.T) {
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							batch_interval 10
-							batch_limit 1024
+							delay 10
+							pending 1024
 						}
 					}`,
 			endpoints:  []string{"10.2.4.1:5555"},
@@ -181,7 +181,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							batch_interval
+							delay
 						}
 					}`,
 			endpoints:  []string{"10.2.4.1:5555"},
@@ -191,17 +191,17 @@ func TestPolicyConfigParse(t *testing.T) {
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							batch_interval wrong_interval
+							delay wrong_interval
 						}
 					}`,
 			endpoints:  []string{"10.2.4.1:5555"},
-			errContent: "Could not parse batch_interval param",
+			errContent: "Could not parse delay param",
 		},
 		{
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							batch_limit
+							pending
 						}
 					}`,
 			endpoints:  []string{"10.2.4.1:5555"},
@@ -211,11 +211,11 @@ func TestPolicyConfigParse(t *testing.T) {
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							batch_limit wrong_limit
+							pending wrong_limit
 						}
 					}`,
 			endpoints:  []string{"10.2.4.1:5555"},
-			errContent: "Could not parse batch_limit param",
+			errContent: "Could not parse pending param",
 		},
 	}
 

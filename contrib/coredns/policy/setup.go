@@ -108,25 +108,25 @@ func policyParse(c *caddy.Controller) (*PolicyPlugin, error) {
 						continue
 					}
 					return nil, c.ArgErr()
-				case "batch_interval":
+				case "delay":
 					args := c.RemainingArgs()
 					if len(args) == 1 {
 						param, err := strconv.ParseUint(args[0], 10, 32)
 						if err != nil {
-							return nil, fmt.Errorf("Could not parse batch_interval param: %s", err)
+							return nil, fmt.Errorf("Could not parse delay param: %s", err)
 						}
-						policyPlugin.BatchInterval = uint(param)
+						policyPlugin.Delay = uint(param)
 						continue
 					}
 					return nil, c.ArgErr()
-				case "batch_limit":
+				case "pending":
 					args := c.RemainingArgs()
 					if len(args) == 1 {
 						param, err := strconv.ParseUint(args[0], 10, 32)
 						if err != nil {
-							return nil, fmt.Errorf("Could not parse batch_limit param: %s", err)
+							return nil, fmt.Errorf("Could not parse pending param: %s", err)
 						}
-						policyPlugin.BatchLimit = uint(param)
+						policyPlugin.Pending = uint(param)
 						continue
 					}
 					return nil, c.ArgErr()

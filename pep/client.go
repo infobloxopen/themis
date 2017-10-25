@@ -69,19 +69,19 @@ func (r *rpc) callBatch() {
 }
 
 type client struct {
-	endpoints     []string
-	rpcs          []rpc
-	batchInterval uint
-	batchLimit    uint
+	endpoints []string
+	rpcs      []rpc
+	delay     uint
+	pending   uint
 }
 
 // NewBalancedClient creates client instance bound to several PDP servers with random balancing.
-func NewBalancedClient(endpoints []string, batchInterval, batchLimit uint) Client {
+func NewBalancedClient(endpoints []string, delay, pending uint) Client {
 	return &client{
-		endpoints:     endpoints,
-		rpcs:          make([]rpc, len(endpoints)),
-		batchInterval: batchInterval,
-		batchLimit:    batchLimit,
+		endpoints: endpoints,
+		rpcs:      make([]rpc, len(endpoints)),
+		delay:     delay,
+		pending:   pending,
 	}
 }
 
@@ -101,16 +101,16 @@ func (c *client) Connect() error {
 		client.DisableCompression = true
 		client.Start()
 		c.rpcs[i].client = client
-		c.rpcs[i].limit = c.batchLimit
+		c.rpcs[i].limit = c.pending
 		c.rpcs[i].batch = client.NewBatch()
-		if c.batchInterval > 0 {
-			timeout := time.After(time.Duration(c.batchInterval) * time.Microsecond)
+		if c.delay > 0 {
+			timeout := time.After(time.Duration(c.delay) * time.Microsecond)
 			go func(i int) {
 				for {
 					select {
 					case <-timeout:
 						c.rpcs[i].callBatch()
-						timeout = time.After(time.Duration(c.batchInterval) * time.Microsecond)
+						timeout = time.After(time.Duration(c.delay) * time.Microsecond)
 					}
 				}
 			}(i)
@@ -141,7 +141,7 @@ func (c *client) Validate(request *pdp.Request) (*pdp.Response, error) {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		i = index[r.Intn(l)]
 	}
-	if c.batchInterval > 0 {
+	if c.delay > 0 {
 		batch := c.rpcs[i].addToBatch(request)
 		<-batch.Done
 		return batch.Response.(*pdp.Response), batch.Error

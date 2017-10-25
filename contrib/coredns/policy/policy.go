@@ -65,21 +65,21 @@ type edns0Map struct {
 // PolicyPlugin represents a plugin instance that can validate DNS
 // requests and replies using PDP server.
 type PolicyPlugin struct {
-	Endpoints     []string
-	BatchInterval uint
-	BatchLimit    uint
-	options       map[uint16][]edns0Map
-	TapIO         dnstap.DnstapSender
-	Next          plugin.Handler
-	pdp           pep.Client
-	DebugSuffix   string
-	ErrorFunc     func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
+	Endpoints   []string
+	Delay       uint
+	Pending     uint
+	options     map[uint16][]edns0Map
+	TapIO       dnstap.DnstapSender
+	Next        plugin.Handler
+	pdp         pep.Client
+	DebugSuffix string
+	ErrorFunc   func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
 }
 
 // Connect establishes connection to PDP server.
 func (p *PolicyPlugin) Connect() error {
 	log.Printf("[DEBUG] Endpoints: %v", p)
-	p.pdp = pep.NewBalancedClient(p.Endpoints, p.BatchInterval, p.BatchLimit)
+	p.pdp = pep.NewBalancedClient(p.Endpoints, p.Delay, p.Pending)
 	/*p.pdp = newTestClientInit(
 		&pdp.Response{Effect: pdp.PERMIT},
 		&pdp.Response{Effect: pdp.PERMIT},
