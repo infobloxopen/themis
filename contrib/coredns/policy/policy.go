@@ -70,7 +70,6 @@ type PolicyPlugin struct {
 	BatchLimit    uint
 	options       map[uint16][]edns0Map
 	TapIO         dnstap.DnstapSender
-	Trace         plugin.Handler
 	Next          plugin.Handler
 	pdp           pep.Client
 	DebugSuffix   string
@@ -81,6 +80,12 @@ type PolicyPlugin struct {
 func (p *PolicyPlugin) Connect() error {
 	log.Printf("[DEBUG] Endpoints: %v", p)
 	p.pdp = pep.NewBalancedClient(p.Endpoints, p.BatchInterval, p.BatchLimit)
+	/*p.pdp = newTestClientInit(
+		&pdp.Response{Effect: pdp.PERMIT},
+		&pdp.Response{Effect: pdp.PERMIT},
+		nil,
+		nil,
+	)*/
 	return p.pdp.Connect()
 }
 
