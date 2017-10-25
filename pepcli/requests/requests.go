@@ -87,14 +87,10 @@ func makeAttribute(name string, value interface{}, symbols map[string]int) (*rpc
 
 	s, err := marshaller(value)
 	if err != nil {
-		return nil, fmt.Errorf("can't marshal \"%s\" attribute as \"%s\": %s", name, pdp.TypeNames[t], err)
+		return nil, fmt.Errorf("cannot marshal \"%s\" attribute as \"%s\": %s", name, pdp.TypeNames[t], err)
 	}
 
-	return &rpc.Attribute{
-		Id:    name,
-		Type:  pdp.TypeKeys[t],
-		Value: s,
-	}, nil
+	return &rpc.Attribute{name, pdp.TypeKeys[t], s}, nil
 }
 
 func guessType(value interface{}) (int, error) {

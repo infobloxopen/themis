@@ -35,11 +35,11 @@ func EffectName(effect byte) string {
 	return "INVALID EFFECT"
 }
 
-type Attribute struct {
-	Id    string
-	Type  string
-	Value string
-}
+type Attribute [3]string
+
+func (a *Attribute) Id() string    { return a[0] }
+func (a *Attribute) Type() string  { return a[1] }
+func (a *Attribute) Value() string { return a[2] }
 
 type Request struct {
 	Attributes []*Attribute

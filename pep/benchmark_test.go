@@ -407,19 +407,19 @@ func init() {
 		requests[i] = &pdp.Request{
 			Attributes: []*pdp.Attribute{
 				{
-					Id:    "k1",
-					Type:  "string",
-					Value: directionOpts[rand.Intn(len(directionOpts))],
+					"k1",
+					"string",
+					directionOpts[rand.Intn(len(directionOpts))],
 				},
 				{
-					Id:    "k2",
-					Type:  "string",
-					Value: policySetOpts[rand.Intn(len(policySetOpts))],
+					"k2",
+					"string",
+					policySetOpts[rand.Intn(len(policySetOpts))],
 				},
 				{
-					Id:    "k3",
-					Type:  "domain",
-					Value: domainOpts[rand.Intn(len(domainOpts))],
+					"k3",
+					"domain",
+					domainOpts[rand.Intn(len(domainOpts))],
 				},
 			},
 		}
@@ -435,15 +435,15 @@ func BenchmarkBatch(b *testing.B) {
 	benchmark(100, 100, 16, b)
 }
 
-func benchmark(threadCount int, batchInterval, batchLimit uint, b *testing.B) {
-	b.Logf("Threads: %d, Interval: %d, Limit: %d", threadCount, batchInterval, batchLimit)
+func benchmark(threadCount int, delay, pending uint, b *testing.B) {
+	b.Logf("Threads: %d, Delay: %d, Pending: %d", threadCount, delay, pending)
 	ok := true
 	tmpYAST, tmpJCon, server, err := startServer(policySet)
 	if err != nil {
 		b.Fatalf("startServer() failed: %s", err)
 	}
 
-	client, err := startClient(batchInterval, batchLimit)
+	client, err := startClient(delay, pending)
 	if err != nil {
 		b.Fatalf("startClient() failed: %s", err)
 	}
@@ -512,8 +512,8 @@ func startServer(p string) (string, string, *os.Process, error) {
 	return tmpYAST, tmpJCon, process, nil
 }
 
-func startClient(batchInterval, batchLimit uint) (Client, error) {
-	client := NewBalancedClient([]string{"127.0.0.1:5555"}, batchInterval, batchLimit)
+func startClient(delay, pending uint) (Client, error) {
+	client := NewBalancedClient([]string{"127.0.0.1:5555"}, delay, pending)
 	err := client.Connect()
 	time.Sleep(time.Second / 10)
 	return client, err

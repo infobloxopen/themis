@@ -17,6 +17,23 @@ var (
 	errPdpNotReady = errors.New("no PDP server in ready state")
 )
 
+type atomBool struct{ flag int32 }
+
+func (b *atomBool) Set(value bool) {
+	var i int32 = 0
+	if value {
+		i = 1
+	}
+	atomic.StoreInt32(&(b.flag), int32(i))
+}
+
+func (b *atomBool) Get() bool {
+	if atomic.LoadInt32(&(b.flag)) != 0 {
+		return true
+	}
+	return false
+}
+
 type Client interface {
 	// Connect establishes connection to PDP server.
 	Connect() error
@@ -29,20 +46,23 @@ type Client interface {
 }
 
 type rpc struct {
-	ready  atomic.Value // bool
-	client *gorpc.Client
-	batch  *gorpc.Batch
-	limit  uint
-	count  uint
+	ready    *atomBool
+	endpoint string
+	client   *gorpc.Client
+	batch    *gorpc.Batch
+	delay    time.Duration
+	pending  uint
+	count    uint
 	sync.Mutex
 }
 
-func (r *rpc) setReady() {
-	r.ready.Store(true)
-}
-
-func (r *rpc) isReady() bool {
-	return r.ready.Load().(bool)
+func newRpc(endpoint string, delay, pending uint) *rpc {
+	return &rpc{
+		endpoint: endpoint,
+		ready:    new(atomBool),
+		delay:    time.Duration(delay) * time.Microsecond,
+		pending:  pending,
+	}
 }
 
 func (r *rpc) addToBatch(request *pdp.Request) *gorpc.BatchResult {
@@ -50,7 +70,7 @@ func (r *rpc) addToBatch(request *pdp.Request) *gorpc.BatchResult {
 	defer r.Unlock()
 	ret := r.batch.Add(request)
 	r.count++
-	if r.count > r.limit {
+	if r.count > r.pending {
 		go r.batch.Call()
 		r.batch = r.client.NewBatch()
 		r.count = 0
@@ -69,66 +89,61 @@ func (r *rpc) callBatch() {
 }
 
 type client struct {
-	endpoints []string
-	rpcs      []rpc
-	delay     uint
-	pending   uint
+	rpcs []*rpc
 }
 
 // NewBalancedClient creates client instance bound to several PDP servers with random balancing.
 func NewBalancedClient(endpoints []string, delay, pending uint) Client {
-	return &client{
-		endpoints: endpoints,
-		rpcs:      make([]rpc, len(endpoints)),
-		delay:     delay,
-		pending:   pending,
+	rpcs := make([]*rpc, len(endpoints))
+	for i, endpoint := range endpoints {
+		rpcs[i] = newRpc(endpoint, delay, pending)
 	}
+	return &client{rpcs}
 }
 
-func newOnConnectFunc(r *rpc) gorpc.OnConnectFunc {
+func (r *rpc) newOnConnectFunc() gorpc.OnConnectFunc {
 	return func(remoteAddr string, rwc io.ReadWriteCloser) (io.ReadWriteCloser, error) {
 		log.Printf("[DEBUG] Connected to %s", remoteAddr)
-		r.setReady()
+		r.ready.Set(true)
 		return rwc, nil
 	}
 }
 
 func (c *client) Connect() error {
-	for i, endpoint := range c.endpoints {
-		client := &gorpc.Client{Addr: endpoint}
-		c.rpcs[i].ready.Store(false)
-		client.OnConnect = newOnConnectFunc(&c.rpcs[i])
-		client.DisableCompression = true
-		client.Start()
-		c.rpcs[i].client = client
-		c.rpcs[i].limit = c.pending
-		c.rpcs[i].batch = client.NewBatch()
-		if c.delay > 0 {
-			timeout := time.After(time.Duration(c.delay) * time.Microsecond)
-			go func(i int) {
+	for _, r := range c.rpcs {
+		r.client = &gorpc.Client{
+			Addr:               r.endpoint,
+			OnConnect:          r.newOnConnectFunc(),
+			DisableCompression: true,
+		}
+		r.client.Start()
+		if r.delay > 0 {
+			go func(r *rpc) {
+				r.batch = r.client.NewBatch()
+				timeout := time.After(r.delay)
 				for {
 					select {
 					case <-timeout:
-						c.rpcs[i].callBatch()
-						timeout = time.After(time.Duration(c.delay) * time.Microsecond)
+						r.callBatch()
+						timeout = time.After(r.delay)
 					}
 				}
-			}(i)
+			}(r)
 		}
 	}
 	return nil
 }
 
 func (c *client) Close() {
-	for i := 0; i < len(c.rpcs); i++ {
-		c.rpcs[i].client.Stop()
+	for _, r := range c.rpcs {
+		r.client.Stop()
 	}
 }
 
 func (c *client) Validate(request *pdp.Request) (*pdp.Response, error) {
 	var index []int
 	for i, r := range c.rpcs {
-		if r.isReady() {
+		if r.ready.Get() {
 			index = append(index, i)
 		}
 	}
@@ -141,12 +156,19 @@ func (c *client) Validate(request *pdp.Request) (*pdp.Response, error) {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		i = index[r.Intn(l)]
 	}
-	if c.delay > 0 {
-		batch := c.rpcs[i].addToBatch(request)
+	r := c.rpcs[i]
+	if r.delay > 0 {
+		batch := r.addToBatch(request)
 		<-batch.Done
-		return batch.Response.(*pdp.Response), batch.Error
+		if batch.Error != nil {
+			return nil, batch.Error
+		}
+		return batch.Response.(*pdp.Response), nil
 	} else {
-		ret, err := c.rpcs[i].client.Call(request)
-		return ret.(*pdp.Response), err
+		ret, err := r.client.Call(request)
+		if err != nil {
+			return nil, err
+		}
+		return ret.(*pdp.Response), nil
 	}
 }

@@ -100,8 +100,8 @@ func TestSendCRExtraMsg(t *testing.T) {
 	proxyRW.WriteMsg(&msg)
 
 	attrs := []*pb.Attribute{
-		{Id: "attr1", Type: "address", Value: "10.240.0.1"},
-		{Id: "attr2", Type: "string", Value: "value2"},
+		{"attr1", "address", "10.240.0.1"},
+		{"attr2", "string", "value2"},
 	}
 
 	io := newIORoutine(5000 * time.Millisecond)
@@ -141,8 +141,8 @@ func checkExtraAttrs(t *testing.T, actual []*DnstapAttribute, expected []*pb.Att
 checkAttr:
 	for _, a := range actual {
 		for _, e := range expected {
-			if e.Id == *(a.Id) {
-				if string(a.Value) != e.Value {
+			if e.Id() == *(a.Id) {
+				if string(a.Value) != e.Value() {
 					t.Errorf("Attribute %s: expected %v , found %v", e.Id, e, a)
 					return
 				}

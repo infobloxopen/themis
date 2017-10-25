@@ -43,8 +43,8 @@ type attrHolder struct {
 
 func newAttrHolder(qName, qType string) *attrHolder {
 	return &attrHolder{attrs: []*pdp.Attribute{
-		{Id: "dns_qtype", Type: "string", Value: qType},
-		{Id: "domain_name", Type: "domain", Value: qName},
+		{"dns_qtype", "string", qType},
+		{"domain_name", "domain", qName},
 	}, action: typeInvalid}
 }
 
@@ -62,15 +62,16 @@ func (ah *attrHolder) setTypeAttr() {
 	}
 	if ah.typeInd == 0 {
 		ah.typeInd = len(ah.attrs)
-		t := pdp.Attribute{Id: "type", Type: "string", Value: "query"}
+		t := pdp.Attribute{"type", "string", "query"}
 		ah.attrs = append(ah.attrs, &t)
 	} else {
-		ah.attrs[ah.typeInd].Value = "response"
+		t := pdp.Attribute{"type", "string", "response"}
+		ah.attrs[ah.typeInd] = &t
 	}
 }
 
 func (ah *attrHolder) addAddress(val string) {
-	aa := pdp.Attribute{Id: "address", Type: "address", Value: val}
+	aa := pdp.Attribute{"address", "address", val}
 	ah.addAttr(&aa)
 }
 
@@ -110,7 +111,7 @@ func (ah *attrHolder) attributes() []*pdp.Attribute {
 	if ah.action == typeInvalid {
 		return ah.attrs
 	}
-	actAttr := pdp.Attribute{Id: "policy_action", Type: "string", Value: actionConv[ah.action]}
+	actAttr := pdp.Attribute{"policy_action", "string", actionConv[ah.action]}
 	return append(ah.attrs, &actAttr)
 }
 
@@ -125,13 +126,13 @@ func actionFromResponse(resp *pdp.Response) (int, *pdp.Attribute) {
 	}
 	if resp.Effect == pdp.DENY {
 		for _, item := range resp.Obligations {
-			switch item.Id {
+			switch item.Id() {
 			case "refuse":
-				if item.Value == "true" {
+				if item.Value() == "true" {
 					return typeRefuse, nil
 				}
 			case "redirect_to":
-				if item.Value != "" {
+				if item.Value() != "" {
 					return typeRedirect, item
 				}
 			}

@@ -179,7 +179,7 @@ func parseOptionGroup(data []byte, options []edns0Map) ([]*pdp.Attribute, bool) 
 		if option.name == "source_ip" {
 			srcIpFound = true
 		}
-		attrs = append(attrs, &pdp.Attribute{Id: option.name, Type: option.destType, Value: value})
+		attrs = append(attrs, &pdp.Attribute{option.name, option.destType, value})
 	}
 	return attrs, srcIpFound
 }
@@ -190,7 +190,7 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pdp.Attribute
 
 	o := r.IsEdns0()
 	if o == nil {
-		return []*pdp.Attribute{{Id: ipId, Type: "address", Value: ip}}
+		return []*pdp.Attribute{{ipId, "address", ip}}
 	}
 
 	for _, opt := range o.Option {
@@ -208,7 +208,7 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pdp.Attribute
 			ipId = "proxy_source_ip"
 		}
 	}
-	attrs = append(attrs, &pdp.Attribute{Id: ipId, Type: "address", Value: ip})
+	attrs = append(attrs, &pdp.Attribute{ipId, "address", ip})
 	return attrs
 }
 
@@ -236,13 +236,13 @@ func (p *PolicyPlugin) retDebugInfo(r *dns.Msg, w dns.ResponseWriter,
 	if ah.resp1Beg > 0 {
 		debugQueryInfo += join("query", pdp.EffectName(ah.effect1))
 		for _, item := range ah.resp1() {
-			debugQueryInfo += join(item.Id, item.Value)
+			debugQueryInfo += join(item.Id(), item.Value())
 		}
 	}
 	if ah.resp2Beg > 0 {
 		debugQueryInfo += join("response", pdp.EffectName(ah.effect2))
 		for _, item := range ah.resp2() {
-			debugQueryInfo += join(item.Id, item.Value)
+			debugQueryInfo += join(item.Id(), item.Value())
 		}
 	}
 
@@ -295,7 +295,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	}
 
 	// validate domain name (validation #1)
-	err := p.validate(ctx, ah)
+	err := p.validate(ah)
 	if err != nil {
 		return p.retRcode(w, r, dns.RcodeServerFailure, err)
 	}
@@ -319,7 +319,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 			if len(address) > 0 {
 				ah.addAddress(address)
 				// validate response IP (validation #2)
-				err = p.validate(ctx, ah)
+				err = p.validate(ah)
 				if err != nil {
 					return p.retRcode(w, r, dns.RcodeServerFailure, err)
 				}
@@ -339,7 +339,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		w.WriteMsg(respMsg)
 		return status, nil
 	case typeRedirect:
-		return p.redirect(ctx, w, r, ah.redirect.Value)
+		return p.redirect(ctx, w, r, ah.redirect.Value())
 	case typeBlock:
 		return p.retRcode(w, r, dns.RcodeNameError, nil)
 	case typeRefuse:
@@ -400,7 +400,7 @@ func (p *PolicyPlugin) redirect(ctx context.Context, w dns.ResponseWriter, r *dn
 	return a.Rcode, nil
 }
 
-func (p *PolicyPlugin) validate(ctx context.Context, ah *attrHolder) error {
+func (p *PolicyPlugin) validate(ah *attrHolder) error {
 	response, err := p.pdp.Validate(&pdp.Request{Attributes: ah.request()})
 	if err != nil {
 		log.Printf("[ERROR] Policy validation failed due to error %s", err)

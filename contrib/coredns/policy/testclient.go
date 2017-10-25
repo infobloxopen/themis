@@ -26,7 +26,7 @@ func (c *testClient) Close()         {}
 func (c *testClient) Validate(request *pdp.Request) (*pdp.Response, error) {
 	if request != nil {
 		for _, a := range request.Attributes {
-			if a.Id == "address" {
+			if a.Id() == "address" {
 				if c.errResponseIP != nil {
 					return nil, c.errResponseIP
 				}
