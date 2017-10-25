@@ -60,7 +60,7 @@ func (o obligations) String() string {
 
 	lines := []string{"attributes:"}
 	for _, attr := range o {
-		lines = append(lines, fmt.Sprintf("- %s.(%s): %q", attr.Id(), attr.Type(), attr.Value()))
+		lines = append(lines, fmt.Sprintf("- %s.(%s): %q", attr.Id, attr.Type, attr.Value))
 	}
 
 	return strings.Join(lines, "\n")
@@ -70,17 +70,17 @@ func (s *server) newContext(c *pdp.LocalContentStorage, in *rpc.Request) (*pdp.C
 	ctx, err := pdp.NewContext(c, len(in.Attributes), func(i int) (string, pdp.AttributeValue, error) {
 		a := in.Attributes[i]
 
-		t, ok := pdp.TypeIDs[strings.ToLower(a.Type())]
+		t, ok := pdp.TypeIDs[strings.ToLower(a.Type)]
 		if !ok {
-			return "", pdp.AttributeValue{}, bindError(newUnknownAttributeTypeError(a.Type()), a.Id())
+			return "", pdp.AttributeValue{}, bindError(newUnknownAttributeTypeError(a.Type), a.Id)
 		}
 
-		v, err := pdp.MakeValueFromString(t, a.Value())
+		v, err := pdp.MakeValueFromString(t, a.Value)
 		if err != nil {
-			return "", pdp.AttributeValue{}, bindError(err, a.Id())
+			return "", pdp.AttributeValue{}, bindError(err, a.Id)
 		}
 
-		return a.Id(), v, nil
+		return a.Id, v, nil
 	})
 	if err != nil {
 		return nil, newContextCreationError(err)

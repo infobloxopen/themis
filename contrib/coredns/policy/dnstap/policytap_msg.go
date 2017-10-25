@@ -86,8 +86,7 @@ func (s *policyDnstapSender) SendCRExtraMsg(t time.Time, pw *ProxyWriter, attrs 
 func convertAttrs(in []*pb.Attribute) []*DnstapAttribute {
 	out := make([]*DnstapAttribute, len(in))
 	for i, a := range in {
-		id := a.Id()
-		out[i] = &DnstapAttribute{Id: &id, Value: []byte(a.Value())}
+		out[i] = &DnstapAttribute{Id: &a.Id, Value: []byte(a.Value)}
 	}
 	return out
 }

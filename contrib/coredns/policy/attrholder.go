@@ -42,10 +42,10 @@ type attrHolder struct {
 }
 
 func newAttrHolder(qName, qType string) *attrHolder {
-	return &attrHolder{attrs: []*pdp.Attribute{
-		{"dns_qtype", "string", qType},
-		{"domain_name", "domain", qName},
-	}, action: typeInvalid}
+	attrs := make([]*pdp.Attribute, 2, 32)
+	attrs[0] = &pdp.Attribute{"dns_qtype", "string", qType}
+	attrs[1] = &pdp.Attribute{"domain_name", "domain", qName}
+	return &attrHolder{attrs: attrs, action: typeInvalid}
 }
 
 func (ah *attrHolder) addAttr(a *pdp.Attribute) {
@@ -126,13 +126,13 @@ func actionFromResponse(resp *pdp.Response) (int, *pdp.Attribute) {
 	}
 	if resp.Effect == pdp.DENY {
 		for _, item := range resp.Obligations {
-			switch item.Id() {
+			switch item.Id {
 			case "refuse":
-				if item.Value() == "true" {
+				if item.Value == "true" {
 					return typeRefuse, nil
 				}
 			case "redirect_to":
-				if item.Value() != "" {
+				if item.Value != "" {
 					return typeRedirect, item
 				}
 			}

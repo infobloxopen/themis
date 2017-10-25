@@ -141,8 +141,8 @@ func checkExtraAttrs(t *testing.T, actual []*DnstapAttribute, expected []*pb.Att
 checkAttr:
 	for _, a := range actual {
 		for _, e := range expected {
-			if e.Id() == *(a.Id) {
-				if string(a.Value) != e.Value() {
+			if e.Id == *(a.Id) {
+				if string(a.Value) != e.Value {
 					t.Errorf("Attribute %s: expected %v , found %v", e.Id, e, a)
 					return
 				}

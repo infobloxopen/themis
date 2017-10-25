@@ -76,16 +76,23 @@ type PolicyPlugin struct {
 	ErrorFunc   func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
 }
 
+const (
+	debug = true
+)
+
 // Connect establishes connection to PDP server.
 func (p *PolicyPlugin) Connect() error {
 	log.Printf("[DEBUG] Endpoints: %v", p)
-	p.pdp = pep.NewBalancedClient(p.Endpoints, p.Delay, p.Pending)
-	/*p.pdp = newTestClientInit(
-		&pdp.Response{Effect: pdp.PERMIT},
-		&pdp.Response{Effect: pdp.PERMIT},
-		nil,
-		nil,
-	)*/
+	if debug {
+		p.pdp = newTestClientInit(
+			&pdp.Response{Effect: pdp.PERMIT},
+			&pdp.Response{Effect: pdp.PERMIT},
+			nil,
+			nil,
+		)
+	} else {
+		p.pdp = pep.NewBalancedClient(p.Endpoints, p.Delay, p.Pending)
+	}
 	return p.pdp.Connect()
 }
 
@@ -184,13 +191,13 @@ func parseOptionGroup(data []byte, options []edns0Map) ([]*pdp.Attribute, bool) 
 	return attrs, srcIpFound
 }
 
-func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pdp.Attribute {
+func (p *PolicyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) {
 	ipId := "source_ip"
-	var attrs []*pdp.Attribute
 
 	o := r.IsEdns0()
 	if o == nil {
-		return []*pdp.Attribute{{ipId, "address", ip}}
+		ah.addAttr(&pdp.Attribute{ipId, "address", ip})
+		return
 	}
 
 	for _, opt := range o.Option {
@@ -203,13 +210,13 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pdp.Attribute
 			continue
 		}
 		group, srcIpFound := parseOptionGroup(optLocal.Data, options)
-		attrs = append(attrs, group...)
+		ah.addAttrs(group)
 		if srcIpFound {
 			ipId = "proxy_source_ip"
 		}
 	}
-	attrs = append(attrs, &pdp.Attribute{ipId, "address", ip})
-	return attrs
+	ah.addAttr(&pdp.Attribute{ipId, "address", ip})
+	return
 }
 
 func (p *PolicyPlugin) retRcode(w dns.ResponseWriter, r *dns.Msg, rcode int, err error) (int, error) {
@@ -236,13 +243,13 @@ func (p *PolicyPlugin) retDebugInfo(r *dns.Msg, w dns.ResponseWriter,
 	if ah.resp1Beg > 0 {
 		debugQueryInfo += join("query", pdp.EffectName(ah.effect1))
 		for _, item := range ah.resp1() {
-			debugQueryInfo += join(item.Id(), item.Value())
+			debugQueryInfo += join(item.Id, item.Value)
 		}
 	}
 	if ah.resp2Beg > 0 {
 		debugQueryInfo += join("response", pdp.EffectName(ah.effect2))
 		for _, item := range ah.resp2() {
-			debugQueryInfo += join(item.Id(), item.Value())
+			debugQueryInfo += join(item.Id, item.Value)
 		}
 	}
 
@@ -276,7 +283,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	state := request.Request{W: w, Req: q}
 
 	ah := newAttrHolder(strings.TrimRight(state.Name(), "."), fmt.Sprintf("%x", state.QType()))
-	ah.addAttrs(p.getAttrsFromEDNS0(r, state.IP()))
+	p.getAttrsFromEDNS0(ah, r, state.IP())
 
 	if p.TapIO != nil {
 		if debugQuery == false {
@@ -339,7 +346,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		w.WriteMsg(respMsg)
 		return status, nil
 	case typeRedirect:
-		return p.redirect(ctx, w, r, ah.redirect.Value())
+		return p.redirect(ctx, w, r, ah.redirect.Value)
 	case typeBlock:
 		return p.retRcode(w, r, dns.RcodeNameError, nil)
 	case typeRefuse:

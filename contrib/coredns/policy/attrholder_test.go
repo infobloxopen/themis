@@ -57,7 +57,7 @@ func TestActionFromResponse(t *testing.T) {
 		}
 		strR := ""
 		if r != nil {
-			strR = r.Value()
+			strR = r.Value
 		}
 		if strR != test.redirect {
 			t.Errorf("Unexpected redirect: expected=%q, actual=%q", test.redirect, strR)
@@ -77,7 +77,7 @@ func TestPolicyActionNegative(t *testing.T) {
 	ah := newAttrHolder("test.com", "1")
 	attrs := ah.attributes()
 	for _, a := range attrs {
-		if a.Id() == "policy_action" {
+		if a.Id == "policy_action" {
 			t.Errorf("Unexpected policy_action attribute")
 		}
 	}

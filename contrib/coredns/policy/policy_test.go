@@ -379,11 +379,11 @@ func TestPolicy(t *testing.T) {
 		}
 		// Check status
 		if test_status != status {
-			t.Errorf("Case debug[%d]: expected status %q but got %q\n", i, test_status, status)
+			t.Errorf("Case debugDnstap[%d]: expected status %q but got %q\n", i, test_status, status)
 		}
 		// Check error
 		if test_err != err {
-			t.Errorf("Case debug[%d]: expected error %v but got %v\n", i, test_err, err)
+			t.Errorf("Case debugDnstap[%d]: expected error %v but got %v\n", i, test_err, err)
 		}
 		sender.checkAttributes(t, i, nil)
 	}
@@ -401,11 +401,11 @@ func TestPolicy(t *testing.T) {
 		status, err := pm.ServeDNS(context.Background(), tapRW, req)
 		// Check status
 		if test.status != status {
-			t.Errorf("Case test[%d]: expected status %q but got %q\n", i, test.status, status)
+			t.Errorf("Case testDnstap[%d]: expected status %q but got %q\n", i, test.status, status)
 		}
 		// Check error
 		if test.err != err {
-			t.Errorf("Case test[%d]: expected error %v but got %v\n", i, test.err, err)
+			t.Errorf("Case testDnstap[%d]: expected error %v but got %v\n", i, test.err, err)
 		}
 		sender.checkAttributes(t, i, test.attrs)
 	}
@@ -502,7 +502,9 @@ func TestEdns(t *testing.T) {
 			name: "Test different than EDNS0_LOCAL option",
 			ip:   "192.168.0.1",
 			attr: map[string]*pdp.Attribute{
-				"source_ip": {"source_ip", "address", "192.168.0.1"},
+				"dns_qtype":   {"dns_qtype", "string", "1"},
+				"domain_name": {"domain_name", "domain", "test.com"},
+				"source_ip":   {"source_ip", "address", "192.168.0.1"},
 			},
 			nonlocal: true,
 		},
@@ -512,7 +514,9 @@ func TestEdns(t *testing.T) {
 			data: "cafecafe",
 			ip:   "192.168.0.2",
 			attr: map[string]*pdp.Attribute{
-				"source_ip": {"source_ip", "address", "192.168.0.2"},
+				"dns_qtype":   {"dns_qtype", "string", "1"},
+				"domain_name": {"domain_name", "domain", "test.com"},
+				"source_ip":   {"source_ip", "address", "192.168.0.2"},
 			},
 		},
 		{
@@ -521,9 +525,11 @@ func TestEdns(t *testing.T) {
 			data: "4e7e318384088e7d4f3dbc96219ee5d4" + "318384088e7d4f3dbc96219ee5d44e7e",
 			ip:   "192.168.0.3",
 			attr: map[string]*pdp.Attribute{
-				"source_ip": {"source_ip", "address", "192.168.0.3"},
-				"client_id": {"client_id", "string", "4e7e318384088e7d4f3dbc96219ee5d4"},
-				"group_id":  {"group_id", "string", "318384088e7d4f3dbc96219ee5d44e7e"},
+				"dns_qtype":   {"dns_qtype", "string", "1"},
+				"domain_name": {"domain_name", "domain", "test.com"},
+				"source_ip":   {"source_ip", "address", "192.168.0.3"},
+				"client_id":   {"client_id", "string", "4e7e318384088e7d4f3dbc96219ee5d4"},
+				"group_id":    {"group_id", "string", "318384088e7d4f3dbc96219ee5d44e7e"},
 			},
 		},
 		{
@@ -532,6 +538,8 @@ func TestEdns(t *testing.T) {
 			data: "aca80001", // 172.168.0.1 in hex
 			ip:   "192.168.0.4",
 			attr: map[string]*pdp.Attribute{
+				"dns_qtype":       {"dns_qtype", "string", "1"},
+				"domain_name":     {"domain_name", "domain", "test.com"},
 				"source_ip":       {"source_ip", "address", "172.168.0.1"},
 				"proxy_source_ip": {"proxy_source_ip", "address", "192.168.0.4"},
 			},
@@ -542,6 +550,8 @@ func TestEdns(t *testing.T) {
 			data: "637573746f6d6572", // "customer" in hex
 			ip:   "192.168.0.5",
 			attr: map[string]*pdp.Attribute{
+				"dns_qtype":   {"dns_qtype", "string", "1"},
+				"domain_name": {"domain_name", "domain", "test.com"},
 				"source_ip":   {"source_ip", "address", "192.168.0.5"},
 				"client_name": {"client_name", "string", "customer"},
 			},
@@ -552,8 +562,10 @@ func TestEdns(t *testing.T) {
 			data: "96219ee5d44e7e318384088e7d4f3dbc",
 			ip:   "192.168.0.6",
 			attr: map[string]*pdp.Attribute{
-				"source_ip":  {"source_ip", "address", "192.168.0.6"},
-				"client_uid": {"client_uid", "string", "96219ee5d44e7e318384088e7d4f3dbc"},
+				"dns_qtype":   {"dns_qtype", "string", "1"},
+				"domain_name": {"domain_name", "domain", "test.com"},
+				"source_ip":   {"source_ip", "address", "192.168.0.6"},
+				"client_uid":  {"client_uid", "string", "96219ee5d44e7e318384088e7d4f3dbc"},
 			},
 		},
 		{
@@ -562,8 +574,10 @@ func TestEdns(t *testing.T) {
 			data: "8e7d" + "4f3dbc96219ee5d44e7e31838408",
 			ip:   "192.168.0.7",
 			attr: map[string]*pdp.Attribute{
-				"source_ip": {"source_ip", "address", "192.168.0.7"},
-				"hex_name":  {"hex_name", "string", "4f3dbc96219ee5d44e7e31838408"},
+				"dns_qtype":   {"dns_qtype", "string", "1"},
+				"domain_name": {"domain_name", "domain", "test.com"},
+				"source_ip":   {"source_ip", "address", "192.168.0.7"},
+				"hex_name":    {"hex_name", "string", "4f3dbc96219ee5d44e7e31838408"},
 			},
 		},
 		{
@@ -572,7 +586,9 @@ func TestEdns(t *testing.T) {
 			data: "8e7d4f3dbc96219ee5d44e7e31838408",
 			ip:   "192.168.0.8",
 			attr: map[string]*pdp.Attribute{
-				"source_ip": {"source_ip", "address", "192.168.0.8"},
+				"dns_qtype":   {"dns_qtype", "string", "1"},
+				"domain_name": {"domain_name", "domain", "test.com"},
+				"source_ip":   {"source_ip", "address", "192.168.0.8"},
 			},
 		},
 		{
@@ -581,7 +597,9 @@ func TestEdns(t *testing.T) {
 			data: "0011",
 			ip:   "192.168.0.9",
 			attr: map[string]*pdp.Attribute{
-				"source_ip": {"source_ip", "address", "192.168.0.9"},
+				"dns_qtype":   {"dns_qtype", "string", "1"},
+				"domain_name": {"domain_name", "domain", "test.com"},
+				"source_ip":   {"source_ip", "address", "192.168.0.9"},
 			},
 		},
 		{
@@ -590,17 +608,21 @@ func TestEdns(t *testing.T) {
 			data: "00112233",
 			ip:   "192.168.0.10",
 			attr: map[string]*pdp.Attribute{
-				"source_ip": {"source_ip", "address", "192.168.0.10"},
+				"dns_qtype":   {"dns_qtype", "string", "1"},
+				"domain_name": {"domain_name", "domain", "test.com"},
+				"source_ip":   {"source_ip", "address", "192.168.0.10"},
 			},
 		},
 	}
 
 	for _, test := range tests {
 		req := makeRequestWithEDNS0(test.code, test.data, test.nonlocal)
-		attr := pm.getAttrsFromEDNS0(req, test.ip)
+		ah := newAttrHolder("test.com", "1")
+		pm.getAttrsFromEDNS0(ah, req, test.ip)
+		attr := ah.attributes()
 		mapAttr := make(map[string]*pdp.Attribute)
 		for _, a := range attr {
-			mapAttr[a.Id()] = a
+			mapAttr[a.Id] = a
 		}
 		if len(attr) != len(mapAttr) {
 			t.Errorf("%s: array %q transformed to map %q\n", test.name, attr, mapAttr)
@@ -642,9 +664,9 @@ func (s *testDnstapSender) checkAttributes(t *testing.T, i int, attrs []*pdp.Att
 checkAttr:
 	for _, a := range s.attrs {
 		for _, e := range attrs {
-			if e.Id() == a.Id() {
-				if e.Value() != a.Value() {
-					t.Errorf("Attribute %s: expected %q , found %q in test %d", e.Id(), e.Value(), a.Value(), i)
+			if e.Id == a.Id {
+				if e.Value != a.Value {
+					t.Errorf("Attribute %s: expected %q , found %q in test %d", e.Id, e.Value, a.Value, i)
 					return
 				}
 				continue checkAttr
