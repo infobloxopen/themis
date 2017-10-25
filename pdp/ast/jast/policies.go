@@ -16,14 +16,14 @@ func makeSource(desc string, id string, hidden bool) string {
 	return fmt.Sprintf("%s \"%s\"", desc, id)
 }
 
-func (ctx *context) decodePolicies(d *json.Decoder) ([]pdp.Evaluable, error) {
+func (ctx *context) unmarshalPolicies(d *json.Decoder) ([]pdp.Evaluable, error) {
 	if err := jparser.CheckArrayStart(d, "policy set"); err != nil {
 		return nil, err
 	}
 
 	policies := []pdp.Evaluable{}
 	if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
-		e, err := ctx.decodeEvaluable(d)
+		e, err := ctx.unmarshalEvaluable(d)
 		if err != nil {
 			return bindErrorf(err, "%d", idx)
 		}
@@ -38,7 +38,7 @@ func (ctx *context) decodePolicies(d *json.Decoder) ([]pdp.Evaluable, error) {
 	return policies, nil
 }
 
-func (ctx *context) decodeEvaluable(d *json.Decoder) (pdp.Evaluable, error) {
+func (ctx *context) unmarshalEvaluable(d *json.Decoder) (pdp.Evaluable, error) {
 	var (
 		hidden      bool = true
 		isPolicy    bool
@@ -62,21 +62,21 @@ func (ctx *context) decodeEvaluable(d *json.Decoder) (pdp.Evaluable, error) {
 			return err
 
 		case yastTagAlg:
-			alg, err = ctx.decodeCombiningAlg(d)
+			alg, err = ctx.unmarshalCombiningAlg(d)
 			if err != nil {
 				return bindError(err, makeSource("policy or policy set", pid, hidden))
 			}
 			return err
 
 		case yastTagTarget:
-			target, err = ctx.decodeTarget(d)
+			target, err = ctx.unmarshalTarget(d)
 			if err != nil {
 				return bindError(err, makeSource("policy or policy set", pid, hidden))
 			}
 			return nil
 
 		case yastTagObligation:
-			obligs, err = ctx.decodeObligations(d)
+			obligs, err = ctx.unmarshalObligations(d)
 			if err != nil {
 				return bindError(err, makeSource("policy or policy set", pid, hidden))
 			}
@@ -84,7 +84,7 @@ func (ctx *context) decodeEvaluable(d *json.Decoder) (pdp.Evaluable, error) {
 
 		case yastTagPolicies:
 			isPolicySet = true
-			policies, err = ctx.decodePolicies(d)
+			policies, err = ctx.unmarshalPolicies(d)
 			if err != nil {
 				return bindError(err, makeSource("policy set", pid, hidden))
 			}
@@ -92,7 +92,7 @@ func (ctx *context) decodeEvaluable(d *json.Decoder) (pdp.Evaluable, error) {
 
 		case yastTagRules:
 			isPolicy = true
-			rules, err = ctx.decodeRules(d)
+			rules, err = ctx.unmarshalRules(d)
 			if err != nil {
 				return bindError(err, makeSource("policy", pid, hidden))
 			}
@@ -141,12 +141,12 @@ func (ctx *context) decodeEvaluable(d *json.Decoder) (pdp.Evaluable, error) {
 	return nil, newPolicyMissingKeyError()
 }
 
-func (ctx *context) decodeRootPolicy(d *json.Decoder) error {
+func (ctx *context) unmarshalRootPolicy(d *json.Decoder) error {
 	if err := jparser.CheckObjectStart(d, "root policy or policy set"); err != nil {
 		return err
 	}
 
-	e, err := ctx.decodeEvaluable(d)
+	e, err := ctx.unmarshalEvaluable(d)
 	if err != nil {
 		return err
 	}

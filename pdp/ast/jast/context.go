@@ -21,7 +21,7 @@ func newContextWithAttributes(attrs map[string]pdp.Attribute) *context {
 	return &context{attrs: attrs}
 }
 
-func (ctx *context) decode(d *json.Decoder) error {
+func (ctx *context) unmarshal(d *json.Decoder) error {
 	ok, err := jparser.CheckRootObjectStart(d)
 	if err != nil {
 		return err
@@ -34,10 +34,10 @@ func (ctx *context) decode(d *json.Decoder) error {
 	if err = jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
 		switch strings.ToLower(k) {
 		case yastTagAttributes:
-			return ctx.decodeAttributeDeclarations(d)
+			return ctx.unmarshalAttributeDeclarations(d)
 
 		case yastTagPolicies:
-			return ctx.decodeRootPolicy(d)
+			return ctx.unmarshalRootPolicy(d)
 		}
 
 		return newUnknownAttributeError(k)

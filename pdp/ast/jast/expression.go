@@ -8,7 +8,7 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 )
 
-func (ctx context) decodeAttributeDesignator(d *json.Decoder) (pdp.AttributeDesignator, error) {
+func (ctx context) unmarshalAttributeDesignator(d *json.Decoder) (pdp.AttributeDesignator, error) {
 	id, err := jparser.GetString(d, "attribute ID")
 	if err != nil {
 		return pdp.AttributeDesignator{}, err
@@ -22,7 +22,7 @@ func (ctx context) decodeAttributeDesignator(d *json.Decoder) (pdp.AttributeDesi
 	return pdp.MakeAttributeDesignator(a), nil
 }
 
-func (ctx context) decodeArguments(d *json.Decoder) ([]pdp.Expression, error) {
+func (ctx context) unmarshalArguments(d *json.Decoder) ([]pdp.Expression, error) {
 	err := jparser.CheckArrayStart(d, "arguments")
 	if err != nil {
 		return nil, err
@@ -30,7 +30,7 @@ func (ctx context) decodeArguments(d *json.Decoder) ([]pdp.Expression, error) {
 
 	args := []pdp.Expression{}
 	if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
-		arg, err := ctx.decodeExpression(d)
+		arg, err := ctx.unmarshalExpression(d)
 		if err != nil {
 			return bindErrorf(err, "%d", idx)
 		}
@@ -45,7 +45,7 @@ func (ctx context) decodeArguments(d *json.Decoder) ([]pdp.Expression, error) {
 	return args, nil
 }
 
-func (ctx context) decodeExpression(d *json.Decoder) (pdp.Expression, error) {
+func (ctx context) unmarshalExpression(d *json.Decoder) (pdp.Expression, error) {
 	var expr pdp.Expression
 
 	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
@@ -53,15 +53,15 @@ func (ctx context) decodeExpression(d *json.Decoder) (pdp.Expression, error) {
 
 		switch strings.ToLower(k) {
 		case yastTagAttribute:
-			expr, err = ctx.decodeAttributeDesignator(d)
+			expr, err = ctx.unmarshalAttributeDesignator(d)
 			return err
 
 		case yastTagValue:
-			expr, err = ctx.decodeValue(d)
+			expr, err = ctx.unmarshalValue(d)
 			return err
 
 		case yastTagSelector:
-			expr, err = ctx.decodeSelector(d)
+			expr, err = ctx.unmarshalSelector(d)
 			return err
 
 		default:
@@ -70,7 +70,7 @@ func (ctx context) decodeExpression(d *json.Decoder) (pdp.Expression, error) {
 				return newUnknownFunctionError(k)
 			}
 
-			args, err := ctx.decodeArguments(d)
+			args, err := ctx.unmarshalArguments(d)
 			if err != nil {
 				return bindError(err, k)
 			}

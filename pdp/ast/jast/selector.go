@@ -9,7 +9,7 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 )
 
-func (ctx context) decodeSelector(d *json.Decoder) (pdp.LocalSelector, error) {
+func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.LocalSelector, error) {
 	if err := jparser.CheckObjectStart(d, "selector"); err != nil {
 		return pdp.LocalSelector{}, err
 	}
@@ -35,7 +35,7 @@ func (ctx context) decodeSelector(d *json.Decoder) (pdp.LocalSelector, error) {
 
 			path = []pdp.Expression{}
 			if err = jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
-				e, err := ctx.decodeExpression(d)
+				e, err := ctx.unmarshalExpression(d)
 				if err != nil {
 					return bindError(bindErrorf(err, "%d", idx), "selector path")
 				}

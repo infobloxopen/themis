@@ -40,7 +40,7 @@ type Parser struct{}
 
 func (p Parser) Unmarshal(in io.Reader, tag *uuid.UUID) (*pdp.PolicyStorage, error) {
 	ctx := newContext()
-	if err := ctx.decode(json.NewDecoder(in)); err != nil {
+	if err := ctx.unmarshal(json.NewDecoder(in)); err != nil {
 		return nil, err
 	}
 
@@ -50,7 +50,7 @@ func (p Parser) Unmarshal(in io.Reader, tag *uuid.UUID) (*pdp.PolicyStorage, err
 func (p Parser) UnmarshalUpdate(in io.Reader, attrs map[string]pdp.Attribute, oldTag, newTag uuid.UUID) (*pdp.PolicyUpdate, error) {
 	ctx := newContextWithAttributes(attrs)
 	u := pdp.NewPolicyUpdate(oldTag, newTag)
-	if err := ctx.decodeCommands(json.NewDecoder(in), u); err != nil {
+	if err := ctx.unmarshalCommands(json.NewDecoder(in), u); err != nil {
 		return nil, err
 	}
 

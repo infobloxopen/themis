@@ -8,12 +8,12 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 )
 
-func (ctx context) decodeCondition(d *json.Decoder) (pdp.Expression, error) {
+func (ctx context) unmarshalCondition(d *json.Decoder) (pdp.Expression, error) {
 	if err := jparser.CheckObjectStart(d, "condition"); err != nil {
 		return nil, err
 	}
 
-	e, err := ctx.decodeExpression(d)
+	e, err := ctx.unmarshalExpression(d)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +26,7 @@ func (ctx context) decodeCondition(d *json.Decoder) (pdp.Expression, error) {
 	return e, nil
 }
 
-func (ctx context) decodeRule(d *json.Decoder) (*pdp.Rule, error) {
+func (ctx context) unmarshalRule(d *json.Decoder) (*pdp.Rule, error) {
 	var (
 		hidden bool = true
 		id     string
@@ -46,11 +46,11 @@ func (ctx context) decodeRule(d *json.Decoder) (*pdp.Rule, error) {
 			return err
 
 		case yastTagTarget:
-			target, err = ctx.decodeTarget(d)
+			target, err = ctx.unmarshalTarget(d)
 			return err
 
 		case yastTagObligation:
-			obligs, err = ctx.decodeObligations(d)
+			obligs, err = ctx.unmarshalObligations(d)
 			return err
 
 		case yastTagEffect:
@@ -69,7 +69,7 @@ func (ctx context) decodeRule(d *json.Decoder) (*pdp.Rule, error) {
 			return nil
 
 		case yastTagCondition:
-			cond, err = ctx.decodeCondition(d)
+			cond, err = ctx.unmarshalCondition(d)
 			return err
 		}
 
@@ -85,7 +85,7 @@ func (ctx context) decodeRule(d *json.Decoder) (*pdp.Rule, error) {
 	return pdp.NewRule(id, hidden, target, cond, effect, obligs), nil
 }
 
-func (ctx *context) decodeRules(d *json.Decoder) ([]*pdp.Rule, error) {
+func (ctx *context) unmarshalRules(d *json.Decoder) ([]*pdp.Rule, error) {
 	err := jparser.CheckArrayStart(d, "rules")
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func (ctx *context) decodeRules(d *json.Decoder) ([]*pdp.Rule, error) {
 
 	rules := []*pdp.Rule{}
 	if err = jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
-		e, err := ctx.decodeRule(d)
+		e, err := ctx.unmarshalRule(d)
 		if err != nil {
 			return bindErrorf(err, "%d", idx)
 		}

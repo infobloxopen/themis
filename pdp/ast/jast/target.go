@@ -8,8 +8,8 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 )
 
-func (ctx context) decodeAdjustedArguments(val pdp.Expression, attr pdp.Expression, d *json.Decoder) (pdp.Expression, pdp.Expression, error) {
-	e, err := ctx.decodeExpression(d)
+func (ctx context) unmarshalAdjustedArguments(val pdp.Expression, attr pdp.Expression, d *json.Decoder) (pdp.Expression, pdp.Expression, error) {
+	e, err := ctx.unmarshalExpression(d)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -40,7 +40,7 @@ func (ctx context) decodeAdjustedArguments(val pdp.Expression, attr pdp.Expressi
 	return nil, nil, newInvalidMatchFunctionArgError(e)
 }
 
-func (ctx context) decodeAdjustedArgumentPair(d *json.Decoder) (pdp.Expression, pdp.Expression, error) {
+func (ctx context) unmarshalAdjustedArgumentPair(d *json.Decoder) (pdp.Expression, pdp.Expression, error) {
 	if err := jparser.CheckArrayStart(d, "function arguments"); err != nil {
 		return nil, nil, err
 	}
@@ -52,10 +52,10 @@ func (ctx context) decodeAdjustedArgumentPair(d *json.Decoder) (pdp.Expression, 
 
 		switch idx {
 		case 1:
-			first, second, err = ctx.decodeAdjustedArguments(nil, nil, d)
+			first, second, err = ctx.unmarshalAdjustedArguments(nil, nil, d)
 			return err
 		case 2:
-			first, second, err = ctx.decodeAdjustedArguments(first, second, d)
+			first, second, err = ctx.unmarshalAdjustedArguments(first, second, d)
 			return err
 		default:
 			return newMatchFunctionArgsNumberError(idx)
@@ -67,13 +67,13 @@ func (ctx context) decodeAdjustedArgumentPair(d *json.Decoder) (pdp.Expression, 
 	return first, second, nil
 }
 
-func (ctx context) decodeTargetMatchExpression(id string, d *json.Decoder) (pdp.Expression, error) {
+func (ctx context) unmarshalTargetMatchExpression(id string, d *json.Decoder) (pdp.Expression, error) {
 	typeFunctionMap, ok := pdp.TargetCompatibleExpressions[strings.ToLower(id)]
 	if !ok {
 		return nil, newUnknownMatchFunctionError(id)
 	}
 
-	first, second, err := ctx.decodeAdjustedArgumentPair(d)
+	first, second, err := ctx.unmarshalAdjustedArgumentPair(d)
 	if err != nil {
 		return nil, bindError(err, id)
 	}
@@ -94,13 +94,13 @@ func (ctx context) decodeTargetMatchExpression(id string, d *json.Decoder) (pdp.
 	return maker(first, second), nil
 }
 
-func (ctx context) decodeTargetAllOfItem(d *json.Decoder) (pdp.Match, error) {
+func (ctx context) unmarshalTargetAllOfItem(d *json.Decoder) (pdp.Match, error) {
 	m := pdp.Match{}
 	var exp pdp.Expression
 
 	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
 		var err error
-		exp, err = ctx.decodeTargetMatchExpression(k, d)
+		exp, err = ctx.unmarshalTargetMatchExpression(k, d)
 		if err != nil {
 			return bindError(err, k)
 		}
@@ -113,7 +113,7 @@ func (ctx context) decodeTargetAllOfItem(d *json.Decoder) (pdp.Match, error) {
 	return pdp.MakeMatch(exp), nil
 }
 
-func (ctx context) decodeTargetAnyOfItem(d *json.Decoder) (pdp.AllOf, error) {
+func (ctx context) unmarshalTargetAnyOfItem(d *json.Decoder) (pdp.AllOf, error) {
 	all := pdp.MakeAllOf()
 
 	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
@@ -123,7 +123,7 @@ func (ctx context) decodeTargetAnyOfItem(d *json.Decoder) (pdp.AllOf, error) {
 			}
 
 			if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
-				m, err := ctx.decodeTargetAllOfItem(d)
+				m, err := ctx.unmarshalTargetAllOfItem(d)
 				if err != nil {
 					return bindError(bindErrorf(err, "%d", idx), k)
 				}
@@ -135,7 +135,7 @@ func (ctx context) decodeTargetAnyOfItem(d *json.Decoder) (pdp.AllOf, error) {
 				return err
 			}
 		} else {
-			e, err := ctx.decodeTargetMatchExpression(k, d)
+			e, err := ctx.unmarshalTargetMatchExpression(k, d)
 			if err != nil {
 				return err
 			}
@@ -152,7 +152,7 @@ func (ctx context) decodeTargetAnyOfItem(d *json.Decoder) (pdp.AllOf, error) {
 	return all, nil
 }
 
-func (ctx context) decodeTargetItem(d *json.Decoder) (pdp.AnyOf, error) {
+func (ctx context) unmarshalTargetItem(d *json.Decoder) (pdp.AnyOf, error) {
 	any := pdp.MakeAnyOf()
 
 	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
@@ -162,7 +162,7 @@ func (ctx context) decodeTargetItem(d *json.Decoder) (pdp.AnyOf, error) {
 			}
 
 			if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
-				all, err := ctx.decodeTargetAnyOfItem(d)
+				all, err := ctx.unmarshalTargetAnyOfItem(d)
 				if err != nil {
 					return bindError(bindErrorf(err, "%d", idx), k)
 				}
@@ -174,7 +174,7 @@ func (ctx context) decodeTargetItem(d *json.Decoder) (pdp.AnyOf, error) {
 				return err
 			}
 		} else {
-			e, err := ctx.decodeTargetMatchExpression(k, d)
+			e, err := ctx.unmarshalTargetMatchExpression(k, d)
 			if err != nil {
 				return err
 			}
@@ -192,14 +192,14 @@ func (ctx context) decodeTargetItem(d *json.Decoder) (pdp.AnyOf, error) {
 	return any, nil
 }
 
-func (ctx *context) decodeTarget(d *json.Decoder) (pdp.Target, error) {
+func (ctx *context) unmarshalTarget(d *json.Decoder) (pdp.Target, error) {
 	t := pdp.MakeTarget()
 	if err := jparser.CheckArrayStart(d, "target"); err != nil {
 		return t, err
 	}
 
 	if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
-		item, err := ctx.decodeTargetItem(d)
+		item, err := ctx.unmarshalTargetItem(d)
 		if err != nil {
 			return bindErrorf(bindErrorf(err, "%d", idx), "target")
 		}

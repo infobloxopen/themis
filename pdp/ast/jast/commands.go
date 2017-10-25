@@ -8,7 +8,7 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 )
 
-func (ctx *context) decodeEntity(d *json.Decoder) (interface{}, error) {
+func (ctx *context) unmarshalEntity(d *json.Decoder) (interface{}, error) {
 	if err := jparser.CheckObjectStart(d, "entity"); err != nil {
 		return nil, err
 	}
@@ -39,20 +39,20 @@ func (ctx *context) decodeEntity(d *json.Decoder) (interface{}, error) {
 			return err
 
 		case yastTagAlg:
-			alg, err = ctx.decodeCombiningAlg(d)
+			alg, err = ctx.unmarshalCombiningAlg(d)
 			return err
 
 		case yastTagTarget:
-			target, err = ctx.decodeTarget(d)
+			target, err = ctx.unmarshalTarget(d)
 			return err
 
 		case yastTagObligation:
-			obligs, err = ctx.decodeObligations(d)
+			obligs, err = ctx.unmarshalObligations(d)
 			return err
 
 		case yastTagPolicies:
 			isPolicySet = true
-			policies, err = ctx.decodePolicies(d)
+			policies, err = ctx.unmarshalPolicies(d)
 			if err != nil {
 				return bindError(err, makeSource("policy set", id, hidden))
 			}
@@ -60,7 +60,7 @@ func (ctx *context) decodeEntity(d *json.Decoder) (interface{}, error) {
 
 		case yastTagRules:
 			isPolicy = true
-			rules, err = ctx.decodeRules(d)
+			rules, err = ctx.unmarshalRules(d)
 			if err != nil {
 				return bindError(err, makeSource("policy", id, hidden))
 			}
@@ -83,7 +83,7 @@ func (ctx *context) decodeEntity(d *json.Decoder) (interface{}, error) {
 			return nil
 
 		case yastTagCondition:
-			cond, err = ctx.decodeCondition(d)
+			cond, err = ctx.unmarshalCondition(d)
 			return err
 		}
 
@@ -150,7 +150,7 @@ func (ctx *context) decodeEntity(d *json.Decoder) (interface{}, error) {
 	return nil, newEntityMissingKeyError()
 }
 
-func (ctx *context) decodeCommand(d *json.Decoder, u *pdp.PolicyUpdate) error {
+func (ctx *context) unmarshalCommand(d *json.Decoder, u *pdp.PolicyUpdate) error {
 	var (
 		op     int
 		path   []string
@@ -187,7 +187,7 @@ func (ctx *context) decodeCommand(d *json.Decoder, u *pdp.PolicyUpdate) error {
 
 		case yastTagEntity:
 			if op == pdp.UOAdd {
-				entity, err = ctx.decodeEntity(d)
+				entity, err = ctx.unmarshalEntity(d)
 			}
 
 			return err
@@ -203,13 +203,13 @@ func (ctx *context) decodeCommand(d *json.Decoder, u *pdp.PolicyUpdate) error {
 	return nil
 }
 
-func (ctx *context) decodeCommands(d *json.Decoder, u *pdp.PolicyUpdate) error {
+func (ctx *context) unmarshalCommands(d *json.Decoder, u *pdp.PolicyUpdate) error {
 	if err := jparser.CheckArrayStart(d, "commands"); err != nil {
 		return err
 	}
 
 	if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
-		if err := ctx.decodeCommand(d, u); err != nil {
+		if err := ctx.unmarshalCommand(d, u); err != nil {
 			return bindErrorf(err, "%d", idx)
 		}
 

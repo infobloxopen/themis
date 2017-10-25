@@ -179,7 +179,7 @@ func (ctx context) buildPolicyCombiningAlg(alg interface{}, policies []pdp.Evalu
 	return nil, nil, newInvalidPCAError(alg)
 }
 
-func (ctx context) decodeCombiningAlgObj(d *json.Decoder) (*caParams, error) {
+func (ctx context) unmarshalCombiningAlgObj(d *json.Decoder) (*caParams, error) {
 	var (
 		mapOk  bool
 		params caParams
@@ -201,7 +201,7 @@ func (ctx context) decodeCombiningAlgObj(d *json.Decoder) (*caParams, error) {
 				return bindErrorf(err, "%s", id)
 			}
 
-			params.arg, err = ctx.decodeExpression(d)
+			params.arg, err = ctx.unmarshalExpression(d)
 			if err != nil {
 				return bindErrorf(err, "%s", id)
 			}
@@ -232,7 +232,7 @@ func (ctx context) decodeCombiningAlgObj(d *json.Decoder) (*caParams, error) {
 			return nil
 
 		case yastTagAlg:
-			params.subAlg, err = ctx.decodeCombiningAlg(d)
+			params.subAlg, err = ctx.unmarshalCombiningAlg(d)
 			if err != nil {
 				return bindErrorf(err, "%s", id)
 			}
@@ -258,7 +258,7 @@ func (ctx context) decodeCombiningAlgObj(d *json.Decoder) (*caParams, error) {
 	return &params, nil
 }
 
-func (ctx context) decodeCombiningAlg(d *json.Decoder) (interface{}, error) {
+func (ctx context) unmarshalCombiningAlg(d *json.Decoder) (interface{}, error) {
 	t, err := d.Token()
 	if err != nil {
 		return nil, err
@@ -267,7 +267,7 @@ func (ctx context) decodeCombiningAlg(d *json.Decoder) (interface{}, error) {
 	switch t := t.(type) {
 	case json.Delim:
 		if t.String() == jparser.DelimObjectStart {
-			return ctx.decodeCombiningAlgObj(d)
+			return ctx.unmarshalCombiningAlgObj(d)
 		}
 
 		return nil, newParseCAError(t)

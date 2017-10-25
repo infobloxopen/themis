@@ -8,7 +8,7 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 )
 
-func (ctx *context) decodeAttributeDeclarations(d *json.Decoder) boundError {
+func (ctx *context) unmarshalAttributeDeclarations(d *json.Decoder) boundError {
 	err := jparser.CheckObjectStart(d, "attribute declarations")
 	if err != nil {
 		return bindError(err, yastTagAttributes)
