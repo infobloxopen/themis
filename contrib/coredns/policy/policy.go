@@ -16,16 +16,13 @@ import (
 
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/pkg/nonwriter"
-	"github.com/coredns/coredns/plugin/pkg/trace"
 	"github.com/coredns/coredns/request"
 
 	"github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
-	pb "github.com/infobloxopen/themis/pdp-service"
+	pdp "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pep"
 
 	"github.com/miekg/dns"
-
-	ot "github.com/opentracing/opentracing-go"
 
 	"golang.org/x/net/context"
 )
@@ -69,25 +66,33 @@ type edns0Map struct {
 // requests and replies using PDP server.
 type PolicyPlugin struct {
 	Endpoints   []string
+	Delay       uint
+	Pending     uint
 	options     map[uint16][]edns0Map
 	TapIO       dnstap.DnstapSender
-	Trace       plugin.Handler
 	Next        plugin.Handler
 	pdp         pep.Client
 	DebugSuffix string
 	ErrorFunc   func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
 }
 
+const (
+	debug = true
+)
+
 // Connect establishes connection to PDP server.
 func (p *PolicyPlugin) Connect() error {
-	log.Printf("[DEBUG] Connecting %v", p)
-	var tracer ot.Tracer
-	if p.Trace != nil {
-		if t, ok := p.Trace.(trace.Trace); ok {
-			tracer = t.Tracer()
-		}
+	log.Printf("[DEBUG] Endpoints: %v", p)
+	if debug {
+		p.pdp = newTestClientInit(
+			&pdp.Response{Effect: pdp.PERMIT},
+			&pdp.Response{Effect: pdp.PERMIT},
+			nil,
+			nil,
+		)
+	} else {
+		p.pdp = pep.NewBalancedClient(p.Endpoints, p.Delay, p.Pending)
 	}
-	p.pdp = pep.NewBalancedClient(p.Endpoints, tracer)
 	return p.pdp.Connect()
 }
 
@@ -161,9 +166,8 @@ func parseHex(data []byte, option edns0Map) string {
 	return hex.EncodeToString(data[start:end])
 }
 
-func parseOptionGroup(data []byte, options []edns0Map) ([]*pb.Attribute, bool) {
+func parseOptionGroup(ah *attrHolder, data []byte, options []edns0Map) bool {
 	srcIpFound := false
-	var attrs []*pb.Attribute
 	for _, option := range options {
 		var value string
 		switch option.dataType {
@@ -181,18 +185,18 @@ func parseOptionGroup(data []byte, options []edns0Map) ([]*pb.Attribute, bool) {
 		if option.name == "source_ip" {
 			srcIpFound = true
 		}
-		attrs = append(attrs, &pb.Attribute{Id: option.name, Type: option.destType, Value: value})
+		ah.addAttr(&pdp.Attribute{option.name, option.destType, value})
 	}
-	return attrs, srcIpFound
+	return srcIpFound
 }
 
-func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pb.Attribute {
+func (p *PolicyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) {
 	ipId := "source_ip"
-	var attrs []*pb.Attribute
 
 	o := r.IsEdns0()
 	if o == nil {
-		return []*pb.Attribute{{Id: ipId, Type: "address", Value: ip}}
+		ah.addAttr(&pdp.Attribute{ipId, "address", ip})
+		return
 	}
 
 	for _, opt := range o.Option {
@@ -204,14 +208,13 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(r *dns.Msg, ip string) []*pb.Attribute 
 		if !ok {
 			continue
 		}
-		group, srcIpFound := parseOptionGroup(optLocal.Data, options)
-		attrs = append(attrs, group...)
+		srcIpFound := parseOptionGroup(ah, optLocal.Data, options)
 		if srcIpFound {
 			ipId = "proxy_source_ip"
 		}
 	}
-	attrs = append(attrs, &pb.Attribute{Id: ipId, Type: "address", Value: ip})
-	return attrs
+	ah.addAttr(&pdp.Attribute{ipId, "address", ip})
+	return
 }
 
 func (p *PolicyPlugin) retRcode(w dns.ResponseWriter, r *dns.Msg, rcode int, err error) (int, error) {
@@ -236,13 +239,13 @@ func (p *PolicyPlugin) retDebugInfo(r *dns.Msg, w dns.ResponseWriter,
 	debugQueryInfo := "resolve:" + resolve
 
 	if ah.resp1Beg > 0 {
-		debugQueryInfo += join("query", ah.effect1.String())
+		debugQueryInfo += join("query", pdp.EffectName(ah.effect1))
 		for _, item := range ah.resp1() {
 			debugQueryInfo += join(item.Id, item.Value)
 		}
 	}
 	if ah.resp2Beg > 0 {
-		debugQueryInfo += join("response", ah.effect2.String())
+		debugQueryInfo += join("response", pdp.EffectName(ah.effect2))
 		for _, item := range ah.resp2() {
 			debugQueryInfo += join(item.Id, item.Value)
 		}
@@ -277,8 +280,8 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	q, debugQuery := p.decodeDebugMsg(r)
 	state := request.Request{W: w, Req: q}
 
-	ah := newAttrHolder(strings.TrimRight(state.Name(), "."), fmt.Sprintf("%x", state.QType()))
-	ah.addAttrs(p.getAttrsFromEDNS0(r, state.IP()))
+	ah := newAttrHolder(state.Name(), state.QType())
+	p.getAttrsFromEDNS0(ah, r, state.IP())
 
 	if p.TapIO != nil {
 		if debugQuery == false {
@@ -297,7 +300,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	}
 
 	// validate domain name (validation #1)
-	err := p.validate(ctx, ah)
+	err := p.validate(ah)
 	if err != nil {
 		return p.retRcode(w, r, dns.RcodeServerFailure, err)
 	}
@@ -321,7 +324,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 			if len(address) > 0 {
 				ah.addAddress(address)
 				// validate response IP (validation #2)
-				err = p.validate(ctx, ah)
+				err = p.validate(ah)
 				if err != nil {
 					return p.retRcode(w, r, dns.RcodeServerFailure, err)
 				}
@@ -329,7 +332,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		}
 	}
 
-	if debugQuery && ah.action != typeRefuse {
+	if debugQuery && (ah.action != typeRefuse) {
 		return p.retDebugInfo(r, w, ah, err, respMsg, address)
 	}
 	if err != nil {
@@ -402,9 +405,8 @@ func (p *PolicyPlugin) redirect(ctx context.Context, w dns.ResponseWriter, r *dn
 	return a.Rcode, nil
 }
 
-func (p *PolicyPlugin) validate(ctx context.Context, ah *attrHolder) error {
-	response := new(pb.Response)
-	err := p.pdp.Validate(ctx, pb.Request{Attributes: ah.request()}, response)
+func (p *PolicyPlugin) validate(ah *attrHolder) error {
+	response, err := p.pdp.Validate(&pdp.Request{Attributes: ah.request()})
 	if err != nil {
 		log.Printf("[ERROR] Policy validation failed due to error %s", err)
 		return err

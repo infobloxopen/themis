@@ -633,19 +633,19 @@ func init() {
 		benchmarkRequests[i] = &pb.Request{
 			Attributes: []*pb.Attribute{
 				{
-					Id:    "k1",
-					Type:  "string",
-					Value: directionOpts[rand.Intn(len(directionOpts))],
+					"k1",
+					"string",
+					directionOpts[rand.Intn(len(directionOpts))],
 				},
 				{
-					Id:    "k2",
-					Type:  "string",
-					Value: policySetOpts[rand.Intn(len(policySetOpts))],
+					"k2",
+					"string",
+					policySetOpts[rand.Intn(len(policySetOpts))],
 				},
 				{
-					Id:    "k3",
-					Type:  "domain",
-					Value: domainOpts[rand.Intn(len(domainOpts))],
+					"k3",
+					"domain",
+					domainOpts[rand.Intn(len(domainOpts))],
 				},
 			},
 		}
