@@ -36,7 +36,7 @@ func absDomainName(b string) string {
 
 // Hostsfile contains known host entries.
 type Hostsfile struct {
-	sync.Mutex
+	sync.RWMutex
 
 	// list of zones we are authoritive for
 	Origins []string
@@ -68,12 +68,18 @@ type Hostsfile struct {
 func (h *Hostsfile) ReadHosts() {
 	now := time.Now()
 
+	// Not deferring h.RUnlock() because we may need to remove the read lock and aquire a write lock
+	h.RLock()
 	if now.Before(h.expire) && len(h.byAddr) > 0 {
+		h.RUnlock()
 		return
 	}
 	stat, err := os.Stat(h.path)
 	if err == nil && h.mtime.Equal(stat.ModTime()) && h.size == stat.Size() {
+		h.RUnlock()
+		h.Lock()
 		h.expire = now.Add(cacheMaxAge)
+		h.Unlock()
 		return
 	}
 
@@ -83,10 +89,14 @@ func (h *Hostsfile) ReadHosts() {
 		if len(h.byAddr) == 0 && len(h.inline) > 0 {
 			h.Parse(nil)
 		}
+		h.RUnlock()
 		return
 	}
 	defer file.Close()
 
+	h.RUnlock()
+	h.Lock()
+	defer h.Unlock()
 	h.Parse(file)
 
 	// Update the data cache.
@@ -159,9 +169,9 @@ func ipVersion(s string) int {
 
 // LookupStaticHostV4 looks up the IPv4 addresses for the given host from the hosts file.
 func (h *Hostsfile) LookupStaticHostV4(host string) []net.IP {
-	h.Lock()
-	defer h.Unlock()
 	h.ReadHosts()
+	h.RLock()
+	defer h.RUnlock()
 	if len(h.byNameV4) != 0 {
 		if ips, ok := h.byNameV4[absDomainName(host)]; ok {
 			ipsCp := make([]net.IP, len(ips))
@@ -174,9 +184,9 @@ func (h *Hostsfile) LookupStaticHostV4(host string) []net.IP {
 
 // LookupStaticHostV6 looks up the IPv6 addresses for the given host from the hosts file.
 func (h *Hostsfile) LookupStaticHostV6(host string) []net.IP {
-	h.Lock()
-	defer h.Unlock()
 	h.ReadHosts()
+	h.RLock()
+	defer h.RUnlock()
 	if len(h.byNameV6) != 0 {
 		if ips, ok := h.byNameV6[absDomainName(host)]; ok {
 			ipsCp := make([]net.IP, len(ips))
@@ -189,9 +199,9 @@ func (h *Hostsfile) LookupStaticHostV6(host string) []net.IP {
 
 // LookupStaticAddr looks up the hosts for the given address from the hosts file.
 func (h *Hostsfile) LookupStaticAddr(addr string) []string {
-	h.Lock()
-	defer h.Unlock()
 	h.ReadHosts()
+	h.RLock()
+	defer h.RUnlock()
 	addr = parseLiteralIP(addr).String()
 	if addr == "" {
 		return nil
