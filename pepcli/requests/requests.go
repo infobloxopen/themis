@@ -42,7 +42,7 @@ func Load(name string) ([]rpc.Request, error) {
 
 	out := make([]rpc.Request, len(in.Requests))
 	for i, r := range in.Requests {
-		attrs := make([]*rpc.Attribute, len(r))
+		attrs := make([]rpc.Attribute, len(r))
 		j := 0
 		for k, v := range r {
 			a, err := makeAttribute(k, v, symbols)
@@ -69,28 +69,30 @@ var marshallers = map[int]attributeMarshaller{
 	pdp.TypeNetwork: networkMarshaller,
 	pdp.TypeDomain:  domainMarshaller}
 
-func makeAttribute(name string, value interface{}, symbols map[string]int) (*rpc.Attribute, error) {
+func makeAttribute(name string, value interface{}, symbols map[string]int) (rpc.Attribute, error) {
+	var ret rpc.Attribute
 	t, ok := symbols[name]
 	var err error
 	if !ok {
 		t, err = guessType(value)
 		if err != nil {
-			return nil, fmt.Errorf("type of \"%s\" attribute isn't defined and can't be derived: %s", name, err)
+			return ret, fmt.Errorf("type of \"%s\" attribute isn't defined and can't be derived: %s", name, err)
 		}
 	}
 
 	marshaller, ok := marshallers[t]
 	if !ok {
-		return nil, fmt.Errorf("marshaling hasn't been implemented for type \"%s\" of \"%s\" attribute",
+		return ret, fmt.Errorf("marshaling hasn't been implemented for type \"%s\" of \"%s\" attribute",
 			pdp.TypeNames[t], name)
 	}
 
 	s, err := marshaller(value)
 	if err != nil {
-		return nil, fmt.Errorf("cannot marshal \"%s\" attribute as \"%s\": %s", name, pdp.TypeNames[t], err)
+		return ret, fmt.Errorf("cannot marshal \"%s\" attribute as \"%s\": %s", name, pdp.TypeNames[t], err)
 	}
 
-	return &rpc.Attribute{name, pdp.TypeKeys[t], s}, nil
+	ret = rpc.Attribute{name, pdp.TypeKeys[t], s}
+	return ret, nil
 }
 
 func guessType(value interface{}) (int, error) {

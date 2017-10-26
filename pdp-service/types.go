@@ -42,13 +42,13 @@ type Attribute struct {
 }
 
 type Request struct {
-	Attributes []*Attribute
+	Attributes []Attribute
 }
 
 type Response struct {
 	Effect      byte
 	Reason      string
-	Obligations []*Attribute
+	Obligations []Attribute
 }
 
 func init() {

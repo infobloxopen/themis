@@ -51,7 +51,7 @@ func makeFailEffect(effect byte) (byte, error) {
 	return rpc.INDETERMINATE, newUnknownEffectError(int(effect))
 }
 
-type obligations []*rpc.Attribute
+type obligations []rpc.Attribute
 
 func (o obligations) String() string {
 	if len(o) <= 0 {
@@ -89,21 +89,21 @@ func (s *server) newContext(c *pdp.LocalContentStorage, in *rpc.Request) (*pdp.C
 	return ctx, nil
 }
 
-func (s *server) newAttributes(obligations []pdp.AttributeAssignmentExpression, ctx *pdp.Context) ([]*rpc.Attribute, error) {
-	attrs := make([]*rpc.Attribute, len(obligations))
+func (s *server) newAttributes(obligations []pdp.AttributeAssignmentExpression, ctx *pdp.Context) ([]rpc.Attribute, error) {
+	attrs := make([]rpc.Attribute, len(obligations))
 	for i, e := range obligations {
 		ID, t, s, err := e.Serialize(ctx)
 		if err != nil {
 			return attrs[:i], err
 		}
 
-		attrs[i] = &rpc.Attribute{ID, t, s}
+		attrs[i] = rpc.Attribute{ID, t, s}
 	}
 
 	return attrs, nil
 }
 
-func (s *server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in *rpc.Request) (byte, []error, []*rpc.Attribute) {
+func (s *server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in *rpc.Request) (byte, []error, []rpc.Attribute) {
 	if p == nil {
 		return rpc.INDETERMINATE, []error{newMissingPolicyError()}, nil
 	}

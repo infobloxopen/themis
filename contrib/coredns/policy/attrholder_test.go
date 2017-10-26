@@ -28,21 +28,21 @@ func TestActionFromResponse(t *testing.T) {
 			redirect: "",
 		},
 		{
-			resp: pdp.Response{Effect: pdp.DENY, Obligations: []*pdp.Attribute{
+			resp: pdp.Response{Effect: pdp.DENY, Obligations: []pdp.Attribute{
 				{"redirect_to", "string", "10.10.10.10"},
 			}},
 			action:   typeRedirect,
 			redirect: "10.10.10.10",
 		},
 		{
-			resp: pdp.Response{Effect: pdp.DENY, Obligations: []*pdp.Attribute{
+			resp: pdp.Response{Effect: pdp.DENY, Obligations: []pdp.Attribute{
 				{"refuse", "string", "bla-bla"},
 			}},
 			action:   typeBlock,
 			redirect: "",
 		},
 		{
-			resp: pdp.Response{Effect: pdp.DENY, Obligations: []*pdp.Attribute{
+			resp: pdp.Response{Effect: pdp.DENY, Obligations: []pdp.Attribute{
 				{"refuse", "string", "true"},
 			}},
 			action:   typeRefuse,
@@ -55,12 +55,8 @@ func TestActionFromResponse(t *testing.T) {
 		if a != test.action {
 			t.Errorf("Unexpected action: expected=%d, actual=%d", test.action, a)
 		}
-		strR := ""
-		if r != nil {
-			strR = r.Value
-		}
-		if strR != test.redirect {
-			t.Errorf("Unexpected redirect: expected=%q, actual=%q", test.redirect, strR)
+		if r.Value != test.redirect {
+			t.Errorf("Unexpected redirect: expected=%q, actual=%q", test.redirect, r.Value)
 		}
 	}
 
@@ -68,13 +64,13 @@ func TestActionFromResponse(t *testing.T) {
 	if a != typeInvalid {
 		t.Errorf("Unexpected action: expected=%d, actual=%d", typeInvalid, a)
 	}
-	if r != nil {
-		t.Errorf("Unexpected redirect: expected=nil, actual=%q", r)
+	if r.Value != "" {
+		t.Errorf("Unexpected redirect: expected empty, actual=%s", r.Value)
 	}
 }
 
 func TestPolicyActionNegative(t *testing.T) {
-	ah := newAttrHolder("test.com", "1")
+	ah := newAttrHolder("test.com", 1)
 	attrs := ah.attributes()
 	for _, a := range attrs {
 		if a.Id == "policy_action" {

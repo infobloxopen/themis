@@ -405,7 +405,7 @@ func init() {
 	requests = make([]*pdp.Request, 2000000)
 	for i := range requests {
 		requests[i] = &pdp.Request{
-			Attributes: []*pdp.Attribute{
+			Attributes: []pdp.Attribute{
 				{
 					"k1",
 					"string",

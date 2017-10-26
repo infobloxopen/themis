@@ -166,9 +166,8 @@ func parseHex(data []byte, option edns0Map) string {
 	return hex.EncodeToString(data[start:end])
 }
 
-func parseOptionGroup(data []byte, options []edns0Map) ([]*pdp.Attribute, bool) {
+func parseOptionGroup(ah *attrHolder, data []byte, options []edns0Map) bool {
 	srcIpFound := false
-	var attrs []*pdp.Attribute
 	for _, option := range options {
 		var value string
 		switch option.dataType {
@@ -186,9 +185,9 @@ func parseOptionGroup(data []byte, options []edns0Map) ([]*pdp.Attribute, bool) 
 		if option.name == "source_ip" {
 			srcIpFound = true
 		}
-		attrs = append(attrs, &pdp.Attribute{option.name, option.destType, value})
+		ah.addAttr(pdp.Attribute{option.name, option.destType, value})
 	}
-	return attrs, srcIpFound
+	return srcIpFound
 }
 
 func (p *PolicyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) {
@@ -196,7 +195,7 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) 
 
 	o := r.IsEdns0()
 	if o == nil {
-		ah.addAttr(&pdp.Attribute{ipId, "address", ip})
+		ah.addAttr(pdp.Attribute{ipId, "address", ip})
 		return
 	}
 
@@ -209,13 +208,12 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) 
 		if !ok {
 			continue
 		}
-		group, srcIpFound := parseOptionGroup(optLocal.Data, options)
-		ah.addAttrs(group)
+		srcIpFound := parseOptionGroup(ah, optLocal.Data, options)
 		if srcIpFound {
 			ipId = "proxy_source_ip"
 		}
 	}
-	ah.addAttr(&pdp.Attribute{ipId, "address", ip})
+	ah.addAttr(pdp.Attribute{ipId, "address", ip})
 	return
 }
 
@@ -282,7 +280,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	q, debugQuery := p.decodeDebugMsg(r)
 	state := request.Request{W: w, Req: q}
 
-	ah := newAttrHolder(strings.TrimRight(state.Name(), "."), fmt.Sprintf("%x", state.QType()))
+	ah := newAttrHolder(state.Name(), state.QType())
 	p.getAttrsFromEDNS0(ah, r, state.IP())
 
 	if p.TapIO != nil {
@@ -334,7 +332,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		}
 	}
 
-	if debugQuery && ah.action != typeRefuse {
+	if debugQuery && (ah.action != typeRefuse) {
 		return p.retDebugInfo(r, w, ah, err, respMsg, address)
 	}
 	if err != nil {
