@@ -10,48 +10,31 @@ import (
 
 const (
 	externalErrorID                       = 0
-	rootObjectStartTokenErrorID           = 1
-	rootObjectStartDelimiterErrorID       = 2
-	objectStartTokenErrorID               = 3
-	objectStartDelimiterErrorID           = 4
-	objectEndDelimiterErrorID             = 5
-	objectTokenErrorID                    = 6
-	rootArrayStartTokenErrorID            = 7
-	rootArrayStartDelimiterErrorID        = 8
-	arrayStartTokenErrorID                = 9
-	arrayStartDelimiterErrorID            = 10
-	arrayEndDelimiterErrorID              = 11
-	stringArrayTokenErrorID               = 12
-	objectArrayStartTokenErrorID          = 13
-	objectArrayStartDelimiterErrorID      = 14
-	objectArrayTokenErrorID               = 15
-	unexpectedObjectArrayDelimiterErrorID = 16
-	unexpectedDelimiterErrorID            = 17
-	objectKeyErrorID                      = 18
-	missingEOFErrorID                     = 19
-	booleanCastErrorID                    = 20
-	stringCastErrorID                     = 21
-	addressCastErrorID                    = 22
-	networkCastErrorID                    = 23
-	domainCastErrorID                     = 24
-	addressNetworkCastErrorID             = 25
-	unknownContentFieldErrorID            = 26
-	unknownContentItemFieldErrorID        = 27
-	unknownTypeErrorID                    = 28
-	invalidContentItemTypeErrorID         = 29
-	invalidContentKeyTypeErrorID          = 30
-	unknownDataFormatErrorID              = 31
-	duplicateContentItemFieldErrorID      = 32
-	missingContentDataErrorID             = 33
-	missingContentTypeErrorID             = 34
-	invalidSequenceContentItemNodeErrorID = 35
-	invalidMapContentItemNodeErrorID      = 36
-	unknownCommadFieldErrorID             = 37
-	duplicateCommandFieldErrorID          = 38
-	missingCommandOpErrorID               = 39
-	missingCommandPathErrorID             = 40
-	missingCommandEntityErrorID           = 41
-	unknownContentUpdateOperationErrorID  = 42
+	objectKeyErrorID                      = 1
+	booleanCastErrorID                    = 2
+	stringCastErrorID                     = 3
+	addressCastErrorID                    = 4
+	networkCastErrorID                    = 5
+	domainCastErrorID                     = 6
+	addressNetworkCastErrorID             = 7
+	unknownContentFieldErrorID            = 8
+	unknownContentItemFieldErrorID        = 9
+	unknownTypeErrorID                    = 10
+	invalidContentItemTypeErrorID         = 11
+	invalidContentKeyTypeErrorID          = 12
+	unknownDataFormatErrorID              = 13
+	duplicateContentItemFieldErrorID      = 14
+	missingContentDataErrorID             = 15
+	missingContentTypeErrorID             = 16
+	invalidSequenceContentItemNodeErrorID = 17
+	invalidMapContentItemNodeErrorID      = 18
+	unknownCommadFieldErrorID             = 19
+	duplicateCommandFieldErrorID          = 20
+	missingCommandOpErrorID               = 21
+	missingCommandPathErrorID             = 22
+	missingCommandEntityErrorID           = 23
+	unknownContentUpdateOperationErrorID  = 24
+	arrayEndDelimiterErrorID              = 25
 )
 
 type externalError struct {
@@ -69,321 +52,6 @@ func (e *externalError) Error() string {
 	return e.errorf("%s", e.err)
 }
 
-type rootObjectStartTokenError struct {
-	errorLink
-	actual   json.Token
-	expected string
-}
-
-func newRootObjectStartTokenError(actual json.Token, expected string) *rootObjectStartTokenError {
-	return &rootObjectStartTokenError{
-		errorLink: errorLink{id: rootObjectStartTokenErrorID},
-		actual:    actual,
-		expected:  expected}
-}
-
-func (e *rootObjectStartTokenError) Error() string {
-	return e.errorf("Expected root JSON object start %q but got token %T (%#v)", e.expected, e.actual, e.actual)
-}
-
-type rootObjectStartDelimiterError struct {
-	errorLink
-	actual   json.Delim
-	expected string
-}
-
-func newRootObjectStartDelimiterError(actual json.Delim, expected string) *rootObjectStartDelimiterError {
-	return &rootObjectStartDelimiterError{
-		errorLink: errorLink{id: rootObjectStartDelimiterErrorID},
-		actual:    actual,
-		expected:  expected}
-}
-
-func (e *rootObjectStartDelimiterError) Error() string {
-	return e.errorf("Expected root JSON object start %q but got delimiter %q", e.expected, e.actual)
-}
-
-type objectStartTokenError struct {
-	errorLink
-	actual   json.Token
-	expected string
-	desc     string
-}
-
-func newObjectStartTokenError(actual json.Token, expected, desc string) *objectStartTokenError {
-	return &objectStartTokenError{
-		errorLink: errorLink{id: objectStartTokenErrorID},
-		actual:    actual,
-		expected:  expected,
-		desc:      desc}
-}
-
-func (e *objectStartTokenError) Error() string {
-	return e.errorf("Expected %s JSON object start %q but got token %T (%#v)", e.desc, e.expected, e.actual, e.actual)
-}
-
-type objectStartDelimiterError struct {
-	errorLink
-	actual   json.Delim
-	expected string
-	desc     string
-}
-
-func newObjectStartDelimiterError(actual json.Delim, expected, desc string) *objectStartDelimiterError {
-	return &objectStartDelimiterError{
-		errorLink: errorLink{id: objectStartDelimiterErrorID},
-		actual:    actual,
-		expected:  expected,
-		desc:      desc}
-}
-
-func (e *objectStartDelimiterError) Error() string {
-	return e.errorf("Expected %s JSON object start %q but got delimiter %q", e.desc, e.expected, e.actual)
-}
-
-type objectEndDelimiterError struct {
-	errorLink
-	actual   json.Delim
-	expected string
-	desc     string
-}
-
-func newObjectEndDelimiterError(actual json.Delim, expected, desc string) *objectEndDelimiterError {
-	return &objectEndDelimiterError{
-		errorLink: errorLink{id: objectEndDelimiterErrorID},
-		actual:    actual,
-		expected:  expected,
-		desc:      desc}
-}
-
-func (e *objectEndDelimiterError) Error() string {
-	return e.errorf("Expected %s JSON object end %q but got delimiter %q", e.desc, e.expected, e.actual)
-}
-
-type objectTokenError struct {
-	errorLink
-	actual   json.Token
-	expected string
-	desc     string
-}
-
-func newObjectTokenError(actual json.Token, expected, desc string) *objectTokenError {
-	return &objectTokenError{
-		errorLink: errorLink{id: objectTokenErrorID},
-		actual:    actual,
-		expected:  expected,
-		desc:      desc}
-}
-
-func (e *objectTokenError) Error() string {
-	return e.errorf("Expected %s JSON object string key or end %q but got token %T (%#v)", e.desc, e.expected, e.actual, e.actual)
-}
-
-type rootArrayStartTokenError struct {
-	errorLink
-	actual   json.Token
-	expected string
-}
-
-func newRootArrayStartTokenError(actual json.Token, expected string) *rootArrayStartTokenError {
-	return &rootArrayStartTokenError{
-		errorLink: errorLink{id: rootArrayStartTokenErrorID},
-		actual:    actual,
-		expected:  expected}
-}
-
-func (e *rootArrayStartTokenError) Error() string {
-	return e.errorf("Expected root JSON array start %q but got token %T (%#v)", e.expected, e.actual, e.actual)
-}
-
-type rootArrayStartDelimiterError struct {
-	errorLink
-	actual   json.Delim
-	expected string
-}
-
-func newRootArrayStartDelimiterError(actual json.Delim, expected string) *rootArrayStartDelimiterError {
-	return &rootArrayStartDelimiterError{
-		errorLink: errorLink{id: rootArrayStartDelimiterErrorID},
-		actual:    actual,
-		expected:  expected}
-}
-
-func (e *rootArrayStartDelimiterError) Error() string {
-	return e.errorf("Expected root JSON array start %q but got delimiter %q", e.expected, e.actual)
-}
-
-type arrayStartTokenError struct {
-	errorLink
-	actual   json.Token
-	expected string
-	desc     string
-}
-
-func newArrayStartTokenError(actual json.Token, expected, desc string) *arrayStartTokenError {
-	return &arrayStartTokenError{
-		errorLink: errorLink{id: arrayStartTokenErrorID},
-		actual:    actual,
-		expected:  expected,
-		desc:      desc}
-}
-
-func (e *arrayStartTokenError) Error() string {
-	return e.errorf("Expected %s JSON array start %q but got token %T (%#v)", e.desc, e.expected, e.actual, e.actual)
-}
-
-type arrayStartDelimiterError struct {
-	errorLink
-	actual   json.Delim
-	expected string
-	desc     string
-}
-
-func newArrayStartDelimiterError(actual json.Delim, expected, desc string) *arrayStartDelimiterError {
-	return &arrayStartDelimiterError{
-		errorLink: errorLink{id: arrayStartDelimiterErrorID},
-		actual:    actual,
-		expected:  expected,
-		desc:      desc}
-}
-
-func (e *arrayStartDelimiterError) Error() string {
-	return e.errorf("Expected %s JSON array start %q but got delimiter %q", e.desc, e.expected, e.actual)
-}
-
-type arrayEndDelimiterError struct {
-	errorLink
-	actual   json.Delim
-	expected string
-	desc     string
-}
-
-func newArrayEndDelimiterError(actual json.Delim, expected, desc string) *arrayEndDelimiterError {
-	return &arrayEndDelimiterError{
-		errorLink: errorLink{id: arrayEndDelimiterErrorID},
-		actual:    actual,
-		expected:  expected,
-		desc:      desc}
-}
-
-func (e *arrayEndDelimiterError) Error() string {
-	return e.errorf("Expected %s JSON array end %q but got delimiter %q", e.desc, e.expected, e.actual)
-}
-
-type stringArrayTokenError struct {
-	errorLink
-	actual   json.Token
-	expected string
-	desc     string
-}
-
-func newStringArrayTokenError(actual json.Token, expected, desc string) *stringArrayTokenError {
-	return &stringArrayTokenError{
-		errorLink: errorLink{id: stringArrayTokenErrorID},
-		actual:    actual,
-		expected:  expected,
-		desc:      desc}
-}
-
-func (e *stringArrayTokenError) Error() string {
-	return e.errorf("Expected %s JSON array string value or end %q but got token %T (%#v)", e.desc, e.expected, e.actual, e.actual)
-}
-
-type objectArrayStartTokenError struct {
-	errorLink
-	actual         json.Token
-	firstExpected  string
-	secondExpected string
-	desc           string
-}
-
-func newObjectArrayStartTokenError(actual json.Token, firstExpected, secondExpected, desc string) *objectArrayStartTokenError {
-	return &objectArrayStartTokenError{
-		errorLink:      errorLink{id: objectArrayStartTokenErrorID},
-		actual:         actual,
-		firstExpected:  firstExpected,
-		secondExpected: secondExpected,
-		desc:           desc}
-}
-
-func (e *objectArrayStartTokenError) Error() string {
-	return e.errorf("Expected %s JSON object or array start %q or %q but got token %T (%#v)", e.desc, e.firstExpected, e.secondExpected, e.actual, e.actual)
-}
-
-type objectArrayStartDelimiterError struct {
-	errorLink
-	actual         json.Delim
-	firstExpected  string
-	secondExpected string
-	desc           string
-}
-
-func newObjectArrayStartDelimiterError(actual json.Delim, firstExpected, secondExpected, desc string) *objectArrayStartDelimiterError {
-	return &objectArrayStartDelimiterError{
-		errorLink:      errorLink{id: objectArrayStartDelimiterErrorID},
-		actual:         actual,
-		firstExpected:  firstExpected,
-		secondExpected: secondExpected,
-		desc:           desc}
-}
-
-func (e *objectArrayStartDelimiterError) Error() string {
-	return e.errorf("Expected %s JSON object or array start %q or %q but got delimiter %q", e.desc, e.firstExpected, e.secondExpected, e.actual)
-}
-
-type objectArrayTokenError struct {
-	errorLink
-	actual   json.Token
-	expected string
-	desc     string
-}
-
-func newObjectArrayTokenError(actual json.Token, expected, desc string) *objectArrayTokenError {
-	return &objectArrayTokenError{
-		errorLink: errorLink{id: objectArrayTokenErrorID},
-		actual:    actual,
-		expected:  expected,
-		desc:      desc}
-}
-
-func (e *objectArrayTokenError) Error() string {
-	return e.errorf("Expected %s JSON array object or end %q but got token %T (%#v)", e.desc, e.expected, e.actual, e.actual)
-}
-
-type unexpectedObjectArrayDelimiterError struct {
-	errorLink
-	delim string
-	desc  string
-}
-
-func newUnexpectedObjectArrayDelimiterError(delim, desc string) *unexpectedObjectArrayDelimiterError {
-	return &unexpectedObjectArrayDelimiterError{
-		errorLink: errorLink{id: unexpectedObjectArrayDelimiterErrorID},
-		delim:     delim,
-		desc:      desc}
-}
-
-func (e *unexpectedObjectArrayDelimiterError) Error() string {
-	return e.errorf("Unexpected delimiter %q for %s", e.delim, e.desc)
-}
-
-type unexpectedDelimiterError struct {
-	errorLink
-	delim string
-	desc  string
-}
-
-func newUnexpectedDelimiterError(delim, desc string) *unexpectedDelimiterError {
-	return &unexpectedDelimiterError{
-		errorLink: errorLink{id: unexpectedDelimiterErrorID},
-		delim:     delim,
-		desc:      desc}
-}
-
-func (e *unexpectedDelimiterError) Error() string {
-	return e.errorf("Unexpected delimiter %q for %s", e.delim, e.desc)
-}
-
 type objectKeyError struct {
 	errorLink
 	token json.Token
@@ -397,21 +65,6 @@ func newObjectKeyError(token json.Token) *objectKeyError {
 
 func (e *objectKeyError) Error() string {
 	return e.errorf("Expected string as JSON object key but got %T (%#v)", e.token, e.token)
-}
-
-type missingEOFError struct {
-	errorLink
-	token json.Token
-}
-
-func newMissingEOFError(token json.Token) *missingEOFError {
-	return &missingEOFError{
-		errorLink: errorLink{id: missingEOFErrorID},
-		token:     token}
-}
-
-func (e *missingEOFError) Error() string {
-	return e.errorf("Expected expected EOF after root object end but got %T (%#v)", e.token, e.token)
 }
 
 type booleanCastError struct {
@@ -769,4 +422,23 @@ func newUnknownContentUpdateOperationError(op string) *unknownContentUpdateOpera
 
 func (e *unknownContentUpdateOperationError) Error() string {
 	return e.errorf("Unknown content update operation %q", e.op)
+}
+
+type arrayEndDelimiterError struct {
+	errorLink
+	actual   json.Delim
+	expected string
+	desc     string
+}
+
+func newArrayEndDelimiterError(actual json.Delim, expected, desc string) *arrayEndDelimiterError {
+	return &arrayEndDelimiterError{
+		errorLink: errorLink{id: arrayEndDelimiterErrorID},
+		actual:    actual,
+		expected:  expected,
+		desc:      desc}
+}
+
+func (e *arrayEndDelimiterError) Error() string {
+	return e.errorf("Expected %s JSON array end %q but got delimiter %q", e.desc, e.expected, e.actual)
 }

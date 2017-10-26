@@ -46,6 +46,7 @@ const (
 	contentUpdateUploadStoreErrorID   = 34
 	contentTransactionCommitErrorID   = 35
 	unknownUploadedRequestErrorID     = 36
+	unsupportedPolicyFromatErrorID    = 37
 )
 
 type externalError struct {
@@ -655,4 +656,19 @@ func newUnknownUploadedRequestError(id int32) *unknownUploadedRequestError {
 
 func (e *unknownUploadedRequestError) Error() string {
 	return e.errorf("Can't find parsed policy or content with id %d", e.id)
+}
+
+type unsupportedPolicyFromatError struct {
+	errorLink
+	format string
+}
+
+func newUnsupportedPolicyFromatError(format string) *unsupportedPolicyFromatError {
+	return &unsupportedPolicyFromatError{
+		errorLink: errorLink{id: unsupportedPolicyFromatErrorID},
+		format:    format}
+}
+
+func (e *unsupportedPolicyFromatError) Error() string {
+	return e.errorf("The %s policy format is unsupported. Must be YAML or JSON", e.format)
 }

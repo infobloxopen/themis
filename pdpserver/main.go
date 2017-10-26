@@ -1,20 +1,25 @@
 package main
 
 import (
-	log "github.com/Sirupsen/logrus"
-	"os"
 	"runtime"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 func main() {
 	initLogging(conf.verbose)
-	log.Info("Starting PDP server")
+	log.Info("Starting PDP server.")
 
 	pdp := newServer()
 
 	if pdp == nil {
-		log.Error("Failed to create Server.")
-		os.Exit(1)
+		log.Fatal("Failed to create PDP server.")
+	}
+
+	if err := pdp.setPolicyFormat(conf.policyFmt); err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Fatal("Failed to initialize PDP server.")
 	}
 
 	pdp.loadPolicies(conf.policy)

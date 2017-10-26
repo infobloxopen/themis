@@ -1,6 +1,6 @@
 package yast
 
-//go:generate bash -c "(egen -i $GOPATH/src/github.com/infobloxopen/themis/pdp/yast/errors.yaml > $GOPATH/src/github.com/infobloxopen/themis/pdp/yast/errors.go) && gofmt -l -s -w $GOPATH/src/github.com/infobloxopen/themis/pdp/yast/errors.go"
+//go:generate bash -c "(egen -i $GOPATH/src/github.com/infobloxopen/themis/pdp/ast/yast/errors.yaml > $GOPATH/src/github.com/infobloxopen/themis/pdp/ast/yast/errors.go) && gofmt -l -s -w $GOPATH/src/github.com/infobloxopen/themis/pdp/ast/yast/errors.go"
 
 import (
 	"fmt"
