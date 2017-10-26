@@ -2,6 +2,7 @@ package policy
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
@@ -32,7 +33,6 @@ func setup(c *caddy.Controller) error {
 			}
 		}
 
-		policyPlugin.Trace = dnsserver.GetConfig(c).Handler("trace")
 		err := policyPlugin.Connect()
 		if err != nil {
 			return plugin.Error("policy", err)
@@ -105,6 +105,28 @@ func policyParse(c *caddy.Controller) (*PolicyPlugin, error) {
 					args := c.RemainingArgs()
 					if len(args) == 1 {
 						policyPlugin.DebugSuffix = args[0]
+						continue
+					}
+					return nil, c.ArgErr()
+				case "delay":
+					args := c.RemainingArgs()
+					if len(args) == 1 {
+						param, err := strconv.ParseUint(args[0], 10, 32)
+						if err != nil {
+							return nil, fmt.Errorf("Could not parse delay param: %s", err)
+						}
+						policyPlugin.Delay = uint(param)
+						continue
+					}
+					return nil, c.ArgErr()
+				case "pending":
+					args := c.RemainingArgs()
+					if len(args) == 1 {
+						param, err := strconv.ParseUint(args[0], 10, 32)
+						if err != nil {
+							return nil, fmt.Errorf("Could not parse pending param: %s", err)
+						}
+						policyPlugin.Pending = uint(param)
 						continue
 					}
 					return nil, c.ArgErr()

@@ -99,9 +99,9 @@ func TestSendCRExtraMsg(t *testing.T) {
 	proxyRW := NewProxyWriter(&tapRW)
 	proxyRW.WriteMsg(&msg)
 
-	attrs := []*pb.Attribute{
-		{Id: "attr1", Type: "address", Value: "10.240.0.1"},
-		{Id: "attr2", Type: "string", Value: "value2"},
+	attrs := []pb.Attribute{
+		{"attr1", "address", "10.240.0.1"},
+		{"attr2", "string", "value2"},
 	}
 
 	io := newIORoutine(5000 * time.Millisecond)
@@ -115,7 +115,7 @@ func TestSendCRExtraMsg(t *testing.T) {
 	}
 }
 
-func checkCRExtraResult(t *testing.T, io testIORoutine, crTime time.Time, proxyRW *ProxyWriter, attrs []*pb.Attribute) {
+func checkCRExtraResult(t *testing.T, io testIORoutine, crTime time.Time, proxyRW *ProxyWriter, attrs []pb.Attribute) {
 	dnstapMsg, ok := <-io.dnstapChan
 	if !ok {
 		t.Errorf("Receiving Dnstap message was timed out")
@@ -132,7 +132,7 @@ func checkCRExtraResult(t *testing.T, io testIORoutine, crTime time.Time, proxyR
 	checkCRMessage(t, dnstapMsg.Message, proxyRW)
 }
 
-func checkExtraAttrs(t *testing.T, actual []*DnstapAttribute, expected []*pb.Attribute) {
+func checkExtraAttrs(t *testing.T, actual []*DnstapAttribute, expected []pb.Attribute) {
 	if len(actual) != len(expected) {
 		t.Errorf("Expected %d attributes, found %d", len(expected), len(actual))
 		return
@@ -141,9 +141,9 @@ func checkExtraAttrs(t *testing.T, actual []*DnstapAttribute, expected []*pb.Att
 checkAttr:
 	for _, a := range actual {
 		for _, e := range expected {
-			if e.GetId() == a.GetId() {
-				if string(a.GetValue()) != e.GetValue() {
-					t.Errorf("Attribute %s: expected %v , found %v", e.GetId(), e, a)
+			if e.Id == *(a.Id) {
+				if string(a.Value) != e.Value {
+					t.Errorf("Attribute %s: expected %v , found %v", e.Id, e, a)
 					return
 				}
 				continue checkAttr

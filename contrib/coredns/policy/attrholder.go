@@ -3,6 +3,8 @@ package policy
 import (
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
 
 	"github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 	pdp "github.com/infobloxopen/themis/pdp-service"
@@ -29,10 +31,10 @@ func init() {
 //
 // resp1, resp2, attributes (in any order)
 type attrHolder struct {
-	attrs    []*pdp.Attribute
-	redirect *pdp.Attribute
-	effect1  pdp.Response_Effect
-	effect2  pdp.Response_Effect
+	attrs    []pdp.Attribute
+	redirect pdp.Attribute
+	effect1  byte
+	effect2  byte
 	action   int
 	typeInd  int
 	resp1Beg int
@@ -41,18 +43,18 @@ type attrHolder struct {
 	resp2End int
 }
 
-func newAttrHolder(qName, qType string) *attrHolder {
-	return &attrHolder{attrs: []*pdp.Attribute{
-		{Id: "dns_qtype", Type: "string", Value: qType},
-		{Id: "domain_name", Type: "domain", Value: qName},
-	}, action: typeInvalid}
+func newAttrHolder(qName string, qType uint16) *attrHolder {
+	attrs := make([]pdp.Attribute, 2, 32)
+	attrs[0] = pdp.Attribute{"dns_qtype", "string", strconv.FormatUint(uint64(qType), 16)}
+	attrs[1] = pdp.Attribute{"domain_name", "domain", strings.TrimRight(qName, ".")}
+	return &attrHolder{attrs: attrs, action: typeInvalid}
 }
 
-func (ah *attrHolder) addAttr(a *pdp.Attribute) {
+func (ah *attrHolder) addAttr(a pdp.Attribute) {
 	ah.attrs = append(ah.attrs, a)
 }
 
-func (ah *attrHolder) addAttrs(a []*pdp.Attribute) {
+func (ah *attrHolder) addAttrs(a []pdp.Attribute) {
 	ah.attrs = append(ah.attrs, a...)
 }
 
@@ -62,19 +64,17 @@ func (ah *attrHolder) setTypeAttr() {
 	}
 	if ah.typeInd == 0 {
 		ah.typeInd = len(ah.attrs)
-		t := pdp.Attribute{Id: "type", Type: "string", Value: "query"}
-		ah.attrs = append(ah.attrs, &t)
+		ah.attrs = append(ah.attrs, pdp.Attribute{"type", "string", "query"})
 	} else {
-		ah.attrs[ah.typeInd].Value = "response"
+		ah.attrs[ah.typeInd] = pdp.Attribute{"type", "string", "response"}
 	}
 }
 
 func (ah *attrHolder) addAddress(val string) {
-	aa := pdp.Attribute{Id: "address", Type: "address", Value: val}
-	ah.addAttr(&aa)
+	ah.addAttr(pdp.Attribute{"address", "address", val})
 }
 
-func (ah *attrHolder) request() []*pdp.Attribute {
+func (ah *attrHolder) request() []pdp.Attribute {
 	ah.setTypeAttr()
 	beg := 1 // skip "dns_qtype" since PDP doesn't need it
 	if ah.resp1Beg != 0 {
@@ -84,7 +84,7 @@ func (ah *attrHolder) request() []*pdp.Attribute {
 }
 
 func (ah *attrHolder) addResponse(r *pdp.Response) {
-	a := r.Obligation
+	a := r.Obligations
 	if ah.resp1Beg == 0 {
 		ah.resp1Beg = len(ah.attrs)
 		ah.resp1End = ah.resp1Beg + len(a)
@@ -98,37 +98,38 @@ func (ah *attrHolder) addResponse(r *pdp.Response) {
 	ah.action, ah.redirect = actionFromResponse(r)
 }
 
-func (ah *attrHolder) resp1() []*pdp.Attribute {
+func (ah *attrHolder) resp1() []pdp.Attribute {
 	return ah.attrs[ah.resp1Beg:ah.resp1End]
 }
 
-func (ah *attrHolder) resp2() []*pdp.Attribute {
+func (ah *attrHolder) resp2() []pdp.Attribute {
 	return ah.attrs[ah.resp2Beg:ah.resp2End]
 }
 
-func (ah *attrHolder) attributes() []*pdp.Attribute {
+func (ah *attrHolder) attributes() []pdp.Attribute {
 	if ah.action == typeInvalid {
 		return ah.attrs
 	}
-	actAttr := pdp.Attribute{Id: "policy_action", Type: "string", Value: actionConv[ah.action]}
-	return append(ah.attrs, &actAttr)
+	actAttr := pdp.Attribute{"policy_action", "string", actionConv[ah.action]}
+	return append(ah.attrs, actAttr)
 }
 
 // actionFromResponse returns action and optionally pointer to redirect attribute
-func actionFromResponse(resp *pdp.Response) (int, *pdp.Attribute) {
+func actionFromResponse(resp *pdp.Response) (int, pdp.Attribute) {
+	var ret pdp.Attribute
 	if resp == nil {
 		log.Printf("[ERROR] PDP response pointer is nil")
-		return typeInvalid, nil
+		return typeInvalid, ret
 	}
-	if resp.Effect == pdp.Response_PERMIT {
-		return typeAllow, nil
+	if resp.Effect == pdp.PERMIT {
+		return typeAllow, ret
 	}
-	if resp.Effect == pdp.Response_DENY {
-		for _, item := range resp.Obligation {
+	if resp.Effect == pdp.DENY {
+		for _, item := range resp.Obligations {
 			switch item.Id {
 			case "refuse":
 				if item.Value == "true" {
-					return typeRefuse, nil
+					return typeRefuse, ret
 				}
 			case "redirect_to":
 				if item.Value != "" {
@@ -136,8 +137,8 @@ func actionFromResponse(resp *pdp.Response) (int, *pdp.Attribute) {
 				}
 			}
 		}
-		return typeBlock, nil
+		return typeBlock, ret
 	}
-	log.Printf("[ERROR] PDP Effect: %s", resp.Effect)
-	return typeInvalid, nil
+	log.Printf("[ERROR] PDP Effect: %s", pdp.EffectName(resp.Effect))
+	return typeInvalid, ret
 }

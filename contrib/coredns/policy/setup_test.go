@@ -166,6 +166,57 @@ func TestPolicyConfigParse(t *testing.T) {
 			endpoints:  []string{"10.2.4.1:5555"},
 			errContent: "",
 		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							delay 10
+							pending 1024
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "",
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							delay
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Wrong argument count or unexpected line ending",
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							delay wrong_interval
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Could not parse delay param",
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							pending
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Wrong argument count or unexpected line ending",
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							pending wrong_limit
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Could not parse pending param",
+		},
 	}
 
 	for _, test := range tests {

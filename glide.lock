@@ -1,8 +1,8 @@
-hash: 77a6718b8f335167b7d23fc6f9f284ff146242d5082cb061f4f8cdfe6e1b63b4
-updated: 2017-10-23T17:26:29.276862266+03:00
+hash: d3b8453cd02e9bb681f4127e2f4406e49810ad258edae9bea0aa929716c61d8c
+updated: 2017-10-24T15:37:04.833165664+03:00
 imports:
 - name: github.com/apache/thrift
-  version: 54ce558ba80905d124b82727d196f6d58964b74c
+  version: ba5e065aaa0e1f9a3d0174a5c287fff09ad2f3a7
   subpackages:
   - lib/go/thrift
 - name: github.com/beorn7/perks
@@ -10,7 +10,7 @@ imports:
   subpackages:
   - quantile
 - name: github.com/coredns/coredns
-  version: cb5e82b82eb85b49be8bb8747f3475b8d76d57e1
+  version: cc490a8912dc5d1afe5f2c2ee53d7fc044496225
   subpackages:
   - core/dnsserver
   - pb
@@ -138,6 +138,8 @@ imports:
   version: 630b33cbf6f5c5af999918be52bac32cf52d0176
 - name: github.com/Sirupsen/logrus
   version: 89742aefa4b206dcf400792f3bd35b542998eb3b
+- name: github.com/valyala/gorpc
+  version: 908281bef77441f2d0ec1792189b4032a1dace0c
 - name: golang.org/x/crypto
   version: 2faea1465de239e4babd8f5905cc25b781712442
   repo: https://go.googlesource.com/crypto
@@ -174,7 +176,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: a5986a5c88227370a9c0a82e5277167229c034cd
+  version: 0d57c57a68d6c3f0cf1d708ab380b10e092c759f
   subpackages:
   - balancer
   - balancer/roundrobin

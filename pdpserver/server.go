@@ -1,7 +1,5 @@
 package main
 
-//go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-service && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/service.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-service && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-service"
-
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-control && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/control.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-control && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-control"
 
 import (
@@ -16,15 +14,14 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	ot "github.com/opentracing/opentracing-go"
 	"google.golang.org/grpc"
 
 	"github.com/infobloxopen/themis/pdp"
 	pbc "github.com/infobloxopen/themis/pdp-control"
-	pbs "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pdp/jcon"
 	"github.com/infobloxopen/themis/pdp/yast"
+	"github.com/valyala/gorpc"
 )
 
 type transport struct {
@@ -39,7 +36,6 @@ type server struct {
 
 	startOnce sync.Once
 
-	requests transport
 	control  transport
 	health   transport
 	profiler net.Listener
@@ -139,16 +135,6 @@ func (s *server) loadContent(paths []string) error {
 	return nil
 }
 
-func (s *server) listenRequests(addr string) {
-	log.WithField("address", addr).Info("Opening service port")
-	ln, err := net.Listen("tcp", addr)
-	if err != nil {
-		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open service port")
-	}
-
-	s.requests.iface = ln
-}
-
 func (s *server) listenControl(addr string) {
 	log.WithField("address", addr).Info("Opening control port")
 	ln, err := net.Listen("tcp", addr)
@@ -188,22 +174,13 @@ func (s *server) listenProfiler(addr string) {
 }
 
 func (s *server) serveRequests() {
-	s.listenRequests(conf.serviceEP)
-
-	log.Info("Creating service protocol handler")
-	if s.tracer == nil {
-		s.requests.proto = grpc.NewServer()
-	} else {
-		onlyIfParent := func(parentSpanCtx ot.SpanContext, method string, req, resp interface{}) bool {
-			return parentSpanCtx != nil
-		}
-		intercept := otgrpc.OpenTracingServerInterceptor(s.tracer, otgrpc.IncludingSpans(onlyIfParent))
-		s.requests.proto = grpc.NewServer(grpc.UnaryInterceptor(intercept))
+	addr := conf.serviceEP
+	log.WithField("address", addr).Info("Opening service port")
+	server := gorpc.NewTCPServer(addr, s.Validate)
+	err := server.Serve()
+	if err != nil {
+		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open service port")
 	}
-	pbs.RegisterPDPServer(s.requests.proto, s)
-
-	log.Info("Serving decision requests")
-	s.requests.proto.Serve(s.requests.iface)
 }
 
 func (s *server) serve() {
