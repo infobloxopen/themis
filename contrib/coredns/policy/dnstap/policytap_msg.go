@@ -40,7 +40,7 @@ func (w *ProxyWriter) WriteMsg(msg *dns.Msg) error {
 }
 
 type DnstapSender interface {
-	SendCRExtraMsg(t time.Time, pw *ProxyWriter, attrs []*pb.Attribute)
+	SendCRExtraMsg(pw *ProxyWriter, attrs []*pb.Attribute)
 }
 
 type policyDnstapSender struct {
@@ -55,15 +55,15 @@ func NewPolicyDnstapSender(io tapplg.IORoutine) DnstapSender {
 // of extra attributes to Dnstap.Extra field. Then it asynchronously sends the
 // message with IORoutine interface
 // Parameter tapIO must not be nil
-func (s *policyDnstapSender) SendCRExtraMsg(t time.Time, pw *ProxyWriter, attrs []*pb.Attribute) {
-	go func() {
-		if pw == nil || pw.msg == nil {
-			log.Printf("[ERROR] Failed to create dnstap CR message - no DNS response message found")
-			return
-		}
+func (s *policyDnstapSender) SendCRExtraMsg(pw *ProxyWriter, attrs []*pb.Attribute) {
+	if pw == nil || pw.msg == nil {
+		log.Printf("[ERROR] Failed to create dnstap CR message - no DNS response message found")
+		return
+	}
+	go func(now time.Time) {
 		b := pw.TapBuilder()
-		b.TimeSec = uint64(t.Unix())
-		timeNs := uint32(t.Nanosecond())
+		b.TimeSec = uint64(now.Unix())
+		timeNs := uint32(now.Nanosecond())
 		err := b.AddrMsg(pw.RemoteAddr(), pw.msg)
 		if err != nil {
 			log.Printf("[ERROR] Failed to create dnstap CR message (%v)", err)
@@ -79,7 +79,7 @@ func (s *policyDnstapSender) SendCRExtraMsg(t time.Time, pw *ProxyWriter, attrs 
 		}
 		dnstapMsg := tap.Dnstap{Type: &t, Message: crMsg, Extra: extra}
 		s.ior.Dnstap(dnstapMsg)
-	}()
+	}(time.Now())
 }
 
 // convertAttrs converts slice of service.Attribute to slice of DnstapAttribute
