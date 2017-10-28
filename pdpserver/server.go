@@ -4,24 +4,29 @@ package main
 
 import (
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
-	ot "github.com/opentracing/opentracing-go"
-	"google.golang.org/grpc"
-
 	"github.com/infobloxopen/themis/pdp"
 	pbc "github.com/infobloxopen/themis/pdp-control"
+	"github.com/infobloxopen/themis/pdp/ast"
 	"github.com/infobloxopen/themis/pdp/jcon"
-	"github.com/infobloxopen/themis/pdp/yast"
+
+	log "github.com/Sirupsen/logrus"
+	ot "github.com/opentracing/opentracing-go"
 	"github.com/valyala/gorpc"
+	"google.golang.org/grpc"
+)
+
+const (
+	policyFormatJSON = "json"
+	policyFormatYAML = "yaml"
 )
 
 type transport struct {
@@ -51,6 +56,8 @@ type server struct {
 	gcMax       int
 	gcPercent   int
 
+	astParser ast.Parser
+
 	logLevel log.Level
 }
 
@@ -79,20 +86,33 @@ func newServer() *server {
 		logLevel:  log.GetLevel()}
 }
 
+func (s *server) setPolicyFormat(format string) error {
+	switch strings.ToLower(format) {
+	case policyFormatJSON:
+		s.astParser = ast.NewJSONParser()
+		return nil
+	case policyFormatYAML:
+		s.astParser = ast.NewYAMLParser()
+		return nil
+	}
+
+	return newUnsupportedPolicyFromatError(format)
+}
+
 func (s *server) loadPolicies(path string) error {
 	if len(path) <= 0 {
 		return nil
 	}
 
 	log.WithField("policy", path).Info("Loading policy")
-	b, err := ioutil.ReadFile(path)
+	pf, err := os.Open(path)
 	if err != nil {
 		log.WithFields(log.Fields{"policy": path, "error": err}).Error("Failed load policy")
 		return err
 	}
 
 	log.WithField("policy", path).Info("Parsing policy")
-	p, err := yast.Unmarshal(b, nil)
+	p, err := s.astParser.Unmarshal(pf, nil)
 	if err != nil {
 		log.WithFields(log.Fields{"policy": path, "error": err}).Error("Failed parse policy")
 		return err

@@ -204,7 +204,7 @@ errors:
   args:
   - field: id
   - field: err
-  
+
 - id: missingPolicyStorageError
   msg: "No any policy to update"
 
@@ -389,3 +389,11 @@ errors:
   msg: "Can't find parsed policy or content with id %d"
   args:
   - field: id
+
+- id: unsupportedPolicyFromatError
+  fields:
+  - id: format
+    type: string
+  msg: "The %s policy format is unsupported. Must be YAML or JSON"
+  args:
+  - field: format

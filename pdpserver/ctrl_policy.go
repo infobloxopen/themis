@@ -1,13 +1,10 @@
 package main
 
 import (
-	"io/ioutil"
+	pb "github.com/infobloxopen/themis/pdp-control"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/google/uuid"
-
-	pb "github.com/infobloxopen/themis/pdp-control"
-	"github.com/infobloxopen/themis/pdp/yast"
 )
 
 func (s *server) policyRequest(fromTag, toTag *uuid.UUID) (int32, error) {
@@ -26,12 +23,7 @@ func (s *server) policyRequest(fromTag, toTag *uuid.UUID) (int32, error) {
 }
 
 func (s *server) uploadPolicy(id int32, r *streamReader, req *item, stream pb.PDPControl_UploadServer) error {
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		return err
-	}
-
-	p, err := yast.Unmarshal(b, req.toTag)
+	p, err := s.astParser.Unmarshal(r, req.toTag)
 	if err != nil {
 		return stream.SendAndClose(controlFail(newPolicyUploadParseError(id, err)))
 	}
@@ -61,12 +53,7 @@ func (s *server) uploadPolicyUpdate(id int32, r *streamReader, req *item, stream
 	}
 	s.RUnlock()
 
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		return err
-	}
-
-	u, err := yast.UnmarshalUpdate(b, t.Attributes(), *req.fromTag, *req.toTag)
+	u, err := s.astParser.UnmarshalUpdate(r, t.Attributes(), *req.fromTag, *req.toTag)
 	if err != nil {
 		return stream.SendAndClose(controlFail(newPolicyUpdateParseError(id, req, err)))
 	}

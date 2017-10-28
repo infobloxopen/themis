@@ -9,6 +9,7 @@ import (
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
+	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
 )
 
@@ -31,7 +32,7 @@ func (c *contentItem) unmarshalTypeField(d *json.Decoder) error {
 		return newDuplicateContentItemFieldError("type")
 	}
 
-	s, err := getString(d, "content item type")
+	s, err := jparser.GetString(d, "content item type")
 	if err != nil {
 		return err
 	}
@@ -56,7 +57,7 @@ func (c *contentItem) unmarshalKeysField(d *json.Decoder) error {
 		return newDuplicateContentItemFieldError("keys")
 	}
 
-	err := checkArrayStart(d, "content item keys")
+	err := jparser.CheckArrayStart(d, "content item keys")
 	if err != nil {
 		return err
 	}
@@ -88,8 +89,8 @@ func (c *contentItem) unmarshalKeysField(d *json.Decoder) error {
 			i++
 
 		case json.Delim:
-			if s.String() != delimArrayEnd {
-				return newArrayEndDelimiterError(s, delimArrayEnd, src)
+			if s.String() != jparser.DelimArrayEnd {
+				return newArrayEndDelimiterError(s, jparser.DelimArrayEnd, src)
 			}
 
 			c.k = k
@@ -102,7 +103,7 @@ func (c *contentItem) unmarshalKeysField(d *json.Decoder) error {
 
 func (c *contentItem) unmarshalMap(d *json.Decoder, keyIdx int) (interface{}, error) {
 	src := fmt.Sprintf("level %d map", keyIdx+1)
-	err := checkObjectStart(d, src)
+	err := jparser.CheckObjectStart(d, src)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +113,7 @@ func (c *contentItem) unmarshalMap(d *json.Decoder, keyIdx int) (interface{}, er
 		return nil, err
 	}
 
-	err = unmarshalObject(d, m.unmarshal, src)
+	err = jparser.UnmarshalObject(d, m.unmarshal, src)
 	if err != nil {
 		return nil, err
 	}
@@ -123,13 +124,13 @@ func (c *contentItem) unmarshalMap(d *json.Decoder, keyIdx int) (interface{}, er
 func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 	switch c.t {
 	case pdp.TypeBoolean:
-		return getBoolean(d, "value")
+		return jparser.GetBoolean(d, "value")
 
 	case pdp.TypeString:
-		return getString(d, "value")
+		return jparser.GetString(d, "value")
 
 	case pdp.TypeAddress:
-		s, err := getString(d, "address value")
+		s, err := jparser.GetString(d, "address value")
 		if err != nil {
 			return nil, err
 		}
@@ -142,7 +143,7 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 		return a, nil
 
 	case pdp.TypeNetwork:
-		s, err := getString(d, "network value")
+		s, err := jparser.GetString(d, "network value")
 		if err != nil {
 			return nil, err
 		}
@@ -155,7 +156,7 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 		return n, nil
 
 	case pdp.TypeDomain:
-		s, err := getString(d, "domain value")
+		s, err := jparser.GetString(d, "domain value")
 		if err != nil {
 			return nil, err
 		}
@@ -170,14 +171,14 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 	case pdp.TypeSetOfStrings:
 		m := strtree.NewTree()
 		i := 0
-		err := getStringSequence(d, "set of strings value", func(s string) error {
+		err := jparser.GetStringSequence(d, func(idx int, s string) error {
 			if _, ok := m.Get(s); !ok {
 				m.InplaceInsert(s, i)
 				i++
 			}
 
 			return nil
-		})
+		}, "set of strings value")
 		if err != nil {
 			return nil, err
 		}
@@ -186,21 +187,21 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 
 	case pdp.TypeSetOfNetworks:
 		m := iptree.NewTree()
-		err := getStringSequence(d, "set of networks value", func(s string) error {
+		err := jparser.GetStringSequence(d, func(idx int, s string) error {
 			a := net.ParseIP(s)
 			if a != nil {
 				m.InplaceInsertIP(a, nil)
 			} else {
 				_, n, err := net.ParseCIDR(s)
 				if err != nil {
-					return newAddressNetworkCastError(s, err)
+					return bindErrorf(newAddressNetworkCastError(s, err), "%d", idx)
 				}
 
 				m.InplaceInsertNet(n, nil)
 			}
 
 			return nil
-		})
+		}, "set of networks value")
 		if err != nil {
 			return nil, err
 		}
@@ -209,16 +210,16 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 
 	case pdp.TypeSetOfDomains:
 		m := &domaintree.Node{}
-		err := getStringSequence(d, "set of domains value", func(s string) error {
+		err := jparser.GetStringSequence(d, func(idx int, s string) error {
 			d, err := pdp.AdjustDomainName(s)
 			if err != nil {
-				return newDomainCastError(s, err)
+				return bindErrorf(newDomainCastError(s, err), "%d", idx)
 			}
 
 			m.InplaceInsert(d, nil)
 
 			return nil
-		})
+		}, "set of domains value")
 		if err != nil {
 			return nil, err
 		}
@@ -227,10 +228,10 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 
 	case pdp.TypeListOfStrings:
 		lst := []string{}
-		err := getStringSequence(d, "list of strings value", func(s string) error {
+		err := jparser.GetStringSequence(d, func(idx int, s string) error {
 			lst = append(lst, s)
 			return nil
-		})
+		}, "list of strings value")
 		if err != nil {
 			return nil, err
 		}
@@ -267,7 +268,7 @@ func (c *contentItem) unmarshalDataField(d *json.Decoder) error {
 			c.v = v
 		}
 	} else {
-		v, err := getUndefined(d, "content")
+		v, err := jparser.GetUndefined(d, "content")
 		if err != nil {
 			return nil
 		}
@@ -329,13 +330,13 @@ func (c *contentItem) get() (*pdp.ContentItem, error) {
 }
 
 func unmarshalContentItem(id string, d *json.Decoder) (*pdp.ContentItem, error) {
-	err := checkObjectStart(d, "content item")
+	err := jparser.CheckObjectStart(d, "content item")
 	if err != nil {
 		return nil, err
 	}
 
 	item := &contentItem{id: id}
-	err = unmarshalObject(d, item.unmarshal, "content item")
+	err = jparser.UnmarshalObject(d, item.unmarshal, "content item")
 	if err != nil {
 		return nil, err
 	}

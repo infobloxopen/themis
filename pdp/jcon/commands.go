@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
 )
 
@@ -17,14 +18,14 @@ func unmarshalCommand(d *json.Decoder, u *pdp.ContentUpdate) error {
 	var entity *pdp.ContentItem
 	entityOk := false
 
-	err := unmarshalObject(d, func(k string, d *json.Decoder) error {
+	err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
 		switch strings.ToLower(k) {
 		case "op":
 			if opOk {
 				return newDuplicateCommandFieldError(k)
 			}
 
-			s, err := getString(d, "operation")
+			s, err := jparser.GetString(d, "operation")
 			if err != nil {
 				return err
 			}
@@ -41,10 +42,10 @@ func unmarshalCommand(d *json.Decoder, u *pdp.ContentUpdate) error {
 				return newDuplicateCommandFieldError(k)
 			}
 			path = []string{}
-			err := getStringSequence(d, "path", func(s string) error {
+			err := jparser.GetStringSequence(d, func(idx int, s string) error {
 				path = append(path, s)
 				return nil
-			})
+			}, "path")
 			if err != nil {
 				return err
 			}
@@ -90,7 +91,7 @@ func unmarshalCommand(d *json.Decoder, u *pdp.ContentUpdate) error {
 }
 
 func unmarshalCommands(d *json.Decoder, u *pdp.ContentUpdate) error {
-	ok, err := checkRootArrayStart(d)
+	ok, err := jparser.CheckRootArrayStart(d)
 	if err != nil {
 		return err
 	}
@@ -99,13 +100,16 @@ func unmarshalCommands(d *json.Decoder, u *pdp.ContentUpdate) error {
 		return nil
 	}
 
-	err = unmarshalObjectArray(d, func(d *json.Decoder) error {
-		return unmarshalCommand(d, u)
+	err = jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
+		if err := unmarshalCommand(d, u); err != nil {
+			return bindErrorf(err, "%d", idx)
+		}
+		return nil
 	}, "update")
 
 	if err != nil {
 		return err
 	}
 
-	return checkEOF(d)
+	return jparser.CheckEOF(d)
 }

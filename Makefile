@@ -35,7 +35,7 @@ fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jcon fmt-pdpctrl-client fmt-papcli fmt-pep fmt
 build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-egen
 
 .PHONY: test
-test: cover-out test-pdp test-pdp-yast test-pdp-jcon test-pep test-plugin
+test: cover-out test-pdp test-pdp-yast test-pdp-jast test-pdp-jcon test-pep test-plugin
 
 .PHONY: cover-out
 cover-out:
@@ -50,7 +50,12 @@ fmt-pdp:
 .PHONY: fmt-pdp-yast
 fmt-pdp-yast:
 	@echo "Checking PDP YAST format..."
-	@$(AT)/pdp/yast && $(GOFMTCHECK)
+	@$(AT)/pdp/ast/yast && $(GOFMTCHECK)
+
+.PHONY: fmt-pdp-jast
+fmt-pdp-jast:
+	@echo "Checking PDP JAST format..."
+	@$(AT)/pdp/ast/jast && $(GOFMTCHECK)
 
 .PHONY: fmt-pdp-jcon
 fmt-pdp-jcon:
@@ -136,7 +141,11 @@ test-pdp: cover-out
 
 .PHONY: test-pdp-yast
 test-pdp-yast: cover-out
-	$(AT)/pdp/yast && $(GOTEST)
+	$(AT)/pdp/ast/yast && $(GOTEST)
+
+.PHONY: test-pdp-jast
+test-pdp-jast: cover-out
+	$(AT)/pdp/ast/jast && $(GOTEST)
 
 .PHONY: test-pdp-jcon
 test-pdp-jcon: cover-out
@@ -150,3 +159,4 @@ test-pep: build-pdpserver cover-out
 test-plugin: cover-out
 	$(AT)/contrib/coredns/policy && $(GOTEST)
 	$(AT)/contrib/coredns/policy/dnstap && $(GOTEST)
+
