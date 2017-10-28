@@ -241,7 +241,7 @@ func (p *PolicyPlugin) retRcode(ah *attrHolder, w dns.ResponseWriter, r *dns.Msg
 
 func (p *PolicyPlugin) retAnswer(ah *attrHolder, w dns.ResponseWriter, r *dns.Msg, rcode int, err error) (int, error) {
 	w.WriteMsg(r)
-	if ah != nil && p.TapIO != nil {
+	if ah != nil && p.TapIO != nil && rcode != dns.RcodeRefused && rcode != dns.RcodeServerFailure {
 		if pw := dnstap.NewProxyWriter(w); pw != nil {
 			p.TapIO.SendCRExtraMsg(pw, ah.attributes())
 		}
