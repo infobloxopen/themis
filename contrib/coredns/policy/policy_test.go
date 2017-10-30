@@ -14,6 +14,7 @@ import (
 
 	"github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 	pdp "github.com/infobloxopen/themis/pdp-service"
+
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
 )
@@ -74,11 +75,11 @@ func TestPolicy(t *testing.T) {
 			status:    dns.RcodeNameError,
 			err:       nil,
 			attrs: []*pdp.Attribute{
-				{"type", "string", "query"},
-				{"domain_name", "string", "test.com"},
-				{"dns_qtype", "string", "1"},
-				{"source_ip", "string", "10.240.0.1"},
-				{"policy_action", "string", "3"},
+				{Id: "type", Value: "query"},
+				{Id: "domain_name", Value: "test.com"},
+				{Id: "dns_qtype", Value: "1"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "policy_action", Value: "3"},
 			},
 		},
 		{
@@ -88,14 +89,6 @@ func TestPolicy(t *testing.T) {
 			responseIP: &pdp.Response{Effect: pdp.PERMIT},
 			status:     dns.RcodeSuccess,
 			err:        nil,
-			attrs: []*pdp.Attribute{
-				{"type", "string", "response"},
-				{"domain_name", "string", "test.com"},
-				{"dns_qtype", "string", "1"},
-				{"source_ip", "string", "10.240.0.1"},
-				{"address", "string", "10.240.0.1"},
-				{"policy_action", "string", "2"},
-			},
 		},
 		{
 			query:      "test.com.",
@@ -105,44 +98,44 @@ func TestPolicy(t *testing.T) {
 			status:     dns.RcodeNameError,
 			err:        nil,
 			attrs: []*pdp.Attribute{
-				{"type", "string", "response"},
-				{"domain_name", "string", "test.com"},
-				{"dns_qtype", "string", "1"},
-				{"source_ip", "string", "10.240.0.1"},
-				{"address", "string", "10.240.0.1"},
-				{"policy_action", "string", "3"},
+				{Id: "type", Value: "response"},
+				{Id: "domain_name", Value: "test.com"},
+				{Id: "dns_qtype", Value: "1"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "address", Value: "10.240.0.1"},
+				{Id: "policy_action", Value: "3"},
 			},
 		},
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
 			response: &pdp.Response{Effect: pdp.DENY,
-				Obligations: []*pdp.Attribute{{"redirect_to", "string", "221.228.88.194"}}},
+				Obligations: []*pdp.Attribute{{Id: "redirect_to", Value: "221.228.88.194"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
 			attrs: []*pdp.Attribute{
-				{"type", "string", "query"},
-				{"domain_name", "string", "test.com"},
-				{"dns_qtype", "string", "1"},
-				{"source_ip", "string", "10.240.0.1"},
-				{"redirect_to", "string", "221.228.88.194"},
-				{"policy_action", "string", "4"},
+				{Id: "type", Value: "query"},
+				{Id: "domain_name", Value: "test.com"},
+				{Id: "dns_qtype", Value: "1"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "redirect_to", Value: "221.228.88.194"},
+				{Id: "policy_action", Value: "4"},
 			},
 		},
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
 			response: &pdp.Response{Effect: pdp.DENY,
-				Obligations: []*pdp.Attribute{{"redirect_to", "string", "redirect.biz"}}},
+				Obligations: []*pdp.Attribute{{Id: "redirect_to", Value: "redirect.biz"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
 			attrs: []*pdp.Attribute{
-				{"type", "string", "query"},
-				{"domain_name", "string", "test.com"},
-				{"dns_qtype", "string", "1"},
-				{"source_ip", "string", "10.240.0.1"},
-				{"redirect_to", "string", "redirect.biz"},
-				{"policy_action", "string", "4"},
+				{Id: "type", Value: "query"},
+				{Id: "domain_name", Value: "test.com"},
+				{Id: "dns_qtype", Value: "1"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "redirect_to", Value: "redirect.biz"},
+				{Id: "policy_action", Value: "4"},
 			},
 		},
 		{
@@ -150,17 +143,17 @@ func TestPolicy(t *testing.T) {
 			queryType: dns.TypeA,
 			response:  &pdp.Response{Effect: pdp.PERMIT},
 			responseIP: &pdp.Response{Effect: pdp.DENY,
-				Obligations: []*pdp.Attribute{{"redirect_to", "string", "221.228.88.194"}}},
+				Obligations: []*pdp.Attribute{{Id: "redirect_to", Value: "221.228.88.194"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
 			attrs: []*pdp.Attribute{
-				{"type", "string", "response"},
-				{"domain_name", "string", "test.com"},
-				{"dns_qtype", "string", "1"},
-				{"source_ip", "string", "10.240.0.1"},
-				{"address", "string", "10.240.0.1"},
-				{"redirect_to", "string", "221.228.88.194"},
-				{"policy_action", "string", "4"},
+				{Id: "type", Value: "response"},
+				{Id: "domain_name", Value: "test.com"},
+				{Id: "dns_qtype", Value: "1"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "address", Value: "10.240.0.1"},
+				{Id: "redirect_to", Value: "221.228.88.194"},
+				{Id: "policy_action", Value: "4"},
 			},
 		},
 		{
@@ -168,17 +161,17 @@ func TestPolicy(t *testing.T) {
 			queryType: dns.TypeA,
 			response:  &pdp.Response{Effect: pdp.PERMIT},
 			responseIP: &pdp.Response{Effect: pdp.DENY,
-				Obligations: []*pdp.Attribute{{"redirect_to", "string", "redirect.biz"}}},
+				Obligations: []*pdp.Attribute{{Id: "redirect_to", Value: "redirect.biz"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
 			attrs: []*pdp.Attribute{
-				{"type", "string", "response"},
-				{"domain_name", "string", "test.com"},
-				{"dns_qtype", "string", "1"},
-				{"source_ip", "string", "10.240.0.1"},
-				{"address", "string", "10.240.0.1"},
-				{"redirect_to", "string", "redirect.biz"},
-				{"policy_action", "string", "4"},
+				{Id: "type", Value: "response"},
+				{Id: "domain_name", Value: "test.com"},
+				{Id: "dns_qtype", Value: "1"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "address", Value: "10.240.0.1"},
+				{Id: "redirect_to", Value: "redirect.biz"},
+				{Id: "policy_action", Value: "4"},
 			},
 		},
 		{
@@ -186,26 +179,34 @@ func TestPolicy(t *testing.T) {
 			queryType: dns.TypeAAAA,
 			response:  &pdp.Response{Effect: pdp.PERMIT},
 			responseIP: &pdp.Response{Effect: pdp.DENY,
-				Obligations: []*pdp.Attribute{{"redirect_to", "string", "2001:db8:0:200:0:0:0:7"}}},
+				Obligations: []*pdp.Attribute{{Id: "redirect_to", Value: "2001:db8:0:200:0:0:0:7"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
 			attrs: []*pdp.Attribute{
-				{"type", "string", "response"},
-				{"domain_name", "string", "test.org"},
-				{"dns_qtype", "string", "1c"},
-				{"source_ip", "string", "10.240.0.1"},
-				{"address", "string", "21da:d3:0:2f3b:2aa:ff:fe28:9c5a"},
-				{"redirect_to", "string", "2001:db8:0:200:0:0:0:7"},
-				{"policy_action", "string", "4"},
+				{Id: "type", Value: "response"},
+				{Id: "domain_name", Value: "test.org"},
+				{Id: "dns_qtype", Value: "1c"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "address", Value: "21da:d3:0:2f3b:2aa:ff:fe28:9c5a"},
+				{Id: "redirect_to", Value: "2001:db8:0:200:0:0:0:7"},
+				{Id: "policy_action", Value: "4"},
 			},
 		},
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
 			response: &pdp.Response{Effect: pdp.DENY,
-				Obligations: []*pdp.Attribute{{"redirect_to", "string", "test.net"}}},
+				Obligations: []*pdp.Attribute{{Id: "redirect_to", Value: "test.net"}}},
 			status: dns.RcodeServerFailure,
 			err:    errFakeResolver,
+			attrs: []*pdp.Attribute{
+				{Id: "type", Value: "query"},
+				{Id: "domain_name", Value: "test.com"},
+				{Id: "dns_qtype", Value: "1"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "redirect_to", Value: "test.net"},
+				{Id: "policy_action", Value: "4"},
+			},
 		},
 		{
 			query:     "test.net.",
@@ -221,11 +222,11 @@ func TestPolicy(t *testing.T) {
 			status:    dns.RcodeNameError,
 			err:       nil,
 			attrs: []*pdp.Attribute{
-				{"type", "string", "query"},
-				{"domain_name", "string", "test.org"},
-				{"dns_qtype", "string", "1c"},
-				{"source_ip", "string", "10.240.0.1"},
-				{"policy_action", "string", "3"},
+				{Id: "type", Value: "query"},
+				{Id: "domain_name", Value: "test.org"},
+				{Id: "dns_qtype", Value: "1c"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "policy_action", Value: "3"},
 			},
 		},
 		{
@@ -234,36 +235,28 @@ func TestPolicy(t *testing.T) {
 			response:  &pdp.Response{Effect: pdp.PERMIT},
 			status:    dns.RcodeSuccess,
 			err:       nil,
-			attrs: []*pdp.Attribute{
-				{"type", "string", "response"},
-				{"domain_name", "string", "test.org"},
-				{"dns_qtype", "string", "1c"},
-				{"source_ip", "string", "10.240.0.1"},
-				{"address", "string", "21da:d3:0:2f3b:2aa:ff:fe28:9c5a"},
-				{"policy_action", "string", "2"},
-			},
 		},
 		{
 			query:     "test.org.",
 			queryType: dns.TypeAAAA,
 			response: &pdp.Response{Effect: pdp.DENY,
-				Obligations: []*pdp.Attribute{{"redirect_to", "string", "redirect.net"}}},
+				Obligations: []*pdp.Attribute{{Id: "redirect_to", Value: "redirect.net"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
 			attrs: []*pdp.Attribute{
-				{"type", "string", "query"},
-				{"domain_name", "string", "test.org"},
-				{"dns_qtype", "string", "1c"},
-				{"source_ip", "string", "10.240.0.1"},
-				{"policy_action", "string", "4"},
-				{"redirect_to", "string", "redirect.net"},
+				{Id: "type", Value: "query"},
+				{Id: "domain_name", Value: "test.org"},
+				{Id: "dns_qtype", Value: "1c"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "policy_action", Value: "4"},
+				{Id: "redirect_to", Value: "redirect.net"},
 			},
 		},
 		{
 			query:     "test.org.",
 			queryType: dns.TypeA,
 			response: &pdp.Response{Effect: pdp.DENY,
-				Obligations: []*pdp.Attribute{{"refuse", "string", "true"}}},
+				Obligations: []*pdp.Attribute{{Id: "refuse", Value: "true"}}},
 			status: dns.RcodeRefused,
 			err:    nil,
 		},
@@ -272,7 +265,7 @@ func TestPolicy(t *testing.T) {
 			queryType: dns.TypeA,
 			response:  &pdp.Response{Effect: pdp.PERMIT},
 			responseIP: &pdp.Response{Effect: pdp.DENY,
-				Obligations: []*pdp.Attribute{{"refuse", "string", "true"}}},
+				Obligations: []*pdp.Attribute{{Id: "refuse", Value: "true"}}},
 			status: dns.RcodeRefused,
 			err:    nil,
 		},
@@ -282,129 +275,83 @@ func TestPolicy(t *testing.T) {
 			response:  &pdp.Response{Effect: pdp.PERMIT},
 			status:    dns.RcodeNameError,
 			err:       nil,
-			attrs: []*pdp.Attribute{
-				{"type", "string", "query"},
-				{"domain_name", "string", "nxdomain.org"},
-				{"dns_qtype", "string", "1"},
-				{"source_ip", "string", "10.240.0.1"},
-				{"policy_action", "string", "2"},
-			},
 		},
 	}
 
-	rec := dnstest.NewRecorder(&test.ResponseWriter{})
+	for _, withDnstap := range [2]bool{false, true} {
+		var rec dns.ResponseWriter
+		sender := &testDnstapSender{}
+		if !withDnstap {
+			rec = dnstest.NewRecorder(&test.ResponseWriter{})
+		} else {
+			rec = &taprw.ResponseWriter{
+				Query:          new(dns.Msg),
+				ResponseWriter: &test.ResponseWriter{},
+				Tapper:         &dtest.TrapTapper{Full: true},
+			}
+			pm.TapIO = sender
+		}
 
-	// no debug, no dnstap
-	for i, test := range tests {
-		// Make request
-		req := new(dns.Msg)
-		req.SetQuestion(test.query, test.queryType)
-		// Init test mock client
-		pm.pdp = newTestClientInit(test.response, test.responseIP, test.errResp, test.errRespIP)
-		// Handle request
-		status, err := pm.ServeDNS(context.Background(), rec, req)
-		// Check status
-		if test.status != status {
-			t.Errorf("Case test[%d]: expected status %q but got %q\n", i, test.status, status)
+		// no debug
+		for i, test := range tests {
+			sender.reset()
+			// Make request
+			req := new(dns.Msg)
+			req.SetQuestion(test.query, test.queryType)
+			// Init test mock client
+			pm.pdp = newTestClientInit(test.response, test.responseIP, test.errResp, test.errRespIP)
+			// Handle request
+			status, err := pm.ServeDNS(context.Background(), rec, req)
+			// Check status
+			if test.status != status {
+				t.Errorf("Case test[%d]: expected status %q but got %q\n", i, test.status, status)
+			}
+			// Check error
+			if test.err != err {
+				t.Errorf("Case test[%d]: expected error %v but got %v\n", i, test.err, err)
+			}
+			if withDnstap {
+				// Check Dnstap attributes
+				sender.checkAttributes(t, i, test.attrs)
+			}
 		}
-		// Check error
-		if test.err != err {
-			t.Errorf("Case test[%d]: expected error %v but got %v\n", i, test.err, err)
-		}
-	}
 
-	// debug, no dnstap
-	pm.DebugSuffix = "debug."
-	for i, test := range tests {
-		// Make request
-		req := new(dns.Msg)
-		req.Question = make([]dns.Question, 1)
-		req.Question[0] = dns.Question{test.query + pm.DebugSuffix, dns.TypeTXT, dns.ClassCHAOS}
-		// Init test mock client
-		pm.pdp = newTestClientInit(test.response, test.responseIP, test.errResp, test.errRespIP)
-		// Handle request
-		status, err := pm.ServeDNS(context.Background(), rec, req)
-		var test_status int
-		var test_err error
-		if test.err == errFakePdp {
-			test_err = errFakePdp
-			test_status = dns.RcodeServerFailure
+		// debug
+		pm.DebugSuffix = "debug."
+		for i, test := range tests {
+			sender.reset()
+			// Make request
+			req := new(dns.Msg)
+			req.Question = make([]dns.Question, 1)
+			req.Question[0] = dns.Question{test.query + pm.DebugSuffix, dns.TypeTXT, dns.ClassCHAOS}
+			// Init test mock client
+			pm.pdp = newTestClientInit(test.response, test.responseIP, test.errResp, test.errRespIP)
+			// Handle request
+			status, err := pm.ServeDNS(context.Background(), rec, req)
+			var test_status int
+			var test_err error
+			if test.err == errFakePdp {
+				test_err = errFakePdp
+				test_status = dns.RcodeServerFailure
+			}
+			if test.status == dns.RcodeRefused {
+				test_status = dns.RcodeRefused
+				test_err = nil
+			}
+			// Check status
+			if test_status != status {
+				t.Errorf("Case debug[%d]: expected status %q but got %q\n", i, test_status, status)
+			}
+			// Check error
+			if test_err != err {
+				t.Errorf("Case debug[%d]: expected error %v but got %v\n", i, test_err, err)
+			}
+			if withDnstap {
+				// Check no Dnstap attributes
+				sender.checkAttributes(t, i, nil)
+			}
 		}
-		if test.status == dns.RcodeRefused {
-			test_status = dns.RcodeRefused
-			test_err = nil
-		}
-		// Check status
-		if test_status != status {
-			t.Errorf("Case debug[%d]: expected status %q but got %q\n", i, test_status, status)
-		}
-		// Check error
-		if test_err != err {
-			t.Errorf("Case debug[%d]: expected error %v but got %v\n", i, test_err, err)
-		}
-	}
 
-	// debug, dnstap
-	sender := &testDnstapSender{}
-	pm.TapIO = sender
-	trapper := dtest.TrapTapper{Full: true}
-	tapRW := &taprw.ResponseWriter{
-		Query:          new(dns.Msg),
-		ResponseWriter: &test.ResponseWriter{},
-		Tapper:         &trapper,
-	}
-
-	for i, test := range tests {
-		sender.reset()
-		// Make request
-		req := new(dns.Msg)
-		req.Question = make([]dns.Question, 1)
-		req.Question[0] = dns.Question{test.query + pm.DebugSuffix, dns.TypeTXT, dns.ClassCHAOS}
-		// Init test mock client
-		pm.pdp = newTestClientInit(test.response, test.responseIP, test.errResp, test.errRespIP)
-		// Handle request
-		status, err := pm.ServeDNS(context.Background(), tapRW, req)
-		var test_status int
-		var test_err error
-		if test.err == errFakePdp {
-			test_err = errFakePdp
-			test_status = dns.RcodeServerFailure
-		}
-		if test.status == dns.RcodeRefused {
-			test_status = dns.RcodeRefused
-			test_err = nil
-		}
-		// Check status
-		if test_status != status {
-			t.Errorf("Case debugDnstap[%d]: expected status %q but got %q\n", i, test_status, status)
-		}
-		// Check error
-		if test_err != err {
-			t.Errorf("Case debugDnstap[%d]: expected error %v but got %v\n", i, test_err, err)
-		}
-		sender.checkAttributes(t, i, nil)
-	}
-
-	// no debug, dnstap
-	pm.DebugSuffix = ""
-	for i, test := range tests {
-		sender.reset()
-		// Make request
-		req := new(dns.Msg)
-		req.SetQuestion(test.query, test.queryType)
-		// Init test mock client
-		pm.pdp = newTestClientInit(test.response, test.responseIP, test.errResp, test.errRespIP)
-		// Handle request
-		status, err := pm.ServeDNS(context.Background(), tapRW, req)
-		// Check status
-		if test.status != status {
-			t.Errorf("Case testDnstap[%d]: expected status %q but got %q\n", i, test.status, status)
-		}
-		// Check error
-		if test.err != err {
-			t.Errorf("Case testDnstap[%d]: expected error %v but got %v\n", i, test.err, err)
-		}
-		sender.checkAttributes(t, i, test.attrs)
 	}
 
 }
@@ -499,9 +446,9 @@ func TestEdns(t *testing.T) {
 			name: "Test different than EDNS0_LOCAL option",
 			ip:   "192.168.0.1",
 			attr: map[string]*pdp.Attribute{
-				"dns_qtype":   {"dns_qtype", "string", "1"},
-				"domain_name": {"domain_name", "domain", "test.com"},
-				"source_ip":   {"source_ip", "address", "192.168.0.1"},
+				"dns_qtype":   {Id: "dns_qtype", Type: "string", Value: "1"},
+				"domain_name": {Id: "domain_name", Type: "domain", Value: "test.com"},
+				"source_ip":   {Id: "source_ip", Type: "address", Value: "192.168.0.1"},
 			},
 			nonlocal: true,
 		},
@@ -511,9 +458,9 @@ func TestEdns(t *testing.T) {
 			data: "cafecafe",
 			ip:   "192.168.0.2",
 			attr: map[string]*pdp.Attribute{
-				"dns_qtype":   {"dns_qtype", "string", "1"},
-				"domain_name": {"domain_name", "domain", "test.com"},
-				"source_ip":   {"source_ip", "address", "192.168.0.2"},
+				"dns_qtype":   {Id: "dns_qtype", Type: "string", Value: "1"},
+				"domain_name": {Id: "domain_name", Type: "domain", Value: "test.com"},
+				"source_ip":   {Id: "source_ip", Type: "address", Value: "192.168.0.2"},
 			},
 		},
 		{
@@ -522,11 +469,11 @@ func TestEdns(t *testing.T) {
 			data: "4e7e318384088e7d4f3dbc96219ee5d4" + "318384088e7d4f3dbc96219ee5d44e7e",
 			ip:   "192.168.0.3",
 			attr: map[string]*pdp.Attribute{
-				"dns_qtype":   {"dns_qtype", "string", "1"},
-				"domain_name": {"domain_name", "domain", "test.com"},
-				"source_ip":   {"source_ip", "address", "192.168.0.3"},
-				"client_id":   {"client_id", "string", "4e7e318384088e7d4f3dbc96219ee5d4"},
-				"group_id":    {"group_id", "string", "318384088e7d4f3dbc96219ee5d44e7e"},
+				"dns_qtype":   {Id: "dns_qtype", Type: "string", Value: "1"},
+				"domain_name": {Id: "domain_name", Type: "domain", Value: "test.com"},
+				"source_ip":   {Id: "source_ip", Type: "address", Value: "192.168.0.3"},
+				"client_id":   {Id: "client_id", Type: "string", Value: "4e7e318384088e7d4f3dbc96219ee5d4"},
+				"group_id":    {Id: "group_id", Type: "string", Value: "318384088e7d4f3dbc96219ee5d44e7e"},
 			},
 		},
 		{
@@ -535,10 +482,10 @@ func TestEdns(t *testing.T) {
 			data: "aca80001", // 172.168.0.1 in hex
 			ip:   "192.168.0.4",
 			attr: map[string]*pdp.Attribute{
-				"dns_qtype":       {"dns_qtype", "string", "1"},
-				"domain_name":     {"domain_name", "domain", "test.com"},
-				"source_ip":       {"source_ip", "address", "172.168.0.1"},
-				"proxy_source_ip": {"proxy_source_ip", "address", "192.168.0.4"},
+				"dns_qtype":       {Id: "dns_qtype", Type: "string", Value: "1"},
+				"domain_name":     {Id: "domain_name", Type: "domain", Value: "test.com"},
+				"source_ip":       {Id: "source_ip", Type: "address", Value: "172.168.0.1"},
+				"proxy_source_ip": {Id: "proxy_source_ip", Type: "address", Value: "192.168.0.4"},
 			},
 		},
 		{
@@ -547,10 +494,10 @@ func TestEdns(t *testing.T) {
 			data: "637573746f6d6572", // "customer" in hex
 			ip:   "192.168.0.5",
 			attr: map[string]*pdp.Attribute{
-				"dns_qtype":   {"dns_qtype", "string", "1"},
-				"domain_name": {"domain_name", "domain", "test.com"},
-				"source_ip":   {"source_ip", "address", "192.168.0.5"},
-				"client_name": {"client_name", "string", "customer"},
+				"dns_qtype":   {Id: "dns_qtype", Type: "string", Value: "1"},
+				"domain_name": {Id: "domain_name", Type: "domain", Value: "test.com"},
+				"source_ip":   {Id: "source_ip", Type: "address", Value: "192.168.0.5"},
+				"client_name": {Id: "client_name", Type: "string", Value: "customer"},
 			},
 		},
 		{
@@ -559,10 +506,10 @@ func TestEdns(t *testing.T) {
 			data: "96219ee5d44e7e318384088e7d4f3dbc",
 			ip:   "192.168.0.6",
 			attr: map[string]*pdp.Attribute{
-				"dns_qtype":   {"dns_qtype", "string", "1"},
-				"domain_name": {"domain_name", "domain", "test.com"},
-				"source_ip":   {"source_ip", "address", "192.168.0.6"},
-				"client_uid":  {"client_uid", "string", "96219ee5d44e7e318384088e7d4f3dbc"},
+				"dns_qtype":   {Id: "dns_qtype", Type: "string", Value: "1"},
+				"domain_name": {Id: "domain_name", Type: "domain", Value: "test.com"},
+				"source_ip":   {Id: "source_ip", Type: "address", Value: "192.168.0.6"},
+				"client_uid":  {Id: "client_uid", Type: "string", Value: "96219ee5d44e7e318384088e7d4f3dbc"},
 			},
 		},
 		{
@@ -571,10 +518,10 @@ func TestEdns(t *testing.T) {
 			data: "8e7d" + "4f3dbc96219ee5d44e7e31838408",
 			ip:   "192.168.0.7",
 			attr: map[string]*pdp.Attribute{
-				"dns_qtype":   {"dns_qtype", "string", "1"},
-				"domain_name": {"domain_name", "domain", "test.com"},
-				"source_ip":   {"source_ip", "address", "192.168.0.7"},
-				"hex_name":    {"hex_name", "string", "4f3dbc96219ee5d44e7e31838408"},
+				"dns_qtype":   {Id: "dns_qtype", Type: "string", Value: "1"},
+				"domain_name": {Id: "domain_name", Type: "domain", Value: "test.com"},
+				"source_ip":   {Id: "source_ip", Type: "address", Value: "192.168.0.7"},
+				"hex_name":    {Id: "hex_name", Type: "string", Value: "4f3dbc96219ee5d44e7e31838408"},
 			},
 		},
 		{
@@ -583,9 +530,9 @@ func TestEdns(t *testing.T) {
 			data: "8e7d4f3dbc96219ee5d44e7e31838408",
 			ip:   "192.168.0.8",
 			attr: map[string]*pdp.Attribute{
-				"dns_qtype":   {"dns_qtype", "string", "1"},
-				"domain_name": {"domain_name", "domain", "test.com"},
-				"source_ip":   {"source_ip", "address", "192.168.0.8"},
+				"dns_qtype":   {Id: "dns_qtype", Type: "string", Value: "1"},
+				"domain_name": {Id: "domain_name", Type: "domain", Value: "test.com"},
+				"source_ip":   {Id: "source_ip", Type: "address", Value: "192.168.0.8"},
 			},
 		},
 		{
@@ -594,9 +541,9 @@ func TestEdns(t *testing.T) {
 			data: "0011",
 			ip:   "192.168.0.9",
 			attr: map[string]*pdp.Attribute{
-				"dns_qtype":   {"dns_qtype", "string", "1"},
-				"domain_name": {"domain_name", "domain", "test.com"},
-				"source_ip":   {"source_ip", "address", "192.168.0.9"},
+				"dns_qtype":   {Id: "dns_qtype", Type: "string", Value: "1"},
+				"domain_name": {Id: "domain_name", Type: "domain", Value: "test.com"},
+				"source_ip":   {Id: "source_ip", Type: "address", Value: "192.168.0.9"},
 			},
 		},
 		{
@@ -605,9 +552,9 @@ func TestEdns(t *testing.T) {
 			data: "00112233",
 			ip:   "192.168.0.10",
 			attr: map[string]*pdp.Attribute{
-				"dns_qtype":   {"dns_qtype", "string", "1"},
-				"domain_name": {"domain_name", "domain", "test.com"},
-				"source_ip":   {"source_ip", "address", "192.168.0.10"},
+				"dns_qtype":   {Id: "dns_qtype", Type: "string", Value: "1"},
+				"domain_name": {Id: "domain_name", Type: "domain", Value: "test.com"},
+				"source_ip":   {Id: "source_ip", Type: "address", Value: "192.168.0.10"},
 			},
 		},
 	}

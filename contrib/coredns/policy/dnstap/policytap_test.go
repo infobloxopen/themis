@@ -95,8 +95,8 @@ func TestSendCRExtraMsg(t *testing.T) {
 	proxyRW.WriteMsg(&msg)
 
 	attrs := []*pb.Attribute{
-		{"attr1", "address", "10.240.0.1"},
-		{"attr2", "string", "value2"},
+		{Id: "attr1", Type: "address", Value: "10.240.0.1"},
+		{Id: "attr2", Type: "string", Value: "value2"},
 	}
 
 	io := newIORoutine(5000 * time.Millisecond)
