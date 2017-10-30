@@ -89,14 +89,6 @@ func TestPolicy(t *testing.T) {
 			responseIP: &pdp.Response{Effect: pdp.Response_PERMIT},
 			status:     dns.RcodeSuccess,
 			err:        nil,
-			attrs: []*pdp.Attribute{
-				{Id: "type", Value: "response"},
-				{Id: "domain_name", Value: "test.com"},
-				{Id: "dns_qtype", Value: "1"},
-				{Id: "source_ip", Value: "10.240.0.1"},
-				{Id: "address", Value: "10.240.0.1"},
-				{Id: "policy_action", Value: "2"},
-			},
 		},
 		{
 			query:      "test.com.",
@@ -207,6 +199,14 @@ func TestPolicy(t *testing.T) {
 				Obligation: []*pdp.Attribute{{Id: "redirect_to", Value: "test.net"}}},
 			status: dns.RcodeServerFailure,
 			err:    errFakeResolver,
+			attrs: []*pdp.Attribute{
+				{Id: "type", Value: "query"},
+				{Id: "domain_name", Value: "test.com"},
+				{Id: "dns_qtype", Value: "1"},
+				{Id: "source_ip", Value: "10.240.0.1"},
+				{Id: "redirect_to", Value: "test.net"},
+				{Id: "policy_action", Value: "4"},
+			},
 		},
 		{
 			query:     "test.net.",
@@ -235,14 +235,6 @@ func TestPolicy(t *testing.T) {
 			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
 			status:    dns.RcodeSuccess,
 			err:       nil,
-			attrs: []*pdp.Attribute{
-				{Id: "type", Value: "response"},
-				{Id: "domain_name", Value: "test.org"},
-				{Id: "dns_qtype", Value: "1c"},
-				{Id: "source_ip", Value: "10.240.0.1"},
-				{Id: "address", Value: "21da:d3:0:2f3b:2aa:ff:fe28:9c5a"},
-				{Id: "policy_action", Value: "2"},
-			},
 		},
 		{
 			query:     "test.org.",
@@ -283,13 +275,6 @@ func TestPolicy(t *testing.T) {
 			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
 			status:    dns.RcodeNameError,
 			err:       nil,
-			attrs: []*pdp.Attribute{
-				{Id: "type", Value: "query"},
-				{Id: "domain_name", Value: "nxdomain.org"},
-				{Id: "dns_qtype", Value: "1"},
-				{Id: "source_ip", Value: "10.240.0.1"},
-				{Id: "policy_action", Value: "2"},
-			},
 		},
 	}
 

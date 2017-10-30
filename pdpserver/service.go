@@ -151,8 +151,6 @@ func (s *server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, i
 }
 
 func (s *server) Validate(ctx context.Context, in *pb.Request) (*pb.Response, error) {
-	log.Info("Validating context")
-
 	s.RLock()
 	p := s.p
 	c := s.c
@@ -167,7 +165,6 @@ func (s *server) Validate(ctx context.Context, in *pb.Request) (*pb.Response, er
 		status = errs[0].Error()
 	}
 
-	log.Info("Returning response")
 	if s.logLevel >= log.DebugLevel {
 		log.WithFields(log.Fields{
 			"effect":     pb.Response_Effect_name[int32(effect)],

@@ -129,13 +129,9 @@ func actionFromResponse(resp *pdp.Response) (int, *pdp.Attribute) {
 		for _, item := range resp.Obligation {
 			switch item.Id {
 			case "refuse":
-				if item.Value == "true" {
-					return typeRefuse, nil
-				}
+				return typeRefuse, nil
 			case "redirect_to":
-				if item.Value != "" {
-					return typeRedirect, item
-				}
+				return typeRedirect, item
 			}
 		}
 		return typeBlock, nil

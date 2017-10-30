@@ -36,13 +36,6 @@ func TestActionFromResponse(t *testing.T) {
 		},
 		{
 			resp: pdp.Response{Effect: pdp.Response_DENY, Obligation: []*pdp.Attribute{
-				{Id: "refuse", Value: "bla-bla"},
-			}},
-			action:   typeBlock,
-			redirect: "",
-		},
-		{
-			resp: pdp.Response{Effect: pdp.Response_DENY, Obligation: []*pdp.Attribute{
 				{Id: "refuse", Value: "true"},
 			}},
 			action:   typeRefuse,
