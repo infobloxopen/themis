@@ -153,6 +153,7 @@ test-pdp-jcon: cover-out
 
 .PHONY: test-pep
 test-pep: build-pdpserver cover-out
+	$(AT)/pep && $(GOTEST)
 	$(AT)/pep && $(GOBENCH)
 
 .PHONY: test-plugin
