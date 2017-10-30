@@ -74,7 +74,7 @@ func TestActionFromResponse(t *testing.T) {
 }
 
 func TestPolicyActionNegative(t *testing.T) {
-	ah := newAttrHolder("test.com", "1")
+	ah := newAttrHolder("test.com", 1)
 	attrs := ah.attributes()
 	for _, a := range attrs {
 		if a.GetId() == "policy_action" {

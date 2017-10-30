@@ -59,7 +59,7 @@ func setup(c *caddy.Controller) error {
 }
 
 func policyParse(c *caddy.Controller) (*PolicyPlugin, error) {
-	policyPlugin := &PolicyPlugin{options: make(map[uint16][]edns0Map)}
+	policyPlugin := &PolicyPlugin{options: make(map[uint16][]*edns0Map)}
 
 	for c.Next() {
 		if c.Val() == "policy" {

@@ -3,6 +3,8 @@ package policy
 import (
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
 
 	"github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 	pdp "github.com/infobloxopen/themis/pdp-service"
@@ -41,11 +43,11 @@ type attrHolder struct {
 	resp2End int
 }
 
-func newAttrHolder(qName, qType string) *attrHolder {
-	return &attrHolder{attrs: []*pdp.Attribute{
-		{Id: "dns_qtype", Type: "string", Value: qType},
-		{Id: "domain_name", Type: "domain", Value: qName},
-	}, action: typeInvalid}
+func newAttrHolder(qName string, qType uint16) *attrHolder {
+	attrs := make([]*pdp.Attribute, 2, 32)
+	attrs[0] = &pdp.Attribute{Id: "dns_qtype", Type: "string", Value: strconv.FormatUint(uint64(qType), 16)}
+	attrs[1] = &pdp.Attribute{Id: "domain_name", Type: "domain", Value: strings.TrimRight(qName, ".")}
+	return &attrHolder{attrs: attrs, action: typeInvalid}
 }
 
 func (ah *attrHolder) addAttr(a *pdp.Attribute) {
