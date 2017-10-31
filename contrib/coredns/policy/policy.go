@@ -315,7 +315,6 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		if err != nil {
 			status = dns.RcodeServerFailure
 		} else {
-			//if err == nil {
 			respMsg = responseWriter.Msg
 			address := extractRespIP(respMsg)
 			// if external resolver ret code is not RcodeSuccess
