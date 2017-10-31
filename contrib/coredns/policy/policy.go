@@ -74,7 +74,7 @@ type PolicyPlugin struct {
 }
 
 const (
-	debug = true
+	debug = false
 )
 
 // Connect establishes connection to PDP server.
