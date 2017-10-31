@@ -199,14 +199,6 @@ func TestPolicy(t *testing.T) {
 				Obligation: []*pdp.Attribute{{Id: "redirect_to", Value: "test.net"}}},
 			status: dns.RcodeServerFailure,
 			err:    errFakeResolver,
-			attrs: []*pdp.Attribute{
-				{Id: "type", Value: "query"},
-				{Id: "domain_name", Value: "test.com"},
-				{Id: "dns_qtype", Value: "1"},
-				{Id: "source_ip", Value: "10.240.0.1"},
-				{Id: "redirect_to", Value: "test.net"},
-				{Id: "policy_action", Value: "4"},
-			},
 		},
 		{
 			query:     "test.net.",
@@ -563,13 +555,12 @@ func TestEdns(t *testing.T) {
 		req := makeRequestWithEDNS0(test.code, test.data, test.nonlocal)
 		ah := newAttrHolder("test.com.", 1)
 		pm.getAttrsFromEDNS0(ah, req, test.ip)
-		attr := ah.attributes()
 		mapAttr := make(map[string]*pdp.Attribute)
-		for _, a := range attr {
+		for _, a := range ah.attrs {
 			mapAttr[a.Id] = a
 		}
-		if len(attr) != len(mapAttr) {
-			t.Errorf("%s: array %q transformed to map %q\n", test.name, attr, mapAttr)
+		if len(ah.attrs) != len(mapAttr) {
+			t.Errorf("%s: array %q transformed to map %q\n", test.name, ah.attrs, mapAttr)
 		}
 		if !reflect.DeepEqual(test.attr, mapAttr) {
 			t.Errorf("%s: expected attributes %q but got %q\n", test.name, test.attr, mapAttr)
