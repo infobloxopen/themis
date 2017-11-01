@@ -73,9 +73,6 @@ func (ah *attrHolder) request() []*pdp.Attribute {
 }
 
 func (ah *attrHolder) addResponse(r *pdp.Response) {
-	if r == nil {
-		panic("PDP response pointer is nil")
-	}
 	if ah.resp1Beg == 0 {
 		ah.resp1Beg = len(ah.attrs)
 		ah.resp1End = ah.resp1Beg + len(r.Obligation)
