@@ -3,26 +3,30 @@ package pep
 import "testing"
 
 func TestNewClient(t *testing.T) {
-	c := NewClient("127.0.0.1:1000", nil)
-	cc, ok := c.(*pdpClient)
-	if !ok {
-		t.Errorf("Expected *pdpClient from NewClient got %v", c)
-	} else {
-		if cc.addr != "127.0.0.1:1000" {
-			t.Errorf("Expected address of 127.0.0.1:1000 but got %s", cc.addr)
-		}
+	c := NewClient()
+	if _, ok := c.(*pdpUnaryClient); !ok {
+		t.Errorf("Expected *pdpUnaryClient from NewClient got %v", c)
 	}
 }
 
 func TestNewBalancedClient(t *testing.T) {
-	addrs := []string{"127.0.0.1:1000", "127.0.0.1:1001"}
-	c := NewBalancedClient(addrs, nil)
-	cc, ok := c.(*pdpClient)
-	if !ok {
-		t.Errorf("Expected *pdpClient from NewClient got %v", c)
-	} else {
-		if cc.balancer == nil {
-			t.Errorf("Expected balancer to be set but got nil")
+	c := NewClient(WithBalancer("127.0.0.1:1000", "127.0.0.1:1001"))
+	if uc, ok := c.(*pdpUnaryClient); ok {
+		if len(uc.opts.addresses) <= 0 {
+			t.Errorf("Expected balancer to be set but got nothing")
 		}
+	} else {
+		t.Errorf("Expected *pdpUnaryClient from NewClient got %v", c)
+	}
+}
+
+func TestNewStreamingClient(t *testing.T) {
+	c := NewClient(WithStreams(5))
+	if sc, ok := c.(*pdpStreamingClient); ok {
+		if sc.opts.maxStreams != 5 {
+			t.Errorf("Expected %d streams got %d", 5, sc.opts.maxStreams)
+		}
+	} else {
+		t.Errorf("Expected *pdpStreamingClient from NewClient got %v", c)
 	}
 }

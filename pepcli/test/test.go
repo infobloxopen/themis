@@ -36,8 +36,8 @@ func Exec(addr, in, out string, n int, v interface{}) error {
 		defer f.Close()
 	}
 
-	c := pep.NewClient(addr, nil)
-	err = c.Connect()
+	c := pep.NewClient()
+	err = c.Connect(addr)
 	if err != nil {
 		return fmt.Errorf("can't connect to %s: %s", addr, err)
 	}
@@ -48,7 +48,7 @@ func Exec(addr, in, out string, n int, v interface{}) error {
 		req := reqs[idx]
 
 		res := &pb.Response{}
-		err := c.ModalValidate(req, res)
+		err := c.Validate(req, res)
 		if err != nil {
 			return fmt.Errorf("can't send request %d (%d): %s", idx, i, err)
 		}

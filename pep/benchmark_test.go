@@ -667,7 +667,7 @@ func benchmarkPolicySet(name, p string, b *testing.B) {
 			in := decisionRequests[n%len(decisionRequests)]
 
 			var out decisionResponse
-			c.ModalValidate(in, &out)
+			c.Validate(in, &out)
 
 			if (out.Effect != "DENY" && out.Effect != "PERMIT" && out.Effect != "NOTAPPLICABLE") ||
 				out.Reason != "Ok" {
@@ -709,7 +709,7 @@ func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			in := rawRequests[n%len(rawRequests)]
 
-			c.ModalValidate(in, &out)
+			c.Validate(in, &out)
 
 			if (out.Effect != pb.Response_DENY &&
 				out.Effect != pb.Response_PERMIT &&
@@ -721,7 +721,52 @@ func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
 	})
 }
 
-func startPDPServer(p string, b *testing.B) (string, string, *proc, Client) {
+func BenchmarkStreamingClient(b *testing.B) {
+	streams := 96
+	ok := true
+	tmpYAST, tmpJCon, pdp, c := startPDPServer(threeStageBenchmarkPolicySet, b, WithStreams(streams))
+	defer func() {
+		c.Close()
+
+		_, errDump, _ := pdp.kill()
+		if !ok && len(errDump) > 0 {
+			b.Logf("PDP server dump:\n%s", strings.Join(errDump, "\n"))
+		}
+
+		os.Remove(tmpYAST)
+		os.Remove(tmpJCon)
+	}()
+
+	ok = b.Run("BenchmarkStreamingClient", func(b *testing.B) {
+		errs := make([]error, b.N)
+
+		th := make(chan int, streams)
+		for n := 0; n < b.N; n++ {
+			th <- 0
+			go func(i int) {
+				defer func() { <-th }()
+
+				var out pb.Response
+				c.Validate(rawRequests[i%len(rawRequests)], &out)
+
+				if (out.Effect != pb.Response_DENY &&
+					out.Effect != pb.Response_PERMIT &&
+					out.Effect != pb.Response_NOTAPPLICABLE) ||
+					out.Reason != "Ok" {
+					errs[i] = fmt.Errorf("unexpected response: %#v", out)
+				}
+			}(n)
+		}
+
+		for i, err := range errs {
+			if err != nil {
+				b.Fatalf("request %d failed: %s", i, err)
+			}
+		}
+	})
+}
+
+func startPDPServer(p string, b *testing.B, opts ...Option) (string, string, *proc, Client) {
 	tmpYAST, err := makeTempFile(p, "policy")
 	if err != nil {
 		b.Fatalf("can't create policy file: %s", err)
@@ -743,8 +788,8 @@ func startPDPServer(p string, b *testing.B) (string, string, *proc, Client) {
 
 	time.Sleep(time.Second)
 
-	c := NewClient("127.0.0.1:5555", nil)
-	err = c.Connect()
+	c := NewClient(opts...)
+	err = c.Connect("127.0.0.1:5555")
 	if err != nil {
 		os.Remove(tmpYAST)
 		os.Remove(tmpJCon)

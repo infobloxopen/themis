@@ -46,7 +46,7 @@ func sequential(c pep.Client, n int, reqs []pb.Request) ([]timing, error) {
 		idx := i % len(reqs)
 
 		out[i].setSend()
-		err := c.ModalValidate(reqs[idx], res)
+		err := c.Validate(reqs[idx], res)
 		if err != nil {
 			return nil, fmt.Errorf("can't send request %d (%d): %s", idx, i, err)
 		}
@@ -64,7 +64,7 @@ func sequentialWithPause(c pep.Client, n int, p time.Duration, reqs []pb.Request
 		idx := i % len(reqs)
 
 		out[i].setSend()
-		err := c.ModalValidate(reqs[idx], res)
+		err := c.Validate(reqs[idx], res)
 		if err != nil {
 			return nil, fmt.Errorf("can't send request %d (%d): %s", idx, i, err)
 		}
@@ -88,7 +88,7 @@ func parallel(c pep.Client, n int, reqs []pb.Request) ([]timing, error) {
 			res := &pb.Response{}
 
 			out[i].setSend()
-			err := c.ModalValidate(req, res)
+			err := c.Validate(req, res)
 			if err != nil {
 				out[i].setError(err)
 			} else {
@@ -114,7 +114,7 @@ func parallelWithPause(c pep.Client, n int, p time.Duration, reqs []pb.Request) 
 			res := &pb.Response{}
 
 			out[i].setSend()
-			err := c.ModalValidate(req, res)
+			err := c.Validate(req, res)
 			if err != nil {
 				out[i].setError(err)
 			} else {
@@ -149,7 +149,7 @@ func parallelWithLimit(c pep.Client, n, l int, reqs []pb.Request) ([]timing, err
 			res := &pb.Response{}
 
 			out[i].setSend()
-			err := c.ModalValidate(req, res)
+			err := c.Validate(req, res)
 			if err != nil {
 				out[i].setError(err)
 			} else {
@@ -182,7 +182,7 @@ func parallelWithLimitAndPause(c pep.Client, n, l int, p time.Duration, reqs []p
 			res := &pb.Response{}
 
 			out[i].setSend()
-			err := c.ModalValidate(req, res)
+			err := c.Validate(req, res)
 			if err != nil {
 				out[i].setError(err)
 			} else {

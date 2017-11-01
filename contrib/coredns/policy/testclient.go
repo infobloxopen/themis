@@ -3,8 +3,6 @@ package policy
 import (
 	"fmt"
 
-	"golang.org/x/net/context"
-
 	pdp "github.com/infobloxopen/themis/pdp-service"
 )
 
@@ -25,9 +23,9 @@ func newTestClientInit(nextResponse *pdp.Response, nextResponseIP *pdp.Response,
 	}
 }
 
-func (c *testClient) Connect() error { return nil }
-func (c *testClient) Close()         {}
-func (c *testClient) Validate(ctx context.Context, in, out interface{}) error {
+func (c *testClient) Connect(addr string) error { return nil }
+func (c *testClient) Close()                    {}
+func (c *testClient) Validate(in, out interface{}) error {
 	if in != nil {
 		p := in.(pdp.Request)
 		for _, a := range p.Attributes {
@@ -46,10 +44,6 @@ func (c *testClient) Validate(ctx context.Context, in, out interface{}) error {
 		return c.errResponse
 	}
 	return fillResponse(c.nextResponse, out)
-}
-
-func (c *testClient) ModalValidate(in, out interface{}) error {
-	return c.Validate(context.Background(), in, out)
 }
 
 func fillResponse(in *pdp.Response, out interface{}) error {

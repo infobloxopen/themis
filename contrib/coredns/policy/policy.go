@@ -15,16 +15,12 @@ import (
 
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/pkg/trace"
+	"github.com/miekg/dns"
+	"golang.org/x/net/context"
 
 	"github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 	pb "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pep"
-
-	"github.com/miekg/dns"
-
-	ot "github.com/opentracing/opentracing-go"
-
-	"golang.org/x/net/context"
 )
 
 const (
@@ -79,14 +75,19 @@ type PolicyPlugin struct {
 // Connect establishes connection to PDP server.
 func (p *PolicyPlugin) Connect() error {
 	log.Printf("[DEBUG] Connecting %v", p)
-	var tracer ot.Tracer
+
+	opts := []pep.Option{
+		pep.WithBalancer(p.Endpoints...),
+	}
+
 	if p.Trace != nil {
 		if t, ok := p.Trace.(trace.Trace); ok {
-			tracer = t.Tracer()
+			opts = append(opts, pep.WithTracer(t.Tracer()))
 		}
 	}
-	p.pdp = pep.NewBalancedClient(p.Endpoints, tracer)
-	return p.pdp.Connect()
+
+	p.pdp = pep.NewClient(opts...)
+	return p.pdp.Connect("")
 }
 
 // Close terminates previously established connection.
@@ -426,7 +427,7 @@ func (p *PolicyPlugin) redirect(ctx context.Context, r *dns.Msg, dst string) (in
 
 func (p *PolicyPlugin) validate(ah *attrHolder) error {
 	response := new(pb.Response)
-	err := p.pdp.ModalValidate(pb.Request{Attributes: ah.request()}, response)
+	err := p.pdp.Validate(pb.Request{Attributes: ah.request()}, response)
 	if err != nil {
 		log.Printf("[ERROR] Policy validation failed due to error %s", err)
 		return err

@@ -34,6 +34,15 @@ var (
 	resTypeCacheLock = sync.RWMutex{}
 )
 
+func fillResponse(res *pb.Response, v interface{}) error {
+	if out, ok := v.(*pb.Response); ok {
+		*out = *res
+		return nil
+	}
+
+	return unmarshalToValue(res, reflect.ValueOf(v))
+}
+
 func unmarshalToValue(res *pb.Response, v reflect.Value) error {
 	if v.Kind() != reflect.Ptr {
 		return ErrorInvalidDestination
