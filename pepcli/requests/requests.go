@@ -1,3 +1,4 @@
+// Package requests provides loader for YAML formatted authorization requests file.
 package requests
 
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-service && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/service.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-service && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-service"
@@ -19,6 +20,7 @@ type requests struct {
 	Requests   []map[string]interface{}
 }
 
+// Load reads given YAML file and porduces list of requests to run.
 func Load(name string) ([]pb.Request, error) {
 	b, err := ioutil.ReadFile(name)
 	if err != nil {
