@@ -13,6 +13,8 @@ import (
 var streamAutoIncrement uint64
 
 func (s *server) NewValidationStream(stream pb.PDP_NewValidationStreamServer) error {
+	ctx := stream.Context()
+
 	sID := atomic.AddUint64(&streamAutoIncrement, 1)
 	log.WithField("id", sID).Info("Got new stream")
 
@@ -23,6 +25,10 @@ func (s *server) NewValidationStream(stream pb.PDP_NewValidationStreamServer) er
 		}
 
 		if err != nil {
+			if err := ctx.Err(); err != nil && (err == context.Canceled || err == context.DeadlineExceeded) {
+				break
+			}
+
 			log.WithFields(log.Fields{
 				"id":  sID,
 				"err": err,

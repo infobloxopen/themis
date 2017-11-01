@@ -6,6 +6,7 @@ package main
 
 import (
 	"io"
+	"math"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -211,33 +212,31 @@ func (s *server) serveRequests() {
 	s.listenRequests(conf.serviceEP)
 
 	log.Info("Creating service protocol handler")
-	if s.tracer == nil {
-		s.requests.proto = grpc.NewServer()
-	} else {
+	opts := []grpc.ServerOption{}
+	if conf.maxStreams > 0 && conf.maxStreams <= math.MaxUint32 {
+		opts = append(opts, grpc.MaxConcurrentStreams(uint32(conf.maxStreams)))
+	}
+
+	if s.tracer != nil {
 		onlyIfParent := func(parentSpanCtx ot.SpanContext, method string, req, resp interface{}) bool {
 			return parentSpanCtx != nil
 		}
 		intercept := otgrpc.OpenTracingServerInterceptor(s.tracer, otgrpc.IncludingSpans(onlyIfParent))
-		s.requests.proto = grpc.NewServer(grpc.UnaryInterceptor(intercept))
+		opts = append(opts, grpc.UnaryInterceptor(intercept))
 	}
+	s.requests.proto = grpc.NewServer(opts...)
 	pbs.RegisterPDPServer(s.requests.proto, s)
 
 	log.Info("Serving decision requests")
-	s.requests.proto.Serve(s.requests.iface)
+	if err := s.requests.proto.Serve(s.requests.iface); err != nil {
+		log.WithField("error", err).Fatal("Failed to start decision service")
+	}
 }
 
 func (s *server) serve() {
 	s.listenControl(conf.controlEP)
 	s.listenHealthCheck(conf.healthEP)
 	s.listenProfiler(conf.profilerEP)
-	go func() {
-		log.Info("Creating control protocol handler")
-		s.control.proto = grpc.NewServer()
-		pbc.RegisterPDPControlServer(s.control.proto, s)
-
-		log.Info("Serving control requests")
-		s.control.proto.Serve(s.control.iface)
-	}()
 
 	if s.health.iface != nil {
 		healthMux := http.NewServeMux()
@@ -259,9 +258,18 @@ func (s *server) serve() {
 	if len(conf.policy) != 0 || len(conf.content) != 0 {
 		// We already have policy info applied; supplied from local files,
 		// pointed to by CLI options.
-		s.startOnce.Do(s.serveRequests)
+		go s.startOnce.Do(s.serveRequests)
 	} else {
 		// serveRequests() will be executed by external request.
 		log.Info("Waiting for policies to be applied.")
+	}
+
+	log.Info("Creating control protocol handler")
+	s.control.proto = grpc.NewServer()
+	pbc.RegisterPDPControlServer(s.control.proto, s)
+
+	log.Info("Serving control requests")
+	if err := s.control.proto.Serve(s.control.iface); err != nil {
+		log.WithField("error", err).Fatal("Failed to start control service")
 	}
 }
