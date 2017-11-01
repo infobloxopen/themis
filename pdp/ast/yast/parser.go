@@ -37,8 +37,10 @@ const (
 	yastTagEntity     = "entity"
 )
 
+// Parser is a YAST parser implementation.
 type Parser struct{}
 
+// Unmarshal parses policies YAML representation to PDP's internal representation.
 func (p Parser) Unmarshal(in io.Reader, tag *uuid.UUID) (*pdp.PolicyStorage, error) {
 	b, err := ioutil.ReadAll(in)
 	if err != nil {
@@ -73,6 +75,7 @@ func (p Parser) Unmarshal(in io.Reader, tag *uuid.UUID) (*pdp.PolicyStorage, err
 	return nil, newRootKeysError(m)
 }
 
+// UnmarshalUpdate parses policies update YAML representation to PDP's internal representation.
 func (p Parser) UnmarshalUpdate(in io.Reader, attrs map[string]pdp.Attribute, oldTag, newTag uuid.UUID) (*pdp.PolicyUpdate, error) {
 	b, err := ioutil.ReadAll(in)
 	if err != nil {
