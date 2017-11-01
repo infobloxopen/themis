@@ -33,8 +33,6 @@ func (tapIO testIORoutine) Dnstap(msg tap.Dnstap) {
 }
 
 func TestSendCRExtraNoMsg(t *testing.T) {
-	now := time.Now()
-
 	trapper := dtest.TrapTapper{Full: true}
 	tapRW := taprw.ResponseWriter{
 		Query:          new(dns.Msg),
@@ -45,7 +43,7 @@ func TestSendCRExtraNoMsg(t *testing.T) {
 
 	io := newIORoutine(100 * time.Millisecond)
 	tapIO := NewPolicyDnstapSender(io)
-	tapIO.SendCRExtraMsg(now, proxyRW, nil)
+	tapIO.SendCRExtraMsg(proxyRW, nil)
 	_, ok := <-io.dnstapChan
 	if ok {
 		t.Errorf("Unexpected msg received")
@@ -54,8 +52,6 @@ func TestSendCRExtraNoMsg(t *testing.T) {
 }
 
 func TestSendCRExtraInvalidMsg(t *testing.T) {
-	now := time.Now()
-
 	msg := dns.Msg{}
 	msg.SetQuestion("test.com.", dns.TypeA)
 	msg.Answer = []dns.RR{
@@ -74,7 +70,7 @@ func TestSendCRExtraInvalidMsg(t *testing.T) {
 
 	io := newIORoutine(100 * time.Millisecond)
 	tapIO := NewPolicyDnstapSender(io)
-	tapIO.SendCRExtraMsg(now, proxyRW, nil)
+	tapIO.SendCRExtraMsg(proxyRW, nil)
 	_, ok := <-io.dnstapChan
 	if ok {
 		t.Errorf("Unexpected msg received")
@@ -83,7 +79,6 @@ func TestSendCRExtraInvalidMsg(t *testing.T) {
 }
 
 func TestSendCRExtraMsg(t *testing.T) {
-	now := time.Now()
 	msg := dns.Msg{}
 	msg.SetQuestion("test.com.", dns.TypeA)
 	msg.Answer = []dns.RR{
@@ -106,8 +101,8 @@ func TestSendCRExtraMsg(t *testing.T) {
 
 	io := newIORoutine(5000 * time.Millisecond)
 	tapIO := NewPolicyDnstapSender(io)
-	tapIO.SendCRExtraMsg(now, proxyRW, attrs)
-	checkCRExtraResult(t, io, now, proxyRW, attrs)
+	tapIO.SendCRExtraMsg(proxyRW, attrs)
+	checkCRExtraResult(t, io, proxyRW, attrs)
 
 	if l := len(trapper.Trap); l != 0 {
 		t.Errorf("Dnstap unexpectedly sent %d messages", l)
@@ -115,7 +110,7 @@ func TestSendCRExtraMsg(t *testing.T) {
 	}
 }
 
-func checkCRExtraResult(t *testing.T, io testIORoutine, crTime time.Time, proxyRW *ProxyWriter, attrs []*pb.Attribute) {
+func checkCRExtraResult(t *testing.T, io testIORoutine, proxyRW *ProxyWriter, attrs []*pb.Attribute) {
 	dnstapMsg, ok := <-io.dnstapChan
 	if !ok {
 		t.Errorf("Receiving Dnstap message was timed out")

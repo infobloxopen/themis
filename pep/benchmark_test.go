@@ -3,10 +3,12 @@ package pep
 import (
 	"bufio"
 	"fmt"
+	"go/build"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -731,7 +733,8 @@ func startPDPServer(p string, b *testing.B) (string, string, *proc, Client) {
 		b.Fatalf("can't create content file: %s", err)
 	}
 
-	pdp, err := newProc("pdpserver", "-p", tmpYAST, "-j", tmpJCon)
+	binPath := filepath.Join(build.Default.GOPATH, "/src/github.com/infobloxopen/themis/build/pdpserver")
+	pdp, err := newProc(binPath, "-p", tmpYAST, "-j", tmpJCon)
 	if err != nil {
 		os.Remove(tmpYAST)
 		os.Remove(tmpJCon)
@@ -986,12 +989,12 @@ func (p *pipe) cleanup() []string {
 	if p.w != nil {
 		p.w.Close()
 		p.w = nil
+		p.Wait()
 	}
 
 	if p.r != nil {
 		p.r.Close()
 		p.r = nil
-		p.Wait()
 	}
 
 	return p.storage.lines
