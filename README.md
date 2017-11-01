@@ -43,6 +43,7 @@ PDP uses YAML based language (YAML Abstract Syntax Tree or YAST) or JSON based l
 
 ### Root
 Any **policies** definition consists of attributes (optional) and policies (required) sections. Attributes section contains set of pairs attribute name and type. For example:
+
 **YAST**
 ```yaml
 # Permit if x is "test" otherwise Not Applicable
