@@ -22,7 +22,9 @@ import:
   - internal/socket
 - package: github.com/opentracing/opentracing-go
 - package: github.com/openzipkin/zipkin-go-opentracing
-- package: github.com/valyala/gorpc
+- package: github.com/valyala/fastrpc
+  subpackages:
+  - tlv
 - package: golang.org/x/net
   subpackages:
   - context

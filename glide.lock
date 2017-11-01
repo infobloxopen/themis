@@ -1,8 +1,8 @@
-hash: d3b8453cd02e9bb681f4127e2f4406e49810ad258edae9bea0aa929716c61d8c
-updated: 2017-10-26T13:51:13.203322112+03:00
+hash: ed5e36530f311421c657f9bdec6b56f562a8a55a38b588b110aba3ab17098b0d
+updated: 2017-11-01T16:43:13.745402787+03:00
 imports:
 - name: github.com/apache/thrift
-  version: 254e86b0103be51c6af9cc50220ee8c144234239
+  version: a533ea1615e9df935e77b99440cf264c6b417e3e
   subpackages:
   - lib/go/thrift
 - name: github.com/beorn7/perks
@@ -10,7 +10,7 @@ imports:
   subpackages:
   - quantile
 - name: github.com/coredns/coredns
-  version: b5d8f2a3d1b82d8198edae40d284ce78991b1c54
+  version: 2c80551fdc1ac409eb11dc8dd9e7fe90fb04d90c
   subpackages:
   - core/dnsserver
   - pb
@@ -26,13 +26,12 @@ imports:
   - plugin/pkg/dnstest
   - plugin/pkg/dnsutil
   - plugin/pkg/edns
-  - plugin/pkg/nonwriter
   - plugin/pkg/rcode
   - plugin/pkg/trace
   - plugin/test
   - request
 - name: github.com/davecgh/go-spew
-  version: ecdeabc65495df2dec95d7c4a4c3e021903035e5
+  version: 04cdfd42973bb9c8589fd6a731800cf222fde1a9
   subpackages:
   - spew
 - name: github.com/dnstap/golang-dnstap
@@ -67,7 +66,7 @@ imports:
 - name: github.com/golang/snappy
   version: 553a641470496b2327abcac10b36396bd98e45c9
 - name: github.com/google/uuid
-  version: e367a344cbe8e08149f9951115dc299ebd42b919
+  version: 064e2069ce9c359c118179501254f67d7d37ba24
 - name: github.com/grpc-ecosystem/grpc-opentracing
   version: a570af39704b9f3d4bb530d83192a99ea6337d5a
   subpackages:
@@ -86,7 +85,7 @@ imports:
   subpackages:
   - pbutil
 - name: github.com/mholt/caddy
-  version: fc75527eb5ea9d0252bb3079a0137dbbfb754790
+  version: 34a34c565d63c5ab19e1123a2619f488f645bc38
   subpackages:
   - caddyfile
 - name: github.com/miekg/dns
@@ -135,9 +134,13 @@ imports:
 - name: github.com/rcrowley/go-metrics
   version: 1f30fe9094a513ce4c700b9a54458bbb0c96996c
 - name: github.com/Shopify/sarama
-  version: 84ac2717eed5b9e0b3b672b2fb94bda65ebf03cb
+  version: eca6c1cfdb9b45576efff666be5dda26918aac4f
 - name: github.com/Sirupsen/logrus
   version: 89742aefa4b206dcf400792f3bd35b542998eb3b
+- name: github.com/valyala/fastrpc
+  version: 0b1a558ac7260beec2d23ecf7cf7d3c1444edf5c
+  subpackages:
+  - tlv
 - name: github.com/valyala/gorpc
   version: 908281bef77441f2d0ec1792189b4032a1dace0c
 - name: golang.org/x/crypto
@@ -172,17 +175,18 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: google.golang.org/genproto
-  version: f676e0f3ac6395ff1a529ae59a6670878a8371a6
+  version: 03951f3b52582ecab79e5a37a86b5a20c5f64df7
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: b5eab4ccac6df282ff981436a5a87554d7377c75
+  version: fb4b2b29e49d653547f46f004953aed4dc3c3249
   subpackages:
   - balancer
   - balancer/roundrobin
   - codes
   - connectivity
   - credentials
+  - encoding
   - grpclb/grpc_lb_v1/messages
   - grpclog
   - internal
@@ -201,6 +205,6 @@ imports:
   version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
 testImports:
 - name: github.com/pmezard/go-difflib
-  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
   subpackages:
   - difflib

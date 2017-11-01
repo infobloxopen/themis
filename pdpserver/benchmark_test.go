@@ -8,8 +8,8 @@ import (
 
 	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
+	"github.com/infobloxopen/themis/pdp/ast/yast"
 	"github.com/infobloxopen/themis/pdp/jcon"
-	"github.com/infobloxopen/themis/pdp/yast"
 )
 
 const (
