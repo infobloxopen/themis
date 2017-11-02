@@ -7,6 +7,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/infobloxopen/themis/pdp"
 	rpc "github.com/infobloxopen/themis/pdp-service"
+	"github.com/valyala/fastrpc"
+	"github.com/valyala/fastrpc/tlv"
 )
 
 func makeEffect(effect int) (byte, error) {
@@ -145,13 +147,18 @@ func (s *server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, i
 	return re, errs, attrs
 }
 
-func (s *server) Validate(clientAddr string, request interface{}) interface{} {
+func (s *server) Validate(ctxv fastrpc.HandlerCtx) fastrpc.HandlerCtx {
 	s.RLock()
 	p := s.p
 	c := s.c
 	s.RUnlock()
 
-	effect, errs, attrs := s.rawValidate(p, c, request.(*rpc.Request))
+	ctx := ctxv.(*tlv.RequestCtx)
+	data := ctx.Request.Value()
+
+	req := rpc.UnmarshalRequest(data)
+
+	effect, errs, attrs := s.rawValidate(p, c, req)
 
 	status := "Ok"
 	if len(errs) > 1 {
@@ -168,9 +175,12 @@ func (s *server) Validate(clientAddr string, request interface{}) interface{} {
 		}).Debug("Response")
 	}
 
-	return &rpc.Response{
+	resp := &rpc.Response{
 		Effect:      effect,
 		Reason:      status,
 		Obligations: attrs,
 	}
+
+	ctx.Write(rpc.MarshalResponse(resp))
+	return ctx
 }

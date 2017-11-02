@@ -20,7 +20,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	ot "github.com/opentracing/opentracing-go"
-	"github.com/valyala/gorpc"
+	"github.com/valyala/fastrpc"
+	"github.com/valyala/fastrpc/tlv"
 	"google.golang.org/grpc"
 )
 
@@ -196,11 +197,20 @@ func (s *server) listenProfiler(addr string) {
 func (s *server) serveRequests() {
 	addr := conf.serviceEP
 	log.WithField("address", addr).Info("Opening service port")
-	server := gorpc.NewTCPServer(addr, s.Validate)
-	err := server.Serve()
+	svc := &fastrpc.Server{
+		CompressType:     fastrpc.CompressNone,
+		PipelineRequests: true,
+		NewHandlerCtx: func() fastrpc.HandlerCtx {
+			return &tlv.RequestCtx{}
+		},
+		Handler: s.Validate,
+	}
+	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open service port")
 	}
+	log.Info("Serving decision requests")
+	go svc.Serve(ln)
 }
 
 func (s *server) serve() {

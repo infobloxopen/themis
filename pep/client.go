@@ -1,174 +1,102 @@
 package pep
 
 import (
-	"errors"
-	"io"
-	"log"
 	"math/rand"
+	"net"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	pdp "github.com/infobloxopen/themis/pdp-service"
-	"github.com/valyala/gorpc"
+	"github.com/valyala/fastrpc"
+	"github.com/valyala/fastrpc/tlv"
 )
 
-var (
-	errPdpNotReady = errors.New("no PDP server in ready state")
+const (
+	deadline = 5 * time.Second
 )
 
-type atomBool struct{ flag int32 }
-
-func (b *atomBool) Set(value bool) {
-	var i int32 = 0
-	if value {
-		i = 1
-	}
-	atomic.StoreInt32(&(b.flag), int32(i))
-}
-
-func (b *atomBool) Get() bool {
-	if atomic.LoadInt32(&(b.flag)) != 0 {
-		return true
-	}
-	return false
-}
-
-type Client interface {
-	// Connect establishes connection to PDP server.
-	Connect() error
-	// Close terminates previously established connection if any.
-	// Close should silently return if connection hasn't been established yet or
-	// if it has been already closed.
-	Close()
-	// Validate sends decision request to PDP server and fills out response.
-	Validate(request *pdp.Request) (*pdp.Response, error)
-}
-
-type rpc struct {
-	ready    *atomBool
-	endpoint string
-	client   *gorpc.Client
-	batch    *gorpc.Batch
-	delay    time.Duration
-	pending  uint
-	count    uint
+type client struct {
+	endpoints          []string
+	maxBatchDelay      int
+	maxPendingRequests int
+	clients            []*fastrpc.Client
+	conns              []net.Conn
 	sync.Mutex
 }
 
-func newRpc(endpoint string, delay, pending uint) *rpc {
-	return &rpc{
-		endpoint: endpoint,
-		ready:    new(atomBool),
-		delay:    time.Duration(delay) * time.Microsecond,
-		pending:  pending,
-	}
+type Client interface {
+	Connect() error
+	Close()
+	Validate(request *pdp.Request) (*pdp.Response, error)
 }
 
-func (r *rpc) addToBatch(request *pdp.Request) *gorpc.BatchResult {
-	r.Lock()
-	defer r.Unlock()
-	ret := r.batch.Add(request)
-	r.count++
-	if r.count > r.pending {
-		go r.batch.Call()
-		r.batch = r.client.NewBatch()
-		r.count = 0
-	}
-	return ret
-}
-
-func (r *rpc) callBatch() {
-	r.Lock()
-	defer r.Unlock()
-	if r.count > 0 {
-		go r.batch.Call()
-		r.batch = r.client.NewBatch()
-		r.count = 0
-	}
-}
-
-type client struct {
-	rpcs []*rpc
-}
-
-// NewBalancedClient creates client instance bound to several PDP servers with random balancing.
 func NewBalancedClient(endpoints []string, delay, pending uint) Client {
-	rpcs := make([]*rpc, len(endpoints))
-	for i, endpoint := range endpoints {
-		rpcs[i] = newRpc(endpoint, delay, pending)
+	if pending <= 0 {
+		pending = fastrpc.DefaultMaxPendingRequests
 	}
-	return &client{rpcs}
+	if delay <= 0 {
+		delay = 100
+	}
+	return &client{
+		endpoints:          endpoints,
+		maxBatchDelay:      int(delay),
+		maxPendingRequests: int(pending),
+		clients:            make([]*fastrpc.Client, len(endpoints)),
+	}
 }
 
-func (r *rpc) newOnConnectFunc() gorpc.OnConnectFunc {
-	return func(remoteAddr string, rwc io.ReadWriteCloser) (io.ReadWriteCloser, error) {
-		log.Printf("[DEBUG] Connected to %s", remoteAddr)
-		r.ready.Set(true)
-		return rwc, nil
+func (c *client) dial(addr string) (net.Conn, error) {
+	conn, err := net.Dial("tcp", addr)
+	c.Lock()
+	defer c.Unlock()
+	if err == nil {
+		c.conns = append(c.conns, conn)
 	}
+	return conn, err
 }
 
 func (c *client) Connect() error {
-	for _, r := range c.rpcs {
-		r.client = &gorpc.Client{
-			Addr:               r.endpoint,
-			OnConnect:          r.newOnConnectFunc(),
-			DisableCompression: true,
-		}
-		r.client.Start()
-		if r.delay > 0 {
-			go func(r *rpc) {
-				r.batch = r.client.NewBatch()
-				timeout := time.After(r.delay)
-				for {
-					select {
-					case <-timeout:
-						r.callBatch()
-						timeout = time.After(r.delay)
-					}
-				}
-			}(r)
+	for i, endpoint := range c.endpoints {
+		c.clients[i] = &fastrpc.Client{
+			Addr:               endpoint,
+			CompressType:       fastrpc.CompressNone,
+			MaxBatchDelay:      time.Duration(c.maxBatchDelay) * time.Microsecond,
+			MaxPendingRequests: c.maxPendingRequests,
+			NewResponse: func() fastrpc.ResponseReader {
+				return &tlv.Response{}
+			},
+			Dial: c.dial,
 		}
 	}
 	return nil
 }
 
 func (c *client) Close() {
-	for _, r := range c.rpcs {
-		r.client.Stop()
+	c.Lock()
+	defer c.Unlock()
+	for _, conn := range c.conns {
+		conn.Close()
 	}
 }
 
-func (c *client) Validate(request *pdp.Request) (*pdp.Response, error) {
-	var index []int
-	for i, r := range c.rpcs {
-		if r.ready.Get() {
-			index = append(index, i)
-		}
-	}
-	l := len(index)
-	if l == 0 {
-		return nil, errPdpNotReady
-	}
-	i := 0
+func (c *client) client() *fastrpc.Client {
+	l := len(c.clients)
+	index := 0
 	if l > 1 {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
-		i = index[r.Intn(l)]
+		index = r.Intn(l)
 	}
-	r := c.rpcs[i]
-	if r.delay > 0 {
-		batch := r.addToBatch(request)
-		<-batch.Done
-		if batch.Error != nil {
-			return nil, batch.Error
-		}
-		return batch.Response.(*pdp.Response), nil
-	} else {
-		ret, err := r.client.Call(request)
-		if err != nil {
-			return nil, err
-		}
-		return ret.(*pdp.Response), nil
+	return c.clients[index]
+}
+
+func (c *client) Validate(request *pdp.Request) (*pdp.Response, error) {
+	var req tlv.Request
+	var resp tlv.Response
+	req.SwapValue(pdp.MarshalRequest(request))
+	err := c.client().DoDeadline(&req, &resp, time.Now().Add(deadline))
+	if err != nil {
+		return nil, err
 	}
+	ret := pdp.UnmarshalResponse(resp.Value())
+	return ret, nil
 }

@@ -2,11 +2,12 @@ package pep
 
 import (
 	"fmt"
+	"go/build"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
-	"sync"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -407,19 +408,19 @@ func init() {
 		requests[i] = &pdp.Request{
 			Attributes: []*pdp.Attribute{
 				{
-					"k1",
-					"string",
-					directionOpts[rand.Intn(len(directionOpts))],
+					Id:    "k1",
+					Type:  "string",
+					Value: directionOpts[rand.Intn(len(directionOpts))],
 				},
 				{
-					"k2",
-					"string",
-					policySetOpts[rand.Intn(len(policySetOpts))],
+					Id:    "k2",
+					Type:  "string",
+					Value: policySetOpts[rand.Intn(len(policySetOpts))],
 				},
 				{
-					"k3",
-					"domain",
-					domainOpts[rand.Intn(len(domainOpts))],
+					Id:    "k3",
+					Type:  "domain",
+					Value: domainOpts[rand.Intn(len(domainOpts))],
 				},
 			},
 		}
@@ -428,15 +429,15 @@ func init() {
 }
 
 func BenchmarkNoBatch(b *testing.B) {
-	benchmark(1, 0, 0, b)
+	benchmark(0, 0, b)
 }
 
 func BenchmarkBatch(b *testing.B) {
-	benchmark(100, 100, 16, b)
+	benchmark(100, 16, b)
 }
 
-func benchmark(threadCount int, delay, pending uint, b *testing.B) {
-	b.Logf("Threads: %d, Delay: %d, Pending: %d", threadCount, delay, pending)
+func benchmark(delay, pending uint, b *testing.B) {
+	b.Logf("Delay: %d, Pending: %d", delay, pending)
 	ok := true
 	tmpYAST, tmpJCon, server, err := startServer(policySet)
 	if err != nil {
@@ -461,30 +462,22 @@ func benchmark(threadCount int, delay, pending uint, b *testing.B) {
 	}()
 
 	ok = b.Run("BenchmarkPolicySet", func(b *testing.B) {
-		var wg sync.WaitGroup
-		for i := 0; i < threadCount; i++ {
-			wg.Add(1)
-			go func() {
-				count := b.N / threadCount
-				for n := 0; n < count; n++ {
-					in := requests[n%len(requests)]
+		count := b.N
+		for n := 0; n < count; n++ {
+			in := requests[n%len(requests)]
 
-					out, err := client.Validate(in)
-					if err != nil {
-						b.Fatalf("unexpected error: %#v", err)
-					}
+			out, err := client.Validate(in)
+			if err != nil {
+				b.Fatalf("unexpected error: %#v", err)
+			}
 
-					if (out.Effect != pdp.DENY &&
-						out.Effect != pdp.PERMIT &&
-						out.Effect != pdp.NOTAPPLICABLE) ||
-						out.Reason != "Ok" {
-						b.Fatalf("unexpected response: %#v", out)
-					}
-				}
-				wg.Done()
-			}()
+			if (out.Effect != pdp.DENY &&
+				out.Effect != pdp.PERMIT &&
+				out.Effect != pdp.NOTAPPLICABLE) ||
+				out.Reason != "Ok" {
+				b.Fatalf("unexpected response: %#v", out)
+			}
 		}
-		wg.Wait()
 	})
 }
 
@@ -500,7 +493,8 @@ func startServer(p string) (string, string, *os.Process, error) {
 		return "", "", nil, fmt.Errorf("cannot create content file: %s", err)
 	}
 
-	process, err := startProcess("../build/pdpserver", "-p", tmpYAST, "-j", tmpJCon)
+	binPath := filepath.Join(build.Default.GOPATH, "/src/github.com/infobloxopen/themis/build/pdpserver")
+	process, err := startProcess(binPath, "-p", tmpYAST, "-j", tmpJCon)
 	if err != nil {
 		os.Remove(tmpYAST)
 		os.Remove(tmpJCon)
