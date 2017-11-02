@@ -41,29 +41,49 @@ func TestActionFromResponse(t *testing.T) {
 			action:   typeRefuse,
 			redirect: "",
 		},
+		{
+			resp: &pdp.Response{Effect: pdp.PERMIT, Obligations: []*pdp.Attribute{
+				{Id: "log", Value: ""},
+			}},
+			action:   typeLog,
+			redirect: "",
+		},
 	}
 
-	for _, test := range tests {
+	for i, test := range tests {
 		ah := newAttrHolder("test.com", 1)
 		ah.addResponse(test.resp)
 		if ah.action != test.action {
-			t.Errorf("Unexpected action: expected=%d, actual=%d", test.action, ah.action)
+			t.Errorf("Unexpected action in TC #%d: expected=%d, actual=%d", i, test.action, ah.action)
 		}
 		strR := ""
 		if ah.redirect != nil {
 			strR = ah.redirect.Value
 		}
 		if strR != test.redirect {
-			t.Errorf("Unexpected redirect: expected=%q, actual=%q", test.redirect, strR)
+			t.Errorf("Unexpected redirect in TC #%d: expected=%q, actual=%q", i, test.redirect, strR)
 		}
 	}
+}
 
+func TestNilResponse(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
-			t.Errorf("addResponse() did not panic for nil request")
+			t.Errorf("addResponse() did not panic for nil response")
 		}
 	}()
 
 	ah := newAttrHolder("test.com", 1)
 	ah.addResponse(nil)
+}
+
+func TestAllowActionAfterLogAction(t *testing.T) {
+	ah := newAttrHolder("test.com", 1)
+	ah.addResponse(&pdp.Response{Effect: pdp.PERMIT, Obligations: []*pdp.Attribute{
+		{Id: "log"},
+	}})
+	ah.addResponse(&pdp.Response{Effect: pdp.PERMIT})
+	if ah.action != typeLog {
+		t.Errorf("Unexpected action: expected=%d, actual=%d", typeLog, ah.action)
+	}
 }

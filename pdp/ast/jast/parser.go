@@ -36,8 +36,10 @@ const (
 	yastTagEntity     = "entity"
 )
 
+// Parser is a JAST parser implementation.
 type Parser struct{}
 
+// Unmarshal parses policies JSON representation to PDP's internal representation.
 func (p Parser) Unmarshal(in io.Reader, tag *uuid.UUID) (*pdp.PolicyStorage, error) {
 	ctx := newContext()
 	if err := ctx.unmarshal(json.NewDecoder(in)); err != nil {
@@ -47,6 +49,7 @@ func (p Parser) Unmarshal(in io.Reader, tag *uuid.UUID) (*pdp.PolicyStorage, err
 	return pdp.NewPolicyStorage(ctx.rootPolicy, ctx.attrs, tag), nil
 }
 
+// UnmarshalUpdate parses policies update JSON representation to PDP's internal representation.
 func (p Parser) UnmarshalUpdate(in io.Reader, attrs map[string]pdp.Attribute, oldTag, newTag uuid.UUID) (*pdp.PolicyUpdate, error) {
 	ctx := newContextWithAttributes(attrs)
 	u := pdp.NewPolicyUpdate(oldTag, newTag)

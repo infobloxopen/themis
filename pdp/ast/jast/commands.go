@@ -14,13 +14,13 @@ func (ctx *context) unmarshalEntity(d *json.Decoder) (interface{}, error) {
 	}
 
 	var (
-		hidden      bool = true
+		hidden      = true
 		isPolicy    bool
 		isPolicySet bool
 		isRule      bool
 
 		id       string
-		effect   int = -1
+		effect   = -1
 		policies []pdp.Evaluable
 		rules    []*pdp.Rule
 		target   pdp.Target
@@ -208,15 +208,11 @@ func (ctx *context) unmarshalCommands(d *json.Decoder, u *pdp.PolicyUpdate) erro
 		return err
 	}
 
-	if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
+	return jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
 		if err := ctx.unmarshalCommand(d, u); err != nil {
 			return bindErrorf(err, "%d", idx)
 		}
 
 		return nil
-	}, "commands"); err != nil {
-		return err
-	}
-
-	return nil
+	}, "commands")
 }

@@ -8,7 +8,7 @@ import (
 
 	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
-	"github.com/infobloxopen/themis/pdp/ast/yast"
+	"github.com/infobloxopen/themis/pdp/ast"
 	"github.com/infobloxopen/themis/pdp/jcon"
 )
 
@@ -612,18 +612,19 @@ func init() {
 	}
 
 	benchmarkContentStorage = pdp.NewLocalContentStorage([]*pdp.LocalContent{c})
+	parser := ast.NewYAMLParser()
 
-	oneStageBenchmarkPolicyStorage, err = yast.Unmarshal([]byte(oneStageBenchmarkPolicySet), nil)
+	oneStageBenchmarkPolicyStorage, err = parser.Unmarshal(strings.NewReader(oneStageBenchmarkPolicySet), nil)
 	if err != nil {
 		panic(fmt.Errorf("expected no error while parsing policies but got: %s", err))
 	}
 
-	twoStageBenchmarkPolicyStorage, err = yast.Unmarshal([]byte(twoStageBenchmarkPolicySet), nil)
+	twoStageBenchmarkPolicyStorage, err = parser.Unmarshal(strings.NewReader(twoStageBenchmarkPolicySet), nil)
 	if err != nil {
 		panic(fmt.Errorf("expected no error while parsing policies but got: %s", err))
 	}
 
-	threeStageBenchmarkPolicyStorage, err = yast.Unmarshal([]byte(threeStageBenchmarkPolicySet), nil)
+	threeStageBenchmarkPolicyStorage, err = parser.Unmarshal(strings.NewReader(threeStageBenchmarkPolicySet), nil)
 	if err != nil {
 		panic(fmt.Errorf("expected no error while parsing policies but got: %s", err))
 	}

@@ -18,6 +18,7 @@ func init() {
 	actionConv[typeAllow] = fmt.Sprintf("%x", int32(dnstap.PolicyAction_PASSTHROUGH))
 	actionConv[typeRedirect] = fmt.Sprintf("%x", int32(dnstap.PolicyAction_REDIRECT))
 	actionConv[typeBlock] = fmt.Sprintf("%x", int32(dnstap.PolicyAction_NXDOMAIN))
+	actionConv[typeLog] = fmt.Sprintf("%x", int32(dnstap.PolicyAction_PASSTHROUGH))
 }
 
 // correct sequence of func calls
@@ -86,7 +87,17 @@ func (ah *attrHolder) addResponse(r *pdp.Response) {
 
 	switch r.Effect {
 	case pdp.PERMIT:
-		ah.action = typeAllow
+		for _, item := range r.Obligations {
+			if item.Id == "log" {
+				ah.action = typeLog
+				return
+			}
+		}
+		// don't overwrite "Log" action from previous validation
+		if ah.action != typeLog {
+			ah.action = typeAllow
+		}
+		return
 	case pdp.DENY:
 		for _, item := range r.Obligations {
 			switch item.Id {
