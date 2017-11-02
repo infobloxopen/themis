@@ -1,5 +1,5 @@
 hash: ed5e36530f311421c657f9bdec6b56f562a8a55a38b588b110aba3ab17098b0d
-updated: 2017-11-01T16:43:13.745402787+03:00
+updated: 2017-11-02T10:53:31.708333634+03:00
 imports:
 - name: github.com/apache/thrift
   version: a533ea1615e9df935e77b99440cf264c6b417e3e
@@ -78,6 +78,14 @@ imports:
   - iptree
   - numtree
   - strtree
+- name: github.com/klauspost/compress
+  version: d3a829afd165e1e870f10e010000bfa9db586d17
+  subpackages:
+  - flate
+  - gzip
+  - zlib
+- name: github.com/klauspost/cpuid
+  version: ae7887de9fa5d2db4eaa8174a7eff2c1ac00f2da
 - name: github.com/kr/logfmt
   version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -137,12 +145,17 @@ imports:
   version: eca6c1cfdb9b45576efff666be5dda26918aac4f
 - name: github.com/Sirupsen/logrus
   version: 89742aefa4b206dcf400792f3bd35b542998eb3b
+- name: github.com/valyala/bytebufferpool
+  version: e746df99fe4a3986f4d4f79e13c1e0117ce9c2f7
+- name: github.com/valyala/fasthttp
+  version: 70ceaddfae639b5f0eca290382de18f64d5aa62d
+  subpackages:
+  - fasthttputil
+  - stackless
 - name: github.com/valyala/fastrpc
   version: 0b1a558ac7260beec2d23ecf7cf7d3c1444edf5c
   subpackages:
   - tlv
-- name: github.com/valyala/gorpc
-  version: 908281bef77441f2d0ec1792189b4032a1dace0c
 - name: golang.org/x/crypto
   version: 2faea1465de239e4babd8f5905cc25b781712442
   repo: https://go.googlesource.com/crypto
