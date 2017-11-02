@@ -3,25 +3,32 @@ package pep
 import "google.golang.org/grpc/naming"
 
 type staticWatcher struct {
-	Addrs []string
-	stop  chan bool
-	sent  bool
+	update []*naming.Update
+	stop   chan bool
+	sent   bool
+}
+
+func newStaticWatcher(addrs []string) *staticWatcher {
+	w := &staticWatcher{
+		update: make([]*naming.Update, len(addrs)),
+		stop:   make(chan bool),
+	}
+
+	for i, addr := range addrs {
+		w.update[i] = &naming.Update{Op: naming.Add, Addr: addr}
+	}
+
+	return w
 }
 
 func (w *staticWatcher) Next() ([]*naming.Update, error) {
 	if w.sent {
-		stop := <-w.stop
-		if stop {
-			return nil, nil
-		}
+		<-w.stop
+		return nil, nil
 	}
-	w.stop = make(chan bool)
+
 	w.sent = true
-	u := make([]*naming.Update, len(w.Addrs))
-	for i, a := range w.Addrs {
-		u[i] = &naming.Update{Op: naming.Add, Addr: a}
-	}
-	return u, nil
+	return w.update, nil
 }
 
 func (w *staticWatcher) Close() {

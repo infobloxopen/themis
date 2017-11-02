@@ -7,18 +7,21 @@ import (
 )
 
 type staticResolver struct {
-	Name  string
-	Addrs []string
+	name  string
+	addrs []string
 }
 
 func newStaticResolver(name string, addrs ...string) naming.Resolver {
-	return &staticResolver{Name: name, Addrs: addrs}
+	return &staticResolver{
+		name:  name,
+		addrs: addrs,
+	}
 }
 
 func (r *staticResolver) Resolve(target string) (naming.Watcher, error) {
-	if target != r.Name {
-		return nil, fmt.Errorf("%q is an invalid target for resolver %q", target, r.Name)
+	if target != r.name {
+		return nil, fmt.Errorf("%q is an invalid target for resolver %q", target, r.name)
 	}
 
-	return &staticWatcher{Addrs: r.Addrs}, nil
+	return newStaticWatcher(r.addrs), nil
 }
