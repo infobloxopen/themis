@@ -45,9 +45,5 @@ func (ctx *context) unmarshal(d *json.Decoder) error {
 		return err
 	}
 
-	if err = jparser.CheckEOF(d); err != nil {
-		return err
-	}
-
-	return nil
+	return jparser.CheckEOF(d)
 }

@@ -36,6 +36,7 @@ const (
 	typeAllow
 	typeRedirect
 	typeBlock
+	typeLog
 
 	actCount
 )
@@ -313,7 +314,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		goto Exit
 	}
 
-	if ah.action == typeAllow {
+	if ah.action == typeAllow || ah.action == typeLog {
 		// resolve domain name to IP
 		responseWriter := new(Writer)
 		status, err = plugin.NextOrFailure(p.Name(), p.Next, ctx, responseWriter, query)
@@ -347,6 +348,9 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 
 	switch ah.action {
 	case typeAllow:
+		r = respMsg
+	case typeLog:
+		sendExtra = true
 		r = respMsg
 	case typeRedirect:
 		sendExtra = true

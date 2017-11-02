@@ -40,7 +40,7 @@ func (ctx *context) unmarshalPolicies(d *json.Decoder) ([]pdp.Evaluable, error) 
 
 func (ctx *context) unmarshalEvaluable(d *json.Decoder) (pdp.Evaluable, error) {
 	var (
-		hidden      bool = true
+		hidden      = true
 		isPolicy    bool
 		isPolicySet bool
 

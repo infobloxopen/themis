@@ -72,10 +72,13 @@ func (s *policyDnstapSender) SendCRExtraMsg(pw *ProxyWriter, attrs []*pb.Attribu
 		crMsg := b.ToClientResponse()
 		crMsg.ResponseTimeNsec = &timeNs
 		t := tap.Dnstap_MESSAGE
-		extra, err := proto.Marshal(&Extra{Attrs: convertAttrs(attrs)})
-		if err != nil {
-			log.Printf("[ERROR] Failed to create extra data for dnstap CR message (%v)", err)
-			return
+
+		var extra []byte
+		if attrs != nil {
+			extra, err = proto.Marshal(&Extra{Attrs: convertAttrs(attrs)})
+			if err != nil {
+				log.Printf("[ERROR] Failed to create extra data for dnstap CR message (%v)", err)
+			}
 		}
 		dnstapMsg := tap.Dnstap{Type: &t, Message: crMsg, Extra: extra}
 		s.ior.Dnstap(dnstapMsg)
