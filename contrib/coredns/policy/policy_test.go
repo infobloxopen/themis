@@ -11,6 +11,7 @@ import (
 	dtest "github.com/coredns/coredns/plugin/dnstap/test"
 	"github.com/coredns/coredns/plugin/pkg/dnstest"
 	"github.com/coredns/coredns/plugin/test"
+	ot "github.com/opentracing/opentracing-go"
 
 	"github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 	pdp "github.com/infobloxopen/themis/pdp-service"
@@ -349,6 +350,55 @@ func TestPolicy(t *testing.T) {
 
 }
 
+func TestPPConnect(t *testing.T) {
+	p := newPolicyPlugin()
+	p.endpoints = []string{
+		"127.0.0.1:5555",
+		"127.0.0.2:5555",
+	}
+
+	// Test if closing not connected plugin doesn't panic.
+	p.closeConn()
+
+	// Test unary gRPC connection.
+	err := p.connect()
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	}
+
+	p.closeConn()
+
+	p = newPolicyPlugin()
+	p.endpoints = []string{
+		"127.0.0.1:5555",
+		"127.0.0.2:5555",
+	}
+
+	// Test streaming gRPC connection.
+	p.streams = 96
+	err = p.connect()
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	}
+
+	p.closeConn()
+
+	p = newPolicyPlugin()
+	p.endpoints = []string{
+		"127.0.0.1:5555",
+		"127.0.0.2:5555",
+	}
+
+	// Test connection with tracer.
+	p.trace = &testTracerHandler{}
+	err = p.connect()
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	}
+
+	p.closeConn()
+}
+
 func handler() plugin.Handler {
 	return plugin.HandlerFunc(func(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 		q := r.Question[0].Name
@@ -402,7 +452,7 @@ func makeRequestWithEDNS0(code uint16, hexstring string, nonlocal bool) *dns.Msg
 }
 
 func TestEdns(t *testing.T) {
-	pm := PolicyPlugin{options: make(map[uint16][]*edns0Map)}
+	pm := newPolicyPlugin()
 
 	// Add EDNS mapping
 	if err := pm.addEDNS0Map("0xfffa", "client_id", "hex", "string", "32", "0", "16"); err != nil {
@@ -610,4 +660,18 @@ checkAttr:
 		}
 		t.Errorf("Unexpected attribute found %q in test %d", a, i)
 	}
+}
+
+type testTracerHandler struct{}
+
+func (t *testTracerHandler) ServeDNS(context.Context, dns.ResponseWriter, *dns.Msg) (int, error) {
+	return 0, nil
+}
+
+func (t *testTracerHandler) Name() string {
+	return "testTracerHandler"
+}
+
+func (t *testTracerHandler) Tracer() ot.Tracer {
+	return nil
 }

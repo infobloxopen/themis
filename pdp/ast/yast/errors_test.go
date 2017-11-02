@@ -9,7 +9,7 @@ import (
 )
 
 var testCases = []map[string]string{
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: sometype # ERROR: Wrong type!
@@ -22,7 +22,7 @@ policies:
 		"err": fmt.Sprintf("%T", &attributeTypeError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: string
@@ -40,7 +40,7 @@ policies:
 		"err": fmt.Sprintf("%T", &policyAmbiguityError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: string
@@ -53,7 +53,7 @@ policies:
 		"err": fmt.Sprintf("%T", &unknownRCAError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: string
@@ -66,7 +66,7 @@ policies:
 		"err": fmt.Sprintf("%T", &missingRCAError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: string
@@ -83,7 +83,7 @@ policies:
 		"err": fmt.Sprintf("%T", &missingMapRCAParamError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: string
@@ -101,7 +101,7 @@ policies:
 		"err": fmt.Sprintf("%T", &missingDefaultRuleRCAError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: string
@@ -119,7 +119,7 @@ policies:
 		"err": fmt.Sprintf("%T", &missingErrorRuleRCAError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: string
@@ -135,7 +135,7 @@ policies:
 		"err": fmt.Sprintf("%T", &unknownPCAError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: string
@@ -151,7 +151,7 @@ policies:
 		"err": fmt.Sprintf("%T", &missingPCAError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: string
@@ -170,7 +170,7 @@ policies:
 		"err": fmt.Sprintf("%T", &missingMapPCAParamError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: string
@@ -190,7 +190,7 @@ policies:
 		"err": fmt.Sprintf("%T", &missingDefaultPolicyPCAError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: string
@@ -210,7 +210,7 @@ policies:
 		"err": fmt.Sprintf("%T", &missingErrorPolicyPCAError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: boolean
@@ -226,7 +226,7 @@ policies:
 		"err": fmt.Sprintf("%T", &mapperArgumentTypeError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: string
@@ -242,7 +242,7 @@ policies:
 		"err": fmt.Sprintf("%T", &conditionTypeError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: string
@@ -256,7 +256,7 @@ policies:
 		"err": fmt.Sprintf("%T", &unknownEffectError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: string
@@ -275,7 +275,7 @@ policies:
 		"err": fmt.Sprintf("%T", &unknownMatchFunctionError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: boolean # ERROR: Wrong attr type for target
@@ -294,7 +294,7 @@ policies:
 		"err": fmt.Sprintf("%T", &matchFunctionCastError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: string
@@ -311,7 +311,7 @@ policies:
 		"err": fmt.Sprintf("%T", &matchFunctionArgsNumberError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: string
@@ -329,7 +329,7 @@ policies:
 		"err": fmt.Sprintf("%T", &matchFunctionBothAttrsError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: string
@@ -350,7 +350,7 @@ policies:
 		"err": fmt.Sprintf("%T", &matchFunctionBothValuesError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 attributes:
   a: string
@@ -383,7 +383,7 @@ func TestUnmarshalErrors(t *testing.T) {
 }
 
 var testCasesUpdate = []map[string]string{
-	map[string]string{
+	{
 		"update": `
 - op: some # ERROR: Unknown operation
   path:
@@ -397,7 +397,7 @@ var testCasesUpdate = []map[string]string{
 		"err": fmt.Sprintf("%T", &unknownPolicyUpdateOperationError{}),
 	},
 
-	map[string]string{
+	{
 		"update": `
 - op: add
   path:
@@ -411,7 +411,7 @@ var testCasesUpdate = []map[string]string{
 		"err": fmt.Sprintf("%T", &invalidPolicyUpdatePathElementError{}),
 	},
 
-	map[string]string{
+	{
 		"update": `
 - op: add
   path:
@@ -422,7 +422,7 @@ var testCasesUpdate = []map[string]string{
 		"err": fmt.Sprintf("%T", &entityMissingKeyError{}),
 	},
 
-	map[string]string{
+	{
 		"update": `
 - op: add
   path:

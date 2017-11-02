@@ -184,6 +184,16 @@ func TestPolicyConfigParse(t *testing.T) {
 			input: `.:53 {
                         policy {
                             endpoint 10.2.4.1:5555
+                            streams
+                        }
+                    }`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Wrong argument count or unexpected line ending",
+		},
+		{
+			input: `.:53 {
+                        policy {
+                            endpoint 10.2.4.1:5555
                             streams -1
                         }
                     }`,

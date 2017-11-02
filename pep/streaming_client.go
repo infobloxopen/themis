@@ -64,11 +64,6 @@ func (c *pdpStreamingClient) Connect(addr string) error {
 	client := pb.NewPDPClient(c.conn)
 	c.client = &client
 
-	if err = c.makeStreams(); err != nil {
-		c.Close()
-		return err
-	}
-
 	return nil
 }
 
@@ -98,12 +93,22 @@ func (c *pdpStreamingClient) makeStreams() error {
 		panic(fmt.Errorf("streaming client must be created with at least 1 stream but got %d", c.opts.maxStreams))
 	}
 
+	if c.client == nil {
+		return ErrorNotConnected
+	}
+
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
+	if c.streams != nil {
+		return nil
+	}
+
 	c.streams = make(chan pb.PDP_NewValidationStreamClient, c.opts.maxStreams)
 	for i := 0; i < c.opts.maxStreams; i++ {
-		s, err := (*c.client).NewValidationStream(context.TODO())
+		s, err := (*c.client).NewValidationStream(context.TODO(),
+			grpc.FailFast(false),
+		)
 		if err != nil {
 			return err
 		}
@@ -148,10 +153,19 @@ func (c *pdpStreamingClient) getStream() (stream, error) {
 	ch := c.streams
 	c.lock.RUnlock()
 
-	if ch != nil {
-		if s, ok := <-ch; ok {
-			return stream{s: s, ch: ch}, nil
+	if ch == nil {
+		if err := c.makeStreams(); err != nil {
+			c.closeStreams()
+			return stream{}, err
 		}
+
+		c.lock.RLock()
+		ch = c.streams
+		c.lock.RUnlock()
+	}
+
+	if s, ok := <-ch; ok {
+		return stream{s: s, ch: ch}, nil
 	}
 
 	return stream{}, ErrorNotConnected

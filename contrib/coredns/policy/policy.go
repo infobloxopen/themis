@@ -102,7 +102,10 @@ func (p *PolicyPlugin) connect() error {
 
 // closeConn terminates previously established connection.
 func (p *PolicyPlugin) closeConn() {
-	p.pdp.Close()
+	if p.pdp != nil {
+		p.pdp.Close()
+		p.pdp = nil
+	}
 }
 
 func (p *PolicyPlugin) parseOption(c *caddy.Controller) error {
