@@ -8,13 +8,17 @@ import (
 )
 
 const (
+	// DelimObjectStart contains json object '{' start delimiter.
 	DelimObjectStart = "{"
-	DelimObjectEnd   = "}"
-
+	// DelimObjectEnd contains json object '}' start delimiter.
+	DelimObjectEnd = "}"
+	// DelimArrayStart contains json array '[' start delimiter.
 	DelimArrayStart = "["
-	DelimArrayEnd   = "]"
+	// DelimArrayEnd contains json array '}' end delimiter.
+	DelimArrayEnd = "]"
 )
 
+// CheckRootObjectStart checks whether JSON byte stream starts with '{'
 func CheckRootObjectStart(d *json.Decoder) (bool, error) {
 	t, err := d.Token()
 	if err == io.EOF {
@@ -37,6 +41,7 @@ func CheckRootObjectStart(d *json.Decoder) (bool, error) {
 	return true, nil
 }
 
+// CheckRootArrayStart checks whether JSON byte stream starts with '['
 func CheckRootArrayStart(d *json.Decoder) (bool, error) {
 	t, err := d.Token()
 	if err == io.EOF {
@@ -59,6 +64,7 @@ func CheckRootArrayStart(d *json.Decoder) (bool, error) {
 	return true, nil
 }
 
+// CheckObjectStart checks whether next token is '{' in JSON byte stream.
 func CheckObjectStart(d *json.Decoder, desc string) error {
 	t, err := d.Token()
 	if err != nil {
@@ -77,6 +83,7 @@ func CheckObjectStart(d *json.Decoder, desc string) error {
 	return nil
 }
 
+// CheckArrayStart checks whether next token is '[' in JSON byte stream.
 func CheckArrayStart(d *json.Decoder, desc string) error {
 	t, err := d.Token()
 	if err != nil {
@@ -95,6 +102,8 @@ func CheckArrayStart(d *json.Decoder, desc string) error {
 	return nil
 }
 
+// CheckObjectArrayStart checks whether next token is '[' or "{" in JSON byte stream.
+// It returns true if it is "{" if there wasn't any error.
 func CheckObjectArrayStart(d *json.Decoder, desc string) (bool, error) {
 	t, err := d.Token()
 	if err != nil {
@@ -117,6 +126,7 @@ func CheckObjectArrayStart(d *json.Decoder, desc string) (bool, error) {
 	return false, newObjectArrayStartDelimiterError(delim, DelimObjectStart, DelimArrayStart, desc)
 }
 
+// CheckEOF checks EOF of the JSON byte stream.
 func CheckEOF(d *json.Decoder) error {
 	t, err := d.Token()
 	if err == io.EOF {
@@ -130,6 +140,7 @@ func CheckEOF(d *json.Decoder) error {
 	return newMissingEOFError(t)
 }
 
+// SkipValue skips object or array in JSON byte stream.
 func SkipValue(d *json.Decoder, desc string) error {
 	t, err := d.Token()
 	if err != nil {
@@ -153,6 +164,7 @@ func SkipValue(d *json.Decoder, desc string) error {
 	return nil
 }
 
+// SkipObject skips object in JSON byte stream.
 func SkipObject(d *json.Decoder, desc string) error {
 	for {
 		t, err := d.Token()
@@ -180,6 +192,7 @@ func SkipObject(d *json.Decoder, desc string) error {
 	}
 }
 
+// SkipArray skips array in JSON byte stream.
 func SkipArray(d *json.Decoder, desc string) error {
 	i := 1
 	for {
@@ -217,11 +230,16 @@ func SkipArray(d *json.Decoder, desc string) error {
 	}
 }
 
+// Pair represents unmarshalled part of JSON byte stream.
+// Value is an array of Pairs or primitive value or []interface{}.
 type Pair struct {
 	K string
 	V interface{}
 }
 
+// GetUndefined unmarshals whole part of JSON byte stream.
+// Part is an object or an array or primitive value.
+// It returns array of Pairs or primitive value or []interface{}.
 func GetUndefined(d *json.Decoder, desc string) (interface{}, error) {
 	t, err := d.Token()
 	if err != nil {
@@ -257,6 +275,7 @@ func GetUndefined(d *json.Decoder, desc string) (interface{}, error) {
 	return t, nil
 }
 
+// GetObject unmarshals whole object from JSON byte stream to a list of Piars.
 func GetObject(d *json.Decoder, desc string) ([]Pair, error) {
 	obj := []Pair{}
 
@@ -288,6 +307,8 @@ func GetObject(d *json.Decoder, desc string) ([]Pair, error) {
 	}
 }
 
+// GetArray unmarshals whole array from JSON byte stream to an []interface{}.
+// []interface{} item is an array of Pairs or primitive value or []interface{}.
 func GetArray(d *json.Decoder, desc string) ([]interface{}, error) {
 	arr := []interface{}{}
 	i := 1
@@ -332,6 +353,7 @@ func GetArray(d *json.Decoder, desc string) ([]interface{}, error) {
 	}
 }
 
+// GetBoolean unmarshals boolean value from JSON byte stream.
 func GetBoolean(d *json.Decoder, desc string) (bool, error) {
 	t, err := d.Token()
 	if err != nil {
@@ -346,6 +368,7 @@ func GetBoolean(d *json.Decoder, desc string) (bool, error) {
 	return b, nil
 }
 
+// GetString unmarshals string value from JSON byte stream.
 func GetString(d *json.Decoder, desc string) (string, error) {
 	t, err := d.Token()
 	if err != nil {
@@ -360,6 +383,7 @@ func GetString(d *json.Decoder, desc string) (string, error) {
 	return s, nil
 }
 
+// GetStringSequence iterates over object keys or string array items in JSON byte stream.
 func GetStringSequence(d *json.Decoder, f func(idx int, s string) error, desc string) error {
 	ok, err := CheckObjectArrayStart(d, desc)
 	if err != nil {
@@ -373,6 +397,7 @@ func GetStringSequence(d *json.Decoder, f func(idx int, s string) error, desc st
 	return GetStringSequenceFromArray(d, f, desc)
 }
 
+// GetStringSequenceFromObject iterates over object keys in JSON byte stream.
 func GetStringSequenceFromObject(d *json.Decoder, f func(idx int, s string) error, desc string) error {
 	i := 1
 	for {
@@ -408,6 +433,7 @@ func GetStringSequenceFromObject(d *json.Decoder, f func(idx int, s string) erro
 	}
 }
 
+// GetStringSequenceFromArray iterates over string array items in JSON byte stream.
 func GetStringSequenceFromArray(d *json.Decoder, f func(idx int, s string) error, desc string) error {
 	i := 1
 	for {
@@ -438,6 +464,7 @@ func GetStringSequenceFromArray(d *json.Decoder, f func(idx int, s string) error
 	}
 }
 
+// UnmarshalObject sequentially unmarshals object from JSON byte stream.
 func UnmarshalObject(d *json.Decoder, u func(key string, d *json.Decoder) error, desc string) error {
 	for {
 		t, err := d.Token()
@@ -465,6 +492,7 @@ func UnmarshalObject(d *json.Decoder, u func(key string, d *json.Decoder) error,
 	}
 }
 
+// UnmarshalObjectArray sequentially unmarshals array from JSON byte stream.
 func UnmarshalObjectArray(d *json.Decoder, u func(idx int, d *json.Decoder) error, desc string) error {
 	i := 1
 	for {

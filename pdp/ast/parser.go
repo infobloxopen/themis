@@ -1,3 +1,4 @@
+// Package ast implements policies Abstract Syntax Tree (AST) parsers.
 package ast
 
 import (
@@ -10,6 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// Parser is interface that wraps the AST parser methods.
 type Parser interface {
 	// Unmarshal parses policies representation to PDP's internal
 	// representation and returns pointer to PolicyStorage with the policies.
@@ -25,10 +27,12 @@ type Parser interface {
 	UnmarshalUpdate(in io.Reader, attrs map[string]pdp.Attribute, oldTag, newTag uuid.UUID) (*pdp.PolicyUpdate, error)
 }
 
+// NewJSONParser is a JSON AST parser constructor.
 func NewJSONParser() Parser {
 	return jast.Parser{}
 }
 
+// NewYAMLParser is a YAML AST parser constructor.
 func NewYAMLParser() Parser {
 	return yast.Parser{}
 }

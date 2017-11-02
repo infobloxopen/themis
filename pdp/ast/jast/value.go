@@ -179,7 +179,7 @@ func (ctx context) unmarshalValue(d *json.Decoder) (pdp.AttributeValue, error) {
 	var (
 		cOk bool
 		a   pdp.AttributeValue
-		t   int = -1
+		t   = -1
 	)
 
 	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {

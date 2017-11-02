@@ -45,23 +45,32 @@ func (ctx context) unmarshalAdjustedArgumentPair(d *json.Decoder) (pdp.Expressio
 		return nil, nil, err
 	}
 
-	var first, second pdp.Expression
+	var (
+		first, second pdp.Expression
+		numArgs       int
+	)
 
 	if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
 		var err error
 
 		switch idx {
 		case 1:
+			numArgs++
 			first, second, err = ctx.unmarshalAdjustedArguments(nil, nil, d)
 			return err
 		case 2:
+			numArgs++
 			first, second, err = ctx.unmarshalAdjustedArguments(first, second, d)
 			return err
-		default:
-			return newMatchFunctionArgsNumberError(idx)
 		}
+
+		return nil
 	}, "function arguments"); err != nil {
 		return nil, nil, err
+	}
+
+	if numArgs != 2 {
+		return nil, nil, newMatchFunctionArgsNumberError(numArgs)
 	}
 
 	return first, second, nil

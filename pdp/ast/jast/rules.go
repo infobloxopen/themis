@@ -28,9 +28,9 @@ func (ctx context) unmarshalCondition(d *json.Decoder) (pdp.Expression, error) {
 
 func (ctx context) unmarshalRule(d *json.Decoder) (*pdp.Rule, error) {
 	var (
-		hidden bool = true
+		hidden = true
 		id     string
-		effect int = -1
+		effect = -1
 		target pdp.Target
 		cond   pdp.Expression
 		obligs []pdp.AttributeAssignmentExpression
