@@ -48,22 +48,22 @@ func TestPolicy(t *testing.T) {
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			response:  &pdp.Response{Effect: pdp.Response_INDETERMINATE},
+			response:  &pdp.Response{Effect: pdp.INDETERMINATE},
 			status:    dns.RcodeServerFailure,
 			err:       errInvalidAction,
 		},
 		{
 			query:      "test.com.",
 			queryType:  dns.TypeA,
-			response:   &pdp.Response{Effect: pdp.Response_PERMIT},
-			responseIP: &pdp.Response{Effect: pdp.Response_INDETERMINATE},
+			response:   &pdp.Response{Effect: pdp.PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.INDETERMINATE},
 			status:     dns.RcodeServerFailure,
 			err:        errInvalidAction,
 		},
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
+			response:  &pdp.Response{Effect: pdp.PERMIT},
 			errRespIP: errFakePdp,
 			status:    dns.RcodeServerFailure,
 			err:       errFakePdp,
@@ -71,7 +71,7 @@ func TestPolicy(t *testing.T) {
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			response:  &pdp.Response{Effect: pdp.Response_DENY},
+			response:  &pdp.Response{Effect: pdp.DENY},
 			status:    dns.RcodeNameError,
 			err:       nil,
 			attrs: []*pdp.Attribute{
@@ -85,16 +85,16 @@ func TestPolicy(t *testing.T) {
 		{
 			query:      "test.com.",
 			queryType:  dns.TypeA,
-			response:   &pdp.Response{Effect: pdp.Response_PERMIT},
-			responseIP: &pdp.Response{Effect: pdp.Response_PERMIT},
+			response:   &pdp.Response{Effect: pdp.PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.PERMIT},
 			status:     dns.RcodeSuccess,
 			err:        nil,
 		},
 		{
 			query:      "test.com.",
 			queryType:  dns.TypeA,
-			response:   &pdp.Response{Effect: pdp.Response_PERMIT},
-			responseIP: &pdp.Response{Effect: pdp.Response_DENY},
+			response:   &pdp.Response{Effect: pdp.PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.DENY},
 			status:     dns.RcodeNameError,
 			err:        nil,
 			attrs: []*pdp.Attribute{
@@ -109,8 +109,8 @@ func TestPolicy(t *testing.T) {
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			response: &pdp.Response{Effect: pdp.Response_DENY,
-				Obligation: []*pdp.Attribute{{Id: "redirect_to", Value: "221.228.88.194"}}},
+			response: &pdp.Response{Effect: pdp.DENY,
+				Obligations: []*pdp.Attribute{{Id: "redirect_to", Value: "221.228.88.194"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
 			attrs: []*pdp.Attribute{
@@ -125,8 +125,8 @@ func TestPolicy(t *testing.T) {
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			response: &pdp.Response{Effect: pdp.Response_DENY,
-				Obligation: []*pdp.Attribute{{Id: "redirect_to", Value: "redirect.biz"}}},
+			response: &pdp.Response{Effect: pdp.DENY,
+				Obligations: []*pdp.Attribute{{Id: "redirect_to", Value: "redirect.biz"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
 			attrs: []*pdp.Attribute{
@@ -141,9 +141,9 @@ func TestPolicy(t *testing.T) {
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
-			responseIP: &pdp.Response{Effect: pdp.Response_DENY,
-				Obligation: []*pdp.Attribute{{Id: "redirect_to", Value: "221.228.88.194"}}},
+			response:  &pdp.Response{Effect: pdp.PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.DENY,
+				Obligations: []*pdp.Attribute{{Id: "redirect_to", Value: "221.228.88.194"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
 			attrs: []*pdp.Attribute{
@@ -159,9 +159,9 @@ func TestPolicy(t *testing.T) {
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
-			responseIP: &pdp.Response{Effect: pdp.Response_DENY,
-				Obligation: []*pdp.Attribute{{Id: "redirect_to", Value: "redirect.biz"}}},
+			response:  &pdp.Response{Effect: pdp.PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.DENY,
+				Obligations: []*pdp.Attribute{{Id: "redirect_to", Value: "redirect.biz"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
 			attrs: []*pdp.Attribute{
@@ -177,9 +177,9 @@ func TestPolicy(t *testing.T) {
 		{
 			query:     "test.org.",
 			queryType: dns.TypeAAAA,
-			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
-			responseIP: &pdp.Response{Effect: pdp.Response_DENY,
-				Obligation: []*pdp.Attribute{{Id: "redirect_to", Value: "2001:db8:0:200:0:0:0:7"}}},
+			response:  &pdp.Response{Effect: pdp.PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.DENY,
+				Obligations: []*pdp.Attribute{{Id: "redirect_to", Value: "2001:db8:0:200:0:0:0:7"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
 			attrs: []*pdp.Attribute{
@@ -195,22 +195,22 @@ func TestPolicy(t *testing.T) {
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			response: &pdp.Response{Effect: pdp.Response_DENY,
-				Obligation: []*pdp.Attribute{{Id: "redirect_to", Value: "test.net"}}},
+			response: &pdp.Response{Effect: pdp.DENY,
+				Obligations: []*pdp.Attribute{{Id: "redirect_to", Value: "test.net"}}},
 			status: dns.RcodeServerFailure,
 			err:    errFakeResolver,
 		},
 		{
 			query:     "test.net.",
 			queryType: dns.TypeA,
-			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
+			response:  &pdp.Response{Effect: pdp.PERMIT},
 			status:    dns.RcodeServerFailure,
 			err:       errFakeResolver,
 		},
 		{
 			query:     "test.org.",
 			queryType: dns.TypeAAAA,
-			response:  &pdp.Response{Effect: pdp.Response_DENY},
+			response:  &pdp.Response{Effect: pdp.DENY},
 			status:    dns.RcodeNameError,
 			err:       nil,
 			attrs: []*pdp.Attribute{
@@ -224,15 +224,15 @@ func TestPolicy(t *testing.T) {
 		{
 			query:     "test.org.",
 			queryType: dns.TypeAAAA,
-			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
+			response:  &pdp.Response{Effect: pdp.PERMIT},
 			status:    dns.RcodeSuccess,
 			err:       nil,
 		},
 		{
 			query:     "test.org.",
 			queryType: dns.TypeAAAA,
-			response: &pdp.Response{Effect: pdp.Response_DENY,
-				Obligation: []*pdp.Attribute{{Id: "redirect_to", Value: "redirect.net"}}},
+			response: &pdp.Response{Effect: pdp.DENY,
+				Obligations: []*pdp.Attribute{{Id: "redirect_to", Value: "redirect.net"}}},
 			status: dns.RcodeSuccess,
 			err:    nil,
 			attrs: []*pdp.Attribute{
@@ -247,24 +247,24 @@ func TestPolicy(t *testing.T) {
 		{
 			query:     "test.org.",
 			queryType: dns.TypeA,
-			response: &pdp.Response{Effect: pdp.Response_DENY,
-				Obligation: []*pdp.Attribute{{Id: "refuse", Value: "true"}}},
+			response: &pdp.Response{Effect: pdp.DENY,
+				Obligations: []*pdp.Attribute{{Id: "refuse", Value: "true"}}},
 			status: dns.RcodeRefused,
 			err:    nil,
 		},
 		{
 			query:     "test.com.",
 			queryType: dns.TypeA,
-			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
-			responseIP: &pdp.Response{Effect: pdp.Response_DENY,
-				Obligation: []*pdp.Attribute{{Id: "refuse", Value: "true"}}},
+			response:  &pdp.Response{Effect: pdp.PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.DENY,
+				Obligations: []*pdp.Attribute{{Id: "refuse", Value: "true"}}},
 			status: dns.RcodeRefused,
 			err:    nil,
 		},
 		{
 			query:     "nxdomain.org.",
 			queryType: dns.TypeA,
-			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
+			response:  &pdp.Response{Effect: pdp.PERMIT},
 			status:    dns.RcodeNameError,
 			err:       nil,
 		},
@@ -599,9 +599,9 @@ func (s *testDnstapSender) checkAttributes(t *testing.T, i int, attrs []*pdp.Att
 checkAttr:
 	for _, a := range s.attrs {
 		for _, e := range attrs {
-			if e.GetId() == a.GetId() {
-				if e.GetValue() != a.GetValue() {
-					t.Errorf("Attribute %s: expected %q , found %q in test %d", e.GetId(), e.GetValue(), a.GetValue(), i)
+			if e.Id == a.Id {
+				if e.Value != a.Value {
+					t.Errorf("Attribute %s: expected %q , found %q in test %d", e.Id, e.Value, a.Value, i)
 					return
 				}
 				continue checkAttr

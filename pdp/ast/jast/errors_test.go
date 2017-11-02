@@ -9,7 +9,7 @@ import (
 )
 
 var testCases = []map[string]string{
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -29,7 +29,7 @@ var testCases = []map[string]string{
 		"err": fmt.Sprintf("%T", &attributeTypeError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -60,7 +60,7 @@ var testCases = []map[string]string{
 		"err": fmt.Sprintf("%T", &policyAmbiguityError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -75,7 +75,7 @@ var testCases = []map[string]string{
 		"err": fmt.Sprintf("%T", &policyMissingKeyError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -95,7 +95,7 @@ var testCases = []map[string]string{
 		"err": fmt.Sprintf("%T", &unknownRCAError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -114,7 +114,7 @@ var testCases = []map[string]string{
 		"err": fmt.Sprintf("%T", &missingRCAError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -141,7 +141,7 @@ var testCases = []map[string]string{
 		"err": fmt.Sprintf("%T", &missingDefaultRuleRCAError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -168,7 +168,7 @@ var testCases = []map[string]string{
 		"err": fmt.Sprintf("%T", &missingErrorRuleRCAError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -194,7 +194,7 @@ var testCases = []map[string]string{
 		"err": fmt.Sprintf("%T", &unknownPCAError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -219,7 +219,7 @@ var testCases = []map[string]string{
 		"err": fmt.Sprintf("%T", &missingPCAError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -251,7 +251,7 @@ var testCases = []map[string]string{
 		"err": fmt.Sprintf("%T", &missingDefaultPolicyPCAError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -283,7 +283,7 @@ var testCases = []map[string]string{
 		"err": fmt.Sprintf("%T", &missingErrorPolicyPCAError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -308,7 +308,7 @@ var testCases = []map[string]string{
 		"err": fmt.Sprintf("%T", &mapperArgumentTypeError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -331,7 +331,7 @@ var testCases = []map[string]string{
 		"err": fmt.Sprintf("%T", &conditionTypeError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -351,7 +351,7 @@ var testCases = []map[string]string{
 		"err": fmt.Sprintf("%T", &unknownEffectError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -386,7 +386,7 @@ var testCases = []map[string]string{
 		"err": fmt.Sprintf("%T", &unknownMatchFunctionError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -421,7 +421,7 @@ var testCases = []map[string]string{
 		"err": fmt.Sprintf("%T", &matchFunctionCastError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -450,7 +450,7 @@ var testCases = []map[string]string{
 		"err": fmt.Sprintf("%T", &matchFunctionArgsNumberError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -483,7 +483,7 @@ var testCases = []map[string]string{
 		"err": fmt.Sprintf("%T", &matchFunctionBothAttrsError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -521,7 +521,7 @@ var testCases = []map[string]string{
 		"err": fmt.Sprintf("%T", &matchFunctionBothValuesError{}),
 	},
 
-	map[string]string{
+	{
 		"policy": `
 {
   "attributes": {
@@ -569,7 +569,7 @@ func TestUnmarshalErrors(t *testing.T) {
 }
 
 var testCasesUpdate = []map[string]string{
-	map[string]string{
+	{
 		"update": `
 [
   {
@@ -590,7 +590,7 @@ var testCasesUpdate = []map[string]string{
 		"err": fmt.Sprintf("%T", &unknownPolicyUpdateOperationError{}),
 	},
 
-	map[string]string{
+	{
 		"update": `
 [
   {
@@ -607,7 +607,7 @@ var testCasesUpdate = []map[string]string{
 		"err": fmt.Sprintf("%T", &entityMissingKeyError{}),
 	},
 
-	map[string]string{
+	{
 		"update": `
 [
   {

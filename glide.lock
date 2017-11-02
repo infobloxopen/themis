@@ -1,8 +1,8 @@
-hash: 77a6718b8f335167b7d23fc6f9f284ff146242d5082cb061f4f8cdfe6e1b63b4
-updated: 2017-10-23T17:26:29.276862266+03:00
+hash: d3b8453cd02e9bb681f4127e2f4406e49810ad258edae9bea0aa929716c61d8c
+updated: 2017-10-26T13:51:13.203322112+03:00
 imports:
 - name: github.com/apache/thrift
-  version: 54ce558ba80905d124b82727d196f6d58964b74c
+  version: 254e86b0103be51c6af9cc50220ee8c144234239
   subpackages:
   - lib/go/thrift
 - name: github.com/beorn7/perks
@@ -10,7 +10,7 @@ imports:
   subpackages:
   - quantile
 - name: github.com/coredns/coredns
-  version: cb5e82b82eb85b49be8bb8747f3475b8d76d57e1
+  version: b5d8f2a3d1b82d8198edae40d284ce78991b1c54
   subpackages:
   - core/dnsserver
   - pb
@@ -69,7 +69,7 @@ imports:
 - name: github.com/google/uuid
   version: e367a344cbe8e08149f9951115dc299ebd42b919
 - name: github.com/grpc-ecosystem/grpc-opentracing
-  version: 6c130eed1e297e1aa4d415a50c90d0c81c52677e
+  version: a570af39704b9f3d4bb530d83192a99ea6337d5a
   subpackages:
   - go/otgrpc
 - name: github.com/infobloxopen/go-trees
@@ -135,9 +135,11 @@ imports:
 - name: github.com/rcrowley/go-metrics
   version: 1f30fe9094a513ce4c700b9a54458bbb0c96996c
 - name: github.com/Shopify/sarama
-  version: 630b33cbf6f5c5af999918be52bac32cf52d0176
+  version: 84ac2717eed5b9e0b3b672b2fb94bda65ebf03cb
 - name: github.com/Sirupsen/logrus
   version: 89742aefa4b206dcf400792f3bd35b542998eb3b
+- name: github.com/valyala/gorpc
+  version: 908281bef77441f2d0ec1792189b4032a1dace0c
 - name: golang.org/x/crypto
   version: 2faea1465de239e4babd8f5905cc25b781712442
   repo: https://go.googlesource.com/crypto
@@ -174,7 +176,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: a5986a5c88227370a9c0a82e5277167229c034cd
+  version: b5eab4ccac6df282ff981436a5a87554d7377c75
   subpackages:
   - balancer
   - balancer/roundrobin

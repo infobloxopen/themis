@@ -55,14 +55,16 @@ here](https://coredns.io). If you do want to use CoreDNS in production, please l
 
 ## Compilation
 
-If you have the source of CoreDNS checked out in the appropriate place in your `GOPATH`, get all
-dependencies:
+Check out the project and do dependency resolution with:
 
-    go get ./...
+    go get github.com/coredns/coredns
 
-(You can do the checkout and dependency resolution as a single step with: `go get github.com/coredns/coredns`.)
+Some of the dependencies require Go version 1.8 or later.
 
-And then `go build` as you would normally do:
+(If you already have the source of CoreDNS checked out in the appropriate place in your `GOPATH`, you can get all
+dependencies with `go get ./...`.)
+
+Then use `go build` as you would normally do:
 
     go build
 
@@ -155,9 +157,11 @@ IP addresses are also allowed. They are automatically converted to reverse zones
 ~~~
 Means you are authoritative for `0.0.10.in-addr.arpa.`.
 
-The netmask must be dividable by 8, if it is not the reverse conversion is not done. This also works
-for IPv6 addresses. If for some reason you want to serve a zone named `10.0.0.0/24` add the closing
-dot: `10.0.0.0/24.` as this also stops the conversion.
+This also works for IPv6 addresses. If for some reason you want to serve a zone named `10.0.0.0/24`
+add the closing dot: `10.0.0.0/24.` as this also stops the conversion.
+
+This even works for CIDR (See RFC 1518 and 1519) addressing, i.e `10.0.0.0/25`, CoreDNS will then
+check if the `in-addr` request falls in the correct range.
 
 Listening on TLS and for gRPC? Use:
 

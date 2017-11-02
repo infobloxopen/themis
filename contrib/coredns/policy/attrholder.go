@@ -34,8 +34,8 @@ func init() {
 type attrHolder struct {
 	attrs    []*pdp.Attribute
 	redirect *pdp.Attribute
-	effect1  pdp.Response_Effect
-	effect2  pdp.Response_Effect
+	effect1  byte
+	effect2  byte
 	action   int
 	typeInd  int
 	resp1Beg int
@@ -76,18 +76,18 @@ func (ah *attrHolder) request() []*pdp.Attribute {
 func (ah *attrHolder) addResponse(r *pdp.Response) {
 	if ah.resp1Beg == 0 {
 		ah.resp1Beg = len(ah.attrs)
-		ah.resp1End = ah.resp1Beg + len(r.Obligation)
+		ah.resp1End = ah.resp1Beg + len(r.Obligations)
 		ah.effect1 = r.Effect
 	} else {
 		ah.resp2Beg = len(ah.attrs)
-		ah.resp2End = ah.resp2Beg + len(r.Obligation)
+		ah.resp2End = ah.resp2Beg + len(r.Obligations)
 		ah.effect2 = r.Effect
 	}
-	ah.attrs = append(ah.attrs, r.Obligation...)
+	ah.attrs = append(ah.attrs, r.Obligations...)
 
 	switch r.Effect {
-	case pdp.Response_PERMIT:
-		for _, item := range r.Obligation {
+	case pdp.PERMIT:
+		for _, item := range r.Obligations {
 			if item.Id == "log" {
 				ah.action = typeLog
 				return
@@ -98,8 +98,8 @@ func (ah *attrHolder) addResponse(r *pdp.Response) {
 			ah.action = typeAllow
 		}
 		return
-	case pdp.Response_DENY:
-		for _, item := range r.Obligation {
+	case pdp.DENY:
+		for _, item := range r.Obligations {
 			switch item.Id {
 			case "refuse":
 				ah.action = typeRefuse
@@ -112,7 +112,7 @@ func (ah *attrHolder) addResponse(r *pdp.Response) {
 		}
 		ah.action = typeBlock
 	default:
-		log.Printf("[ERROR] PDP Effect: %s", r.Effect)
+		log.Printf("[ERROR] PDP Effect: %s", pdp.EffectName(r.Effect))
 		ah.action = typeInvalid
 	}
 	return

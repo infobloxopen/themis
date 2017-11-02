@@ -14,15 +14,12 @@ import (
 	"strings"
 
 	"github.com/coredns/coredns/plugin"
-	"github.com/coredns/coredns/plugin/pkg/trace"
 
 	"github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
-	pb "github.com/infobloxopen/themis/pdp-service"
+	pdp "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pep"
 
 	"github.com/miekg/dns"
-
-	ot "github.com/opentracing/opentracing-go"
 
 	"golang.org/x/net/context"
 )
@@ -67,25 +64,33 @@ type edns0Map struct {
 // requests and replies using PDP server.
 type PolicyPlugin struct {
 	Endpoints   []string
+	Delay       uint
+	Pending     uint
 	options     map[uint16][]*edns0Map
 	TapIO       dnstap.DnstapSender
-	Trace       plugin.Handler
 	Next        plugin.Handler
 	pdp         pep.Client
 	DebugSuffix string
 	ErrorFunc   func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
 }
 
+const (
+	debug = false
+)
+
 // Connect establishes connection to PDP server.
 func (p *PolicyPlugin) Connect() error {
-	log.Printf("[DEBUG] Connecting %v", p)
-	var tracer ot.Tracer
-	if p.Trace != nil {
-		if t, ok := p.Trace.(trace.Trace); ok {
-			tracer = t.Tracer()
-		}
+	log.Printf("[DEBUG] Endpoints: %v", p)
+	if debug {
+		p.pdp = newTestClientInit(
+			&pdp.Response{Effect: pdp.PERMIT},
+			&pdp.Response{Effect: pdp.PERMIT},
+			nil,
+			nil,
+		)
+	} else {
+		p.pdp = pep.NewBalancedClient(p.Endpoints, p.Delay, p.Pending)
 	}
-	p.pdp = pep.NewBalancedClient(p.Endpoints, tracer)
 	return p.pdp.Connect()
 }
 
@@ -178,7 +183,7 @@ func parseOptionGroup(ah *attrHolder, data []byte, options []*edns0Map) bool {
 		if option.name == "source_ip" {
 			srcIpFound = true
 		}
-		ah.attrs = append(ah.attrs, &pb.Attribute{Id: option.name, Type: option.destType, Value: value})
+		ah.attrs = append(ah.attrs, &pdp.Attribute{Id: option.name, Type: option.destType, Value: value})
 	}
 	return srcIpFound
 }
@@ -207,7 +212,7 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) 
 	}
 
 Exit:
-	ah.attrs = append(ah.attrs, &pb.Attribute{Id: ipId, Type: "address", Value: ip})
+	ah.attrs = append(ah.attrs, &pdp.Attribute{Id: ipId, Type: "address", Value: ip})
 	return
 }
 
@@ -231,13 +236,13 @@ func (p *PolicyPlugin) retDebugInfo(ah *attrHolder, w dns.ResponseWriter,
 	debugQueryInfo := resolve(status)
 
 	if ah.resp1Beg > 0 {
-		debugQueryInfo += join("query", ah.effect1.String())
+		debugQueryInfo += join("query", pdp.EffectName(ah.effect1))
 		for _, item := range ah.resp1() {
 			debugQueryInfo += join(item.Id, item.Value)
 		}
 	}
 	if ah.resp2Beg > 0 {
-		debugQueryInfo += join("response", ah.effect2.String())
+		debugQueryInfo += join("response", pdp.EffectName(ah.effect2))
 		for _, item := range ah.resp2() {
 			debugQueryInfo += join(item.Id, item.Value)
 		}
@@ -322,7 +327,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 			// address is not filled from the answer
 			// in this case just pass through answer w/o validation
 			if len(address) > 0 {
-				ah.attrs = append(ah.attrs, &pb.Attribute{Id: "address", Type: "address", Value: address})
+				ah.attrs = append(ah.attrs, &pdp.Attribute{Id: "address", Type: "address", Value: address})
 				// validate response IP (validation #2)
 				err = p.validate(ah)
 				if err != nil {
@@ -367,7 +372,7 @@ Exit:
 		if pw := dnstap.NewProxyWriter(w); pw != nil {
 			pw.WriteMsg(r)
 			if sendExtra {
-				ah.attrs = append(ah.attrs, &pb.Attribute{Id: "policy_action", Type: "string", Value: actionConv[ah.action]})
+				ah.attrs = append(ah.attrs, &pdp.Attribute{Id: "policy_action", Type: "string", Value: actionConv[ah.action]})
 				p.TapIO.SendCRExtraMsg(pw, ah.attrs)
 			} else {
 				p.TapIO.SendCRExtraMsg(pw, nil)
@@ -425,8 +430,7 @@ func (p *PolicyPlugin) redirect(ctx context.Context, r *dns.Msg, dst string) (in
 }
 
 func (p *PolicyPlugin) validate(ah *attrHolder) error {
-	response := new(pb.Response)
-	err := p.pdp.ModalValidate(pb.Request{Attributes: ah.request()}, response)
+	response, err := p.pdp.Validate(&pdp.Request{Attributes: ah.request()})
 	if err != nil {
 		log.Printf("[ERROR] Policy validation failed due to error %s", err)
 		return err

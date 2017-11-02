@@ -3,7 +3,6 @@ package pdp
 import (
 	"fmt"
 	"net"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -508,17 +507,27 @@ func (d AttributeDesignator) calculate(ctx *Context) (AttributeValue, error) {
 	return ctx.getAttribute(d.a)
 }
 
-var domainRegexp = regexp.MustCompile("^[-._a-z0-9]+$")
+func checkAndToLower(domain string) (string, error) {
+	ret := make([]byte, len(domain))
+	for i, c := range domain {
+		if c == '-' || c == '.' || c == '_' || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') {
+			ret[i] = byte(c)
+		} else if c >= 'A' && c <= 'Z' {
+			ret[i] = byte(c + 32) // 'a' - 'A'
+		} else {
+			return "", fmt.Errorf("cannot validate domain [%s]", domain)
+		}
+	}
+	return string(ret), nil
+}
+
+var profile = idna.New(idna.VerifyDNSLength(true), idna.RemoveLeadingDots(true))
 
 // AdjustDomainName makes necessary conversions and validations for domain name.
-func AdjustDomainName(s string) (string, error) {
-	tmp, err := idna.Punycode.ToASCII(s)
+func AdjustDomainName(domain string) (string, error) {
+	tmp, err := profile.ToASCII(domain)
 	if err != nil {
-		return "", fmt.Errorf("can't convert domain [%s]", s)
+		return "", fmt.Errorf("cannot convert domain [%s]", domain)
 	}
-	ret := strings.ToLower(tmp)
-	if !domainRegexp.MatchString(ret) {
-		return "", fmt.Errorf("can't validate domain [%s]", s)
-	}
-	return ret, nil
+	return checkAndToLower(tmp)
 }

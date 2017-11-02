@@ -13,36 +13,36 @@ func TestActionFromResponse(t *testing.T) {
 		redirect string
 	}{
 		{
-			resp:     &pdp.Response{Effect: pdp.Response_PERMIT},
+			resp:     &pdp.Response{Effect: pdp.PERMIT},
 			action:   typeAllow,
 			redirect: "",
 		},
 		{
-			resp:     &pdp.Response{Effect: pdp.Response_INDETERMINATE},
+			resp:     &pdp.Response{Effect: pdp.INDETERMINATE},
 			action:   typeInvalid,
 			redirect: "",
 		},
 		{
-			resp:     &pdp.Response{Effect: pdp.Response_DENY},
+			resp:     &pdp.Response{Effect: pdp.DENY},
 			action:   typeBlock,
 			redirect: "",
 		},
 		{
-			resp: &pdp.Response{Effect: pdp.Response_DENY, Obligation: []*pdp.Attribute{
-				{Id: "redirect_to", Value: "10.10.10.10"},
+			resp: &pdp.Response{Effect: pdp.DENY, Obligations: []*pdp.Attribute{
+				{"redirect_to", "string", "10.10.10.10"},
 			}},
 			action:   typeRedirect,
 			redirect: "10.10.10.10",
 		},
 		{
-			resp: &pdp.Response{Effect: pdp.Response_DENY, Obligation: []*pdp.Attribute{
+			resp: &pdp.Response{Effect: pdp.DENY, Obligations: []*pdp.Attribute{
 				{Id: "refuse", Value: "true"},
 			}},
 			action:   typeRefuse,
 			redirect: "",
 		},
 		{
-			resp: &pdp.Response{Effect: pdp.Response_PERMIT, Obligation: []*pdp.Attribute{
+			resp: &pdp.Response{Effect: pdp.PERMIT, Obligations: []*pdp.Attribute{
 				{Id: "log", Value: ""},
 			}},
 			action:   typeLog,
@@ -58,7 +58,7 @@ func TestActionFromResponse(t *testing.T) {
 		}
 		strR := ""
 		if ah.redirect != nil {
-			strR = ah.redirect.GetValue()
+			strR = ah.redirect.Value
 		}
 		if strR != test.redirect {
 			t.Errorf("Unexpected redirect in TC #%d: expected=%q, actual=%q", i, test.redirect, strR)
@@ -79,10 +79,10 @@ func TestNilResponse(t *testing.T) {
 
 func TestAllowActionAfterLogAction(t *testing.T) {
 	ah := newAttrHolder("test.com", 1)
-	ah.addResponse(&pdp.Response{Effect: pdp.Response_PERMIT, Obligation: []*pdp.Attribute{
+	ah.addResponse(&pdp.Response{Effect: pdp.PERMIT, Obligations: []*pdp.Attribute{
 		{Id: "log"},
 	}})
-	ah.addResponse(&pdp.Response{Effect: pdp.Response_PERMIT})
+	ah.addResponse(&pdp.Response{Effect: pdp.PERMIT})
 	if ah.action != typeLog {
 		t.Errorf("Unexpected action: expected=%d, actual=%d", typeLog, ah.action)
 	}
