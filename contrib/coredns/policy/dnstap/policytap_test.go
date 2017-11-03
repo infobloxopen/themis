@@ -9,7 +9,6 @@ import (
 	"github.com/coredns/coredns/plugin/test"
 	tap "github.com/dnstap/golang-dnstap"
 	"github.com/golang/protobuf/proto"
-	pb "github.com/infobloxopen/themis/pdp-service"
 	"github.com/miekg/dns"
 )
 
@@ -94,9 +93,9 @@ func TestSendCRExtraMsg(t *testing.T) {
 	proxyRW := NewProxyWriter(&tapRW)
 	proxyRW.WriteMsg(&msg)
 
-	attrs := []*pb.Attribute{
-		{Id: "attr1", Type: "address", Value: "10.240.0.1"},
-		{Id: "attr2", Type: "string", Value: "value2"},
+	attrs := []*DnstapAttribute{
+		{Id: "attr1", Value: "10.240.0.1"},
+		{Id: "attr2", Value: "value2"},
 	}
 
 	io := newIORoutine(5000 * time.Millisecond)
@@ -110,7 +109,7 @@ func TestSendCRExtraMsg(t *testing.T) {
 	}
 }
 
-func checkCRExtraResult(t *testing.T, io testIORoutine, proxyRW *ProxyWriter, attrs []*pb.Attribute) {
+func checkCRExtraResult(t *testing.T, io testIORoutine, proxyRW *ProxyWriter, attrs []*DnstapAttribute) {
 	dnstapMsg, ok := <-io.dnstapChan
 	if !ok {
 		t.Errorf("Receiving Dnstap message was timed out")
@@ -127,7 +126,7 @@ func checkCRExtraResult(t *testing.T, io testIORoutine, proxyRW *ProxyWriter, at
 	checkCRMessage(t, dnstapMsg.Message, proxyRW)
 }
 
-func checkExtraAttrs(t *testing.T, actual []*DnstapAttribute, expected []*pb.Attribute) {
+func checkExtraAttrs(t *testing.T, actual, expected []*DnstapAttribute) {
 	if len(actual) != len(expected) {
 		t.Errorf("Expected %d attributes, found %d", len(expected), len(actual))
 		return
@@ -136,8 +135,8 @@ func checkExtraAttrs(t *testing.T, actual []*DnstapAttribute, expected []*pb.Att
 checkAttr:
 	for _, a := range actual {
 		for _, e := range expected {
-			if e.Id == *(a.Id) {
-				if string(a.Value) != e.Value {
+			if e.Id == a.Id {
+				if a.Value != e.Value {
 					t.Errorf("Attribute %s: expected %v , found %v", e.Id, e, a)
 					return
 				}

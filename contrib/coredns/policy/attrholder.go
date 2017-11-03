@@ -1,89 +1,153 @@
 package policy
 
 import (
-	"fmt"
+	"encoding/hex"
 	"log"
+	"net"
 	"strconv"
 	"strings"
 
 	"github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 	pdp "github.com/infobloxopen/themis/pdp-service"
+	"github.com/miekg/dns"
 )
 
-var actionConv [actCount]string
+var actionConvDnstap [actCount]string
 
 func init() {
-	actionConv[typeInvalid] = "0"
-	actionConv[typeRefuse] = fmt.Sprintf("%x", int32(dnstap.PolicyAction_REFUSE))
-	actionConv[typeAllow] = fmt.Sprintf("%x", int32(dnstap.PolicyAction_PASSTHROUGH))
-	actionConv[typeRedirect] = fmt.Sprintf("%x", int32(dnstap.PolicyAction_REDIRECT))
-	actionConv[typeBlock] = fmt.Sprintf("%x", int32(dnstap.PolicyAction_NXDOMAIN))
-	actionConv[typeLog] = fmt.Sprintf("%x", int32(dnstap.PolicyAction_PASSTHROUGH))
+	actionConvDnstap[typeInvalid] = "0"  // dnstap.PolicyAction_INVALID
+	actionConvDnstap[typeRefuse] = "5"   // dnstap.PolicyAction_REFUSE
+	actionConvDnstap[typeAllow] = "2"    // dnstap.PolicyAction_PASSTHROUGH
+	actionConvDnstap[typeRedirect] = "4" // dnstap.PolicyAction_REDIRECT
+	actionConvDnstap[typeBlock] = "3"    // dnstap.PolicyAction_NXDOMAIN
+	actionConvDnstap[typeLog] = "2"      // dnstap.PolicyAction_PASSTHROUGH
 }
 
-// correct sequence of func calls
-// 1 newAttrHolder
-// 2 (optionally) addAttr
-// 3 request
-// 4 addResponse
-// 5 (optionally) addAttr
-// 6 (optionally) request
-// 7 (optionally) addResponse
-//
-// resp1, resp2, attributes (in any order)
 type attrHolder struct {
-	attrs    []*pdp.Attribute
-	redirect *pdp.Attribute
-	effect1  byte
-	effect2  byte
-	action   int
-	typeInd  int
-	resp1Beg int
-	resp1End int
-	resp2Beg int
-	resp2End int
+	attrsReqDomain  []*pdp.Attribute
+	attrsRespDomain []*pdp.Attribute
+	attrsReqRespip  []*pdp.Attribute
+	attrsRespRespip []*pdp.Attribute
+	action          byte
+	redirect        string
 }
 
 func newAttrHolder(qName string, qType uint16) *attrHolder {
-	attrs := make([]*pdp.Attribute, 2, 32)
-	attrs[0] = &pdp.Attribute{Id: "dns_qtype", Type: "string", Value: strconv.FormatUint(uint64(qType), 16)}
-	attrs[1] = &pdp.Attribute{Id: "domain_name", Type: "domain", Value: strings.TrimRight(qName, ".")}
-	return &attrHolder{attrs: attrs, action: typeInvalid}
+	ret := &attrHolder{
+		attrsReqDomain: make([]*pdp.Attribute, 3, 8),
+		action:         typeInvalid,
+	}
+	ret.attrsReqDomain[0] = &pdp.Attribute{Id: "type", Type: "string", Value: "query"}
+	ret.attrsReqDomain[1] = &pdp.Attribute{Id: "domain_name", Type: "domain", Value: strings.TrimRight(qName, ".")}
+	ret.attrsReqDomain[2] = &pdp.Attribute{Id: "dns_qtype", Type: "string", Value: strconv.FormatUint(uint64(qType), 16)}
+	return ret
 }
 
-func (ah *attrHolder) setTypeAttr() {
-	if len(ah.attrs) == 0 {
-		panic("adding type attribute to empty list")
+func parseHex(data []byte, option *edns0Map) string {
+	size := uint(len(data))
+	// if option.size == 0 - don't check size
+	if option.size > 0 {
+		if size != option.size {
+			// skip parsing option with wrong size
+			return ""
+		}
 	}
-	if ah.typeInd == 0 {
-		ah.typeInd = len(ah.attrs)
-		t := pdp.Attribute{Id: "type", Type: "string", Value: "query"}
-		ah.attrs = append(ah.attrs, &t)
+	start := uint(0)
+	if option.start < size {
+		// set start index
+		start = option.start
 	} else {
-		ah.attrs[ah.typeInd].Value = "response"
+		// skip parsing option if start >= data size
+		return ""
+	}
+	end := size
+	// if option.end == 0 - return data[start:]
+	if option.end > 0 {
+		if option.end <= size {
+			// set end index
+			end = option.end
+		} else {
+			// skip parsing option if end > data size
+			return ""
+		}
+	}
+	return hex.EncodeToString(data[start:end])
+}
+
+func (ah *attrHolder) parseOptionGroup(data []byte, options []*edns0Map) bool {
+	srcIpFound := false
+	for _, option := range options {
+		var value string
+		switch option.dataType {
+		case typeEDNS0Bytes:
+			value = string(data)
+		case typeEDNS0Hex:
+			value = parseHex(data, option)
+			if value == "" {
+				continue
+			}
+		case typeEDNS0IP:
+			ip := net.IP(data)
+			value = ip.String()
+		}
+		if option.name == "source_ip" {
+			srcIpFound = true
+		}
+		ah.attrsReqDomain = append(ah.attrsReqDomain, &pdp.Attribute{Id: option.name, Type: option.destType, Value: value})
+	}
+	return srcIpFound
+}
+
+func (ah *attrHolder) getAttrsFromEDNS0(ip string, r *dns.Msg, options map[uint16][]*edns0Map) {
+	ipId := "source_ip"
+
+	o := r.IsEdns0()
+	if o == nil {
+		goto Exit
+	}
+
+	for _, opt := range o.Option {
+		optLocal, local := opt.(*dns.EDNS0_LOCAL)
+		if !local {
+			continue
+		}
+		options, ok := options[optLocal.Code]
+		if !ok {
+			continue
+		}
+		srcIpFound := ah.parseOptionGroup(optLocal.Data, options)
+		if srcIpFound {
+			ipId = "proxy_source_ip"
+		}
+	}
+
+Exit:
+	ah.attrsReqDomain = append(ah.attrsReqDomain, &pdp.Attribute{Id: ipId, Type: "address", Value: ip})
+	return
+}
+
+func (ah *attrHolder) makeReqRespip(addr string) {
+	policyID := ""
+	for _, item := range ah.attrsRespDomain {
+		if item.Id == "policy_id" {
+			policyID = item.Value
+			break
+		}
+	}
+
+	ah.attrsReqRespip = []*pdp.Attribute{
+		{Id: "type", Type: "string", Value: "response"},
+		{Id: "policy_id", Type: "string", Value: policyID},
+		{Id: "address", Type: "address", Value: addr},
 	}
 }
 
-func (ah *attrHolder) request() []*pdp.Attribute {
-	ah.setTypeAttr()
-	beg := 1 // skip "dns_qtype" since PDP doesn't need it
-	if ah.resp1Beg != 0 {
-		beg = ah.typeInd
-	}
-	return ah.attrs[beg:]
-}
-
-func (ah *attrHolder) addResponse(r *pdp.Response) {
-	if ah.resp1Beg == 0 {
-		ah.resp1Beg = len(ah.attrs)
-		ah.resp1End = ah.resp1Beg + len(r.Obligations)
-		ah.effect1 = r.Effect
+func (ah *attrHolder) addResponse(r *pdp.Response, respip bool) {
+	if !respip {
+		ah.attrsRespDomain = r.Obligations
 	} else {
-		ah.resp2Beg = len(ah.attrs)
-		ah.resp2End = ah.resp2Beg + len(r.Obligations)
-		ah.effect2 = r.Effect
+		ah.attrsRespRespip = r.Obligations
 	}
-	ah.attrs = append(ah.attrs, r.Obligations...)
 
 	switch r.Effect {
 	case pdp.PERMIT:
@@ -106,7 +170,7 @@ func (ah *attrHolder) addResponse(r *pdp.Response) {
 				return
 			case "redirect_to":
 				ah.action = typeRedirect
-				ah.redirect = item
+				ah.redirect = item.Value
 				return
 			}
 		}
@@ -118,10 +182,48 @@ func (ah *attrHolder) addResponse(r *pdp.Response) {
 	return
 }
 
-func (ah *attrHolder) resp1() []*pdp.Attribute {
-	return ah.attrs[ah.resp1Beg:ah.resp1End]
-}
-
-func (ah *attrHolder) resp2() []*pdp.Attribute {
-	return ah.attrs[ah.resp2Beg:ah.resp2End]
+func (ah *attrHolder) convertAttrs() []*dnstap.DnstapAttribute {
+	lenAttrsReqDomain := len(ah.attrsReqDomain) - 1
+	lenAttrsRespDomain := len(ah.attrsRespDomain)
+	lenAttrsReqRespip := len(ah.attrsReqRespip)
+	if lenAttrsReqRespip > 0 {
+		lenAttrsReqRespip -= 2
+	}
+	lenAttrsRespRespip := len(ah.attrsRespRespip)
+	length := lenAttrsReqDomain + lenAttrsRespDomain +
+		lenAttrsReqRespip + lenAttrsRespRespip + 1
+	out := make([]*dnstap.DnstapAttribute, length)
+	i := 0
+	id := "policy_action"
+	out[i] = &dnstap.DnstapAttribute{Id: id, Value: actionConvDnstap[ah.action]}
+	i++
+	for j := 0; j < lenAttrsReqDomain; j++ {
+		out[i] = &dnstap.DnstapAttribute{
+			Id:    ah.attrsReqDomain[j+1].Id,
+			Value: ah.attrsReqDomain[j+1].Value,
+		}
+		i++
+	}
+	for j := 0; j < lenAttrsRespDomain; j++ {
+		out[i] = &dnstap.DnstapAttribute{
+			Id:    ah.attrsRespDomain[j].Id,
+			Value: ah.attrsRespDomain[j].Value,
+		}
+		i++
+	}
+	for j := 0; j < lenAttrsReqRespip; j++ {
+		out[i] = &dnstap.DnstapAttribute{
+			Id:    ah.attrsReqRespip[j+2].Id,
+			Value: ah.attrsReqRespip[j+2].Value,
+		}
+		i++
+	}
+	for j := 0; j < lenAttrsRespRespip; j++ {
+		out[i] = &dnstap.DnstapAttribute{
+			Id:    ah.attrsRespRespip[j].Id,
+			Value: ah.attrsRespRespip[j].Value,
+		}
+		i++
+	}
+	return out
 }

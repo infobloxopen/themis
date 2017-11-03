@@ -8,7 +8,6 @@ import (
 	"github.com/coredns/coredns/plugin/dnstap/taprw"
 	tap "github.com/dnstap/golang-dnstap"
 	"github.com/golang/protobuf/proto"
-	pb "github.com/infobloxopen/themis/pdp-service"
 	"github.com/miekg/dns"
 )
 
@@ -40,7 +39,7 @@ func (w *ProxyWriter) WriteMsg(msg *dns.Msg) error {
 }
 
 type DnstapSender interface {
-	SendCRExtraMsg(pw *ProxyWriter, attrs []*pb.Attribute)
+	SendCRExtraMsg(pw *ProxyWriter, attrs []*DnstapAttribute)
 }
 
 type policyDnstapSender struct {
@@ -55,7 +54,7 @@ func NewPolicyDnstapSender(io tapplg.IORoutine) DnstapSender {
 // of extra attributes to Dnstap.Extra field. Then it asynchronously sends the
 // message with IORoutine interface
 // Parameter tapIO must not be nil
-func (s *policyDnstapSender) SendCRExtraMsg(pw *ProxyWriter, attrs []*pb.Attribute) {
+func (s *policyDnstapSender) SendCRExtraMsg(pw *ProxyWriter, attrs []*DnstapAttribute) {
 	if pw == nil || pw.msg == nil {
 		log.Printf("[ERROR] Failed to create dnstap CR message - no DNS response message found")
 		return
@@ -75,7 +74,7 @@ func (s *policyDnstapSender) SendCRExtraMsg(pw *ProxyWriter, attrs []*pb.Attribu
 
 		var extra []byte
 		if attrs != nil {
-			extra, err = proto.Marshal(&Extra{Attrs: convertAttrs(attrs)})
+			extra, err = proto.Marshal(&Extra{Attrs: attrs})
 			if err != nil {
 				log.Printf("[ERROR] Failed to create extra data for dnstap CR message (%v)", err)
 			}
@@ -83,13 +82,4 @@ func (s *policyDnstapSender) SendCRExtraMsg(pw *ProxyWriter, attrs []*pb.Attribu
 		dnstapMsg := tap.Dnstap{Type: &t, Message: crMsg, Extra: extra}
 		s.ior.Dnstap(dnstapMsg)
 	}(time.Now())
-}
-
-// convertAttrs converts slice of service.Attribute to slice of DnstapAttribute
-func convertAttrs(in []*pb.Attribute) []*DnstapAttribute {
-	out := make([]*DnstapAttribute, len(in))
-	for i, a := range in {
-		out[i] = &DnstapAttribute{Id: &a.Id, Value: []byte(a.Value)}
-	}
-	return out
 }
