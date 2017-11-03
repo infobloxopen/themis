@@ -555,7 +555,7 @@ func TestEdns(t *testing.T) {
 	for _, test := range tests {
 		req := makeRequestWithEDNS0(test.code, test.data, test.nonlocal)
 		ah := newAttrHolder("test.com", 1)
-		getAttrsFromEDNS0(ah, test.ip, req, pm.options)
+		pm.getAttrsFromEDNS0(ah, req, test.ip)
 		mapAttr := make(map[string]*pdp.Attribute)
 		for _, a := range ah.attrsReqDomain {
 			mapAttr[a.Id] = a

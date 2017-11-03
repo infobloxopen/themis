@@ -199,7 +199,7 @@ func parseOptionGroup(ah *attrHolder, data []byte, options []*edns0Map) bool {
 	return srcIpFound
 }
 
-func getAttrsFromEDNS0(ah *attrHolder, ip string, r *dns.Msg, options map[uint16][]*edns0Map) {
+func (p *PolicyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) {
 	ipId := "source_ip"
 
 	o := r.IsEdns0()
@@ -212,7 +212,7 @@ func getAttrsFromEDNS0(ah *attrHolder, ip string, r *dns.Msg, options map[uint16
 		if !local {
 			continue
 		}
-		options, ok := options[optLocal.Code]
+		options, ok := p.options[optLocal.Code]
 		if !ok {
 			continue
 		}
@@ -314,7 +314,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 
 	debugQuery := p.decodeDebugMsg(r)
 	ah := newAttrHolder(getNameType(r))
-	getAttrsFromEDNS0(ah, getRemoteIP(w), r, p.options)
+	p.getAttrsFromEDNS0(ah, r, getRemoteIP(w))
 
 	// validate domain name (validation #1)
 	err = p.validate(ah, "")
