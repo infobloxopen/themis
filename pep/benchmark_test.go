@@ -724,7 +724,10 @@ func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
 func BenchmarkStreamingClient(b *testing.B) {
 	streams := 96
 	ok := true
-	tmpYAST, tmpJCon, pdp, c := startPDPServer(threeStageBenchmarkPolicySet, b, WithStreams(streams))
+	tmpYAST, tmpJCon, pdp, c := startPDPServer(threeStageBenchmarkPolicySet, b,
+		WithStreams(streams),
+		WithBalancer("127.0.0.1:5555", "[::1]:5555"),
+	)
 	defer func() {
 		c.Close()
 

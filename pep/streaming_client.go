@@ -68,6 +68,9 @@ func (c *pdpStreamingClient) Connect(addr string) error {
 }
 
 func (c *pdpStreamingClient) Close() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	c.closeStreams()
 
 	if c.conn != nil {
@@ -93,12 +96,12 @@ func (c *pdpStreamingClient) makeStreams() error {
 		panic(fmt.Errorf("streaming client must be created with at least 1 stream but got %d", c.opts.maxStreams))
 	}
 
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	if c.client == nil {
 		return ErrorNotConnected
 	}
-
-	c.lock.Lock()
-	defer c.lock.Unlock()
 
 	if c.streams != nil {
 		return nil
@@ -110,6 +113,7 @@ func (c *pdpStreamingClient) makeStreams() error {
 			grpc.FailFast(false),
 		)
 		if err != nil {
+			c.closeStreams()
 			return err
 		}
 
@@ -120,9 +124,6 @@ func (c *pdpStreamingClient) makeStreams() error {
 }
 
 func (c *pdpStreamingClient) closeStreams() {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
 	if c.streams == nil {
 		return
 	}
@@ -155,7 +156,6 @@ func (c *pdpStreamingClient) getStream() (stream, error) {
 
 	if ch == nil {
 		if err := c.makeStreams(); err != nil {
-			c.closeStreams()
 			return stream{}, err
 		}
 
