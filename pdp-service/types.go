@@ -88,7 +88,8 @@ func MarshalResponse(r *Response) []byte {
 	rLen := len(r.Reason)
 	length := 3 + rLen
 	for j := 0; j < count; j++ {
-		length += 3 + len(r.Obligations[j].Id) + len(r.Obligations[j].Type) + len(r.Obligations[j].Value)
+		//length += 3 + len(r.Obligations[j].Id) + len(r.Obligations[j].Type) + len(r.Obligations[j].Value)
+		length += 2 + len(r.Obligations[j].Id) + len(r.Obligations[j].Value)
 	}
 	ret := make([]byte, length)
 	i := 0
@@ -110,13 +111,13 @@ func MarshalResponse(r *Response) []byte {
 			ret[i] = r.Obligations[j].Id[k]
 			i++
 		}
-		lType := len(r.Obligations[j].Type)
-		ret[i] = byte(lType)
-		i++
-		for k := 0; k < lType; k++ {
-			ret[i] = r.Obligations[j].Type[k]
-			i++
-		}
+		//lType := len(r.Obligations[j].Type)
+		//ret[i] = byte(lType)
+		//i++
+		//for k := 0; k < lType; k++ {
+		//	ret[i] = r.Obligations[j].Type[k]
+		//	i++
+		//}
 		lValue := len(r.Obligations[j].Value)
 		ret[i] = byte(lValue)
 		i++
@@ -169,13 +170,16 @@ func UnmarshalResponse(data []byte) *Response {
 	for j := 0; j < int(count); j++ {
 		sId := i + 1
 		eId := int(data[i]) + sId
-		sType := eId + 1
-		eType := int(data[eId]) + sType
-		sValue := eType + 1
-		eValue := int(data[eType]) + sValue
+		//sType := eId + 1
+		//eType := int(data[eId]) + sType
+		//sValue := eType + 1
+		//eValue := int(data[eType]) + sValue
+		sValue := eId + 1
+		eValue := int(data[eId]) + sValue
 		ret.Obligations[j] = &Attribute{
-			Id:    string(data[sId:eId]),
-			Type:  string(data[sType:eType]),
+			Id: string(data[sId:eId]),
+			//Type: string(data[sType:eType]),
+			Type:  "string",
 			Value: string(data[sValue:eValue]),
 		}
 		i = eValue
