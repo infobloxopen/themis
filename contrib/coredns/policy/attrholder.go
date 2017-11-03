@@ -1,15 +1,12 @@
 package policy
 
 import (
-	"encoding/hex"
 	"log"
-	"net"
 	"strconv"
 	"strings"
 
 	"github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 	pdp "github.com/infobloxopen/themis/pdp-service"
-	"github.com/miekg/dns"
 )
 
 var actionConvDnstap [actCount]string
@@ -41,89 +38,6 @@ func newAttrHolder(qName string, qType uint16) *attrHolder {
 	ret.attrsReqDomain[1] = &pdp.Attribute{Id: "domain_name", Type: "domain", Value: strings.TrimRight(qName, ".")}
 	ret.attrsReqDomain[2] = &pdp.Attribute{Id: "dns_qtype", Type: "string", Value: strconv.FormatUint(uint64(qType), 16)}
 	return ret
-}
-
-func parseHex(data []byte, option *edns0Map) string {
-	size := uint(len(data))
-	// if option.size == 0 - don't check size
-	if option.size > 0 {
-		if size != option.size {
-			// skip parsing option with wrong size
-			return ""
-		}
-	}
-	start := uint(0)
-	if option.start < size {
-		// set start index
-		start = option.start
-	} else {
-		// skip parsing option if start >= data size
-		return ""
-	}
-	end := size
-	// if option.end == 0 - return data[start:]
-	if option.end > 0 {
-		if option.end <= size {
-			// set end index
-			end = option.end
-		} else {
-			// skip parsing option if end > data size
-			return ""
-		}
-	}
-	return hex.EncodeToString(data[start:end])
-}
-
-func (ah *attrHolder) parseOptionGroup(data []byte, options []*edns0Map) bool {
-	srcIpFound := false
-	for _, option := range options {
-		var value string
-		switch option.dataType {
-		case typeEDNS0Bytes:
-			value = string(data)
-		case typeEDNS0Hex:
-			value = parseHex(data, option)
-			if value == "" {
-				continue
-			}
-		case typeEDNS0IP:
-			ip := net.IP(data)
-			value = ip.String()
-		}
-		if option.name == "source_ip" {
-			srcIpFound = true
-		}
-		ah.attrsReqDomain = append(ah.attrsReqDomain, &pdp.Attribute{Id: option.name, Type: option.destType, Value: value})
-	}
-	return srcIpFound
-}
-
-func (ah *attrHolder) getAttrsFromEDNS0(ip string, r *dns.Msg, options map[uint16][]*edns0Map) {
-	ipId := "source_ip"
-
-	o := r.IsEdns0()
-	if o == nil {
-		goto Exit
-	}
-
-	for _, opt := range o.Option {
-		optLocal, local := opt.(*dns.EDNS0_LOCAL)
-		if !local {
-			continue
-		}
-		options, ok := options[optLocal.Code]
-		if !ok {
-			continue
-		}
-		srcIpFound := ah.parseOptionGroup(optLocal.Data, options)
-		if srcIpFound {
-			ipId = "proxy_source_ip"
-		}
-	}
-
-Exit:
-	ah.attrsReqDomain = append(ah.attrsReqDomain, &pdp.Attribute{Id: ipId, Type: "address", Value: ip})
-	return
 }
 
 func (ah *attrHolder) makeReqRespip(addr string) {

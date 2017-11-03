@@ -5,6 +5,7 @@
 package policy
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
@@ -143,6 +144,89 @@ func (p *PolicyPlugin) AddEDNS0Map(code, name, dataType, destType,
 	return nil
 }
 
+func parseHex(data []byte, option *edns0Map) string {
+	size := uint(len(data))
+	// if option.size == 0 - don't check size
+	if option.size > 0 {
+		if size != option.size {
+			// skip parsing option with wrong size
+			return ""
+		}
+	}
+	start := uint(0)
+	if option.start < size {
+		// set start index
+		start = option.start
+	} else {
+		// skip parsing option if start >= data size
+		return ""
+	}
+	end := size
+	// if option.end == 0 - return data[start:]
+	if option.end > 0 {
+		if option.end <= size {
+			// set end index
+			end = option.end
+		} else {
+			// skip parsing option if end > data size
+			return ""
+		}
+	}
+	return hex.EncodeToString(data[start:end])
+}
+
+func parseOptionGroup(ah *attrHolder, data []byte, options []*edns0Map) bool {
+	srcIpFound := false
+	for _, option := range options {
+		var value string
+		switch option.dataType {
+		case typeEDNS0Bytes:
+			value = string(data)
+		case typeEDNS0Hex:
+			value = parseHex(data, option)
+			if value == "" {
+				continue
+			}
+		case typeEDNS0IP:
+			ip := net.IP(data)
+			value = ip.String()
+		}
+		if option.name == "source_ip" {
+			srcIpFound = true
+		}
+		ah.attrsReqDomain = append(ah.attrsReqDomain, &pdp.Attribute{Id: option.name, Type: option.destType, Value: value})
+	}
+	return srcIpFound
+}
+
+func getAttrsFromEDNS0(ah *attrHolder, ip string, r *dns.Msg, options map[uint16][]*edns0Map) {
+	ipId := "source_ip"
+
+	o := r.IsEdns0()
+	if o == nil {
+		goto Exit
+	}
+
+	for _, opt := range o.Option {
+		optLocal, local := opt.(*dns.EDNS0_LOCAL)
+		if !local {
+			continue
+		}
+		options, ok := options[optLocal.Code]
+		if !ok {
+			continue
+		}
+		srcIpFound := parseOptionGroup(ah, optLocal.Data, options)
+		if srcIpFound {
+			ipId = "proxy_source_ip"
+		}
+	}
+
+Exit:
+	ah.attrsReqDomain = append(ah.attrsReqDomain, &pdp.Attribute{Id: ipId, Type: "address", Value: ip})
+	return
+}
+
 func resolve(status int) string {
 	switch status {
 	case -1:
@@ -212,6 +296,13 @@ func getRemoteIP(w dns.ResponseWriter) string {
 	return ip
 }
 
+func getNameClass(r *dns.Msg) (string, uint16) {
+	if r == nil || len(r.Question) == 0 {
+		return ".", 0
+	}
+	return r.Question[0].Name, r.Question[0].Qclass
+}
+
 // ServeDNS implements the Handler interface.
 func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	var (
@@ -223,7 +314,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 
 	debugQuery := p.decodeDebugMsg(r)
 	ah := newAttrHolder(getNameType(r))
-	ah.getAttrsFromEDNS0(getRemoteIP(w), r, p.options)
+	getAttrsFromEDNS0(ah, getRemoteIP(w), r, p.options)
 
 	// validate domain name (validation #1)
 	err = p.validate(ah, "")
@@ -310,13 +401,6 @@ Exit:
 
 // Name implements the Handler interface
 func (p *PolicyPlugin) Name() string { return "policy" }
-
-func getNameClass(r *dns.Msg) (string, uint16) {
-	if r == nil || len(r.Question) == 0 {
-		return ".", 0
-	}
-	return r.Question[0].Name, r.Question[0].Qclass
-}
 
 func (p *PolicyPlugin) redirect(ctx context.Context, r *dns.Msg, dst string) (int, error) {
 	var rr dns.RR
