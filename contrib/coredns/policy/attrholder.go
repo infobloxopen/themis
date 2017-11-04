@@ -34,25 +34,25 @@ func newAttrHolder(qName string, qType uint16) *attrHolder {
 		attrsReqDomain: make([]*pdp.Attribute, 3, 8),
 		action:         typeInvalid,
 	}
-	ret.attrsReqDomain[0] = &pdp.Attribute{Id: "type", Type: "string", Value: "query"}
-	ret.attrsReqDomain[1] = &pdp.Attribute{Id: "domain_name", Type: "domain", Value: strings.TrimRight(qName, ".")}
-	ret.attrsReqDomain[2] = &pdp.Attribute{Id: "dns_qtype", Type: "string", Value: strconv.FormatUint(uint64(qType), 16)}
+	ret.attrsReqDomain[0] = &pdp.Attribute{Id: AttrNameType, Type: "string", Value: TypeValueQuery}
+	ret.attrsReqDomain[1] = &pdp.Attribute{Id: AttrNameDomainName, Type: "domain", Value: strings.TrimRight(qName, ".")}
+	ret.attrsReqDomain[2] = &pdp.Attribute{Id: AttrNameDNSQtype, Type: "string", Value: strconv.FormatUint(uint64(qType), 16)}
 	return ret
 }
 
 func (ah *attrHolder) makeReqRespip(addr string) {
 	policyID := ""
 	for _, item := range ah.attrsRespDomain {
-		if item.Id == "policy_id" {
+		if item.Id == AttrNamePolicyID {
 			policyID = item.Value
 			break
 		}
 	}
 
 	ah.attrsReqRespip = []*pdp.Attribute{
-		{Id: "type", Type: "string", Value: "response"},
-		{Id: "policy_id", Type: "string", Value: policyID},
-		{Id: "address", Type: "address", Value: addr},
+		{Id: AttrNameType, Type: "string", Value: TypeValueResponse},
+		{Id: AttrNamePolicyID, Type: "string", Value: policyID},
+		{Id: AttrNameAddress, Type: "address", Value: addr},
 	}
 }
 
@@ -66,7 +66,7 @@ func (ah *attrHolder) addResponse(r *pdp.Response, respip bool) {
 	switch r.Effect {
 	case pdp.PERMIT:
 		for _, item := range r.Obligations {
-			if item.Id == "log" {
+			if item.Id == AttrNameLog {
 				ah.action = typeLog
 				return
 			}
@@ -79,10 +79,10 @@ func (ah *attrHolder) addResponse(r *pdp.Response, respip bool) {
 	case pdp.DENY:
 		for _, item := range r.Obligations {
 			switch item.Id {
-			case "refuse":
+			case AttrNameRefuse:
 				ah.action = typeRefuse
 				return
-			case "redirect_to":
+			case AttrNameRedirectTo:
 				ah.action = typeRedirect
 				ah.redirect = item.Value
 				return
@@ -135,6 +135,6 @@ func (ah *attrHolder) convertAttrs() []*pb.DnstapAttribute {
 		}
 		i++
 	}
-	out[i] = &pb.DnstapAttribute{Id: "policy_action", Value: actionConvDnstap[ah.action]}
+	out[i] = &pb.DnstapAttribute{Id: AttrNamePolicyAction, Value: actionConvDnstap[ah.action]}
 	return out
 }

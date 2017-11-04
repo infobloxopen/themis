@@ -29,21 +29,21 @@ func TestActionFromResponse(t *testing.T) {
 		},
 		{
 			resp: &pdp.Response{Effect: pdp.DENY, Obligations: []*pdp.Attribute{
-				{"redirect_to", "string", "10.10.10.10"},
+				{AttrNameRedirectTo, "string", "10.10.10.10"},
 			}},
 			action:   typeRedirect,
 			redirect: "10.10.10.10",
 		},
 		{
 			resp: &pdp.Response{Effect: pdp.DENY, Obligations: []*pdp.Attribute{
-				{Id: "refuse", Value: "true"},
+				{Id: AttrNameRefuse, Value: "true"},
 			}},
 			action:   typeRefuse,
 			redirect: "",
 		},
 		{
 			resp: &pdp.Response{Effect: pdp.PERMIT, Obligations: []*pdp.Attribute{
-				{Id: "log", Value: ""},
+				{Id: AttrNameLog, Value: ""},
 			}},
 			action:   typeLog,
 			redirect: "",

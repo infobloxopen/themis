@@ -84,6 +84,10 @@ type PolicyPlugin struct {
 	ErrorFunc   func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
 }
 
+func newPolicyPlugin() *PolicyPlugin {
+	return &PolicyPlugin{options: make(map[uint16][]*edns0Map)}
+}
+
 const (
 	debug = false
 )
@@ -96,8 +100,8 @@ func (p *PolicyPlugin) Connect() error {
 			&pdp.Response{
 				Effect: pdp.PERMIT,
 				Obligations: []*pdp.Attribute{
-					{Id: "customer_id", Value: "35e178af10438bd6bf7cbbcb6115a6b3"},
-					{Id: "policy_id", Value: "00000006"},
+					{Id: AttrNameCustomerID, Value: "35e178af10438bd6bf7cbbcb6115a6b3"},
+					{Id: AttrNamePolicyID, Value: "00000006"},
 				},
 			},
 			&pdp.Response{Effect: pdp.PERMIT},
@@ -205,7 +209,7 @@ func parseOptionGroup(ah *attrHolder, data []byte, options []*edns0Map) bool {
 }
 
 func (p *PolicyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) {
-	ipId := "source_ip"
+	ipId := AttrNameSourceIP
 
 	o := r.IsEdns0()
 	if o == nil {
@@ -223,7 +227,7 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) 
 		}
 		srcIpFound := parseOptionGroup(ah, optLocal.Data, options)
 		if srcIpFound {
-			ipId = "proxy_source_ip"
+			ipId = AttrNameProxySourceIP
 		}
 	}
 
@@ -256,12 +260,12 @@ func (p *PolicyPlugin) setDebugQueryAnswer(ah *attrHolder, r *dns.Msg, status in
 	} else {
 		action = actionConv[ah.action]
 	}
-	debugQueryInfo += join("query", action)
+	debugQueryInfo += join(TypeValueQuery, action)
 	for _, item := range ah.attrsRespDomain {
 		debugQueryInfo += join(item.Id, item.Value)
 	}
 	if len(ah.attrsRespRespip) > 0 {
-		debugQueryInfo += join("response", actionConv[ah.action])
+		debugQueryInfo += join(TypeValueResponse, actionConv[ah.action])
 		for _, item := range ah.attrsRespRespip {
 			debugQueryInfo += join(item.Id, item.Value)
 		}
