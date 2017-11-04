@@ -71,6 +71,7 @@ type PolicyPlugin struct {
 	pdp         pep.Client
 	debugSuffix string
 	streams     int
+	hotSpot     bool
 	errorFunc   func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
 }
 
@@ -82,18 +83,22 @@ func newPolicyPlugin() *PolicyPlugin {
 func (p *PolicyPlugin) connect() error {
 	log.Printf("[DEBUG] Connecting %v", p)
 
-	opts := []pep.Option{
-		pep.WithBalancer(p.endpoints...),
+	opts := []pep.Option{}
+	if p.streams <= 0 || !p.hotSpot {
+		opts = append(opts, pep.WithRoundRobinBalancer(p.endpoints...))
+	}
+
+	if p.streams > 0 {
+		opts = append(opts, pep.WithStreams(p.streams))
+		if p.hotSpot {
+			opts = append(opts, pep.WithHotSpotBalancer(p.endpoints...))
+		}
 	}
 
 	if p.trace != nil {
 		if t, ok := p.trace.(trace.Trace); ok {
 			opts = append(opts, pep.WithTracer(t.Tracer()))
 		}
-	}
-
-	if p.streams > 0 {
-		opts = append(opts, pep.WithStreams(p.streams))
 	}
 
 	p.pdp = pep.NewClient(opts...)
@@ -183,7 +188,7 @@ func (p *PolicyPlugin) parseDebugQuerySuffix(c *caddy.Controller) error {
 
 func (p *PolicyPlugin) parseStreams(c *caddy.Controller) error {
 	args := c.RemainingArgs()
-	if len(args) != 1 {
+	if len(args) < 1 || len(args) > 2 {
 		return c.ArgErr()
 	}
 
@@ -196,6 +201,22 @@ func (p *PolicyPlugin) parseStreams(c *caddy.Controller) error {
 	}
 
 	p.streams = int(streams)
+
+	if len(args) > 1 {
+		switch strings.ToLower(args[1]) {
+		default:
+			return fmt.Errorf("Expected round-robin or hot-spot balancing but got %s", args[1])
+
+		case "round-robin":
+			p.hotSpot = false
+
+		case "hot-spot":
+			p.hotSpot = true
+		}
+	} else {
+		p.hotSpot = false
+	}
+
 	return nil
 }
 

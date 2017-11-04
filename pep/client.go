@@ -9,7 +9,6 @@ package pep
 
 import (
 	"errors"
-	"sync"
 
 	ot "github.com/opentracing/opentracing-go"
 )
@@ -19,6 +18,9 @@ var (
 	ErrorConnected = errors.New("connection has been already established")
 	// ErrorNotConnected indicates that there is no connection established to PDP server.
 	ErrorNotConnected = errors.New("no connection")
+	// ErrorHotSpotBalancerUnsupported returned by attempt to make unary connection with
+	// "hot spot" balancer.
+	ErrorHotSpotBalancerUnsupported = errors.New("\"hot spot\" balancer isn't supported by unary gRPC client")
 )
 
 // Client defines abstract PDP service client interface.
@@ -77,9 +79,19 @@ type Option func(*options)
 
 const virtualServerAddress = "pdp"
 
-// WithBalancer returns an Option which sets round-robing balancer with given set of servers.
-func WithBalancer(addresses ...string) Option {
+// WithRoundRobinBalancer returns an Option which sets round-robin balancer with given set of servers.
+func WithRoundRobinBalancer(addresses ...string) Option {
 	return func(o *options) {
+		o.balancer = roundRobinBalancer
+		o.addresses = addresses
+	}
+}
+
+// WithHotSpotBalancer returns an Option which sets "hot spot" balancer with given set of servers
+// (the balancer can be applied for gRPC streaming connection).
+func WithHotSpotBalancer(addresses ...string) Option {
+	return func(o *options) {
+		o.balancer = hotSpotBalancer
 		o.addresses = addresses
 	}
 }
@@ -98,8 +110,15 @@ func WithStreams(n int) Option {
 	}
 }
 
+const (
+	noBalancer = iota
+	roundRobinBalancer
+	hotSpotBalancer
+)
+
 type options struct {
 	addresses  []string
+	balancer   int
 	tracer     ot.Tracer
 	maxStreams int
 }
@@ -112,13 +131,8 @@ func NewClient(opts ...Option) Client {
 	}
 
 	if o.maxStreams > 0 {
-		return &pdpStreamingClient{
-			opts: o,
-			lock: &sync.RWMutex{},
-		}
+		return newStreamingClient(o)
 	}
 
-	return &pdpUnaryClient{
-		opts: o,
-	}
+	return newUnaryClient(o)
 }

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
@@ -16,36 +17,181 @@ import (
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
-type pdpStreamingClient struct {
-	conn   *grpc.ClientConn
-	client *pb.PDPClient
+type validator func(in, out interface{}, clients []*subClient, counter *uint64) error
 
+type streamingClient struct {
 	opts options
 
 	lock    *sync.RWMutex
-	streams []pb.PDP_NewValidationStreamClient
-	index   chan int
+	clients []*subClient
+	counter uint64
+
+	validate validator
 }
 
-func (c *pdpStreamingClient) Connect(addr string) error {
-	if c.conn != nil {
+func newStreamingClient(opts options) *streamingClient {
+	if opts.maxStreams <= 0 {
+		panic(fmt.Errorf("streaming client must be created with at least 1 stream but got %d", opts.maxStreams))
+	}
+
+	return &streamingClient{
+		opts: opts,
+		lock: &sync.RWMutex{},
+	}
+}
+
+func (c *streamingClient) Connect(addr string) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if len(c.clients) > 0 {
 		return ErrorConnected
+	}
+
+	addrs := c.opts.addresses
+	c.validate = simpleValidator
+	if len(addrs) > 1 {
+		switch c.opts.balancer {
+		default:
+			panic(fmt.Errorf("Invalid balancer %d", c.opts.balancer))
+
+		case roundRobinBalancer:
+			c.validate = roundRobinValidator
+
+		case hotSpotBalancer:
+			c.validate = hotSpotValidator
+		}
+	} else if len(addrs) <= 0 {
+		addrs = []string{addr}
+	}
+
+	clients, err := makeClients(addrs, c.opts.maxStreams, c.opts.tracer)
+	if err != nil {
+		return err
+	}
+
+	c.clients = clients
+	return nil
+}
+
+func (c *streamingClient) Close() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	closeClients(c.clients)
+	c.clients = nil
+}
+
+func (c *streamingClient) Validate(in, out interface{}) error {
+	c.lock.RLock()
+	clients := c.clients
+	c.lock.RUnlock()
+
+	if len(clients) <= 0 {
+		return ErrorNotConnected
+	}
+
+	return c.validate(in, out, clients, &c.counter)
+}
+
+func simpleValidator(in, out interface{}, clients []*subClient, counter *uint64) error {
+	return clients[0].validate(in, out)
+}
+
+func roundRobinValidator(in, out interface{}, clients []*subClient, counter *uint64) error {
+	i := int((atomic.AddUint64(counter, 1) - 1) % uint64(len(clients)))
+	return clients[i].validate(in, out)
+}
+
+func hotSpotValidator(in, out interface{}, clients []*subClient, counter *uint64) error {
+	i := 0
+
+	total := uint64(len(clients))
+	i = int(atomic.LoadUint64(counter) % total)
+	j := i
+	for {
+		ok, err := clients[j].tryValidate(in, out)
+		if ok {
+			return err
+		}
+
+		j = int(atomic.AddUint64(counter, 1) % total)
+
+		next := j + 1
+		if next >= len(clients) {
+			next = 0
+		}
+
+		if next == i {
+			i = j
+			break
+		}
+	}
+
+	return clients[i].validate(in, out)
+}
+
+func makeClients(addrs []string, maxStreams int, tracer ot.Tracer) ([]*subClient, error) {
+	total := len(addrs)
+	if total > maxStreams {
+		total = maxStreams
+	}
+
+	out := make([]*subClient, total)
+	chunk := maxStreams / total
+	rem := maxStreams % total
+	for i := range out {
+		count := chunk
+		if i < rem {
+			count++
+		}
+
+		sc, err := newSubClient(addrs[i], count, tracer)
+		if err != nil {
+			closeClients(out)
+			return nil, err
+		}
+
+		out[i] = sc
+	}
+
+	return out, nil
+}
+
+func closeClients(clients []*subClient) {
+	for _, sc := range clients {
+		if sc != nil {
+			sc.closeConn()
+		}
+	}
+}
+
+type subClient struct {
+	conn   *grpc.ClientConn
+	client *pb.PDPClient
+
+	lock *sync.RWMutex
+
+	maxStreams int
+	streams    []pb.PDP_NewValidationStreamClient
+	index      chan int
+}
+
+func newSubClient(addr string, maxStreams int, tracer ot.Tracer) (*subClient, error) {
+	c := &subClient{
+		lock:       &sync.RWMutex{},
+		maxStreams: maxStreams,
 	}
 
 	opts := []grpc.DialOption{
 		grpc.WithInsecure(),
 	}
 
-	if len(c.opts.addresses) > 0 {
-		addr = virtualServerAddress
-		opts = append(opts, grpc.WithBalancer(grpc.RoundRobin(newStaticResolver(addr, c.opts.addresses...))))
-	}
-
-	if c.opts.tracer != nil {
+	if tracer != nil {
 		opts = append(opts,
 			grpc.WithUnaryInterceptor(
 				otgrpc.OpenTracingClientInterceptor(
-					c.opts.tracer,
+					tracer,
 					otgrpc.IncludingSpans(
 						func(parentSpanCtx ot.SpanContext, method string, req, resp interface{}) bool {
 							return parentSpanCtx != nil
@@ -58,7 +204,7 @@ func (c *pdpStreamingClient) Connect(addr string) error {
 
 	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	c.conn = conn
@@ -66,10 +212,10 @@ func (c *pdpStreamingClient) Connect(addr string) error {
 	client := pb.NewPDPClient(c.conn)
 	c.client = &client
 
-	return nil
+	return c, nil
 }
 
-func (c *pdpStreamingClient) Close() {
+func (c *subClient) closeConn() {
 	ready := c.waitForStreams()
 
 	c.lock.Lock()
@@ -85,7 +231,7 @@ func (c *pdpStreamingClient) Close() {
 	c.client = nil
 }
 
-func (c *pdpStreamingClient) Validate(in, out interface{}) error {
+func (c *subClient) validate(in, out interface{}) error {
 	s, err := c.getStream()
 	if err != nil {
 		return err
@@ -95,14 +241,30 @@ func (c *pdpStreamingClient) Validate(in, out interface{}) error {
 	return s.validate(in, out)
 }
 
-func (c *pdpStreamingClient) fillIndex() {
+func (c *subClient) tryValidate(in, out interface{}) (bool, error) {
+	s, ok, err := c.tryGetStream()
+	if err != nil {
+		return false, err
+	}
+
+	if !ok {
+		return false, err
+	}
+
+	defer c.putStream(s)
+
+	err = s.validate(in, out)
+	return true, err
+}
+
+func (c *subClient) fillIndex() {
 	c.index = make(chan int, len(c.streams))
 	for i := range c.streams {
 		c.index <- i
 	}
 }
 
-func (c *pdpStreamingClient) dropIndex() {
+func (c *subClient) dropIndex() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -110,11 +272,7 @@ func (c *pdpStreamingClient) dropIndex() {
 	c.index = nil
 }
 
-func (c *pdpStreamingClient) makeStreams() error {
-	if c.opts.maxStreams <= 0 {
-		panic(fmt.Errorf("streaming client must be created with at least 1 stream but got %d", c.opts.maxStreams))
-	}
-
+func (c *subClient) makeStreams() error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -126,7 +284,7 @@ func (c *pdpStreamingClient) makeStreams() error {
 		return nil
 	}
 
-	c.streams = make([]pb.PDP_NewValidationStreamClient, c.opts.maxStreams)
+	c.streams = make([]pb.PDP_NewValidationStreamClient, c.maxStreams)
 	ready := make([]int, len(c.streams))
 	for i := range ready {
 		ready[i] = -1
@@ -150,7 +308,7 @@ func (c *pdpStreamingClient) makeStreams() error {
 	return nil
 }
 
-func (c *pdpStreamingClient) waitForStreams() []int {
+func (c *subClient) waitForStreams() []int {
 	c.lock.RLock()
 	streams := c.streams
 	index := c.index
@@ -181,7 +339,7 @@ func (c *pdpStreamingClient) waitForStreams() []int {
 	return ready
 }
 
-func (c *pdpStreamingClient) closeStreams(ready []int) {
+func (c *subClient) closeStreams(ready []int) {
 	if len(c.streams) <= 0 {
 		return
 	}
@@ -218,7 +376,7 @@ func closeStream(s pb.PDP_NewValidationStreamClient, wg *sync.WaitGroup) {
 	}
 }
 
-func (c *pdpStreamingClient) getStream() (stream, error) {
+func (c *subClient) getStream() (stream, error) {
 	c.lock.RLock()
 	streams := c.streams
 	index := c.index
@@ -244,7 +402,41 @@ func (c *pdpStreamingClient) getStream() (stream, error) {
 	return stream{}, ErrorNotConnected
 }
 
-func (c *pdpStreamingClient) putStream(s stream) error {
+func (c *subClient) tryGetStream() (stream, bool, error) {
+	c.lock.RLock()
+	streams := c.streams
+	index := c.index
+	c.lock.RUnlock()
+
+	if streams == nil {
+		if err := c.makeStreams(); err != nil {
+			return stream{}, false, err
+		}
+
+		c.lock.RLock()
+		streams = c.streams
+		index = c.index
+		c.lock.RUnlock()
+	}
+
+	if index == nil {
+		return stream{}, false, ErrorNotConnected
+	}
+
+	select {
+	default:
+		return stream{}, false, nil
+
+	case i, ok := <-index:
+		if ok {
+			return stream{idx: i, s: streams[i], ch: index}, true, nil
+		}
+	}
+
+	return stream{}, false, ErrorNotConnected
+}
+
+func (c *subClient) putStream(s stream) error {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 

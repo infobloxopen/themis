@@ -3,6 +3,9 @@ package pep
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-service && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/service.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-service && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-service"
 
 import (
+	"fmt"
+	"sync"
+
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	ot "github.com/opentracing/opentracing-go"
 	"golang.org/x/net/context"
@@ -11,14 +14,25 @@ import (
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
-type pdpUnaryClient struct {
+type unaryClient struct {
+	lock   *sync.RWMutex
 	conn   *grpc.ClientConn
 	client *pb.PDPClient
 
 	opts options
 }
 
-func (c *pdpUnaryClient) Connect(addr string) error {
+func newUnaryClient(opts options) *unaryClient {
+	return &unaryClient{
+		lock: &sync.RWMutex{},
+		opts: opts,
+	}
+}
+
+func (c *unaryClient) Connect(addr string) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	if c.conn != nil {
 		return ErrorConnected
 	}
@@ -29,7 +43,16 @@ func (c *pdpUnaryClient) Connect(addr string) error {
 
 	if len(c.opts.addresses) > 0 {
 		addr = virtualServerAddress
-		opts = append(opts, grpc.WithBalancer(grpc.RoundRobin(newStaticResolver(addr, c.opts.addresses...))))
+		switch c.opts.balancer {
+		default:
+			panic(fmt.Errorf("Invalid balancer %d", c.opts.balancer))
+
+		case roundRobinBalancer:
+			opts = append(opts, grpc.WithBalancer(grpc.RoundRobin(newStaticResolver(addr, c.opts.addresses...))))
+
+		case hotSpotBalancer:
+			return ErrorHotSpotBalancerUnsupported
+		}
 	}
 
 	if c.opts.tracer != nil {
@@ -60,7 +83,10 @@ func (c *pdpUnaryClient) Connect(addr string) error {
 	return nil
 }
 
-func (c *pdpUnaryClient) Close() {
+func (c *unaryClient) Close() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	if c.conn != nil {
 		c.conn.Close()
 		c.conn = nil
@@ -69,8 +95,12 @@ func (c *pdpUnaryClient) Close() {
 	c.client = nil
 }
 
-func (c *pdpUnaryClient) Validate(in, out interface{}) error {
-	if c.client == nil {
+func (c *unaryClient) Validate(in, out interface{}) error {
+	c.lock.RLock()
+	uc := c.client
+	c.lock.RUnlock()
+
+	if uc == nil {
 		return ErrorNotConnected
 	}
 
@@ -79,7 +109,7 @@ func (c *pdpUnaryClient) Validate(in, out interface{}) error {
 		return err
 	}
 
-	res, err := (*c.client).Validate(context.Background(), &req)
+	res, err := (*uc).Validate(context.Background(), &req)
 	if err != nil {
 		return err
 	}

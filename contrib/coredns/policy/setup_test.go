@@ -200,6 +200,34 @@ func TestPolicyConfigParse(t *testing.T) {
 			endpoints:  []string{"10.2.4.1:5555"},
 			errContent: "Expected at least one stream got -1",
 		},
+		{
+			input: `.:53 {
+                        policy {
+                            endpoint 10.2.4.1:5555
+                            streams 10 Round-Robin
+                        }
+                    }`,
+			endpoints: []string{"10.2.4.1:5555"},
+		},
+		{
+			input: `.:53 {
+                        policy {
+                            endpoint 10.2.4.1:5555
+                            streams 10 Hot-Spot
+                        }
+                    }`,
+			endpoints: []string{"10.2.4.1:5555"},
+		},
+		{
+			input: `.:53 {
+                        policy {
+                            endpoint 10.2.4.1:5555
+                            streams 10 Unknown-Balancer
+                        }
+                    }`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Expected round-robin or hot-spot balancing but got Unknown-Balancer",
+		},
 	}
 
 	for _, test := range tests {

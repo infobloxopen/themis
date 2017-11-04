@@ -721,13 +721,14 @@ func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
 	})
 }
 
-func BenchmarkStreamingClient(b *testing.B) {
+func benchmarkStreamingClient(name string, b *testing.B, opts ...Option) {
 	streams := 96
 	ok := true
-	tmpYAST, tmpJCon, pdp, c := startPDPServer(threeStageBenchmarkPolicySet, b,
+
+	opts = append(opts,
 		WithStreams(streams),
-		WithBalancer("127.0.0.1:5555", "[::1]:5555"),
 	)
+	tmpYAST, tmpJCon, pdp, c := startPDPServer(threeStageBenchmarkPolicySet, b, opts...)
 	defer func() {
 		c.Close()
 
@@ -740,7 +741,7 @@ func BenchmarkStreamingClient(b *testing.B) {
 		os.Remove(tmpJCon)
 	}()
 
-	ok = b.Run("BenchmarkStreamingClient", func(b *testing.B) {
+	ok = b.Run(name, func(b *testing.B) {
 		errs := make([]error, b.N)
 
 		th := make(chan int, streams)
@@ -767,6 +768,22 @@ func BenchmarkStreamingClient(b *testing.B) {
 			}
 		}
 	})
+}
+
+func BenchmarkStreamingClient(b *testing.B) {
+	benchmarkStreamingClient("BenchmarkStreamingClient", b)
+}
+
+func BenchmarkRoundRobinStreamingClient(b *testing.B) {
+	benchmarkStreamingClient("BenchmarkRoundRobinStreamingClient", b,
+		WithRoundRobinBalancer("127.0.0.1:5555", "[::1]:5555"),
+	)
+}
+
+func BenchmarkHotSpotStreamingClient(b *testing.B) {
+	benchmarkStreamingClient("BenchmarkHotSpotStreamingClient", b,
+		WithHotSpotBalancer("127.0.0.1:5555", "[::1]:5555"),
+	)
 }
 
 func startPDPServer(p string, b *testing.B, opts ...Option) (string, string, *proc, Client) {
