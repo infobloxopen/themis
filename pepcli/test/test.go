@@ -22,7 +22,7 @@ const (
 
 // Exec tests requests from input with given pdp server and dumps responses in YAML format
 // to given file or standard output if file name is empty.
-func Exec(addr, in, out string, n, s int, v interface{}) error {
+func Exec(addr string, opts []pep.Option, in, out string, n int, v interface{}) error {
 	reqs, err := requests.Load(in)
 	if err != nil {
 		return fmt.Errorf("can't load requests from \"%s\"", in)
@@ -39,13 +39,6 @@ func Exec(addr, in, out string, n, s int, v interface{}) error {
 			return err
 		}
 		defer f.Close()
-	}
-
-	opts := []pep.Option{}
-	if s > 0 {
-		opts = append(opts,
-			pep.WithStreams(s),
-		)
 	}
 
 	c := pep.NewClient(opts...)
