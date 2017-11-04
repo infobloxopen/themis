@@ -7,13 +7,15 @@ AT = cd $(SRCROOT)
 RM = rm -fv
 GOBUILD = go build -v
 GOFMTCHECK = test -z `gofmt -w -s *.go | tee /dev/stderr`
-COVER = go test -v -coverprofile=$(COVERTMP) -covermode=atomic
+GOTEST = go test -v
+COVER = $(GOTEST) -coverprofile=$(COVERTMP) -covermode=atomic
 JOINCOVER = cat $(COVERTMP) >> $(COVEROUT)
-GOTEST = $(COVER) -race && $(JOINCOVER)
-GOBENCH = $(COVER) -bench=. && $(JOINCOVER)
+GOTESTRACE = $(COVER) -race && $(JOINCOVER)
+GOBENCH = $(GOTEST) -run=BypassAllTestsAndRunOnlyBenchmarks -bench=
+GOBENCHALL = $(GOBENCH).
 
 .PHONY: all
-all: fmt build test
+all: fmt build test bench
 
 .PHONY: build-dir
 build-dir:
@@ -36,6 +38,9 @@ build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-eg
 
 .PHONY: test
 test: cover-out test-pdp test-pdp-yast test-pdp-jast test-pdp-jcon test-pep test-plugin
+
+.PHONY: bench
+bench: bench-pep bench-pdpserver
 
 .PHONY: cover-out
 cover-out:
@@ -137,27 +142,33 @@ build-egen: build-dir
 
 .PHONY: test-pdp
 test-pdp: cover-out
-	$(AT)/pdp && $(GOTEST)
+	$(AT)/pdp && $(GOTESTRACE)
 
 .PHONY: test-pdp-yast
 test-pdp-yast: cover-out
-	$(AT)/pdp/ast/yast && $(GOTEST)
+	$(AT)/pdp/ast/yast && $(GOTESTRACE)
 
 .PHONY: test-pdp-jast
 test-pdp-jast: cover-out
-	$(AT)/pdp/ast/jast && $(GOTEST)
+	$(AT)/pdp/ast/jast && $(GOTESTRACE)
 
 .PHONY: test-pdp-jcon
 test-pdp-jcon: cover-out
-	$(AT)/pdp/jcon && $(GOTEST)
+	$(AT)/pdp/jcon && $(GOTESTRACE)
 
 .PHONY: test-pep
 test-pep: build-pdpserver cover-out
-	$(AT)/pep && $(GOTEST)
-	$(AT)/pep && $(GOBENCH)
+	$(AT)/pep && $(GOTESTRACE)
 
 .PHONY: test-plugin
 test-plugin: cover-out
-	$(AT)/contrib/coredns/policy && $(GOTEST)
-	$(AT)/contrib/coredns/policy/dnstap && $(GOTEST)
+	$(AT)/contrib/coredns/policy && $(GOTESTRACE)
+	$(AT)/contrib/coredns/policy/dnstap && $(GOTESTRACE)
 
+.PHONY: bench-pep
+bench-pep: build-pdpserver
+	$(AT)/pep && $(GOBENCH)\(Benchmark.*PolicySet\)\|\(BenchmarkStreamingClient\)
+
+.PHONY: bench-pdpserver
+bench-pdpserver:
+	$(AT)/pdpserver && $(GOBENCHALL)
