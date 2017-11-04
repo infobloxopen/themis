@@ -93,7 +93,13 @@ func (p *PolicyPlugin) Connect() error {
 	log.Printf("[DEBUG] Endpoints: %v", p)
 	if debug {
 		p.pdp = newTestClientInit(
-			&pdp.Response{Effect: pdp.PERMIT},
+			&pdp.Response{
+				Effect: pdp.PERMIT,
+				Obligations: []*pdp.Attribute{
+					{Id: "customer_id", Value: "35e178af10438bd6bf7cbbcb6115a6b3"},
+					{Id: "policy_id", Value: "00000006"},
+				},
+			},
 			&pdp.Response{Effect: pdp.PERMIT},
 			nil,
 			nil,

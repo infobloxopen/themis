@@ -97,24 +97,20 @@ func (ah *attrHolder) addResponse(r *pdp.Response, respip bool) {
 }
 
 func (ah *attrHolder) convertAttrs() []*pb.DnstapAttribute {
-	lenAttrsReqDomain := len(ah.attrsReqDomain) - 1
+	lenAttrsReqDomain := len(ah.attrsReqDomain)
 	lenAttrsRespDomain := len(ah.attrsRespDomain)
 	lenAttrsReqRespip := len(ah.attrsReqRespip)
-	if lenAttrsReqRespip > 0 {
-		lenAttrsReqRespip -= 2
-	}
 	lenAttrsRespRespip := len(ah.attrsRespRespip)
-	length := lenAttrsReqDomain + lenAttrsRespDomain +
-		lenAttrsReqRespip + lenAttrsRespRespip + 1
+	length := lenAttrsReqDomain + lenAttrsRespDomain + lenAttrsReqRespip + lenAttrsRespRespip
+	if lenAttrsReqRespip > 0 {
+		length -= 2
+	}
 	out := make([]*pb.DnstapAttribute, length)
 	i := 0
-	id := "policy_action"
-	out[i] = &pb.DnstapAttribute{Id: id, Value: actionConvDnstap[ah.action]}
-	i++
-	for j := 0; j < lenAttrsReqDomain; j++ {
+	for j := 1; j < lenAttrsReqDomain; j++ {
 		out[i] = &pb.DnstapAttribute{
-			Id:    ah.attrsReqDomain[j+1].Id,
-			Value: ah.attrsReqDomain[j+1].Value,
+			Id:    ah.attrsReqDomain[j].Id,
+			Value: ah.attrsReqDomain[j].Value,
 		}
 		i++
 	}
@@ -125,10 +121,10 @@ func (ah *attrHolder) convertAttrs() []*pb.DnstapAttribute {
 		}
 		i++
 	}
-	for j := 0; j < lenAttrsReqRespip; j++ {
+	for j := 2; j < lenAttrsReqRespip; j++ {
 		out[i] = &pb.DnstapAttribute{
-			Id:    ah.attrsReqRespip[j+2].Id,
-			Value: ah.attrsReqRespip[j+2].Value,
+			Id:    ah.attrsReqRespip[j].Id,
+			Value: ah.attrsReqRespip[j].Value,
 		}
 		i++
 	}
@@ -139,5 +135,7 @@ func (ah *attrHolder) convertAttrs() []*pb.DnstapAttribute {
 		}
 		i++
 	}
+	id := "policy_action"
+	out[i] = &pb.DnstapAttribute{Id: id, Value: actionConvDnstap[ah.action]}
 	return out
 }
