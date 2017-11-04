@@ -135,7 +135,6 @@ func (ah *attrHolder) convertAttrs() []*pb.DnstapAttribute {
 		}
 		i++
 	}
-	id := "policy_action"
-	out[i] = &pb.DnstapAttribute{Id: id, Value: actionConvDnstap[ah.action]}
+	out[i] = &pb.DnstapAttribute{Id: "policy_action", Value: actionConvDnstap[ah.action]}
 	return out
 }
