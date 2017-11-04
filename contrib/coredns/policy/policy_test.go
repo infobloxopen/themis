@@ -12,7 +12,7 @@ import (
 	"github.com/coredns/coredns/plugin/pkg/dnstest"
 	"github.com/coredns/coredns/plugin/test"
 
-	"github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
+	"github.com/infobloxopen/themis/contrib/coredns/policy/pb"
 	pdp "github.com/infobloxopen/themis/pdp-service"
 
 	"github.com/miekg/dns"
@@ -570,15 +570,17 @@ func TestEdns(t *testing.T) {
 }
 
 type testDnstapSender struct {
-	attrs []*dnstap.DnstapAttribute
+	attrs []*pb.DnstapAttribute
 }
 
 func (s *testDnstapSender) reset() {
 	s.attrs = nil
 }
 
-func (s *testDnstapSender) SendCRExtraMsg(pw *dnstap.ProxyWriter, attrs []*dnstap.DnstapAttribute) {
-	s.attrs = attrs
+func (s *testDnstapSender) SendCRExtraMsg(pw *ProxyWriter, ah *attrHolder) {
+	if ah != nil {
+		s.attrs = ah.convertAttrs()
+	}
 }
 
 func (s *testDnstapSender) checkAttributes(t *testing.T, i int, attrs []*pdp.Attribute) {

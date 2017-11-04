@@ -1,13 +1,14 @@
-package dnstap
+package policy
 
 import (
 	"log"
 	"time"
 
-	tapplg "github.com/coredns/coredns/plugin/dnstap"
+	"github.com/coredns/coredns/plugin/dnstap"
 	"github.com/coredns/coredns/plugin/dnstap/taprw"
 	tap "github.com/dnstap/golang-dnstap"
 	"github.com/golang/protobuf/proto"
+	"github.com/infobloxopen/themis/contrib/coredns/policy/pb"
 	"github.com/miekg/dns"
 )
 
@@ -39,14 +40,14 @@ func (w *ProxyWriter) WriteMsg(msg *dns.Msg) error {
 }
 
 type DnstapSender interface {
-	SendCRExtraMsg(pw *ProxyWriter, attrs []*DnstapAttribute)
+	SendCRExtraMsg(pw *ProxyWriter, ah *attrHolder)
 }
 
 type policyDnstapSender struct {
-	ior tapplg.IORoutine
+	ior dnstap.IORoutine
 }
 
-func NewPolicyDnstapSender(io tapplg.IORoutine) DnstapSender {
+func NewPolicyDnstapSender(io dnstap.IORoutine) DnstapSender {
 	return &policyDnstapSender{ior: io}
 }
 
@@ -54,7 +55,7 @@ func NewPolicyDnstapSender(io tapplg.IORoutine) DnstapSender {
 // of extra attributes to Dnstap.Extra field. Then it asynchronously sends the
 // message with IORoutine interface
 // Parameter tapIO must not be nil
-func (s *policyDnstapSender) SendCRExtraMsg(pw *ProxyWriter, attrs []*DnstapAttribute) {
+func (s *policyDnstapSender) SendCRExtraMsg(pw *ProxyWriter, ah *attrHolder) {
 	if pw == nil || pw.msg == nil {
 		log.Printf("[ERROR] Failed to create dnstap CR message - no DNS response message found")
 		return
@@ -73,8 +74,8 @@ func (s *policyDnstapSender) SendCRExtraMsg(pw *ProxyWriter, attrs []*DnstapAttr
 		t := tap.Dnstap_MESSAGE
 
 		var extra []byte
-		if attrs != nil {
-			extra, err = proto.Marshal(&Extra{Attrs: attrs})
+		if ah != nil {
+			extra, err = proto.Marshal(&pb.Extra{Attrs: ah.convertAttrs()})
 			if err != nil {
 				log.Printf("[ERROR] Failed to create extra data for dnstap CR message (%v)", err)
 			}

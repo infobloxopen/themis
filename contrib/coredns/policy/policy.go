@@ -15,7 +15,6 @@ import (
 
 	"github.com/coredns/coredns/plugin"
 
-	"github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 	pdp "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pep"
 
@@ -78,7 +77,7 @@ type PolicyPlugin struct {
 	Delay       uint
 	Pending     uint
 	options     map[uint16][]*edns0Map
-	TapIO       dnstap.DnstapSender
+	TapIO       DnstapSender
 	Next        plugin.Handler
 	pdp         pep.Client
 	DebugSuffix string
@@ -383,15 +382,15 @@ Exit:
 		r.Question[0].Name = r.Question[0].Name + p.DebugSuffix
 		r.Question[0].Qtype = dns.TypeTXT
 		r.Question[0].Qclass = dns.ClassCHAOS
+		sendExtra = false
 	}
 	if p.TapIO != nil && status != dns.RcodeRefused && status != dns.RcodeServerFailure {
-		if pw := dnstap.NewProxyWriter(w); pw != nil {
+		if pw := NewProxyWriter(w); pw != nil {
 			pw.WriteMsg(r)
-			var attrs []*dnstap.DnstapAttribute
-			if sendExtra {
-				attrs = ah.convertAttrs()
+			if !sendExtra {
+				ah = nil
 			}
-			p.TapIO.SendCRExtraMsg(pw, attrs)
+			p.TapIO.SendCRExtraMsg(pw, ah)
 		}
 	} else {
 		w.WriteMsg(r)

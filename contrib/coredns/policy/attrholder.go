@@ -5,19 +5,19 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
+	"github.com/infobloxopen/themis/contrib/coredns/policy/pb"
 	pdp "github.com/infobloxopen/themis/pdp-service"
 )
 
 var actionConvDnstap [actCount]string
 
 func init() {
-	actionConvDnstap[typeInvalid] = "0"  // dnstap.PolicyAction_INVALID
-	actionConvDnstap[typeRefuse] = "5"   // dnstap.PolicyAction_REFUSE
-	actionConvDnstap[typeAllow] = "2"    // dnstap.PolicyAction_PASSTHROUGH
-	actionConvDnstap[typeRedirect] = "4" // dnstap.PolicyAction_REDIRECT
-	actionConvDnstap[typeBlock] = "3"    // dnstap.PolicyAction_NXDOMAIN
-	actionConvDnstap[typeLog] = "2"      // dnstap.PolicyAction_PASSTHROUGH
+	actionConvDnstap[typeInvalid] = "0"  // pb.PolicyAction_INVALID
+	actionConvDnstap[typeRefuse] = "5"   // pb.PolicyAction_REFUSE
+	actionConvDnstap[typeAllow] = "2"    // pb.PolicyAction_PASSTHROUGH
+	actionConvDnstap[typeRedirect] = "4" // pb.PolicyAction_REDIRECT
+	actionConvDnstap[typeBlock] = "3"    // pb.PolicyAction_NXDOMAIN
+	actionConvDnstap[typeLog] = "2"      // pb.PolicyAction_PASSTHROUGH
 }
 
 type attrHolder struct {
@@ -96,7 +96,7 @@ func (ah *attrHolder) addResponse(r *pdp.Response, respip bool) {
 	return
 }
 
-func (ah *attrHolder) convertAttrs() []*dnstap.DnstapAttribute {
+func (ah *attrHolder) convertAttrs() []*pb.DnstapAttribute {
 	lenAttrsReqDomain := len(ah.attrsReqDomain) - 1
 	lenAttrsRespDomain := len(ah.attrsRespDomain)
 	lenAttrsReqRespip := len(ah.attrsReqRespip)
@@ -106,34 +106,34 @@ func (ah *attrHolder) convertAttrs() []*dnstap.DnstapAttribute {
 	lenAttrsRespRespip := len(ah.attrsRespRespip)
 	length := lenAttrsReqDomain + lenAttrsRespDomain +
 		lenAttrsReqRespip + lenAttrsRespRespip + 1
-	out := make([]*dnstap.DnstapAttribute, length)
+	out := make([]*pb.DnstapAttribute, length)
 	i := 0
 	id := "policy_action"
-	out[i] = &dnstap.DnstapAttribute{Id: id, Value: actionConvDnstap[ah.action]}
+	out[i] = &pb.DnstapAttribute{Id: id, Value: actionConvDnstap[ah.action]}
 	i++
 	for j := 0; j < lenAttrsReqDomain; j++ {
-		out[i] = &dnstap.DnstapAttribute{
+		out[i] = &pb.DnstapAttribute{
 			Id:    ah.attrsReqDomain[j+1].Id,
 			Value: ah.attrsReqDomain[j+1].Value,
 		}
 		i++
 	}
 	for j := 0; j < lenAttrsRespDomain; j++ {
-		out[i] = &dnstap.DnstapAttribute{
+		out[i] = &pb.DnstapAttribute{
 			Id:    ah.attrsRespDomain[j].Id,
 			Value: ah.attrsRespDomain[j].Value,
 		}
 		i++
 	}
 	for j := 0; j < lenAttrsReqRespip; j++ {
-		out[i] = &dnstap.DnstapAttribute{
+		out[i] = &pb.DnstapAttribute{
 			Id:    ah.attrsReqRespip[j+2].Id,
 			Value: ah.attrsReqRespip[j+2].Value,
 		}
 		i++
 	}
 	for j := 0; j < lenAttrsRespRespip; j++ {
-		out[i] = &dnstap.DnstapAttribute{
+		out[i] = &pb.DnstapAttribute{
 			Id:    ah.attrsRespRespip[j].Id,
 			Value: ah.attrsRespRespip[j].Value,
 		}

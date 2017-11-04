@@ -6,8 +6,7 @@ import (
 
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
-	tapplg "github.com/coredns/coredns/plugin/dnstap"
-	"github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
+	"github.com/coredns/coredns/plugin/dnstap"
 
 	"github.com/mholt/caddy"
 )
@@ -28,8 +27,8 @@ func setup(c *caddy.Controller) error {
 
 	c.OnStartup(func() error {
 		if taph := dnsserver.GetConfig(c).Handler("dnstap"); taph != nil {
-			if tapPlugin, ok := taph.(tapplg.Dnstap); ok && tapPlugin.IO != nil {
-				policyPlugin.TapIO = dnstap.NewPolicyDnstapSender(tapPlugin.IO)
+			if tapPlugin, ok := taph.(dnstap.Dnstap); ok && tapPlugin.IO != nil {
+				policyPlugin.TapIO = NewPolicyDnstapSender(tapPlugin.IO)
 			}
 		}
 
