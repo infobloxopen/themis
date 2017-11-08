@@ -139,6 +139,18 @@ var (
 	typeCacheLock = sync.RWMutex{}
 )
 
+func makeRequest(v interface{}) (pb.Request, error) {
+	if req, ok := v.(pb.Request); ok {
+		return req, nil
+	}
+	attrs, err := marshalValue(reflect.ValueOf(v))
+	if err != nil {
+		return pb.Request{}, err
+	}
+
+	return pb.Request{Attributes: attrs}, nil
+}
+
 func marshalValue(v reflect.Value) ([]*pb.Attribute, error) {
 	if v.Kind() != reflect.Struct {
 		return nil, ErrorInvalidSource

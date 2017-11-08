@@ -16,6 +16,7 @@ type config struct {
 	healthEP   string
 	profilerEP string
 	mem        memCheckConfig
+	maxStreams uint
 }
 
 type stringSet []string
@@ -39,9 +40,10 @@ func init() {
 	flag.StringVar(&conf.serviceEP, "l", "0.0.0.0:5555", "listen for decision requests on this address:port")
 	flag.StringVar(&conf.controlEP, "c", "0.0.0.0:5554", "listen for policies on this address:port")
 	flag.StringVar(&conf.tracingEP, "t", "", "OpenZipkin tracing endpoint")
-	flag.StringVar(&conf.healthEP, "health", "", "Health check endpoint")
-	flag.StringVar(&conf.profilerEP, "pprof", "", "Performance profiler endpoint")
-	flag.Uint64Var(&conf.mem.limit, "mem-limit", 0, "Memory limit in megabytes")
+	flag.StringVar(&conf.healthEP, "health", "", "health check endpoint")
+	flag.StringVar(&conf.profilerEP, "pprof", "", "performance profiler endpoint")
+	flag.Uint64Var(&conf.mem.limit, "mem-limit", 0, "memory limit in megabytes")
+	flag.UintVar(&conf.maxStreams, "max-streams", 0, "maximum number of parallel gRPC streams (0 - use gRPC default)")
 
 	flag.Parse()
 

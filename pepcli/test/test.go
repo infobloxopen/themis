@@ -1,3 +1,4 @@
+// Package test implements test command for PEPCLI.
 package test
 
 import (
@@ -13,11 +14,15 @@ import (
 )
 
 const (
-	Name        = "test"
+	// Name contains title of function implemented by the package.
+	Name = "test"
+	// Description provides additional information on the package functionality.
 	Description = "evaluates given requests on PDP server"
 )
 
-func Exec(addr, in, out string, n int, v interface{}) error {
+// Exec tests requests from input with given pdp server and dumps responses in YAML format
+// to given file or standard output if file name is empty.
+func Exec(addr string, opts []pep.Option, in, out string, n int, v interface{}) error {
 	reqs, err := requests.Load(in)
 	if err != nil {
 		return fmt.Errorf("can't load requests from \"%s\"", in)
@@ -36,8 +41,8 @@ func Exec(addr, in, out string, n int, v interface{}) error {
 		defer f.Close()
 	}
 
-	c := pep.NewClient(addr, nil)
-	err = c.Connect()
+	c := pep.NewClient(opts...)
+	err = c.Connect(addr)
 	if err != nil {
 		return fmt.Errorf("can't connect to %s: %s", addr, err)
 	}
@@ -48,7 +53,7 @@ func Exec(addr, in, out string, n int, v interface{}) error {
 		req := reqs[idx]
 
 		res := &pb.Response{}
-		err := c.ModalValidate(req, res)
+		err := c.Validate(req, res)
 		if err != nil {
 			return fmt.Errorf("can't send request %d (%d): %s", idx, i, err)
 		}

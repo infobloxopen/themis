@@ -1,3 +1,4 @@
+// Package perf implements perf command for PEPCLI.
 package perf
 
 import (
@@ -8,11 +9,15 @@ import (
 )
 
 const (
-	Name        = "perf"
+	// Name contains title of function implemented by the package.
+	Name = "perf"
+	// Description provides additional information on the package functionality.
 	Description = "measures performance of evaluation given requests on PDP server"
 )
 
-func Exec(addr, in, out string, n int, v interface{}) error {
+// Exec runs performance test for given server with requests from input and
+// dumps timings in JSON format to given file or standard output if file name is empty.
+func Exec(addr string, opts []pep.Option, in, out string, n int, v interface{}) error {
 	reqs, err := requests.Load(in)
 	if err != nil {
 		return fmt.Errorf("can't load requests from \"%s\"", in)
@@ -22,8 +27,8 @@ func Exec(addr, in, out string, n int, v interface{}) error {
 		n = len(reqs)
 	}
 
-	c := pep.NewClient(addr, nil)
-	err = c.Connect()
+	c := pep.NewClient(opts...)
+	err = c.Connect(addr)
 	if err != nil {
 		return fmt.Errorf("can't connect to %s: %s", addr, err)
 	}

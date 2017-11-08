@@ -15,16 +15,13 @@ import (
 
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/pkg/trace"
+	"github.com/mholt/caddy"
+	"github.com/miekg/dns"
+	"golang.org/x/net/context"
 
 	"github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 	pb "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pep"
-
-	"github.com/miekg/dns"
-
-	ot "github.com/opentracing/opentracing-go"
-
-	"golang.org/x/net/context"
 )
 
 const (
@@ -66,36 +63,164 @@ type edns0Map struct {
 // PolicyPlugin represents a plugin instance that can validate DNS
 // requests and replies using PDP server.
 type PolicyPlugin struct {
-	Endpoints   []string
+	endpoints   []string
 	options     map[uint16][]*edns0Map
-	TapIO       dnstap.DnstapSender
-	Trace       plugin.Handler
-	Next        plugin.Handler
+	tapIO       dnstap.DnstapSender
+	trace       plugin.Handler
+	next        plugin.Handler
 	pdp         pep.Client
-	DebugSuffix string
-	ErrorFunc   func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
+	debugSuffix string
+	streams     int
+	hotSpot     bool
+	errorFunc   func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
 }
 
-// Connect establishes connection to PDP server.
-func (p *PolicyPlugin) Connect() error {
+func newPolicyPlugin() *PolicyPlugin {
+	return &PolicyPlugin{options: make(map[uint16][]*edns0Map)}
+}
+
+// connect establishes connection to PDP server.
+func (p *PolicyPlugin) connect() error {
 	log.Printf("[DEBUG] Connecting %v", p)
-	var tracer ot.Tracer
-	if p.Trace != nil {
-		if t, ok := p.Trace.(trace.Trace); ok {
-			tracer = t.Tracer()
+
+	opts := []pep.Option{}
+	if p.streams <= 0 || !p.hotSpot {
+		opts = append(opts, pep.WithRoundRobinBalancer(p.endpoints...))
+	}
+
+	if p.streams > 0 {
+		opts = append(opts, pep.WithStreams(p.streams))
+		if p.hotSpot {
+			opts = append(opts, pep.WithHotSpotBalancer(p.endpoints...))
 		}
 	}
-	p.pdp = pep.NewBalancedClient(p.Endpoints, tracer)
-	return p.pdp.Connect()
+
+	if p.trace != nil {
+		if t, ok := p.trace.(trace.Trace); ok {
+			opts = append(opts, pep.WithTracer(t.Tracer()))
+		}
+	}
+
+	p.pdp = pep.NewClient(opts...)
+	return p.pdp.Connect("")
 }
 
-// Close terminates previously established connection.
-func (p *PolicyPlugin) Close() {
-	p.pdp.Close()
+// closeConn terminates previously established connection.
+func (p *PolicyPlugin) closeConn() {
+	if p.pdp != nil {
+		p.pdp.Close()
+		p.pdp = nil
+	}
 }
 
-// AddEDNS0Map adds new EDNS0 to table.
-func (p *PolicyPlugin) AddEDNS0Map(code, name, dataType, destType,
+func (p *PolicyPlugin) parseOption(c *caddy.Controller) error {
+	switch c.Val() {
+	case "endpoint":
+		return p.parseEndpoint(c)
+
+	case "edns0":
+		return p.parseEDNS0(c)
+
+	case "debug_query_suffix":
+		return p.parseDebugQuerySuffix(c)
+
+	case "streams":
+		return p.parseStreams(c)
+	}
+
+	return nil
+}
+
+func (p *PolicyPlugin) parseEndpoint(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) <= 0 {
+		return c.ArgErr()
+	}
+
+	p.endpoints = args
+	return nil
+}
+
+func (p *PolicyPlugin) parseEDNS0(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	// Usage: edns0 <code> <name> [ <dataType> <destType> ] [ <size> <start> <end> ].
+	// Valid dataTypes are hex (default), bytes, ip.
+	// Valid destTypes depend on PDP (default string).
+	argsLen := len(args)
+	if argsLen != 2 && argsLen != 4 && argsLen != 7 {
+		return fmt.Errorf("Invalid edns0 directive")
+	}
+
+	dataType := "hex"
+	destType := "string"
+	size := "0"
+	start := "0"
+	end := "0"
+
+	if argsLen > 2 {
+		dataType = args[2]
+		destType = args[3]
+	}
+
+	if argsLen == 7 && dataType == "hex" {
+		size = args[4]
+		start = args[5]
+		end = args[6]
+	}
+
+	err := p.addEDNS0Map(args[0], args[1], dataType, destType, size, start, end)
+	if err != nil {
+		return fmt.Errorf("Could not add EDNS0 map for %s: %s", args[0], err)
+	}
+
+	return nil
+}
+
+func (p *PolicyPlugin) parseDebugQuerySuffix(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) != 1 {
+		return c.ArgErr()
+	}
+
+	p.debugSuffix = args[0]
+	return nil
+}
+
+func (p *PolicyPlugin) parseStreams(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) < 1 || len(args) > 2 {
+		return c.ArgErr()
+	}
+
+	streams, err := strconv.ParseInt(args[0], 10, 32)
+	if err != nil {
+		return fmt.Errorf("Could not parse number of streams: %s", err)
+	}
+	if streams < 1 {
+		return fmt.Errorf("Expected at least one stream got %d", streams)
+	}
+
+	p.streams = int(streams)
+
+	if len(args) > 1 {
+		switch strings.ToLower(args[1]) {
+		default:
+			return fmt.Errorf("Expected round-robin or hot-spot balancing but got %s", args[1])
+
+		case "round-robin":
+			p.hotSpot = false
+
+		case "hot-spot":
+			p.hotSpot = true
+		}
+	} else {
+		p.hotSpot = false
+	}
+
+	return nil
+}
+
+func (p *PolicyPlugin) addEDNS0Map(code, name, dataType, destType,
 	sizeStr, startStr, endStr string) error {
 	c, err := strconv.ParseUint(code, 0, 16)
 	if err != nil {
@@ -160,7 +285,7 @@ func parseHex(data []byte, option *edns0Map) string {
 }
 
 func parseOptionGroup(ah *attrHolder, data []byte, options []*edns0Map) bool {
-	srcIpFound := false
+	srcIPFound := false
 	for _, option := range options {
 		var value string
 		switch option.dataType {
@@ -176,15 +301,15 @@ func parseOptionGroup(ah *attrHolder, data []byte, options []*edns0Map) bool {
 			value = ip.String()
 		}
 		if option.name == "source_ip" {
-			srcIpFound = true
+			srcIPFound = true
 		}
 		ah.attrs = append(ah.attrs, &pb.Attribute{Id: option.name, Type: option.destType, Value: value})
 	}
-	return srcIpFound
+	return srcIPFound
 }
 
 func (p *PolicyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) {
-	ipId := "source_ip"
+	ipID := "source_ip"
 
 	o := r.IsEdns0()
 	if o == nil {
@@ -200,14 +325,14 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) 
 		if !ok {
 			continue
 		}
-		srcIpFound := parseOptionGroup(ah, optLocal.Data, options)
-		if srcIpFound {
-			ipId = "proxy_source_ip"
+		srcIPFound := parseOptionGroup(ah, optLocal.Data, options)
+		if srcIPFound {
+			ipID = "proxy_source_ip"
 		}
 	}
 
 Exit:
-	ah.attrs = append(ah.attrs, &pb.Attribute{Id: ipId, Type: "address", Value: ip})
+	ah.attrs = append(ah.attrs, &pb.Attribute{Id: ipID, Type: "address", Value: ip})
 	return
 }
 
@@ -256,9 +381,9 @@ func (p *PolicyPlugin) decodeDebugMsg(r *dns.Msg) (*dns.Msg, bool) {
 		q := r.Question[0]
 		if q.Qclass == dns.ClassCHAOS && q.Qtype == dns.TypeTXT {
 			name := strings.ToLower(q.Name)
-			if strings.HasSuffix(name, p.DebugSuffix) {
+			if strings.HasSuffix(name, p.debugSuffix) {
 				req := new(dns.Msg)
-				name = strings.TrimSuffix(name, p.DebugSuffix)
+				name = strings.TrimSuffix(name, p.debugSuffix)
 				req.SetQuestion(name, dns.TypeA)
 				return req, true
 			}
@@ -292,7 +417,7 @@ func getNameClass(r *dns.Msg) (string, uint16) {
 // ServeDNS implements the Handler interface.
 func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	var (
-		status    int = -1
+		status    = -1
 		respMsg   *dns.Msg
 		err       error
 		sendExtra bool
@@ -311,8 +436,8 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 
 	if ah.action == typeAllow || ah.action == typeLog {
 		// resolve domain name to IP
-		responseWriter := new(Writer)
-		status, err = plugin.NextOrFailure(p.Name(), p.Next, ctx, responseWriter, query)
+		responseWriter := new(writer)
+		status, err = plugin.NextOrFailure(p.Name(), p.next, ctx, responseWriter, query)
 		if err != nil {
 			status = dns.RcodeServerFailure
 		} else {
@@ -363,14 +488,14 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 Exit:
 	r.Rcode = status
 	r.Response = true
-	if p.TapIO != nil && status != dns.RcodeRefused && status != dns.RcodeServerFailure {
+	if p.tapIO != nil && status != dns.RcodeRefused && status != dns.RcodeServerFailure {
 		if pw := dnstap.NewProxyWriter(w); pw != nil {
 			pw.WriteMsg(r)
 			if sendExtra {
 				ah.attrs = append(ah.attrs, &pb.Attribute{Id: "policy_action", Type: "string", Value: actionConv[ah.action]})
-				p.TapIO.SendCRExtraMsg(pw, ah.attrs)
+				p.tapIO.SendCRExtraMsg(pw, ah.attrs)
 			} else {
-				p.TapIO.SendCRExtraMsg(pw, nil)
+				p.tapIO.SendCRExtraMsg(pw, nil)
 			}
 		}
 	} else {
@@ -407,8 +532,8 @@ func (p *PolicyPlugin) redirect(ctx context.Context, r *dns.Msg, dst string) (in
 	if cname {
 		origName := r.Question[0].Name
 		r.Question[0].Name = dst
-		responseWriter := new(Writer)
-		status, err := plugin.NextOrFailure(p.Name(), p.Next, ctx, responseWriter, r)
+		responseWriter := new(writer)
+		status, err := plugin.NextOrFailure(p.Name(), p.next, ctx, responseWriter, r)
 		r.Question[0].Name = origName
 		if err != nil {
 			return dns.RcodeServerFailure, err
@@ -426,7 +551,7 @@ func (p *PolicyPlugin) redirect(ctx context.Context, r *dns.Msg, dst string) (in
 
 func (p *PolicyPlugin) validate(ah *attrHolder) error {
 	response := new(pb.Response)
-	err := p.pdp.ModalValidate(pb.Request{Attributes: ah.request()}, response)
+	err := p.pdp.Validate(pb.Request{Attributes: ah.request()}, response)
 	if err != nil {
 		log.Printf("[ERROR] Policy validation failed due to error %s", err)
 		return err
@@ -455,15 +580,15 @@ func extractRespIP(m *dns.Msg) (address string) {
 	return
 }
 
-type Writer struct {
+type writer struct {
 	Msg *dns.Msg
 }
 
-func (w *Writer) Close() error                  { return nil }
-func (w *Writer) TsigStatus() error             { return nil }
-func (w *Writer) TsigTimersOnly(b bool)         { return }
-func (w *Writer) Hijack()                       { return }
-func (w *Writer) LocalAddr() (la net.Addr)      { return }
-func (w *Writer) RemoteAddr() (ra net.Addr)     { return }
-func (w *Writer) WriteMsg(m *dns.Msg) error     { w.Msg = m; return nil }
-func (w *Writer) Write(buf []byte) (int, error) { return len(buf), nil }
+func (w *writer) Close() error                  { return nil }
+func (w *writer) TsigStatus() error             { return nil }
+func (w *writer) TsigTimersOnly(b bool)         { return }
+func (w *writer) Hijack()                       { return }
+func (w *writer) LocalAddr() (la net.Addr)      { return }
+func (w *writer) RemoteAddr() (ra net.Addr)     { return }
+func (w *writer) WriteMsg(m *dns.Msg) error     { w.Msg = m; return nil }
+func (w *writer) Write(buf []byte) (int, error) { return len(buf), nil }

@@ -6,6 +6,7 @@ import (
 	"go/build"
 	"io/ioutil"
 	"math/rand"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -667,7 +668,7 @@ func benchmarkPolicySet(name, p string, b *testing.B) {
 			in := decisionRequests[n%len(decisionRequests)]
 
 			var out decisionResponse
-			c.ModalValidate(in, &out)
+			c.Validate(in, &out)
 
 			if (out.Effect != "DENY" && out.Effect != "PERMIT" && out.Effect != "NOTAPPLICABLE") ||
 				out.Reason != "Ok" {
@@ -709,7 +710,7 @@ func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			in := rawRequests[n%len(rawRequests)]
 
-			c.ModalValidate(in, &out)
+			c.Validate(in, &out)
 
 			if (out.Effect != pb.Response_DENY &&
 				out.Effect != pb.Response_PERMIT &&
@@ -721,7 +722,91 @@ func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
 	})
 }
 
-func startPDPServer(p string, b *testing.B) (string, string, *proc, Client) {
+func benchmarkStreamingClient(name string, b *testing.B, opts ...Option) {
+	streams := 96
+	ok := true
+
+	opts = append(opts,
+		WithStreams(streams),
+	)
+	tmpYAST, tmpJCon, pdp, c := startPDPServer(threeStageBenchmarkPolicySet, b, opts...)
+	defer func() {
+		c.Close()
+
+		_, errDump, _ := pdp.kill()
+		if !ok && len(errDump) > 0 {
+			b.Logf("PDP server dump:\n%s", strings.Join(errDump, "\n"))
+		}
+
+		os.Remove(tmpYAST)
+		os.Remove(tmpJCon)
+	}()
+
+	ok = b.Run(name, func(b *testing.B) {
+		errs := make([]error, b.N)
+
+		th := make(chan int, streams)
+		for n := 0; n < b.N; n++ {
+			th <- 0
+			go func(i int) {
+				defer func() { <-th }()
+
+				var out pb.Response
+				c.Validate(rawRequests[i%len(rawRequests)], &out)
+
+				if (out.Effect != pb.Response_DENY &&
+					out.Effect != pb.Response_PERMIT &&
+					out.Effect != pb.Response_NOTAPPLICABLE) ||
+					out.Reason != "Ok" {
+					errs[i] = fmt.Errorf("unexpected response: %#v", out)
+				}
+			}(n)
+		}
+
+		for i, err := range errs {
+			if err != nil {
+				b.Fatalf("request %d failed: %s", i, err)
+			}
+		}
+	})
+}
+
+func BenchmarkStreamingClient(b *testing.B) {
+	benchmarkStreamingClient("BenchmarkStreamingClient", b)
+}
+
+func BenchmarkRoundRobinStreamingClient(b *testing.B) {
+	benchmarkStreamingClient("BenchmarkRoundRobinStreamingClient", b,
+		WithRoundRobinBalancer("127.0.0.1:5555", "[::1]:5555"),
+	)
+}
+
+func BenchmarkHotSpotStreamingClient(b *testing.B) {
+	benchmarkStreamingClient("BenchmarkHotSpotStreamingClient", b,
+		WithHotSpotBalancer("127.0.0.1:5555", "[::1]:5555"),
+	)
+}
+
+func waitForPortOpened(address string) error {
+	var (
+		c   net.Conn
+		err error
+	)
+
+	for i := 0; i < 20; i++ {
+		after := time.After(500 * time.Millisecond)
+		c, err = net.DialTimeout("tcp", address, 500*time.Millisecond)
+		if err == nil {
+			return c.Close()
+		}
+
+		<-after
+	}
+
+	return err
+}
+
+func startPDPServer(p string, b *testing.B, opts ...Option) (string, string, *proc, Client) {
 	tmpYAST, err := makeTempFile(p, "policy")
 	if err != nil {
 		b.Fatalf("can't create policy file: %s", err)
@@ -741,10 +826,20 @@ func startPDPServer(p string, b *testing.B) (string, string, *proc, Client) {
 		b.Fatalf("can't start PDP server: %s", err)
 	}
 
-	time.Sleep(time.Second)
+	err = waitForPortOpened("127.0.0.1:5555")
+	if err != nil {
+		_, errDump, _ := pdp.kill()
+		if len(errDump) > 0 {
+			b.Logf("PDP server dump:\n%s", strings.Join(errDump, "\n"))
+		}
 
-	c := NewClient("127.0.0.1:5555", nil)
-	err = c.Connect()
+		os.Remove(tmpYAST)
+		os.Remove(tmpJCon)
+		b.Fatalf("can't connect to PDP server: %s", err)
+	}
+
+	c := NewClient(opts...)
+	err = c.Connect("127.0.0.1:5555")
 	if err != nil {
 		os.Remove(tmpYAST)
 		os.Remove(tmpJCon)

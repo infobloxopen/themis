@@ -13,6 +13,7 @@ type config struct {
 
 var testFlagSet = flag.NewFlagSet(Name, flag.ExitOnError)
 
+// FlagsParser implements parsing for options specific to the package.
 func FlagsParser(args []string) interface{} {
 	conf := config{}
 
