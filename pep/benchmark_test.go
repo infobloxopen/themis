@@ -6,6 +6,7 @@ import (
 	"go/build"
 	"io/ioutil"
 	"math/rand"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -786,6 +787,25 @@ func BenchmarkHotSpotStreamingClient(b *testing.B) {
 	)
 }
 
+func waitForPortOpened(address string) error {
+	var (
+		c   net.Conn
+		err error
+	)
+
+	for i := 0; i < 20; i++ {
+		after := time.After(500 * time.Millisecond)
+		c, err = net.DialTimeout("tcp", address, 500*time.Millisecond)
+		if err == nil {
+			return c.Close()
+		}
+
+		<-after
+	}
+
+	return err
+}
+
 func startPDPServer(p string, b *testing.B, opts ...Option) (string, string, *proc, Client) {
 	tmpYAST, err := makeTempFile(p, "policy")
 	if err != nil {
@@ -806,7 +826,17 @@ func startPDPServer(p string, b *testing.B, opts ...Option) (string, string, *pr
 		b.Fatalf("can't start PDP server: %s", err)
 	}
 
-	time.Sleep(time.Second)
+	err = waitForPortOpened("127.0.0.1:5555")
+	if err != nil {
+		_, errDump, _ := pdp.kill()
+		if len(errDump) > 0 {
+			b.Logf("PDP server dump:\n%s", strings.Join(errDump, "\n"))
+		}
+
+		os.Remove(tmpYAST)
+		os.Remove(tmpJCon)
+		b.Fatalf("can't connect to PDP server: %s", err)
+	}
 
 	c := NewClient(opts...)
 	err = c.Connect("127.0.0.1:5555")
