@@ -1,25 +1,26 @@
+# Makefile for building CoreDNS
 GITCOMMIT:=$(shell git describe --dirty --always)
 BINARY:=coredns
 SYSTEM:=
+CHECKS:=check godeps
+VERBOSE:=-v
 
 all: coredns
 
-# Phony this to ensure we always build the binary.
-# TODO: Add .go file dependencies.
 .PHONY: coredns
-coredns: check godeps
-	CGO_ENABLED=0 $(SYSTEM) go build -v -ldflags="-s -w -X github.com/coredns/coredns/coremain.gitCommit=$(GITCOMMIT)" -o $(BINARY)
+coredns: $(CHECKS)
+	CGO_ENABLED=0 $(SYSTEM) go build $(VERBOSE) -ldflags="-s -w -X github.com/coredns/coredns/coremain.gitCommit=$(GITCOMMIT)" -o $(BINARY)
 
 .PHONY: check
 check: linter core/zplugin.go core/dnsserver/zdirectives.go godeps
 
 .PHONY: test
 test: check
-	go test -race -v ./test ./plugin/...
+	go test -race $(VERBOSE) ./test ./plugin/...
 
 .PHONY: testk8s
 testk8s: check
-	go test -race -v -tags=k8s -run 'TestKubernetes' ./test ./plugin/kubernetes/...
+	go test -race $(VERBOSE) -tags=k8s -run 'TestKubernetes' ./test ./plugin/kubernetes/...
 
 .PHONY: godeps
 godeps:
@@ -31,21 +32,21 @@ godeps:
 .PHONY: travis
 travis: check
 ifeq ($(TEST_TYPE),core)
-	( cd request ; go test -v  -tags 'etcd k8s' -race ./... )
-	( cd core ; go test -v  -tags 'etcd k8s' -race  ./... )
-	( cd coremain go test -v  -tags 'etcd k8s' -race ./... )
+	( cd request ; go test -v  -tags 'etcd' -race ./... )
+	( cd core ; go test -v  -tags 'etcd' -race  ./... )
+	( cd coremain go test -v  -tags 'etcd' -race ./... )
 endif
 ifeq ($(TEST_TYPE),integration)
-	( cd test ; go test -v  -tags 'etcd k8s' -race ./... )
+	( cd test ; go test -v  -tags 'etcd' -race ./... )
 endif
 ifeq ($(TEST_TYPE),plugin)
-	( cd plugin ; go test -v  -tags 'etcd k8s' -race ./... )
+	( cd plugin ; go test -v  -tags 'etcd' -race ./... )
 endif
 ifeq ($(TEST_TYPE),coverage)
 	for d in `go list ./... | grep -v vendor`; do \
 		t=$$(date +%s); \
-		go test -i -tags 'etcd k8s' -coverprofile=cover.out -covermode=atomic $$d || exit 1; \
-		go test -v -tags 'etcd k8s' -coverprofile=cover.out -covermode=atomic $$d || exit 1; \
+		go test -i -tags 'etcd' -coverprofile=cover.out -covermode=atomic $$d || exit 1; \
+		go test -v -tags 'etcd' -coverprofile=cover.out -covermode=atomic $$d || exit 1; \
 		echo "Coverage test $$d took $$(($$(date +%s)-t)) seconds"; \
 		if [ -f cover.out ]; then \
 			cat cover.out >> coverage.txt; \
@@ -53,7 +54,6 @@ ifeq ($(TEST_TYPE),coverage)
 		fi; \
 	done
 endif
-
 
 core/zplugin.go core/dnsserver/zdirectives.go: plugin.cfg
 	go generate coredns.go

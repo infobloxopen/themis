@@ -28,19 +28,20 @@ import (
 
 // Kubernetes implements a plugin that connects to a Kubernetes cluster.
 type Kubernetes struct {
-	Next          plugin.Handler
-	Zones         []string
-	Proxy         proxy.Proxy // Proxy for looking up names during the resolution process
-	APIServerList []string
-	APIProxy      *apiProxy
-	APICertAuth   string
-	APIClientCert string
-	APIClientKey  string
-	APIConn       dnsController
-	Namespaces    map[string]bool
-	podMode       string
-	Fallthrough   bool
-	ttl           uint32
+	Next             plugin.Handler
+	Zones            []string
+	Proxy            proxy.Proxy // Proxy for looking up names during the resolution process
+	APIServerList    []string
+	APIProxy         *apiProxy
+	APICertAuth      string
+	APIClientCert    string
+	APIClientKey     string
+	APIConn          dnsController
+	Namespaces       map[string]bool
+	podMode          string
+	endpointNameMode bool
+	Fallthrough      bool
+	ttl              uint32
 
 	primaryZoneIndex   int
 	interfaceAddrsFunc func() net.IP
@@ -276,9 +277,12 @@ func (k *Kubernetes) Records(state request.Request, exact bool) ([]msg.Service, 
 	return services, err
 }
 
-func endpointHostname(addr api.EndpointAddress) string {
+func endpointHostname(addr api.EndpointAddress, endpointNameMode bool) string {
 	if addr.Hostname != "" {
 		return strings.ToLower(addr.Hostname)
+	}
+	if endpointNameMode && addr.TargetRef != nil && addr.TargetRef.Name != "" {
+		return addr.TargetRef.Name
 	}
 	if strings.Contains(addr.IP, ".") {
 		return strings.Replace(addr.IP, ".", "-", -1)
@@ -331,18 +335,20 @@ func (k *Kubernetes) findPods(r recordRequest, zone string) (pods []msg.Service,
 func (k *Kubernetes) findServices(r recordRequest, zone string) (services []msg.Service, err error) {
 	zonePath := msg.Path(zone, "coredns")
 	err = errNoItems // Set to errNoItems to signal really nothing found, gets reset when name is matched.
+
 	var (
-		endpointsList []*api.Endpoints
-		serviceList   []*api.Service
-		idx           string
+		endpointsListFunc func() []*api.Endpoints
+		endpointsList     []*api.Endpoints
+		serviceList       []*api.Service
 	)
+
 	if wildcard(r.service) || wildcard(r.namespace) {
 		serviceList = k.APIConn.ServiceList()
-		endpointsList = k.APIConn.EndpointsList()
+		endpointsListFunc = func() []*api.Endpoints { return k.APIConn.EndpointsList() }
 	} else {
-		idx = r.service + "." + r.namespace
+		idx := r.service + "." + r.namespace
 		serviceList = k.APIConn.SvcIndex(idx)
-		endpointsList = k.APIConn.EpIndex(idx)
+		endpointsListFunc = func() []*api.Endpoints { return k.APIConn.EpIndex(idx) }
 	}
 
 	for _, svc := range serviceList {
@@ -359,6 +365,9 @@ func (k *Kubernetes) findServices(r recordRequest, zone string) (services []msg.
 
 		// Endpoint query or headless service
 		if svc.Spec.ClusterIP == api.ClusterIPNone || r.endpoint != "" {
+			if endpointsList == nil {
+				endpointsList = endpointsListFunc()
+			}
 			for _, ep := range endpointsList {
 				if ep.ObjectMeta.Name != svc.Name || ep.ObjectMeta.Namespace != svc.Namespace {
 					continue
@@ -370,7 +379,7 @@ func (k *Kubernetes) findServices(r recordRequest, zone string) (services []msg.
 						// See comments in parse.go parseRequest about the endpoint handling.
 
 						if r.endpoint != "" {
-							if !match(r.endpoint, endpointHostname(addr)) {
+							if !match(r.endpoint, endpointHostname(addr, k.endpointNameMode)) {
 								continue
 							}
 						}
@@ -380,7 +389,7 @@ func (k *Kubernetes) findServices(r recordRequest, zone string) (services []msg.
 								continue
 							}
 							s := msg.Service{Host: addr.IP, Port: int(p.Port), TTL: k.ttl}
-							s.Key = strings.Join([]string{zonePath, Svc, svc.Namespace, svc.Name, endpointHostname(addr)}, "/")
+							s.Key = strings.Join([]string{zonePath, Svc, svc.Namespace, svc.Name, endpointHostname(addr, k.endpointNameMode)}, "/")
 
 							err = nil
 

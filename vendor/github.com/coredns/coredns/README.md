@@ -7,8 +7,8 @@
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fcoredns%2Fcoredns.svg?type=shield)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fcoredns%2Fcoredns?ref=badge_shield)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/1250/badge)](https://bestpractices.coreinfrastructure.org/projects/1250)
 
-CoreDNS is a DNS server that started as a fork of [Caddy](https://github.com/mholt/caddy/). It has
-the same model: it chains plugins.
+CoreDNS (written in Go) chains [plugins](https://coredns.io/plugins). Each plugin performs a DNS
+function.
 
 CoreDNS is a [Cloud Native Computing Foundation](https://cncf.io) inception level project.
 
@@ -20,7 +20,7 @@ CoreDNS aims to be a fast and flexible DNS server. The keyword here is *flexible
 are able to do what you want with your DNS data. And if not: write a plugin!
 
 CoreDNS can listen for DNS request coming in over UDP/TCP (go'old DNS), TLS ([RFC
-7858](https://tools.ietf.org/html/rfc7858)) and gRPC (not a standard).
+7858](https://tools.ietf.org/html/rfc7858)) and [gRPC](https://grpc.io) (not a standard).
 
 Currently CoreDNS is able to:
 
@@ -41,28 +41,30 @@ Currently CoreDNS is able to:
 * Support the CH class: `version.bind` and friends (*chaos*).
 * Profiling support (*pprof*).
 * Rewrite queries (qtype, qclass and qname) (*rewrite*).
-* Echo back the IP address, transport and port number used (*whoami*).
+* Echo back the IP address, transport and port number used (*whoami*). This is also the default
+  plugin that gets loaded when CoreDNS can't find a Corefile to load.
 
 Each of the plugins has a README.md of its own, see [coredns.io/plugins](https://coredns.io/plugins)
-for all in-tree plugins.
+for all in-tree plugins, and [coredns.io/explugins](https://coredns.io/explugins) for all
+out-of-tree plugins.
 
 ## Status
 
-CoreDNS can be used as an authoritative nameserver for your domains. All in all, CoreDNS should be
-able to provide you with enough functionality to replace parts of BIND 9, Knot, NSD or PowerDNS and
-SkyDNS. Most documentation is in the source and blog articles can be [found
-here](https://coredns.io). If you do want to use CoreDNS in production, please let us know.
+CoreDNS can be used as an authoritative nameserver for your domains. CoreDNS should be able to
+provide you with enough functionality to replace parts of BIND 9, Knot, NSD or PowerDNS and SkyDNS.
 
 ## Compilation
 
-If you have the source of CoreDNS checked out in the appropriate place in your `GOPATH`, get all
-dependencies:
+Check out the project and do dependency resolution with:
 
-    go get ./...
+    go get github.com/coredns/coredns
 
-(You can do the checkout and dependency resolution as a single step with: `go get github.com/coredns/coredns`.)
+Some of the dependencies require Go version 1.8 or later.
 
-And then `go build` as you would normally do:
+(If you already have the source of CoreDNS checked out in the appropriate place in your `GOPATH`, you can get all
+dependencies with `go get ./...`.)
+
+Then use `go build` as you would normally do:
 
     go build
 
@@ -83,8 +85,8 @@ The above command alone will have `coredns` binary generated.
 ## Examples
 
 When starting CoreDNS without any configuration, it loads the
-[*whoami*](https://coredns.io/plugins/whoami) plugin and starts
-listening on port 53 (override with `-dns.port`), it should show the following:
+[*whoami*](https://coredns.io/plugins/whoami) plugin and starts listening on port 53 (override with
+`-dns.port`), it should show the following:
 
 ~~~ txt
 .:53
@@ -104,7 +106,7 @@ Start a simple proxy, you'll need to be root to start listening on port 53.
 
 `Corefile` contains:
 
-~~~ txt
+~~~ corefile
 .:53 {
     proxy . 8.8.8.8:53
     log
@@ -112,11 +114,12 @@ Start a simple proxy, you'll need to be root to start listening on port 53.
 ~~~
 
 Just start CoreDNS: `./coredns`. Then just query on that port (53). The query should be forwarded to
-8.8.8.8 and the response will be returned. Each query should also show up in the log.
+8.8.8.8 and the response will be returned. Each query should also show up in the log which is
+printed on standard output.
 
-Serve the (NSEC) DNSSEC-signed `example.org` on port 1053, with errors and logging sent to stdout.
-Allow zone transfers to everybody, but specifically mention 1 IP address so that CoreDNS can send
-notifies to it.
+Serve the (NSEC) DNSSEC-signed `example.org` on port 1053, with errors and logging sent to standard
+output. Allow zone transfers to everybody, but specifically mention 1 IP address so that CoreDNS can
+send notifies to it.
 
 ~~~ txt
 example.org:1053 {
@@ -155,9 +158,11 @@ IP addresses are also allowed. They are automatically converted to reverse zones
 ~~~
 Means you are authoritative for `0.0.10.in-addr.arpa.`.
 
-The netmask must be dividable by 8, if it is not the reverse conversion is not done. This also works
-for IPv6 addresses. If for some reason you want to serve a zone named `10.0.0.0/24` add the closing
-dot: `10.0.0.0/24.` as this also stops the conversion.
+This also works for IPv6 addresses. If for some reason you want to serve a zone named `10.0.0.0/24`
+add the closing dot: `10.0.0.0/24.` as this also stops the conversion.
+
+This even works for CIDR (See RFC 1518 and 1519) addressing, i.e `10.0.0.0/25`, CoreDNS will then
+check if the `in-addr` request falls in the correct range.
 
 Listening on TLS and for gRPC? Use:
 
