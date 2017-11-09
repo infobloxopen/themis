@@ -1,18 +1,17 @@
 // Package requests provides loader for YAML formatted authorization requests file.
 package requests
 
-//go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-service && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/service.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-service && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-service"
-
 import (
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"net"
 	"strconv"
 	"strings"
 
+	"gopkg.in/yaml.v2"
+
 	"github.com/infobloxopen/themis/pdp"
-	pb "github.com/infobloxopen/themis/pdp-service"
+	rpc "github.com/infobloxopen/themis/pdp-service"
 )
 
 type requests struct {
@@ -21,7 +20,7 @@ type requests struct {
 }
 
 // Load reads given YAML file and porduces list of requests to run.
-func Load(name string) ([]pb.Request, error) {
+func Load(name string) ([]rpc.Request, error) {
 	b, err := ioutil.ReadFile(name)
 	if err != nil {
 		return nil, err
@@ -43,9 +42,9 @@ func Load(name string) ([]pb.Request, error) {
 		symbols[k] = t
 	}
 
-	out := make([]pb.Request, len(in.Requests))
+	out := make([]rpc.Request, len(in.Requests))
 	for i, r := range in.Requests {
-		attrs := make([]*pb.Attribute, len(r))
+		attrs := make([]*rpc.Attribute, len(r))
 		j := 0
 		for k, v := range r {
 			a, err := makeAttribute(k, v, symbols)
@@ -57,7 +56,7 @@ func Load(name string) ([]pb.Request, error) {
 			j++
 		}
 
-		out[i] = pb.Request{Attributes: attrs}
+		out[i] = rpc.Request{Attributes: attrs}
 	}
 
 	return out, nil
@@ -72,7 +71,7 @@ var marshallers = map[int]attributeMarshaller{
 	pdp.TypeNetwork: networkMarshaller,
 	pdp.TypeDomain:  domainMarshaller}
 
-func makeAttribute(name string, value interface{}, symbols map[string]int) (*pb.Attribute, error) {
+func makeAttribute(name string, value interface{}, symbols map[string]int) (*rpc.Attribute, error) {
 	t, ok := symbols[name]
 	var err error
 	if !ok {
@@ -90,14 +89,10 @@ func makeAttribute(name string, value interface{}, symbols map[string]int) (*pb.
 
 	s, err := marshaller(value)
 	if err != nil {
-		return nil, fmt.Errorf("can't marshal \"%s\" attribute as \"%s\": %s", name, pdp.TypeNames[t], err)
+		return nil, fmt.Errorf("cannot marshal \"%s\" attribute as \"%s\": %s", name, pdp.TypeNames[t], err)
 	}
 
-	return &pb.Attribute{
-		Id:    name,
-		Type:  pdp.TypeKeys[t],
-		Value: s,
-	}, nil
+	return &rpc.Attribute{name, pdp.TypeKeys[t], s}, nil
 }
 
 func guessType(value interface{}) (int, error) {
