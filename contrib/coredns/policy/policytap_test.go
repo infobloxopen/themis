@@ -1,4 +1,4 @@
-package dnstap
+package policy
 
 import (
 	"testing"
@@ -9,7 +9,8 @@ import (
 	"github.com/coredns/coredns/plugin/test"
 	tap "github.com/dnstap/golang-dnstap"
 	"github.com/golang/protobuf/proto"
-	pb "github.com/infobloxopen/themis/pdp-service"
+	pb "github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
+	pdp "github.com/infobloxopen/themis/pdp-service"
 	"github.com/miekg/dns"
 )
 
@@ -94,15 +95,23 @@ func TestSendCRExtraMsg(t *testing.T) {
 	proxyRW := NewProxyWriter(&tapRW)
 	proxyRW.WriteMsg(&msg)
 
-	attrs := []*pb.Attribute{
-		{Id: "attr1", Type: "address", Value: "10.240.0.1"},
-		{Id: "attr2", Type: "string", Value: "value2"},
-	}
+	testAttrHolder := &attrHolder{attrsReqDomain: []*pdp.Attribute{
+		{Id: AttrNameType, Value: TypeValueQuery},
+		{Id: AttrNameDomainName, Value: "test.com"},
+		{Id: AttrNameSourceIP, Value: "10.0.0.7"},
+	}}
 
 	io := newIORoutine(5000 * time.Millisecond)
 	tapIO := NewPolicyDnstapSender(io)
-	tapIO.SendCRExtraMsg(proxyRW, attrs)
-	checkCRExtraResult(t, io, proxyRW, attrs)
+	tapIO.SendCRExtraMsg(proxyRW, testAttrHolder)
+
+	expectedAttrs := []*pdp.Attribute{
+		{Id: AttrNameDomainName, Value: "test.com"},
+		{Id: AttrNameSourceIP, Value: "10.0.0.7"},
+		{Id: AttrNamePolicyAction, Value: "0"},
+		{Id: AttrNameType, Value: TypeValueQuery},
+	}
+	checkCRExtraResult(t, io, proxyRW, expectedAttrs)
 
 	if l := len(trapper.Trap); l != 0 {
 		t.Errorf("Dnstap unexpectedly sent %d messages", l)
@@ -110,13 +119,13 @@ func TestSendCRExtraMsg(t *testing.T) {
 	}
 }
 
-func checkCRExtraResult(t *testing.T, io testIORoutine, proxyRW *ProxyWriter, attrs []*pb.Attribute) {
+func checkCRExtraResult(t *testing.T, io testIORoutine, proxyRW *ProxyWriter, attrs []*pdp.Attribute) {
 	dnstapMsg, ok := <-io.dnstapChan
 	if !ok {
 		t.Errorf("Receiving Dnstap message was timed out")
 		return
 	}
-	extra := &Extra{}
+	extra := &pb.Extra{}
 	err := proto.Unmarshal(dnstapMsg.Extra, extra)
 	if err != nil {
 		t.Errorf("Failed to unmarshal Extra (%v)", err)
@@ -127,7 +136,7 @@ func checkCRExtraResult(t *testing.T, io testIORoutine, proxyRW *ProxyWriter, at
 	checkCRMessage(t, dnstapMsg.Message, proxyRW)
 }
 
-func checkExtraAttrs(t *testing.T, actual []*DnstapAttribute, expected []*pb.Attribute) {
+func checkExtraAttrs(t *testing.T, actual []*pb.DnstapAttribute, expected []*pdp.Attribute) {
 	if len(actual) != len(expected) {
 		t.Errorf("Expected %d attributes, found %d", len(expected), len(actual))
 		return
@@ -136,9 +145,9 @@ func checkExtraAttrs(t *testing.T, actual []*DnstapAttribute, expected []*pb.Att
 checkAttr:
 	for _, a := range actual {
 		for _, e := range expected {
-			if e.GetId() == a.GetId() {
-				if string(a.GetValue()) != e.GetValue() {
-					t.Errorf("Attribute %s: expected %v , found %v", e.GetId(), e, a)
+			if e.Id == a.Id {
+				if a.Value != e.Value {
+					t.Errorf("Attribute %s: expected %v , found %v", e.Id, e, a)
 					return
 				}
 				continue checkAttr

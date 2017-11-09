@@ -7,9 +7,8 @@ import (
 	"os"
 	"strings"
 
-	pb "github.com/infobloxopen/themis/pdp-service"
+	pdp "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pep"
-
 	"github.com/infobloxopen/themis/pepcli/requests"
 )
 
@@ -22,7 +21,7 @@ const (
 
 // Exec tests requests from input with given pdp server and dumps responses in YAML format
 // to given file or standard output if file name is empty.
-func Exec(addr string, opts []pep.Option, in, out string, n int, v interface{}) error {
+func Exec(addr string, in, out string, n int, v interface{}) error {
 	reqs, err := requests.Load(in)
 	if err != nil {
 		return fmt.Errorf("can't load requests from \"%s\"", in)
@@ -41,8 +40,8 @@ func Exec(addr string, opts []pep.Option, in, out string, n int, v interface{}) 
 		defer f.Close()
 	}
 
-	c := pep.NewClient(opts...)
-	err = c.Connect(addr)
+	c := pep.NewBalancedClient([]string{addr}, 0, 0)
+	err = c.Connect()
 	if err != nil {
 		return fmt.Errorf("can't connect to %s: %s", addr, err)
 	}
@@ -52,8 +51,7 @@ func Exec(addr string, opts []pep.Option, in, out string, n int, v interface{}) 
 		idx := i % len(reqs)
 		req := reqs[idx]
 
-		res := &pb.Response{}
-		err := c.Validate(req, res)
+		res, err := c.Validate(&req)
 		if err != nil {
 			return fmt.Errorf("can't send request %d (%d): %s", idx, i, err)
 		}
@@ -67,15 +65,15 @@ func Exec(addr string, opts []pep.Option, in, out string, n int, v interface{}) 
 	return nil
 }
 
-func dump(r *pb.Response, f io.Writer) error {
-	lines := []string{fmt.Sprintf("- effect: %s", r.Effect.String())}
+func dump(r *pdp.Response, f io.Writer) error {
+	lines := []string{fmt.Sprintf("- effect: %s", pdp.EffectName(r.Effect))}
 	if len(r.Reason) > 0 {
 		lines = append(lines, fmt.Sprintf("  reason: %q", r.Reason))
 	}
 
-	if len(r.Obligation) > 0 {
+	if len(r.Obligations) > 0 {
 		lines = append(lines, "  obligation:")
-		for _, attr := range r.Obligation {
+		for _, attr := range r.Obligations {
 			lines = append(lines, fmt.Sprintf("    - id: %q", attr.Id))
 			lines = append(lines, fmt.Sprintf("      type: %q", attr.Type))
 			lines = append(lines, fmt.Sprintf("      value: %q", attr.Value))

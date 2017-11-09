@@ -5,8 +5,7 @@ import (
 
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
-	tapplg "github.com/coredns/coredns/plugin/dnstap"
-	"github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
+	"github.com/coredns/coredns/plugin/dnstap"
 
 	"github.com/mholt/caddy"
 )
@@ -27,12 +26,11 @@ func setup(c *caddy.Controller) error {
 
 	c.OnStartup(func() error {
 		if taph := dnsserver.GetConfig(c).Handler("dnstap"); taph != nil {
-			if tapPlugin, ok := taph.(tapplg.Dnstap); ok && tapPlugin.IO != nil {
-				policyPlugin.tapIO = dnstap.NewPolicyDnstapSender(tapPlugin.IO)
+			if tapPlugin, ok := taph.(dnstap.Dnstap); ok && tapPlugin.IO != nil {
+				policyPlugin.tapIO = NewPolicyDnstapSender(tapPlugin.IO)
 			}
 		}
 
-		policyPlugin.trace = dnsserver.GetConfig(c).Handler("trace")
 		err := policyPlugin.connect()
 		if err != nil {
 			return plugin.Error("policy", err)
@@ -59,17 +57,17 @@ func setup(c *caddy.Controller) error {
 }
 
 func policyParse(c *caddy.Controller) (*PolicyPlugin, error) {
-	p := newPolicyPlugin()
+	policyPlugin := newPolicyPlugin()
 
 	for c.Next() {
 		if c.Val() == "policy" {
 			c.RemainingArgs()
 			for c.NextBlock() {
-				if err := p.parseOption(c); err != nil {
+				if err := policyPlugin.parseOption(c); err != nil {
 					return nil, err
 				}
 			}
-			return p, nil
+			return policyPlugin, nil
 		}
 	}
 	return nil, fmt.Errorf("Policy setup called without keyword 'policy' in Corefile")

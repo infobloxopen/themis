@@ -14,13 +14,11 @@ import (
 	"strings"
 
 	"github.com/coredns/coredns/plugin"
-	"github.com/coredns/coredns/plugin/pkg/trace"
 	"github.com/mholt/caddy"
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
 
-	"github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
-	pb "github.com/infobloxopen/themis/pdp-service"
+	pdp "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pep"
 )
 
@@ -40,6 +38,17 @@ const (
 
 	actCount
 )
+
+var actionConv [actCount]string
+
+func init() {
+	actionConv[typeInvalid] = "invalid"
+	actionConv[typeRefuse] = "refuse"
+	actionConv[typeAllow] = "allow"
+	actionConv[typeRedirect] = "redirect"
+	actionConv[typeBlock] = "block"
+	actionConv[typeLog] = "log"
+}
 
 var (
 	errInvalidAction = errors.New("invalid action")
@@ -64,45 +73,43 @@ type edns0Map struct {
 // requests and replies using PDP server.
 type PolicyPlugin struct {
 	endpoints   []string
+	delay       uint
+	pending     uint
 	options     map[uint16][]*edns0Map
-	tapIO       dnstap.DnstapSender
-	trace       plugin.Handler
+	tapIO       DnstapSender
 	next        plugin.Handler
 	pdp         pep.Client
 	debugSuffix string
-	streams     int
-	hotSpot     bool
-	errorFunc   func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
 }
 
 func newPolicyPlugin() *PolicyPlugin {
 	return &PolicyPlugin{options: make(map[uint16][]*edns0Map)}
 }
 
+const (
+	debug = false
+)
+
 // connect establishes connection to PDP server.
 func (p *PolicyPlugin) connect() error {
-	log.Printf("[DEBUG] Connecting %v", p)
-
-	opts := []pep.Option{}
-	if p.streams <= 0 || !p.hotSpot {
-		opts = append(opts, pep.WithRoundRobinBalancer(p.endpoints...))
+	log.Printf("[DEBUG] Endpoints: %v", p)
+	if debug {
+		p.pdp = newTestClientInit(
+			&pdp.Response{
+				Effect: pdp.PERMIT,
+				Obligations: []*pdp.Attribute{
+					{Id: AttrNameCustomerID, Value: "35e178af10438bd6bf7cbbcb6115a6b3"},
+					{Id: AttrNamePolicyID, Value: "00000006"},
+				},
+			},
+			&pdp.Response{Effect: pdp.PERMIT},
+			nil,
+			nil,
+		)
+	} else {
+		p.pdp = pep.NewBalancedClient(p.endpoints, p.delay, p.pending)
 	}
-
-	if p.streams > 0 {
-		opts = append(opts, pep.WithStreams(p.streams))
-		if p.hotSpot {
-			opts = append(opts, pep.WithHotSpotBalancer(p.endpoints...))
-		}
-	}
-
-	if p.trace != nil {
-		if t, ok := p.trace.(trace.Trace); ok {
-			opts = append(opts, pep.WithTracer(t.Tracer()))
-		}
-	}
-
-	p.pdp = pep.NewClient(opts...)
-	return p.pdp.Connect("")
+	return p.pdp.Connect()
 }
 
 // closeConn terminates previously established connection.
@@ -124,8 +131,11 @@ func (p *PolicyPlugin) parseOption(c *caddy.Controller) error {
 	case "debug_query_suffix":
 		return p.parseDebugQuerySuffix(c)
 
-	case "streams":
-		return p.parseStreams(c)
+	case "delay":
+		return p.parseDelay(c)
+
+	case "pending":
+		return p.parsePending(c)
 	}
 
 	return nil
@@ -186,37 +196,33 @@ func (p *PolicyPlugin) parseDebugQuerySuffix(c *caddy.Controller) error {
 	return nil
 }
 
-func (p *PolicyPlugin) parseStreams(c *caddy.Controller) error {
+func (p *PolicyPlugin) parseDelay(c *caddy.Controller) error {
 	args := c.RemainingArgs()
-	if len(args) < 1 || len(args) > 2 {
+	if len(args) != 1 {
 		return c.ArgErr()
 	}
 
-	streams, err := strconv.ParseInt(args[0], 10, 32)
+	param, err := strconv.ParseUint(args[0], 10, 32)
 	if err != nil {
-		return fmt.Errorf("Could not parse number of streams: %s", err)
-	}
-	if streams < 1 {
-		return fmt.Errorf("Expected at least one stream got %d", streams)
+		return fmt.Errorf("Could not parse delay param: %s", err)
 	}
 
-	p.streams = int(streams)
+	p.delay = uint(param)
+	return nil
+}
 
-	if len(args) > 1 {
-		switch strings.ToLower(args[1]) {
-		default:
-			return fmt.Errorf("Expected round-robin or hot-spot balancing but got %s", args[1])
-
-		case "round-robin":
-			p.hotSpot = false
-
-		case "hot-spot":
-			p.hotSpot = true
-		}
-	} else {
-		p.hotSpot = false
+func (p *PolicyPlugin) parsePending(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) != 1 {
+		return c.ArgErr()
 	}
 
+	param, err := strconv.ParseUint(args[0], 10, 32)
+	if err != nil {
+		return fmt.Errorf("Could not parse pending param: %s", err)
+	}
+
+	p.pending = uint(param)
 	return nil
 }
 
@@ -303,13 +309,13 @@ func parseOptionGroup(ah *attrHolder, data []byte, options []*edns0Map) bool {
 		if option.name == "source_ip" {
 			srcIPFound = true
 		}
-		ah.attrs = append(ah.attrs, &pb.Attribute{Id: option.name, Type: option.destType, Value: value})
+		ah.attrsReqDomain = append(ah.attrsReqDomain, &pdp.Attribute{Id: option.name, Type: option.destType, Value: value})
 	}
 	return srcIPFound
 }
 
 func (p *PolicyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) {
-	ipID := "source_ip"
+	ipID := AttrNameSourceIP
 
 	o := r.IsEdns0()
 	if o == nil {
@@ -327,69 +333,66 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) 
 		}
 		srcIPFound := parseOptionGroup(ah, optLocal.Data, options)
 		if srcIPFound {
-			ipID = "proxy_source_ip"
+			ipID = AttrNameProxySourceIP
 		}
 	}
 
 Exit:
-	ah.attrs = append(ah.attrs, &pb.Attribute{Id: ipID, Type: "address", Value: ip})
+	ah.attrsReqDomain = append(ah.attrsReqDomain, &pdp.Attribute{Id: ipID, Type: "address", Value: ip})
 	return
 }
 
 func resolve(status int) string {
 	switch status {
 	case -1:
-		return "resolve: skip"
+		return "resolve:skip"
 	case dns.RcodeSuccess:
-		return "resolve: yes"
+		return "resolve:yes"
 	case dns.RcodeServerFailure:
-		return "resolve: failed"
+		return "resolve:failed"
 	default:
-		return "resolve: no"
+		return "resolve:no"
 	}
 }
 
 func join(key, value string) string { return "," + key + ":" + value }
 
-func (p *PolicyPlugin) retDebugInfo(ah *attrHolder, w dns.ResponseWriter,
-	r *dns.Msg, status int) (int, error) {
+func (p *PolicyPlugin) setDebugQueryAnswer(ah *attrHolder, r *dns.Msg, status int) {
 	debugQueryInfo := resolve(status)
 
-	if ah.resp1Beg > 0 {
-		debugQueryInfo += join("query", ah.effect1.String())
-		for _, item := range ah.resp1() {
-			debugQueryInfo += join(item.Id, item.Value)
-		}
+	var action string
+	if len(ah.attrsRespRespip) > 0 {
+		action = "pass"
+	} else {
+		action = actionConv[ah.action]
 	}
-	if ah.resp2Beg > 0 {
-		debugQueryInfo += join("response", ah.effect2.String())
-		for _, item := range ah.resp2() {
+	debugQueryInfo += join(TypeValueQuery, action)
+	for _, item := range ah.attrsRespDomain {
+		debugQueryInfo += join(item.Id, item.Value)
+	}
+	if len(ah.attrsRespRespip) > 0 {
+		debugQueryInfo += join(TypeValueResponse, actionConv[ah.action])
+		for _, item := range ah.attrsRespRespip {
 			debugQueryInfo += join(item.Id, item.Value)
 		}
 	}
 
-	hdr := dns.RR_Header{Name: r.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassCHAOS, Ttl: 0}
+	hdr := dns.RR_Header{Name: r.Question[0].Name + p.debugSuffix, Rrtype: dns.TypeTXT, Class: dns.ClassCHAOS, Ttl: 0}
 	r.Answer = append(r.Answer, &dns.TXT{Hdr: hdr, Txt: []string{debugQueryInfo}})
-	r.Response = true
-	r.Rcode = dns.RcodeSuccess
-	w.WriteMsg(r)
-	return r.Rcode, nil
 }
 
-func (p *PolicyPlugin) decodeDebugMsg(r *dns.Msg) (*dns.Msg, bool) {
+func (p *PolicyPlugin) decodeDebugMsg(r *dns.Msg) bool {
 	if r != nil && len(r.Question) > 0 {
-		q := r.Question[0]
-		if q.Qclass == dns.ClassCHAOS && q.Qtype == dns.TypeTXT {
-			name := strings.ToLower(q.Name)
-			if strings.HasSuffix(name, p.debugSuffix) {
-				req := new(dns.Msg)
-				name = strings.TrimSuffix(name, p.debugSuffix)
-				req.SetQuestion(name, dns.TypeA)
-				return req, true
+		if r.Question[0].Qclass == dns.ClassCHAOS && r.Question[0].Qtype == dns.TypeTXT {
+			if strings.HasSuffix(r.Question[0].Name, p.debugSuffix) {
+				r.Question[0].Name = strings.TrimSuffix(r.Question[0].Name, p.debugSuffix)
+				r.Question[0].Qtype = dns.TypeA
+				r.Question[0].Qclass = dns.ClassINET
+				return true
 			}
 		}
 	}
-	return r, false
+	return false
 }
 
 func getNameType(r *dns.Msg) (string, uint16) {
@@ -399,7 +402,8 @@ func getNameType(r *dns.Msg) (string, uint16) {
 	return strings.ToLower(r.Question[0].Name), r.Question[0].Qtype
 }
 
-func getRemoteIP(addr string) string {
+func getRemoteIP(w dns.ResponseWriter) string {
+	addr := w.RemoteAddr().String()
 	ip, _, err := net.SplitHostPort(addr)
 	if err != nil {
 		return addr
@@ -423,12 +427,12 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		sendExtra bool
 	)
 
-	query, debugQuery := p.decodeDebugMsg(r)
-	ah := newAttrHolder(getNameType(query))
-	p.getAttrsFromEDNS0(ah, r, getRemoteIP(w.RemoteAddr().String()))
+	debugQuery := p.decodeDebugMsg(r)
+	ah := newAttrHolder(getNameType(r))
+	p.getAttrsFromEDNS0(ah, r, getRemoteIP(w))
 
 	// validate domain name (validation #1)
-	err = p.validate(ah)
+	err = p.validate(ah, "")
 	if err != nil {
 		status = dns.RcodeServerFailure
 		goto Exit
@@ -437,7 +441,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	if ah.action == typeAllow || ah.action == typeLog {
 		// resolve domain name to IP
 		responseWriter := new(writer)
-		status, err = plugin.NextOrFailure(p.Name(), p.next, ctx, responseWriter, query)
+		status, err = plugin.NextOrFailure(p.Name(), p.next, ctx, responseWriter, r)
 		if err != nil {
 			status = dns.RcodeServerFailure
 		} else {
@@ -447,9 +451,8 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 			// address is not filled from the answer
 			// in this case just pass through answer w/o validation
 			if len(address) > 0 {
-				ah.attrs = append(ah.attrs, &pb.Attribute{Id: "address", Type: "address", Value: address})
 				// validate response IP (validation #2)
-				err = p.validate(ah)
+				err = p.validate(ah, address)
 				if err != nil {
 					status = dns.RcodeServerFailure
 					goto Exit
@@ -459,7 +462,10 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	}
 
 	if debugQuery && (ah.action != typeRefuse) {
-		return p.retDebugInfo(ah, w, r, status)
+		p.setDebugQueryAnswer(ah, r, status)
+		status = dns.RcodeSuccess
+		err = nil
+		goto Exit
 	}
 
 	if err != nil {
@@ -474,7 +480,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		r = respMsg
 	case typeRedirect:
 		sendExtra = true
-		status, err = p.redirect(ctx, r, ah.redirect.Value)
+		status, err = p.redirect(ctx, r, ah.redirect)
 	case typeBlock:
 		sendExtra = true
 		status = dns.RcodeNameError
@@ -488,15 +494,19 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 Exit:
 	r.Rcode = status
 	r.Response = true
+	if debugQuery {
+		r.Question[0].Name = r.Question[0].Name + p.debugSuffix
+		r.Question[0].Qtype = dns.TypeTXT
+		r.Question[0].Qclass = dns.ClassCHAOS
+		sendExtra = false
+	}
 	if p.tapIO != nil && status != dns.RcodeRefused && status != dns.RcodeServerFailure {
-		if pw := dnstap.NewProxyWriter(w); pw != nil {
+		if pw := NewProxyWriter(w); pw != nil {
 			pw.WriteMsg(r)
-			if sendExtra {
-				ah.attrs = append(ah.attrs, &pb.Attribute{Id: "policy_action", Type: "string", Value: actionConv[ah.action]})
-				p.tapIO.SendCRExtraMsg(pw, ah.attrs)
-			} else {
-				p.tapIO.SendCRExtraMsg(pw, nil)
+			if !sendExtra {
+				ah = nil
 			}
+			p.tapIO.SendCRExtraMsg(pw, ah)
 		}
 	} else {
 		w.WriteMsg(r)
@@ -549,15 +559,22 @@ func (p *PolicyPlugin) redirect(ctx context.Context, r *dns.Msg, dst string) (in
 	return r.Rcode, nil
 }
 
-func (p *PolicyPlugin) validate(ah *attrHolder) error {
-	response := new(pb.Response)
-	err := p.pdp.Validate(pb.Request{Attributes: ah.request()}, response)
+func (p *PolicyPlugin) validate(ah *attrHolder, addr string) error {
+	req := &pdp.Request{}
+	if len(addr) == 0 {
+		req.Attributes = ah.attrsReqDomain
+	} else {
+		ah.makeReqRespip(addr)
+		req.Attributes = ah.attrsReqRespip
+	}
+
+	response, err := p.pdp.Validate(req)
 	if err != nil {
 		log.Printf("[ERROR] Policy validation failed due to error %s", err)
 		return err
 	}
 
-	ah.addResponse(response)
+	ah.addResponse(response, len(addr) > 0)
 	return nil
 }
 

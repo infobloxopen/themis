@@ -5,57 +5,57 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"golang.org/x/net/context"
-
 	"github.com/infobloxopen/themis/pdp"
-	pb "github.com/infobloxopen/themis/pdp-service"
+	rpc "github.com/infobloxopen/themis/pdp-service"
+	"github.com/valyala/fastrpc"
+	"github.com/valyala/fastrpc/tlv"
 )
 
-func makeEffect(effect int) (pb.Response_Effect, error) {
+func makeEffect(effect int) (byte, error) {
 	switch effect {
 	case pdp.EffectDeny:
-		return pb.Response_DENY, nil
+		return rpc.DENY, nil
 
 	case pdp.EffectPermit:
-		return pb.Response_PERMIT, nil
+		return rpc.PERMIT, nil
 
 	case pdp.EffectNotApplicable:
-		return pb.Response_NOTAPPLICABLE, nil
+		return rpc.NOTAPPLICABLE, nil
 
 	case pdp.EffectIndeterminate:
-		return pb.Response_INDETERMINATE, nil
+		return rpc.INDETERMINATE, nil
 
 	case pdp.EffectIndeterminateD:
-		return pb.Response_INDETERMINATED, nil
+		return rpc.INDETERMINATED, nil
 
 	case pdp.EffectIndeterminateP:
-		return pb.Response_INDETERMINATEP, nil
+		return rpc.INDETERMINATEP, nil
 
 	case pdp.EffectIndeterminateDP:
-		return pb.Response_INDETERMINATEDP, nil
+		return rpc.INDETERMINATEDP, nil
 	}
 
-	return pb.Response_INDETERMINATE, newUnknownEffectError(effect)
+	return rpc.INDETERMINATE, newUnknownEffectError(effect)
 }
 
-func makeFailEffect(effect pb.Response_Effect) (pb.Response_Effect, error) {
+func makeFailEffect(effect byte) (byte, error) {
 	switch effect {
-	case pb.Response_DENY:
-		return pb.Response_INDETERMINATED, nil
+	case rpc.DENY:
+		return rpc.INDETERMINATED, nil
 
-	case pb.Response_PERMIT:
-		return pb.Response_INDETERMINATEP, nil
+	case rpc.PERMIT:
+		return rpc.INDETERMINATEP, nil
 
-	case pb.Response_NOTAPPLICABLE, pb.Response_INDETERMINATE, pb.Response_INDETERMINATED, pb.Response_INDETERMINATEP, pb.Response_INDETERMINATEDP:
+	case rpc.NOTAPPLICABLE, rpc.INDETERMINATE, rpc.INDETERMINATED, rpc.INDETERMINATEP, rpc.INDETERMINATEDP:
 		return effect, nil
 	}
 
-	return pb.Response_INDETERMINATE, newUnknownEffectError(int(effect))
+	return rpc.INDETERMINATE, newUnknownEffectError(int(effect))
 }
 
-type obligation []*pb.Attribute
+type obligations []*rpc.Attribute
 
-func (o obligation) String() string {
+func (o obligations) String() string {
 	if len(o) <= 0 {
 		return "no attributes"
 	}
@@ -68,7 +68,7 @@ func (o obligation) String() string {
 	return strings.Join(lines, "\n")
 }
 
-func (s *server) newContext(c *pdp.LocalContentStorage, in *pb.Request) (*pdp.Context, error) {
+func (s *server) newContext(c *pdp.LocalContentStorage, in *rpc.Request) (*pdp.Context, error) {
 	ctx, err := pdp.NewContext(c, len(in.Attributes), func(i int) (string, pdp.AttributeValue, error) {
 		a := in.Attributes[i]
 
@@ -91,31 +91,28 @@ func (s *server) newContext(c *pdp.LocalContentStorage, in *pb.Request) (*pdp.Co
 	return ctx, nil
 }
 
-func (s *server) newAttributes(obligations []pdp.AttributeAssignmentExpression, ctx *pdp.Context) ([]*pb.Attribute, error) {
-	attrs := make([]*pb.Attribute, len(obligations))
+func (s *server) newAttributes(obligations []pdp.AttributeAssignmentExpression, ctx *pdp.Context) ([]*rpc.Attribute, error) {
+	attrs := make([]*rpc.Attribute, len(obligations))
 	for i, e := range obligations {
 		ID, t, s, err := e.Serialize(ctx)
 		if err != nil {
 			return attrs[:i], err
 		}
 
-		attrs[i] = &pb.Attribute{
-			Id:    ID,
-			Type:  t,
-			Value: s}
+		attrs[i] = &rpc.Attribute{ID, t, s}
 	}
 
 	return attrs, nil
 }
 
-func (s *server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in *pb.Request) (pb.Response_Effect, []error, []*pb.Attribute) {
+func (s *server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in *rpc.Request) (byte, []error, []*rpc.Attribute) {
 	if p == nil {
-		return pb.Response_INDETERMINATE, []error{newMissingPolicyError()}, nil
+		return rpc.INDETERMINATE, []error{newMissingPolicyError()}, nil
 	}
 
 	ctx, err := s.newContext(c, in)
 	if err != nil {
-		return pb.Response_INDETERMINATE, []error{err}, nil
+		return rpc.INDETERMINATE, []error{err}, nil
 	}
 
 	if s.logLevel >= log.DebugLevel {
@@ -150,13 +147,18 @@ func (s *server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, i
 	return re, errs, attrs
 }
 
-func (s *server) Validate(ctx context.Context, in *pb.Request) (*pb.Response, error) {
+func (s *server) Validate(ctxv fastrpc.HandlerCtx) fastrpc.HandlerCtx {
 	s.RLock()
 	p := s.p
 	c := s.c
 	s.RUnlock()
 
-	effect, errs, attrs := s.rawValidate(p, c, in)
+	ctx := ctxv.(*tlv.RequestCtx)
+	data := ctx.Request.Value()
+
+	req := rpc.UnmarshalRequest(data)
+
+	effect, errs, attrs := s.rawValidate(p, c, req)
 
 	status := "Ok"
 	if len(errs) > 1 {
@@ -167,14 +169,18 @@ func (s *server) Validate(ctx context.Context, in *pb.Request) (*pb.Response, er
 
 	if s.logLevel >= log.DebugLevel {
 		log.WithFields(log.Fields{
-			"effect":     pb.Response_Effect_name[int32(effect)],
+			"effect":     rpc.EffectName(effect),
 			"reason":     status,
-			"obligation": obligation(attrs),
+			"obligation": obligations(attrs),
 		}).Debug("Response")
 	}
 
-	return &pb.Response{
-		Effect:     effect,
-		Reason:     status,
-		Obligation: attrs}, nil
+	resp := &rpc.Response{
+		Effect:      effect,
+		Reason:      status,
+		Obligations: attrs,
+	}
+
+	ctx.Write(rpc.MarshalResponse(resp))
+	return ctx
 }
