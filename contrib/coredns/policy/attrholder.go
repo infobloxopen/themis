@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/infobloxopen/themis/contrib/coredns/policy/pb"
+	pb "github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 	pdp "github.com/infobloxopen/themis/pdp-service"
 )
 
@@ -101,7 +101,7 @@ func (ah *attrHolder) convertAttrs() []*pb.DnstapAttribute {
 	lenAttrsRespDomain := len(ah.attrsRespDomain)
 	lenAttrsReqRespip := len(ah.attrsReqRespip)
 	lenAttrsRespRespip := len(ah.attrsRespRespip)
-	length := lenAttrsReqDomain + lenAttrsRespDomain + lenAttrsReqRespip + lenAttrsRespRespip
+	length := lenAttrsReqDomain + lenAttrsRespDomain + lenAttrsReqRespip + lenAttrsRespRespip + 1
 	if lenAttrsReqRespip > 0 {
 		length -= 2
 	}
@@ -136,5 +136,11 @@ func (ah *attrHolder) convertAttrs() []*pb.DnstapAttribute {
 		i++
 	}
 	out[i] = &pb.DnstapAttribute{Id: AttrNamePolicyAction, Value: actionConvDnstap[ah.action]}
+	i++
+	if len(ah.attrsReqRespip) > 0 {
+		out[i] = &pb.DnstapAttribute{Id: AttrNameType, Value: TypeValueResponse}
+	} else {
+		out[i] = &pb.DnstapAttribute{Id: AttrNameType, Value: TypeValueQuery}
+	}
 	return out
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/coredns/coredns/plugin/pkg/dnstest"
 	"github.com/coredns/coredns/plugin/test"
 
-	"github.com/infobloxopen/themis/contrib/coredns/policy/pb"
+	pb "github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 	pdp "github.com/infobloxopen/themis/pdp-service"
 
 	"github.com/miekg/dns"
@@ -80,6 +80,7 @@ func TestPolicy(t *testing.T) {
 				{Id: AttrNameDNSQtype, Value: "1"},
 				{Id: AttrNameSourceIP, Value: "10.240.0.1"},
 				{Id: AttrNamePolicyAction, Value: "3"},
+				{Id: AttrNameType, Value: TypeValueQuery},
 			},
 		},
 		{
@@ -103,6 +104,7 @@ func TestPolicy(t *testing.T) {
 				{Id: AttrNameSourceIP, Value: "10.240.0.1"},
 				{Id: AttrNameAddress, Value: "10.240.0.1"},
 				{Id: AttrNamePolicyAction, Value: "3"},
+				{Id: AttrNameType, Value: TypeValueResponse},
 			},
 		},
 		{
@@ -118,6 +120,7 @@ func TestPolicy(t *testing.T) {
 				{Id: AttrNameSourceIP, Value: "10.240.0.1"},
 				{Id: AttrNameRedirectTo, Value: "221.228.88.194"},
 				{Id: AttrNamePolicyAction, Value: "4"},
+				{Id: AttrNameType, Value: TypeValueQuery},
 			},
 		},
 		{
@@ -133,6 +136,7 @@ func TestPolicy(t *testing.T) {
 				{Id: AttrNameSourceIP, Value: "10.240.0.1"},
 				{Id: AttrNameRedirectTo, Value: "redirect.biz"},
 				{Id: AttrNamePolicyAction, Value: "4"},
+				{Id: AttrNameType, Value: TypeValueQuery},
 			},
 		},
 		{
@@ -150,6 +154,7 @@ func TestPolicy(t *testing.T) {
 				{Id: AttrNameAddress, Value: "10.240.0.1"},
 				{Id: AttrNameRedirectTo, Value: "221.228.88.194"},
 				{Id: AttrNamePolicyAction, Value: "4"},
+				{Id: AttrNameType, Value: TypeValueResponse},
 			},
 		},
 		{
@@ -167,6 +172,7 @@ func TestPolicy(t *testing.T) {
 				{Id: AttrNameAddress, Value: "10.240.0.1"},
 				{Id: AttrNameRedirectTo, Value: "redirect.biz"},
 				{Id: AttrNamePolicyAction, Value: "4"},
+				{Id: AttrNameType, Value: TypeValueResponse},
 			},
 		},
 		{
@@ -184,6 +190,7 @@ func TestPolicy(t *testing.T) {
 				{Id: AttrNameAddress, Value: "21da:d3:0:2f3b:2aa:ff:fe28:9c5a"},
 				{Id: AttrNameRedirectTo, Value: "2001:db8:0:200:0:0:0:7"},
 				{Id: AttrNamePolicyAction, Value: "4"},
+				{Id: AttrNameType, Value: TypeValueResponse},
 			},
 		},
 		{
@@ -212,6 +219,7 @@ func TestPolicy(t *testing.T) {
 				{Id: AttrNameDNSQtype, Value: "1c"},
 				{Id: AttrNameSourceIP, Value: "10.240.0.1"},
 				{Id: AttrNamePolicyAction, Value: "3"},
+				{Id: AttrNameType, Value: TypeValueQuery},
 			},
 		},
 		{
@@ -234,6 +242,7 @@ func TestPolicy(t *testing.T) {
 				{Id: AttrNameSourceIP, Value: "10.240.0.1"},
 				{Id: AttrNamePolicyAction, Value: "4"},
 				{Id: AttrNameRedirectTo, Value: "redirect.net"},
+				{Id: AttrNameType, Value: TypeValueQuery},
 			},
 		},
 		{

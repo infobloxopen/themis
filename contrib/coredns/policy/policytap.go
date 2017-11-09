@@ -8,7 +8,7 @@ import (
 	"github.com/coredns/coredns/plugin/dnstap/taprw"
 	tap "github.com/dnstap/golang-dnstap"
 	"github.com/golang/protobuf/proto"
-	"github.com/infobloxopen/themis/contrib/coredns/policy/pb"
+	pb "github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 	"github.com/miekg/dns"
 )
 

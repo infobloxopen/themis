@@ -9,7 +9,7 @@ import (
 	"github.com/coredns/coredns/plugin/test"
 	tap "github.com/dnstap/golang-dnstap"
 	"github.com/golang/protobuf/proto"
-	"github.com/infobloxopen/themis/contrib/coredns/policy/pb"
+	pb "github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 	pdp "github.com/infobloxopen/themis/pdp-service"
 	"github.com/miekg/dns"
 )
@@ -96,9 +96,9 @@ func TestSendCRExtraMsg(t *testing.T) {
 	proxyRW.WriteMsg(&msg)
 
 	testAttrHolder := &attrHolder{attrsReqDomain: []*pdp.Attribute{
-		{Id: "type", Value: "query"},
-		{Id: "domain_name", Value: "test.com"},
-		{Id: "source_ip", Value: "10.0.0.7"},
+		{Id: AttrNameType, Value: TypeValueQuery},
+		{Id: AttrNameDomainName, Value: "test.com"},
+		{Id: AttrNameSourceIP, Value: "10.0.0.7"},
 	}}
 
 	io := newIORoutine(5000 * time.Millisecond)
@@ -106,9 +106,10 @@ func TestSendCRExtraMsg(t *testing.T) {
 	tapIO.SendCRExtraMsg(proxyRW, testAttrHolder)
 
 	expectedAttrs := []*pdp.Attribute{
-		{Id: "domain_name", Value: "test.com"},
-		{Id: "source_ip", Value: "10.0.0.7"},
-		{Id: "policy_action", Value: "0"},
+		{Id: AttrNameDomainName, Value: "test.com"},
+		{Id: AttrNameSourceIP, Value: "10.0.0.7"},
+		{Id: AttrNamePolicyAction, Value: "0"},
+		{Id: AttrNameType, Value: TypeValueQuery},
 	}
 	checkCRExtraResult(t, io, proxyRW, expectedAttrs)
 

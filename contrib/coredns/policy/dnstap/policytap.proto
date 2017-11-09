@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package pb;
+package dnstap;
 
 
 // PolicyAction defines available policy action type
