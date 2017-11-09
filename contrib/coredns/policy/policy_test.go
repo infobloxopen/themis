@@ -11,6 +11,7 @@ import (
 	dtest "github.com/coredns/coredns/plugin/dnstap/test"
 	"github.com/coredns/coredns/plugin/pkg/dnstest"
 	"github.com/coredns/coredns/plugin/test"
+	ot "github.com/opentracing/opentracing-go"
 
 	pb "github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 	pdp "github.com/infobloxopen/themis/pdp-service"
@@ -26,7 +27,7 @@ var (
 
 func TestPolicy(t *testing.T) {
 	p := newPolicyPlugin()
-	p.Next = handler()
+	p.next = handler()
 
 	tests := []struct {
 		query      string
@@ -282,7 +283,7 @@ func TestPolicy(t *testing.T) {
 				ResponseWriter: &test.ResponseWriter{},
 				Tapper:         &dtest.TrapTapper{Full: true},
 			}
-			p.TapIO = sender
+			p.tapIO = sender
 		}
 
 		// no debug
@@ -310,34 +311,34 @@ func TestPolicy(t *testing.T) {
 		}
 
 		// debug
-		p.DebugSuffix = "debug."
+		p.debugSuffix = "debug."
 		for i, test := range tests {
 			sender.reset()
 			// Make request
 			req := new(dns.Msg)
 			req.Question = make([]dns.Question, 1)
-			req.Question[0] = dns.Question{test.query + p.DebugSuffix, dns.TypeTXT, dns.ClassCHAOS}
+			req.Question[0] = dns.Question{test.query + p.debugSuffix, dns.TypeTXT, dns.ClassCHAOS}
 			// Init test mock client
 			p.pdp = newTestClientInit(test.response, test.responseIP, test.errResp, test.errRespIP)
 			// Handle request
 			status, err := p.ServeDNS(context.Background(), rec, req)
-			var test_status int
-			var test_err error
+			var testStatus int
+			var testErr error
 			if test.err == errFakePdp {
-				test_err = errFakePdp
-				test_status = dns.RcodeServerFailure
+				testErr = errFakePdp
+				testStatus = dns.RcodeServerFailure
 			}
 			if test.status == dns.RcodeRefused {
-				test_status = dns.RcodeRefused
-				test_err = nil
+				testStatus = dns.RcodeRefused
+				testErr = nil
 			}
 			// Check status
-			if test_status != status {
-				t.Errorf("Case debug[%d]: expected status %q but got %q\n", i, test_status, status)
+			if testStatus != status {
+				t.Errorf("Case debug[%d]: expected status %q but got %q\n", i, testStatus, status)
 			}
 			// Check error
-			if test_err != err {
-				t.Errorf("Case debug[%d]: expected error %v but got %v\n", i, test_err, err)
+			if testErr != err {
+				t.Errorf("Case debug[%d]: expected error %v but got %v\n", i, testErr, err)
 			}
 			if withDnstap {
 				// Check no Dnstap attributes
@@ -347,6 +348,25 @@ func TestPolicy(t *testing.T) {
 
 	}
 
+}
+
+func TestPPConnect(t *testing.T) {
+	p := newPolicyPlugin()
+	p.endpoints = []string{
+		"127.0.0.1:5555",
+		"127.0.0.2:5555",
+	}
+
+	// Test if closing not connected plugin doesn't panic.
+	p.closeConn()
+
+	// Test connection.
+	err := p.connect()
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	}
+
+	p.closeConn()
 }
 
 func handler() plugin.Handler {
@@ -406,30 +426,30 @@ func TestEdns(t *testing.T) {
 
 	// Add EDNS mapping
 	AttrClientId := "client_id"
-	if err := p.AddEDNS0Map("0xfffa", AttrClientId, "hex", "string", "32", "0", "16"); err != nil {
+	if err := p.addEDNS0Map("0xfffa", AttrClientId, "hex", "string", "32", "0", "16"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
 	AttrGroupId := "group_id"
-	if err := p.AddEDNS0Map("0xfffa", AttrGroupId, "hex", "string", "32", "16", "32"); err != nil {
+	if err := p.addEDNS0Map("0xfffa", AttrGroupId, "hex", "string", "32", "16", "32"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
-	if err := p.AddEDNS0Map("0xfffb", AttrNameSourceIP, "address", "address", "0", "0", "0"); err != nil {
+	if err := p.addEDNS0Map("0xfffb", AttrNameSourceIP, "address", "address", "0", "0", "0"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
 	AttrClientName := "client_name"
-	if err := p.AddEDNS0Map("0xfffc", AttrClientName, "bytes", "string", "0", "0", "0"); err != nil {
+	if err := p.addEDNS0Map("0xfffc", AttrClientName, "bytes", "string", "0", "0", "0"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
 	AttrClientUID := "client_uid"
-	if err := p.AddEDNS0Map("0xfffd", AttrClientUID, "hex", "string", "0", "0", "0"); err != nil {
+	if err := p.addEDNS0Map("0xfffd", AttrClientUID, "hex", "string", "0", "0", "0"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
 	AttrHexName := "hex_name"
-	if err := p.AddEDNS0Map("0xfffe", AttrHexName, "hex", "string", "0", "2", "0"); err != nil {
+	if err := p.addEDNS0Map("0xfffe", AttrHexName, "hex", "string", "0", "2", "0"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
 	AttrVar := "var"
-	if err := p.AddEDNS0Map("0xffff", AttrVar, "hex", "string", "0", "2", "6"); err != nil {
+	if err := p.addEDNS0Map("0xffff", AttrVar, "hex", "string", "0", "2", "6"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
 
@@ -628,4 +648,18 @@ checkAttr:
 		}
 		t.Errorf("Unexpected attribute found %q in test %d", a, i)
 	}
+}
+
+type testTracerHandler struct{}
+
+func (t *testTracerHandler) ServeDNS(context.Context, dns.ResponseWriter, *dns.Msg) (int, error) {
+	return 0, nil
+}
+
+func (t *testTracerHandler) Name() string {
+	return "testTracerHandler"
+}
+
+func (t *testTracerHandler) Tracer() ot.Tracer {
+	return nil
 }

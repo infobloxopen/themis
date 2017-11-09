@@ -12,19 +12,32 @@ import (
 )
 
 type config struct {
-	server string
-	input  string
-	count  int
-	output string
+	servers stringSet
+	hotSpot bool
+	input   string
+	count   int
+	streams int
+	output  string
 
 	cmdConf interface{}
 	cmd     cmdExec
 }
 
+type stringSet []string
+
+func (s *stringSet) String() string {
+	return strings.Join(*s, ", ")
+}
+
+func (s *stringSet) Set(v string) error {
+	*s = append(*s, v)
+	return nil
+}
+
 var conf = config{}
 
 type (
-	cmdExec       func(addr, in, out string, n int, conf interface{}) error
+	cmdExec       func(addr string, in, out string, n int, conf interface{}) error
 	cmdFlagParser func(args []string) interface{}
 
 	command struct {
@@ -65,13 +78,20 @@ var (
 func init() {
 	flag.Usage = usage
 
-	flag.StringVar(&conf.server, "s", "127.0.0.1:5555", "PDP server to work with")
+	flag.Var(&conf.servers, "s", "PDP server to work with (default 127.0.0.1:5555, "+
+		"allowed use multiple to distribute load)")
+	flag.BoolVar(&conf.hotSpot, "hot-spot", false, "enables \"hot spot\" balancer (works only for gRPC streaming")
 	flag.StringVar(&conf.input, "i", "requests.yaml", "file with YAML formatted list of requests to send to PDP")
 	flag.IntVar(&conf.count, "n", 0, "number or requests to send\n\t"+
 		"(default and value less than one means all requests from file)")
+	flag.IntVar(&conf.streams, "streams", 0, "number of streams to use with gRPC streaming (< 1 unary gRPC)")
 	flag.StringVar(&conf.output, "o", "", "file to write command output (default stdout)")
 
 	flag.Parse()
+
+	if len(conf.servers) <= 0 {
+		conf.servers = stringSet{"127.0.0.1:5555"}
+	}
 
 	count := flag.NArg()
 	if count < 1 {

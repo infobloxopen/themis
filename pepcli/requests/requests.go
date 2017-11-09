@@ -1,3 +1,4 @@
+// Package requests provides loader for YAML formatted authorization requests file.
 package requests
 
 import (
@@ -18,6 +19,7 @@ type requests struct {
 	Requests   []map[string]interface{}
 }
 
+// Load reads given YAML file and porduces list of requests to run.
 func Load(name string) ([]rpc.Request, error) {
 	b, err := ioutil.ReadFile(name)
 	if err != nil {

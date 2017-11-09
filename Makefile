@@ -9,7 +9,7 @@ GOBUILD = go build -v
 GOFMTCHECK = test -z `gofmt -w -s *.go | tee /dev/stderr`
 COVER = go test -v -coverprofile=$(COVERTMP) -covermode=atomic
 JOINCOVER = cat $(COVERTMP) >> $(COVEROUT)
-GOTEST = $(COVER) -race && $(JOINCOVER)
+GOTESTRACE = $(COVER) -race && $(JOINCOVER)
 GOBENCH = $(COVER) -bench=. && $(JOINCOVER)
 
 .PHONY: all
@@ -135,19 +135,19 @@ build-egen: build-dir
 
 .PHONY: test-pdp
 test-pdp: cover-out
-	$(AT)/pdp && $(GOTEST)
+	$(AT)/pdp && $(GOTESTRACE)
 
 .PHONY: test-pdp-yast
 test-pdp-yast: cover-out
-	$(AT)/pdp/ast/yast && $(GOTEST)
+	$(AT)/pdp/ast/yast && $(GOTESTRACE)
 
 .PHONY: test-pdp-jast
 test-pdp-jast: cover-out
-	$(AT)/pdp/ast/jast && $(GOTEST)
+	$(AT)/pdp/ast/jast && $(GOTESTRACE)
 
 .PHONY: test-pdp-jcon
 test-pdp-jcon: cover-out
-	$(AT)/pdp/jcon && $(GOTEST)
+	$(AT)/pdp/jcon && $(GOTESTRACE)
 
 .PHONY: test-pep
 test-pep: build-pdpserver cover-out
@@ -155,4 +155,4 @@ test-pep: build-pdpserver cover-out
 
 .PHONY: test-plugin
 test-plugin: cover-out
-	$(AT)/contrib/coredns/policy && $(GOTEST)
+	$(AT)/contrib/coredns/policy && $(GOTESTRACE)

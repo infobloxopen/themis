@@ -428,15 +428,9 @@ func init() {
 
 }
 
-func BenchmarkNoBatch(b *testing.B) {
-	benchmark(0, 0, b)
-}
-
-func BenchmarkBatch(b *testing.B) {
-	benchmark(100, 16, b)
-}
-
-func benchmark(delay, pending uint, b *testing.B) {
+func Benchmark(b *testing.B) {
+	var delay uint = 0
+	var pending uint = 0
 	b.Logf("Delay: %d, Pending: %d", delay, pending)
 	ok := true
 	tmpYAST, tmpJCon, server, err := startServer(policySet)
