@@ -6,7 +6,7 @@ const (
 	AttrNameCustomerID = "customer_id"
 	AttrNameDomainName = "domain_name"
 	AttrNameRedirectTo = "redirect_to"
-	AttrNamePolicyID   = "pid"
+	AttrNamePolicyID   = "policy_id"
 	AttrNameTagDomain  = "tag_domain"
 	AttrNameTagRespip  = "tag_respip"
 	AttrNameAddress    = "address"
