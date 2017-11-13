@@ -1,12 +1,9 @@
 package main
 
-//go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-service && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/service.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-service && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-service"
-
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-control && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/control.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-control && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-control"
 
 import (
 	"io"
-	"math"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -18,13 +15,13 @@ import (
 
 	"github.com/infobloxopen/themis/pdp"
 	pbc "github.com/infobloxopen/themis/pdp-control"
-	pbs "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pdp/ast"
 	"github.com/infobloxopen/themis/pdp/jcon"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	ot "github.com/opentracing/opentracing-go"
+	"github.com/valyala/fastrpc"
+	"github.com/valyala/fastrpc/tlv"
 	"google.golang.org/grpc"
 )
 
@@ -45,7 +42,6 @@ type server struct {
 
 	startOnce sync.Once
 
-	requests transport
 	control  transport
 	health   transport
 	profiler net.Listener
@@ -160,16 +156,6 @@ func (s *server) loadContent(paths []string) error {
 	return nil
 }
 
-func (s *server) listenRequests(addr string) {
-	log.WithField("address", addr).Info("Opening service port")
-	ln, err := net.Listen("tcp", addr)
-	if err != nil {
-		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open service port")
-	}
-
-	s.requests.iface = ln
-}
-
 func (s *server) listenControl(addr string) {
 	log.WithField("address", addr).Info("Opening control port")
 	ln, err := net.Listen("tcp", addr)
@@ -209,28 +195,22 @@ func (s *server) listenProfiler(addr string) {
 }
 
 func (s *server) serveRequests() {
-	s.listenRequests(conf.serviceEP)
-
-	log.Info("Creating service protocol handler")
-	opts := []grpc.ServerOption{}
-	if conf.maxStreams > 0 && conf.maxStreams <= math.MaxUint32 {
-		opts = append(opts, grpc.MaxConcurrentStreams(uint32(conf.maxStreams)))
+	addr := conf.serviceEP
+	log.WithField("address", addr).Info("Opening service port")
+	svc := &fastrpc.Server{
+		CompressType:     fastrpc.CompressNone,
+		PipelineRequests: true,
+		NewHandlerCtx: func() fastrpc.HandlerCtx {
+			return &tlv.RequestCtx{}
+		},
+		Handler: s.Validate,
 	}
-
-	if s.tracer != nil {
-		onlyIfParent := func(parentSpanCtx ot.SpanContext, method string, req, resp interface{}) bool {
-			return parentSpanCtx != nil
-		}
-		intercept := otgrpc.OpenTracingServerInterceptor(s.tracer, otgrpc.IncludingSpans(onlyIfParent))
-		opts = append(opts, grpc.UnaryInterceptor(intercept))
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open service port")
 	}
-	s.requests.proto = grpc.NewServer(opts...)
-	pbs.RegisterPDPServer(s.requests.proto, s)
-
 	log.Info("Serving decision requests")
-	if err := s.requests.proto.Serve(s.requests.iface); err != nil {
-		log.WithField("error", err).Fatal("Failed to start decision service")
-	}
+	go svc.Serve(ln)
 }
 
 func (s *server) serve() {

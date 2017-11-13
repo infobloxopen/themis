@@ -7,15 +7,13 @@ AT = cd $(SRCROOT)
 RM = rm -fv
 GOBUILD = go build -v
 GOFMTCHECK = test -z `gofmt -w -s *.go | tee /dev/stderr`
-GOTEST = go test -v
-COVER = $(GOTEST) -coverprofile=$(COVERTMP) -covermode=atomic
+COVER = go test -v -coverprofile=$(COVERTMP) -covermode=atomic
 JOINCOVER = cat $(COVERTMP) >> $(COVEROUT)
 GOTESTRACE = $(COVER) -race && $(JOINCOVER)
-GOBENCH = $(GOTEST) -run=BypassAllTestsAndRunOnlyBenchmarks -bench=
-GOBENCHALL = $(GOBENCH).
+GOBENCH = $(COVER) -bench=. && $(JOINCOVER)
 
 .PHONY: all
-all: fmt build test bench
+all: fmt build test
 
 .PHONY: build-dir
 build-dir:
@@ -38,9 +36,6 @@ build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-eg
 
 .PHONY: test
 test: cover-out test-pdp test-pdp-yast test-pdp-jast test-pdp-jcon test-pep test-plugin
-
-.PHONY: bench
-bench: bench-pep bench-pdpserver
 
 .PHONY: cover-out
 cover-out:
@@ -109,9 +104,8 @@ fmt-pdpserver:
 
 .PHONY: fmt-plugin
 fmt-plugin:
-	@echo "Checking PE-CoreDNS Middleware format..."
+	@echo "Checking CoreDNS PEP plugin format..."
 	@$(AT)/contrib/coredns/policy && $(GOFMTCHECK)
-	@$(AT)/contrib/coredns/policy/dnstap && $(GOFMTCHECK)
 
 .PHONY: fmt-egen
 fmt-egen:
@@ -134,7 +128,6 @@ build-pdpserver: build-dir
 .PHONY: build-plugin
 build-plugin: build-dir
 	$(AT)/contrib/coredns/policy && $(GOBUILD)
-	$(AT)/contrib/coredns/policy/dnstap && $(GOBUILD)
 
 .PHONY: build-egen
 build-egen: build-dir
@@ -158,17 +151,8 @@ test-pdp-jcon: cover-out
 
 .PHONY: test-pep
 test-pep: build-pdpserver cover-out
-	$(AT)/pep && $(GOTESTRACE)
+	$(AT)/pep && $(GOBENCH)
 
 .PHONY: test-plugin
 test-plugin: cover-out
 	$(AT)/contrib/coredns/policy && $(GOTESTRACE)
-	$(AT)/contrib/coredns/policy/dnstap && $(GOTESTRACE)
-
-.PHONY: bench-pep
-bench-pep: build-pdpserver
-	$(AT)/pep && $(GOBENCH)\(Benchmark.*PolicySet\)\|\(BenchmarkStreamingClient\)
-
-.PHONY: bench-pdpserver
-bench-pdpserver:
-	$(AT)/pdpserver && $(GOBENCHALL)

@@ -1,5 +1,5 @@
-hash: 77a6718b8f335167b7d23fc6f9f284ff146242d5082cb061f4f8cdfe6e1b63b4
-updated: 2017-11-08T18:44:55.429191044+03:00
+hash: ed5e36530f311421c657f9bdec6b56f562a8a55a38b588b110aba3ab17098b0d
+updated: 2017-11-09T18:47:25.095472621+03:00
 imports:
 - name: github.com/apache/thrift
   version: 4f77ab8e296d64c57e6ea1c6e3f0f152bc7d6a3a
@@ -10,7 +10,7 @@ imports:
   subpackages:
   - quantile
 - name: github.com/coredns/coredns
-  version: 3527be6c0056acbcd8dc9848ff96be2136c68ed5
+  version: 93e481a2479ae5215d5b07372fd6ab85c434d8d4
   subpackages:
   - core/dnsserver
   - pb
@@ -78,6 +78,14 @@ imports:
   - iptree
   - numtree
   - strtree
+- name: github.com/klauspost/compress
+  version: ea08389e0dc46025380296f7dd04ab0e8de36adb
+  subpackages:
+  - flate
+  - gzip
+  - zlib
+- name: github.com/klauspost/cpuid
+  version: ae7887de9fa5d2db4eaa8174a7eff2c1ac00f2da
 - name: github.com/kr/logfmt
   version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -137,6 +145,17 @@ imports:
   version: b305748200a6396c34b89fe5dacc768cb1a7ea69
 - name: github.com/Sirupsen/logrus
   version: 89742aefa4b206dcf400792f3bd35b542998eb3b
+- name: github.com/valyala/bytebufferpool
+  version: e746df99fe4a3986f4d4f79e13c1e0117ce9c2f7
+- name: github.com/valyala/fasthttp
+  version: 51bb00256c3cb0a130d470a087a98684ce003065
+  subpackages:
+  - fasthttputil
+  - stackless
+- name: github.com/valyala/fastrpc
+  version: 0b1a558ac7260beec2d23ecf7cf7d3c1444edf5c
+  subpackages:
+  - tlv
 - name: golang.org/x/crypto
   version: 2faea1465de239e4babd8f5905cc25b781712442
   repo: https://go.googlesource.com/crypto
@@ -173,7 +192,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: abd3e10d785b2ef7e32b5207eb7c303301a4ac84
+  version: ebefec97ddde8309567144d2cdffe9801fda7fc0
   subpackages:
   - balancer
   - balancer/roundrobin

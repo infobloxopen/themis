@@ -163,70 +163,54 @@ func TestPolicyConfigParse(t *testing.T) {
 		},
 		{
 			input: `.:53 {
-                        policy {
-                            endpoint 10.2.4.1:5555
-                            streams 10
-                        }
-                    }`,
-			endpoints: []string{"10.2.4.1:5555"},
-		},
-		{
-			input: `.:53 {
-                        policy {
-                            endpoint 10.2.4.1:5555
-                            streams Ten
-                        }
-                    }`,
+						policy {
+							endpoint 10.2.4.1:5555
+							delay 10
+							pending 1024
+						}
+					}`,
 			endpoints:  []string{"10.2.4.1:5555"},
-			errContent: "Could not parse number of streams",
+			errContent: "",
 		},
 		{
 			input: `.:53 {
-                        policy {
-                            endpoint 10.2.4.1:5555
-                            streams
-                        }
-                    }`,
+						policy {
+							endpoint 10.2.4.1:5555
+							delay
+						}
+					}`,
 			endpoints:  []string{"10.2.4.1:5555"},
 			errContent: "Wrong argument count or unexpected line ending",
 		},
 		{
 			input: `.:53 {
-                        policy {
-                            endpoint 10.2.4.1:5555
-                            streams -1
-                        }
-                    }`,
+						policy {
+							endpoint 10.2.4.1:5555
+							delay wrong_interval
+						}
+					}`,
 			endpoints:  []string{"10.2.4.1:5555"},
-			errContent: "Expected at least one stream got -1",
+			errContent: "Could not parse delay param",
 		},
 		{
 			input: `.:53 {
-                        policy {
-                            endpoint 10.2.4.1:5555
-                            streams 10 Round-Robin
-                        }
-                    }`,
-			endpoints: []string{"10.2.4.1:5555"},
-		},
-		{
-			input: `.:53 {
-                        policy {
-                            endpoint 10.2.4.1:5555
-                            streams 10 Hot-Spot
-                        }
-                    }`,
-			endpoints: []string{"10.2.4.1:5555"},
-		},
-		{
-			input: `.:53 {
-                        policy {
-                            endpoint 10.2.4.1:5555
-                            streams 10 Unknown-Balancer
-                        }
-                    }`,
+						policy {
+							endpoint 10.2.4.1:5555
+							pending
+						}
+					}`,
 			endpoints:  []string{"10.2.4.1:5555"},
-			errContent: "Expected round-robin or hot-spot balancing but got Unknown-Balancer",
+			errContent: "Wrong argument count or unexpected line ending",
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							pending wrong_limit
+						}
+					}`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Could not parse pending param",
 		},
 	}
 
