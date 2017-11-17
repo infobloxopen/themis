@@ -109,7 +109,7 @@ func (c *unaryClient) Validate(in, out interface{}) error {
 		return err
 	}
 
-	res, err := (*uc).Validate(context.Background(), &req)
+	res, err := (*uc).Validate(context.Background(), &req, grpc.FailFast(false))
 	if err != nil {
 		return err
 	}
