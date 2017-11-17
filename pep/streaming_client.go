@@ -175,6 +175,8 @@ type subClient struct {
 	maxStreams int
 	streams    []pb.PDP_NewValidationStreamClient
 	index      chan int
+
+	retry chan stream
 }
 
 func newSubClient(addr string, maxStreams int, tracer ot.Tracer) (*subClient, error) {
@@ -236,9 +238,15 @@ func (c *subClient) validate(in, out interface{}) error {
 	if err != nil {
 		return err
 	}
-	defer c.putStream(s)
 
-	return s.validate(in, out)
+	err = s.validate(in, out)
+	if err != nil {
+		c.retryStream(s)
+		return err
+	}
+
+	c.putStream(s)
+	return nil
 }
 
 func (c *subClient) tryValidate(in, out interface{}) (bool, error) {
@@ -248,13 +256,17 @@ func (c *subClient) tryValidate(in, out interface{}) (bool, error) {
 	}
 
 	if !ok {
-		return false, err
+		return false, nil
 	}
 
-	defer c.putStream(s)
-
 	err = s.validate(in, out)
-	return true, err
+	if err != nil {
+		c.retryStream(s)
+		return true, err
+	}
+
+	c.putStream(s)
+	return true, nil
 }
 
 func (c *subClient) fillIndex() {
@@ -264,12 +276,54 @@ func (c *subClient) fillIndex() {
 	}
 }
 
+func (c *subClient) startRetryHandler() {
+	c.retry = make(chan stream, len(c.streams))
+	go func(ch chan stream) {
+		for s := range ch {
+			ss, err := (*s.client).NewValidationStream(context.TODO(),
+				grpc.FailFast(false),
+			)
+			if err != nil {
+				continue
+			}
+
+			s.s = ss
+			c.putRestoredStream(s)
+		}
+	}(c.retry)
+}
+
+func (c *subClient) putRestoredStream(s stream) error {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	if c.streams == nil || c.index == nil || c.index != s.ch {
+		return errors.New("invalid connection")
+	}
+
+	s.streams[s.idx] = s.s
+	s.ch <- s.idx
+	return nil
+}
+
 func (c *subClient) dropIndex() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	close(c.index)
-	c.index = nil
+	if c.index != nil {
+		close(c.index)
+		c.index = nil
+	}
+}
+
+func (c *subClient) dropRetry() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if c.retry != nil {
+		close(c.retry)
+		c.retry = nil
+	}
 }
 
 func (c *subClient) makeStreams() error {
@@ -304,11 +358,14 @@ func (c *subClient) makeStreams() error {
 	}
 
 	c.fillIndex()
+	c.startRetryHandler()
 
 	return nil
 }
 
 func (c *subClient) waitForStreams() []int {
+	c.dropRetry()
+
 	c.lock.RLock()
 	streams := c.streams
 	index := c.index
@@ -380,6 +437,7 @@ func (c *subClient) getStream() (stream, error) {
 	c.lock.RLock()
 	streams := c.streams
 	index := c.index
+	retry := c.retry
 	c.lock.RUnlock()
 
 	if streams == nil {
@@ -390,12 +448,20 @@ func (c *subClient) getStream() (stream, error) {
 		c.lock.RLock()
 		streams = c.streams
 		index = c.index
+		retry = c.retry
 		c.lock.RUnlock()
 	}
 
 	if index != nil {
 		if i, ok := <-index; ok {
-			return stream{idx: i, s: streams[i], ch: index}, nil
+			return stream{
+				client:  c.client,
+				streams: streams,
+				idx:     i,
+				s:       streams[i],
+				ch:      index,
+				retry:   retry,
+			}, nil
 		}
 	}
 
@@ -406,6 +472,7 @@ func (c *subClient) tryGetStream() (stream, bool, error) {
 	c.lock.RLock()
 	streams := c.streams
 	index := c.index
+	retry := c.retry
 	c.lock.RUnlock()
 
 	if streams == nil {
@@ -416,6 +483,7 @@ func (c *subClient) tryGetStream() (stream, bool, error) {
 		c.lock.RLock()
 		streams = c.streams
 		index = c.index
+		retry = c.retry
 		c.lock.RUnlock()
 	}
 
@@ -429,7 +497,14 @@ func (c *subClient) tryGetStream() (stream, bool, error) {
 
 	case i, ok := <-index:
 		if ok {
-			return stream{idx: i, s: streams[i], ch: index}, true, nil
+			return stream{
+				client:  c.client,
+				streams: streams,
+				idx:     i,
+				s:       streams[i],
+				ch:      index,
+				retry:   retry,
+			}, true, nil
 		}
 	}
 
@@ -448,10 +523,26 @@ func (c *subClient) putStream(s stream) error {
 	return nil
 }
 
+func (c *subClient) retryStream(s stream) error {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	if c.retry == nil || c.retry != s.retry {
+		return errors.New("invalid connection")
+	}
+
+	s.retry <- s
+	return nil
+}
+
 type stream struct {
-	idx int
-	s   pb.PDP_NewValidationStreamClient
-	ch  chan int
+	client  *pb.PDPClient
+	streams []pb.PDP_NewValidationStreamClient
+	idx     int
+	s       pb.PDP_NewValidationStreamClient
+	ch      chan int
+
+	retry chan stream
 }
 
 func (s stream) validate(in, out interface{}) error {
