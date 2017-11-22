@@ -91,7 +91,18 @@ func (c *streamingClient) Validate(in, out interface{}) error {
 		return ErrorNotConnected
 	}
 
-	return c.validate(in, out, clients, &c.counter)
+	for {
+		err := c.validate(in, out, clients, &c.counter)
+		if err == nil {
+			break
+		}
+
+		if err != streamError {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func simpleValidator(in, out interface{}, clients []*subClient, counter *uint64) error {
@@ -240,7 +251,7 @@ func (c *subClient) validate(in, out interface{}) error {
 	}
 
 	err = s.validate(in, out)
-	if err != nil {
+	if err == streamError {
 		c.retryStream(s)
 		return err
 	}
@@ -260,7 +271,7 @@ func (c *subClient) tryValidate(in, out interface{}) (bool, error) {
 	}
 
 	err = s.validate(in, out)
-	if err != nil {
+	if err == streamError {
 		c.retryStream(s)
 		return true, err
 	}
@@ -545,6 +556,8 @@ type stream struct {
 	retry chan stream
 }
 
+var streamError = errors.New("sending or receiving error for a stream")
+
 func (s stream) validate(in, out interface{}) error {
 	req, err := makeRequest(in)
 	if err != nil {
@@ -553,12 +566,12 @@ func (s stream) validate(in, out interface{}) error {
 
 	err = s.s.Send(&req)
 	if err != nil {
-		return err
+		return streamError
 	}
 
 	res, err := s.s.Recv()
 	if err != nil {
-		return err
+		return streamError
 	}
 
 	return fillResponse(res, out)
