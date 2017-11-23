@@ -7,39 +7,20 @@ import (
 )
 
 type testClient struct {
-	nextResponse   *pdp.Response
-	nextResponseIP *pdp.Response
-	errResponse    error
-	errResponseIP  error
+	nextResponse *pdp.Response
+	errResponse  error
 }
 
-func newTestClientInit(nextResponse *pdp.Response, nextResponseIP *pdp.Response,
-	errResponse error, errResponseIP error) *testClient {
+func newTestClientInit(nextResponse *pdp.Response, errResponse error) *testClient {
 	return &testClient{
-		nextResponse:   nextResponse,
-		nextResponseIP: nextResponseIP,
-		errResponse:    errResponse,
-		errResponseIP:  errResponseIP,
+		nextResponse: nextResponse,
+		errResponse:  errResponse,
 	}
 }
 
 func (c *testClient) Connect(addr string) error { return nil }
 func (c *testClient) Close()                    {}
 func (c *testClient) Validate(in, out interface{}) error {
-	if in != nil {
-		p := in.(pdp.Request)
-		for _, a := range p.Attributes {
-			if a.Id == AttrNameAddress {
-				if c.errResponseIP != nil {
-					return c.errResponseIP
-				}
-				if c.nextResponseIP != nil {
-					return fillResponse(c.nextResponseIP, out)
-				}
-				continue
-			}
-		}
-	}
 	if c.errResponse != nil {
 		return c.errResponse
 	}

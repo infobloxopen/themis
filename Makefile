@@ -14,6 +14,9 @@ GOTESTRACE = $(COVER) -race && $(JOINCOVER)
 GOBENCH = $(GOTEST) -run=BypassAllTestsAndRunOnlyBenchmarks -bench=
 GOBENCHALL = $(GOBENCH).
 
+COVERHTML=$(SRCROOT)/cover.html
+GOCOVER = go test -v -coverprofile=$(COVERTMP) && go tool cover -html=$(COVERTMP) -o $(COVERHTML)
+
 .PHONY: all
 all: fmt build test bench
 
@@ -172,3 +175,7 @@ bench-pep: build-pdpserver
 .PHONY: bench-pdpserver
 bench-pdpserver:
 	$(AT)/pdpserver && $(GOBENCHALL)
+
+.PHONY: cover-plugin
+cover-plugin: cover-out
+	$(AT)/contrib/coredns/policy && $(GOCOVER)

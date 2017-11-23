@@ -21,47 +21,28 @@ func init() {
 }
 
 type attrHolder struct {
-	attrsReqDomain  []*pdp.Attribute
-	attrsRespDomain []*pdp.Attribute
-	attrsReqRespip  []*pdp.Attribute
-	attrsRespRespip []*pdp.Attribute
-	action          byte
-	redirect        string
+	attrsRequest  []*pdp.Attribute
+	attrsResponse []*pdp.Attribute
+	action        byte
+	redirect      string
 }
 
 func newAttrHolder(qName string, qType uint16) *attrHolder {
 	ret := &attrHolder{
-		attrsReqDomain: make([]*pdp.Attribute, 3, 8),
-		action:         typeInvalid,
+		attrsRequest: make([]*pdp.Attribute, 2, 8),
+		action:       typeInvalid,
 	}
-	ret.attrsReqDomain[0] = &pdp.Attribute{Id: AttrNameType, Type: "string", Value: TypeValueQuery}
-	ret.attrsReqDomain[1] = &pdp.Attribute{Id: AttrNameDomainName, Type: "domain", Value: strings.TrimRight(qName, ".")}
-	ret.attrsReqDomain[2] = &pdp.Attribute{Id: AttrNameDNSQtype, Type: "string", Value: strconv.FormatUint(uint64(qType), 16)}
+	ret.attrsRequest[0] = &pdp.Attribute{Id: AttrNameDomainName, Type: "domain", Value: strings.TrimRight(qName, ".")}
+	ret.attrsRequest[1] = &pdp.Attribute{Id: AttrNameDNSQtype, Type: "string", Value: strconv.FormatUint(uint64(qType), 16)}
 	return ret
 }
 
-func (ah *attrHolder) makeReqRespip(addr string) {
-	policyID := ""
-	for _, item := range ah.attrsRespDomain {
-		if item.Id == AttrNamePolicyID {
-			policyID = item.Value
-			break
-		}
-	}
-
-	ah.attrsReqRespip = []*pdp.Attribute{
-		{Id: AttrNameType, Type: "string", Value: TypeValueResponse},
-		{Id: AttrNamePolicyID, Type: "string", Value: policyID},
-		{Id: AttrNameAddress, Type: "address", Value: addr},
-	}
+func (ah *attrHolder) addRespip(addr string) {
+	ah.attrsRequest = append(ah.attrsRequest, &pdp.Attribute{Id: AttrNameAddress, Type: "address", Value: addr})
 }
 
-func (ah *attrHolder) addResponse(r *pdp.Response, respip bool) {
-	if !respip {
-		ah.attrsRespDomain = r.Obligation
-	} else {
-		ah.attrsRespRespip = r.Obligation
-	}
+func (ah *attrHolder) addResponse(r *pdp.Response) {
+	ah.attrsResponse = r.Obligation
 
 	switch r.Effect {
 	case pdp.Response_PERMIT:
@@ -71,11 +52,7 @@ func (ah *attrHolder) addResponse(r *pdp.Response, respip bool) {
 				return
 			}
 		}
-		// don't overwrite "Log" action from previous validation
-		if ah.action != typeLog {
-			ah.action = typeAllow
-		}
-		return
+		ah.action = typeAllow
 	case pdp.Response_DENY:
 		for _, item := range r.Obligation {
 			switch item.Id {
@@ -97,50 +74,23 @@ func (ah *attrHolder) addResponse(r *pdp.Response, respip bool) {
 }
 
 func (ah *attrHolder) convertAttrs() []*pb.DnstapAttribute {
-	lenAttrsReqDomain := len(ah.attrsReqDomain)
-	lenAttrsRespDomain := len(ah.attrsRespDomain)
-	lenAttrsReqRespip := len(ah.attrsReqRespip)
-	lenAttrsRespRespip := len(ah.attrsRespRespip)
-	length := lenAttrsReqDomain + lenAttrsRespDomain + lenAttrsReqRespip + lenAttrsRespRespip + 1
-	if lenAttrsReqRespip > 0 {
-		length -= 2
-	}
-	out := make([]*pb.DnstapAttribute, length)
+	size := len(ah.attrsRequest) + len(ah.attrsResponse) + 1
+	out := make([]*pb.DnstapAttribute, size)
 	i := 0
-	for j := 1; j < lenAttrsReqDomain; j++ {
+	for _, item := range ah.attrsRequest {
 		out[i] = &pb.DnstapAttribute{
-			Id:    ah.attrsReqDomain[j].Id,
-			Value: ah.attrsReqDomain[j].Value,
+			Id:    item.Id,
+			Value: item.Value,
 		}
 		i++
 	}
-	for j := 0; j < lenAttrsRespDomain; j++ {
+	for _, item := range ah.attrsResponse {
 		out[i] = &pb.DnstapAttribute{
-			Id:    ah.attrsRespDomain[j].Id,
-			Value: ah.attrsRespDomain[j].Value,
-		}
-		i++
-	}
-	for j := 2; j < lenAttrsReqRespip; j++ {
-		out[i] = &pb.DnstapAttribute{
-			Id:    ah.attrsReqRespip[j].Id,
-			Value: ah.attrsReqRespip[j].Value,
-		}
-		i++
-	}
-	for j := 0; j < lenAttrsRespRespip; j++ {
-		out[i] = &pb.DnstapAttribute{
-			Id:    ah.attrsRespRespip[j].Id,
-			Value: ah.attrsRespRespip[j].Value,
+			Id:    item.Id,
+			Value: item.Value,
 		}
 		i++
 	}
 	out[i] = &pb.DnstapAttribute{Id: AttrNamePolicyAction, Value: actionConvDnstap[ah.action]}
-	i++
-	if len(ah.attrsReqRespip) > 0 {
-		out[i] = &pb.DnstapAttribute{Id: AttrNameType, Value: TypeValueResponse}
-	} else {
-		out[i] = &pb.DnstapAttribute{Id: AttrNameType, Value: TypeValueQuery}
-	}
 	return out
 }

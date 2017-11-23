@@ -53,6 +53,7 @@ func init() {
 
 var (
 	errInvalidAction = errors.New("invalid action")
+	errInvalidOption = errors.New("invalid policy plugin option")
 )
 
 var stringToEDNS0MapType = map[string]uint16{
@@ -137,7 +138,7 @@ func (p *PolicyPlugin) parseOption(c *caddy.Controller) error {
 		return p.parseStreams(c)
 	}
 
-	return nil
+	return errInvalidOption
 }
 
 func (p *PolicyPlugin) parseEndpoint(c *caddy.Controller) error {
@@ -312,7 +313,7 @@ func parseOptionGroup(ah *attrHolder, data []byte, options []*edns0Map) bool {
 		if option.name == "source_ip" {
 			srcIPFound = true
 		}
-		ah.attrsReqDomain = append(ah.attrsReqDomain, &pdp.Attribute{Id: option.name, Type: option.destType, Value: value})
+		ah.attrsRequest = append(ah.attrsRequest, &pdp.Attribute{Id: option.name, Type: option.destType, Value: value})
 	}
 	return srcIPFound
 }
@@ -341,14 +342,12 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) 
 	}
 
 Exit:
-	ah.attrsReqDomain = append(ah.attrsReqDomain, &pdp.Attribute{Id: ipID, Type: "address", Value: ip})
+	ah.attrsRequest = append(ah.attrsRequest, &pdp.Attribute{Id: ipID, Type: "address", Value: ip})
 	return
 }
 
-func resolve(status int) string {
+func statusToString(status int) string {
 	switch status {
-	case -1:
-		return "resolve:skip"
 	case dns.RcodeSuccess:
 		return "resolve:yes"
 	case dns.RcodeServerFailure:
@@ -361,23 +360,10 @@ func resolve(status int) string {
 func join(key, value string) string { return "," + key + ":" + value }
 
 func (p *PolicyPlugin) setDebugQueryAnswer(ah *attrHolder, r *dns.Msg, status int) {
-	debugQueryInfo := resolve(status)
+	debugQueryInfo := statusToString(status) + join("action", actionConv[ah.action])
 
-	var action string
-	if len(ah.attrsRespRespip) > 0 {
-		action = "pass"
-	} else {
-		action = actionConv[ah.action]
-	}
-	debugQueryInfo += join(TypeValueQuery, action)
-	for _, item := range ah.attrsRespDomain {
+	for _, item := range ah.attrsResponse {
 		debugQueryInfo += join(item.Id, item.Value)
-	}
-	if len(ah.attrsRespRespip) > 0 {
-		debugQueryInfo += join(TypeValueResponse, actionConv[ah.action])
-		for _, item := range ah.attrsRespRespip {
-			debugQueryInfo += join(item.Id, item.Value)
-		}
 	}
 
 	hdr := dns.RR_Header{Name: r.Question[0].Name + p.debugSuffix, Rrtype: dns.TypeTXT, Class: dns.ClassCHAOS, Ttl: 0}
@@ -424,7 +410,7 @@ func getNameClass(r *dns.Msg) (string, uint16) {
 // ServeDNS implements the Handler interface.
 func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	var (
-		status    = -1
+		status    int
 		respMsg   *dns.Msg
 		err       error
 		sendExtra bool
@@ -434,34 +420,29 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	ah := newAttrHolder(getNameType(r))
 	p.getAttrsFromEDNS0(ah, r, getRemoteIP(w))
 
-	// validate domain name (validation #1)
-	err = p.validate(ah, "")
+	// resolve domain name to IP
+	responseWriter := new(writer)
+	status, err = plugin.NextOrFailure(p.Name(), p.next, ctx, responseWriter, r)
 	if err != nil {
 		status = dns.RcodeServerFailure
-		goto Exit
-	}
-
-	if ah.action == typeAllow || ah.action == typeLog {
-		// resolve domain name to IP
-		responseWriter := new(writer)
-		status, err = plugin.NextOrFailure(p.Name(), p.next, ctx, responseWriter, r)
-		if err != nil {
-			status = dns.RcodeServerFailure
-		} else {
-			respMsg = responseWriter.Msg
-			address := extractRespIP(respMsg)
-			// if external resolver ret code is not RcodeSuccess
-			// address is not filled from the answer
-			// in this case just pass through answer w/o validation
-			if len(address) > 0 {
-				// validate response IP (validation #2)
-				err = p.validate(ah, address)
-				if err != nil {
-					status = dns.RcodeServerFailure
-					goto Exit
-				}
-			}
+	} else {
+		respMsg = responseWriter.Msg
+		address := extractRespIP(respMsg)
+		// if external resolver ret code is not RcodeSuccess
+		// address is not filled from the answer
+		if len(address) > 0 {
+			ah.addRespip(address)
 		}
+
+		req := pdp.Request{Attributes: ah.attrsRequest}
+		response := new(pdp.Response)
+		err = p.pdp.Validate(req, response)
+		if err != nil {
+			log.Printf("[ERROR] Policy validation failed due to error %s", err)
+			status = dns.RcodeServerFailure
+			goto Exit
+		}
+		ah.addResponse(response)
 	}
 
 	if debugQuery && (ah.action != typeRefuse) {
@@ -560,26 +541,6 @@ func (p *PolicyPlugin) redirect(ctx context.Context, r *dns.Msg, dst string) (in
 	}
 
 	return r.Rcode, nil
-}
-
-func (p *PolicyPlugin) validate(ah *attrHolder, addr string) error {
-	var req pdp.Request
-	if len(addr) == 0 {
-		req.Attributes = ah.attrsReqDomain
-	} else {
-		ah.makeReqRespip(addr)
-		req.Attributes = ah.attrsReqRespip
-	}
-
-	response := new(pdp.Response)
-	err := p.pdp.Validate(req, response)
-	if err != nil {
-		log.Printf("[ERROR] Policy validation failed due to error %s", err)
-		return err
-	}
-
-	ah.addResponse(response, len(addr) > 0)
-	return nil
 }
 
 func extractRespIP(m *dns.Msg) (address string) {

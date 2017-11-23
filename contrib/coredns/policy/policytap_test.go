@@ -95,8 +95,7 @@ func TestSendCRExtraMsg(t *testing.T) {
 	proxyRW := NewProxyWriter(&tapRW)
 	proxyRW.WriteMsg(&msg)
 
-	testAttrHolder := &attrHolder{attrsReqDomain: []*pdp.Attribute{
-		{Id: AttrNameType, Value: TypeValueQuery},
+	testAttrHolder := &attrHolder{attrsRequest: []*pdp.Attribute{
 		{Id: AttrNameDomainName, Value: "test.com"},
 		{Id: AttrNameSourceIP, Value: "10.0.0.7"},
 	}}
@@ -109,7 +108,6 @@ func TestSendCRExtraMsg(t *testing.T) {
 		{Id: AttrNameDomainName, Value: "test.com"},
 		{Id: AttrNameSourceIP, Value: "10.0.0.7"},
 		{Id: AttrNamePolicyAction, Value: "0"},
-		{Id: AttrNameType, Value: TypeValueQuery},
 	}
 	checkCRExtraResult(t, io, proxyRW, expectedAttrs)
 

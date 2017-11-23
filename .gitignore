@@ -27,3 +27,4 @@ _testmain.go
 # Coverage files
 coverage.txt
 cover.out
+cover.html

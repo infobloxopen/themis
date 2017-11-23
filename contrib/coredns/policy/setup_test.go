@@ -22,6 +22,14 @@ func TestPolicyConfigParse(t *testing.T) {
 		{
 			input: `.:53 {
 						policy {
+							error option
+						}
+					}`,
+			errContent: "invalid policy plugin option",
+		},
+		{
+			input: `.:53 {
+						policy {
 							endpoint
 						}
 					}`,

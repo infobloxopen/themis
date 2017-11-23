@@ -52,7 +52,7 @@ func TestActionFromResponse(t *testing.T) {
 
 	for i, test := range tests {
 		ah := newAttrHolder("test.com", 1)
-		ah.addResponse(test.resp, false)
+		ah.addResponse(test.resp)
 		if ah.action != test.action {
 			t.Errorf("Unexpected action in TC #%d: expected=%d, actual=%d", i, test.action, ah.action)
 		}
@@ -70,15 +70,5 @@ func TestNilResponse(t *testing.T) {
 	}()
 
 	ah := newAttrHolder("test.com", 1)
-	ah.addResponse(nil, false)
-}
-
-func TestAllowActionAfterLogAction(t *testing.T) {
-	ah := newAttrHolder("test.com", 1)
-	ah.addResponse(&pdp.Response{Effect: pdp.Response_PERMIT,
-		Obligation: []*pdp.Attribute{{Id: "log"}}}, false)
-	ah.addResponse(&pdp.Response{Effect: pdp.Response_PERMIT}, true)
-	if ah.action != typeLog {
-		t.Errorf("Unexpected action: expected=%d, actual=%d", typeLog, ah.action)
-	}
+	ah.addResponse(nil)
 }
