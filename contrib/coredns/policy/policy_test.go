@@ -27,6 +27,7 @@ var (
 
 func TestPolicy(t *testing.T) {
 	p := newPolicyPlugin()
+	p.transfer[AttrNamePolicyID] = struct{}{}
 	p.next = handler()
 
 	tests := []struct {
@@ -91,6 +92,29 @@ func TestPolicy(t *testing.T) {
 			responseIP: &pdp.Response{Effect: pdp.Response_PERMIT},
 			status:     dns.RcodeSuccess,
 			err:        nil,
+		},
+		{
+			query:     "test.com.",
+			queryType: dns.TypeA,
+			response: &pdp.Response{Effect: pdp.Response_PERMIT,
+				Obligation: []*pdp.Attribute{
+					{Id: AttrNameLog, Value: "true"},
+					{Id: AttrNamePolicyID, Value: "cafecafe"},
+				},
+			},
+			responseIP: &pdp.Response{Effect: pdp.Response_PERMIT},
+			status:     dns.RcodeSuccess,
+			err:        nil,
+			attrs: []*pdp.Attribute{
+				{Id: AttrNameDomainName, Value: "test.com"},
+				{Id: AttrNameDNSQtype, Value: "1"},
+				{Id: AttrNameSourceIP, Value: "10.240.0.1"},
+				{Id: AttrNameAddress, Value: "10.240.0.1"},
+				{Id: AttrNamePolicyID, Value: "cafecafe"},
+				{Id: AttrNameLog, Value: "true"},
+				{Id: AttrNamePolicyAction, Value: "2"},
+				{Id: AttrNameType, Value: TypeValueResponse},
+			},
 		},
 		{
 			query:      "test.com.",
@@ -383,6 +407,16 @@ func TestPPConnect(t *testing.T) {
 
 	p.closeConn()
 
+	// Test streaming gRPC connection with hot spot.
+	p.streams = 82
+	p.hotSpot = true
+	err = p.connect()
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	}
+
+	p.closeConn()
+
 	p = newPolicyPlugin()
 	p.endpoints = []string{
 		"127.0.0.1:5555",
@@ -620,7 +654,7 @@ func TestEdns(t *testing.T) {
 
 	for _, test := range tests {
 		req := makeRequestWithEDNS0(test.code, test.data, test.nonlocal)
-		ah := newAttrHolder("test.com", 1)
+		ah := newAttrHolder("test.com", 1, p.transfer)
 		p.getAttrsFromEDNS0(ah, req, test.ip)
 		mapAttr := make(map[string]*pdp.Attribute)
 		for _, a := range ah.attrsReqDomain {

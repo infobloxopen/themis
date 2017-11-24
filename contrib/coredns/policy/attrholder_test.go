@@ -6,6 +6,10 @@ import (
 	pdp "github.com/infobloxopen/themis/pdp-service"
 )
 
+var (
+	transfer = map[string]struct{}{AttrNamePolicyID: struct{}{}}
+)
+
 func TestActionFromResponse(t *testing.T) {
 	tests := []struct {
 		resp     *pdp.Response
@@ -48,10 +52,17 @@ func TestActionFromResponse(t *testing.T) {
 			action:   typeLog,
 			redirect: "",
 		},
+		{
+			resp: &pdp.Response{Effect: pdp.Response_PERMIT, Obligation: []*pdp.Attribute{
+				{Id: AttrNameLog, Value: ""},
+			}},
+			action:   typeLog,
+			redirect: "",
+		},
 	}
 
 	for i, test := range tests {
-		ah := newAttrHolder("test.com", 1)
+		ah := newAttrHolder("test.com", 1, transfer)
 		ah.addResponse(test.resp, false)
 		if ah.action != test.action {
 			t.Errorf("Unexpected action in TC #%d: expected=%d, actual=%d", i, test.action, ah.action)
@@ -69,12 +80,12 @@ func TestNilResponse(t *testing.T) {
 		}
 	}()
 
-	ah := newAttrHolder("test.com", 1)
+	ah := newAttrHolder("test.com", 1, transfer)
 	ah.addResponse(nil, false)
 }
 
 func TestAllowActionAfterLogAction(t *testing.T) {
-	ah := newAttrHolder("test.com", 1)
+	ah := newAttrHolder("test.com", 1, transfer)
 	ah.addResponse(&pdp.Response{Effect: pdp.Response_PERMIT,
 		Obligation: []*pdp.Attribute{{Id: "log"}}}, false)
 	ah.addResponse(&pdp.Response{Effect: pdp.Response_PERMIT}, true)

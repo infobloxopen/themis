@@ -53,6 +53,7 @@ func init() {
 
 var (
 	errInvalidAction = errors.New("invalid action")
+	errInvalidOption = errors.New("invalid policy plugin option")
 )
 
 var stringToEDNS0MapType = map[string]uint16{
@@ -75,6 +76,7 @@ type edns0Map struct {
 type PolicyPlugin struct {
 	endpoints   []string
 	options     map[uint16][]*edns0Map
+	transfer    map[string]struct{}
 	tapIO       DnstapSender
 	trace       plugin.Handler
 	next        plugin.Handler
@@ -85,7 +87,7 @@ type PolicyPlugin struct {
 }
 
 func newPolicyPlugin() *PolicyPlugin {
-	return &PolicyPlugin{options: make(map[uint16][]*edns0Map)}
+	return &PolicyPlugin{options: make(map[uint16][]*edns0Map), transfer: make(map[string]struct{})}
 }
 
 // connect establishes connection to PDP server.
@@ -135,9 +137,12 @@ func (p *PolicyPlugin) parseOption(c *caddy.Controller) error {
 
 	case "streams":
 		return p.parseStreams(c)
+
+	case "transfer":
+		return p.parseTransfer(c)
 	}
 
-	return nil
+	return errInvalidOption
 }
 
 func (p *PolicyPlugin) parseEndpoint(c *caddy.Controller) error {
@@ -224,6 +229,19 @@ func (p *PolicyPlugin) parseStreams(c *caddy.Controller) error {
 		}
 	} else {
 		p.hotSpot = false
+	}
+
+	return nil
+}
+
+func (p *PolicyPlugin) parseTransfer(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) <= 0 {
+		return c.ArgErr()
+	}
+
+	for _, item := range args {
+		p.transfer[item] = struct{}{}
 	}
 
 	return nil
@@ -431,7 +449,8 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	)
 
 	debugQuery := p.decodeDebugMsg(r)
-	ah := newAttrHolder(getNameType(r))
+	qName, qType := getNameType(r)
+	ah := newAttrHolder(qName, qType, p.transfer)
 	p.getAttrsFromEDNS0(ah, r, getRemoteIP(w))
 
 	// validate domain name (validation #1)

@@ -21,6 +21,7 @@ func init() {
 }
 
 type attrHolder struct {
+	transfer        map[string]struct{}
 	attrsReqDomain  []*pdp.Attribute
 	attrsRespDomain []*pdp.Attribute
 	attrsReqRespip  []*pdp.Attribute
@@ -29,8 +30,9 @@ type attrHolder struct {
 	redirect        string
 }
 
-func newAttrHolder(qName string, qType uint16) *attrHolder {
+func newAttrHolder(qName string, qType uint16, transfer map[string]struct{}) *attrHolder {
 	ret := &attrHolder{
+		transfer:       transfer,
 		attrsReqDomain: make([]*pdp.Attribute, 3, 8),
 		action:         typeInvalid,
 	}
@@ -41,18 +43,15 @@ func newAttrHolder(qName string, qType uint16) *attrHolder {
 }
 
 func (ah *attrHolder) makeReqRespip(addr string) {
-	policyID := ""
-	for _, item := range ah.attrsRespDomain {
-		if item.Id == AttrNamePolicyID {
-			policyID = item.Value
-			break
-		}
-	}
-
 	ah.attrsReqRespip = []*pdp.Attribute{
 		{Id: AttrNameType, Type: "string", Value: TypeValueResponse},
-		{Id: AttrNamePolicyID, Type: "string", Value: policyID},
 		{Id: AttrNameAddress, Type: "address", Value: addr},
+	}
+
+	for _, item := range ah.attrsRespDomain {
+		if _, ok := ah.transfer[item.Id]; ok {
+			ah.attrsReqRespip = append(ah.attrsReqRespip, item)
+		}
 	}
 }
 
@@ -100,11 +99,11 @@ func (ah *attrHolder) convertAttrs() []*pb.DnstapAttribute {
 	lenAttrsReqDomain := len(ah.attrsReqDomain)
 	lenAttrsRespDomain := len(ah.attrsRespDomain)
 	lenAttrsReqRespip := len(ah.attrsReqRespip)
+	if lenAttrsReqRespip > 0 {
+		lenAttrsReqRespip = 1
+	}
 	lenAttrsRespRespip := len(ah.attrsRespRespip)
 	length := lenAttrsReqDomain + lenAttrsRespDomain + lenAttrsReqRespip + lenAttrsRespRespip + 1
-	if lenAttrsReqRespip > 0 {
-		length -= 2
-	}
 	out := make([]*pb.DnstapAttribute, length)
 	i := 0
 	for j := 1; j < lenAttrsReqDomain; j++ {
@@ -121,10 +120,10 @@ func (ah *attrHolder) convertAttrs() []*pb.DnstapAttribute {
 		}
 		i++
 	}
-	for j := 2; j < lenAttrsReqRespip; j++ {
+	if lenAttrsReqRespip == 1 {
 		out[i] = &pb.DnstapAttribute{
-			Id:    ah.attrsReqRespip[j].Id,
-			Value: ah.attrsReqRespip[j].Value,
+			Id:    ah.attrsReqRespip[1].Id,
+			Value: ah.attrsReqRespip[1].Value,
 		}
 		i++
 	}
