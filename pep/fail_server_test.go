@@ -21,7 +21,7 @@ const (
 	thisRequest = "this"
 )
 
-var requestedError = errors.New("failed as requested by client")
+var errRequested = errors.New("failed as requested by client")
 
 type failServer struct {
 	ID       uint64
@@ -51,7 +51,7 @@ func (s *failServer) Validate(ctx context.Context, in *pb.Request) (*pb.Response
 
 	targetID, fail := parseFailRequest(in)
 	if fail == thisRequest && reqID == targetID {
-		return nil, requestedError
+		return nil, errRequested
 	}
 
 	return &pb.Response{
@@ -75,7 +75,7 @@ func (s *failServer) NewValidationStream(stream pb.PDP_NewValidationStreamServer
 		reqID := atomic.AddUint64(&s.ID, 1)
 		targetID, fail := parseFailRequest(in)
 		if fail == thisRequest && reqID == targetID {
-			return requestedError
+			return errRequested
 		}
 
 		err = stream.Send(&pb.Response{

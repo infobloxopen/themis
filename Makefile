@@ -167,7 +167,7 @@ test-plugin: cover-out
 
 .PHONY: bench-pep
 bench-pep: build-pdpserver
-	$(AT)/pep && $(GOBENCH)\(Benchmark.*PolicySet\)\|\(BenchmarkStreamingClient\)
+	$(AT)/pep && $(GOBENCHALL)
 
 .PHONY: bench-pdpserver
 bench-pdpserver:

@@ -12,6 +12,22 @@ const (
 )
 
 func TestStreamClientRecovery(t *testing.T) {
+	singleClientRecovery(5, t)
+}
+
+func TestConnectionClientRecovery(t *testing.T) {
+	singleClientRecovery(1, t)
+}
+
+func TestStreamClientRecoveryWithHotSpotBalancer(t *testing.T) {
+	hotSotBalancedClientRecovery(10, t)
+}
+
+func TestConnectionClientRecoveryWithHotSpotBalancer(t *testing.T) {
+	hotSotBalancedClientRecovery(1, t)
+}
+
+func singleClientRecovery(streams int, t *testing.T) {
 	s, err := newFailServer(fakeServerAddress)
 	if err != nil {
 		t.Fatalf("couldn't start fake server: %s", err)
@@ -24,11 +40,12 @@ func TestStreamClientRecovery(t *testing.T) {
 		t.Fatalf("can't connect to fake server: %s", err)
 	}
 
-	c := NewClient(WithStreams(1))
+	c := NewClient(WithStreams(streams))
 	err = c.Connect(fakeServerAddress)
 	if err != nil {
 		t.Fatalf("can't connect to fake server: %s", err)
 	}
+	defer c.Close()
 
 	in := pb.Request{
 		Attributes: []*pb.Attribute{
@@ -55,7 +72,7 @@ func TestStreamClientRecovery(t *testing.T) {
 	}
 }
 
-func TestStreamClientRecoveryWithHotSpotBalancer(t *testing.T) {
+func hotSotBalancedClientRecovery(streams int, t *testing.T) {
 	s1, err := newFailServer(fakeServerAddress)
 	if err != nil {
 		t.Fatalf("couldn't start fake server: %s", err)
@@ -81,7 +98,7 @@ func TestStreamClientRecoveryWithHotSpotBalancer(t *testing.T) {
 	}
 
 	c := NewClient(
-		WithStreams(1),
+		WithStreams(streams),
 		WithHotSpotBalancer(
 			fakeServerAddress,
 			fakeServerAltAddress,
@@ -91,6 +108,7 @@ func TestStreamClientRecoveryWithHotSpotBalancer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("can't connect to fake server: %s", err)
 	}
+	defer c.Close()
 
 	in := pb.Request{
 		Attributes: []*pb.Attribute{
