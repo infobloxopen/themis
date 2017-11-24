@@ -21,8 +21,9 @@ import (
 )
 
 var (
-	errFakePdp      = errors.New("fake PDP error")
-	errFakeResolver = errors.New("fake Resolver error")
+	errFakePdp       = errors.New("fake PDP error")
+	errFakeResolver  = errors.New("fake Resolver error")
+	AttrNamePolicyID = "policy_id"
 )
 
 func TestPolicy(t *testing.T) {
