@@ -29,7 +29,7 @@ func (c *testClient) Validate(in, out interface{}) error {
 	if in != nil {
 		p := in.(pdp.Request)
 		for _, a := range p.Attributes {
-			if a.Id == "address" {
+			if a.Id == AttrNameAddress {
 				if c.errResponseIP != nil {
 					return c.errResponseIP
 				}
@@ -49,7 +49,7 @@ func (c *testClient) Validate(in, out interface{}) error {
 func fillResponse(in *pdp.Response, out interface{}) error {
 	r, ok := out.(*pdp.Response)
 	if !ok {
-		return fmt.Errorf("testClient can only translate response to *pb.Response type but got %T", out)
+		return fmt.Errorf("testClient can only translate response to *Response type but got %T", out)
 	}
 	r.Effect = in.Effect
 	r.Obligation = in.Obligation

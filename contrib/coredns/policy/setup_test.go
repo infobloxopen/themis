@@ -22,6 +22,14 @@ func TestPolicyConfigParse(t *testing.T) {
 		{
 			input: `.:53 {
 						policy {
+							error option
+						}
+					}`,
+			errContent: "invalid policy plugin option",
+		},
+		{
+			input: `.:53 {
+						policy {
 							endpoint
 						}
 					}`,
@@ -227,6 +235,25 @@ func TestPolicyConfigParse(t *testing.T) {
                     }`,
 			endpoints:  []string{"10.2.4.1:5555"},
 			errContent: "Expected round-robin or hot-spot balancing but got Unknown-Balancer",
+		},
+		{
+			input: `.:53 {
+                        policy {
+							endpoint 10.2.4.1:5555
+                            transfer policy_id
+                        }
+                    }`,
+			endpoints: []string{"10.2.4.1:5555"},
+		},
+		{
+			input: `.:53 {
+                        policy {
+							endpoint 10.2.4.1:5555
+                            transfer
+                        }
+                    }`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Wrong argument count or unexpected line ending",
 		},
 	}
 
