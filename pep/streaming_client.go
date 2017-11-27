@@ -152,10 +152,11 @@ func (c *streamingClient) makeHotSpotValidator() validator {
 			}
 
 			new := atomic.AddUint64(c.counter, 1)
-			if new-start >= 2*total {
-				i = int(new % total)
+			if new-start >= total {
 				break
 			}
+
+			i = int(new % total)
 		}
 
 		conn := c.conns[i]
