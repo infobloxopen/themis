@@ -20,6 +20,8 @@ const (
 	TypeBoolean
 	// TypeString is string data type.
 	TypeString
+	// TypeInteger is integer data type.
+	TypeInteger
 	// TypeAddress is IPv4 or IPv6 address data type.
 	TypeAddress
 	// TypeNetwork is IPv4 or IPv6 network data type.
@@ -47,6 +49,7 @@ var (
 		"Undefined",
 		"Boolean",
 		"String",
+		"Integer",
 		"Address",
 		"Network",
 		"Domain",
@@ -116,6 +119,13 @@ func MakeBooleanValue(v bool) AttributeValue {
 func MakeStringValue(v string) AttributeValue {
 	return AttributeValue{
 		t: TypeString,
+		v: v}
+}
+
+// MakeIntegerValue creates instance of integer attribute value.
+func MakeIntegerValue(v int64) AttributeValue {
+	return AttributeValue{
+		t: TypeInteger,
 		v: v}
 }
 
@@ -192,6 +202,14 @@ func MakeValueFromString(t int, s string) (AttributeValue, error) {
 	case TypeString:
 		return MakeStringValue(s), nil
 
+	case TypeInteger:
+		n, err := strconv.ParseInt(s, 0, 64)
+		if err != nil {
+			return undefinedValue, newInvalidIntegerStringCastError(s, err)
+		}
+
+		return MakeIntegerValue(n), nil
+
 	case TypeAddress:
 		a := net.ParseIP(s)
 		if a == nil {
@@ -236,6 +254,9 @@ func (v AttributeValue) describe() string {
 
 	case TypeString:
 		return fmt.Sprintf("%q", v.v.(string))
+
+    case TypeInteger:
+        return strconv.FormatInt(v.v.(int64), 10)
 
 	case TypeAddress:
 		return v.v.(net.IP).String()
@@ -324,6 +345,15 @@ func (v AttributeValue) str() (string, error) {
 	return v.v.(string), nil
 }
 
+func (v AttributeValue) integer() (int64, error) {
+	err := v.typeCheck(TypeInteger)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.v.(int64), nil
+}
+
 func (v AttributeValue) address() (net.IP, error) {
 	err := v.typeCheck(TypeAddress)
 	if err != nil {
@@ -404,6 +434,9 @@ func (v AttributeValue) Serialize() (string, error) {
 
 	case TypeString:
 		return v.v.(string), nil
+
+	case TypeInteger:
+		return strconv.FormatInt(v.v.(int64), 10), nil
 
 	case TypeAddress:
 		return v.v.(net.IP).String(), nil
