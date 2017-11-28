@@ -1,7 +1,5 @@
 package pep
 
-//go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-service && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/service.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-service && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-service"
-
 import (
 	"fmt"
 	"sync"
@@ -45,7 +43,7 @@ func (c *unaryClient) Connect(addr string) error {
 		addr = virtualServerAddress
 		switch c.opts.balancer {
 		default:
-			panic(fmt.Errorf("Invalid balancer %d", c.opts.balancer))
+			panic(fmt.Errorf("invalid balancer %d", c.opts.balancer))
 
 		case roundRobinBalancer:
 			opts = append(opts, grpc.WithBalancer(grpc.RoundRobin(newStaticResolver(addr, c.opts.addresses...))))

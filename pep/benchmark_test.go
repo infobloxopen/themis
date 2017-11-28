@@ -650,7 +650,7 @@ func init() {
 
 func benchmarkPolicySet(name, p string, b *testing.B) {
 	ok := true
-	tmpYAST, tmpJCon, pdp, c := startPDPServer(p, b)
+	tmpYAST, tmpJCon, pdp, _, c := startPDPServer(p, []string{}, b)
 	defer func() {
 		c.Close()
 
@@ -692,7 +692,7 @@ func BenchmarkThreeStagePolicySet(b *testing.B) {
 
 func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
 	ok := true
-	tmpYAST, tmpJCon, pdp, c := startPDPServer(threeStageBenchmarkPolicySet, b)
+	tmpYAST, tmpJCon, pdp, _, c := startPDPServer(threeStageBenchmarkPolicySet, []string{}, b)
 	defer func() {
 		c.Close()
 
@@ -722,20 +722,31 @@ func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
 	})
 }
 
-func benchmarkStreamingClient(name string, b *testing.B, opts ...Option) {
+func benchmarkStreamingClient(name string, ports []string, b *testing.B, opts ...Option) {
+	if len(ports) != 0 && len(ports) != 4 {
+		b.Fatalf("only 0 for single PDP and 4 for 2 PDP ports supported but got %d", len(ports))
+	}
+
 	streams := 96
 	ok := true
 
 	opts = append(opts,
 		WithStreams(streams),
 	)
-	tmpYAST, tmpJCon, pdp, c := startPDPServer(threeStageBenchmarkPolicySet, b, opts...)
+	tmpYAST, tmpJCon, pdp, pdpAlt, c := startPDPServer(threeStageBenchmarkPolicySet, ports, b, opts...)
 	defer func() {
 		c.Close()
 
 		_, errDump, _ := pdp.kill()
 		if !ok && len(errDump) > 0 {
 			b.Logf("PDP server dump:\n%s", strings.Join(errDump, "\n"))
+		}
+
+		if pdpAlt != nil {
+			_, errDump, _ := pdpAlt.kill()
+			if !ok && len(errDump) > 0 {
+				b.Logf("second PDP server dump:\n%s", strings.Join(errDump, "\n"))
+			}
 		}
 
 		os.Remove(tmpYAST)
@@ -772,18 +783,28 @@ func benchmarkStreamingClient(name string, b *testing.B, opts ...Option) {
 }
 
 func BenchmarkStreamingClient(b *testing.B) {
-	benchmarkStreamingClient("BenchmarkStreamingClient", b)
+	benchmarkStreamingClient("BenchmarkStreamingClient", []string{}, b)
 }
 
 func BenchmarkRoundRobinStreamingClient(b *testing.B) {
-	benchmarkStreamingClient("BenchmarkRoundRobinStreamingClient", b,
-		WithRoundRobinBalancer("127.0.0.1:5555", "[::1]:5555"),
+	benchmarkStreamingClient("BenchmarkRoundRobinStreamingClient",
+		[]string{
+			":5555", ":5554",
+			":5557", ":5556",
+		},
+		b,
+		WithRoundRobinBalancer("127.0.0.1:5555", "127.0.0.1:5557"),
 	)
 }
 
 func BenchmarkHotSpotStreamingClient(b *testing.B) {
-	benchmarkStreamingClient("BenchmarkHotSpotStreamingClient", b,
-		WithHotSpotBalancer("127.0.0.1:5555", "[::1]:5555"),
+	benchmarkStreamingClient("BenchmarkHotSpotStreamingClient",
+		[]string{
+			":5555", ":5554",
+			":5557", ":5556",
+		},
+		b,
+		WithHotSpotBalancer("127.0.0.1:5555", "127.0.0.1:5557"),
 	)
 }
 
@@ -806,7 +827,7 @@ func waitForPortOpened(address string) error {
 	return err
 }
 
-func startPDPServer(p string, b *testing.B, opts ...Option) (string, string, *proc, Client) {
+func startPDPServer(p string, ports []string, b *testing.B, opts ...Option) (string, string, *proc, *proc, Client) {
 	tmpYAST, err := makeTempFile(p, "policy")
 	if err != nil {
 		b.Fatalf("can't create policy file: %s", err)
@@ -818,15 +839,23 @@ func startPDPServer(p string, b *testing.B, opts ...Option) (string, string, *pr
 		b.Fatalf("can't create content file: %s", err)
 	}
 
+	sPort := ":5555"
+	cPort := ":5554"
+	if len(ports) >= 2 {
+		sPort = ports[0]
+		cPort = ports[1]
+	}
+	addr := fmt.Sprintf("127.0.0.1%s", sPort)
+
 	binPath := filepath.Join(build.Default.GOPATH, "/src/github.com/infobloxopen/themis/build/pdpserver")
-	pdp, err := newProc(binPath, "-p", tmpYAST, "-j", tmpJCon)
+	pdp, err := newProc(binPath, "-l", sPort, "-c", cPort, "-p", tmpYAST, "-j", tmpJCon)
 	if err != nil {
 		os.Remove(tmpYAST)
 		os.Remove(tmpJCon)
 		b.Fatalf("can't start PDP server: %s", err)
 	}
 
-	err = waitForPortOpened("127.0.0.1:5555")
+	err = waitForPortOpened(addr)
 	if err != nil {
 		_, errDump, _ := pdp.kill()
 		if len(errDump) > 0 {
@@ -838,21 +867,45 @@ func startPDPServer(p string, b *testing.B, opts ...Option) (string, string, *pr
 		b.Fatalf("can't connect to PDP server: %s", err)
 	}
 
-	c := NewClient(opts...)
-	err = c.Connect("127.0.0.1:5555")
-	if err != nil {
-		os.Remove(tmpYAST)
-		os.Remove(tmpJCon)
+	var pdpAlt *proc
+	if len(ports) >= 4 {
+		sPort = ports[2]
+		cPort = ports[3]
 
+		pdpAlt, err = newProc(binPath, "-l", sPort, "-c", cPort, "-p", tmpYAST, "-j", tmpJCon)
+		if err != nil {
+			_, errDump, _ := pdp.kill()
+			if len(errDump) > 0 {
+				b.Logf("PDP server dump:\n%s", strings.Join(errDump, "\n"))
+			}
+
+			os.Remove(tmpYAST)
+			os.Remove(tmpJCon)
+			b.Fatalf("can't start second PDP server: %s", err)
+		}
+	}
+
+	c := NewClient(opts...)
+	err = c.Connect(addr)
+	if err != nil {
 		_, errDump, _ := pdp.kill()
 		if len(errDump) > 0 {
-			b.Fatalf("can't connect to PDP server: %s\nPDP server dump:\n%s", err, strings.Join(errDump, "\n"))
+			b.Logf("PDP server dump:\n%s", err, strings.Join(errDump, "\n"))
 		}
 
+		if pdpAlt != nil {
+			_, errDump, _ := pdpAlt.kill()
+			if len(errDump) > 0 {
+				b.Logf("second PDP server dump:\n%s", strings.Join(errDump, "\n"))
+			}
+		}
+
+		os.Remove(tmpYAST)
+		os.Remove(tmpJCon)
 		b.Fatalf("can't connect to PDP server: %s", err)
 	}
 
-	return tmpYAST, tmpJCon, pdp, c
+	return tmpYAST, tmpJCon, pdp, pdpAlt, c
 }
 
 func makeTempFile(s, prefix string) (string, error) {
