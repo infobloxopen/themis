@@ -680,7 +680,7 @@ func (s *testDnstapSender) reset() {
 
 func (s *testDnstapSender) SendCRExtraMsg(pw *ProxyWriter, ah *attrHolder) {
 	if ah != nil {
-		s.attrs = ah.convertAttrs()
+		s.attrs = convertAttrs(ah, new(attrBlock))
 	}
 }
 
