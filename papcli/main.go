@@ -96,6 +96,8 @@ func main() {
 
 		if err := h.Apply(id); err != nil {
 			log.Errorf("Failed to apply: %v", err)
+		} else if err := h.NotifyReady(); err != nil {
+			log.Errorf("Failed to signal readiness status to the PDP server: %v", err)
 		}
 	}
 }
