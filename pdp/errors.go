@@ -18,68 +18,69 @@ const (
 	invalidTypeStringCastErrorID              = 5
 	notImplementedStringCastErrorID           = 6
 	invalidBooleanStringCastErrorID           = 7
-	invalidAddressStringCastErrorID           = 8
-	invalidNetworkStringCastErrorID           = 9
-	invalidAddressNetworkStringCastErrorID    = 10
-	attributeValueTypeErrorID                 = 11
-	duplicateAttributeValueErrorID            = 12
-	unknownTypeSerializationErrorID           = 13
-	invalidTypeSerializationErrorID           = 14
-	assignmentTypeMismatchID                  = 15
-	mapperArgumentTypeErrorID                 = 16
-	UntaggedPolicyModificationErrorID         = 17
-	MissingPolicyTagErrorID                   = 18
-	PolicyTagsNotMatchErrorID                 = 19
-	emptyPathModificationErrorID              = 20
-	invalidRootPolicyItemTypeErrorID          = 21
-	hiddenRootPolicyAppendErrorID             = 22
-	invalidRootPolicyErrorID                  = 23
-	hiddenPolicySetModificationErrorID        = 24
-	invalidPolicySetItemTypeErrorID           = 25
-	tooShortPathPolicySetModificationErrorID  = 26
-	missingPolicySetChildErrorID              = 27
-	hiddenPolicyAppendErrorID                 = 28
-	policyTransactionTagsNotMatchErrorID      = 29
-	failedPolicyTransactionErrorID            = 30
-	unknownPolicyUpdateOperationErrorID       = 31
-	hiddenPolicyModificationErrorID           = 32
-	tooLongPathPolicyModificationErrorID      = 33
-	tooShortPathPolicyModificationErrorID     = 34
-	invalidPolicyItemTypeErrorID              = 35
-	hiddenRuleAppendErrorID                   = 36
-	missingPolicyChildErrorID                 = 37
-	missingContentErrorID                     = 38
-	invalidContentStorageItemID               = 39
-	missingContentItemErrorID                 = 40
-	invalidContentItemErrorID                 = 41
-	invalidContentItemTypeErrorID             = 42
-	invalidSelectorPathErrorID                = 43
-	networkMapKeyValueTypeErrorID             = 44
-	mapContentSubitemErrorID                  = 45
-	invalidContentModificationErrorID         = 46
-	missingPathContentModificationErrorID     = 47
-	tooLongPathContentModificationErrorID     = 48
-	invalidContentValueModificationErrorID    = 49
-	UntaggedContentModificationErrorID        = 50
-	MissingContentTagErrorID                  = 51
-	ContentTagsNotMatchErrorID                = 52
-	unknownContentUpdateOperationErrorID      = 53
-	failedContentTransactionErrorID           = 54
-	contentTransactionIDNotMatchErrorID       = 55
-	contentTransactionTagsNotMatchErrorID     = 56
-	tooShortRawPathContentModificationErrorID = 57
-	tooLongRawPathContentModificationErrorID  = 58
-	invalidContentUpdateDataErrorID           = 59
-	invalidContentUpdateResultTypeErrorID     = 60
-	invalidContentUpdateKeysErrorID           = 61
-	unknownContentItemResultTypeErrorID       = 62
-	invalidContentItemResultTypeErrorID       = 63
-	invalidContentKeyTypeErrorID              = 64
-	invalidContentStringMapErrorID            = 65
-	invalidContentNetworkMapErrorID           = 66
-	invalidContentDomainMapErrorID            = 67
-	invalidContentValueErrorID                = 68
-	invalidContentValueTypeErrorID            = 69
+	invalidIntegerStringCastErrorID           = 8
+	invalidAddressStringCastErrorID           = 9
+	invalidNetworkStringCastErrorID           = 10
+	invalidAddressNetworkStringCastErrorID    = 11
+	attributeValueTypeErrorID                 = 12
+	duplicateAttributeValueErrorID            = 13
+	unknownTypeSerializationErrorID           = 14
+	invalidTypeSerializationErrorID           = 15
+	assignmentTypeMismatchID                  = 16
+	mapperArgumentTypeErrorID                 = 17
+	UntaggedPolicyModificationErrorID         = 18
+	MissingPolicyTagErrorID                   = 19
+	PolicyTagsNotMatchErrorID                 = 20
+	emptyPathModificationErrorID              = 21
+	invalidRootPolicyItemTypeErrorID          = 22
+	hiddenRootPolicyAppendErrorID             = 23
+	invalidRootPolicyErrorID                  = 24
+	hiddenPolicySetModificationErrorID        = 25
+	invalidPolicySetItemTypeErrorID           = 26
+	tooShortPathPolicySetModificationErrorID  = 27
+	missingPolicySetChildErrorID              = 28
+	hiddenPolicyAppendErrorID                 = 29
+	policyTransactionTagsNotMatchErrorID      = 30
+	failedPolicyTransactionErrorID            = 31
+	unknownPolicyUpdateOperationErrorID       = 32
+	hiddenPolicyModificationErrorID           = 33
+	tooLongPathPolicyModificationErrorID      = 34
+	tooShortPathPolicyModificationErrorID     = 35
+	invalidPolicyItemTypeErrorID              = 36
+	hiddenRuleAppendErrorID                   = 37
+	missingPolicyChildErrorID                 = 38
+	missingContentErrorID                     = 39
+	invalidContentStorageItemID               = 40
+	missingContentItemErrorID                 = 41
+	invalidContentItemErrorID                 = 42
+	invalidContentItemTypeErrorID             = 43
+	invalidSelectorPathErrorID                = 44
+	networkMapKeyValueTypeErrorID             = 45
+	mapContentSubitemErrorID                  = 46
+	invalidContentModificationErrorID         = 47
+	missingPathContentModificationErrorID     = 48
+	tooLongPathContentModificationErrorID     = 49
+	invalidContentValueModificationErrorID    = 50
+	UntaggedContentModificationErrorID        = 51
+	MissingContentTagErrorID                  = 52
+	ContentTagsNotMatchErrorID                = 53
+	unknownContentUpdateOperationErrorID      = 54
+	failedContentTransactionErrorID           = 55
+	contentTransactionIDNotMatchErrorID       = 56
+	contentTransactionTagsNotMatchErrorID     = 57
+	tooShortRawPathContentModificationErrorID = 58
+	tooLongRawPathContentModificationErrorID  = 59
+	invalidContentUpdateDataErrorID           = 60
+	invalidContentUpdateResultTypeErrorID     = 61
+	invalidContentUpdateKeysErrorID           = 62
+	unknownContentItemResultTypeErrorID       = 63
+	invalidContentItemResultTypeErrorID       = 64
+	invalidContentKeyTypeErrorID              = 65
+	invalidContentStringMapErrorID            = 66
+	invalidContentNetworkMapErrorID           = 67
+	invalidContentDomainMapErrorID            = 68
+	invalidContentValueErrorID                = 69
+	invalidContentValueTypeErrorID            = 70
 )
 
 type externalError struct {
@@ -204,6 +205,23 @@ func newInvalidBooleanStringCastError(s string, err error) *invalidBooleanString
 
 func (e *invalidBooleanStringCastError) Error() string {
 	return e.errorf("Can't treat %q as boolean (%s)", e.s, e.err)
+}
+
+type invalidIntegerStringCastError struct {
+	errorLink
+	s   string
+	err error
+}
+
+func newInvalidIntegerStringCastError(s string, err error) *invalidIntegerStringCastError {
+	return &invalidIntegerStringCastError{
+		errorLink: errorLink{id: invalidIntegerStringCastErrorID},
+		s:         s,
+		err:       err}
+}
+
+func (e *invalidIntegerStringCastError) Error() string {
+	return e.errorf("Can't treat %q as integer (%s)", e.s, e.err)
 }
 
 type invalidAddressStringCastError struct {

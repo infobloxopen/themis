@@ -26,6 +26,7 @@ const (
 	missingEOFErrorID                     = 18
 	booleanCastErrorID                    = 19
 	stringCastErrorID                     = 20
+	numberCastErrorID                     = 21
 )
 
 type externalError struct {
@@ -405,4 +406,21 @@ func newStringCastError(token json.Token, desc string) *stringCastError {
 
 func (e *stringCastError) Error() string {
 	return e.errorf("Expected string as %s but got %T (%#v)", e.desc, e.token, e.token)
+}
+
+type numberCastError struct {
+	errorLink
+	token json.Token
+	desc  string
+}
+
+func newNumberCastError(token json.Token, desc string) *numberCastError {
+	return &numberCastError{
+		errorLink: errorLink{id: numberCastErrorID},
+		token:     token,
+		desc:      desc}
+}
+
+func (e *numberCastError) Error() string {
+	return e.errorf("Expected number as %s but got %T (%#v)", e.desc, e.token, e.token)
 }
