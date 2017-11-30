@@ -383,6 +383,21 @@ func GetString(d *json.Decoder, desc string) (string, error) {
 	return s, nil
 }
 
+// GetNumber unmarshals number from JSON byte stream.
+func GetNumber(d *json.Decoder, desc string) (float64, error) {
+	t, err := d.Token()
+	if err != nil {
+		return 0, err
+	}
+
+	n, ok := t.(float64)
+	if !ok {
+		return 0, newNumberCastError(t, desc)
+	}
+
+	return n, nil
+}
+
 // GetStringSequence iterates over object keys or string array items in JSON byte stream.
 func GetStringSequence(d *json.Decoder, f func(idx int, s string) error, desc string) error {
 	ok, err := CheckObjectArrayStart(d, desc)
