@@ -192,6 +192,15 @@ func (c *Context) calculateStringExpression(e Expression) (string, error) {
 	return v.str()
 }
 
+func (c *Context) calculateIntegerExpression(e Expression) (int64, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.integer()
+}
+
 func (c *Context) calculateAddressExpression(e Expression) (net.IP, error) {
 	v, err := e.Calculate(c)
 	if err != nil {
