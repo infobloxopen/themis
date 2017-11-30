@@ -70,6 +70,17 @@ errors:
   - field: s
   - field: err
 
+- id: invalidIntegerStringCastError
+  fields:
+  - id: s
+    type: string
+  - id: err
+    type: error
+  msg: "Can't treat %q as integer (%s)"
+  args:
+  - field: s
+  - field: err
+
 - id: invalidAddressStringCastError
   fields:
   - id: s

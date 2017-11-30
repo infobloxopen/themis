@@ -130,6 +130,7 @@ policies:
 attributes:
   boolAttr: boolean
   strAttr: string
+  intAttr: integer
   addrAttr: address
   netAttr: network
   domAttr: domain
@@ -290,6 +291,7 @@ policies:
         - first
         - second
         - third
+      - intAttr: 9.007199254740992e+15
 `
 )
 

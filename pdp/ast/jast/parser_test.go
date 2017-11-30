@@ -208,6 +208,7 @@ const (
   "attributes": {
     "boolAttr": "boolean",
     "strAttr": "string",
+    "intAttr": "integer",
     "addrAttr": "address",
     "netAttr": "network",
     "domAttr": "domain",
@@ -553,6 +554,9 @@ const (
                   "second",
                   "third"
                 ]
+              },
+              {
+                "intAttr": 9.007199254740994e+15
               }
             ]
           }
