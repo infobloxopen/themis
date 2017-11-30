@@ -254,8 +254,8 @@ func (v AttributeValue) describe() string {
 	case TypeString:
 		return fmt.Sprintf("%q", v.v.(string))
 
-    case TypeInteger:
-        return strconv.FormatInt(v.v.(int64), 10)
+	case TypeInteger:
+		return strconv.FormatInt(v.v.(int64), 10)
 
 	case TypeAddress:
 		return v.v.(net.IP).String()
