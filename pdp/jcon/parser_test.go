@@ -179,7 +179,7 @@ const (
             "type": "integer",
             "keys": ["string"],
             "data": {
-                "key": 9.007199254740994e+15
+                "key": 9.007199254740992e+15
             }
         },
 		"address": {

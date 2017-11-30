@@ -16,7 +16,10 @@ type functionArgumentValidator func(args []Expression) functionMaker
 // doesn't accept the arguments or function which creates expression based
 // on desired function and set of argument expressions.
 var FunctionArgumentValidators = map[string][]functionArgumentValidator{
-	"equal": {functionStringEqualValidator},
+	"equal": {
+		functionStringEqualValidator,
+		functionIntegerEqualValidator,
+	},
 	"contains": {
 		functionStringContainsValidator,
 		functionNetworkContainsAddressValidator,
