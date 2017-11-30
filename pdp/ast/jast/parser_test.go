@@ -556,9 +556,41 @@ const (
                 ]
               },
               {
-                "intAttr": 9.007199254740994e+15
+                "intAttr": 9.007199254740992e+15
               }
             ]
+          },
+          {
+            "id": "IntEqual",
+            "effect": "Deny",
+            "target": [
+              {
+                "equal": [
+                  {
+                    "attr": "intAttr"
+                  },
+                  {
+                    "val": {
+                      "type": "integer",
+                      "content": 0
+                    }
+                  }
+                ]
+              }
+            ],
+            "condition": {
+              "equal": [
+                {
+                  "attr": "intAttr"
+                },
+                {
+                  "val": {
+                    "type": "integer",
+                    "content": 0
+                  }
+                }
+              ]
+            }
           }
         ]
       }
