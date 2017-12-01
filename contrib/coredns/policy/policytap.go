@@ -168,5 +168,5 @@ func convertAttrs(ah *attrHolder, a *attrBlock) []*pb.DnstapAttribute {
 }
 
 func (s *policyDnstapSender) Stop() {
-    close(s.workerChan)
+	close(s.workerChan)
 }
