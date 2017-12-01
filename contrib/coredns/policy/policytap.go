@@ -2,6 +2,7 @@ package policy
 
 import (
 	"log"
+	"runtime"
 	"time"
 
 	"github.com/coredns/coredns/plugin/dnstap"
@@ -41,6 +42,7 @@ func (w *ProxyWriter) WriteMsg(msg *dns.Msg) error {
 
 type DnstapSender interface {
 	SendCRExtraMsg(pw *ProxyWriter, ah *attrHolder)
+	Stop()
 }
 
 type dnstapData struct {
@@ -55,6 +57,7 @@ type policyDnstapSender struct {
 
 func NewPolicyDnstapSender(io dnstap.IORoutine) DnstapSender {
 	ds := &policyDnstapSender{ior: io, workerChan: make(chan dnstapData, workerQSize)}
+	workerCnt := 2 * runtime.NumCPU()
 	for i := 0; i < workerCnt; i++ {
 		go ds.tapWorker()
 	}
@@ -75,7 +78,6 @@ func (s *policyDnstapSender) SendCRExtraMsg(pw *ProxyWriter, ah *attrHolder) {
 
 const (
 	workerQSize = 1000
-	workerCnt   = 100
 	defAttrCnt  = 10
 )
 
@@ -97,7 +99,7 @@ func (s *policyDnstapSender) tapWorker() {
 	allocateAttrs(aBlock, defAttrCnt)
 
 	extraMsg := pb.Extra{}
-    t := tap.Dnstap_MESSAGE
+	t := tap.Dnstap_MESSAGE
 
 	for data := range s.workerChan {
 		now := time.Now()
@@ -163,4 +165,8 @@ func convertAttrs(ah *attrHolder, a *attrBlock) []*pb.DnstapAttribute {
 	}
 	i++
 	return a.pAttrs[:i]
+}
+
+func (s *policyDnstapSender) Stop() {
+    close(s.workerChan)
 }

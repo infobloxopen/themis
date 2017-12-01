@@ -41,11 +41,17 @@ func setup(c *caddy.Controller) error {
 
 	c.OnRestart(func() error {
 		policyPlugin.closeConn()
+		if policyPlugin.tapIO != nil {
+			policyPlugin.tapIO.Stop()
+		}
 		return nil
 	})
 
 	c.OnFinalShutdown(func() error {
 		policyPlugin.closeConn()
+		if policyPlugin.tapIO != nil {
+			policyPlugin.tapIO.Stop()
+		}
 		return nil
 	})
 
