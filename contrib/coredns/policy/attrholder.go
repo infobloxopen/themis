@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	pb "github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 	pdp "github.com/infobloxopen/themis/pdp-service"
 )
 
@@ -28,6 +27,7 @@ type attrHolder struct {
 	attrsRespRespip []*pdp.Attribute
 	action          byte
 	redirect        string
+	address         string
 }
 
 func newAttrHolder(qName string, qType uint16, transfer map[string]struct{}) *attrHolder {
@@ -43,6 +43,7 @@ func newAttrHolder(qName string, qType uint16, transfer map[string]struct{}) *at
 }
 
 func (ah *attrHolder) makeReqRespip(addr string) {
+	ah.address = addr
 	ah.attrsReqRespip = []*pdp.Attribute{
 		{Id: AttrNameType, Type: "string", Value: TypeValueResponse},
 		{Id: AttrNameAddress, Type: "address", Value: addr},
@@ -93,53 +94,4 @@ func (ah *attrHolder) addResponse(r *pdp.Response, respip bool) {
 		ah.action = typeInvalid
 	}
 	return
-}
-
-func (ah *attrHolder) convertAttrs() []*pb.DnstapAttribute {
-	lenAttrsReqDomain := len(ah.attrsReqDomain)
-	lenAttrsRespDomain := len(ah.attrsRespDomain)
-	lenAttrsReqRespip := len(ah.attrsReqRespip)
-	if lenAttrsReqRespip > 0 {
-		lenAttrsReqRespip = 1
-	}
-	lenAttrsRespRespip := len(ah.attrsRespRespip)
-	length := lenAttrsReqDomain + lenAttrsRespDomain + lenAttrsReqRespip + lenAttrsRespRespip + 1
-	out := make([]*pb.DnstapAttribute, length)
-	i := 0
-	for j := 1; j < lenAttrsReqDomain; j++ {
-		out[i] = &pb.DnstapAttribute{
-			Id:    ah.attrsReqDomain[j].Id,
-			Value: ah.attrsReqDomain[j].Value,
-		}
-		i++
-	}
-	for j := 0; j < lenAttrsRespDomain; j++ {
-		out[i] = &pb.DnstapAttribute{
-			Id:    ah.attrsRespDomain[j].Id,
-			Value: ah.attrsRespDomain[j].Value,
-		}
-		i++
-	}
-	if lenAttrsReqRespip == 1 {
-		out[i] = &pb.DnstapAttribute{
-			Id:    ah.attrsReqRespip[1].Id,
-			Value: ah.attrsReqRespip[1].Value,
-		}
-		i++
-	}
-	for j := 0; j < lenAttrsRespRespip; j++ {
-		out[i] = &pb.DnstapAttribute{
-			Id:    ah.attrsRespRespip[j].Id,
-			Value: ah.attrsRespRespip[j].Value,
-		}
-		i++
-	}
-	out[i] = &pb.DnstapAttribute{Id: AttrNamePolicyAction, Value: actionConvDnstap[ah.action]}
-	i++
-	if len(ah.attrsReqRespip) > 0 {
-		out[i] = &pb.DnstapAttribute{Id: AttrNameType, Value: TypeValueResponse}
-	} else {
-		out[i] = &pb.DnstapAttribute{Id: AttrNameType, Value: TypeValueQuery}
-	}
-	return out
 }

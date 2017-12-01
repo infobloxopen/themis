@@ -44,6 +44,7 @@ func TestSendCRExtraNoMsg(t *testing.T) {
 
 	io := newIORoutine(100 * time.Millisecond)
 	tapIO := NewPolicyDnstapSender(io)
+	defer tapIO.Stop()
 	tapIO.SendCRExtraMsg(proxyRW, nil)
 	_, ok := <-io.dnstapChan
 	if ok {
@@ -71,6 +72,7 @@ func TestSendCRExtraInvalidMsg(t *testing.T) {
 
 	io := newIORoutine(100 * time.Millisecond)
 	tapIO := NewPolicyDnstapSender(io)
+	defer tapIO.Stop()
 	tapIO.SendCRExtraMsg(proxyRW, nil)
 	_, ok := <-io.dnstapChan
 	if ok {
@@ -103,6 +105,7 @@ func TestSendCRExtraMsg(t *testing.T) {
 
 	io := newIORoutine(5000 * time.Millisecond)
 	tapIO := NewPolicyDnstapSender(io)
+	defer tapIO.Stop()
 	tapIO.SendCRExtraMsg(proxyRW, testAttrHolder)
 
 	expectedAttrs := []*pdp.Attribute{
