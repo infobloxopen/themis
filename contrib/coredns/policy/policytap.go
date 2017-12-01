@@ -77,7 +77,7 @@ func (s *policyDnstapSender) SendCRExtraMsg(pw *ProxyWriter, ah *attrHolder) {
 }
 
 const (
-	workerQSize = 1000
+	workerQSize = 10000
 	defAttrCnt  = 10
 )
 
