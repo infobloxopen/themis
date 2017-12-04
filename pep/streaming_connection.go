@@ -5,7 +5,6 @@ package pep
 import (
 	"errors"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
@@ -18,7 +17,7 @@ import (
 
 const connectionResetPercent float64 = 0.3
 
-func makeStreamConns(addrs []string, streams int, tracer opentracing.Tracer) []*streamConn {
+func makeStreamConns(addrs []string, streams int, tracer opentracing.Tracer) ([]*streamConn, *connRetryPool) {
 	total := len(addrs)
 	if total > streams {
 		total = streams
@@ -36,18 +35,12 @@ func makeStreamConns(addrs []string, streams int, tracer opentracing.Tracer) []*
 		conns[i] = newStreamConn(addrs[i], count, tracer)
 	}
 
-	return conns
-}
-
-func startConnRetryWorkers(conns []*streamConn, crp *connRetryPool) {
+	crp := newConnRetryPool(conns)
 	for _, c := range conns {
-		limit := int(float64(len(c.streams))*connectionResetPercent + 0.5)
-		if limit < 1 {
-			limit = 1
-		}
-
-		go c.retryWorker(limit, crp)
+		c.crp = crp
 	}
+
+	return conns, crp
 }
 
 func closeStreamConns(conns []*streamConn) {
@@ -63,8 +56,6 @@ const (
 	scisConnecting
 	scisConnected
 	scisClosing
-	scisClosed
-	scisBroken
 )
 
 var (
@@ -72,29 +63,31 @@ var (
 	errConnFailure          = errors.New("connection failed")
 )
 
+var closeWaitDuration = 5 * time.Second
+
 type streamConn struct {
 	addr   string
 	tracer opentracing.Tracer
+	crp    *connRetryPool
+	limit  int
 
-	state *uint32
+	state uint32
+	lock  *sync.RWMutex
 
 	conn    *grpc.ClientConn
 	client  pb.PDPClient
 	streams []*stream
-	index   *atomic.Value
+	index   chan int
 	retry   chan boundStream
 }
 
 func newStreamConn(addr string, streams int, tracer opentracing.Tracer) *streamConn {
-	state := scisDisconnected
-
 	c := &streamConn{
 		addr:    addr,
 		tracer:  tracer,
-		state:   &state,
+		limit:   int(float64(streams)*connectionResetPercent + 0.5),
+		lock:    new(sync.RWMutex),
 		streams: make([]*stream, streams),
-		index:   new(atomic.Value),
-		retry:   make(chan boundStream),
 	}
 
 	for i := range c.streams {
@@ -105,38 +98,66 @@ func newStreamConn(addr string, streams int, tracer opentracing.Tracer) *streamC
 }
 
 func (c *streamConn) connect() error {
-	if !atomic.CompareAndSwapUint32(c.state, scisDisconnected, scisConnecting) {
-		return errStreamConnWrongState
+	addr, tracer, err := c.enterConnect()
+	if err != nil {
+		return err
 	}
 
 	for {
-		if err := c.tryConnect(time.Second); err == nil {
-			if atomic.CompareAndSwapUint32(c.state, scisConnecting, scisConnected) {
-				return nil
-			}
-
-			c.closeConnInternal()
-			return errStreamConnWrongState
-		}
-
-		if atomic.CompareAndSwapUint32(c.state, scisClosing, scisClosed) {
-			return errStreamConnWrongState
+		if err := c.tryConnect(addr, tracer, time.Second); err == nil || err == errStreamConnWrongState {
+			break
 		}
 	}
+
+	return nil
 }
 
-func (c *streamConn) tryConnect(timeout time.Duration) error {
+func (c *streamConn) enterConnect() (string, opentracing.Tracer, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if c.state != scisDisconnected {
+		return "", nil, errStreamConnWrongState
+	}
+
+	c.state = scisConnecting
+	return c.addr, c.tracer, nil
+}
+
+func (c *streamConn) exitConnect() bool {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if c.state == scisClosing {
+		closeStreams(c.streams, nil)
+		c.closeConnInternal()
+		return false
+	}
+
+	c.index = make(chan int, len(c.streams))
+	for i := range c.streams {
+		c.index <- i
+	}
+
+	c.retry = make(chan boundStream)
+	go c.retryWorker(c.retry)
+
+	c.state = scisConnected
+	return true
+}
+
+func (c *streamConn) tryConnect(addr string, tracer opentracing.Tracer, timeout time.Duration) error {
 	opts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
 		grpc.FailOnNonTempDialError(true),
 	}
 
-	if c.tracer != nil {
+	if tracer != nil {
 		opts = append(opts,
 			grpc.WithUnaryInterceptor(
 				otgrpc.OpenTracingClientInterceptor(
-					c.tracer,
+					tracer,
 					otgrpc.IncludingSpans(inclusionFunc),
 				),
 			),
@@ -146,144 +167,218 @@ func (c *streamConn) tryConnect(timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	conn, err := grpc.DialContext(ctx, c.addr, opts...)
+	conn, err := grpc.DialContext(ctx, addr, opts...)
 	if err != nil {
 		return err
 	}
 
+	client := pb.NewPDPClient(conn)
+	c.lock.Lock()
 	c.conn = conn
-	c.client = pb.NewPDPClient(c.conn)
+	c.client = client
+	c.lock.Unlock()
 
-	err = c.connectStreams()
+	ready, err := c.connectStreams()
 	if err != nil {
-		c.closeStreams()
-		c.conn.Close()
-		c.conn = nil
-		c.client = nil
+		c.lock.Lock()
+		defer c.lock.Unlock()
+
+		closeStreams(c.streams[0:ready], nil)
+		c.closeConnInternal()
+
 		return err
 	}
 
-	index := make(chan int, len(c.streams))
-	for i := range c.streams {
-		index <- i
+	if c.exitConnect() {
+		return nil
 	}
-	c.index.Store(index)
 
-	return nil
+	return errStreamConnWrongState
 }
 
 func (c *streamConn) newValidationStream() (pb.PDP_NewValidationStreamClient, error) {
-	state := atomic.LoadUint32(c.state)
+	c.lock.RLock()
+	state := c.state
+	client := c.client
+	c.lock.RUnlock()
+
 	if state != scisConnected && state != scisConnecting {
 		return nil, errStreamConnWrongState
 	}
 
-	return c.client.NewValidationStream(context.TODO())
+	return client.NewValidationStream(context.TODO())
 }
 
-func (c *streamConn) connectStreams() error {
-	for _, s := range c.streams {
+func (c *streamConn) connectStreams() (int, error) {
+	for i, s := range c.streams {
 		err := s.connect()
 		if err != nil {
-			return err
+			return i, err
 		}
 	}
 
-	return nil
+	return 0, nil
 }
 
-func (c *streamConn) withdrawStreams() {
-	index := c.index.Load().(chan int)
-	count := 0
-	for len(index) > 0 {
+func (c *streamConn) withdrawStreams() ([]*stream, []*stream) {
+	c.lock.RLock()
+	index := c.index
+	c.lock.RUnlock()
+
+	if index == nil {
+		return nil, nil
+	}
+
+	toClose := []*stream{}
+	toDrop := []*stream{}
+	ready := tryRead(index)
+	for i, s := range c.streams {
+		if _, ok := ready[i]; ok {
+			toClose = append(toClose, s)
+		} else {
+			toDrop = append(toDrop, s)
+		}
+	}
+
+	return toClose, toDrop
+}
+
+func tryRead(ch chan int) map[int]bool {
+	streams := make(map[int]bool)
+
+	for len(ch) > 0 {
 		select {
 		default:
-		case <-index:
-			count++
+		case i, ok := <-ch:
+			if !ok {
+				return streams
+			}
+
+			streams[i] = true
 		}
 	}
 
-	if count < cap(index) {
-		var wg sync.WaitGroup
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	if len(streams) < cap(ch) {
+		t := time.NewTimer(closeWaitDuration)
+		for len(streams) < cap(ch) {
+			select {
+			case i, ok := <-ch:
+				if !ok {
+					if !t.Stop() {
+						<-t.C
+					}
 
-			t := time.NewTimer(5 * time.Second)
-			for i := 0; i < cap(index); i++ {
-				select {
-				case <-index:
-				case <-t.C:
-					return
+					return streams
 				}
-			}
 
-			if !t.Stop() {
-				<-t.C
+				streams[i] = true
+
+			case <-t.C:
+				return streams
 			}
-		}()
-		wg.Wait()
+		}
+
+		if !t.Stop() {
+			<-t.C
+		}
 	}
 
-	close(index)
-	index = nil
-	c.index.Store(index)
-}
-
-func (c *streamConn) closeStreams() {
-	wg := &sync.WaitGroup{}
-	for _, s := range c.streams {
-		wg.Add(1)
-		go s.closeStream(wg)
-	}
-
-	wg.Wait()
+	return streams
 }
 
 func (c *streamConn) closeConn() {
-	if atomic.CompareAndSwapUint32(c.state, scisConnecting, scisClosing) ||
-		!atomic.CompareAndSwapUint32(c.state, scisConnected, scisClosing) {
+	if !c.enterCloseConn() {
 		return
 	}
 
-	close(c.retry)
+	toClose, toDrop := c.withdrawStreams()
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	closeStreams(toClose, toDrop)
 	c.closeConnInternal()
 }
 
+func (c *streamConn) enterCloseConn() bool {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if c.state == scisConnected {
+		c.state = scisClosing
+
+		close(c.retry)
+		c.retry = nil
+
+		return true
+	}
+
+	if c.state == scisConnecting {
+		c.state = scisClosing
+
+		if c.retry != nil {
+			close(c.retry)
+			c.retry = nil
+		}
+	}
+
+	return false
+}
+
 func (c *streamConn) closeConnInternal() {
-	c.withdrawStreams()
-	c.closeStreams()
-	c.conn.Close()
-	atomic.StoreUint32(c.state, scisClosed)
+	if c.index != nil {
+		close(c.index)
+		c.index = nil
+	}
+
+	if c.conn != nil {
+		c.conn.Close()
+		c.conn = nil
+	}
+	c.client = nil
+	c.state = scisDisconnected
 }
 
 func (c *streamConn) markDisconnected() bool {
-	if !atomic.CompareAndSwapUint32(c.state, scisConnected, scisBroken) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if c.state != scisConnected {
 		return false
 	}
 
-	index := c.index.Load().(chan int)
-	close(index)
-	index = nil
-	c.index.Store(index)
+	close(c.retry)
+	c.retry = nil
 
-	c.closeStreams()
-	c.conn.Close()
-	c.conn = nil
-	c.client = nil
+	close(c.index)
+	c.index = nil
 
-	atomic.StoreUint32(c.state, scisDisconnected)
+	closeStreams(nil, c.streams)
+	c.closeConnInternal()
 	return true
 }
 
+type boundStream struct {
+	s     *stream
+	idx   int
+	index chan int
+	retry chan boundStream
+}
+
 func (c *streamConn) getStream() (boundStream, error) {
-	index := c.index.Load().(chan int)
-	if index != nil {
+	c.lock.RLock()
+	state := c.state
+	index := c.index
+	retry := c.retry
+	c.lock.RUnlock()
+
+	if state == scisConnected && index != nil {
 		if i, ok := <-index; ok {
 			return boundStream{
 				s:     c.streams[i],
 				idx:   i,
 				index: index,
+				retry: retry,
 			}, nil
 		}
 	}
@@ -292,8 +387,13 @@ func (c *streamConn) getStream() (boundStream, error) {
 }
 
 func (c *streamConn) tryGetStream() (boundStream, bool, error) {
-	index := c.index.Load().(chan int)
-	if index != nil {
+	c.lock.RLock()
+	state := c.state
+	index := c.index
+	retry := c.retry
+	c.lock.RUnlock()
+
+	if state == scisConnected && index != nil {
 		select {
 		default:
 			return boundStream{}, false, nil
@@ -304,6 +404,7 @@ func (c *streamConn) tryGetStream() (boundStream, bool, error) {
 					s:     c.streams[i],
 					idx:   i,
 					index: index,
+					retry: retry,
 				}, true, nil
 			}
 		}
@@ -313,25 +414,18 @@ func (c *streamConn) tryGetStream() (boundStream, bool, error) {
 }
 
 func (c *streamConn) putStream(s boundStream) error {
-	if atomic.LoadUint32(c.state) != scisConnected {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	if c.state != scisConnected && c.state != scisClosing || c.index != s.index {
 		return errStreamConnWrongState
 	}
 
-	current := c.index.Load().(chan int)
-	if current != s.index {
-		return errStreamConnWrongState
-	}
-
-	defer recover()
 	s.index <- s.idx
 	return nil
 }
 
 func (c *streamConn) validate(in, out interface{}) error {
-	if atomic.LoadUint32(c.state) != scisConnected {
-		return errStreamConnWrongState
-	}
-
 	s, err := c.getStream()
 	if err != nil {
 		return err
@@ -339,8 +433,10 @@ func (c *streamConn) validate(in, out interface{}) error {
 
 	err = s.s.validate(in, out)
 	if err != nil {
-		if err == errStreamFailure {
-			c.retry <- s
+		c.lock.RLock()
+		defer c.lock.RUnlock()
+		if err == errStreamFailure && c.retry == s.retry {
+			s.retry <- s
 		}
 
 		return err
@@ -351,10 +447,6 @@ func (c *streamConn) validate(in, out interface{}) error {
 }
 
 func (c *streamConn) tryValidate(in, out interface{}) (bool, error) {
-	if atomic.LoadUint32(c.state) != scisConnected {
-		return false, errStreamConnWrongState
-	}
-
 	s, ok, err := c.tryGetStream()
 	if err != nil {
 		return false, err
@@ -366,8 +458,10 @@ func (c *streamConn) tryValidate(in, out interface{}) (bool, error) {
 
 	err = s.s.validate(in, out)
 	if err != nil {
-		if err == errStreamFailure {
-			c.retry <- s
+		c.lock.RLock()
+		defer c.lock.RUnlock()
+		if err == errStreamFailure && c.retry == s.retry {
+			s.retry <- s
 		}
 
 		return true, err
@@ -377,10 +471,14 @@ func (c *streamConn) tryValidate(in, out interface{}) (bool, error) {
 	return true, nil
 }
 
-func (c *streamConn) retryWorker(limit int, crp *connRetryPool) {
-	pool := newStreamRetryPool(limit)
-	for s := range c.retry {
-		if atomic.LoadUint32(c.state) != scisConnected {
+func (c *streamConn) retryWorker(retry chan boundStream) {
+	pool := newStreamRetryPool(c.limit)
+	for s := range retry {
+		c.lock.RLock()
+		state := c.state
+		c.lock.RUnlock()
+
+		if state == scisClosing {
 			c.putStream(s)
 			continue
 		}
@@ -389,7 +487,7 @@ func (c *streamConn) retryWorker(limit int, crp *connRetryPool) {
 		if !ok {
 			c.putStream(s)
 			pool.flush()
-			crp.put(c)
+			c.crp.put(c)
 			continue
 		}
 
@@ -401,7 +499,7 @@ func (c *streamConn) retryWorker(limit int, crp *connRetryPool) {
 
 			s.s.drop()
 			if err := s.s.connect(); err != nil {
-				crp.put(c)
+				c.crp.put(c)
 			}
 		}(s, ver)
 	}

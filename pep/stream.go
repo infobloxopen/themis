@@ -12,96 +12,75 @@ import (
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
-const (
-	ssDisconnected uint32 = iota
-	ssConnecting
-	ssConnected
-	ssClosing
-)
-
 var (
 	errStreamWrongState = errors.New("can't make operation with the stream")
 	errStreamFailure    = errors.New("stream failed")
 )
 
+func closeStreams(toClose, toDrop []*stream) {
+	wg := &sync.WaitGroup{}
+	for _, s := range toClose {
+		wg.Add(1)
+		go s.closeStream(wg)
+	}
+
+	for _, s := range toDrop {
+		s.drop()
+	}
+
+	wg.Wait()
+}
+
 type stream struct {
 	parent *streamConn
-	state  *uint32
-
-	stream pb.PDP_NewValidationStreamClient
+	stream *atomic.Value
 }
 
 func (c *streamConn) newStream() *stream {
-	state := ssDisconnected
-	return &stream{
+	s := &stream{
 		parent: c,
-		state:  &state,
+		stream: new(atomic.Value),
 	}
+	s.drop()
+	return s
 }
 
 func (s *stream) connect() error {
-	if !atomic.CompareAndSwapUint32(s.state, ssDisconnected, ssConnecting) {
+	sp := s.stream.Load().(*pb.PDP_NewValidationStreamClient)
+	if sp != nil {
 		return errStreamWrongState
 	}
 
-	var (
-		ss  pb.PDP_NewValidationStreamClient
-		err error
-	)
-
-	exitState := ssDisconnected
-	defer func() {
-		if atomic.CompareAndSwapUint32(s.state, ssClosing, ssDisconnected) {
-			s.stream = nil
-			if ss == nil {
-				return
-			}
-
-			go func() {
-				if err := ss.CloseSend(); err != nil {
-					return
-				}
-
-				ss.Recv()
-			}()
-
-			return
-		}
-
-		atomic.StoreUint32(s.state, exitState)
-	}()
-
-	ss, err = s.parent.newValidationStream()
+	ss, err := s.parent.newValidationStream()
 	if err != nil {
 		return err
 	}
 
-	s.stream = ss
-	exitState = ssConnected
+	sp = &ss
+	s.stream.Store(sp)
 	return nil
 }
 
 func (s *stream) closeStream(wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	if atomic.CompareAndSwapUint32(s.state, ssConnecting, ssClosing) ||
-		!atomic.CompareAndSwapUint32(s.state, ssConnected, ssClosing) {
+	sp := s.stream.Load().(*pb.PDP_NewValidationStreamClient)
+	if sp == nil {
 		return
 	}
+	s.drop()
 
-	if err := s.stream.CloseSend(); err != nil {
+	if err := (*sp).CloseSend(); err != nil {
 		return
 	}
 
 	done := make(chan int)
-	go func(s pb.PDP_NewValidationStreamClient) {
+	go func() {
 		defer close(done)
-		s.Recv()
-	}(s.stream)
+		(*sp).Recv()
+	}()
 
-	s.stream = nil
-
-	t := time.NewTimer(5 * time.Second)
+	t := time.NewTimer(closeWaitDuration)
 	select {
 	case <-done:
 		if !t.Stop() {
@@ -109,33 +88,25 @@ func (s *stream) closeStream(wg *sync.WaitGroup) {
 		}
 	case <-t.C:
 	}
-
-	atomic.StoreUint32(s.state, ssDisconnected)
 }
 
 func (s *stream) drop() {
-	if atomic.CompareAndSwapUint32(s.state, ssConnecting, ssClosing) ||
-		!atomic.CompareAndSwapUint32(s.state, ssConnected, ssClosing) {
-		return
-	}
-
-	s.stream = nil
-	atomic.StoreUint32(s.state, ssDisconnected)
+	var ssNil *pb.PDP_NewValidationStreamClient
+	s.stream.Store(ssNil)
 }
 
 func (s *stream) validate(in, out interface{}) error {
-	if atomic.LoadUint32(s.state) != ssConnected {
+	sp := s.stream.Load().(*pb.PDP_NewValidationStreamClient)
+	if sp == nil {
 		return errStreamWrongState
 	}
-
-	stream := s.stream
 
 	req, err := makeRequest(in)
 	if err != nil {
 		return err
 	}
 
-	err = stream.Send(&req)
+	err = (*sp).Send(&req)
 	if err != nil {
 		if err == transport.ErrConnClosing || err == balancer.ErrTransientFailure {
 			return errConnFailure
@@ -144,7 +115,7 @@ func (s *stream) validate(in, out interface{}) error {
 		return errStreamFailure
 	}
 
-	res, err := stream.Recv()
+	res, err := (*sp).Recv()
 	if err != nil {
 		if err == transport.ErrConnClosing || err == balancer.ErrTransientFailure {
 			return errConnFailure
@@ -154,10 +125,4 @@ func (s *stream) validate(in, out interface{}) error {
 	}
 
 	return fillResponse(res, out)
-}
-
-type boundStream struct {
-	s     *stream
-	idx   int
-	index chan int
 }
