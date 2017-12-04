@@ -14,6 +14,7 @@ import (
 type TestResponseStruct struct {
 	Effect  bool
 	Int     int
+	Float   float64
 	Bool    bool
 	String  string
 	Address net.IP
@@ -26,6 +27,7 @@ type TestTaggedResponseStruct struct {
 	Bool1   bool
 	Bool2   bool      `pdp:""`
 	Bool3   bool      `pdp:"flag"`
+	Int     int       `pdp:"i,integer"`
 	Domain  string    `pdp:"d,domain"`
 	Address net.IP    `pdp:""`
 	Network net.IPNet `pdp:"net,network"`
@@ -36,6 +38,7 @@ type TestTaggedAllTypesResponseStruct struct {
 	Reason  string    `pdp:"Reason"`
 	Bool    bool      `pdp:"ba"`
 	String  string    `pdp:"sa"`
+	Int     int       `pdp:"ia"`
 	Address net.IP    `pdp:"aa"`
 	Network net.IPNet `pdp:"na"`
 	Domain  string    `pdp:"da,domain"`
@@ -65,6 +68,7 @@ var (
 	TestObligations = []*pb.Attribute{
 		{"Bool", "boolean", "true"},
 		{"String", "string", "test"},
+		{"Int", "integer", "1234"},
 		{"Address", "address", "1.2.3.4"},
 		{"Network", "network", "1.2.3.4/32"}}
 
@@ -123,7 +127,7 @@ func TestUnmarshalUntaggedStruct(t *testing.T) {
 		t.Errorf("Expected no error but got: %s", err)
 	} else {
 		_, n, _ := net.ParseCIDR("1.2.3.4/32")
-		CompareTestResponseStruct(v, TestResponseStruct{true, 0, true, "test", net.ParseIP("1.2.3.4"), *n}, t)
+		CompareTestResponseStruct(v, TestResponseStruct{true, 1234, 0, true, "test", net.ParseIP("1.2.3.4"), *n}, t)
 	}
 }
 
@@ -139,7 +143,7 @@ func TestUnmarshalTaggedStruct(t *testing.T) {
 		e := TestTaggedResponseStruct{
 			pb.Response_Effect_name[int32(pb.Response_INDETERMINATED)],
 			"Test Error!",
-			false, false, true,
+			false, false, true, 0,
 			"example.com",
 			net.ParseIP("1.2.3.4"), *n}
 		CompareTestTaggedStruct(v, e, t)
@@ -150,6 +154,9 @@ func TestUnmarshalTaggedStruct(t *testing.T) {
 
 	sa := pdp.MakeAttribute("sa", pdp.TypeString)
 	sv := pdp.MakeStringValue("test")
+
+	ia := pdp.MakeAttribute("ia", pdp.TypeInteger)
+	iv := pdp.MakeIntegerValue(1234)
 
 	aa := pdp.MakeAttribute("aa", pdp.TypeAddress)
 	a := net.ParseIP("192.0.2.1")
@@ -171,6 +178,7 @@ func TestUnmarshalTaggedStruct(t *testing.T) {
 	assignments := []pdp.AttributeAssignmentExpression{
 		pdp.MakeAttributeAssignmentExpression(ba, bv),
 		pdp.MakeAttributeAssignmentExpression(sa, sv),
+		pdp.MakeAttributeAssignmentExpression(ia, iv),
 		pdp.MakeAttributeAssignmentExpression(aa, av),
 		pdp.MakeAttributeAssignmentExpression(na, nv),
 		pdp.MakeAttributeAssignmentExpression(da, dv),
@@ -201,6 +209,7 @@ func TestUnmarshalTaggedStruct(t *testing.T) {
 			Reason:  "Test Error!",
 			Bool:    true,
 			String:  "test",
+			Int:     1234,
 			Address: a,
 			Network: *n,
 			Domain:  "example.com"}
@@ -372,6 +381,7 @@ func newResponse(effect pb.Response_Effect, reason string, obligation []*pb.Attr
 func CompareTestResponseStruct(v, e TestResponseStruct, t *testing.T) {
 	if v.Effect != e.Effect ||
 		v.Int != e.Int ||
+		v.Float != e.Float ||
 		v.Bool != e.Bool ||
 		v.String != e.String ||
 		v.Address.String() != e.Address.String() ||
@@ -398,6 +408,7 @@ func CompareTestTaggedAllTypesStruct(v, e TestTaggedAllTypesResponseStruct, t *t
 		v.Reason != e.Reason ||
 		v.Bool != e.Bool ||
 		v.String != e.String ||
+		v.Int != e.Int ||
 		v.Address.String() != e.Address.String() ||
 		v.Network.String() != e.Network.String() ||
 		v.Domain != e.Domain {
@@ -419,7 +430,7 @@ func SprintfTestTaggedStruct(v TestTaggedResponseStruct) string {
 
 func SprintfTestTaggedAllTypesStruct(v TestTaggedAllTypesResponseStruct) string {
 	return fmt.Sprintf("\tEffect: %v\n\tReason: %v\n"+
-		"\tBool: %v\n\tString: %v\n\tAddress:%v\n"+
+		"\tBool: %v\n\tString: %v\n\tInteger: %v\n\tAddress:%v\n"+
 		"\tNetwork: %v\n\tDomain: %v\n",
-		v.Effect, v.Reason, v.Bool, v.String, v.Address.String(), v.Network.String(), v.Domain)
+		v.Effect, v.Reason, v.Bool, v.String, v.Int, v.Address.String(), v.Network.String(), v.Domain)
 }
