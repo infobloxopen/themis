@@ -2,6 +2,7 @@ package pep
 
 import (
 	"fmt"
+	"math"
 	"net"
 	"reflect"
 	"strings"
@@ -29,13 +30,14 @@ type TestTaggedStruct struct {
 	Bool1   bool
 	Bool2   bool      `pdp:""`
 	Bool3   bool      `pdp:"flag"`
+	Int     int       `pdp:"i,integer"`
 	Domain  string    `pdp:"d,domain"`
 	Address net.IP    `pdp:""`
 	network net.IPNet `pdp:"net,network"`
 }
 
 type TestInvalidStruct1 struct {
-	Int int `pdp:"number,integer"`
+	Float float64 `pdp:"number,float"`
 }
 
 type TestInvalidStruct2 struct {
@@ -49,6 +51,7 @@ type TestInvalidStruct3 struct {
 var (
 	TestAttributes = []*pb.Attribute{
 		{"Bool", "boolean", "true"},
+		{"Int", "integer", "5"},
 		{"String", "string", "test"},
 		{"Address", "address", "1.2.3.4"},
 		{"Network", "network", "1.2.3.4/32"}}
@@ -56,6 +59,7 @@ var (
 	TestTaggedAttributes = []*pb.Attribute{
 		{"Bool2", "boolean", "false"},
 		{"flag", "boolean", "true"},
+		{"i", "integer", "2147483647"},
 		{"d", "domain", "example.com"},
 		{"Address", "address", "1.2.3.4"},
 		{"net", "network", "1.2.3.4/32"}}
@@ -74,7 +78,7 @@ func TestMarshalUntaggedStruct(t *testing.T) {
 
 func TestMarshalTaggedStruct(t *testing.T) {
 	_, n, _ := net.ParseCIDR("1.2.3.4/32")
-	v := TestTaggedStruct{true, false, true, "example.com", net.ParseIP("1.2.3.4"), *n}
+	v := TestTaggedStruct{true, false, true, math.MaxInt32, "example.com", net.ParseIP("1.2.3.4"), *n}
 	attrs, err := marshalValue(reflect.ValueOf(v))
 	if err != nil {
 		t.Errorf("Expected no error but got: %s", err)
