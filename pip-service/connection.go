@@ -5,7 +5,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var pIPServiceEndPoints = map[string]string {
+var pIPServiceEndPoints = map[string]string{
 	"mcafee-ts": "127.0.0.1:5368",
 }
 
