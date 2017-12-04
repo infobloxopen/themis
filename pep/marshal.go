@@ -3,6 +3,7 @@ package pep
 import (
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"reflect"
 	"strconv"
@@ -22,6 +23,9 @@ var (
 	// ErrorInvalidStruct indicates that input structure has struct field
 	// (client can't marshal nested structures).
 	ErrorInvalidStruct = errors.New("marshalling for the struct hasn't been implemented")
+	// ErrorIntegerOverflow indicates that input structure contains integer
+	// which doesn't fit to int64.
+	ErrorIntegerOverflow = errors.New("integer overflow")
 )
 
 type fieldMarshaller func(v reflect.Value) (string, string, error)
@@ -30,12 +34,23 @@ var (
 	marshallersByKind = map[reflect.Kind]fieldMarshaller{
 		reflect.Bool:   boolMarshaller,
 		reflect.String: stringMarshaller,
+		reflect.Int:    intMarshaller,
+		reflect.Int8:   intMarshaller,
+		reflect.Int16:  intMarshaller,
+		reflect.Int32:  intMarshaller,
+		reflect.Int64:  intMarshaller,
+		reflect.Uint:   intMarshaller,
+		reflect.Uint8:  intMarshaller,
+		reflect.Uint16: intMarshaller,
+		reflect.Uint32: intMarshaller,
+		reflect.Uint64: intMarshaller,
 		reflect.Slice:  sliceMarshaller,
 		reflect.Struct: structMarshaller}
 
 	marshallersByTag = map[string]fieldMarshaller{
 		"boolean": boolMarshaller,
 		"string":  stringMarshaller,
+		"integer": intMarshaller,
 		"address": addressMarshaller,
 		"network": networkMarshaller,
 		"domain":  domainMarshaller}
@@ -46,6 +61,7 @@ var (
 	typeByTag = map[string]reflect.Type{
 		"boolean": reflect.TypeOf(true),
 		"string":  reflect.TypeOf("string"),
+		"integer": reflect.TypeOf(0),
 		"address": netIPType,
 		"network": netIPNetType,
 		"domain":  reflect.TypeOf("string")}
@@ -244,6 +260,27 @@ func boolMarshaller(v reflect.Value) (string, string, error) {
 
 func stringMarshaller(v reflect.Value) (string, string, error) {
 	return v.String(), "string", nil
+}
+
+func intMarshaller(v reflect.Value) (string, string, error) {
+	var s string
+	switch v.Kind() {
+	default:
+		panic(fmt.Errorf("expected any integer value but got %q (%s)", v.Type().Name(), v.String()))
+
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		s = strconv.FormatInt(v.Int(), 10)
+
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		n := v.Uint()
+		if n > math.MaxInt64 {
+			return "", "", ErrorIntegerOverflow
+		}
+
+		s = strconv.FormatUint(n, 10)
+	}
+
+	return s, "integer", nil
 }
 
 func sliceMarshaller(v reflect.Value) (string, string, error) {
