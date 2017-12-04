@@ -3,6 +3,7 @@ package pep
 import (
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"reflect"
 	"strconv"
@@ -149,6 +150,7 @@ type fieldUnmarshaller func(attr *pb.Attribute, v reflect.Value) error
 var unmarshallersByType = map[string]fieldUnmarshaller{
 	pdp.TypeKeys[pdp.TypeBoolean]: boolUnmarshaller,
 	pdp.TypeKeys[pdp.TypeString]:  stringUnmarshaller,
+	pdp.TypeKeys[pdp.TypeInteger]: intUnmarshaller,
 	pdp.TypeKeys[pdp.TypeAddress]: addressUnmarshaller,
 	pdp.TypeKeys[pdp.TypeNetwork]: networkUnmarshaller,
 	pdp.TypeKeys[pdp.TypeDomain]:  domainUnmarshaller}
@@ -291,6 +293,94 @@ func boolUnmarshaller(attr *pb.Attribute, v reflect.Value) error {
 func stringUnmarshaller(attr *pb.Attribute, v reflect.Value) error {
 	v.SetString(attr.Value)
 	return nil
+}
+
+func intUnmarshaller(attr *pb.Attribute, v reflect.Value) error {
+	i, err := strconv.ParseInt(attr.Value, 0, 64)
+	if err != nil {
+		return fmt.Errorf("can't treat \"%s\" value (%s) as integer: %s", attr.Id, attr.Value, err)
+	}
+
+	switch v.Kind() {
+	case reflect.Int:
+		if i < math.MinInt32 || i > math.MaxInt32 {
+			return fmt.Errorf("\"%s\" %d overflows int value", attr.Id, i)
+		}
+
+		v.SetInt(i)
+		return nil
+
+	case reflect.Int8:
+		if i < math.MinInt8 || i > math.MaxInt8 {
+			return fmt.Errorf("\"%s\" %d overflows int8 value", attr.Id, i)
+		}
+
+		v.SetInt(i)
+		return nil
+
+	case reflect.Int16:
+		if i < math.MinInt16 || i > math.MaxInt16 {
+			return fmt.Errorf("\"%s\" %d overflows int16 value", attr.Id, i)
+		}
+
+		v.SetInt(i)
+		return nil
+
+	case reflect.Int32:
+		if i < math.MinInt32 || i > math.MaxInt32 {
+			return fmt.Errorf("\"%s\" %d overflows int32 value", attr.Id, i)
+		}
+
+		v.SetInt(i)
+		return nil
+
+	case reflect.Int64:
+		v.SetInt(i)
+		return nil
+
+	case reflect.Uint:
+		if i < 0 || i > math.MaxUint32 {
+			return fmt.Errorf("\"%s\" %d overflows uint value", attr.Id, i)
+		}
+
+		v.SetUint(uint64(i))
+		return nil
+
+	case reflect.Uint8:
+		if i < 0 || i > math.MaxUint8 {
+			return fmt.Errorf("\"%s\" %d overflows uint8 value", attr.Id, i)
+		}
+
+		v.SetUint(uint64(i))
+		return nil
+
+	case reflect.Uint16:
+		if i < 0 || i > math.MaxUint16 {
+			return fmt.Errorf("\"%s\" %d overflows uint16 value", attr.Id, i)
+		}
+
+		v.SetUint(uint64(i))
+		return nil
+
+	case reflect.Uint32:
+		if i < 0 || i > math.MaxUint32 {
+			return fmt.Errorf("\"%s\" %d overflows uint32 value", attr.Id, i)
+		}
+
+		v.SetUint(uint64(i))
+		return nil
+
+	case reflect.Uint64:
+		if i < 0 {
+			return fmt.Errorf("\"%s\" %d overflows uint64 value", attr.Id, i)
+		}
+
+		v.SetUint(uint64(i))
+		return nil
+
+	}
+
+	return fmt.Errorf("can't set value %q of \"%s\" attribute to %s", attr.Value, attr.Id, v.Type().Name())
 }
 
 func addressUnmarshaller(attr *pb.Attribute, v reflect.Value) error {
