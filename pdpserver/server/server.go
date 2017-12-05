@@ -135,6 +135,10 @@ func NewServer(opts ...Option) *Server {
 		opt(&o)
 	}
 
+	if o.parser == nil {
+		o.parser = ast.NewYAMLParser()
+	}
+
 	gcp := debug.SetGCPercent(-1)
 	if gcp != -1 {
 		debug.SetGCPercent(gcp)
@@ -177,6 +181,23 @@ func (s *Server) LoadPolicies(path string) error {
 	return nil
 }
 
+func (s *Server) ReadPolicies(r io.Reader) error {
+	if r == nil {
+		return nil
+	}
+
+	s.opts.logger.Info("Parsing policy")
+	p, err := s.opts.parser.Unmarshal(r, nil)
+	if err != nil {
+		s.opts.logger.WithError(err).Error("Failed parse policy")
+		return err
+	}
+
+	s.p = p
+
+	return nil
+}
+
 func (s *Server) LoadContent(paths []string) error {
 	items := []*pdp.LocalContent{}
 	for _, path := range paths {
@@ -201,6 +222,23 @@ func (s *Server) LoadContent(paths []string) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	s.c = pdp.NewLocalContentStorage(items)
+
+	return nil
+}
+
+func (s *Server) ReadContent(readers ...io.Reader) error {
+	items := []*pdp.LocalContent{}
+	for _, r := range readers {
+		s.opts.logger.Info("Parsing content")
+		item, err := jcon.Unmarshal(r, nil)
+		if err != nil {
+			return err
+		}
+
+		items = append(items, item)
 	}
 
 	s.c = pdp.NewLocalContentStorage(items)
@@ -331,24 +369,26 @@ func (s *Server) Serve() error {
 		})
 
 		healthServer := &http.Server{Handler: healthMux}
-		defer healthServer.Close()
-
-		go func() {
-			if err := healthServer.Serve(s.health.iface); err != nil && err != http.ErrServerClosed {
-				s.errCh <- err
-			}
+		defer func() {
+			s.health.iface.Close()
+			s.health.iface = nil
 		}()
+
+		go func(l net.Listener) {
+			s.errCh <- healthServer.Serve(l)
+		}(s.health.iface)
 	}
 
 	if s.profiler != nil {
 		profilerServer := &http.Server{}
-		defer profilerServer.Close()
-
-		go func() {
-			if err := profilerServer.Serve(s.profiler); err != nil && err != http.ErrServerClosed {
-				s.errCh <- err
-			}
+		defer func() {
+			s.profiler.Close()
+			s.profiler = nil
 		}()
+
+		go func(l net.Listener) {
+			s.errCh <- profilerServer.Serve(l)
+		}(s.profiler)
 	}
 
 	s.opts.logger.Info("Creating service protocol handler")
@@ -360,9 +400,7 @@ func (s *Server) Serve() error {
 		// We already have policy info applied; supplied from local files,
 		// pointed to by CLI options.
 		go s.startOnce.Do(func() {
-			if err := s.serveRequests(); err != nil {
-				s.errCh <- err
-			}
+			s.errCh <- s.serveRequests()
 		})
 	} else {
 		if s.control.iface == nil {
@@ -381,11 +419,29 @@ func (s *Server) Serve() error {
 
 		go func() {
 			s.opts.logger.Info("Serving control requests")
-			if err := s.control.proto.Serve(s.control.iface); err != nil {
-				s.errCh <- err
-			}
+			s.errCh <- s.control.proto.Serve(s.control.iface)
 		}()
 	}
 
-	return <-s.errCh
+	err := <-s.errCh
+	s.flushErrors()
+	return err
+}
+
+func (s *Server) Stop() error {
+	if s.control.proto != nil {
+		s.control.proto.Stop()
+		return nil
+	}
+
+	s.RLock()
+	p := s.p
+	s.RUnlock()
+
+	if p != nil && s.requests.proto != nil {
+		s.requests.proto.Stop()
+		return nil
+	}
+
+	return fmt.Errorf("server hasn't been started")
 }

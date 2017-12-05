@@ -30,6 +30,10 @@ type failServer struct {
 }
 
 func newFailServer(addr string) (*failServer, error) {
+	if err := waitForPortClosed(addr); err != nil {
+		return nil, err
+	}
+
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, err
@@ -38,6 +42,11 @@ func newFailServer(addr string) (*failServer, error) {
 	s := &failServer{s: grpc.NewServer()}
 	pb.RegisterPDPServer(s.s, s)
 	go s.s.Serve(ln)
+
+	if err := waitForPortOpened(addr); err != nil {
+		s.Stop()
+		return nil, err
+	}
 
 	return s, nil
 }

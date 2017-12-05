@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	fakeServerAddress    = "localhost:5555"
-	fakeServerAltAddress = "localhost:5556"
+	fakeServerAddress    = ":5555"
+	fakeServerAltAddress = ":5556"
 )
 
 func TestStreamClientRecovery(t *testing.T) {
@@ -34,11 +34,6 @@ func singleClientRecovery(streams int, t *testing.T) {
 	}
 
 	defer s.Stop()
-
-	err = waitForPortOpened(fakeServerAddress)
-	if err != nil {
-		t.Fatalf("can't connect to fake server: %s", err)
-	}
 
 	c := NewClient(WithStreams(streams))
 	err = c.Connect(fakeServerAddress)
@@ -80,22 +75,12 @@ func hotSotBalancedClientRecovery(streams int, t *testing.T) {
 
 	defer s1.Stop()
 
-	err = waitForPortOpened(fakeServerAddress)
-	if err != nil {
-		t.Fatalf("can't connect to fake server: %s", err)
-	}
-
 	s2, err := newFailServer(fakeServerAltAddress)
 	if err != nil {
 		t.Fatalf("couldn't start fake server: %s", err)
 	}
 
 	defer s2.Stop()
-
-	err = waitForPortOpened(fakeServerAltAddress)
-	if err != nil {
-		t.Fatalf("can't connect to fake server: %s", err)
-	}
 
 	c := NewClient(
 		WithStreams(streams),

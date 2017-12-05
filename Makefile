@@ -139,7 +139,6 @@ build-pdpserver: build-dir
 .PHONY: build-plugin
 build-plugin: build-dir
 	$(AT)/contrib/coredns/policy && $(GOBUILD)
-	$(AT)/contrib/coredns/policy/dnstap && $(GOBUILD)
 
 .PHONY: build-egen
 build-egen: build-dir
@@ -168,7 +167,6 @@ test-pep: build-pdpserver cover-out
 .PHONY: test-plugin
 test-plugin: cover-out
 	$(AT)/contrib/coredns/policy && $(GOTESTRACE)
-	$(AT)/contrib/coredns/policy/dnstap && $(GOTESTRACE)
 
 .PHONY: bench-pep
 bench-pep: build-pdpserver

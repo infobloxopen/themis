@@ -168,9 +168,7 @@ func (s *Server) NotifyReady(ctx context.Context, m *pb.Empty) (*pb.Response, er
 	s.opts.logger.Info("Got notified about readiness")
 
 	go s.startOnce.Do(func() {
-		if err := s.serveRequests(); err != nil {
-			s.errCh <- err
-		}
+		s.errCh <- s.serveRequests()
 	})
 
 	return &pb.Response{Status: pb.Response_ACK}, nil

@@ -1,21 +1,18 @@
 package pep
 
 import (
-	"bufio"
+	"bytes"
 	"fmt"
-	"go/build"
-	"io/ioutil"
 	"math/rand"
 	"net"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
+
 	pb "github.com/infobloxopen/themis/pdp-service"
+	"github.com/infobloxopen/themis/pdpserver/server"
 )
 
 const (
@@ -649,21 +646,15 @@ func init() {
 }
 
 func benchmarkPolicySet(name, p string, b *testing.B) {
-	ok := true
-	tmpYAST, tmpJCon, pdp, _, c := startPDPServer(p, []string{}, b)
+	pdp, _, c := startPDPServer(p, nil, b)
 	defer func() {
 		c.Close()
-
-		_, errDump, _ := pdp.kill()
-		if !ok && len(errDump) > 0 {
-			b.Logf("PDP server dump:\n%s", strings.Join(errDump, "\n"))
+		if logs := pdp.Stop(); len(logs) > 0 {
+			b.Logf("server logs:\n%s", logs)
 		}
-
-		os.Remove(tmpYAST)
-		os.Remove(tmpJCon)
 	}()
 
-	ok = b.Run(name, func(b *testing.B) {
+	b.Run(name, func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			in := decisionRequests[n%len(decisionRequests)]
 
@@ -691,21 +682,15 @@ func BenchmarkThreeStagePolicySet(b *testing.B) {
 }
 
 func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
-	ok := true
-	tmpYAST, tmpJCon, pdp, _, c := startPDPServer(threeStageBenchmarkPolicySet, []string{}, b)
+	pdp, _, c := startPDPServer(threeStageBenchmarkPolicySet, nil, b)
 	defer func() {
 		c.Close()
-
-		_, errDump, _ := pdp.kill()
-		if !ok && len(errDump) > 0 {
-			b.Logf("PDP server dump:\n%s", strings.Join(errDump, "\n"))
+		if logs := pdp.Stop(); len(logs) > 0 {
+			b.Logf("server logs:\n%s", logs)
 		}
-
-		os.Remove(tmpYAST)
-		os.Remove(tmpJCon)
 	}()
 
-	ok = b.Run("BenchmarkThreeStagePolicySetRaw", func(b *testing.B) {
+	b.Run("BenchmarkThreeStagePolicySetRaw", func(b *testing.B) {
 		var out pb.Response
 		for n := 0; n < b.N; n++ {
 			in := rawRequests[n%len(rawRequests)]
@@ -722,38 +707,30 @@ func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
 	})
 }
 
-func benchmarkStreamingClient(name string, ports []string, b *testing.B, opts ...Option) {
-	if len(ports) != 0 && len(ports) != 4 {
-		b.Fatalf("only 0 for single PDP and 4 for 2 PDP ports supported but got %d", len(ports))
+func benchmarkStreamingClient(name string, ports []uint16, b *testing.B, opts ...Option) {
+	if len(ports) != 0 && len(ports) != 2 {
+		b.Fatalf("only 0 for single PDP and 2 for 2 PDP ports supported but got %d", len(ports))
 	}
 
 	streams := 96
-	ok := true
 
 	opts = append(opts,
 		WithStreams(streams),
 	)
-	tmpYAST, tmpJCon, pdp, pdpAlt, c := startPDPServer(threeStageBenchmarkPolicySet, ports, b, opts...)
+	pdp, pdpAlt, c := startPDPServer(threeStageBenchmarkPolicySet, ports, b, opts...)
 	defer func() {
 		c.Close()
-
-		_, errDump, _ := pdp.kill()
-		if !ok && len(errDump) > 0 {
-			b.Logf("PDP server dump:\n%s", strings.Join(errDump, "\n"))
+		if logs := pdp.Stop(); len(logs) > 0 {
+			b.Logf("primary server logs:\n%s", logs)
 		}
-
 		if pdpAlt != nil {
-			_, errDump, _ := pdpAlt.kill()
-			if !ok && len(errDump) > 0 {
-				b.Logf("second PDP server dump:\n%s", strings.Join(errDump, "\n"))
+			if logs := pdpAlt.Stop(); len(logs) > 0 {
+				b.Logf("secondary server logs:\n%s", logs)
 			}
 		}
-
-		os.Remove(tmpYAST)
-		os.Remove(tmpJCon)
 	}()
 
-	ok = b.Run(name, func(b *testing.B) {
+	b.Run(name, func(b *testing.B) {
 		errs := make([]error, b.N)
 
 		th := make(chan int, streams)
@@ -783,28 +760,28 @@ func benchmarkStreamingClient(name string, ports []string, b *testing.B, opts ..
 }
 
 func BenchmarkStreamingClient(b *testing.B) {
-	benchmarkStreamingClient("BenchmarkStreamingClient", []string{}, b)
+	benchmarkStreamingClient("BenchmarkStreamingClient", nil, b)
 }
 
 func BenchmarkRoundRobinStreamingClient(b *testing.B) {
 	benchmarkStreamingClient("BenchmarkRoundRobinStreamingClient",
-		[]string{
-			":5555", ":5554",
-			":5557", ":5556",
+		[]uint16{
+			5555,
+			5556,
 		},
 		b,
-		WithRoundRobinBalancer("127.0.0.1:5555", "127.0.0.1:5557"),
+		WithRoundRobinBalancer("127.0.0.1:5555", "127.0.0.1:5556"),
 	)
 }
 
 func BenchmarkHotSpotStreamingClient(b *testing.B) {
 	benchmarkStreamingClient("BenchmarkHotSpotStreamingClient",
-		[]string{
-			":5555", ":5554",
-			":5557", ":5556",
+		[]uint16{
+			5555,
+			5556,
 		},
 		b,
-		WithHotSpotBalancer("127.0.0.1:5555", "127.0.0.1:5557"),
+		WithHotSpotBalancer("127.0.0.1:5555", "127.0.0.1:5556"),
 	)
 }
 
@@ -827,439 +804,148 @@ func waitForPortOpened(address string) error {
 	return err
 }
 
-func startPDPServer(p string, ports []string, b *testing.B, opts ...Option) (string, string, *proc, *proc, Client) {
-	tmpYAST, err := makeTempFile(p, "policy")
-	if err != nil {
-		b.Fatalf("can't create policy file: %s", err)
-	}
+func waitForPortClosed(address string) error {
+	var (
+		c   net.Conn
+		err error
+	)
 
-	tmpJCon, err := makeTempFile(benchmarkContent, "content")
-	if err != nil {
-		os.Remove(tmpYAST)
-		b.Fatalf("can't create content file: %s", err)
-	}
-
-	sPort := ":5555"
-	cPort := ":5554"
-	if len(ports) >= 2 {
-		sPort = ports[0]
-		cPort = ports[1]
-	}
-	addr := fmt.Sprintf("127.0.0.1%s", sPort)
-
-	binPath := filepath.Join(build.Default.GOPATH, "/src/github.com/infobloxopen/themis/build/pdpserver")
-	pdp, err := newProc(binPath, "-l", sPort, "-c", cPort, "-p", tmpYAST, "-j", tmpJCon)
-	if err != nil {
-		os.Remove(tmpYAST)
-		os.Remove(tmpJCon)
-		b.Fatalf("can't start PDP server: %s", err)
-	}
-
-	err = waitForPortOpened(addr)
-	if err != nil {
-		_, errDump, _ := pdp.kill()
-		if len(errDump) > 0 {
-			b.Logf("PDP server dump:\n%s", strings.Join(errDump, "\n"))
+	for i := 0; i < 20; i++ {
+		after := time.After(500 * time.Millisecond)
+		c, err = net.DialTimeout("tcp", address, 500*time.Millisecond)
+		if err != nil {
+			return nil
 		}
 
-		os.Remove(tmpYAST)
-		os.Remove(tmpJCon)
+		c.Close()
+		<-after
+	}
+
+	return fmt.Errorf("port at %s hasn't been closed yet", address)
+}
+
+type loggedServer struct {
+	s *server.Server
+	b *bytes.Buffer
+}
+
+func newServer(opts ...server.Option) *loggedServer {
+	s := &loggedServer{
+		b: new(bytes.Buffer),
+	}
+
+	logger := log.New()
+	logger.Out = s.b
+	logger.Level = log.ErrorLevel
+	opts = append(opts,
+		server.WithLogger(logger),
+	)
+
+	s.s = server.NewServer(opts...)
+	return s
+}
+
+func (s *loggedServer) Stop() string {
+	s.s.Stop()
+	return s.b.String()
+}
+
+func startPDPServer(p string, ports []uint16, b *testing.B, opts ...Option) (*loggedServer, *loggedServer, Client) {
+	var (
+		primary   *loggedServer
+		secondary *loggedServer
+	)
+
+	service := ":5555"
+	if len(ports) > 0 {
+		service = fmt.Sprintf(":%d", ports[0])
+	}
+	addr := "127.0.0.1" + service
+
+	primary = newServer(
+		server.WithServiceAt(service),
+	)
+
+	if err := primary.s.ReadPolicies(strings.NewReader(p)); err != nil {
+		b.Fatalf("can't read policies: %s", err)
+	}
+
+	if err := primary.s.ReadContent(strings.NewReader(benchmarkContent)); err != nil {
+		b.Fatalf("can't read content: %s", err)
+	}
+
+	if err := waitForPortClosed(addr); err != nil {
+		b.Fatalf("port still in use: %s", err)
+	}
+	go func() {
+		if err := primary.s.Serve(); err != nil {
+			b.Fatalf("primary server failed: %s", err)
+		}
+	}()
+
+	if err := waitForPortOpened(addr); err != nil {
+		if logs := primary.Stop(); len(logs) > 0 {
+			b.Logf("primary server logs:\n%s", logs)
+		}
+
 		b.Fatalf("can't connect to PDP server: %s", err)
 	}
 
-	var pdpAlt *proc
-	if len(ports) >= 4 {
-		sPort = ports[2]
-		cPort = ports[3]
+	if len(ports) > 1 {
+		service := fmt.Sprintf(":%d", ports[1])
+		secondary = newServer(
+			server.WithServiceAt(service),
+		)
+		addr := "127.0.0.1" + service
 
-		pdpAlt, err = newProc(binPath, "-l", sPort, "-c", cPort, "-p", tmpYAST, "-j", tmpJCon)
-		if err != nil {
-			_, errDump, _ := pdp.kill()
-			if len(errDump) > 0 {
-				b.Logf("PDP server dump:\n%s", strings.Join(errDump, "\n"))
+		if err := secondary.s.ReadPolicies(strings.NewReader(p)); err != nil {
+			if logs := primary.Stop(); len(logs) > 0 {
+				b.Logf("primary server logs:\n%s", logs)
+			}
+			b.Fatalf("can't read policies: %s", err)
+		}
+
+		if err := secondary.s.ReadContent(strings.NewReader(benchmarkContent)); err != nil {
+			if logs := primary.Stop(); len(logs) > 0 {
+				b.Logf("primary server logs:\n%s", logs)
+			}
+			b.Fatalf("can't read content: %s", err)
+		}
+
+		if err := waitForPortClosed(addr); err != nil {
+			b.Fatalf("port still in use: %s", err)
+		}
+		go func() {
+			if err := secondary.s.Serve(); err != nil {
+				b.Fatalf("secondary server failed: %s", err)
+			}
+		}()
+
+		if err := waitForPortOpened(addr); err != nil {
+			if logs := secondary.Stop(); len(logs) > 0 {
+				b.Logf("secondary server logs:\n%s", logs)
+			}
+			if logs := primary.Stop(); len(logs) > 0 {
+				b.Logf("primary server logs:\n%s", logs)
 			}
 
-			os.Remove(tmpYAST)
-			os.Remove(tmpJCon)
-			b.Fatalf("can't start second PDP server: %s", err)
+			b.Fatalf("can't connect to PDP server: %s", err)
 		}
 	}
 
 	c := NewClient(opts...)
-	err = c.Connect(addr)
-	if err != nil {
-		_, errDump, _ := pdp.kill()
-		if len(errDump) > 0 {
-			b.Logf("PDP server dump:\n%s", err, strings.Join(errDump, "\n"))
-		}
-
-		if pdpAlt != nil {
-			_, errDump, _ := pdpAlt.kill()
-			if len(errDump) > 0 {
-				b.Logf("second PDP server dump:\n%s", strings.Join(errDump, "\n"))
+	if err := c.Connect(addr); err != nil {
+		if secondary != nil {
+			if logs := secondary.Stop(); len(logs) > 0 {
+				b.Logf("secondary server logs:\n%s", logs)
 			}
 		}
+		if logs := primary.Stop(); len(logs) > 0 {
+			b.Logf("primary server logs:\n%s", logs)
+		}
 
-		os.Remove(tmpYAST)
-		os.Remove(tmpJCon)
 		b.Fatalf("can't connect to PDP server: %s", err)
 	}
 
-	return tmpYAST, tmpJCon, pdp, pdpAlt, c
-}
-
-func makeTempFile(s, prefix string) (string, error) {
-	f, err := ioutil.TempFile("", prefix)
-	if err != nil {
-		return "", err
-	}
-
-	name := f.Name()
-
-	if _, err := f.Write([]byte(s)); err != nil {
-		f.Close()
-		os.Remove(name)
-		return name, err
-	}
-
-	if err := f.Close(); err != nil {
-		os.Remove(name)
-		return name, err
-	}
-
-	return name, nil
-}
-
-type proc struct {
-	name string
-
-	proc *os.Process
-
-	out *pipe
-	err *pipe
-}
-
-func newProc(name string, argv ...string) (*proc, error) {
-	path, err := exec.LookPath(name)
-	if err != nil {
-		return nil, fmt.Errorf("can't find %q: %s", name, err)
-	}
-
-	p := &proc{name: name}
-
-	outPipe, err := newPipe(name, "stdout")
-	if err != nil {
-		p.cleanup()
-		return nil, fmt.Errorf("can't create stdout pipe for %q: %s", name, err)
-	}
-
-	p.out = outPipe
-
-	errPipe, err := newPipe(name, "stderr")
-	if err != nil {
-		p.cleanup()
-		return nil, fmt.Errorf("can't create stderr pipe for %q: %s", name, err)
-	}
-
-	p.err = errPipe
-
-	attr := &os.ProcAttr{Files: []*os.File{nil, p.out.w, p.err.w}}
-	prc, err := os.StartProcess(path, append([]string{path}, argv...), attr)
-	if err != nil {
-		p.cleanup()
-		return nil, fmt.Errorf("can't start process %q: %s", name, err)
-	}
-
-	p.proc = prc
-	return p, nil
-}
-
-func (p *proc) cleanup() ([]string, []string) {
-	var (
-		out []string
-		err []string
-	)
-
-	if p.out != nil {
-		out = p.out.cleanup()
-		p.out = nil
-	}
-
-	if p.err != nil {
-		err = p.err.cleanup()
-		p.err = nil
-	}
-
-	return out, err
-}
-
-func (p *proc) kill() ([]string, []string, error) {
-	if p == nil {
-		return nil, nil, nil
-	}
-
-	if p.proc != nil {
-		err := p.proc.Signal(os.Interrupt)
-		if err != nil {
-			return p.out.dump(), p.err.dump(), fmt.Errorf("can't send interrupt signal to %q: %s", p.name, err)
-		}
-
-		_, err = p.proc.Wait()
-		if err != nil {
-			return p.out.dump(), p.err.dump(), fmt.Errorf("failed to wait for %q to exit: %s", p.name, err)
-		}
-
-		p.proc = nil
-	}
-
-	out, err := p.cleanup()
-	return out, err, nil
-}
-
-type noLogLine struct {
-	name   string
-	substr string
-	step   int
-}
-
-func (err *noLogLine) Error() string {
-	return fmt.Sprintf("no expected log line for %q (%q) at %d step", err.name, err.substr, err.step)
-}
-
-func (p *proc) waitErrLine(s string) error {
-	ok, err := p.err.wait(s, 10*time.Second)
-	if err != nil {
-		return fmt.Errorf("error on waiting for %q logs: %s", p.name, err)
-	}
-
-	if !ok {
-		return &noLogLine{
-			name:   p.name,
-			substr: s,
-		}
-	}
-
-	return nil
-}
-
-type pipe struct {
-	name string
-	kind string
-
-	r *os.File
-	w *os.File
-
-	err error
-
-	storage *storage
-	lookup  *lookup
-
-	sync.WaitGroup
-	sync.Mutex
-}
-
-func newPipe(name, kind string) (*pipe, error) {
-	r, w, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-
-	p := &pipe{
-		name:    name,
-		kind:    kind,
-		r:       r,
-		w:       w,
-		storage: newStorage(),
-		lookup:  newLookup(),
-	}
-	p.scan()
-
-	return p, nil
-}
-
-func (p *pipe) scan() {
-	s := bufio.NewScanner(p.r)
-	p.Add(1)
-
-	go func() {
-		defer func() {
-			p.lookup.done()
-			p.Done()
-		}()
-
-		for s.Scan() {
-			p.storage.put(s.Text())
-			p.lookup.iteration(p.storage)
-		}
-
-		if err := s.Err(); err != nil {
-			p.Lock()
-			p.err = err
-			p.Unlock()
-		}
-	}()
-}
-
-func (p *pipe) setErr(err error) {
-	p.Lock()
-	defer p.Unlock()
-
-	p.err = err
-}
-
-func (p *pipe) getErr() error {
-	p.Lock()
-	defer p.Unlock()
-
-	err := p.err
-	return err
-}
-
-func (p *pipe) wait(s string, timeout time.Duration) (bool, error) {
-	if err := p.getErr(); err != nil {
-		return false, err
-	}
-
-	return p.lookup.wait(s, timeout, p.storage), nil
-}
-
-func (p *pipe) dump() []string {
-	if p == nil || p.storage == nil {
-		return nil
-	}
-
-	p.storage.Lock()
-	defer p.storage.Unlock()
-	return p.storage.lines
-}
-
-func (p *pipe) cleanup() []string {
-	if p.w != nil {
-		p.w.Close()
-		p.w = nil
-		p.Wait()
-	}
-
-	if p.r != nil {
-		p.r.Close()
-		p.r = nil
-	}
-
-	return p.storage.lines
-}
-
-type storage struct {
-	lines []string
-	count int
-
-	sync.Mutex
-}
-
-func newStorage() *storage {
-	return &storage{lines: []string{}}
-}
-
-func (s *storage) put(line string) {
-	s.Lock()
-	defer s.Unlock()
-
-	s.lines = append(s.lines, line)
-}
-
-func (s *storage) scan(f func(string) bool) bool {
-	s.Lock()
-	defer s.Unlock()
-
-	for i, line := range s.lines[s.count:] {
-		if f(line) {
-			s.count += i + 1
-			return true
-		}
-	}
-
-	s.count = len(s.lines)
-	return false
-}
-
-type lookup struct {
-	ch     chan int
-	found  bool
-	substr *string
-
-	sync.Mutex
-}
-
-func newLookup() *lookup {
-	return &lookup{ch: make(chan int)}
-}
-
-func (lu *lookup) iteration(s *storage) {
-	lu.Lock()
-	defer lu.Unlock()
-
-	if lu.substr == nil {
-		return
-	}
-
-	s.scan(func(line string) bool {
-		if strings.Contains(line, *lu.substr) {
-			lu.found = true
-
-			select {
-			default:
-			case lu.ch <- 0:
-			}
-
-			return true
-		}
-
-		return false
-	})
-}
-
-func (lu *lookup) done() {
-	close(lu.ch)
-}
-
-func (lu *lookup) start(substr string, s *storage) bool {
-	lu.Lock()
-	defer lu.Unlock()
-
-	lu.found = false
-
-	found := lu.history(substr, s)
-	if found {
-		return true
-	}
-
-	lu.substr = &substr
-	return false
-}
-
-func (lu *lookup) stop() bool {
-	lu.Lock()
-	defer lu.Unlock()
-
-	found := lu.found
-	lu.substr = nil
-
-	return found
-}
-
-func (lu *lookup) history(substr string, s *storage) bool {
-	return s.scan(func(line string) bool { return strings.Contains(line, substr) })
-}
-
-func (lu *lookup) wait(substr string, timeout time.Duration, s *storage) bool {
-	found := lu.start(substr, s)
-	if found {
-		return true
-	}
-
-	select {
-	case <-time.After(timeout):
-	case <-lu.ch:
-	}
-
-	return lu.stop()
+	return primary, secondary, c
 }
