@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package pip_service;
+
+service PIP {
+  rpc GetAttribute (Request) returns (Response) {}
+}
+
+message Attribute {
+  string id    = 1;
+  int32  type  = 2;
+  string value = 3;
+}
+
+message Request {
+  string query_type = 1;
+  repeated Attribute attributes = 2;
+}
+
+message Response {
+  enum Status {
+    OK       = 0;
+    NOTFOUND = 1;
+    INSUFFICIENTDATA   = 2;
+    NOTAPPLICABLE   = 3;
+    GENERALERROR   = 4;
+    SERVICEERROR  = 5;
+    FATALERROR  = 6;
+  }
+  Status status = 1;
+  repeated Attribute values = 2;
+}

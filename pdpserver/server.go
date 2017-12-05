@@ -21,6 +21,7 @@ import (
 	pbs "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pdp/ast"
 	"github.com/infobloxopen/themis/pdp/jcon"
+	ps "github.com/infobloxopen/themis/pip-service"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
@@ -52,8 +53,9 @@ type server struct {
 
 	q *queue
 
-	p *pdp.PolicyStorage
-	c *pdp.LocalContentStorage
+	p   *pdp.PolicyStorage
+	c   *pdp.LocalContentStorage
+	pcm *ps.ConnectionManager
 
 	softMemWarn *time.Time
 	backMemWarn *time.Time
@@ -86,6 +88,7 @@ func newServer() *server {
 		tracer:    tracer,
 		q:         newQueue(),
 		c:         pdp.NewLocalContentStorage(nil),
+		pcm:       ps.NewConnectionManager(),
 		gcMax:     gcp,
 		gcPercent: gcp,
 		logLevel:  log.GetLevel()}
