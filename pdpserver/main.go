@@ -4,22 +4,24 @@ import (
 	"runtime"
 
 	log "github.com/Sirupsen/logrus"
+
+	"github.com/infobloxopen/themis/pdpserver/server"
 )
 
 func main() {
 	logger := log.StandardLogger()
 	logger.Info("Starting PDP server.")
 
-	pdp := NewServer(
-		WithLogger(logger),
-		WithPolicyParser(conf.policyParser),
-		WithServiceAt(conf.serviceEP),
-		WithControlAt(conf.controlEP),
-		WithHealthAt(conf.healthEP),
-		WithProfilerAt(conf.profilerEP),
-		WithTracingAt(conf.tracingEP),
-		WithMemLimits(conf.mem),
-		WithMaxGRPCStreams(uint32(conf.maxStreams)),
+	pdp := server.NewServer(
+		server.WithLogger(logger),
+		server.WithPolicyParser(conf.policyParser),
+		server.WithServiceAt(conf.serviceEP),
+		server.WithControlAt(conf.controlEP),
+		server.WithHealthAt(conf.healthEP),
+		server.WithProfilerAt(conf.profilerEP),
+		server.WithTracingAt(conf.tracingEP),
+		server.WithMemLimits(conf.mem),
+		server.WithMaxGRPCStreams(uint32(conf.maxStreams)),
 	)
 
 	err := pdp.LoadPolicies(conf.policy)

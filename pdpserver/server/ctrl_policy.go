@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	pb "github.com/infobloxopen/themis/pdp-control"

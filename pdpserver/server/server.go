@@ -1,10 +1,11 @@
-package main
+package server
 
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-service && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/service.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-service && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-service"
 
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-control && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/control.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-control && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-control"
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -128,7 +129,6 @@ func NewServer(opts ...Option) *Server {
 	o := options{
 		logger:  log.StandardLogger(),
 		service: ":5555",
-		control: ":5554",
 	}
 
 	for _, opt := range opts {
@@ -220,6 +220,10 @@ func (s *Server) listenRequests() error {
 }
 
 func (s *Server) listenControl() error {
+	if len(s.opts.control) <= 0 {
+		return nil
+	}
+
 	s.opts.logger.WithField("address", s.opts.control).Info("Opening control port")
 	ln, err := net.Listen("tcp", s.opts.control)
 	if err != nil {
@@ -361,21 +365,27 @@ func (s *Server) Serve() error {
 			}
 		})
 	} else {
+		if s.control.iface == nil {
+			return fmt.Errorf("nothing to server - no policies provided and no control endpoint specified")
+		}
+
 		// serveRequests() will be executed by external request.
 		s.opts.logger.Info("Waiting for policies to be applied.")
 	}
 
-	s.opts.logger.Info("Creating control protocol handler")
-	s.control.proto = grpc.NewServer()
-	pbc.RegisterPDPControlServer(s.control.proto, s)
-	defer s.control.proto.Stop()
+	if s.control.iface != nil {
+		s.opts.logger.Info("Creating control protocol handler")
+		s.control.proto = grpc.NewServer()
+		pbc.RegisterPDPControlServer(s.control.proto, s)
+		defer s.control.proto.Stop()
 
-	go func() {
-		s.opts.logger.Info("Serving control requests")
-		if err := s.control.proto.Serve(s.control.iface); err != nil {
-			s.errCh <- err
-		}
-	}()
+		go func() {
+			s.opts.logger.Info("Serving control requests")
+			if err := s.control.proto.Serve(s.control.iface); err != nil {
+				s.errCh <- err
+			}
+		}()
+	}
 
 	return <-s.errCh
 }

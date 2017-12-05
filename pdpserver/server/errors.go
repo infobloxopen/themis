@@ -1,4 +1,4 @@
-package main
+package server
 
 /* AUTOMATICALLY GENERATED FROM errors.yaml - DO NOT EDIT */
 

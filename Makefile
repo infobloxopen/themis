@@ -31,7 +31,7 @@ clean:
 	@$(RM) $(BUILDPATH)
 
 .PHONY: fmt
-fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver fmt-plugin fmt-egen
+fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-plugin fmt-egen
 
 .PHONY: build
 build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-egen
@@ -40,7 +40,7 @@ build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-eg
 test: cover-out test-pdp test-pdp-yast test-pdp-jast test-pdp-jcon test-pep test-plugin
 
 .PHONY: bench
-bench: bench-pep bench-pdpserver
+bench: bench-pep bench-pdpserver-pkg
 
 .PHONY: cover-out
 cover-out:
@@ -101,6 +101,11 @@ fmt-pepcli-test:
 fmt-pepcli-perf:
 	@echo "Checking PEP CLI perf package format..."
 	@$(AT)/pepcli/perf && $(GOFMTCHECK)
+
+.PHONY: fmt-pdpserver-pkg
+fmt-pdpserver-pkg:
+	@echo "Checking PDP server package format..."
+	@$(AT)/pdpserver/server && $(GOFMTCHECK)
 
 .PHONY: fmt-pdpserver
 fmt-pdpserver:
@@ -169,6 +174,6 @@ test-plugin: cover-out
 bench-pep: build-pdpserver
 	$(AT)/pep && $(GOBENCHALL)
 
-.PHONY: bench-pdpserver
-bench-pdpserver:
-	$(AT)/pdpserver && $(GOBENCHALL)
+.PHONY: bench-pdpserver-pkg
+bench-pdpserver-pkg:
+	$(AT)/pdpserver/server && $(GOBENCHALL)

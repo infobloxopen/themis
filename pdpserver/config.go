@@ -8,6 +8,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/infobloxopen/themis/pdp/ast"
+	"github.com/infobloxopen/themis/pdpserver/server"
 )
 
 const (
@@ -29,7 +30,7 @@ type config struct {
 	tracingEP    string
 	healthEP     string
 	profilerEP   string
-	mem          MemLimits
+	mem          server.MemLimits
 	maxStreams   uint
 }
 
@@ -69,7 +70,7 @@ func init() {
 	}
 	conf.policyParser = p
 
-	mem, err := MakeMemLimits(*limit*1024*1024, 0.9, 0.7, 0.3, 0.3)
+	mem, err := server.MakeMemLimits(*limit*1024*1024, 0.9, 0.7, 0.3, 0.3)
 	if err != nil {
 		log.WithError(err).Panic("wrong memory limits")
 	}
