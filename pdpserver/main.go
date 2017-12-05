@@ -7,24 +7,40 @@ import (
 )
 
 func main() {
-	initLogging(conf.verbose)
-	log.Info("Starting PDP server.")
+	logger := log.StandardLogger()
+	logger.Info("Starting PDP server.")
 
-	pdp := newServer()
+	pdp := NewServer(
+		WithLogger(logger),
+		WithPolicyParser(conf.policyParser),
+		WithServiceAt(conf.serviceEP),
+		WithControlAt(conf.controlEP),
+		WithHealthAt(conf.healthEP),
+		WithProfilerAt(conf.profilerEP),
+		WithTracingAt(conf.tracingEP),
+		WithMemLimits(conf.mem),
+		WithMaxGRPCStreams(uint32(conf.maxStreams)),
+	)
 
-	if pdp == nil {
-		log.Fatal("Failed to create PDP server.")
+	err := pdp.LoadPolicies(conf.policy)
+	if err != nil {
+		logger.WithFields(
+			log.Fields{
+				"policy": conf.policy,
+				"err":    err,
+			},
+		).Error("Failed to load policy. Continue with no policy...")
 	}
 
-	if err := pdp.setPolicyFormat(conf.policyFmt); err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Fatal("Failed to initialize PDP server.")
+	err = pdp.LoadContent(conf.content)
+	if err != nil {
+		logger.WithField("err", err).Error("Failed to load content. Continue with no content...")
 	}
 
-	pdp.loadPolicies(conf.policy)
-	pdp.loadContent(conf.content)
 	runtime.GC()
 
-	pdp.serve()
+	err = pdp.Serve()
+	if err != nil {
+		logger.WithError(err).Error("Failed to run server")
+	}
 }

@@ -68,7 +68,7 @@ func (o obligation) String() string {
 	return strings.Join(lines, "\n")
 }
 
-func (s *server) newContext(c *pdp.LocalContentStorage, in *pb.Request) (*pdp.Context, error) {
+func (s *Server) newContext(c *pdp.LocalContentStorage, in *pb.Request) (*pdp.Context, error) {
 	ctx, err := pdp.NewContext(c, len(in.Attributes), func(i int) (string, pdp.AttributeValue, error) {
 		a := in.Attributes[i]
 
@@ -91,7 +91,7 @@ func (s *server) newContext(c *pdp.LocalContentStorage, in *pb.Request) (*pdp.Co
 	return ctx, nil
 }
 
-func (s *server) newAttributes(obligations []pdp.AttributeAssignmentExpression, ctx *pdp.Context) ([]*pb.Attribute, error) {
+func (s *Server) newAttributes(obligations []pdp.AttributeAssignmentExpression, ctx *pdp.Context) ([]*pb.Attribute, error) {
 	attrs := make([]*pb.Attribute, len(obligations))
 	for i, e := range obligations {
 		ID, t, s, err := e.Serialize(ctx)
@@ -108,7 +108,7 @@ func (s *server) newAttributes(obligations []pdp.AttributeAssignmentExpression, 
 	return attrs, nil
 }
 
-func (s *server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in *pb.Request) (pb.Response_Effect, []error, []*pb.Attribute) {
+func (s *Server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in *pb.Request) (pb.Response_Effect, []error, []*pb.Attribute) {
 	if p == nil {
 		return pb.Response_INDETERMINATE, []error{newMissingPolicyError()}, nil
 	}
@@ -118,8 +118,8 @@ func (s *server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, i
 		return pb.Response_INDETERMINATE, []error{err}, nil
 	}
 
-	if s.logLevel >= log.DebugLevel {
-		log.WithField("context", ctx).Debug("Request context")
+	if s.opts.logger.Level >= log.DebugLevel {
+		s.opts.logger.WithField("context", ctx).Debug("Request context")
 	}
 
 	errs := []error{}
@@ -150,7 +150,7 @@ func (s *server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, i
 	return re, errs, attrs
 }
 
-func (s *server) Validate(ctx context.Context, in *pb.Request) (*pb.Response, error) {
+func (s *Server) Validate(ctx context.Context, in *pb.Request) (*pb.Response, error) {
 	s.RLock()
 	p := s.p
 	c := s.c
@@ -165,8 +165,8 @@ func (s *server) Validate(ctx context.Context, in *pb.Request) (*pb.Response, er
 		status = errs[0].Error()
 	}
 
-	if s.logLevel >= log.DebugLevel {
-		log.WithFields(log.Fields{
+	if s.opts.logger.Level >= log.DebugLevel {
+		s.opts.logger.WithFields(log.Fields{
 			"effect":     pb.Response_Effect_name[int32(effect)],
 			"reason":     status,
 			"obligation": obligation(attrs),

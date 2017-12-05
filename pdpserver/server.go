@@ -6,13 +6,11 @@ package main
 
 import (
 	"io"
-	"math"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"runtime/debug"
-	"strings"
 	"sync"
 	"time"
 
@@ -28,22 +26,86 @@ import (
 	"google.golang.org/grpc"
 )
 
-const (
-	policyFormatJSON = "json"
-	policyFormatYAML = "yaml"
-)
-
 type transport struct {
 	iface net.Listener
 	proto *grpc.Server
 }
 
-type server struct {
+type Option func(*options)
+
+func WithLogger(logger *log.Logger) Option {
+	return func(o *options) {
+		o.logger = logger
+	}
+}
+
+func WithPolicyParser(parser ast.Parser) Option {
+	return func(o *options) {
+		o.parser = parser
+	}
+}
+
+func WithServiceAt(addr string) Option {
+	return func(o *options) {
+		o.service = addr
+	}
+}
+
+func WithControlAt(addr string) Option {
+	return func(o *options) {
+		o.control = addr
+	}
+}
+
+func WithHealthAt(addr string) Option {
+	return func(o *options) {
+		o.health = addr
+	}
+}
+
+func WithProfilerAt(addr string) Option {
+	return func(o *options) {
+		o.profiler = addr
+	}
+}
+
+func WithTracingAt(addr string) Option {
+	return func(o *options) {
+		o.tracing = addr
+	}
+}
+
+func WithMaxGRPCStreams(limit uint32) Option {
+	return func(o *options) {
+		o.streams = limit
+	}
+}
+
+func WithMemLimits(limits MemLimits) Option {
+	return func(o *options) {
+		o.memLimits = &limits
+	}
+}
+
+type options struct {
+	logger    *log.Logger
+	parser    ast.Parser
+	service   string
+	control   string
+	health    string
+	profiler  string
+	tracing   string
+	memLimits *MemLimits
+	streams   uint32
+}
+
+type Server struct {
 	sync.RWMutex
 
-	tracer ot.Tracer
+	opts options
 
 	startOnce sync.Once
+	errCh     chan error
 
 	requests transport
 	control  transport
@@ -60,18 +122,17 @@ type server struct {
 	fragMemWarn *time.Time
 	gcMax       int
 	gcPercent   int
-
-	astParser ast.Parser
-
-	logLevel log.Level
 }
 
-func newServer() *server {
+func NewServer(opts ...Option) *Server {
+	o := options{
+		logger:  log.StandardLogger(),
+		service: ":5555",
+		control: ":5554",
+	}
 
-	tracer, err := initTracing("zipkin", conf.tracingEP)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Warning("Cannot initialize tracing.")
-		tracer = nil
+	for _, opt := range opts {
+		opt(&o)
 	}
 
 	gcp := debug.SetGCPercent(-1)
@@ -82,44 +143,32 @@ func newServer() *server {
 		gcp = 50
 	}
 
-	return &server{
-		tracer:    tracer,
+	return &Server{
+		opts:      o,
+		errCh:     make(chan error, 100),
 		q:         newQueue(),
 		c:         pdp.NewLocalContentStorage(nil),
 		gcMax:     gcp,
 		gcPercent: gcp,
-		logLevel:  log.GetLevel()}
-}
-
-func (s *server) setPolicyFormat(format string) error {
-	switch strings.ToLower(format) {
-	case policyFormatJSON:
-		s.astParser = ast.NewJSONParser()
-		return nil
-	case policyFormatYAML:
-		s.astParser = ast.NewYAMLParser()
-		return nil
 	}
-
-	return newUnsupportedPolicyFromatError(format)
 }
 
-func (s *server) loadPolicies(path string) error {
+func (s *Server) LoadPolicies(path string) error {
 	if len(path) <= 0 {
 		return nil
 	}
 
-	log.WithField("policy", path).Info("Loading policy")
+	s.opts.logger.WithField("policy", path).Info("Loading policy")
 	pf, err := os.Open(path)
 	if err != nil {
-		log.WithFields(log.Fields{"policy": path, "error": err}).Error("Failed load policy")
+		s.opts.logger.WithFields(log.Fields{"policy": path, "error": err}).Error("Failed load policy")
 		return err
 	}
 
-	log.WithField("policy", path).Info("Parsing policy")
-	p, err := s.astParser.Unmarshal(pf, nil)
+	s.opts.logger.WithField("policy", path).Info("Parsing policy")
+	p, err := s.opts.parser.Unmarshal(pf, nil)
 	if err != nil {
-		log.WithFields(log.Fields{"policy": path, "error": err}).Error("Failed parse policy")
+		s.opts.logger.WithFields(log.Fields{"policy": path, "error": err}).Error("Failed parse policy")
 		return err
 	}
 
@@ -128,11 +177,11 @@ func (s *server) loadPolicies(path string) error {
 	return nil
 }
 
-func (s *server) loadContent(paths []string) error {
+func (s *Server) LoadContent(paths []string) error {
 	items := []*pdp.LocalContent{}
 	for _, path := range paths {
 		err := func() error {
-			log.WithField("content", path).Info("Opening content")
+			s.opts.logger.WithField("content", path).Info("Opening content")
 			f, err := os.Open(path)
 			if err != nil {
 				return err
@@ -140,7 +189,7 @@ func (s *server) loadContent(paths []string) error {
 
 			defer f.Close()
 
-			log.WithField("content", path).Info("Parsing content")
+			s.opts.logger.WithField("content", path).Info("Parsing content")
 			item, err := jcon.Unmarshal(f, nil)
 			if err != nil {
 				return err
@@ -150,7 +199,6 @@ func (s *server) loadContent(paths []string) error {
 			return nil
 		}()
 		if err != nil {
-			log.WithFields(log.Fields{"content": path, "error": err}).Error("Failed parse content")
 			return err
 		}
 	}
@@ -160,116 +208,174 @@ func (s *server) loadContent(paths []string) error {
 	return nil
 }
 
-func (s *server) listenRequests(addr string) {
-	log.WithField("address", addr).Info("Opening service port")
-	ln, err := net.Listen("tcp", addr)
+func (s *Server) listenRequests() error {
+	s.opts.logger.WithField("address", s.opts.service).Info("Opening service port")
+	ln, err := net.Listen("tcp", s.opts.service)
 	if err != nil {
-		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open service port")
+		return err
 	}
 
 	s.requests.iface = ln
+	return nil
 }
 
-func (s *server) listenControl(addr string) {
-	log.WithField("address", addr).Info("Opening control port")
-	ln, err := net.Listen("tcp", addr)
+func (s *Server) listenControl() error {
+	s.opts.logger.WithField("address", s.opts.control).Info("Opening control port")
+	ln, err := net.Listen("tcp", s.opts.control)
 	if err != nil {
-		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open control port")
+		return err
 	}
 
 	s.control.iface = ln
+	return nil
 }
 
-func (s *server) listenHealthCheck(addr string) {
-	if len(addr) <= 0 {
-		return
+func (s *Server) listenHealthCheck() error {
+	if len(s.opts.health) <= 0 {
+		return nil
 	}
 
-	log.WithField("address", addr).Info("Opening health check port")
-	ln, err := net.Listen("tcp", addr)
+	s.opts.logger.WithField("address", s.opts.health).Info("Opening health check port")
+	ln, err := net.Listen("tcp", s.opts.health)
 	if err != nil {
-		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open health check port")
+		return err
 	}
 
 	s.health.iface = ln
+	return nil
 }
 
-func (s *server) listenProfiler(addr string) {
-	if len(addr) <= 0 {
-		return
+func (s *Server) listenProfiler() error {
+	if len(s.opts.profiler) <= 0 {
+		return nil
 	}
 
-	log.WithField("address", addr).Info("Opening profiler port")
-	ln, err := net.Listen("tcp", addr)
+	s.opts.logger.WithField("address", s.opts.profiler).Info("Opening profiler port")
+	ln, err := net.Listen("tcp", s.opts.profiler)
 	if err != nil {
-		log.WithFields(log.Fields{"address": addr, "error": err}).Fatal("Failed to open profiler port")
+		return err
 	}
 
 	s.profiler = ln
+	return nil
 }
 
-func (s *server) serveRequests() {
-	s.listenRequests(conf.serviceEP)
-
-	log.Info("Creating service protocol handler")
+func (s *Server) configureRequests() []grpc.ServerOption {
 	opts := []grpc.ServerOption{}
-	if conf.maxStreams > 0 && conf.maxStreams <= math.MaxUint32 {
-		opts = append(opts, grpc.MaxConcurrentStreams(uint32(conf.maxStreams)))
+	if s.opts.streams > 0 {
+		opts = append(opts, grpc.MaxConcurrentStreams(s.opts.streams))
 	}
 
-	if s.tracer != nil {
-		onlyIfParent := func(parentSpanCtx ot.SpanContext, method string, req, resp interface{}) bool {
-			return parentSpanCtx != nil
+	if len(s.opts.tracing) > 0 {
+		tracer, err := initTracing("zipkin", s.opts.tracing)
+		if err != nil {
+			s.opts.logger.WithFields(log.Fields{"err": err}).Warning("Cannot initialize tracing.")
+		} else {
+			onlyIfParent := func(parentSpanCtx ot.SpanContext, method string, req, resp interface{}) bool {
+				return parentSpanCtx != nil
+			}
+			intercept := otgrpc.OpenTracingServerInterceptor(tracer, otgrpc.IncludingSpans(onlyIfParent))
+			opts = append(opts, grpc.UnaryInterceptor(intercept))
 		}
-		intercept := otgrpc.OpenTracingServerInterceptor(s.tracer, otgrpc.IncludingSpans(onlyIfParent))
-		opts = append(opts, grpc.UnaryInterceptor(intercept))
 	}
-	s.requests.proto = grpc.NewServer(opts...)
-	pbs.RegisterPDPServer(s.requests.proto, s)
 
-	log.Info("Serving decision requests")
+	return opts
+}
+
+func (s *Server) serveRequests() error {
+	err := s.listenRequests()
+	if err != nil {
+		return err
+	}
+
+	s.opts.logger.Info("Serving decision requests")
 	if err := s.requests.proto.Serve(s.requests.iface); err != nil {
-		log.WithField("error", err).Fatal("Failed to start decision service")
+		return err
+	}
+
+	return nil
+}
+
+func (s *Server) flushErrors() {
+	for len(s.errCh) > 0 {
+		select {
+		default:
+			return
+		case <-s.errCh:
+		}
 	}
 }
 
-func (s *server) serve() {
-	s.listenControl(conf.controlEP)
-	s.listenHealthCheck(conf.healthEP)
-	s.listenProfiler(conf.profilerEP)
+func (s *Server) Serve() error {
+	s.flushErrors()
+
+	if err := s.listenControl(); err != nil {
+		return err
+	}
+	if err := s.listenHealthCheck(); err != nil {
+		return err
+	}
+	if err := s.listenProfiler(); err != nil {
+		return err
+	}
 
 	if s.health.iface != nil {
 		healthMux := http.NewServeMux()
 		healthMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-			log.Info("Health check responding with OK")
+			s.opts.logger.Info("Health check responding with OK")
 			io.WriteString(w, "OK")
 		})
+
+		healthServer := &http.Server{Handler: healthMux}
+		defer healthServer.Close()
+
 		go func() {
-			http.Serve(s.health.iface, healthMux)
+			if err := healthServer.Serve(s.health.iface); err != nil && err != http.ErrServerClosed {
+				s.errCh <- err
+			}
 		}()
 	}
 
 	if s.profiler != nil {
+		profilerServer := &http.Server{}
+		defer profilerServer.Close()
+
 		go func() {
-			http.Serve(s.profiler, nil)
+			if err := profilerServer.Serve(s.profiler); err != nil && err != http.ErrServerClosed {
+				s.errCh <- err
+			}
 		}()
 	}
 
-	if len(conf.policy) != 0 || len(conf.content) != 0 {
+	s.opts.logger.Info("Creating service protocol handler")
+	s.requests.proto = grpc.NewServer(s.configureRequests()...)
+	pbs.RegisterPDPServer(s.requests.proto, s)
+	defer s.requests.proto.Stop()
+
+	if s.p != nil {
 		// We already have policy info applied; supplied from local files,
 		// pointed to by CLI options.
-		go s.startOnce.Do(s.serveRequests)
+		go s.startOnce.Do(func() {
+			if err := s.serveRequests(); err != nil {
+				s.errCh <- err
+			}
+		})
 	} else {
 		// serveRequests() will be executed by external request.
-		log.Info("Waiting for policies to be applied.")
+		s.opts.logger.Info("Waiting for policies to be applied.")
 	}
 
-	log.Info("Creating control protocol handler")
+	s.opts.logger.Info("Creating control protocol handler")
 	s.control.proto = grpc.NewServer()
 	pbc.RegisterPDPControlServer(s.control.proto, s)
+	defer s.control.proto.Stop()
 
-	log.Info("Serving control requests")
-	if err := s.control.proto.Serve(s.control.iface); err != nil {
-		log.WithField("error", err).Fatal("Failed to start control service")
-	}
+	go func() {
+		s.opts.logger.Info("Serving control requests")
+		if err := s.control.proto.Serve(s.control.iface); err != nil {
+			s.errCh <- err
+		}
+	}()
+
+	return <-s.errCh
 }

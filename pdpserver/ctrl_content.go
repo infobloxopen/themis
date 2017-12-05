@@ -8,7 +8,7 @@ import (
 	"github.com/infobloxopen/themis/pdp/jcon"
 )
 
-func (s *server) contentRequest(id string, fromTag, toTag *uuid.UUID) (int32, error) {
+func (s *Server) contentRequest(id string, fromTag, toTag *uuid.UUID) (int32, error) {
 	if fromTag != nil {
 		s.RLock()
 		c := s.c
@@ -23,7 +23,7 @@ func (s *server) contentRequest(id string, fromTag, toTag *uuid.UUID) (int32, er
 	return s.q.push(newContentItem(id, fromTag, toTag))
 }
 
-func (s *server) uploadContent(id int32, r *streamReader, req *item, stream pb.PDPControl_UploadServer) error {
+func (s *Server) uploadContent(id int32, r *streamReader, req *item, stream pb.PDPControl_UploadServer) error {
 	c, err := jcon.Unmarshal(r, req.toTag)
 	if err != nil {
 		r.skip()
@@ -39,7 +39,7 @@ func (s *server) uploadContent(id int32, r *streamReader, req *item, stream pb.P
 	return stream.SendAndClose(&pb.Response{Status: pb.Response_ACK, Id: nid})
 }
 
-func (s *server) uploadContentUpdate(id int32, r *streamReader, req *item, stream pb.PDPControl_UploadServer) error {
+func (s *Server) uploadContentUpdate(id int32, r *streamReader, req *item, stream pb.PDPControl_UploadServer) error {
 	s.RLock()
 	t, err := s.c.NewTransaction(req.id, req.fromTag)
 	if err != nil {
@@ -55,7 +55,7 @@ func (s *server) uploadContentUpdate(id int32, r *streamReader, req *item, strea
 		return stream.SendAndClose(controlFail(newContentUpdateParseError(id, req, err)))
 	}
 
-	log.WithField("update", u).Debug("Content update")
+	s.opts.logger.WithField("update", u).Debug("Content update")
 
 	err = t.Apply(u)
 	if err != nil {
@@ -71,16 +71,16 @@ func (s *server) uploadContentUpdate(id int32, r *streamReader, req *item, strea
 	return stream.SendAndClose(&pb.Response{Status: pb.Response_ACK, Id: nid})
 }
 
-func (s *server) applyContent(id int32, req *item) (*pb.Response, error) {
+func (s *Server) applyContent(id int32, req *item) (*pb.Response, error) {
 	if req.c != nil {
 		s.Lock()
 		s.c = s.c.Add(req.c)
 		s.Unlock()
 
 		if req.toTag == nil {
-			log.WithField("id", id).Info("New content has been applied")
+			s.opts.logger.WithField("id", id).Info("New content has been applied")
 		} else {
-			log.WithFields(log.Fields{
+			s.opts.logger.WithFields(log.Fields{
 				"id":  id,
 				"tag": req.toTag.String()}).Info("New content has been applied")
 		}
@@ -100,7 +100,7 @@ func (s *server) applyContent(id int32, req *item) (*pb.Response, error) {
 		s.c = c
 		s.Unlock()
 
-		log.WithFields(log.Fields{
+		s.opts.logger.WithFields(log.Fields{
 			"id":       id,
 			"cid":      req.id,
 			"prev-tag": req.fromTag,

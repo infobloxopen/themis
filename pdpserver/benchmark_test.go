@@ -654,10 +654,10 @@ func init() {
 }
 
 func benchmarkPolicySet(p *pdp.PolicyStorage, b *testing.B) {
-	s := &server{
-		p: p,
-		c: benchmarkContentStorage,
-	}
+	s := NewServer()
+	s.p = p
+	s.c = benchmarkContentStorage
+
 	for n := 0; n < b.N; n++ {
 		r, err := s.Validate(nil, benchmarkRequests[n%len(benchmarkRequests)])
 		if err != nil {

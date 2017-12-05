@@ -14,13 +14,15 @@ type streamReader struct {
 	chunk  []byte
 	offset int
 	eof    bool
+	logger *log.Logger
 }
 
-func newStreamReader(id int32, head string, stream pb.PDPControl_UploadServer) *streamReader {
+func newStreamReader(id int32, head string, stream pb.PDPControl_UploadServer, logger *log.Logger) *streamReader {
 	return &streamReader{
 		id:     id,
 		stream: stream,
-		chunk:  []byte(head)}
+		chunk:  []byte(head),
+		logger: logger}
 }
 
 func (r *streamReader) skip() error {
@@ -36,7 +38,7 @@ func (r *streamReader) skip() error {
 		}
 
 		if err != nil {
-			log.WithFields(log.Fields{
+			r.logger.WithFields(log.Fields{
 				"id":    r.id,
 				"error": err}).Error("failed to read data stream")
 			return err
@@ -74,7 +76,7 @@ func (r *streamReader) Read(p []byte) (n int, err error) {
 		}
 
 		if err != nil {
-			log.WithFields(log.Fields{
+			r.logger.WithFields(log.Fields{
 				"id":    r.id,
 				"error": err}).Error("failed to read data stream")
 			return offset, err
