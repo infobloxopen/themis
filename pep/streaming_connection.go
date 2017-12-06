@@ -487,7 +487,7 @@ func (c *streamConn) retryWorker(retry chan boundStream) {
 		if !ok {
 			c.putStream(s)
 			pool.flush()
-			c.crp.put(c)
+			go c.crp.put(c)
 			continue
 		}
 
