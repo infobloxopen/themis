@@ -6,39 +6,20 @@ import (
 
 	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
-	"github.com/infobloxopen/themis/pdp/selector/local"
 )
 
-func (ctx context) unmarshalAdjustedArguments(val pdp.Expression, attr pdp.Expression, d *json.Decoder) (pdp.Expression, pdp.Expression, error) {
+func (ctx context) unmarshalTargetCompatibleArgument(d *json.Decoder) (pdp.Expression, int, error) {
 	e, err := ctx.unmarshalExpression(d)
 	if err != nil {
-		return nil, nil, err
+		return nil, 0, err
 	}
 
-	switch a := e.(type) {
-	case pdp.AttributeValue:
-		if val != nil {
-			return nil, nil, newMatchFunctionBothValuesError()
-		}
-
-		return a, attr, nil
-
-	case local.LocalSelector:
-		if val != nil {
-			return nil, nil, newMatchFunctionBothValuesError()
-		}
-
-		return a, attr, nil
-
-	case pdp.AttributeDesignator:
-		if attr != nil {
-			return nil, nil, newMatchFunctionBothAttrsError()
-		}
-
-		return val, a, nil
+	TCAID, ok := pdp.CheckExpressionAsTargetArgument(e)
+	if !ok {
+		return nil, 0, newInvalidMatchFunctionArgError(e)
 	}
 
-	return nil, nil, newInvalidMatchFunctionArgError(e)
+	return e, TCAID, nil
 }
 
 func (ctx context) unmarshalAdjustedArgumentPair(d *json.Decoder) (pdp.Expression, pdp.Expression, error) {
@@ -47,25 +28,21 @@ func (ctx context) unmarshalAdjustedArgumentPair(d *json.Decoder) (pdp.Expressio
 	}
 
 	var (
-		first, second pdp.Expression
-		numArgs       int
+		args    [2]pdp.Expression
+		TCAIDs  [2]int
+		numArgs int
 	)
 
 	if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
 		var err error
 
-		switch idx {
-		case 1:
-			numArgs++
-			first, second, err = ctx.unmarshalAdjustedArguments(nil, nil, d)
-			return err
-		case 2:
-			numArgs++
-			first, second, err = ctx.unmarshalAdjustedArguments(first, second, d)
-			return err
+		if numArgs >= len(args) {
+			return newMatchFunctionArgsNumberError(numArgs)
 		}
 
-		return nil
+		args[numArgs], TCAIDs[numArgs], err = ctx.unmarshalTargetCompatibleArgument(d)
+		numArgs++
+		return err
 	}, "function arguments"); err != nil {
 		return nil, nil, err
 	}
@@ -74,7 +51,17 @@ func (ctx context) unmarshalAdjustedArgumentPair(d *json.Decoder) (pdp.Expressio
 		return nil, nil, newMatchFunctionArgsNumberError(numArgs)
 	}
 
-	return first, second, nil
+	if TCAIDs[0] == pdp.TargetCompatibleArgumentAttributeValue &&
+		TCAIDs[1] == pdp.TargetCompatibleArgumentAttributeValue {
+		return nil, nil, newMatchFunctionBothValuesError()
+	}
+
+	if TCAIDs[0] == pdp.TargetCompatibleArgumentAttributeDesignator &&
+		TCAIDs[1] == pdp.TargetCompatibleArgumentAttributeDesignator {
+		return nil, nil, newMatchFunctionBothAttrsError()
+	}
+
+	return args[0], args[1], nil
 }
 
 func (ctx context) unmarshalTargetMatchExpression(id string, d *json.Decoder) (pdp.Expression, error) {

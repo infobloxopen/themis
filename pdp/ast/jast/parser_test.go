@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/infobloxopen/themis/pdp"
-
 	"github.com/google/uuid"
+
+	"github.com/infobloxopen/themis/pdp"
 )
 
 const (
@@ -253,17 +253,9 @@ const (
                 "attr": "strAttr"
               },
               {
-                "selector": {
-                  "uri": "local:content/content-item",
+                "val": {
                   "type": "string",
-                  "path": [
-                    {
-                      "attr": "netAttr"
-                    },
-                    {
-                      "attr": "domAttr"
-                    }
-                  ]
+                  "content": "string"
                 }
               }
             ]
@@ -286,21 +278,13 @@ const (
               {
                 "equal": [
                   {
-                    "attr": "strAttr"
+                    "val": {
+                      "type": "string",
+                      "content": "string"
+                    }
                   },
                   {
-                    "selector": {
-                      "uri": "local:content/content-item",
-                      "type": "string",
-                      "path": [
-                        {
-                          "attr": "netAttr"
-                        },
-                        {
-                          "attr": "domAttr"
-                        }
-                      ]
-                    }
+                    "attr": "strAttr"
                   }
                 ]
               }

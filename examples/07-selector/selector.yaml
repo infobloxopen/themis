@@ -7,8 +7,8 @@ attributes:
 policies:
   alg: FirstApplicableEffect
   rules:
-  - target:
-    - contains:
+  - condition:
+      contains:
       - selector:
           uri: "local:content/domain-addresses"
           path:
@@ -21,8 +21,8 @@ policies:
     effect: Permit
     obligations:
     - s: Good
-  - target:
-    - contains:
+  - condition:
+      contains:
       - selector:
           uri: "local:content/domain-addresses"
           path:

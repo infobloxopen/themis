@@ -159,6 +159,32 @@ func combineEffectAndStatus(err boundError, r Response) Response {
 	return Response{EffectIndeterminateDP, err, nil}
 }
 
+// TargetCompatibleArgument* identify expressions which supported as
+// arguments of target compatible exporessions.
+const (
+	// TargetCompatibleArgumentAttributeValue stands for AttributeValue
+	// expression.
+	TargetCompatibleArgumentAttributeValue = iota
+	// TargetCompatibleArgumentAttributeDesignator is AttributeDesignator
+	// expression.
+	TargetCompatibleArgumentAttributeDesignator
+)
+
+// CheckExpressionAsTargetArgument checks if given expression can be used
+// as target argument. It returns expression kind and flag if the check
+// is passed.
+func CheckExpressionAsTargetArgument(e Expression) (int, bool) {
+	switch e.(type) {
+	case AttributeValue:
+		return TargetCompatibleArgumentAttributeValue, true
+
+	case AttributeDesignator:
+		return TargetCompatibleArgumentAttributeDesignator, true
+	}
+
+	return 0, false
+}
+
 type twoArgumentsFunctionType func(first, second Expression) Expression
 
 // TargetCompatibleExpressions maps name of expression and types of its

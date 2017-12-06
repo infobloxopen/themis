@@ -155,12 +155,9 @@ policies:
       - attr: addrAttr
     - equal:
       - attr: strAttr
-      - selector:
-         uri: "local:content/content-item"
-         type: "string"
-         path:
-         - attr: netAttr
-         - attr: domAttr
+      - val:
+         type: string
+         content: string
     - all:
       - contains:
         - val:
@@ -168,13 +165,10 @@ policies:
             content: 192.0.2.0/24
         - attr: addrAttr
       - equal:
+        - val:
+           type: string
+           content: string
         - attr: strAttr
-        - selector:
-           uri: "local:content/content-item"
-           type: "string"
-           path:
-           - attr: netAttr
-           - attr: domAttr
   policies:
   - id: Permit
     alg: DenyOverrides
