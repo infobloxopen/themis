@@ -60,27 +60,26 @@ func (s *policyDnstapSender) SendCRExtraMsg(pw *ProxyWriter, ah *attrHolder) {
 		log.Printf("[ERROR] Failed to create dnstap CR message - no DNS response message found")
 		return
 	}
-	go func(now time.Time) {
-		b := pw.TapBuilder()
-		b.TimeSec = uint64(now.Unix())
-		timeNs := uint32(now.Nanosecond())
-		err := b.AddrMsg(pw.RemoteAddr(), pw.msg)
-		if err != nil {
-			log.Printf("[ERROR] Failed to create dnstap CR message (%v)", err)
-			return
-		}
-		crMsg := b.ToClientResponse()
-		crMsg.ResponseTimeNsec = &timeNs
-		t := tap.Dnstap_MESSAGE
+	now := time.Now()
+	b := pw.TapBuilder()
+	b.TimeSec = uint64(now.Unix())
+	timeNs := uint32(now.Nanosecond())
+	err := b.AddrMsg(pw.RemoteAddr(), pw.msg)
+	if err != nil {
+		log.Printf("[ERROR] Failed to create dnstap CR message (%v)", err)
+		return
+	}
+	crMsg := b.ToClientResponse()
+	crMsg.ResponseTimeNsec = &timeNs
+	t := tap.Dnstap_MESSAGE
 
-		var extra []byte
-		if ah != nil {
-			extra, err = proto.Marshal(&pb.Extra{Attrs: ah.convertAttrs()})
-			if err != nil {
-				log.Printf("[ERROR] Failed to create extra data for dnstap CR message (%v)", err)
-			}
+	var extra []byte
+	if ah != nil {
+		extra, err = proto.Marshal(&pb.Extra{Attrs: ah.convertAttrs()})
+		if err != nil {
+			log.Printf("[ERROR] Failed to create extra data for dnstap CR message (%v)", err)
 		}
-		dnstapMsg := tap.Dnstap{Type: &t, Message: crMsg, Extra: extra}
-		s.ior.Dnstap(dnstapMsg)
-	}(time.Now())
+	}
+	dnstapMsg := tap.Dnstap{Type: &t, Message: crMsg, Extra: extra}
+	s.ior.Dnstap(dnstapMsg)
 }
