@@ -2,21 +2,16 @@ package pep
 
 import (
 	"fmt"
-	"os"
-	"strings"
 	"sync"
 	"testing"
 )
 
 func TestStreamingClientValidation(t *testing.T) {
-	tmpYAST, pdp := startTestPDPServer(allPermitPolicy, "127.0.0.1:5555", "127.0.0.1:5554", t)
+	pdp := startTestPDPServer(allPermitPolicy, 5555, t)
 	defer func() {
-		_, errDump, _ := pdp.kill()
-		if t.Failed() && len(errDump) > 0 {
-			t.Logf("PDP server dump:\n%s", strings.Join(errDump, "\n"))
+		if logs := pdp.Stop(); len(logs) > 0 {
+			t.Logf("server logs:\n%s", logs)
 		}
-
-		os.Remove(tmpYAST)
 	}()
 
 	c := NewClient(WithStreams(1))
@@ -43,31 +38,25 @@ func TestStreamingClientValidation(t *testing.T) {
 }
 
 func TestStreamingClientValidationWithRoundRobingBalancer(t *testing.T) {
-	firstTmpYAST, firstPDP := startTestPDPServer(allPermitPolicy, "127.0.0.1:5515", "127.0.0.1:5514", t)
+	firstPDP := startTestPDPServer(allPermitPolicy, 5555, t)
 	defer func() {
-		_, errDump, _ := firstPDP.kill()
-		if t.Failed() && len(errDump) > 0 {
-			t.Logf("first PDP server dump:\n%s", strings.Join(errDump, "\n"))
+		if logs := firstPDP.Stop(); len(logs) > 0 {
+			t.Logf("primary server logs:\n%s", logs)
 		}
-
-		os.Remove(firstTmpYAST)
 	}()
 
-	secondTmpYAST, secondPDP := startTestPDPServer(allPermitPolicy, "127.0.0.1:5525", "127.0.0.1:5524", t)
+	secondPDP := startTestPDPServer(allPermitPolicy, 5556, t)
 	defer func() {
-		_, errDump, _ := secondPDP.kill()
-		if t.Failed() && len(errDump) > 0 {
-			t.Logf("second PDP server dump:\n%s", strings.Join(errDump, "\n"))
+		if logs := secondPDP.Stop(); len(logs) > 0 {
+			t.Logf("secondary server logs:\n%s", logs)
 		}
-
-		os.Remove(secondTmpYAST)
 	}()
 
 	c := NewClient(
 		WithStreams(2),
 		WithRoundRobinBalancer(
-			"127.0.0.1:5515",
-			"127.0.0.1:5525",
+			"127.0.0.1:5555",
+			"127.0.0.1:5556",
 		))
 	err := c.Connect("")
 	if err != nil {
@@ -92,31 +81,25 @@ func TestStreamingClientValidationWithRoundRobingBalancer(t *testing.T) {
 }
 
 func TestStreamingClientValidationWithHotSpotBalancer(t *testing.T) {
-	firstTmpYAST, firstPDP := startTestPDPServer(allPermitPolicy, "127.0.0.1:5515", "127.0.0.1:5514", t)
+	firstPDP := startTestPDPServer(allPermitPolicy, 5555, t)
 	defer func() {
-		_, errDump, _ := firstPDP.kill()
-		if t.Failed() && len(errDump) > 0 {
-			t.Logf("first PDP server dump:\n%s", strings.Join(errDump, "\n"))
+		if logs := firstPDP.Stop(); len(logs) > 0 {
+			t.Logf("primary server logs:\n%s", logs)
 		}
-
-		os.Remove(firstTmpYAST)
 	}()
 
-	secondTmpYAST, secondPDP := startTestPDPServer(allPermitPolicy, "127.0.0.1:5525", "127.0.0.1:5524", t)
+	secondPDP := startTestPDPServer(allPermitPolicy, 5556, t)
 	defer func() {
-		_, errDump, _ := secondPDP.kill()
-		if t.Failed() && len(errDump) > 0 {
-			t.Logf("second PDP server dump:\n%s", strings.Join(errDump, "\n"))
+		if logs := secondPDP.Stop(); len(logs) > 0 {
+			t.Logf("secondary server logs:\n%s", logs)
 		}
-
-		os.Remove(secondTmpYAST)
 	}()
 
 	c := NewClient(
 		WithStreams(2),
 		WithHotSpotBalancer(
-			"127.0.0.1:5515",
-			"127.0.0.1:5525",
+			"127.0.0.1:5555",
+			"127.0.0.1:5556",
 		))
 	err := c.Connect("")
 	if err != nil {

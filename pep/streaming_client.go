@@ -65,9 +65,9 @@ func (c *streamingClient) Connect(addr string) error {
 		addrs = []string{addr}
 	}
 
-	c.conns = makeStreamConns(addrs, c.opts.maxStreams, c.opts.tracer)
-	c.crp = newConnRetryPool(c.conns)
-	startConnRetryWorkers(c.conns, c.crp)
+	conns, crp := makeStreamConns(addrs, c.opts.maxStreams, c.opts.tracer)
+	c.conns = conns
+	c.crp = crp
 
 	exitState = scsConnected
 	return nil

@@ -2,21 +2,36 @@ package main
 
 import (
 	"flag"
+	"math"
 	"strings"
+
+	log "github.com/Sirupsen/logrus"
+
+	"github.com/infobloxopen/themis/pdp/ast"
+	"github.com/infobloxopen/themis/pdpserver/server"
 )
 
+const (
+	policyFormatNameYAML = "yaml"
+	policyFormatNameJSON = "json"
+)
+
+var policyParsers = map[string]ast.Parser{
+	policyFormatNameYAML: ast.NewYAMLParser(),
+	policyFormatNameJSON: ast.NewJSONParser(),
+}
+
 type config struct {
-	verbose    int
-	policy     string
-	policyFmt  string
-	content    stringSet
-	serviceEP  string
-	controlEP  string
-	tracingEP  string
-	healthEP   string
-	profilerEP string
-	mem        memCheckConfig
-	maxStreams uint
+	policy       string
+	policyParser ast.Parser
+	content      stringSet
+	serviceEP    string
+	controlEP    string
+	tracingEP    string
+	healthEP     string
+	profilerEP   string
+	mem          server.MemLimits
+	maxStreams   uint
 }
 
 type stringSet []string
@@ -33,23 +48,38 @@ func (s *stringSet) Set(v string) error {
 var conf config
 
 func init() {
-	flag.IntVar(&conf.verbose, "v", 1, "log verbosity (0 - error, 1 - warn (default), 2 - info, 3 - debug)")
+	verbose := flag.Int("v", 1, "log verbosity (0 - error, 1 - warn (default), 2 - info, 3 - debug)")
 	flag.StringVar(&conf.policy, "p", "", "policy file to start with")
-	flag.StringVar(&conf.policyFmt, "pfmt", "YAML", "policy data format (YAML or JSON) ")
+	policyFmt := flag.String("pfmt", policyFormatNameYAML, "policy data format \"yaml\" or \"json\"")
 	flag.Var(&conf.content, "j", "JSON content files to start with")
-	flag.StringVar(&conf.serviceEP, "l", "0.0.0.0:5555", "listen for decision requests on this address:port")
-	flag.StringVar(&conf.controlEP, "c", "0.0.0.0:5554", "listen for policies on this address:port")
+	flag.StringVar(&conf.serviceEP, "l", ":5555", "listen for decision requests on this address:port")
+	flag.StringVar(&conf.controlEP, "c", ":5554", "listen for policies on this address:port")
 	flag.StringVar(&conf.tracingEP, "t", "", "OpenZipkin tracing endpoint")
 	flag.StringVar(&conf.healthEP, "health", "", "health check endpoint")
 	flag.StringVar(&conf.profilerEP, "pprof", "", "performance profiler endpoint")
-	flag.Uint64Var(&conf.mem.limit, "mem-limit", 0, "memory limit in megabytes")
+	limit := flag.Uint64("mem-limit", 0, "memory limit in megabytes")
 	flag.UintVar(&conf.maxStreams, "max-streams", 0, "maximum number of parallel gRPC streams (0 - use gRPC default)")
 
 	flag.Parse()
 
-	conf.mem.limit *= 1024 * 1024
-	conf.mem.reset = 0.9 * float64(conf.mem.limit)
-	conf.mem.soft = 0.7 * float64(conf.mem.limit)
-	conf.mem.frag = 0.3
-	conf.mem.back = 0.3
+	initLogging(*verbose)
+
+	p, ok := policyParsers[strings.ToLower(*policyFmt)]
+	if !ok {
+		log.WithField("format", *policyFmt).Fatal("unknow policy format")
+	}
+	conf.policyParser = p
+
+	mem, err := server.MakeMemLimits(*limit*1024*1024, 0.9, 0.7, 0.3, 0.3)
+	if err != nil {
+		log.WithError(err).Panic("wrong memory limits")
+	}
+	conf.mem = mem
+
+	if conf.maxStreams > math.MaxUint32 {
+		log.WithFields(log.Fields{
+			"max-streams": conf.maxStreams,
+			"limit":       math.MaxUint32,
+		}).Fatal("too big maximum number of parallel gRPC streams")
+	}
 }

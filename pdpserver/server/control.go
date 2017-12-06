@@ -1,10 +1,9 @@
-package main
+package server
 
 import (
 	"io"
 	"runtime/debug"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/google/uuid"
 	"golang.org/x/net/context"
 
@@ -52,8 +51,8 @@ func newTag(s string) (*uuid.UUID, error) {
 	return &t, nil
 }
 
-func (s *server) Request(ctx context.Context, in *pb.Item) (*pb.Response, error) {
-	log.Info("Got new control request")
+func (s *Server) Request(ctx context.Context, in *pb.Item) (*pb.Response, error) {
+	s.opts.logger.Info("Got new control request")
 
 	fromTag, err := newTag(in.FromTag)
 	if err != nil {
@@ -88,7 +87,7 @@ func (s *server) Request(ctx context.Context, in *pb.Item) (*pb.Response, error)
 	return &pb.Response{Status: pb.Response_ACK, Id: id}, nil
 }
 
-func (s *server) getHead(stream pb.PDPControl_UploadServer) (int32, *streamReader, error) {
+func (s *Server) getHead(stream pb.PDPControl_UploadServer) (int32, *streamReader, error) {
 	chunk, err := stream.Recv()
 	if err == io.EOF {
 		return 0, nil, stream.SendAndClose(controlFail(newEmptyUploadError()))
@@ -98,11 +97,11 @@ func (s *server) getHead(stream pb.PDPControl_UploadServer) (int32, *streamReade
 		return 0, nil, err
 	}
 
-	return chunk.Id, newStreamReader(chunk.Id, chunk.Data, stream), nil
+	return chunk.Id, newStreamReader(chunk.Id, chunk.Data, stream, s.opts.logger), nil
 }
 
-func (s *server) Upload(stream pb.PDPControl_UploadServer) error {
-	log.Info("Got new data stream")
+func (s *Server) Upload(stream pb.PDPControl_UploadServer) error {
+	s.opts.logger.Info("Got new data stream")
 
 	id, r, err := s.getHead(stream)
 	if r == nil {
@@ -111,7 +110,7 @@ func (s *server) Upload(stream pb.PDPControl_UploadServer) error {
 
 	req, ok := s.q.pop(id)
 	if !ok {
-		log.WithField("id", id).Error("no such request")
+		s.opts.logger.WithField("id", id).Error("no such request")
 		err := r.skip()
 		if err != nil {
 			return err
@@ -135,17 +134,17 @@ func (s *server) Upload(stream pb.PDPControl_UploadServer) error {
 	}
 
 	debug.FreeOSMemory()
-	s.checkMemory(&conf.mem)
+	s.checkMemory(s.opts.memLimits)
 
 	return err
 }
 
-func (s *server) Apply(ctx context.Context, in *pb.Update) (*pb.Response, error) {
-	log.Info("Got apply command")
+func (s *Server) Apply(ctx context.Context, in *pb.Update) (*pb.Response, error) {
+	s.opts.logger.Info("Got apply command")
 
 	req, ok := s.q.pop(in.Id)
 	if !ok {
-		log.WithField("id", in.Id).Error("no such request")
+		s.opts.logger.WithField("id", in.Id).Error("no such request")
 		return controlFail(newUnknownUploadedRequestError(in.Id)), nil
 	}
 
@@ -160,15 +159,17 @@ func (s *server) Apply(ctx context.Context, in *pb.Update) (*pb.Response, error)
 	}
 
 	debug.FreeOSMemory()
-	s.checkMemory(&conf.mem)
+	s.checkMemory(s.opts.memLimits)
 
 	return res, err
 }
 
-func (s *server) NotifyReady(ctx context.Context, m *pb.Empty) (*pb.Response, error) {
-	log.Info("Got notified about readiness")
+func (s *Server) NotifyReady(ctx context.Context, m *pb.Empty) (*pb.Response, error) {
+	s.opts.logger.Info("Got notified about readiness")
 
-	go s.startOnce.Do(s.serveRequests)
+	go s.startOnce.Do(func() {
+		s.errCh <- s.serveRequests()
+	})
 
 	return &pb.Response{Status: pb.Response_ACK}, nil
 }

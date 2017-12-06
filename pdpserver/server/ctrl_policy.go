@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	pb "github.com/infobloxopen/themis/pdp-control"
@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (s *server) policyRequest(fromTag, toTag *uuid.UUID) (int32, error) {
+func (s *Server) policyRequest(fromTag, toTag *uuid.UUID) (int32, error) {
 	if fromTag != nil {
 		s.RLock()
 		p := s.p
@@ -22,8 +22,8 @@ func (s *server) policyRequest(fromTag, toTag *uuid.UUID) (int32, error) {
 	return s.q.push(newPolicyItem(fromTag, toTag))
 }
 
-func (s *server) uploadPolicy(id int32, r *streamReader, req *item, stream pb.PDPControl_UploadServer) error {
-	p, err := s.astParser.Unmarshal(r, req.toTag)
+func (s *Server) uploadPolicy(id int32, r *streamReader, req *item, stream pb.PDPControl_UploadServer) error {
+	p, err := s.opts.parser.Unmarshal(r, req.toTag)
 	if err != nil {
 		return stream.SendAndClose(controlFail(newPolicyUploadParseError(id, err)))
 	}
@@ -37,7 +37,7 @@ func (s *server) uploadPolicy(id int32, r *streamReader, req *item, stream pb.PD
 	return stream.SendAndClose(&pb.Response{Status: pb.Response_ACK, Id: nid})
 }
 
-func (s *server) uploadPolicyUpdate(id int32, r *streamReader, req *item, stream pb.PDPControl_UploadServer) error {
+func (s *Server) uploadPolicyUpdate(id int32, r *streamReader, req *item, stream pb.PDPControl_UploadServer) error {
 	s.RLock()
 	if s.p == nil {
 		s.RUnlock()
@@ -53,7 +53,7 @@ func (s *server) uploadPolicyUpdate(id int32, r *streamReader, req *item, stream
 	}
 	s.RUnlock()
 
-	u, err := s.astParser.UnmarshalUpdate(r, t.Attributes(), *req.fromTag, *req.toTag)
+	u, err := s.opts.parser.UnmarshalUpdate(r, t.Attributes(), *req.fromTag, *req.toTag)
 	if err != nil {
 		return stream.SendAndClose(controlFail(newPolicyUpdateParseError(id, req, err)))
 	}
@@ -74,7 +74,7 @@ func (s *server) uploadPolicyUpdate(id int32, r *streamReader, req *item, stream
 	return stream.SendAndClose(&pb.Response{Status: pb.Response_ACK, Id: nid})
 }
 
-func (s *server) applyPolicy(id int32, req *item) (*pb.Response, error) {
+func (s *Server) applyPolicy(id int32, req *item) (*pb.Response, error) {
 	if req.p != nil {
 		s.Lock()
 		s.p = req.p

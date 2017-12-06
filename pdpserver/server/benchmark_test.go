@@ -1,10 +1,12 @@
-package main
+package server
 
 import (
 	"fmt"
 	"math/rand"
 	"strings"
 	"testing"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
@@ -604,7 +606,7 @@ var (
 )
 
 func init() {
-	initLogging(0)
+	log.SetLevel(log.ErrorLevel)
 
 	c, err := jcon.Unmarshal(strings.NewReader(benchmarkContent), nil)
 	if err != nil {
@@ -654,10 +656,10 @@ func init() {
 }
 
 func benchmarkPolicySet(p *pdp.PolicyStorage, b *testing.B) {
-	s := &server{
-		p: p,
-		c: benchmarkContentStorage,
-	}
+	s := NewServer()
+	s.p = p
+	s.c = benchmarkContentStorage
+
 	for n := 0; n < b.N; n++ {
 		r, err := s.Validate(nil, benchmarkRequests[n%len(benchmarkRequests)])
 		if err != nil {

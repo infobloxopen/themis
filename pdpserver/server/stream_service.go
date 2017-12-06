@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"io"
@@ -12,11 +12,11 @@ import (
 
 var streamAutoIncrement uint64
 
-func (s *server) NewValidationStream(stream pb.PDP_NewValidationStreamServer) error {
+func (s *Server) NewValidationStream(stream pb.PDP_NewValidationStreamServer) error {
 	ctx := stream.Context()
 
 	sID := atomic.AddUint64(&streamAutoIncrement, 1)
-	log.WithField("id", sID).Info("Got new stream")
+	s.opts.logger.WithField("id", sID).Info("Got new stream")
 
 	for {
 		in, err := stream.Recv()
@@ -29,7 +29,7 @@ func (s *server) NewValidationStream(stream pb.PDP_NewValidationStreamServer) er
 				break
 			}
 
-			log.WithFields(log.Fields{
+			s.opts.logger.WithFields(log.Fields{
 				"id":  sID,
 				"err": err,
 			}).Error("Failed to read next request from stream. Dropping stream...")
@@ -39,7 +39,7 @@ func (s *server) NewValidationStream(stream pb.PDP_NewValidationStreamServer) er
 
 		out, err := s.Validate(context.Background(), in)
 		if err != nil {
-			log.WithFields(log.Fields{
+			s.opts.logger.WithFields(log.Fields{
 				"id":  sID,
 				"err": err,
 			}).Panic("Failed to validate request")
@@ -47,7 +47,7 @@ func (s *server) NewValidationStream(stream pb.PDP_NewValidationStreamServer) er
 
 		err = stream.Send(out)
 		if err != nil {
-			log.WithFields(log.Fields{
+			s.opts.logger.WithFields(log.Fields{
 				"id":  sID,
 				"err": err,
 			}).Error("Failed to send response. Dropping stream...")
@@ -56,6 +56,6 @@ func (s *server) NewValidationStream(stream pb.PDP_NewValidationStreamServer) er
 		}
 	}
 
-	log.WithField("id", sID).Info("Stream depleted")
+	s.opts.logger.WithField("id", sID).Info("Stream depleted")
 	return nil
 }

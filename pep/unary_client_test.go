@@ -1,11 +1,11 @@
 package pep
 
 import (
-	"go/build"
-	"os"
-	"path/filepath"
+	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/infobloxopen/themis/pdpserver/server"
 )
 
 const allPermitPolicy = `# Policy for client tests
@@ -21,14 +21,11 @@ policies:
 `
 
 func TestUnaryClientValidation(t *testing.T) {
-	tmpYAST, pdp := startTestPDPServer(allPermitPolicy, "127.0.0.1:5555", "127.0.0.1:5554", t)
+	pdp := startTestPDPServer(allPermitPolicy, 5555, t)
 	defer func() {
-		_, errDump, _ := pdp.kill()
-		if t.Failed() && len(errDump) > 0 {
-			t.Logf("PDP server dump:\n%s", strings.Join(errDump, "\n"))
+		if logs := pdp.Stop(); len(logs) > 0 {
+			t.Logf("server logs:\n%s", logs)
 		}
-
-		os.Remove(tmpYAST)
 	}()
 
 	c := NewClient()
@@ -54,28 +51,32 @@ func TestUnaryClientValidation(t *testing.T) {
 	}
 }
 
-func startTestPDPServer(p, s, c string, t *testing.T) (string, *proc) {
-	tmpYAST, err := makeTempFile(p, "policy")
-	if err != nil {
-		t.Fatalf("can't create policy file: %s", err)
+func startTestPDPServer(p string, s uint16, t *testing.T) *loggedServer {
+	service := fmt.Sprintf(":%d", s)
+	primary := newServer(
+		server.WithServiceAt(service),
+	)
+	addr := "127.0.0.1" + service
+
+	if err := primary.s.ReadPolicies(strings.NewReader(p)); err != nil {
+		t.Fatalf("can't read policies: %s", err)
 	}
 
-	binPath := filepath.Join(build.Default.GOPATH, "/src/github.com/infobloxopen/themis/build/pdpserver")
-	pdp, err := newProc(binPath, "-l", s, "-c", c, "-p", tmpYAST, "-v", "3")
-	if err != nil {
-		os.Remove(tmpYAST)
-		t.Fatalf("can't start PDP server: %s", err)
+	if err := waitForPortClosed(addr); err != nil {
+		t.Fatalf("port still in use: %s", err)
 	}
-
-	err = waitForPortOpened(s)
-	if err != nil {
-		_, errDump, _ := pdp.kill()
-		if len(errDump) > 0 {
-			t.Logf("%s PDP server dump:\n%s", s, strings.Join(errDump, "\n"))
+	go func() {
+		if err := primary.s.Serve(); err != nil {
+			t.Fatalf("server failed: %s", err)
 		}
-		os.Remove(tmpYAST)
+	}()
+
+	if err := waitForPortOpened(addr); err != nil {
+		if logs := primary.Stop(); len(logs) > 0 {
+			t.Logf("server logs:\n%s", logs)
+		}
+
 		t.Fatalf("can't connect to PDP server: %s", err)
 	}
-
-	return tmpYAST, pdp
+	return primary
 }
