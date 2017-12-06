@@ -418,6 +418,19 @@ const (
                               }
                             }
                           ]
+                        },
+                        {
+                          "regex-match": [
+                            {
+                              "val": {
+                                "type": "string",
+                                "content": "string-.*-pattern"
+                              }
+                            },
+                            {
+                              "attr": "strAttr"
+                            }
+                          ]
                         }
                       ]
                     }

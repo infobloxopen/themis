@@ -225,6 +225,11 @@ policies:
                 path:
                 - attr: netAttr
                 - attr: domAttr
+           - regex-match:
+             - val:
+                 type: string
+                 content: "string-.*-pattern"
+             - attr: strAttr
       effect: Permit
   - id: Nested Mappers Policy Set
     alg:
