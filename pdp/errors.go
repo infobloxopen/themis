@@ -81,6 +81,7 @@ const (
 	invalidContentDomainMapErrorID            = 68
 	invalidContentValueErrorID                = 69
 	invalidContentValueTypeErrorID            = 70
+	invalidWildcardPatternID                  = 71
 )
 
 type externalError struct {
@@ -1256,4 +1257,19 @@ func newInvalidContentValueTypeError(value interface{}, expected int) *invalidCo
 
 func (e *invalidContentValueTypeError) Error() string {
 	return e.errorf("Expected value of type %s but got %T", TypeNames[e.expected], e.value)
+}
+
+type invalidWildcardPattern struct {
+	errorLink
+	pattern string
+}
+
+func newInvalidWildcardPattern(pattern string) *invalidWildcardPattern {
+	return &invalidWildcardPattern{
+		errorLink: errorLink{id: invalidWildcardPatternID},
+		pattern:   pattern}
+}
+
+func (e *invalidWildcardPattern) Error() string {
+	return e.errorf("Invalid wildcard pattern %q", e.pattern)
 }

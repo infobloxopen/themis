@@ -431,6 +431,19 @@ const (
                               "attr": "strAttr"
                             }
                           ]
+                        },
+                        {
+                          "wildcard-match": [
+                            {
+                              "val": {
+                                "type": "string",
+                                "content": "string-*-pattern"
+                              }
+                            },
+                            {
+                              "attr": "strAttr"
+                            }
+                          ]
                         }
                       ]
                     }

@@ -230,6 +230,11 @@ policies:
                  type: string
                  content: "string-.*-pattern"
              - attr: strAttr
+           - wildcard-match:
+             - val:
+                 type: string
+                 content: "string-*-pattern"
+             - attr: strAttr
       effect: Permit
   - id: Nested Mappers Policy Set
     alg:
