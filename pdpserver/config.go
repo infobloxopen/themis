@@ -70,7 +70,7 @@ func init() {
 	}
 	conf.policyParser = p
 
-	mem, err := server.MakeMemLimits(*limit*1024*1024, 0.9, 0.7, 0.3, 0.3)
+	mem, err := server.MakeMemLimits(*limit*1024*1024, 90, 70, 30, 30)
 	if err != nil {
 		log.WithError(err).Panic("wrong memory limits")
 	}
