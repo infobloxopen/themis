@@ -4,6 +4,8 @@ attributes:
 requests:
 # Permitted request
 - x: test
+  z: pattern-test-match
 
 # Not applicable request
 - x: example
+  z: example-doesn't-match

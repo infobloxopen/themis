@@ -1,6 +1,7 @@
 # Policy with all its fields
 attributes:
   x: string
+  z: string
   a: address
 
 policies:
@@ -14,5 +15,11 @@ policies:
   alg: FirstApplicableEffect
   rules:
   - effect: Permit
+    condition:
+      regex-match:
+      - val:
+          type: string
+          content: "pattern-.*-match"
+      - attr: z
   obligations:
   - a: "192.0.2.1"
