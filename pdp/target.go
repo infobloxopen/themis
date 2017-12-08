@@ -205,4 +205,23 @@ var TargetCompatibleExpressions = map[string]map[int]map[int]twoArgumentsFunctio
 		TypeSetOfNetworks: {
 			TypeAddress: makeFunctionSetOfNetworksContainsAddress},
 		TypeSetOfDomains: {
-			TypeDomain: makeFunctionSetOfDomainsContains}}}
+			TypeDomain: makeFunctionSetOfDomainsContains}},
+	"wildcard-match": {
+		TypeString: {
+			TypeString: makeFunctionStringWildcardMatch}},
+	functionStringWildcardAnyMatchName: {
+		TypeString: {
+			TypeSetOfStrings:  makeFunctionStringWildcardMatchAny,
+			TypeListOfStrings: makeFunctionStringWildcardMatchAny},
+		TypeSetOfStrings: {
+			TypeString: makeFunctionStringWildcardAnyMatch},
+		TypeListOfStrings: {
+			TypeString: makeFunctionStringWildcardAnyMatch}},
+	functionStringWildcardAllMatchName: {
+		TypeString: {
+			TypeSetOfStrings:  makeFunctionStringWildcardMatchAll,
+			TypeListOfStrings: makeFunctionStringWildcardMatchAll},
+		TypeSetOfStrings: {
+			TypeString: makeFunctionStringWildcardAllMatch},
+		TypeListOfStrings: {
+			TypeString: makeFunctionStringWildcardAllMatch}}}

@@ -169,6 +169,37 @@ policies:
            type: string
            content: string
         - attr: strAttr
+      - wildcard-match:
+        - val:
+            type: string
+            content: "string-*-pattern"
+        - attr: strAttr
+      - wildcard-any-match:
+        - val:
+            type: set of strings
+            content:
+            - "prefix-*"
+            - "*-infix-*"
+            - "*-postfix"
+        - attr: strAttr
+      - wildcard-any-match:
+        - val:
+            type: string
+            content: "string-*-pattern"
+        - attr: lsAttr
+      - wildcard-all-match:
+        - val:
+            type: set of strings
+            content:
+            - "prefix-*"
+            - "*-infix-*"
+            - "*-postfix"
+        - attr: strAttr
+      - wildcard-all-match:
+        - val:
+            type: string
+            content: "string-*-pattern"
+        - attr: lsAttr
   policies:
   - id: Permit
     alg: DenyOverrides
@@ -261,6 +292,32 @@ policies:
                  type: string
                  content: "string-*-pattern"
              - attr: strAttr
+           - wildcard-any-match:
+             - val:
+                 type: set of strings
+                 content:
+                 - "prefix-*"
+                 - "*-infix-*"
+                 - "*-postfix"
+             - attr: strAttr
+           - wildcard-any-match:
+             - val:
+                 type: string
+                 content: "string-*-pattern"
+             - attr: lsAttr
+           - wildcard-all-match:
+             - val:
+                 type: set of strings
+                 content:
+                 - "prefix-*"
+                 - "*-infix-*"
+                 - "*-postfix"
+             - attr: strAttr
+           - wildcard-all-match:
+             - val:
+                 type: string
+                 content: "string-*-pattern"
+             - attr: lsAttr
       effect: Permit
   - id: Nested Mappers Policy Set
     alg:
