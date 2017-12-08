@@ -23,8 +23,10 @@ var FunctionArgumentValidators = map[string][]functionArgumentValidator{
 		functionSetOfStringsContainsValidator,
 		functionSetOfNetworksContainsAddressValidator,
 		functionSetOfDomainsContainsValidator},
-	"regex-match":    {functionStringRegexMatchValidator},
-	"wildcard-match": {functionStringWildcardMatchValidator},
-	"not":            {functionBooleanNotValidator},
-	"or":             {functionBooleanOrValidator},
-	"and":            {functionBooleanAndValidator}}
+	"regex-match":                   {functionStringRegexMatchValidator},
+	functionStringRegexAnyMatchName: {functionStringRegexAnyMatchValidator},
+	functionStringRegexAllMatchName: {functionStringRegexAllMatchValidator},
+	"wildcard-match":                {functionStringWildcardMatchValidator},
+	"not":                           {functionBooleanNotValidator},
+	"or":                            {functionBooleanOrValidator},
+	"and":                           {functionBooleanAndValidator}}

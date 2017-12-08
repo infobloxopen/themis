@@ -670,6 +670,20 @@ errors:
   - expr: TypeNames[e.expected]
   - field: value
 
+- id: invalidContainerArgType
+  fields:
+  - id: t
+    type: int
+  - id: firstExpected
+    type: int
+  - id: secondExpected
+    type: int
+  msg: "Expected %q or %q but got %q"
+  args:
+  - expr: TypeNames[e.firstExpected]
+  - expr: TypeNames[e.secondExpected]
+  - expr: TypeNames[e.t]
+
 - id: invalidWildcardPattern
   fields:
   - id: pattern

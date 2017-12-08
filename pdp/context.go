@@ -246,6 +246,15 @@ func (c *Context) calculateSetOfDomainsExpression(e Expression) (*domaintree.Nod
 	return v.setOfDomains()
 }
 
+func (c *Context) calculateListOfStringsExpression(e Expression) ([]string, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return v.listOfStrings()
+}
+
 // Response represent result of policies evaluation.
 type Response struct {
 	// Effect is resulting effect.

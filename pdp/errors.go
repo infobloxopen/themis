@@ -81,7 +81,8 @@ const (
 	invalidContentDomainMapErrorID            = 68
 	invalidContentValueErrorID                = 69
 	invalidContentValueTypeErrorID            = 70
-	invalidWildcardPatternID                  = 71
+	invalidContainerArgTypeID                 = 71
+	invalidWildcardPatternID                  = 72
 )
 
 type externalError struct {
@@ -1257,6 +1258,25 @@ func newInvalidContentValueTypeError(value interface{}, expected int) *invalidCo
 
 func (e *invalidContentValueTypeError) Error() string {
 	return e.errorf("Expected value of type %s but got %T", TypeNames[e.expected], e.value)
+}
+
+type invalidContainerArgType struct {
+	errorLink
+	t              int
+	firstExpected  int
+	secondExpected int
+}
+
+func newInvalidContainerArgType(t, firstExpected, secondExpected int) *invalidContainerArgType {
+	return &invalidContainerArgType{
+		errorLink:      errorLink{id: invalidContainerArgTypeID},
+		t:              t,
+		firstExpected:  firstExpected,
+		secondExpected: secondExpected}
+}
+
+func (e *invalidContainerArgType) Error() string {
+	return e.errorf("Expected %q or %q but got %q", TypeNames[e.firstExpected], TypeNames[e.secondExpected], TypeNames[e.t])
 }
 
 type invalidWildcardPattern struct {

@@ -433,6 +433,66 @@ const (
                           ]
                         },
                         {
+                          "regex-any-match": [
+                            {
+                              "val": {
+                                "type": "set of strings",
+                                "content": [
+                                  "prefix-.*",
+                                  ".*-infix-.*",
+                                  ".*-postfix"
+                                ]
+                              }
+                            },
+                            {
+                              "attr": "strAttr"
+                            }
+                          ]
+                        },
+                        {
+                          "regex-any-match": [
+                            {
+                              "val": {
+                                "type": "string",
+                                "content": "string-.*-pattern"
+                              }
+                            },
+                            {
+                              "attr": "lsAttr"
+                            }
+                          ]
+                        },
+                        {
+                          "regex-all-match": [
+                            {
+                              "val": {
+                                "type": "set of strings",
+                                "content": [
+                                  "prefix-.*",
+                                  ".*-infix-.*",
+                                  ".*-postfix"
+                                ]
+                              }
+                            },
+                            {
+                              "attr": "strAttr"
+                            }
+                          ]
+                        },
+                        {
+                          "regex-all-match": [
+                            {
+                              "val": {
+                                "type": "string",
+                                "content": "string-.*-pattern"
+                              }
+                            },
+                            {
+                              "attr": "lsAttr"
+                            }
+                          ]
+                        },
+                        {
                           "wildcard-match": [
                             {
                               "val": {
