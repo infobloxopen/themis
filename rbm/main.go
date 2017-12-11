@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -25,8 +26,16 @@ func main() {
 		server.WithLogger(logger),
 	)
 
+	r := ""
+	for i := 1; i < rules; i++ {
+		r += fmt.Sprintf(rule, i)
+	}
+
+	p := fmt.Sprintf(policy, r)
+	//log.Printf("Policy to load:\n%s", p)
+
 	log.Print("Loading policy...")
-	if err := s.ReadPolicies(strings.NewReader(regexPrefixPolicy)); err != nil {
+	if err := s.ReadPolicies(strings.NewReader(p)); err != nil {
 		log.Fatalf("Failed to load policy: %s", err)
 	}
 
@@ -36,7 +45,7 @@ func main() {
 			{
 				Id:    "x",
 				Type:  "string",
-				Value: "prefix-match-test",
+				Value: value,
 			},
 		},
 	}
