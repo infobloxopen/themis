@@ -1,7 +1,6 @@
 package yast
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/infobloxopen/themis/pdp"
@@ -37,8 +36,5 @@ func makeLocalSelector(ctx context, loc []string, m map[interface{}]interface{})
 		return pdp.LocalSelector{}, bindErrorf(newInvalidTypeError(t), "selector(%s.%s)", loc[0], loc[1])
 	}
 
-	res := pdp.MakeLocalSelector(loc[0], loc[1], path, t)
-
-	fmt.Printf("Res is %v\n", res)
-	return res, nil
+	return pdp.MakeLocalSelector(loc[0], loc[1], path, t), nil
 }

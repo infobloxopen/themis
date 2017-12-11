@@ -18,12 +18,12 @@ type PIPSelector struct {
 	t         int
 }
 
-func MakePIPSelector(service, queryType string, path []Expression, t int) (PIPSelector, error) {
+func MakePIPSelector(service, queryType string, path []Expression, t int) PIPSelector {
 	return PIPSelector{
 		service:   service,
 		queryType: queryType,
 		path:      path,
-		t:         t}, nil
+		t:         t}
 }
 
 func (s PIPSelector) GetResultType() int {

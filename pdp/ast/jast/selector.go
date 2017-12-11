@@ -9,7 +9,7 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 )
 
-func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.LocalSelector, error) {
+func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.Expression, error) {
 	if err := jparser.CheckObjectStart(d, "selector"); err != nil {
 		return pdp.LocalSelector{}, err
 	}
@@ -68,7 +68,8 @@ func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.LocalSelector, error)
 		return pdp.LocalSelector{}, newSelectorURIError(uri, err)
 	}
 
-	if strings.ToLower(id.Scheme) == "local" {
+	scheme := strings.ToLower(id.Scheme)
+	if scheme == "local" {
 		loc := strings.Split(id.Opaque, "/")
 		if len(loc) != 2 {
 			return pdp.LocalSelector{}, newSelectorLocationError(id.Opaque, uri)
@@ -84,6 +85,22 @@ func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.LocalSelector, error)
 		}
 
 		return pdp.MakeLocalSelector(loc[0], loc[1], path, t), nil
+	} else if strings.ToLower(id.Scheme) == "pip" {
+		loc := strings.Split(id.Opaque, "/")
+		if len(loc) != 2 {
+			return pdp.PIPSelector{}, newSelectorLocationError(id.Opaque, uri)
+		}
+
+		t, ok := pdp.TypeIDs[strings.ToLower(st)]
+		if !ok {
+			return pdp.PIPSelector{}, bindErrorf(newUnknownTypeError(uri), "selector(%s.%s)", loc[0], loc[1])
+		}
+
+		if t == pdp.TypeUndefined {
+			return pdp.PIPSelector{}, bindErrorf(newInvalidTypeError(t), "selector(%s.%s)", loc[0], loc[1])
+		}
+
+		return pdp.MakePIPSelector(loc[0], loc[1], path, t), nil
 	}
 
 	return pdp.LocalSelector{}, newUnsupportedSelectorSchemeError(id.Scheme, uri)
