@@ -58,21 +58,28 @@ func main() {
 
 			start := time.Now()
 			res, err := s.Validate(context.Background(), req)
-			end := time.Now()
-
-			if err != nil {
-				log.Fatalf("Failed to validate request: %s", err)
-			}
-
 			timings[i] = timing{
-				s: start,
-				r: end,
-				e: checkResponse(res),
+				s:   start,
+				r:   time.Now(),
+				e:   err,
+				res: res,
 			}
 		}(i)
 	}
 
 	wg.Wait()
+
+	log.Printf("Checking responses...")
+	for i, t := range timings {
+		if t.e == nil {
+			err := checkResponse(t.res)
+			if err != nil {
+				log.Printf("Message %d: %s", i, err)
+			}
+
+			timings[i].e = err
+		}
+	}
 
 	log.Printf("Dumping timings to %q...", output)
 	dump(timings, output)

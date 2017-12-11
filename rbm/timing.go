@@ -1,11 +1,17 @@
 package main
 
-import "time"
+import (
+	"time"
+
+	pb "github.com/infobloxopen/themis/pdp-service"
+)
 
 type timing struct {
 	s time.Time
 	r time.Time
 	e error
+
+	res *pb.Response
 }
 
 func (t *timing) setSend() {
