@@ -4,6 +4,7 @@ const (
 	policyBody = iota
 	policyRule
 	attrValue
+	attrTypeIdx
 )
 
 var policies = map[string]map[string][]string{
@@ -12,16 +13,19 @@ var policies = map[string]map[string][]string{
 			regexPrefixPolicy,
 			regexPrefixRule,
 			prefixValue,
+			strType,
 		},
 		"infix": {
 			regexInfixPolicy,
 			regexInfixRule,
 			infixValue,
+			strType,
 		},
 		"postfix": {
 			regexPostfixPolicy,
 			regexPostfixRule,
 			postfixValue,
+			strType,
 		},
 	},
 	"wildcard": {
@@ -29,16 +33,27 @@ var policies = map[string]map[string][]string{
 			wcPrefixPolicy,
 			wcPrefixRule,
 			prefixValue,
+			strType,
 		},
 		"infix": {
 			wcInfixPolicy,
 			wcInfixRule,
 			infixValue,
+			strType,
 		},
 		"postfix": {
 			wcPostfixPolicy,
 			wcPostfixRule,
 			postfixValue,
+			strType,
+		},
+	},
+	"mapper": {
+		"postfix": {
+			mapPostfixPolicy,
+			mapPostfixRule,
+			mapPostfixValue,
+			mapType,
 		},
 	},
 }
@@ -75,6 +90,8 @@ policies:
     - c: "rule-not-match"`
 
 	prefixValue = "prefix-match-test"
+
+	strType = "string"
 
 	regexInfixPolicy = `# Regex infix policy
 attributes:
@@ -229,4 +246,49 @@ policies:
     effect: Permit
     obligations:
     - c: "rule-not-match"`
+
+	mapPostfixPolicy = `# Mapper postfix policy
+attributes:
+  x: domain
+  c: string
+
+policies:
+  alg:
+    id: mapper
+    map:
+      selector:
+        uri: "local:content/map"
+        path:
+        - attr: x
+        type: string
+  rules:%s
+  - id: postfix-match
+    effect: Permit
+    obligations:
+    - c: "rule-match"
+`
+
+	mapPostfixRule = `
+  - id: "postfix-%d-not-match"
+    effect: Permit
+    obligations:
+    - c: "rule-not-match"`
+
+	mapPostfixValue = "test.example.com"
+
+	mapPostfixContent = `{
+	"id": "content",
+	"items": {
+		"map": {
+			"keys": ["domain"],
+			"type": "string",
+			"data": {
+				"example.com": "postfix-match"
+			}
+		}
+	}
+}
+`
+
+	mapType = "domain"
 )

@@ -39,12 +39,17 @@ func main() {
 		log.Fatalf("Failed to load policy: %s", err)
 	}
 
+	log.Printf("Loading content...")
+	if err := s.ReadContent(strings.NewReader(mapPostfixContent)); err != nil {
+		log.Fatalf("Failed to load content: %s", err)
+	}
+
 	log.Print("Preparing data...")
 	req := &pb.Request{
 		Attributes: []*pb.Attribute{
 			{
 				Id:    "x",
-				Type:  "string",
+				Type:  attrType,
 				Value: value,
 			},
 		},

@@ -14,9 +14,10 @@ var (
 	threshold int
 	output    string
 
-	policy string
-	rule   string
-	value  string
+	policy   string
+	rule     string
+	value    string
+	attrType string
 )
 
 func init() {
@@ -42,4 +43,5 @@ func init() {
 	policy = p[policyBody]
 	rule = p[policyRule]
 	value = p[attrValue]
+	attrType = p[attrTypeIdx]
 }
