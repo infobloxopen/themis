@@ -6,7 +6,7 @@ import (
 
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
-	"github.com/infobloxopen/go-trees/strtree"
+	"github.com/infobloxopen/go-trees/strtrie"
 	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
 )
@@ -24,7 +24,7 @@ func newTypedMap(c *contentItem, keyIdx int) (mapUnmarshaller, error) {
 	case pdp.TypeString:
 		return &stringMap{
 			contentItemLink: contentItemLink{c: c, i: keyIdx},
-			m:               strtree.NewTree()}, nil
+			m:               strtrie.NewPrefixTrie()}, nil
 	case pdp.TypeAddress, pdp.TypeNetwork:
 		return &networkMap{
 			contentItemLink: contentItemLink{c: c, i: keyIdx},
@@ -45,7 +45,7 @@ type contentItemLink struct {
 
 type stringMap struct {
 	contentItemLink
-	m *strtree.Tree
+	m *strtrie.PrefixTrie
 }
 
 func (m *stringMap) get() interface{} {
@@ -58,7 +58,7 @@ func (m *stringMap) unmarshal(k string, d *json.Decoder) error {
 		return bindError(err, k)
 	}
 
-	m.m.InplaceInsert(k, v)
+	m.m = m.m.Insert(k, v)
 
 	return nil
 }
@@ -69,7 +69,7 @@ func (m *stringMap) postProcess(p jparser.Pair) error {
 		return bindError(err, p.K)
 	}
 
-	m.m.InplaceInsert(p.K, v)
+	m.m = m.m.Insert(p.K, v)
 
 	return nil
 }

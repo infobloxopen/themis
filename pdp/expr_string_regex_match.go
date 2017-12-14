@@ -32,7 +32,7 @@ func (f functionStringRegexMatch) describe() string {
 	return "regex-match"
 }
 
-func (f functionStringRegexMatch) calculate(ctx *Context) (AttributeValue, error) {
+func (f functionStringRegexMatch) Calculate(ctx *Context) (AttributeValue, error) {
 	pattern, err := ctx.calculateStringExpression(f.pattern)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "pattern"), f.describe())

@@ -35,7 +35,7 @@ func (f functionStringRegexAnyMatch) describe() string {
 	return functionStringRegexAnyMatchName
 }
 
-func (f functionStringRegexAnyMatch) calculate(ctx *Context) (AttributeValue, error) {
+func (f functionStringRegexAnyMatch) Calculate(ctx *Context) (AttributeValue, error) {
 	pType := f.patterns.GetResultType()
 	switch pType {
 	case TypeSetOfStrings:
@@ -125,7 +125,7 @@ func (f functionStringRegexMatchAny) describe() string {
 	return functionStringRegexAnyMatchName
 }
 
-func (f functionStringRegexMatchAny) calculate(ctx *Context) (AttributeValue, error) {
+func (f functionStringRegexMatchAny) Calculate(ctx *Context) (AttributeValue, error) {
 	pattern, err := ctx.calculateStringExpression(f.pattern)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "pattern"), f.describe())

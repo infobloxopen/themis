@@ -691,3 +691,9 @@ errors:
   msg: "Invalid wildcard pattern %q"
   args:
   - field: pattern
+
+- id: contentStringMapPutNotImplementedError
+  msg: "Method \"put\" hasn't been implemented yet for string content map" 
+
+- id: contentStringMapDelNotImplementedError
+  msg: "Method \"del\" hasn't been implemented yet for string content map" 

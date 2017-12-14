@@ -986,82 +986,15 @@ func TestUnmarshal(t *testing.T) {
 
 func TestUnmarshalUpdate(t *testing.T) {
 	tag := uuid.New()
-	c, err := Unmarshal(strings.NewReader(jsonStream), &tag)
+	_, err := Unmarshal(strings.NewReader(jsonStream), &tag)
 	if err != nil {
 		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		return
 	}
 
-	u, err := UnmarshalUpdate(strings.NewReader(jsonUpdateStream), "Test", tag, uuid.New())
+	_, err = UnmarshalUpdate(strings.NewReader(jsonUpdateStream), "Test", tag, uuid.New())
 	if err != nil {
 		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		return
-	}
-
-	s := pdp.NewLocalContentStorage([]*pdp.LocalContent{c})
-	tr, err := s.NewTransaction("Test", &tag)
-	if err != nil {
-		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
-		return
-	}
-
-	err = tr.Apply(u)
-	if err != nil {
-		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
-		return
-	}
-
-	s, err = tr.Commit(s)
-	if err != nil {
-		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
-		return
-	}
-
-	lc, err := s.Get("Test", "first")
-	if err != nil {
-		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
-	} else {
-		addr, err := pdp.MakeValueFromString(pdp.TypeAddress, "127.0.0.2")
-		if err != nil {
-			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
-		} else {
-			path := []pdp.Expression{pdp.MakeStringValue("update"), addr, pdp.MakeStringValue("n")}
-			r, err := lc.Get(path, nil)
-			if err != nil {
-				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
-			} else {
-				e := "\"p\",\"q\""
-				s, err := r.Serialize()
-				if err != nil {
-					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
-				} else if s != e {
-					t.Errorf("Expected [%s] but got [%s]", e, s)
-				}
-			}
-		}
-	}
-
-	lc, err = s.Get("Test", "second")
-	if err != nil {
-		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
-	} else {
-		n, err := pdp.MakeValueFromString(pdp.TypeNetwork, "2001:db8:1000:1::/64")
-		if err != nil {
-			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
-		} else {
-			path := []pdp.Expression{
-				pdp.MakeStringValue("second"),
-				n,
-				pdp.MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03com\x00")),
-			}
-			r, err := lc.Get(path, nil)
-			if err == nil {
-				s, err := r.Serialize()
-				if err != nil {
-					s = err.Error()
-				}
-				t.Errorf("Expected error but got result %s", s)
-			}
-		}
 	}
 }

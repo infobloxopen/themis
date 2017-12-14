@@ -32,7 +32,7 @@ func (f functionStringWildcardAllMatch) describe() string {
 	return functionStringWildcardAllMatchName
 }
 
-func (f functionStringWildcardAllMatch) calculate(ctx *Context) (AttributeValue, error) {
+func (f functionStringWildcardAllMatch) Calculate(ctx *Context) (AttributeValue, error) {
 	pType := f.patterns.GetResultType()
 	switch pType {
 	case TypeSetOfStrings:
@@ -122,7 +122,7 @@ func (f functionStringWildcardMatchAll) describe() string {
 	return functionStringWildcardAllMatchName
 }
 
-func (f functionStringWildcardMatchAll) calculate(ctx *Context) (AttributeValue, error) {
+func (f functionStringWildcardMatchAll) Calculate(ctx *Context) (AttributeValue, error) {
 	pattern, err := ctx.calculateStringExpression(f.pattern)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "pattern"), f.describe())

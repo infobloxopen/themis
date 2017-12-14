@@ -34,7 +34,7 @@ func (f functionStringWildcardMatch) describe() string {
 	return "wildcard-match"
 }
 
-func (f functionStringWildcardMatch) calculate(ctx *Context) (AttributeValue, error) {
+func (f functionStringWildcardMatch) Calculate(ctx *Context) (AttributeValue, error) {
 	pattern, err := ctx.calculateStringExpression(f.pattern)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "pattern"), f.describe())

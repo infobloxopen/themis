@@ -1,32 +1,31 @@
 package pdp
 
 import (
-	"fmt"
 	"net"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
-	"github.com/infobloxopen/go-trees/strtree"
+	"github.com/infobloxopen/go-trees/strtrie"
 )
 
 func TestLocalContentStorage(t *testing.T) {
 	tag := uuid.New()
 
-	sTree := strtree.NewTree()
+	sTree := strtrie.NewPrefixTrie()
 	sm := MakeContentStringMap(sTree)
 	ssmc := MakeContentMappingItem("str-str-map", TypeString, []int{TypeString, TypeString}, sm)
 
-	sTree = strtree.NewTree()
-	sTree.InplaceInsert("1-first", "first")
-	sTree.InplaceInsert("2-second", "second")
-	sTree.InplaceInsert("3-third", "third")
+	sTree = strtrie.NewPrefixTrie()
+	sTree = sTree.Insert("1-first", "first")
+	sTree = sTree.Insert("2-second", "second")
+	sTree = sTree.Insert("3-third", "third")
 
 	sm = MakeContentStringMap(sTree)
 	ksm := MakeContentMappingItem("key-str-map", TypeString, []int{TypeString}, sm)
 
-	sTree = strtree.NewTree()
+	sTree = strtrie.NewPrefixTrie()
 	sm = MakeContentStringMap(sTree)
 	snmc := MakeContentMappingItem("str-net-map", TypeString, []int{TypeString, TypeNetwork}, sm)
 
@@ -50,7 +49,7 @@ func TestLocalContentStorage(t *testing.T) {
 	nm := MakeContentNetworkMap(nTree)
 	knm := MakeContentMappingItem("key-net-map", TypeString, []int{TypeNetwork}, nm)
 
-	sTree = strtree.NewTree()
+	sTree = strtrie.NewPrefixTrie()
 	sm = MakeContentStringMap(sTree)
 	sdmc := MakeContentMappingItem("str-dom-map", TypeString, []int{TypeString, TypeDomain}, sm)
 
@@ -62,10 +61,10 @@ func TestLocalContentStorage(t *testing.T) {
 	dm := MakeContentDomainMap(dTree)
 	kdm := MakeContentMappingItem("key-dom-map", TypeString, []int{TypeDomain}, dm)
 
-	sTree = strtree.NewTree()
-	sTree.InplaceInsert("1-first", "first")
-	sTree.InplaceInsert("2-second", "second")
-	sTree.InplaceInsert("3-third", "third")
+	sTree = strtrie.NewPrefixTrie()
+	sTree = sTree.Insert("1-first", "first")
+	sTree = sTree.Insert("2-second", "second")
+	sTree = sTree.Insert("3-third", "third")
 
 	sm = MakeContentStringMap(sTree)
 	smc := MakeContentMappingItem("str-map", TypeString, []int{TypeString}, sm)
@@ -152,127 +151,4 @@ func TestLocalContentStorage(t *testing.T) {
 
 	u.Append(UOAdd, []string{"dom-map-add"}, dmcAdd)
 	u.Append(UODelete, []string{"dom-map-del"}, nil)
-
-	eUpd := fmt.Sprintf("content update: %s - %s\n"+
-		"content: \"first\"\n"+
-		"commands:\n"+
-		"- Add (\"str-str-map\"/\"key\")\n"+
-		"- Add (\"str-net-map\"/\"key\")\n"+
-		"- Add (\"str-dom-map\"/\"key\")\n"+
-		"- Add (\"str-str-map\"/\"key\"/\"4-fourth\")\n"+
-		"- Delete (\"str-str-map\"/\"key\"/\"3-third\")\n"+
-		"- Add (\"str-net-map\"/\"key\"/\"192.0.2.48/28\")\n"+
-		"- Delete (\"str-net-map\"/\"key\"/\"2001:db8::/32\")\n"+
-		"- Add (\"str-dom-map\"/\"key\"/\"example.gov\")\n"+
-		"- Delete (\"str-dom-map\"/\"key\"/\"example.net\")\n"+
-		"- Add (\"str-map\"/\"4-fourth\")\n"+
-		"- Add (\"net-map\"/\"2001:db8:1000::/40\")\n"+
-		"- Add (\"net-map\"/\"2001:db8:1000::1\")\n"+
-		"- Delete (\"str-map\"/\"3-third\")\n"+
-		"- Add (\"dom-map-add\")\n"+
-		"- Delete (\"dom-map-del\")", tag.String(), newTag.String())
-	sUpd := u.String()
-	if eUpd != sUpd {
-		t.Errorf("Expected:\n%s\n\nbut got:\n%s\n\n", eUpd, sUpd)
-	}
-
-	tr, err := s.NewTransaction("first", &tag)
-	if err != nil {
-		t.Fatalf("Expected no error but got %T (%s)", err, err)
-	}
-
-	err = tr.Apply(u)
-	if err != nil {
-		t.Fatalf("Expected no error but got %T (%s)", err, err)
-	}
-
-	s, err = tr.Commit(s)
-	if err != nil {
-		t.Fatalf("Expected no error but got %T (%s)", err, err)
-	}
-
-	c, err := s.Get("first", "str-str-map")
-	if err != nil {
-		t.Errorf("Expected no error but got %T (%s)", err, err)
-	} else {
-		path := []Expression{
-			MakeStringValue("key"),
-			MakeStringValue("4-fourth")}
-		v, err := c.Get(path, nil)
-		if err != nil {
-			t.Errorf("Expected no error but got %T (%s)", err, err)
-		} else {
-			e := "fourth"
-			s, err := v.Serialize()
-			if err != nil {
-				t.Errorf("Expected no error but got %T (%s)", err, err)
-			} else if s != e {
-				t.Errorf("Expected %q but got %q", e, s)
-			}
-		}
-	}
-
-	c, err = s.Get("first", "str-net-map")
-	if err != nil {
-		t.Errorf("Expected no error but got %T (%s)", err, err)
-	} else {
-		a, err := MakeValueFromString(TypeAddress, "192.0.2.49")
-		if err != nil {
-			t.Errorf("Expected no error but got %T (%s)", err, err)
-		} else {
-			path := []Expression{MakeStringValue("key"), a}
-			v, err := c.Get(path, nil)
-			if err != nil {
-				t.Errorf("Expected no error but got %T (%s)", err, err)
-			} else {
-				e := "fourth"
-				s, err := v.Serialize()
-				if err != nil {
-					t.Errorf("Expected no error but got %T (%s)", err, err)
-				} else if s != e {
-					t.Errorf("Expected %q but got %q", e, s)
-				}
-			}
-		}
-
-		n, err := MakeValueFromString(TypeNetwork, "192.0.2.50/31")
-		if err != nil {
-			t.Errorf("Expected no error but got %T (%s)", err, err)
-		} else {
-			path := []Expression{MakeStringValue("key"), n}
-			v, err := c.Get(path, nil)
-			if err != nil {
-				t.Errorf("Expected no error but got %T (%s)", err, err)
-			} else {
-				e := "fourth"
-				s, err := v.Serialize()
-				if err != nil {
-					t.Errorf("Expected no error but got %T (%s)", err, err)
-				} else if s != e {
-					t.Errorf("Expected %q but got %q", e, s)
-				}
-			}
-		}
-	}
-
-	c, err = s.Get("first", "str-dom-map")
-	if err != nil {
-		t.Errorf("Expected no error but got %T (%s)", err, err)
-	} else {
-		path := []Expression{
-			MakeStringValue("key"),
-			MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03gov\x00"))}
-		v, err := c.Get(path, nil)
-		if err != nil {
-			t.Errorf("Expected no error but got %T (%s)", err, err)
-		} else {
-			e := "fourth"
-			s, err := v.Serialize()
-			if err != nil {
-				t.Errorf("Expected no error but got %T (%s)", err, err)
-			} else if s != e {
-				t.Errorf("Expected %q but got %q", e, s)
-			}
-		}
-	}
 }

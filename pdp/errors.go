@@ -83,6 +83,8 @@ const (
 	invalidContentValueTypeErrorID            = 70
 	invalidContainerArgTypeID                 = 71
 	invalidWildcardPatternID                  = 72
+	contentStringMapPutNotImplementedErrorID  = 73
+	contentStringMapDelNotImplementedErrorID  = 74
 )
 
 type externalError struct {
@@ -1292,4 +1294,30 @@ func newInvalidWildcardPattern(pattern string) *invalidWildcardPattern {
 
 func (e *invalidWildcardPattern) Error() string {
 	return e.errorf("Invalid wildcard pattern %q", e.pattern)
+}
+
+type contentStringMapPutNotImplementedError struct {
+	errorLink
+}
+
+func newContentStringMapPutNotImplementedError() *contentStringMapPutNotImplementedError {
+	return &contentStringMapPutNotImplementedError{
+		errorLink: errorLink{id: contentStringMapPutNotImplementedErrorID}}
+}
+
+func (e *contentStringMapPutNotImplementedError) Error() string {
+	return e.errorf("Method \"put\" hasn't been implemented yet for string content map")
+}
+
+type contentStringMapDelNotImplementedError struct {
+	errorLink
+}
+
+func newContentStringMapDelNotImplementedError() *contentStringMapDelNotImplementedError {
+	return &contentStringMapDelNotImplementedError{
+		errorLink: errorLink{id: contentStringMapDelNotImplementedErrorID}}
+}
+
+func (e *contentStringMapDelNotImplementedError) Error() string {
+	return e.errorf("Method \"del\" hasn't been implemented yet for string content map")
 }

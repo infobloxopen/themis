@@ -247,7 +247,7 @@ func (c *Context) calculateSetOfDomainsExpression(e Expression) (*domaintree.Nod
 }
 
 func (c *Context) calculateListOfStringsExpression(e Expression) ([]string, error) {
-	v, err := e.calculate(c)
+	v, err := e.Calculate(c)
 	if err != nil {
 		return nil, err
 	}

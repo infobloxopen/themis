@@ -10,6 +10,7 @@ import (
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
+	"github.com/infobloxopen/go-trees/strtrie"
 )
 
 // ContentKeyTypes gathers all types which can be a key for content map.
@@ -705,14 +706,14 @@ type ContentSubItem interface {
 // ContentStringMap implements ContentSubItem as map of string
 // to ContentSubItem.
 type ContentStringMap struct {
-	tree *strtree.Tree
+	trie *strtrie.PrefixTrie
 }
 
 // MakeContentStringMap creates instance of ContentStringMap based on strtree
 // from github.com/infobloxopen/go-trees. Nodes should be of the same
 // ContentSubItem compatible type.
-func MakeContentStringMap(tree *strtree.Tree) ContentStringMap {
-	return ContentStringMap{tree: tree}
+func MakeContentStringMap(trie *strtrie.PrefixTrie) ContentStringMap {
+	return ContentStringMap{trie: trie}
 }
 
 func (m ContentStringMap) getValue(key AttributeValue, t int) (AttributeValue, error) {
@@ -721,7 +722,7 @@ func (m ContentStringMap) getValue(key AttributeValue, t int) (AttributeValue, e
 		return undefinedValue, err
 	}
 
-	v, ok := m.tree.Get(s)
+	v, ok := m.trie.Match(s)
 	if !ok {
 		return undefinedValue, newMissingValueError()
 	}
@@ -735,7 +736,7 @@ func (m ContentStringMap) next(key AttributeValue) (ContentSubItem, error) {
 		return nil, err
 	}
 
-	v, ok := m.tree.Get(s)
+	v, ok := m.trie.Match(s)
 	if !ok {
 		return nil, newMissingValueError()
 	}
@@ -749,30 +750,21 @@ func (m ContentStringMap) next(key AttributeValue) (ContentSubItem, error) {
 }
 
 func (m ContentStringMap) put(key AttributeValue, value ContentSubItem) (ContentSubItem, error) {
-	k, err := key.str()
+	_, err := key.str()
 	if err != nil {
 		return m, err
 	}
 
-	if v, ok := value.(ContentValue); ok {
-		return MakeContentStringMap(m.tree.Insert(k, v.value)), nil
-	}
-
-	return MakeContentStringMap(m.tree.Insert(k, value)), nil
+	return m, newContentStringMapPutNotImplementedError()
 }
 
 func (m ContentStringMap) del(key AttributeValue) (ContentSubItem, error) {
-	k, err := key.str()
+	_, err := key.str()
 	if err != nil {
 		return m, err
 	}
 
-	t, ok := m.tree.Delete(k)
-	if !ok {
-		return m, newMissingValueError()
-	}
-
-	return MakeContentStringMap(t), nil
+	return m, newContentStringMapDelNotImplementedError()
 }
 
 // ContentNetworkMap implements ContentSubItem as map of IP address or network
