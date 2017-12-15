@@ -26,6 +26,7 @@ func main() {
 		server.WithLogger(logger),
 	)
 
+	log.Print("Generating policy...")
 	r := ""
 	for i := 1; i < rules; i++ {
 		r += fmt.Sprintf(rule, i)
@@ -34,13 +35,22 @@ func main() {
 	p := fmt.Sprintf(policy, r)
 	//log.Printf("Policy to load:\n%s", p)
 
+	log.Print("Generating content...")
+	cp := ""
+	for i := 1; i < rules; i++ {
+		cp += fmt.Sprintf(mapPrefixContentPair, i, i)
+	}
+
+	c := fmt.Sprintf(mapPrefixContent, cp)
+	//log.Printf("Contentto load:\n%s", c)
+
 	log.Print("Loading policy...")
 	if err := s.ReadPolicies(strings.NewReader(p)); err != nil {
 		log.Fatalf("Failed to load policy: %s", err)
 	}
 
 	log.Printf("Loading content...")
-	if err := s.ReadContent(strings.NewReader(mapPostfixContent)); err != nil {
+	if err := s.ReadContent(strings.NewReader(c)); err != nil {
 		log.Fatalf("Failed to load content: %s", err)
 	}
 

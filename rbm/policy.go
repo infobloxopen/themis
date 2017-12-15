@@ -49,10 +49,10 @@ var policies = map[string]map[string][]string{
 		},
 	},
 	"mapper": {
-		"postfix": {
-			mapPostfixPolicy,
-			mapPostfixRule,
-			mapPostfixValue,
+		"prefix": {
+			mapPrefixPolicy,
+			mapPrefixRule,
+			mapPrefixValue,
 			mapType,
 		},
 	},
@@ -247,9 +247,9 @@ policies:
     obligations:
     - c: "rule-not-match"`
 
-	mapPostfixPolicy = `# Mapper postfix policy
+	mapPrefixPolicy = `# Mapper prefix policy
 attributes:
-  x: domain
+  x: string
   c: string
 
 policies:
@@ -262,33 +262,36 @@ policies:
         - attr: x
         type: string
   rules:%s
-  - id: postfix-match
+  - id: prefix-match
     effect: Permit
     obligations:
     - c: "rule-match"
 `
 
-	mapPostfixRule = `
-  - id: "postfix-%d-not-match"
+	mapPrefixRule = `
+  - id: "prefix-%d-not-match"
     effect: Permit
     obligations:
     - c: "rule-not-match"`
 
-	mapPostfixValue = "test.example.com"
+	mapPrefixValue = "abcdef-match-with-tail"
 
-	mapPostfixContent = `{
+	mapPrefixContent = `{
 	"id": "content",
 	"items": {
 		"map": {
-			"keys": ["domain"],
+			"keys": ["string"],
 			"type": "string",
-			"data": {
-				"example.com": "postfix-match"
+			"data": {%s
+				"abcdef-match": "prefix-match"
 			}
 		}
 	}
 }
 `
 
-	mapType = "domain"
+	mapPrefixContentPair = `
+				"abcdef-%d": "prefix-%d-not-match",`
+
+	mapType = "string"
 )
