@@ -306,6 +306,20 @@ policies:
         - val:
             type: integer
             content: 0
+    - id: IntGreater
+      effect: Deny
+      target:
+      - equal:
+        - attr: intAttr
+        - val:
+            type: integer
+            content: 0
+      condition:
+        greater:
+        - attr: intAttr
+        - val:
+            type: integer
+            content: 0
 `
 )
 

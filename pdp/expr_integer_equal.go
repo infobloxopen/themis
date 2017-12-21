@@ -19,10 +19,7 @@ func makeFunctionIntegerEqualAlt(args []Expression) Expression {
 		panic(fmt.Errorf("function \"equal\" for Integer needs exactly two arguments but got %d", len(args)))
 	}
 
-	return functionIntegerEqual{
-		first:  args[0],
-		second: args[1],
-	}
+	return makeFunctionIntegerEqual(args[0], args[1])
 }
 
 func (f functionIntegerEqual) GetResultType() int {
@@ -30,12 +27,12 @@ func (f functionIntegerEqual) GetResultType() int {
 }
 
 func (f functionIntegerEqual) calculate(ctx *Context) (AttributeValue, error) {
-	first, err := ctx.calculateStringExpression(f.first)
+	first, err := ctx.calculateIntegerExpression(f.first)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "first argument"), "equal")
 	}
 
-	second, err := ctx.calculateStringExpression(f.second)
+	second, err := ctx.calculateIntegerExpression(f.second)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "second argument"), "equal")
 	}
