@@ -20,7 +20,7 @@ const (
 	EffectPermit
 
 	// EffectNotApplicable indicates that policies don't contain any policy
-	// and rule applicabe to the request.
+	// and rule applicable to the request.
 	EffectNotApplicable
 
 	// EffectIndeterminate indicates that evaluation can't be done for

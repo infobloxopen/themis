@@ -19,10 +19,7 @@ func makeFunctionIntegerSubtractAlt(args []Expression) Expression {
 		panic(fmt.Errorf("function \"subtract\" for Integer needs exactly two arguments but got %d", len(args)))
 	}
 
-	return functionIntegerSubtract{
-		first:  args[0],
-		second: args[1],
-	}
+	return makeFunctionIntegerSubtract(args[0], args[1])
 }
 
 func (f functionIntegerSubtract) GetResultType() int {
@@ -40,7 +37,11 @@ func (f functionIntegerSubtract) calculate(ctx *Context) (AttributeValue, error)
 		return undefinedValue, bindError(bindError(err, "second argument"), "equal")
 	}
 
+<<<<<<< HEAD
 	return MakeIntegerValue(first-second), nil
+=======
+	return MakeIntegerValue(first - second), nil
+>>>>>>> Add integer functions
 }
 
 func functionIntegerSubtractValidator(args []Expression) functionMaker {
