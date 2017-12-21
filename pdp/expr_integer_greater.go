@@ -19,10 +19,7 @@ func makeFunctionIntegerGreaterAlt(args []Expression) Expression {
 		panic(fmt.Errorf("function \"greater\" for Integer needs exactly two arguments but got %d", len(args)))
 	}
 
-	return functionIntegerGreater{
-		first:  args[0],
-		second: args[1],
-	}
+	return makeFunctionIntegerGreater(args[0], args[1])
 }
 
 func (f functionIntegerGreater) GetResultType() int {
