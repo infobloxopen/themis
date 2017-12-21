@@ -19,10 +19,7 @@ func makeFunctionIntegerAddAlt(args []Expression) Expression {
 		panic(fmt.Errorf("function \"add\" for Integer needs exactly two arguments but got %d", len(args)))
 	}
 
-	return functionIntegerAdd{
-		first:  args[0],
-		second: args[1],
-	}
+	return makeFunctionIntegerAdd(args[0], args[1])
 }
 
 func (f functionIntegerAdd) GetResultType() int {
@@ -40,7 +37,7 @@ func (f functionIntegerAdd) calculate(ctx *Context) (AttributeValue, error) {
 		return undefinedValue, bindError(bindError(err, "second argument"), "equal")
 	}
 
-	return MakeIntegerValue(first+second), nil
+	return MakeIntegerValue(first + second), nil
 }
 
 func functionIntegerAddValidator(args []Expression) functionMaker {
