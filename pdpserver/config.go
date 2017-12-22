@@ -25,6 +25,7 @@ type config struct {
 	policy       string
 	policyParser ast.Parser
 	content      stringSet
+	infoEP       string
 	serviceEP    string
 	controlEP    string
 	tracingEP    string
@@ -52,6 +53,7 @@ func init() {
 	flag.StringVar(&conf.policy, "p", "", "policy file to start with")
 	policyFmt := flag.String("pfmt", policyFormatNameYAML, "policy data format \"yaml\" or \"json\"")
 	flag.Var(&conf.content, "j", "JSON content files to start with")
+	flag.StringVar(&conf.infoEP, "i", ":5556", "listen for PIP connection on this address:port")
 	flag.StringVar(&conf.serviceEP, "l", ":5555", "listen for decision requests on this address:port")
 	flag.StringVar(&conf.controlEP, "c", ":5554", "listen for policies on this address:port")
 	flag.StringVar(&conf.tracingEP, "t", "", "OpenZipkin tracing endpoint")
@@ -66,7 +68,7 @@ func init() {
 
 	p, ok := policyParsers[strings.ToLower(*policyFmt)]
 	if !ok {
-		log.WithField("format", *policyFmt).Fatal("unknow policy format")
+		log.WithField("format", *policyFmt).Fatal("unknown policy format")
 	}
 	conf.policyParser = p
 

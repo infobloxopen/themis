@@ -4,8 +4,9 @@ package pdp
 
 import (
 	"fmt"
-	"github.com/google/uuid"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 // Numeric identifiers of errors.
@@ -80,6 +81,7 @@ const (
 	invalidContentDomainMapErrorID            = 67
 	invalidContentValueErrorID                = 68
 	invalidContentValueTypeErrorID            = 69
+	invalidPipResponseTypeErrorID             = 70
 )
 
 type externalError struct {
@@ -740,7 +742,24 @@ func newInvalidContentItemTypeError(expected, actual int) *invalidContentItemTyp
 }
 
 func (e *invalidContentItemTypeError) Error() string {
-	return e.errorf("Invalid conent item type. Expected %q but got %q", TypeNames[e.expected], TypeNames[e.actual])
+	return e.errorf("Invalid content item type. Expected %q but got %q", TypeNames[e.expected], TypeNames[e.actual])
+}
+
+type invalidPipResponseTypeError struct {
+	errorLink
+	expected int
+	actual   int
+}
+
+func newInvalidPipResponseTypeError(expected, actual int) *invalidPipResponseTypeError {
+	return &invalidPipResponseTypeError{
+		errorLink: errorLink{id: invalidPipResponseTypeErrorID},
+		expected:  expected,
+		actual:    actual}
+}
+
+func (e *invalidPipResponseTypeError) Error() string {
+	return e.errorf("Invalid pip response type. Expected %q but got %q", TypeNames[e.expected], TypeNames[e.actual])
 }
 
 type invalidSelectorPathError struct {

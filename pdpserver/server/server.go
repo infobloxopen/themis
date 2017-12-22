@@ -4,6 +4,8 @@ package server
 
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-control && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/control.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-control && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-control"
 
+//go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-info && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/info.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-info && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-info"
+
 import (
 	"fmt"
 	"io"
@@ -17,6 +19,7 @@ import (
 
 	"github.com/infobloxopen/themis/pdp"
 	pbc "github.com/infobloxopen/themis/pdp-control"
+	pbi "github.com/infobloxopen/themis/pdp-info"
 	pbs "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pdp/ast"
 	"github.com/infobloxopen/themis/pdp/jcon"
@@ -43,6 +46,12 @@ func WithLogger(logger *log.Logger) Option {
 func WithPolicyParser(parser ast.Parser) Option {
 	return func(o *options) {
 		o.parser = parser
+	}
+}
+
+func WithInfoAt(addr string) Option {
+	return func(o *options) {
+		o.info = addr
 	}
 }
 
@@ -91,6 +100,7 @@ func WithMemLimits(limits MemLimits) Option {
 type options struct {
 	logger    *log.Logger
 	parser    ast.Parser
+	info      string
 	service   string
 	control   string
 	health    string
@@ -108,6 +118,7 @@ type Server struct {
 	startOnce sync.Once
 	errCh     chan error
 
+	info     transport
 	requests transport
 	control  transport
 	health   transport
@@ -246,6 +257,17 @@ func (s *Server) ReadContent(readers ...io.Reader) error {
 	return nil
 }
 
+func (s *Server) listenInfo() error {
+	s.opts.logger.WithField("address", s.opts.info).Info("Opening info port")
+	ln, err := net.Listen("tcp", s.opts.info)
+	if err != nil {
+		return err
+	}
+
+	s.info.iface = ln
+	return nil
+}
+
 func (s *Server) listenRequests() error {
 	s.opts.logger.WithField("address", s.opts.service).Info("Opening service port")
 	ln, err := net.Listen("tcp", s.opts.service)
@@ -324,6 +346,20 @@ func (s *Server) configureRequests() []grpc.ServerOption {
 	return opts
 }
 
+func (s *Server) servePipConnections() error {
+	err := s.listenInfo()
+	if err != nil {
+		return err
+	}
+
+	s.opts.logger.Info("Serving PIP connections")
+	if err := s.info.proto.Serve(s.info.iface); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *Server) serveRequests() error {
 	err := s.listenRequests()
 	if err != nil {
@@ -351,6 +387,9 @@ func (s *Server) flushErrors() {
 func (s *Server) Serve() error {
 	s.flushErrors()
 
+	if err := s.listenInfo(); err != nil {
+		return err
+	}
 	if err := s.listenControl(); err != nil {
 		return err
 	}
@@ -409,6 +448,18 @@ func (s *Server) Serve() error {
 
 		// serveRequests() will be executed by external request.
 		s.opts.logger.Info("Waiting for policies to be applied.")
+	}
+
+	if s.info.iface != nil {
+		s.opts.logger.Info("Creating info protocol handler")
+		s.info.proto = grpc.NewServer()
+		pbi.RegisterPipServiceServer(s.info.proto, pbi.GetPipService())
+		defer s.info.proto.Stop()
+
+		go func() {
+			s.opts.logger.Info("Serving PIP connections")
+			s.errCh <- s.info.proto.Serve(s.info.iface)
+		}()
 	}
 
 	if s.control.iface != nil {

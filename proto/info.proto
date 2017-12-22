@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package info;
+
+service PipService {
+  rpc GetRequestsStream (stream Response) returns (stream Request) {}
+}
+
+message Attribute {
+  string id    = 1;
+  string type  = 2;
+  string value = 3;
+}
+
+message Request {
+  string query = 1;
+  repeated Attribute attributes = 2;
+}
+
+message Response {
+  enum Status {
+    OK    = 0;
+    ERROR = 1;
+  }
+  Status status = 1;
+  string reason = 2;
+  repeated Attribute attributes = 3;
+}

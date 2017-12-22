@@ -15,6 +15,7 @@ func main() {
 	pdp := server.NewServer(
 		server.WithLogger(logger),
 		server.WithPolicyParser(conf.policyParser),
+		server.WithInfoAt(conf.infoEP),
 		server.WithServiceAt(conf.serviceEP),
 		server.WithControlAt(conf.controlEP),
 		server.WithHealthAt(conf.healthEP),
