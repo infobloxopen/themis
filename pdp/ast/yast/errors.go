@@ -14,57 +14,58 @@ const (
 	stringErrorID                         = 2
 	missingStringErrorID                  = 3
 	integerErrorID                        = 4
-	integerUint64OverflowErrorID          = 5
-	integerFloat64OverflowErrorID         = 6
-	mapErrorID                            = 7
-	missingMapErrorID                     = 8
-	listErrorID                           = 9
-	missingListErrorID                    = 10
-	attributeTypeErrorID                  = 11
-	policyAmbiguityErrorID                = 12
-	policyMissingKeyErrorID               = 13
-	unknownRCAErrorID                     = 14
-	missingRCAErrorID                     = 15
-	invalidRCAErrorID                     = 16
-	missingMapRCAParamErrorID             = 17
-	missingDefaultRuleRCAErrorID          = 18
-	missingErrorRuleRCAErrorID            = 19
-	notImplementedRCAErrorID              = 20
-	unknownPCAErrorID                     = 21
-	missingPCAErrorID                     = 22
-	invalidPCAErrorID                     = 23
-	missingMapPCAParamErrorID             = 24
-	missingDefaultPolicyPCAErrorID        = 25
-	missingErrorPolicyPCAErrorID          = 26
-	notImplementedPCAErrorID              = 27
-	mapperArgumentTypeErrorID             = 28
-	conditionTypeErrorID                  = 29
-	unknownEffectErrorID                  = 30
-	noSMPItemsErrorID                     = 31
-	tooManySMPItemsErrorID                = 32
-	unknownMatchFunctionErrorID           = 33
-	matchFunctionCastErrorID              = 34
-	matchFunctionArgsNumberErrorID        = 35
-	invalidMatchFunctionArgErrorID        = 36
-	matchFunctionBothValuesErrorID        = 37
-	matchFunctionBothAttrsErrorID         = 38
-	unknownFunctionErrorID                = 39
-	functionCastErrorID                   = 40
-	unknownAttributeErrorID               = 41
-	unknownTypeErrorID                    = 42
-	invalidTypeErrorID                    = 43
-	missingContentErrorID                 = 44
-	notImplementedValueTypeErrorID        = 45
-	invalidAddressErrorID                 = 46
-	invalidNetworkErrorID                 = 47
-	invalidDomainErrorID                  = 48
-	selectorURIErrorID                    = 49
-	selectorLocationErrorID               = 50
-	unsupportedSelectorSchemeErrorID      = 51
-	entityAmbiguityErrorID                = 52
-	entityMissingKeyErrorID               = 53
-	unknownPolicyUpdateOperationErrorID   = 54
-	invalidPolicyUpdatePathElementErrorID = 55
+	floatErrorID                          = 5
+	integerUint64OverflowErrorID          = 6
+	integerFloat64OverflowErrorID         = 7
+	mapErrorID                            = 8
+	missingMapErrorID                     = 9
+	listErrorID                           = 10
+	missingListErrorID                    = 11
+	attributeTypeErrorID                  = 12
+	policyAmbiguityErrorID                = 13
+	policyMissingKeyErrorID               = 14
+	unknownRCAErrorID                     = 15
+	missingRCAErrorID                     = 16
+	invalidRCAErrorID                     = 17
+	missingMapRCAParamErrorID             = 18
+	missingDefaultRuleRCAErrorID          = 19
+	missingErrorRuleRCAErrorID            = 20
+	notImplementedRCAErrorID              = 21
+	unknownPCAErrorID                     = 22
+	missingPCAErrorID                     = 23
+	invalidPCAErrorID                     = 24
+	missingMapPCAParamErrorID             = 25
+	missingDefaultPolicyPCAErrorID        = 26
+	missingErrorPolicyPCAErrorID          = 27
+	notImplementedPCAErrorID              = 28
+	mapperArgumentTypeErrorID             = 29
+	conditionTypeErrorID                  = 30
+	unknownEffectErrorID                  = 31
+	noSMPItemsErrorID                     = 32
+	tooManySMPItemsErrorID                = 33
+	unknownMatchFunctionErrorID           = 34
+	matchFunctionCastErrorID              = 35
+	matchFunctionArgsNumberErrorID        = 36
+	invalidMatchFunctionArgErrorID        = 37
+	matchFunctionBothValuesErrorID        = 38
+	matchFunctionBothAttrsErrorID         = 39
+	unknownFunctionErrorID                = 40
+	functionCastErrorID                   = 41
+	unknownAttributeErrorID               = 42
+	unknownTypeErrorID                    = 43
+	invalidTypeErrorID                    = 44
+	missingContentErrorID                 = 45
+	notImplementedValueTypeErrorID        = 46
+	invalidAddressErrorID                 = 47
+	invalidNetworkErrorID                 = 48
+	invalidDomainErrorID                  = 49
+	selectorURIErrorID                    = 50
+	selectorLocationErrorID               = 51
+	unsupportedSelectorSchemeErrorID      = 52
+	entityAmbiguityErrorID                = 53
+	entityMissingKeyErrorID               = 54
+	unknownPolicyUpdateOperationErrorID   = 55
+	invalidPolicyUpdatePathElementErrorID = 56
 )
 
 type externalError struct {
@@ -155,6 +156,23 @@ func newIntegerError(v interface{}, desc string) *integerError {
 }
 
 func (e *integerError) Error() string {
+	return e.errorf("Expected %s but got %T", e.desc, e.v)
+}
+
+type floatError struct {
+	errorLink
+	v    interface{}
+	desc string
+}
+
+func newFloatError(v interface{}, desc string) *floatError {
+	return &floatError{
+		errorLink: errorLink{id: floatErrorID},
+		v:         v,
+		desc:      desc}
+}
+
+func (e *floatError) Error() string {
 	return e.errorf("Expected %s but got %T", e.desc, e.v)
 }
 

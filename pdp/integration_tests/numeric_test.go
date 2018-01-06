@@ -13,9 +13,7 @@ import (
 )
 
 type testCase struct {
-	a        string
-	b        string
-	c        string
+	attrs    []*pb.Attribute
 	expected int
 }
 
@@ -23,116 +21,6 @@ type testSuite struct {
 	policy  string
 	testSet []testCase
 }
-
-const (
-	integerEqualPolicySet = `# Policy set for Integer Equal Comparison
-attributes:
-  a: integer
-  b: integer
-
-policies:
-  alg: FirstApplicableEffect
-  rules:
-  - id: "Test Integer Equal"
-    condition: # a == b
-      equal:
-      - attr: a
-      - attr: b
-    effect: Permit
-`
-
-	integerGreaterPolicySet = `# Policy set for Integer Greater Comparison
-attributes:
-  a: integer
-  b: integer
-
-policies:
-  alg: FirstApplicableEffect
-  rules:
-  - id: "Test Integer Greater"
-    condition: # a > b
-      greater:
-      - attr: a
-      - attr: b
-    effect: Permit
-`
-
-	integerAddPolicySet = `# Policy set for Integer Addition
-attributes:
-  a: integer
-  b: integer
-  c: integer
-
-policies:
-  alg: FirstApplicableEffect
-  rules:
-  - id: "Test Integer Addition"
-    condition: # a + b == c
-      equal:
-      - add: # a + b
-        - attr: a
-        - attr: b
-      - attr: c
-    effect: Permit
-`
-
-	integerSubtractPolicySet = `# Policy set for Integer Subtraction
-attributes:
-  a: integer
-  b: integer
-  c: integer
-
-policies:
-  alg: FirstApplicableEffect
-  rules:
-  - id: "Test Integer Subtraction"
-    condition: # a - b == c
-      equal:
-      - subtract:
-        - attr: a
-        - attr: b
-      - attr: c
-    effect: Permit
-`
-
-	integerMultiplyPolicySet = `# Policy set for Integer Multiplication
-attributes:
-  a: integer
-  b: integer
-  c: integer
-
-policies:
-  alg: FirstApplicableEffect
-  rules:
-  - id: "Test Integer Multiplication"
-    condition: # a * b == c
-      equal:
-      - multiply: # a * b
-        - attr: a
-        - attr: b
-      - attr: c
-    effect: Permit
-`
-
-	integerDividePolicySet = `# Policy set for Integer Division
-attributes:
-  a: integer
-  b: integer
-  c: integer
-
-policies:
-  alg: FirstApplicableEffect
-  rules:
-  - id: "Test Integer Division"
-    condition: # a / b == c
-      equal:
-      - divide: # a / b
-        - attr: a
-        - attr: b
-      - attr: c
-    effect: Permit
-`
-)
 
 func init() {
 	log.SetLevel(log.ErrorLevel)
@@ -150,23 +38,7 @@ func loadPolicy(policyYAML string) *pdp.PolicyStorage {
 
 func createRequest(tc testCase) *pb.Request {
 	return &pb.Request{
-		Attributes: []*pb.Attribute{
-			{
-				Id:    "a",
-				Type:  "integer",
-				Value: tc.a,
-			},
-			{
-				Id:    "b",
-				Type:  "integer",
-				Value: tc.b,
-			},
-			{
-				Id:    "c",
-				Type:  "integer",
-				Value: tc.c,
-			},
-		},
+		Attributes: tc.attrs,
 	}
 }
 
@@ -197,7 +69,7 @@ func validateTestSuite(ts testSuite, t *testing.T) {
 	p := loadPolicy(ts.policy)
 
 	for _, tc := range ts.testSet {
-		t.Run(fmt.Sprintf("a=%s,b=%s,c=%s", tc.a, tc.b, tc.c), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%v", tc.attrs), func(t *testing.T) {
 			req := createRequest(tc)
 			ctx, err := createContext(req)
 			if err != nil {
@@ -219,42 +91,110 @@ func validateTestSuite(ts testSuite, t *testing.T) {
 
 func TestIntegerEqual(t *testing.T) {
 	ts := testSuite{
-		policy: integerEqualPolicySet,
+		policy: `# Policy set for Integer Equal Comparison
+attributes:
+  a: integer
+  b: integer
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - id: "Test Integer Equal"
+    condition: # a == b
+       equal:
+       - attr: a
+       - attr: b
+    effect: Permit
+`,
 		testSet: []testCase{
 			{
-				a:        "1",
-				b:        "1",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "1",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "0",
-				b:        "0",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "0",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "-1",
-				b:        "-1",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "-1",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "1",
-				b:        "0",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "0",
+					},
+				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				a:        "0",
-				b:        "1",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "1",
+					},
+				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				a:        "1",
-				b:        "-2",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "-2",
+					},
+				},
 				expected: pdp.EffectNotApplicable,
 			},
 		},
@@ -265,42 +205,95 @@ func TestIntegerEqual(t *testing.T) {
 
 func TestIntegerGreater(t *testing.T) {
 	ts := testSuite{
-		policy: integerGreaterPolicySet,
+		policy: `# Policy set for Integer Greater Comparison
+attributes:
+  a: integer
+  b: integer
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - id: "Test Integer Greater"
+    condition: # a > b
+      greater:
+      - attr: a
+      - attr: b
+    effect: Permit
+`,
 		testSet: []testCase{
 			{
-				a:        "1",
-				b:        "0",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "0",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "0",
-				b:        "-1",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "-1",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "1",
-				b:        "-1",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "-1",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "0",
-				b:        "0",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "0",
+					},
+				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				a:        "0",
-				b:        "1",
-				c:        "0",
-				expected: pdp.EffectNotApplicable,
-			},
-			{
-				a:        "-1",
-				b:        "1",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "1",
+					},
+				},
 				expected: pdp.EffectNotApplicable,
 			},
 		},
@@ -311,42 +304,143 @@ func TestIntegerGreater(t *testing.T) {
 
 func TestIntegerAdd(t *testing.T) {
 	ts := testSuite{
-		policy: integerAddPolicySet,
+		policy: `# Policy set for Integer Addition
+attributes:
+  a: integer
+  b: integer
+  c: integer
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - id: "Test Integer Addition"
+    condition: # a + b == c
+      equal:
+      - add: # a + b
+        - attr: a
+        - attr: b
+      - attr: c
+    effect: Permit
+`,
 		testSet: []testCase{
 			{
-				a:        "1",
-				b:        "1",
-				c:        "2",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "2",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "0",
-				b:        "0",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "0",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "-1",
-				b:        "-1",
-				c:        "-2",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "-2",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "1",
-				b:        "0",
-				c:        "2",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "2",
+					},
+				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				a:        "0",
-				b:        "1",
-				c:        "2",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "2",
+					},
+				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				a:        "1",
-				b:        "-1",
-				c:        "2",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "2",
+					},
+				},
 				expected: pdp.EffectNotApplicable,
 			},
 		},
@@ -357,42 +451,143 @@ func TestIntegerAdd(t *testing.T) {
 
 func TestIntegerSubtract(t *testing.T) {
 	ts := testSuite{
-		policy: integerSubtractPolicySet,
+		policy: `# Policy set for Integer Subtraction
+attributes:
+  a: integer
+  b: integer
+  c: integer
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - id: "Test Integer Subtraction"
+    condition: # a - b == c
+      equal:
+      - subtract:
+        - attr: a
+        - attr: b
+      - attr: c
+    effect: Permit
+`,
 		testSet: []testCase{
 			{
-				a:        "1",
-				b:        "1",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "0",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "0",
-				b:        "0",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "0",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "-1",
-				b:        "-1",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "0",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "1",
-				b:        "0",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "0",
+					},
+				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				a:        "0",
-				b:        "1",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "0",
+					},
+				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				a:        "1",
-				b:        "-1",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "0",
+					},
+				},
 				expected: pdp.EffectNotApplicable,
 			},
 		},
@@ -403,54 +598,183 @@ func TestIntegerSubtract(t *testing.T) {
 
 func TestIntegerMultiply(t *testing.T) {
 	ts := testSuite{
-		policy: integerMultiplyPolicySet,
+		policy: `# Policy set for Integer Multiplication
+attributes:
+  a: integer
+  b: integer
+  c: integer
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - id: "Test Integer Multiplication"
+    condition: # a * b == c
+      equal:
+      - multiply: # a * b
+        - attr: a
+        - attr: b
+      - attr: c
+    effect: Permit
+`,
 		testSet: []testCase{
 			{
-				a:        "1",
-				b:        "1",
-				c:        "1",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "1",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "1",
-				b:        "0",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "0",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "0",
-				b:        "1",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "0",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "-1",
-				b:        "-1",
-				c:        "1",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "1",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "-1",
-				b:        "1",
-				c:        "-1",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "-1",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "1",
-				b:        "0",
-				c:        "1",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "1",
+					},
+				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				a:        "-1",
-				b:        "1",
-				c:        "1",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "1",
+					},
+				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				a:        "0",
-				b:        "1",
-				c:        "1",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "1",
+					},
+				},
 				expected: pdp.EffectNotApplicable,
 			},
 		},
@@ -461,60 +785,1005 @@ func TestIntegerMultiply(t *testing.T) {
 
 func TestIntegerDivide(t *testing.T) {
 	ts := testSuite{
-		policy: integerDividePolicySet,
+		policy: `# Policy set for Integer Division
+attributes:
+  a: integer
+  b: integer
+  c: integer
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - id: "Test Integer Division"
+    condition: # a / b == c
+      equal:
+      - divide: # a / b
+        - attr: a
+        - attr: b
+      - attr: c
+    effect: Permit
+`,
 		testSet: []testCase{
 			{
-				a:        "1",
-				b:        "1",
-				c:        "1",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "1",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "0",
-				b:        "1",
-				c:        "0",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "0",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "4",
-				b:        "2",
-				c:        "2",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "4",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "2",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "2",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "7",
-				b:        "2",
-				c:        "3",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "7",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "2",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "3",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "-1",
-				b:        "1",
-				c:        "-1",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "-1",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "1",
-				b:        "-1",
-				c:        "-1",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "-1",
+					},
+				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				a:        "2",
-				b:        "1",
-				c:        "1",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "2",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "1",
+					},
+				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				a:        "-1",
-				b:        "1",
-				c:        "1",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "1",
+					},
+				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				a:        "0",
-				b:        "1",
-				c:        "1",
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "1",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+		},
+	}
+
+	validateTestSuite(ts, t)
+}
+
+func TestFloatGreater(t *testing.T) {
+	ts := testSuite{
+		policy: `# Policy set for Float Greater Comparison
+attributes:
+  a: float
+  b: float
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - id: "Test Float Greater"
+    condition: # a > b
+      greater:
+        - attr: a
+        - attr: b
+    effect: Permit
+`,
+		testSet: []testCase{
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "1.0",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "0.9",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "1.0",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "-1.0",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "0.0",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "-1.0",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "0.8",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "0.9",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "-2.0",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.0",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "-1.0",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "0.0",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+		},
+	}
+
+	validateTestSuite(ts, t)
+}
+
+func TestFloatAdd(t *testing.T) {
+	ts := testSuite{
+		policy: `# Policy set for Integer Addition
+attributes:
+  a: float
+  b: float
+  c: float
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - id: "Test Float Addition"
+    condition: # a + b == c
+      equal:
+      - add: # a + b
+        - attr: a
+        - attr: b
+      - attr: c
+    effect: Permit
+`,
+		testSet: []testCase{
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "float",
+						Value: "1.",
+					},
+					{
+						Id:    "b",
+						Type:  "float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "float",
+						Value: "2.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "float",
+						Value: "0.",
+					},
+					{
+						Id:    "b",
+						Type:  "float",
+						Value: "0.",
+					},
+					{
+						Id:    "c",
+						Type:  "float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "float",
+						Value: "-1.",
+					},
+					{
+						Id:    "b",
+						Type:  "float",
+						Value: "-1.",
+					},
+					{
+						Id:    "c",
+						Type:  "float",
+						Value: "-2.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "float",
+						Value: "1.",
+					},
+					{
+						Id:    "b",
+						Type:  "float",
+						Value: "0.",
+					},
+					{
+						Id:    "c",
+						Type:  "float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "float",
+						Value: "0.",
+					},
+					{
+						Id:    "b",
+						Type:  "float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "float",
+						Value: "2.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "float",
+						Value: "1.",
+					},
+					{
+						Id:    "b",
+						Type:  "float",
+						Value: "-1.",
+					},
+					{
+						Id:    "c",
+						Type:  "float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+		},
+	}
+
+	validateTestSuite(ts, t)
+}
+
+func TestFloatSubtract(t *testing.T) {
+	ts := testSuite{
+		policy: `# Policy set for float Subtraction
+attributes:
+  a: float
+  b: float
+  c: float
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - id: "Test Float Subtraction"
+    condition: # a - b == c
+      equal:
+      - subtract:
+        - attr: a
+        - attr: b
+      - attr: c
+    effect: Permit
+`,
+		testSet: []testCase{
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "0.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "0.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "-1.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "-1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "0.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "0.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "-1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+		},
+	}
+
+	validateTestSuite(ts, t)
+}
+
+func TestFloatMultiply(t *testing.T) {
+	ts := testSuite{
+		policy: `# Policy set for Float Multiplication
+attributes:
+  a: float
+  b: float
+  c: float
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - id: "Test Float Multiplication"
+    condition: # a * b == c
+      equal:
+      - multiply: # a * b
+        - attr: a
+        - attr: b
+      - attr: c
+    effect: Permit
+`,
+		testSet: []testCase{
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "0.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "0.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "-1.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "-1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "-1.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "-1.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "0.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "-1.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "0.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+		},
+	}
+
+	validateTestSuite(ts, t)
+}
+
+func TestFloatDivide(t *testing.T) {
+	ts := testSuite{
+		policy: `# Policy set for Float Division
+attributes:
+  a: float
+  b: float
+  c: float
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - id: "Test Float Division"
+    condition: # a / b == c
+      equal:
+      - divide: # a / b
+        - attr: a
+        - attr: b
+      - attr: c
+    effect: Permit
+`,
+		testSet: []testCase{
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "0.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "4.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "2.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "2.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "7.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "2.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "3.5",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "-1.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "-1.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "-1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "-1.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "2.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "-1.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "0.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
 				expected: pdp.EffectNotApplicable,
 			},
 		},

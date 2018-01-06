@@ -141,6 +141,14 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 
 		return int64(x), nil
 
+	case pdp.TypeFloat:
+		x, err := jparser.GetNumber(d, "value")
+		if err != nil {
+			return nil, err
+		}
+
+		return float64(x), nil
+
 	case pdp.TypeAddress:
 		s, err := jparser.GetString(d, "address value")
 		if err != nil {

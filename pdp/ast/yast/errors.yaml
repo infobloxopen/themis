@@ -65,6 +65,17 @@ errors:
   - field: desc
   - field: v
 
+- id: floatError
+  fields:
+  - id: v
+    type: interface{}
+  - id: desc
+    type: string
+  msg: "Expected %s but got %T"
+  args:
+  - field: desc
+  - field: v
+
 - id: integerUint64OverflowError
   fields:
   - id: v
