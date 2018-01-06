@@ -101,6 +101,14 @@ func (c *contentItem) ppValue(v interface{}) (interface{}, error) {
 
 		return int64(x), nil
 
+	case pdp.TypeFloat:
+		x, ok := v.(float64)
+		if !ok {
+			return nil, newNumberCastError(v, "value")
+		}
+
+		return x, nil
+
 	case pdp.TypeAddress:
 		s, ok := v.(string)
 		if !ok {
