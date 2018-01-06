@@ -73,6 +73,24 @@ func (ctx context) validateInteger(v interface{}, desc string) (int64, boundErro
 	return 0, newIntegerError(v, desc)
 }
 
+func (ctx context) validateFloat(v interface{}, desc string) (float64, boundError) {
+	switch v := v.(type) {
+	case int:
+		return float64(v), nil
+
+	case int64:
+		return float64(v), nil
+
+	case uint64:
+		return float64(v), nil
+
+	case float64:
+		return float64(v), nil
+	}
+
+	return 0, newFloatError(v, desc)
+}
+
 func (ctx context) validateMap(v interface{}, desc string) (map[interface{}]interface{}, boundError) {
 	r, ok := v.(map[interface{}]interface{})
 	if !ok {

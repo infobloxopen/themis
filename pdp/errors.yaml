@@ -81,6 +81,17 @@ errors:
   - field: s
   - field: err
 
+- id: invalidFloatStringCastError
+  fields:
+  - id: s
+    type: string
+  - id: err
+    type: error
+  msg: "Can't treat %q as float (%s)"
+  args:
+  - field: s
+  - field: err
+
 - id: invalidAddressStringCastError
   fields:
   - id: s

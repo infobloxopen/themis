@@ -28,6 +28,15 @@ func (ctx context) unmarshalIntegerValue(v interface{}) (pdp.AttributeValue, bou
 	return pdp.MakeIntegerValue(n), nil
 }
 
+func (ctx context) unmarshalFloatValue(v interface{}) (pdp.AttributeValue, boundError) {
+	n, err := ctx.validateFloat(v, "value of float type")
+	if err != nil {
+		return pdp.AttributeValue{}, err
+	}
+
+	return pdp.MakeFloatValue(n), nil
+}
+
 func (ctx context) unmarshalAddressValue(v interface{}) (pdp.AttributeValue, boundError) {
 	s, err := ctx.validateString(v, "value of address type")
 	if err != nil {
@@ -191,6 +200,9 @@ func (ctx context) unmarshalValueByType(t int, v interface{}) (pdp.AttributeValu
 
 	case pdp.TypeInteger:
 		return ctx.unmarshalIntegerValue(v)
+
+	case pdp.TypeFloat:
+		return ctx.unmarshalFloatValue(v)
 
 	case pdp.TypeAddress:
 		return ctx.unmarshalAddressValue(v)
