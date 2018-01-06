@@ -18,21 +18,27 @@ var FunctionArgumentValidators = map[string][]functionArgumentValidator{
 	"equal": {
 		functionStringEqualValidator,
 		functionIntegerEqualValidator,
+		functionFloatEqualValidator,
 	},
 	"greater": {
 		functionIntegerGreaterValidator,
+		functionFloatGreaterValidator,
 	},
 	"add": {
 		functionIntegerAddValidator,
+		functionFloatAddValidator,
 	},
 	"subtract": {
 		functionIntegerSubtractValidator,
+		functionFloatSubtractValidator,
 	},
 	"multiply": {
 		functionIntegerMultiplyValidator,
+		functionFloatMultiplyValidator,
 	},
 	"divide": {
 		functionIntegerDivideValidator,
+		functionFloatDivideValidator,
 	},
 	"contains": {
 		functionStringContainsValidator,

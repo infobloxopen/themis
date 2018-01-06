@@ -25,6 +25,8 @@ const (
 	TypeString
 	// TypeInteger is integer data type.
 	TypeInteger
+	// TypeFloat is float data type.
+	TypeFloat
 	// TypeAddress is IPv4 or IPv6 address data type.
 	TypeAddress
 	// TypeNetwork is IPv4 or IPv6 network data type.
@@ -53,6 +55,7 @@ var (
 		"Boolean",
 		"String",
 		"Integer",
+		"Float",
 		"Address",
 		"Network",
 		"Domain",
@@ -128,6 +131,13 @@ func MakeStringValue(v string) AttributeValue {
 func MakeIntegerValue(v int64) AttributeValue {
 	return AttributeValue{
 		t: TypeInteger,
+		v: v}
+}
+
+// MakeFloatValue creates instance of float attribute value.
+func MakeFloatValue(v float64) AttributeValue {
+	return AttributeValue{
+		t: TypeFloat,
 		v: v}
 }
 
@@ -212,6 +222,14 @@ func MakeValueFromString(t int, s string) (AttributeValue, error) {
 
 		return MakeIntegerValue(n), nil
 
+	case TypeFloat:
+		f, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			return undefinedValue, newInvalidFloatStringCastError(s, err)
+		}
+
+		return MakeFloatValue(f), nil
+
 	case TypeAddress:
 		a := net.ParseIP(s)
 		if a == nil {
@@ -255,6 +273,9 @@ func (v AttributeValue) describe() string {
 
 	case TypeInteger:
 		return strconv.FormatInt(v.v.(int64), 10)
+
+	case TypeFloat:
+		return strconv.FormatFloat(v.v.(float64), byte('G'), 16, 64)
 
 	case TypeAddress:
 		return v.v.(net.IP).String()
@@ -352,6 +373,15 @@ func (v AttributeValue) integer() (int64, error) {
 	return v.v.(int64), nil
 }
 
+func (v AttributeValue) float() (float64, error) {
+	err := v.typeCheck(TypeFloat)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.v.(float64), nil
+}
+
 func (v AttributeValue) address() (net.IP, error) {
 	err := v.typeCheck(TypeAddress)
 	if err != nil {
@@ -434,6 +464,9 @@ func (v AttributeValue) Serialize() (string, error) {
 
 	case TypeInteger:
 		return strconv.FormatInt(v.v.(int64), 10), nil
+
+	case TypeFloat:
+		return strconv.FormatFloat(v.v.(float64), byte('G'), 16, 64), nil
 
 	case TypeAddress:
 		return v.v.(net.IP).String(), nil

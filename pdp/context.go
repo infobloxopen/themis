@@ -200,6 +200,15 @@ func (c *Context) calculateIntegerExpression(e Expression) (int64, error) {
 	return v.integer()
 }
 
+func (c *Context) calculateFloatExpression(e Expression) (float64, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.float()
+}
+
 func (c *Context) calculateAddressExpression(e Expression) (net.IP, error) {
 	v, err := e.calculate(c)
 	if err != nil {
