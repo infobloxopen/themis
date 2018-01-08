@@ -12,23 +12,45 @@ import (
 	"github.com/infobloxopen/themis/pdp/ast"
 )
 
+type policyFormat int
+
+const (
+	YAML policyFormat = iota
+	JSON
+)
+
+var policyFormatString = map[policyFormat]string{
+	YAML: "YAML",
+	JSON: "JSON",
+}
+
+func (f policyFormat) String() string {
+	return policyFormatString[f]
+}
+
 type testCase struct {
 	attrs    []*pb.Attribute
 	expected int
 }
 
 type testSuite struct {
-	policy  string
-	testSet []testCase
+	policies map[policyFormat]string
+	testSet  []testCase
 }
 
 func init() {
 	log.SetLevel(log.ErrorLevel)
 }
 
-func loadPolicy(policyYAML string) *pdp.PolicyStorage {
-	parser := ast.NewYAMLParser()
-	policyStorage, err := parser.Unmarshal(strings.NewReader(policyYAML), nil)
+func loadPolicy(pf policyFormat, ps string) *pdp.PolicyStorage {
+	var parser ast.Parser
+	switch pf {
+	case YAML:
+		parser = ast.NewYAMLParser()
+	case JSON:
+		parser = ast.NewJSONParser()
+	}
+	policyStorage, err := parser.Unmarshal(strings.NewReader(ps), nil)
 	if err != nil {
 		panic(fmt.Errorf("expected no error while parsing policies but got: %s", err))
 	}
@@ -66,8 +88,6 @@ func createContext(req *pb.Request) (*pdp.Context, error) {
 }
 
 func validateTestSuite(ts testSuite, t *testing.T) {
-	p := loadPolicy(ts.policy)
-
 	for _, tc := range ts.testSet {
 		t.Run(fmt.Sprintf("%v", tc.attrs), func(t *testing.T) {
 			req := createRequest(tc)
@@ -76,14 +96,20 @@ func validateTestSuite(ts testSuite, t *testing.T) {
 				t.Fatalf("Expected no error while creating context but got: %s", err)
 			}
 
-			r := p.Root().Calculate(ctx)
-			effect, _, err := r.Status()
-			if err != nil {
-				t.Fatalf("Expected no error while evaluating policy but got: %s", err)
-			}
+			for pf, ps := range ts.policies {
+				t.Run(fmt.Sprintf("Policy Format: %s", pf), func(t *testing.T) {
+					p := loadPolicy(pf, ps)
+					r := p.Root().Calculate(ctx)
+					effect, _, err := r.Status()
+					if err != nil {
+						t.Fatalf("Expected no error while evaluating policy but got: %s", err)
+					}
 
-			if effect != tc.expected {
-				t.Fatalf("Expected result of policy evaluation %d, but got %d", tc.expected, effect)
+					if effect != tc.expected {
+						t.Fatalf("Expected result of policy evaluation %s, but got %s",
+							pdp.EffectNameFromEnum(tc.expected), pdp.EffectNameFromEnum(effect))
+					}
+				})
 			}
 		})
 	}
@@ -91,7 +117,8 @@ func validateTestSuite(ts testSuite, t *testing.T) {
 
 func TestIntegerEqual(t *testing.T) {
 	ts := testSuite{
-		policy: `# Policy set for Integer Equal Comparison
+		policies: map[policyFormat]string{
+			YAML: `# Policy set for Integer Equal Comparison
 attributes:
   a: integer
   b: integer
@@ -106,6 +133,33 @@ policies:
        - attr: b
     effect: Permit
 `,
+			JSON: `{
+  "attributes": {
+    "a": "integer",
+    "b": "integer"
+  },
+  "policies": {
+    "id": "Test Integer Equal Policies",
+    "alg": "FirstApplicableEffect",
+    "rules": [
+      {
+        "id": "Test Integer Equal Rule",
+        "condition": {
+          "equal": [
+            {
+              "attr": "a"
+            },
+            {
+              "attr": "b"
+            }
+          ]
+        },
+        "effect": "Permit"
+      }
+    ]
+  }
+}`,
+		},
 		testSet: []testCase{
 			{
 				attrs: []*pb.Attribute{
@@ -205,7 +259,8 @@ policies:
 
 func TestIntegerGreater(t *testing.T) {
 	ts := testSuite{
-		policy: `# Policy set for Integer Greater Comparison
+		policies: map[policyFormat]string{
+			YAML: `# Policy set for Integer Greater Comparison
 attributes:
   a: integer
   b: integer
@@ -220,6 +275,33 @@ policies:
       - attr: b
     effect: Permit
 `,
+			JSON: `{
+  "attributes": {
+    "a": "integer",
+    "b": "integer"
+  },
+  "policies": {
+    "id": "Test Integer Greater Policies",
+    "alg": "FirstApplicableEffect",
+    "rules": [
+      {
+        "id": "Test Integer Greater Rule",
+        "condition": {
+          "greater": [
+            {
+              "attr": "a"
+            },
+            {
+              "attr": "b"
+            }
+          ]
+        },
+        "effect": "Permit"
+      }
+    ]
+  }
+}`,
+		},
 		testSet: []testCase{
 			{
 				attrs: []*pb.Attribute{
@@ -304,7 +386,8 @@ policies:
 
 func TestIntegerAdd(t *testing.T) {
 	ts := testSuite{
-		policy: `# Policy set for Integer Addition
+		policies: map[policyFormat]string{
+			YAML: `# Policy set for Integer Addition
 attributes:
   a: integer
   b: integer
@@ -322,6 +405,41 @@ policies:
       - attr: c
     effect: Permit
 `,
+			JSON: `{
+  "attributes": {
+    "a": "integer",
+    "b": "integer",
+    "c": "integer"
+  },
+  "policies": {
+    "id": "Test Integer Addition Policies",
+    "alg": "FirstApplicableEffect",
+    "rules": [
+      {
+        "id": "Test Integer Addition Rule",
+        "condition": {
+          "equal": [
+            {
+              "add": [
+                {
+                  "attr": "a"
+                },
+                {
+                  "attr": "b"
+                }
+              ]
+            },
+            {
+              "attr": "c"
+            }
+          ]
+        },
+        "effect": "Permit"
+      }
+    ]
+  }
+}`,
+		},
 		testSet: []testCase{
 			{
 				attrs: []*pb.Attribute{
@@ -451,7 +569,8 @@ policies:
 
 func TestIntegerSubtract(t *testing.T) {
 	ts := testSuite{
-		policy: `# Policy set for Integer Subtraction
+		policies: map[policyFormat]string{
+			YAML: `# Policy set for Integer Subtraction
 attributes:
   a: integer
   b: integer
@@ -469,6 +588,41 @@ policies:
       - attr: c
     effect: Permit
 `,
+			JSON: `{
+  "attributes": {
+    "a": "integer",
+    "b": "integer",
+    "c": "integer"
+  },
+  "policies": {
+    "id": "Test Integer Subtraction Policies",
+    "alg": "FirstApplicableEffect",
+    "rules": [
+      {
+        "id": "Test Integer Subtraction Rule",
+        "condition": {
+          "equal": [
+            {
+              "subtract": [
+                {
+                  "attr": "a"
+                },
+                {
+                  "attr": "b"
+                }
+              ]
+            },
+            {
+              "attr": "c"
+            }
+          ]
+        },
+        "effect": "Permit"
+      }
+    ]
+  }
+}`,
+		},
 		testSet: []testCase{
 			{
 				attrs: []*pb.Attribute{
@@ -598,7 +752,8 @@ policies:
 
 func TestIntegerMultiply(t *testing.T) {
 	ts := testSuite{
-		policy: `# Policy set for Integer Multiplication
+		policies: map[policyFormat]string{
+			YAML: `# Policy set for Integer Multiplication
 attributes:
   a: integer
   b: integer
@@ -616,6 +771,41 @@ policies:
       - attr: c
     effect: Permit
 `,
+			JSON: `{
+  "attributes": {
+    "a": "integer",
+    "b": "integer",
+    "c": "integer"
+  },
+  "policies": {
+    "id": "Test Integer Multiplication Policies",
+    "alg": "FirstApplicableEffect",
+    "rules": [
+      {
+        "id": "Test Integer Multiplication Rule",
+        "condition": {
+          "equal": [
+            {
+              "multiply": [
+                {
+                  "attr": "a"
+                },
+                {
+                  "attr": "b"
+                }
+              ]
+            },
+            {
+              "attr": "c"
+            }
+          ]
+        },
+        "effect": "Permit"
+      }
+    ]
+  }
+}`,
+		},
 		testSet: []testCase{
 			{
 				attrs: []*pb.Attribute{
@@ -785,7 +975,8 @@ policies:
 
 func TestIntegerDivide(t *testing.T) {
 	ts := testSuite{
-		policy: `# Policy set for Integer Division
+		policies: map[policyFormat]string{
+			YAML: `# Policy set for Integer Division
 attributes:
   a: integer
   b: integer
@@ -803,6 +994,41 @@ policies:
       - attr: c
     effect: Permit
 `,
+			JSON: `{
+  "attributes": {
+    "a": "integer",
+    "b": "integer",
+    "c": "integer"
+  },
+  "policies": {
+    "id": "Test Integer Division Policies",
+    "alg": "FirstApplicableEffect",
+    "rules": [
+      {
+        "id": "Test Integer Division Rule",
+        "condition": {
+          "equal": [
+            {
+              "divide": [
+                {
+                  "attr": "a"
+                },
+                {
+                  "attr": "b"
+                }
+              ]
+            },
+            {
+              "attr": "c"
+            }
+          ]
+        },
+        "effect": "Permit"
+      }
+    ]
+  }
+}`,
+		},
 		testSet: []testCase{
 			{
 				attrs: []*pb.Attribute{
@@ -992,7 +1218,8 @@ policies:
 
 func TestFloatGreater(t *testing.T) {
 	ts := testSuite{
-		policy: `# Policy set for Float Greater Comparison
+		policies: map[policyFormat]string{
+			YAML: `# Policy set for Float Greater Comparison
 attributes:
   a: float
   b: float
@@ -1007,6 +1234,33 @@ policies:
         - attr: b
     effect: Permit
 `,
+			JSON: `{
+  "attributes": {
+    "a": "float",
+    "b": "float"
+  },
+  "policies": {
+    "id": "Test Float Greater Policies",
+    "alg": "FirstApplicableEffect",
+    "rules": [
+      {
+        "id": "Test Float Greater Rule",
+        "condition": {
+          "greater": [
+            {
+              "attr": "a"
+            },
+            {
+              "attr": "b"
+            }
+          ]
+        },
+        "effect": "Permit"
+      }
+    ]
+  }
+}`,
+		},
 		testSet: []testCase{
 			{
 				attrs: []*pb.Attribute{
@@ -1106,7 +1360,8 @@ policies:
 
 func TestFloatAdd(t *testing.T) {
 	ts := testSuite{
-		policy: `# Policy set for Integer Addition
+		policies: map[policyFormat]string{
+			YAML: `# Policy set for Integer Addition
 attributes:
   a: float
   b: float
@@ -1124,6 +1379,41 @@ policies:
       - attr: c
     effect: Permit
 `,
+			JSON: `{
+  "attributes": {
+    "a": "float",
+    "b": "float",
+    "c": "float"
+  },
+  "policies": {
+    "id": "Test Float Addition Policies",
+    "alg": "FirstApplicableEffect",
+    "rules": [
+      {
+        "id": "Test Float Addition Rule",
+        "condition": {
+          "equal": [
+            {
+              "add": [
+                {
+                  "attr": "a"
+                },
+                {
+                  "attr": "b"
+                }
+              ]
+            },
+            {
+              "attr": "c"
+            }
+          ]
+        },
+        "effect": "Permit"
+      }
+    ]
+  }
+}`,
+		},
 		testSet: []testCase{
 			{
 				attrs: []*pb.Attribute{
@@ -1253,7 +1543,8 @@ policies:
 
 func TestFloatSubtract(t *testing.T) {
 	ts := testSuite{
-		policy: `# Policy set for float Subtraction
+		policies: map[policyFormat]string{
+			YAML: `# Policy set for float Subtraction
 attributes:
   a: float
   b: float
@@ -1271,6 +1562,41 @@ policies:
       - attr: c
     effect: Permit
 `,
+			JSON: `{
+  "attributes": {
+    "a": "float",
+    "b": "float",
+    "c": "float"
+  },
+  "policies": {
+    "id": "Test Float Subtraction Policies",
+    "alg": "FirstApplicableEffect",
+    "rules": [
+      {
+        "id": "Test Float Subtraction Rule",
+        "condition": {
+          "equal": [
+            {
+              "subtract": [
+                {
+                  "attr": "a"
+                },
+                {
+                  "attr": "b"
+                }
+              ]
+            },
+            {
+              "attr": "c"
+            }
+          ]
+        },
+        "effect": "Permit"
+      }
+    ]
+  }
+}`,
+		},
 		testSet: []testCase{
 			{
 				attrs: []*pb.Attribute{
@@ -1400,7 +1726,8 @@ policies:
 
 func TestFloatMultiply(t *testing.T) {
 	ts := testSuite{
-		policy: `# Policy set for Float Multiplication
+		policies: map[policyFormat]string{
+			YAML: `# Policy set for Float Multiplication
 attributes:
   a: float
   b: float
@@ -1418,6 +1745,43 @@ policies:
       - attr: c
     effect: Permit
 `,
+			JSON: `
+{
+  "attributes": {
+    "a": "float",
+    "b": "float",
+    "c": "float"
+  },
+  "policies": {
+    "id": "Test Float Multiplication Policies",
+    "alg": "FirstApplicableEffect",
+    "rules": [
+      {
+        "id": "Test Float Multiplication Rule",
+        "condition": {
+          "equal": [
+            {
+              "multiply": [
+                {
+                  "attr": "a"
+                },
+                {
+                  "attr": "b"
+                }
+              ]
+            },
+            {
+                "attr": "c"
+            }
+          ]
+        },
+        "effect": "Permit"
+      }
+    ]
+  }
+}
+`,
+		},
 		testSet: []testCase{
 			{
 				attrs: []*pb.Attribute{
@@ -1587,7 +1951,8 @@ policies:
 
 func TestFloatDivide(t *testing.T) {
 	ts := testSuite{
-		policy: `# Policy set for Float Division
+		policies: map[policyFormat]string{
+			YAML: `# Policy set for Float Division
 attributes:
   a: float
   b: float
@@ -1605,6 +1970,43 @@ policies:
       - attr: c
     effect: Permit
 `,
+			JSON: `
+{
+  "attributes": {
+    "a": "float",
+    "b": "float",
+    "c": "float"
+  },
+  "policies": {
+    "id": "Test Float Division Policies",
+    "alg": "FirstApplicableEffect",
+    "rules": [
+      {
+        "id": "Test Float Division Rule",
+        "condition": {
+          "equal": [
+            {
+              "divide": [
+                {
+                  "attr": "a"
+                },
+                {
+                  "attr": "b"
+                }
+              ]
+            },
+            {
+                "attr": "c"
+            }
+          ]
+        },
+        "effect": "Permit"
+      }
+    ]
+  }
+}
+`,
+		},
 		testSet: []testCase{
 			{
 				attrs: []*pb.Attribute{
