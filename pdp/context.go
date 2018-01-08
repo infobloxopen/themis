@@ -36,6 +36,8 @@ const (
 	// the request but if it could effect would be only EffectDeny or
 	// EffectPermit.
 	EffectIndeterminateDP
+
+	EffectOutOfRange
 )
 
 var (
@@ -59,6 +61,14 @@ var (
 type Context struct {
 	a map[string]interface{}
 	c *LocalContentStorage
+}
+
+// EffectNameFromEnum returns human readable name for Effect enum
+func EffectNameFromEnum(effectEnum int) string {
+	if effectEnum >= EffectOutOfRange {
+		return "EffectOutOfRange"
+	}
+	return effectNames[effectEnum]
 }
 
 // NewContext creates new instance of context. It requires pointer to local
