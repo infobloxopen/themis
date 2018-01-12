@@ -151,6 +151,7 @@ var unmarshallersByType = map[string]fieldUnmarshaller{
 	pdp.TypeKeys[pdp.TypeBoolean]: boolUnmarshaller,
 	pdp.TypeKeys[pdp.TypeString]:  stringUnmarshaller,
 	pdp.TypeKeys[pdp.TypeInteger]: intUnmarshaller,
+	pdp.TypeKeys[pdp.TypeFloat]:   floatUnmarshaller,
 	pdp.TypeKeys[pdp.TypeAddress]: addressUnmarshaller,
 	pdp.TypeKeys[pdp.TypeNetwork]: networkUnmarshaller,
 	pdp.TypeKeys[pdp.TypeDomain]:  domainUnmarshaller}
@@ -378,6 +379,32 @@ func intUnmarshaller(attr *pb.Attribute, v reflect.Value) error {
 		v.SetUint(uint64(i))
 		return nil
 
+	}
+
+	return fmt.Errorf("can't set value %q of \"%s\" attribute to %s", attr.Value, attr.Id, v.Type().Name())
+}
+
+func floatUnmarshaller(attr *pb.Attribute, v reflect.Value) error {
+	f, err := strconv.ParseFloat(attr.Value, 64)
+	if err != nil {
+		return fmt.Errorf("can't treat \"%s\" value (%s) as integer: %s", attr.Id, attr.Value, err)
+	}
+
+	switch v.Kind() {
+	case reflect.Float32:
+		absF := math.Abs(f)
+		if absF > math.MaxFloat32 {
+			return fmt.Errorf("\"%s\" %g overflows float32 value", attr.Id, f)
+		}
+		if absF < math.SmallestNonzeroFloat32 {
+			return fmt.Errorf("\"%s\" %g underflows float32 value", attr.Id, f)
+		}
+		v.SetFloat(f)
+		return nil
+
+	case reflect.Float64:
+		v.SetFloat(f)
+		return nil
 	}
 
 	return fmt.Errorf("can't set value %q of \"%s\" attribute to %s", attr.Value, attr.Id, v.Type().Name())
