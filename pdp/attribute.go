@@ -275,7 +275,7 @@ func (v AttributeValue) describe() string {
 		return strconv.FormatInt(v.v.(int64), 10)
 
 	case TypeFloat:
-		return strconv.FormatFloat(v.v.(float64), byte('G'), 16, 64)
+		return strconv.FormatFloat(v.v.(float64), 'G', -1, 64)
 
 	case TypeAddress:
 		return v.v.(net.IP).String()
