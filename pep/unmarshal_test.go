@@ -30,6 +30,7 @@ type TestTaggedResponseStruct struct {
 	Bool2   bool      `pdp:""`
 	Bool3   bool      `pdp:"flag"`
 	Int     int       `pdp:"i,integer"`
+	Float   float64   `pdp:"f,float"`
 	Domain  string    `pdp:"d,domain"`
 	Address net.IP    `pdp:""`
 	Network net.IPNet `pdp:"net,network"`
@@ -41,6 +42,7 @@ type TestTaggedAllTypesResponseStruct struct {
 	Bool    bool      `pdp:"ba"`
 	String  string    `pdp:"sa"`
 	Int     int       `pdp:"ia"`
+	Float   float64   `pdp:"fa"`
 	Address net.IP    `pdp:"aa"`
 	Network net.IPNet `pdp:"na"`
 	Domain  string    `pdp:"da,domain"`
@@ -71,6 +73,7 @@ var (
 		{"Bool", "boolean", "true"},
 		{"String", "string", "test"},
 		{"Int", "integer", "1234"},
+		{"Float", "float", "567890.1234"},
 		{"Address", "address", "1.2.3.4"},
 		{"Network", "network", "1.2.3.4/32"}}
 
@@ -129,7 +132,7 @@ func TestUnmarshalUntaggedStruct(t *testing.T) {
 		t.Errorf("Expected no error but got: %s", err)
 	} else {
 		_, n, _ := net.ParseCIDR("1.2.3.4/32")
-		CompareTestResponseStruct(v, TestResponseStruct{true, 1234, 0, true, "test", net.ParseIP("1.2.3.4"), *n}, t)
+		CompareTestResponseStruct(v, TestResponseStruct{true, 1234, 567890.1234, true, "test", net.ParseIP("1.2.3.4"), *n}, t)
 	}
 }
 
@@ -145,7 +148,7 @@ func TestUnmarshalTaggedStruct(t *testing.T) {
 		e := TestTaggedResponseStruct{
 			pb.Response_Effect_name[int32(pb.Response_INDETERMINATED)],
 			"Test Error!",
-			false, false, true, 0,
+			false, false, true, 0, 0.,
 			"example.com",
 			net.ParseIP("1.2.3.4"), *n}
 		CompareTestTaggedStruct(v, e, t)
@@ -159,6 +162,9 @@ func TestUnmarshalTaggedStruct(t *testing.T) {
 
 	ia := pdp.MakeAttribute("ia", pdp.TypeInteger)
 	iv := pdp.MakeIntegerValue(1234)
+
+	fa := pdp.MakeAttribute("fa", pdp.TypeFloat)
+	fv := pdp.MakeFloatValue(6789.0123)
 
 	aa := pdp.MakeAttribute("aa", pdp.TypeAddress)
 	a := net.ParseIP("192.0.2.1")
@@ -181,6 +187,7 @@ func TestUnmarshalTaggedStruct(t *testing.T) {
 		pdp.MakeAttributeAssignmentExpression(ba, bv),
 		pdp.MakeAttributeAssignmentExpression(sa, sv),
 		pdp.MakeAttributeAssignmentExpression(ia, iv),
+		pdp.MakeAttributeAssignmentExpression(fa, fv),
 		pdp.MakeAttributeAssignmentExpression(aa, av),
 		pdp.MakeAttributeAssignmentExpression(na, nv),
 		pdp.MakeAttributeAssignmentExpression(da, dv),
@@ -212,6 +219,7 @@ func TestUnmarshalTaggedStruct(t *testing.T) {
 			Bool:    true,
 			String:  "test",
 			Int:     1234,
+			Float:   6789.0123,
 			Address: a,
 			Network: *n,
 			Domain:  "example.com"}
@@ -398,6 +406,8 @@ func CompareTestTaggedStruct(v, e TestTaggedResponseStruct, t *testing.T) {
 		v.Bool1 != e.Bool1 ||
 		v.Bool2 != e.Bool2 ||
 		v.Bool3 != e.Bool3 ||
+		v.Int != e.Int ||
+		v.Float != e.Float ||
 		v.Domain != e.Domain ||
 		v.Address.String() != e.Address.String() ||
 		v.Network.String() != e.Network.String() {
