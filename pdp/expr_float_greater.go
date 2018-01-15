@@ -27,12 +27,12 @@ func (f functionFloatGreater) GetResultType() int {
 }
 
 func (f functionFloatGreater) calculate(ctx *Context) (AttributeValue, error) {
-	first, err := ctx.calculateFloatExpression(f.first)
+	first, err := ctx.calculateFloatOrIntegerExpression(f.first)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "first argument"), "equal")
 	}
 
-	second, err := ctx.calculateFloatExpression(f.second)
+	second, err := ctx.calculateFloatOrIntegerExpression(f.second)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "second argument"), "equal")
 	}
@@ -41,9 +41,10 @@ func (f functionFloatGreater) calculate(ctx *Context) (AttributeValue, error) {
 }
 
 func functionFloatGreaterValidator(args []Expression) functionMaker {
-	if len(args) != 2 || args[0].GetResultType() != TypeFloat || args[1].GetResultType() != TypeFloat {
+	if len(args) != 2 ||
+		(args[0].GetResultType() != TypeFloat && args[0].GetResultType() != TypeInteger) ||
+		(args[1].GetResultType() != TypeFloat && args[1].GetResultType() != TypeInteger) {
 		return nil
 	}
-
 	return makeFunctionFloatGreaterAlt
 }

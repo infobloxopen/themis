@@ -2193,3 +2193,1104 @@ policies:
 
 	validateTestSuite(ts, t)
 }
+
+func TestFloatIntegerEqual(t *testing.T) {
+	ts := testSuite{
+		policies: map[policyFormat]string{
+			YAML: `# Policy set for Float Integer Equal Comparison
+attributes:
+  a: integer
+  b: float
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - id: "Test Float Integer Equal"
+    condition: # a == b
+       equal:
+       - attr: a
+       - attr: b
+    effect: Permit
+`,
+			JSON: `{
+  "attributes": {
+    "a": "integer",
+    "b": "float"
+  },
+  "policies": {
+    "id": "Test Float Integer Equal Policies",
+    "alg": "FirstApplicableEffect",
+    "rules": [
+      {
+        "id": "Test Float Integer Equal Rule",
+        "condition": {
+          "equal": [
+            {
+              "attr": "a"
+            },
+            {
+              "attr": "b"
+            }
+          ]
+        },
+        "effect": "Permit"
+      }
+    ]
+  }
+}`,
+		},
+		testSet: []testCase{
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "-1.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "-2.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+		},
+	}
+
+	validateTestSuite(ts, t)
+}
+
+func TestFloatIntegerGreater(t *testing.T) {
+	ts := testSuite{
+		policies: map[policyFormat]string{
+			YAML: `# Policy set for Float Integer Greater Comparison
+attributes:
+  a: integer
+  b: float
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - id: "Test Float Integer Greater"
+    condition: # a > b
+      greater:
+      - attr: a
+      - attr: b
+    effect: Permit
+`,
+			JSON: `{
+  "attributes": {
+    "a": "integer",
+    "b": "float"
+  },
+  "policies": {
+    "id": "Test Float Integer Greater Policies",
+    "alg": "FirstApplicableEffect",
+    "rules": [
+      {
+        "id": "Test Float Integer Greater Rule",
+        "condition": {
+          "greater": [
+            {
+              "attr": "a"
+            },
+            {
+              "attr": "b"
+            }
+          ]
+        },
+        "effect": "Permit"
+      }
+    ]
+  }
+}`,
+		},
+		testSet: []testCase{
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "0",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "-1",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "-1",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "0",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+		},
+	}
+
+	validateTestSuite(ts, t)
+}
+
+func TestFloatIntegerAdd(t *testing.T) {
+	ts := testSuite{
+		policies: map[policyFormat]string{
+			YAML: `# Policy set for Float Integer Addition
+attributes:
+  a: integer
+  b: float
+  c: float
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - id: "Test Float Integer Addition"
+    condition: # a + b == c
+      equal:
+      - add: # a + b
+        - attr: a
+        - attr: b
+      - attr: c
+    effect: Permit
+`,
+			JSON: `{
+  "attributes": {
+    "a": "integer",
+    "b": "float",
+    "c": "float"
+  },
+  "policies": {
+    "id": "Test Float Integer Addition Policies",
+    "alg": "FirstApplicableEffect",
+    "rules": [
+      {
+        "id": "Test Float Integer Addition Rule",
+        "condition": {
+          "equal": [
+            {
+              "add": [
+                {
+                  "attr": "a"
+                },
+                {
+                  "attr": "b"
+                }
+              ]
+            },
+            {
+              "attr": "c"
+            }
+          ]
+        },
+        "effect": "Permit"
+      }
+    ]
+  }
+}`,
+		},
+		testSet: []testCase{
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "float",
+						Value: "1.3",
+					},
+					{
+						Id:    "c",
+						Type:  "float",
+						Value: "2.3",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "float",
+						Value: "0.",
+					},
+					{
+						Id:    "c",
+						Type:  "float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "b",
+						Type:  "float",
+						Value: "-1.1",
+					},
+					{
+						Id:    "c",
+						Type:  "float",
+						Value: "-2.1",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "float",
+						Value: "0.",
+					},
+					{
+						Id:    "c",
+						Type:  "float",
+						Value: "2.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "float",
+						Value: "2.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "float",
+						Value: "-1.",
+					},
+					{
+						Id:    "c",
+						Type:  "float",
+						Value: "2.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+		},
+	}
+	validateTestSuite(ts, t)
+}
+
+func TestFloatIntegerSubtract(t *testing.T) {
+	ts := testSuite{
+		policies: map[policyFormat]string{
+			YAML: `# Policy set for Float Integer Subtraction
+attributes:
+  a: integer
+  b: float
+  c: float
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - id: "Test Float Integer Subtraction"
+    condition: # a - b == c
+      equal:
+      - subtract:
+        - attr: a
+        - attr: b
+      - attr: c
+    effect: Permit
+`,
+			JSON: `{
+  "attributes": {
+    "a": "integer",
+    "b": "float",
+    "c": "float"
+  },
+  "policies": {
+    "id": "Test Float Integer Subtraction Policies",
+    "alg": "FirstApplicableEffect",
+    "rules": [
+      {
+        "id": "Test Float Integer Subtraction Rule",
+        "condition": {
+          "equal": [
+            {
+              "subtract": [
+                {
+                  "attr": "a"
+                },
+                {
+                  "attr": "b"
+                }
+              ]
+            },
+            {
+              "attr": "c"
+            }
+          ]
+        },
+        "effect": "Permit"
+      }
+    ]
+  }
+}`,
+		},
+		testSet: []testCase{
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "0.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "-1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "0.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "-1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "0",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+		},
+	}
+
+	validateTestSuite(ts, t)
+}
+
+func TestFloatIntegerMultiply(t *testing.T) {
+	ts := testSuite{
+		policies: map[policyFormat]string{
+			YAML: `# Policy set for Float Integer Multiplication
+attributes:
+  a: integer
+  b: float
+  c: float
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - id: "Test Float Integer Multiplication"
+    condition: # a * b == c
+      equal:
+      - multiply: # a * b
+        - attr: a
+        - attr: b
+      - attr: c
+    effect: Permit
+`,
+			JSON: `{
+  "attributes": {
+    "a": "integer",
+    "b": "float",
+    "c": "float"
+  },
+  "policies": {
+    "id": "Test Float Integer Multiplication Policies",
+    "alg": "FirstApplicableEffect",
+    "rules": [
+      {
+        "id": "Test Float Integer Multiplication Rule",
+        "condition": {
+          "equal": [
+            {
+              "multiply": [
+                {
+                  "attr": "a"
+                },
+                {
+                  "attr": "b"
+                }
+              ]
+            },
+            {
+              "attr": "c"
+            }
+          ]
+        },
+        "effect": "Permit"
+      }
+    ]
+  }
+}`,
+		},
+		testSet: []testCase{
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "0.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "-1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "-1.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "0.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+		},
+	}
+
+	validateTestSuite(ts, t)
+}
+
+func TestFloatIntegerDivide(t *testing.T) {
+	ts := testSuite{
+		policies: map[policyFormat]string{
+			YAML: `# Policy set for Float Integer Division
+attributes:
+  a: integer
+  b: float
+  c: float
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - id: "Test Float Integer Division"
+    condition: # a / b == c
+      equal:
+      - divide: # a / b
+        - attr: a
+        - attr: b
+      - attr: c
+    effect: Permit
+`,
+			JSON: `{
+  "attributes": {
+    "a": "integer",
+    "b": "float",
+    "c": "float"
+  },
+  "policies": {
+    "id": "Test Float Integer Division Policies",
+    "alg": "FirstApplicableEffect",
+    "rules": [
+      {
+        "id": "Test Float Integer Division Rule",
+        "condition": {
+          "equal": [
+            {
+              "divide": [
+                {
+                  "attr": "a"
+                },
+                {
+                  "attr": "b"
+                }
+              ]
+            },
+            {
+              "attr": "c"
+            }
+          ]
+        },
+        "effect": "Permit"
+      }
+    ]
+  }
+}`,
+		},
+		testSet: []testCase{
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "4",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "2.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "2.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "7",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "2.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "3.5",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "-1.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "-1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "-1.",
+					},
+				},
+				expected: pdp.EffectPermit,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "2",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "-1",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "1.",
+					},
+				},
+				expected: pdp.EffectNotApplicable,
+			},
+		},
+	}
+
+	validateTestSuite(ts, t)
+}

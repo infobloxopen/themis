@@ -37,7 +37,7 @@ fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdpctrl-client fmt-papcl
 build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-egen
 
 .PHONY: test
-test: cover-out test-pdp test-pdp-yast test-pdp-jast test-pdp-jcon test-pep test-plugin
+test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-pep test-plugin
 
 .PHONY: bench
 bench: bench-pep bench-pdpserver-pkg
@@ -153,6 +153,10 @@ build-egen: build-dir
 .PHONY: test-pdp
 test-pdp: cover-out
 	$(AT)/pdp && $(GOTESTRACE)
+
+.PHONY: test-pdp-integration
+test-pdp-integration: cover-out
+	$(AT)/pdp/integration_tests && $(GOTESTRACE)
 
 .PHONY: test-pdp-yast
 test-pdp-yast: cover-out
