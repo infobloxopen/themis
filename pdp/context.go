@@ -219,6 +219,23 @@ func (c *Context) calculateFloatExpression(e Expression) (float64, error) {
 	return v.float()
 }
 
+func (c *Context) calculateFloatOrIntegerExpression(e Expression) (float64, error) {
+	v, err := e.calculate(c)
+	if err != nil {
+		return 0, err
+	}
+
+	if v.GetResultType() == TypeInteger {
+		intVal, err := v.integer()
+		if err != nil {
+			return 0, err
+		}
+
+		return float64(intVal), nil
+	}
+	return v.float()
+}
+
 func (c *Context) calculateAddressExpression(e Expression) (net.IP, error) {
 	v, err := e.calculate(c)
 	if err != nil {
