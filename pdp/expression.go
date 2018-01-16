@@ -48,4 +48,9 @@ var FunctionArgumentValidators = map[string][]functionArgumentValidator{
 		functionSetOfDomainsContainsValidator},
 	"not": {functionBooleanNotValidator},
 	"or":  {functionBooleanOrValidator},
-	"and": {functionBooleanAndValidator}}
+	"and": {functionBooleanAndValidator},
+	"range": {
+		functionIntegerRangeValidator,
+		functionFloatRangeValidator,
+	},
+}

@@ -26,15 +26,19 @@ func (f functionIntegerAdd) GetResultType() int {
 	return TypeInteger
 }
 
+func (f functionIntegerAdd) describe() string {
+	return "add"
+}
+
 func (f functionIntegerAdd) calculate(ctx *Context) (AttributeValue, error) {
 	first, err := ctx.calculateIntegerExpression(f.first)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "first argument"), "equal")
+		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())
 	}
 
 	second, err := ctx.calculateIntegerExpression(f.second)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "second argument"), "equal")
+		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 
 	return MakeIntegerValue(first + second), nil

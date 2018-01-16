@@ -26,15 +26,19 @@ func (f functionFloatAdd) GetResultType() int {
 	return TypeFloat
 }
 
+func (f functionFloatAdd) describe() string {
+	return "add"
+}
+
 func (f functionFloatAdd) calculate(ctx *Context) (AttributeValue, error) {
 	first, err := ctx.calculateFloatOrIntegerExpression(f.first)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "first argument"), "equal")
+		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())
 	}
 
 	second, err := ctx.calculateFloatOrIntegerExpression(f.second)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "second argument"), "equal")
+		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 
 	return MakeFloatValue(first + second), nil

@@ -26,15 +26,19 @@ func (f functionFloatEqual) GetResultType() int {
 	return TypeBoolean
 }
 
+func (f functionFloatEqual) describe() string {
+	return "equal"
+}
+
 func (f functionFloatEqual) calculate(ctx *Context) (AttributeValue, error) {
 	first, err := ctx.calculateFloatOrIntegerExpression(f.first)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "first argument"), "equal")
+		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())
 	}
 
 	second, err := ctx.calculateFloatOrIntegerExpression(f.second)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "second argument"), "equal")
+		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 
 	return MakeBooleanValue(first == second), nil
