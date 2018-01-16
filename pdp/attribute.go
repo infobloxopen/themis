@@ -66,7 +66,7 @@ var (
 
 	// TypeKeys maps Type* constants to type IDs. Type ID is all lower case
 	// type name. The slice is filled by init function.
-	TypeKeys = []string{}
+	TypeKeys []string
 	// TypeIDs maps type IDs to Type* constants. The map is filled by init
 	// function.
 	TypeIDs = map[string]int{}
@@ -288,7 +288,7 @@ func (v AttributeValue) describe() string {
 		return fmt.Sprintf("domain(%s)", v.v.(string))
 
 	case TypeSetOfStrings:
-		s := []string{}
+		var s []string
 		for p := range v.v.(*strtree.Tree).Enumerate() {
 			s = append(s, fmt.Sprintf("%q", p.Key))
 			if len(s) > 2 {
@@ -300,7 +300,7 @@ func (v AttributeValue) describe() string {
 		return fmt.Sprintf("set(%s)", strings.Join(s, ", "))
 
 	case TypeSetOfNetworks:
-		s := []string{}
+		var s []string
 		for p := range v.v.(*iptree.Tree).Enumerate() {
 			s = append(s, p.Key.String())
 			if len(s) > 2 {
@@ -312,7 +312,7 @@ func (v AttributeValue) describe() string {
 		return fmt.Sprintf("set(%s)", strings.Join(s, ", "))
 
 	case TypeSetOfDomains:
-		s := []string{}
+		var s []string
 		for p := range v.v.(*domaintree.Node).Enumerate() {
 			s = append(s, fmt.Sprintf("%q", p.Key))
 			if len(s) > 2 {
@@ -324,7 +324,7 @@ func (v AttributeValue) describe() string {
 		return fmt.Sprintf("domains(%s)", strings.Join(s, ", "))
 
 	case TypeListOfStrings:
-		s := []string{}
+		var s []string
 		for _, item := range v.v.([]string) {
 			s = append(s, fmt.Sprintf("%q", item))
 			if len(s) > 2 {
@@ -488,7 +488,7 @@ func (v AttributeValue) Serialize() (string, error) {
 		return strings.Join(s, ","), nil
 
 	case TypeSetOfNetworks:
-		s := []string{}
+		var s []string
 		for p := range v.v.(*iptree.Tree).Enumerate() {
 			s = append(s, strconv.Quote(p.Key.String()))
 		}
@@ -496,7 +496,7 @@ func (v AttributeValue) Serialize() (string, error) {
 		return strings.Join(s, ","), nil
 
 	case TypeSetOfDomains:
-		s := []string{}
+		var s []string
 		for p := range v.v.(*domaintree.Node).Enumerate() {
 			s = append(s, strconv.Quote(p.Key))
 		}
@@ -504,7 +504,7 @@ func (v AttributeValue) Serialize() (string, error) {
 		return strings.Join(s, ","), nil
 
 	case TypeListOfStrings:
-		s := []string{}
+		var s []string
 		for _, item := range v.v.([]string) {
 			s = append(s, strconv.Quote(item))
 		}

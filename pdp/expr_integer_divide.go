@@ -26,15 +26,19 @@ func (f functionIntegerDivide) GetResultType() int {
 	return TypeInteger
 }
 
+func (f functionIntegerDivide) describe() string {
+	return "divide"
+}
+
 func (f functionIntegerDivide) calculate(ctx *Context) (AttributeValue, error) {
 	first, err := ctx.calculateIntegerExpression(f.first)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "first argument"), "equal")
+		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())
 	}
 
 	second, err := ctx.calculateIntegerExpression(f.second)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "second argument"), "equal")
+		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 
 	return MakeIntegerValue(first / second), nil

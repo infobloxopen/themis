@@ -29,8 +29,9 @@ func (f policyFormat) String() string {
 }
 
 type testCase struct {
-	attrs    []*pb.Attribute
-	expected int
+	attrs              []*pb.Attribute
+	expected           int
+	expectedObligation string
 }
 
 type testSuite struct {
@@ -100,7 +101,7 @@ func validateTestSuite(ts testSuite, t *testing.T) {
 				t.Run(fmt.Sprintf("Policy Format: %s", pf), func(t *testing.T) {
 					p := loadPolicy(pf, ps)
 					r := p.Root().Calculate(ctx)
-					effect, _, err := r.Status()
+					effect, obligations, err := r.Status()
 					if err != nil {
 						t.Fatalf("Expected no error while evaluating policy but got: %s", err)
 					}
@@ -108,6 +109,19 @@ func validateTestSuite(ts testSuite, t *testing.T) {
 					if effect != tc.expected {
 						t.Fatalf("Expected result of policy evaluation %s, but got %s",
 							pdp.EffectNameFromEnum(tc.expected), pdp.EffectNameFromEnum(effect))
+					}
+					if tc.expectedObligation != "" {
+						obLen := len(obligations)
+						if obLen != 1 {
+							t.Fatalf("Expected result of policy evaluation include 1 obligation, but got %d", obLen)
+						}
+						_, _, obligationRes, err := obligations[0].Serialize(ctx)
+						if err != nil {
+							t.Fatalf("Expected when serializing obligation, but got %s", err)
+						}
+						if obligationRes != tc.expectedObligation {
+							t.Fatalf("Expected obligation of policy evaluation %s, but got %s", tc.expectedObligation, obligationRes)
+						}
 					}
 				})
 			}
@@ -3288,6 +3302,168 @@ policies:
 					},
 				},
 				expected: pdp.EffectNotApplicable,
+			},
+		},
+	}
+
+	validateTestSuite(ts, t)
+}
+
+func TestFloatRange(t *testing.T) {
+	ts := testSuite{
+		policies: map[policyFormat]string{
+			YAML: `# Policy set for Float Integer Division
+attributes:
+  a: float
+  b: float
+  c: float
+  r: string
+
+policies:
+  alg:
+    id: Mapper
+    map:
+      range:
+        - attr: a
+        - attr: b
+        - attr: c
+    alg: FirstApplicableEffect
+  rules:
+  - id: Below
+    effect: Permit
+    obligations:
+      - r: Below
+
+  - id: Above
+    effect: Permit
+    obligations:
+      - r: Above
+
+  - id: Within
+    effect: Permit
+    obligations:
+      - r: Within
+`,
+			JSON: `{
+  "attributes": {
+    "a": "float",
+    "b": "float",
+    "c": "float",
+    "r": "string"
+  },
+  "policies": {
+    "id": "Test Integer Range Policies",
+    "alg": {
+       "id": "mapper",
+       "map": {
+          "range": [
+            {
+               "attr": "a"
+            },
+            {
+               "attr": "b"
+            },
+            {
+               "attr": "c"
+            }
+          ]
+        }
+     },
+    "rules": [
+      {
+        "id": "Below",
+        "effect": "Permit",
+        "Obligations": [
+           {
+               "r": "Below"
+           }
+        ]
+      },
+      {
+        "id": "Above",
+        "effect": "Permit",
+        "Obligations": [
+           {
+               "r": "Above"
+           }
+        ]
+      },
+      {
+        "id": "Within",
+        "effect": "Permit",
+        "Obligations": [
+           {
+               "r": "Within"
+           }
+        ]
+      }
+    ]
+  }
+}`,
+		},
+		testSet: []testCase{
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "5.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "0.",
+					},
+				},
+				expected:           pdp.EffectPermit,
+				expectedObligation: "Below",
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "5.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "10.",
+					},
+				},
+				expected:           pdp.EffectPermit,
+				expectedObligation: "Above",
+			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Float",
+						Value: "1.",
+					},
+					{
+						Id:    "b",
+						Type:  "Float",
+						Value: "5.",
+					},
+					{
+						Id:    "c",
+						Type:  "Float",
+						Value: "3.3",
+					},
+				},
+				expected:           pdp.EffectPermit,
+				expectedObligation: "Within",
 			},
 		},
 	}
