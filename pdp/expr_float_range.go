@@ -33,17 +33,17 @@ func (f functionFloatRange) describe() string {
 }
 
 func (f functionFloatRange) calculate(ctx *Context) (AttributeValue, error) {
-	min, err := ctx.calculateFloatExpression(f.min)
+	min, err := ctx.calculateFloatOrIntegerExpression(f.min)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "min argument"), f.describe())
 	}
 
-	max, err := ctx.calculateFloatExpression(f.max)
+	max, err := ctx.calculateFloatOrIntegerExpression(f.max)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "max argument"), f.describe())
 	}
 
-	val, err := ctx.calculateFloatExpression(f.val)
+	val, err := ctx.calculateFloatOrIntegerExpression(f.val)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "val argument"), f.describe())
 	}
@@ -58,7 +58,10 @@ func (f functionFloatRange) calculate(ctx *Context) (AttributeValue, error) {
 }
 
 func functionFloatRangeValidator(args []Expression) functionMaker {
-	if len(args) != 3 || args[0].GetResultType() != TypeFloat || args[1].GetResultType() != TypeFloat || args[2].GetResultType() != TypeFloat {
+	if len(args) != 3 ||
+		(args[0].GetResultType() != TypeFloat && args[0].GetResultType() != TypeInteger) ||
+		(args[1].GetResultType() != TypeFloat && args[1].GetResultType() != TypeInteger) ||
+		(args[2].GetResultType() != TypeFloat && args[2].GetResultType() != TypeInteger) {
 		return nil
 	}
 
