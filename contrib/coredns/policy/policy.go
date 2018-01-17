@@ -537,11 +537,11 @@ func (p *policyPlugin) decodeDebugMsg(r *dns.Msg) bool {
 	return false
 }
 
-func getNameType(r *dns.Msg) (string, uint16) {
+func getNameAndType(r *dns.Msg) (string, uint16) {
 	if r == nil || len(r.Question) == 0 {
 		return ".", 0
 	}
-	return strings.ToLower(r.Question[0].Name), r.Question[0].Qtype
+	return r.Question[0].Name, r.Question[0].Qtype
 }
 
 func getRemoteIP(w dns.ResponseWriter) string {
@@ -553,7 +553,7 @@ func getRemoteIP(w dns.ResponseWriter) string {
 	return ip
 }
 
-func getNameClass(r *dns.Msg) (string, uint16) {
+func getNameAndClass(r *dns.Msg) (string, uint16) {
 	if r == nil || len(r.Question) == 0 {
 		return ".", 0
 	}
@@ -573,7 +573,7 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	resetCqCr(ctx)
 
 	debugQuery := p.decodeDebugMsg(r)
-	qName, qType := getNameType(r)
+	qName, qType := getNameAndType(r)
 	for _, s := range p.passthrough {
 		if strings.HasSuffix(qName, s) {
 			return plugin.NextOrFailure(p.Name(), p.next, ctx, w, r)
@@ -673,7 +673,7 @@ func (p *policyPlugin) redirect(ctx context.Context, r *dns.Msg, dst string) (in
 	cname := false
 
 	ip := net.ParseIP(dst)
-	qname, qclass := getNameClass(r)
+	qname, qclass := getNameAndClass(r)
 	if ipv4 := ip.To4(); ipv4 != nil {
 		rr = new(dns.A)
 		rr.(*dns.A).Hdr = dns.RR_Header{Name: qname, Rrtype: dns.TypeA, Class: qclass}

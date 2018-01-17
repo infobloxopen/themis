@@ -111,7 +111,7 @@ func TestAttribute(t *testing.T) {
 		t.Errorf("Expected %q as value description but got %q", expDesc, d)
 	}
 
-	v = MakeDomainValue("example.com")
+	v = MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03com\x00"))
 	vt = v.GetResultType()
 	if vt != TypeDomain {
 		t.Errorf("Expected %q as value type but got %q", TypeNames[TypeDomain], TypeNames[vt])
@@ -415,8 +415,8 @@ func TestAttributeValueTypeCast(t *testing.T) {
 		d, err := v.domain()
 		if err != nil {
 			t.Errorf("Expected domain value but got error: %s", err)
-		} else if d != "example.com" {
-			t.Errorf("Expected \"example.com\" as attribute value but got %s", d)
+		} else if string(d) != "\x07example\x03com\x00" {
+			t.Errorf("Expected \"\\aexample\\x03com\\x00\" as attribute value but got %s", d)
 		}
 
 		_, err = v.setOfStrings()
@@ -710,7 +710,7 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 		t.Errorf("Expected %q, %q, %q but got %q, %q, %q", a.id, TypeNames[a.t], expect, id, tName, s)
 	}
 
-	dv := MakeDomainValue("example.com")
+	dv := MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03com\x00"))
 	v = MakeStringValue(expect)
 	e := makeFunctionStringEqual(v, dv)
 	a = Attribute{
@@ -771,51 +771,6 @@ func TestAttributeDesignator(t *testing.T) {
 	_, err = d.Calculate(ctx)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	}
-}
-
-func TestDomainTreeAdjustDomainName(t *testing.T) {
-	raw := "example.com"
-	domain, err := AdjustDomainName(raw)
-	if err != nil {
-		t.Errorf("Don't expect error for \"%s\" adjustment but got %s", raw, err)
-	} else {
-		if domain != raw {
-			t.Errorf("Expected ajusted domain \"%s\" but got \"%s\"", raw, domain)
-		}
-	}
-
-	raw = "\u043f\u0440\u0438\u043c\u0435\u0440.\u0440\u0444"
-	conv := "xn--e1afmkfd.xn--p1ai"
-	domain, err = AdjustDomainName(raw)
-	if err != nil {
-		t.Errorf("Don't expect error for \"%s\" adjustment but got %s", raw, err)
-	} else {
-		if domain != conv {
-			t.Errorf("Expected ajusted domain \"%s\" but got \"%s\"", conv, domain)
-		}
-	}
-
-	raw = "xn---"
-	domain, err = AdjustDomainName(raw)
-	if err == nil {
-		t.Errorf("Expected error for domain \"%s\" but got converted to \"%s\"", raw, domain)
-	}
-
-	raw = "dom@in.com"
-	domain, err = AdjustDomainName(raw)
-	if err == nil {
-		t.Errorf("Expected error for domain \"%s\" but got converted to \"%s\"", raw, domain)
-	}
-
-	raw = "mof_web.lowestprices.at"
-	domain, err = AdjustDomainName(raw)
-	if err != nil {
-		t.Errorf("Don't expect error for \"%s\" adjustment but got %s", raw, err)
-	} else {
-		if domain != raw {
-			t.Errorf("Expected ajusted domain \"%s\" but got \"%s\"", raw, domain)
-		}
 	}
 }
 

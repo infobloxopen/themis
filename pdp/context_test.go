@@ -48,7 +48,7 @@ func TestContext(t *testing.T) {
 			return "n", MakeNetworkValue(n), nil
 
 		case 4:
-			return "d", MakeDomainValue("example.com"), nil
+			return "d", MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03com\x00")), nil
 
 		case 5:
 			st := strtree.NewTree()

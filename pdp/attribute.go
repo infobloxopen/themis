@@ -3,11 +3,8 @@ package pdp
 import (
 	"fmt"
 	"net"
-	"regexp"
 	"strconv"
 	"strings"
-
-	"golang.org/x/net/idna"
 
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
@@ -139,7 +136,7 @@ func MakeNetworkValue(v *net.IPNet) AttributeValue {
 
 // MakeDomainValue creates instance of domain name attribute value. Argument
 // should be valid domain name. Caller is responsible for the validation.
-func MakeDomainValue(v string) AttributeValue {
+func MakeDomainValue(v domaintree.WireDomainNameLower) AttributeValue {
 	return AttributeValue{
 		t: TypeDomain,
 		v: v}
@@ -212,8 +209,12 @@ func MakeValueFromString(t int, s string) (AttributeValue, error) {
 		return MakeNetworkValue(n), nil
 
 	case TypeDomain:
-		//TODO: Add domain validation according standards.
-		return MakeDomainValue(s), nil
+		d, err := domaintree.MakeWireDomainNameLower(s)
+		if err != nil {
+			return undefinedValue, newInvalidDomainNameStringCastError(s, err)
+		}
+
+		return MakeDomainValue(d), nil
 	}
 
 	return undefinedValue, newUnknownTypeStringCastError(t)
@@ -243,7 +244,7 @@ func (v AttributeValue) describe() string {
 		return v.v.(*net.IPNet).String()
 
 	case TypeDomain:
-		return fmt.Sprintf("domain(%s)", v.v.(string))
+		return fmt.Sprintf("domain(%s)", v.v.(domaintree.WireDomainNameLower).String())
 
 	case TypeSetOfStrings:
 		s := []string{}
@@ -341,13 +342,13 @@ func (v AttributeValue) network() (*net.IPNet, error) {
 	return v.v.(*net.IPNet), nil
 }
 
-func (v AttributeValue) domain() (string, error) {
+func (v AttributeValue) domain() (domaintree.WireDomainNameLower, error) {
 	err := v.typeCheck(TypeDomain)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return v.v.(string), nil
+	return v.v.(domaintree.WireDomainNameLower), nil
 }
 
 func (v AttributeValue) setOfStrings() (*strtree.Tree, error) {
@@ -411,7 +412,7 @@ func (v AttributeValue) Serialize() (string, error) {
 		return v.v.(*net.IPNet).String(), nil
 
 	case TypeDomain:
-		return v.v.(string), nil
+		return v.v.(domaintree.WireDomainNameLower).String(), nil
 
 	case TypeSetOfStrings:
 		s := sortSetOfStrings(v.v.(*strtree.Tree))
@@ -514,19 +515,4 @@ func (d AttributeDesignator) GetResultType() int {
 // Calculate implements Expression interface and returns calculated value
 func (d AttributeDesignator) Calculate(ctx *Context) (AttributeValue, error) {
 	return ctx.getAttribute(d.a)
-}
-
-var domainRegexp = regexp.MustCompile("^[-._a-z0-9]+$")
-
-// AdjustDomainName makes necessary conversions and validations for domain name.
-func AdjustDomainName(s string) (string, error) {
-	tmp, err := idna.Punycode.ToASCII(s)
-	if err != nil {
-		return "", fmt.Errorf("can't convert domain [%s]", s)
-	}
-	ret := strings.ToLower(tmp)
-	if !domainRegexp.MatchString(ret) {
-		return "", fmt.Errorf("can't validate domain [%s]", s)
-	}
-	return ret, nil
 }

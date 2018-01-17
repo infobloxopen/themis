@@ -145,33 +145,23 @@ type domainMap struct {
 }
 
 func (m *domainMap) unmarshal(k string, d *json.Decoder) error {
-	n, err := pdp.AdjustDomainName(k)
-	if err != nil {
-		return newDomainCastError(k, err)
-	}
-
 	v, err := m.c.unmarshalTypedData(d, m.i+1)
 	if err != nil {
 		return bindError(err, k)
 	}
 
-	m.m.InplaceInsert(n, v)
+	m.m.InplaceInsert(k, v)
 
 	return nil
 }
 
 func (m *domainMap) postProcess(p jparser.Pair) error {
-	n, err := pdp.AdjustDomainName(p.K)
-	if err != nil {
-		return newDomainCastError(p.K, err)
-	}
-
 	v, err := m.c.postProcess(p.V, m.i+1)
 	if err != nil {
 		return bindError(err, p.K)
 	}
 
-	m.m.InplaceInsert(n, v)
+	m.m.InplaceInsert(p.K, v)
 
 	return nil
 }

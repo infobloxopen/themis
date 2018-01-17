@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/themis/pdp"
 )
 
@@ -80,6 +81,10 @@ const (
         }
       }
     }
+  },
+  {
+    "op": "Delete",
+    "path": ["second", "second", "2001:db8:1000::/36", "example.net"]
   },
   {
     "op": "Delete",
@@ -403,7 +408,11 @@ func TestUnmarshal(t *testing.T) {
 			if err != nil {
 				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 			} else {
-				path := []pdp.Expression{pdp.MakeStringValue("first"), n, pdp.MakeDomainValue("example.com")}
+				path := []pdp.Expression{
+					pdp.MakeStringValue("first"),
+					n,
+					pdp.MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03com\x00")),
+				}
 				r, err := lc.Get(path, nil)
 				if err != nil {
 					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
@@ -422,7 +431,11 @@ func TestUnmarshal(t *testing.T) {
 			if err != nil {
 				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 			} else {
-				path := []pdp.Expression{pdp.MakeStringValue("second"), n, pdp.MakeDomainValue("example.net")}
+				path := []pdp.Expression{
+					pdp.MakeStringValue("second"),
+					n,
+					pdp.MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03net\x00")),
+				}
 				r, err := lc.Get(path, nil)
 				if err != nil {
 					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
@@ -441,7 +454,11 @@ func TestUnmarshal(t *testing.T) {
 			if err != nil {
 				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 			} else {
-				path := []pdp.Expression{pdp.MakeStringValue("second"), n, pdp.MakeDomainValue("example.net")}
+				path := []pdp.Expression{
+					pdp.MakeStringValue("second"),
+					n,
+					pdp.MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03net\x00")),
+				}
 				r, err := lc.Get(path, nil)
 				if err == nil {
 					s, err := r.Serialize()
@@ -505,7 +522,9 @@ func TestUnmarshal(t *testing.T) {
 		if err != nil {
 			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		} else {
-			path := []pdp.Expression{pdp.MakeDomainValue("example.net")}
+			path := []pdp.Expression{
+				pdp.MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03net\x00")),
+			}
 			r, err := lc.Get(path, nil)
 			if err != nil {
 				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
@@ -572,7 +591,9 @@ func TestUnmarshal(t *testing.T) {
 		if err != nil {
 			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		} else {
-			path := []pdp.Expression{pdp.MakeDomainValue("example.net")}
+			path := []pdp.Expression{
+				pdp.MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03net\x00")),
+			}
 			r, err := lc.Get(path, nil)
 			if err != nil {
 				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
@@ -1028,7 +1049,11 @@ func TestUnmarshalUpdate(t *testing.T) {
 		if err != nil {
 			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		} else {
-			path := []pdp.Expression{pdp.MakeStringValue("second"), n, pdp.MakeDomainValue("example.com")}
+			path := []pdp.Expression{
+				pdp.MakeStringValue("second"),
+				n,
+				pdp.MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03com\x00")),
+			}
 			r, err := lc.Get(path, nil)
 			if err == nil {
 				s, err := r.Serialize()

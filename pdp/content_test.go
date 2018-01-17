@@ -261,7 +261,7 @@ func TestLocalContentStorage(t *testing.T) {
 	} else {
 		path := []Expression{
 			MakeStringValue("key"),
-			MakeDomainValue("example.gov")}
+			MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03gov\x00"))}
 		v, err := c.Get(path, nil)
 		if err != nil {
 			t.Errorf("Expected no error but got %T (%s)", err, err)
