@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "net/http/pprof"
 	"runtime"
 
 	log "github.com/Sirupsen/logrus"
@@ -10,7 +11,7 @@ import (
 
 func main() {
 	logger := log.StandardLogger()
-	logger.Info("Starting PDP server.")
+	logger.Info("Starting PDP server")
 
 	pdp := server.NewServer(
 		server.WithLogger(logger),

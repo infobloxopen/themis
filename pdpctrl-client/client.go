@@ -152,6 +152,8 @@ func (c *Client) Apply(id int32) error {
 	return nil
 }
 
+// NotifyReady set server to 'ready' state -
+// after that server will open service port for serve decision requests
 func (c *Client) NotifyReady() error {
 	r, err := c.client.NotifyReady(context.Background(), &pb.Empty{})
 	if err != nil {

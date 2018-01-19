@@ -1,10 +1,11 @@
 package pdp
 
-// Expression abstracts any PDP expression. The GetResultType method returns
-// type of particular expression.
+// Expression abstracts any PDP expression.
+// The GetResultType method returns type of particular expression.
+// The Calculate method returns calculated value for particular expression.
 type Expression interface {
 	GetResultType() int
-	calculate(ctx *Context) (AttributeValue, error)
+	Calculate(ctx *Context) (AttributeValue, error)
 }
 
 type functionMaker func(args []Expression) Expression

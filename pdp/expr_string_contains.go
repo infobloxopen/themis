@@ -32,7 +32,8 @@ func (f functionStringContains) describe() string {
 	return "contains"
 }
 
-func (f functionStringContains) calculate(ctx *Context) (AttributeValue, error) {
+// Calculate implements Expression interface and returns calculated value
+func (f functionStringContains) Calculate(ctx *Context) (AttributeValue, error) {
 	str, err := ctx.calculateStringExpression(f.str)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "string argument"), f.describe())

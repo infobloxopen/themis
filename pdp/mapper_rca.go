@@ -208,7 +208,7 @@ func (a mapperRCA) del(ID string, old *Rule) RuleCombiningAlg {
 }
 
 func (a mapperRCA) execute(rules []*Rule, ctx *Context) Response {
-	v, err := a.argument.calculate(ctx)
+	v, err := a.argument.Calculate(ctx)
 	if err != nil {
 		switch err.(type) {
 		case *missingValueError:

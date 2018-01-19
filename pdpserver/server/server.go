@@ -9,7 +9,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	_ "net/http/pprof"
 	"os"
 	"runtime/debug"
 	"sync"
@@ -32,56 +31,66 @@ type transport struct {
 	proto *grpc.Server
 }
 
+// Option configures how we set up PDP server.
 type Option func(*options)
 
+// WithLogger returns a Option which sets logger
 func WithLogger(logger *log.Logger) Option {
 	return func(o *options) {
 		o.logger = logger
 	}
 }
 
+// WithPolicyParser returns a Option which sets policy parser
 func WithPolicyParser(parser ast.Parser) Option {
 	return func(o *options) {
 		o.parser = parser
 	}
 }
 
+// WithServiceAt returns a Option which sets service endpoint
 func WithServiceAt(addr string) Option {
 	return func(o *options) {
 		o.service = addr
 	}
 }
 
+// WithControlAt returns a Option which sets control endpoint
 func WithControlAt(addr string) Option {
 	return func(o *options) {
 		o.control = addr
 	}
 }
 
+// WithHealthAt returns a Option which sets healthcheck endpoint
 func WithHealthAt(addr string) Option {
 	return func(o *options) {
 		o.health = addr
 	}
 }
 
+// WithProfilerAt returns a Option which sets profiler endpoint
 func WithProfilerAt(addr string) Option {
 	return func(o *options) {
 		o.profiler = addr
 	}
 }
 
+// WithTracingAt returns a Option which sets tracing endpoint
 func WithTracingAt(addr string) Option {
 	return func(o *options) {
 		o.tracing = addr
 	}
 }
 
+// WithMaxGRPCStreams returns a Option which sets maximum gRPC streams count
 func WithMaxGRPCStreams(limit uint32) Option {
 	return func(o *options) {
 		o.streams = limit
 	}
 }
 
+// WithMemLimits returns a Option which sets memory limits
 func WithMemLimits(limits MemLimits) Option {
 	return func(o *options) {
 		o.memLimits = &limits
@@ -100,6 +109,7 @@ type options struct {
 	streams   uint32
 }
 
+// Server structure is PDP server object
 type Server struct {
 	sync.RWMutex
 
@@ -125,6 +135,7 @@ type Server struct {
 	gcPercent   int
 }
 
+// NewServer returns new Server instance
 func NewServer(opts ...Option) *Server {
 	o := options{
 		logger:  log.StandardLogger(),
@@ -157,6 +168,7 @@ func NewServer(opts ...Option) *Server {
 	}
 }
 
+// LoadPolicies loads policies from file
 func (s *Server) LoadPolicies(path string) error {
 	if len(path) <= 0 {
 		return nil
@@ -181,6 +193,7 @@ func (s *Server) LoadPolicies(path string) error {
 	return nil
 }
 
+// ReadPolicies reads policies with using io.Reader instance
 func (s *Server) ReadPolicies(r io.Reader) error {
 	if r == nil {
 		return nil
@@ -198,6 +211,7 @@ func (s *Server) ReadPolicies(r io.Reader) error {
 	return nil
 }
 
+// LoadContent loads content from files
 func (s *Server) LoadContent(paths []string) error {
 	items := []*pdp.LocalContent{}
 	for _, path := range paths {
@@ -229,6 +243,7 @@ func (s *Server) LoadContent(paths []string) error {
 	return nil
 }
 
+// ReadContent reads content with using io.Reader instances
 func (s *Server) ReadContent(readers ...io.Reader) error {
 	items := []*pdp.LocalContent{}
 	for _, r := range readers {
@@ -348,6 +363,7 @@ func (s *Server) flushErrors() {
 	}
 }
 
+// Serve starts PDP server service
 func (s *Server) Serve() error {
 	s.flushErrors()
 
@@ -428,6 +444,7 @@ func (s *Server) Serve() error {
 	return err
 }
 
+// Stop stops PDP server service
 func (s *Server) Stop() error {
 	if s.control.proto != nil {
 		s.control.proto.Stop()

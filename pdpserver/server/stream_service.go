@@ -12,11 +12,13 @@ import (
 
 var streamAutoIncrement uint64
 
+// NewValidationStream is a server handler for gRPC call
+// It creates new gRPC stream and handles PDP decision requests using it
 func (s *Server) NewValidationStream(stream pb.PDP_NewValidationStreamServer) error {
 	ctx := stream.Context()
 
 	sID := atomic.AddUint64(&streamAutoIncrement, 1)
-	s.opts.logger.WithField("id", sID).Info("Got new stream")
+	s.opts.logger.WithField("id", sID).Debug("Got new stream")
 
 	for {
 		in, err := stream.Recv()
@@ -56,6 +58,6 @@ func (s *Server) NewValidationStream(stream pb.PDP_NewValidationStreamServer) er
 		}
 	}
 
-	s.opts.logger.WithField("id", sID).Info("Stream depleted")
+	s.opts.logger.WithField("id", sID).Debug("Stream deleted")
 	return nil
 }

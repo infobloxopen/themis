@@ -71,13 +71,13 @@ type edns0Map struct {
 	end      uint
 }
 
-// PolicyPlugin represents a plugin instance that can validate DNS
+// policyPlugin represents a plugin instance that can validate DNS
 // requests and replies using PDP server.
-type PolicyPlugin struct {
+type policyPlugin struct {
 	endpoints   []string
 	options     map[uint16][]*edns0Map
 	transfer    map[string]struct{}
-	tapIO       DnstapSender
+	tapIO       dnstapSender
 	trace       plugin.Handler
 	next        plugin.Handler
 	pdp         pep.Client
@@ -86,12 +86,12 @@ type PolicyPlugin struct {
 	hotSpot     bool
 }
 
-func newPolicyPlugin() *PolicyPlugin {
-	return &PolicyPlugin{options: make(map[uint16][]*edns0Map), transfer: make(map[string]struct{})}
+func newPolicyPlugin() *policyPlugin {
+	return &policyPlugin{options: make(map[uint16][]*edns0Map), transfer: make(map[string]struct{})}
 }
 
 // connect establishes connection to PDP server.
-func (p *PolicyPlugin) connect() error {
+func (p *policyPlugin) connect() error {
 	log.Printf("[DEBUG] Connecting %v", p)
 
 	opts := []pep.Option{}
@@ -117,14 +117,14 @@ func (p *PolicyPlugin) connect() error {
 }
 
 // closeConn terminates previously established connection.
-func (p *PolicyPlugin) closeConn() {
+func (p *policyPlugin) closeConn() {
 	if p.pdp != nil {
 		p.pdp.Close()
 		p.pdp = nil
 	}
 }
 
-func (p *PolicyPlugin) parseOption(c *caddy.Controller) error {
+func (p *policyPlugin) parseOption(c *caddy.Controller) error {
 	switch c.Val() {
 	case "endpoint":
 		return p.parseEndpoint(c)
@@ -145,7 +145,7 @@ func (p *PolicyPlugin) parseOption(c *caddy.Controller) error {
 	return errInvalidOption
 }
 
-func (p *PolicyPlugin) parseEndpoint(c *caddy.Controller) error {
+func (p *policyPlugin) parseEndpoint(c *caddy.Controller) error {
 	args := c.RemainingArgs()
 	if len(args) <= 0 {
 		return c.ArgErr()
@@ -155,7 +155,7 @@ func (p *PolicyPlugin) parseEndpoint(c *caddy.Controller) error {
 	return nil
 }
 
-func (p *PolicyPlugin) parseEDNS0(c *caddy.Controller) error {
+func (p *policyPlugin) parseEDNS0(c *caddy.Controller) error {
 	args := c.RemainingArgs()
 	// Usage: edns0 <code> <name> [ <dataType> <destType> ] [ <size> <start> <end> ].
 	// Valid dataTypes are hex (default), bytes, ip.
@@ -190,7 +190,7 @@ func (p *PolicyPlugin) parseEDNS0(c *caddy.Controller) error {
 	return nil
 }
 
-func (p *PolicyPlugin) parseDebugQuerySuffix(c *caddy.Controller) error {
+func (p *policyPlugin) parseDebugQuerySuffix(c *caddy.Controller) error {
 	args := c.RemainingArgs()
 	if len(args) != 1 {
 		return c.ArgErr()
@@ -200,7 +200,7 @@ func (p *PolicyPlugin) parseDebugQuerySuffix(c *caddy.Controller) error {
 	return nil
 }
 
-func (p *PolicyPlugin) parseStreams(c *caddy.Controller) error {
+func (p *policyPlugin) parseStreams(c *caddy.Controller) error {
 	args := c.RemainingArgs()
 	if len(args) < 1 || len(args) > 2 {
 		return c.ArgErr()
@@ -234,7 +234,7 @@ func (p *PolicyPlugin) parseStreams(c *caddy.Controller) error {
 	return nil
 }
 
-func (p *PolicyPlugin) parseTransfer(c *caddy.Controller) error {
+func (p *policyPlugin) parseTransfer(c *caddy.Controller) error {
 	args := c.RemainingArgs()
 	if len(args) <= 0 {
 		return c.ArgErr()
@@ -247,7 +247,7 @@ func (p *PolicyPlugin) parseTransfer(c *caddy.Controller) error {
 	return nil
 }
 
-func (p *PolicyPlugin) addEDNS0Map(code, name, dataType, destType,
+func (p *policyPlugin) addEDNS0Map(code, name, dataType, destType,
 	sizeStr, startStr, endStr string) error {
 	c, err := strconv.ParseUint(code, 0, 16)
 	if err != nil {
@@ -335,8 +335,8 @@ func parseOptionGroup(ah *attrHolder, data []byte, options []*edns0Map) bool {
 	return srcIPFound
 }
 
-func (p *PolicyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) {
-	ipID := AttrNameSourceIP
+func (p *policyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) {
+	ipID := attrNameSourceIP
 
 	o := r.IsEdns0()
 	if o == nil {
@@ -354,7 +354,7 @@ func (p *PolicyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) 
 		}
 		srcIPFound := parseOptionGroup(ah, optLocal.Data, options)
 		if srcIPFound {
-			ipID = AttrNameProxySourceIP
+			ipID = attrNameProxySourceIP
 		}
 	}
 
@@ -378,7 +378,7 @@ func resolve(status int) string {
 
 func join(key, value string) string { return "," + key + ":" + value }
 
-func (p *PolicyPlugin) setDebugQueryAnswer(ah *attrHolder, r *dns.Msg, status int) {
+func (p *policyPlugin) setDebugQueryAnswer(ah *attrHolder, r *dns.Msg, status int) {
 	debugQueryInfo := resolve(status)
 
 	var action string
@@ -387,12 +387,12 @@ func (p *PolicyPlugin) setDebugQueryAnswer(ah *attrHolder, r *dns.Msg, status in
 	} else {
 		action = actionConv[ah.action]
 	}
-	debugQueryInfo += join(TypeValueQuery, action)
+	debugQueryInfo += join(typeValueQuery, action)
 	for _, item := range ah.attrsRespDomain {
 		debugQueryInfo += join(item.Id, item.Value)
 	}
 	if len(ah.attrsRespRespip) > 0 {
-		debugQueryInfo += join(TypeValueResponse, actionConv[ah.action])
+		debugQueryInfo += join(typeValueResponse, actionConv[ah.action])
 		for _, item := range ah.attrsRespRespip {
 			debugQueryInfo += join(item.Id, item.Value)
 		}
@@ -402,7 +402,7 @@ func (p *PolicyPlugin) setDebugQueryAnswer(ah *attrHolder, r *dns.Msg, status in
 	r.Answer = append(r.Answer, &dns.TXT{Hdr: hdr, Txt: []string{debugQueryInfo}})
 }
 
-func (p *PolicyPlugin) decodeDebugMsg(r *dns.Msg) bool {
+func (p *policyPlugin) decodeDebugMsg(r *dns.Msg) bool {
 	if r != nil && len(r.Question) > 0 {
 		if r.Question[0].Qclass == dns.ClassCHAOS && r.Question[0].Qtype == dns.TypeTXT {
 			if strings.HasSuffix(r.Question[0].Name, p.debugSuffix) {
@@ -440,7 +440,7 @@ func getNameClass(r *dns.Msg) (string, uint16) {
 }
 
 // ServeDNS implements the Handler interface.
-func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	var (
 		status    = -1
 		respMsg   *dns.Msg
@@ -516,6 +516,7 @@ func (p *PolicyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 Exit:
 	r.Rcode = status
 	r.Response = true
+	r.Extra = nil
 	if debugQuery {
 		r.Question[0].Name = r.Question[0].Name + p.debugSuffix
 		r.Question[0].Qtype = dns.TypeTXT
@@ -523,12 +524,12 @@ Exit:
 		sendExtra = false
 	}
 	if p.tapIO != nil && status != dns.RcodeRefused && status != dns.RcodeServerFailure {
-		if pw := NewProxyWriter(w); pw != nil {
+		if pw := newProxyWriter(w); pw != nil {
 			pw.WriteMsg(r)
 			if !sendExtra {
 				ah = nil
 			}
-			p.tapIO.SendCRExtraMsg(pw, ah)
+			p.tapIO.sendCRExtraMsg(pw, ah)
 		}
 	} else {
 		w.WriteMsg(r)
@@ -537,9 +538,9 @@ Exit:
 }
 
 // Name implements the Handler interface
-func (p *PolicyPlugin) Name() string { return "policy" }
+func (p *policyPlugin) Name() string { return "policy" }
 
-func (p *PolicyPlugin) redirect(ctx context.Context, r *dns.Msg, dst string) (int, error) {
+func (p *policyPlugin) redirect(ctx context.Context, r *dns.Msg, dst string) (int, error) {
 	var rr dns.RR
 	cname := false
 
@@ -581,7 +582,7 @@ func (p *PolicyPlugin) redirect(ctx context.Context, r *dns.Msg, dst string) (in
 	return r.Rcode, nil
 }
 
-func (p *PolicyPlugin) validate(ah *attrHolder, addr string) error {
+func (p *policyPlugin) validate(ah *attrHolder, addr string) error {
 	var req pdp.Request
 	if len(addr) == 0 {
 		req.Attributes = ah.attrsReqDomain

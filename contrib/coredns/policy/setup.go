@@ -27,7 +27,7 @@ func setup(c *caddy.Controller) error {
 	c.OnStartup(func() error {
 		if taph := dnsserver.GetConfig(c).Handler("dnstap"); taph != nil {
 			if tapPlugin, ok := taph.(dnstap.Dnstap); ok && tapPlugin.IO != nil {
-				policyPlugin.tapIO = NewPolicyDnstapSender(tapPlugin.IO)
+				policyPlugin.tapIO = newPolicyDnstapSender(tapPlugin.IO)
 			}
 		}
 
@@ -57,7 +57,7 @@ func setup(c *caddy.Controller) error {
 	return nil
 }
 
-func policyParse(c *caddy.Controller) (*PolicyPlugin, error) {
+func policyParse(c *caddy.Controller) (*policyPlugin, error) {
 	p := newPolicyPlugin()
 
 	for c.Next() {

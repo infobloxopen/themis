@@ -178,7 +178,7 @@ func (a mapperPCA) del(ID string, old Evaluable) PolicyCombiningAlg {
 }
 
 func (a mapperPCA) execute(policies []Evaluable, ctx *Context) Response {
-	v, err := a.argument.calculate(ctx)
+	v, err := a.argument.Calculate(ctx)
 	if err != nil {
 		switch err.(type) {
 		case *missingValueError:

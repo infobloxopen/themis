@@ -31,7 +31,8 @@ func (f functionNetworkContainsAddress) describe() string {
 	return "contains"
 }
 
-func (f functionNetworkContainsAddress) calculate(ctx *Context) (AttributeValue, error) {
+// Calculate implements Expression interface and returns calculated value
+func (f functionNetworkContainsAddress) Calculate(ctx *Context) (AttributeValue, error) {
 	n, err := ctx.calculateNetworkExpression(f.network)
 	if err != nil {
 		return undefinedValue, bindError(err, f.describe())

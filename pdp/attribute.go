@@ -385,7 +385,8 @@ func (v AttributeValue) listOfStrings() ([]string, error) {
 	return v.v.([]string), nil
 }
 
-func (v AttributeValue) calculate(ctx *Context) (AttributeValue, error) {
+// Calculate implements Expression interface and returns calculated value
+func (v AttributeValue) Calculate(ctx *Context) (AttributeValue, error) {
 	return v, nil
 }
 
@@ -468,7 +469,7 @@ func (a AttributeAssignmentExpression) Serialize(ctx *Context) (string, string, 
 	ID := a.a.id
 	typeName := TypeKeys[a.a.t]
 
-	v, err := a.e.calculate(ctx)
+	v, err := a.e.Calculate(ctx)
 	if err != nil {
 		return ID, typeName, "", bindErrorf(err, "assignment to %q", ID)
 	}
@@ -498,13 +499,19 @@ func MakeAttributeDesignator(a Attribute) AttributeDesignator {
 	return AttributeDesignator{a}
 }
 
+// GetID returns ID of wrapped attribute.
+func (d AttributeDesignator) GetID() string {
+	return d.a.id
+}
+
 // GetResultType returns type of wrapped attribute (implements Expression
 // interface).
 func (d AttributeDesignator) GetResultType() int {
 	return d.a.t
 }
 
-func (d AttributeDesignator) calculate(ctx *Context) (AttributeValue, error) {
+// Calculate implements Expression interface and returns calculated value
+func (d AttributeDesignator) Calculate(ctx *Context) (AttributeValue, error) {
 	return ctx.getAttribute(d.a)
 }
 

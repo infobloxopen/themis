@@ -29,7 +29,7 @@ func (f functionSetOfDomainsContains) describe() string {
 	return "contains"
 }
 
-func (f functionSetOfDomainsContains) calculate(ctx *Context) (AttributeValue, error) {
+func (f functionSetOfDomainsContains) Calculate(ctx *Context) (AttributeValue, error) {
 	set, err := ctx.calculateSetOfDomainsExpression(f.set)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())

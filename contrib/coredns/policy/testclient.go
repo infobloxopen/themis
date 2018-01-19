@@ -29,7 +29,7 @@ func (c *testClient) Validate(in, out interface{}) error {
 	if in != nil {
 		p := in.(pdp.Request)
 		for _, a := range p.Attributes {
-			if a.Id == AttrNameAddress {
+			if a.Id == attrNameAddress {
 				if c.errResponseIP != nil {
 					return c.errResponseIP
 				}

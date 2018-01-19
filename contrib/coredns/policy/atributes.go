@@ -1,18 +1,18 @@
 package policy
 
 const (
-	AttrNameType       = "type"
-	AttrNameSourceIP   = "source_ip"
-	AttrNameDomainName = "domain_name"
-	AttrNameRedirectTo = "redirect_to"
-	AttrNameAddress    = "address"
-	AttrNameRefuse     = "refuse"
-	AttrNameLog        = "log"
+	attrNameType       = "type"
+	attrNameSourceIP   = "source_ip"
+	attrNameDomainName = "domain_name"
+	attrNameRedirectTo = "redirect_to"
+	attrNameAddress    = "address"
+	attrNameRefuse     = "refuse"
+	attrNameLog        = "log"
 
-	TypeValueQuery    = "query"
-	TypeValueResponse = "response"
+	typeValueQuery    = "query"
+	typeValueResponse = "response"
 
-	AttrNameProxySourceIP = "proxy_source_ip"
-	AttrNameDNSQtype      = "dns_qtype"
-	AttrNamePolicyAction  = "policy_action"
+	attrNameProxySourceIP = "proxy_source_ip"
+	attrNameDNSQtype      = "dns_qtype"
+	attrNamePolicyAction  = "policy_action"
 )
