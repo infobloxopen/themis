@@ -170,30 +170,36 @@ func (p *Policy) updatedCopy(rules []*Rule, algorithm RuleCombiningAlg) *Policy 
 	}
 }
 
+func (p *Policy) getChild(ID string) (int, *Rule, error) {
+	for i, r := range p.rules {
+		if rID, ok := r.GetID(); ok && rID == ID {
+			return i, r, nil
+		}
+	}
+
+	return -1, nil, newMissingPolicyChildError(ID)
+}
+
 func (p *Policy) putChild(child *Rule) *Policy {
 	ID, _ := child.GetID()
 
 	var rules []*Rule
 	if len(p.rules) > 0 {
-		for i, old := range p.rules {
-			if rID, ok := old.GetID(); ok && rID == ID {
-				child.ord = old.ord
+		i, old, err := p.getChild(ID)
+		if err == nil {
+			child.ord = old.ord
 
-				rules = make([]*Rule, len(p.rules))
-				if i > 0 {
-					copy(rules, p.rules[:i])
-				}
-
-				rules[i] = child
-
-				if i+1 < len(p.rules) {
-					copy(rules[i+1:], p.rules[i+1:])
-				}
-				break
+			rules = make([]*Rule, len(p.rules))
+			if i > 0 {
+				copy(rules, p.rules[:i])
 			}
-		}
 
-		if rules == nil {
+			rules[i] = child
+
+			if i+1 < len(p.rules) {
+				copy(rules[i+1:], p.rules[i+1:])
+			}
+		} else {
 			child.ord = p.rules[len(p.rules)-1].ord + 1
 			rules = make([]*Rule, len(p.rules)+1)
 			copy(rules, p.rules)
@@ -213,27 +219,29 @@ func (p *Policy) putChild(child *Rule) *Policy {
 }
 
 func (p *Policy) delChild(ID string) (*Policy, error) {
-	for i, old := range p.rules {
-		if rID, ok := old.GetID(); ok && rID == ID {
-			rules := []*Rule{}
-			if i > 0 {
-				rules = append(rules, p.rules[:i]...)
-			}
+	i, old, err := p.getChild(ID)
+	if err != nil {
+		return nil, err
+	}
 
-			if i+1 < len(p.rules) {
-				rules = append(rules, p.rules[i+1:]...)
-			}
+	var rules []*Rule
+	if len(p.rules) > 1 {
+		rules = make([]*Rule, len(p.rules)-1)
+		if i > 0 {
+			copy(rules, p.rules[:i])
+		}
 
-			algorithm := p.algorithm
-			if m, ok := algorithm.(mapperRCA); ok {
-				algorithm = m.del(ID, old)
-			}
-
-			return p.updatedCopy(rules, algorithm), nil
+		if i+1 < len(p.rules) {
+			copy(rules[i:], p.rules[i+1:])
 		}
 	}
 
-	return nil, newMissingPolicyChildError(ID)
+	algorithm := p.algorithm
+	if m, ok := algorithm.(mapperRCA); ok {
+		algorithm = m.del(ID, old)
+	}
+
+	return p.updatedCopy(rules, algorithm), nil
 }
 
 type firstApplicableEffectRCA struct {
