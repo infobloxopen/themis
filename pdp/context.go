@@ -267,4 +267,7 @@ type Evaluable interface {
 	Calculate(ctx *Context) Response
 	Append(path []string, v interface{}) (Evaluable, error)
 	Delete(path []string) (Evaluable, error)
+
+	getOrder() int
+	setOrder(ord int)
 }
