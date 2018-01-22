@@ -2,6 +2,7 @@ package pdp
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/infobloxopen/go-trees/strtree"
 )
@@ -33,9 +34,55 @@ type MapperPCAParams struct {
 	// Argument can't be evaluated).
 	Err string
 
+	// Order selects how to sort choosen policies if argument returns several
+	// ids. Currently mapper supports two options: external order - sort
+	// policies in the same order as ids returned, internal - sort by position
+	// in parent policy set.
+	Order int
+
 	// Algorithm is additional policy combining algorithm which is used when
 	// argument can return several ids.
 	Algorithm PolicyCombiningAlg
+}
+
+// MapperPCA*Order constants represents all possible values suitable for Order
+// field of MapperPCAParams structure.
+const (
+	// MapperPCAExternalOrder stands for external order - sorting in the same
+	// order as ids returned by mapper argument.
+	MapperPCAExternalOrder = iota
+	// MapperPCAInternalOrder designates internal order - sorting by position
+	// in parent policy set.
+	MapperPCAInternalOrder
+
+	totalMapperPCAOrders
+)
+
+// MapperPCAOrder* collections bind order value names and IDs.
+var (
+	// MapperPCAOrderNames is a list of humanreadable option value names.
+	// The order must be kept in sync with MapperPCA*Order constants order.
+	MapperPCAOrderNames = []string{
+		"External",
+		"Internal",
+	}
+
+	// MapperPCAOrderKeys maps MapperPCA*Order constants to order IDs.
+	// The ID is all lower case order name. The slice is filled by init
+	// function.
+	MapperPCAOrderKeys = []string{}
+	// MapperPCAOrderIDs maps order IDs to MapperPCA*Order constants.
+	// The map is filled by init function.
+	MapperPCAOrderIDs = map[string]int{}
+)
+
+func init() {
+	MapperPCAOrderKeys = make([]string, totalMapperPCAOrders)
+	for i := 0; i < totalMapperPCAOrders; i++ {
+		key := strings.ToLower(MapperPCAOrderNames[i])
+		MapperPCAOrderKeys[i] = key
+		MapperPCAOrderIDs[key] = i
+	}
 }
 
 func collectSubPolicies(IDs []string, m *strtree.Tree) []Evaluable {

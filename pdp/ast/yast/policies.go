@@ -210,7 +210,20 @@ func unmarshalMapperPolicyCombiningAlgParams(ctx context, m map[interface{}]inte
 	}
 
 	var subAlg pdp.PolicyCombiningAlg
+	order := pdp.MapperPCAExternalOrder
 	if t == pdp.TypeSetOfStrings || t == pdp.TypeListOfStrings {
+		s, ok, err := ctx.extractStringOpt(m, yastTagOrder, "ordering option")
+		if err != nil {
+			return nil, err
+		}
+
+		if ok {
+			order, ok = pdp.MapperPCAOrderIDs[strings.ToLower(s)]
+			if !ok {
+				return nil, newUnknownMapperPCAOrder(s)
+			}
+		}
+
 		maker, params, err := ctx.unmarshalPolicyCombiningAlg(m, nil)
 		if err != nil {
 			return nil, err
@@ -224,6 +237,7 @@ func unmarshalMapperPolicyCombiningAlgParams(ctx context, m map[interface{}]inte
 		Def:       defID,
 		ErrOk:     errOk,
 		Err:       errID,
+		Order:     order,
 		Algorithm: subAlg}, nil
 }
 

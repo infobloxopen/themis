@@ -69,9 +69,10 @@ var (
 var undefinedValue = AttributeValue{}
 
 func init() {
+	TypeKeys = make([]string, typesTotal)
 	for t := 0; t < typesTotal; t++ {
 		key := strings.ToLower(TypeNames[t])
-		TypeKeys = append(TypeKeys, key)
+		TypeKeys[t] = key
 		TypeIDs[key] = t
 	}
 }

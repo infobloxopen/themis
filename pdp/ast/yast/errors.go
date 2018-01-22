@@ -26,42 +26,43 @@ const (
 	missingMapRCAParamErrorID             = 14
 	missingDefaultRuleRCAErrorID          = 15
 	missingErrorRuleRCAErrorID            = 16
-	notImplementedRCAErrorID              = 17
-	unknownPCAErrorID                     = 18
-	missingPCAErrorID                     = 19
-	invalidPCAErrorID                     = 20
-	missingMapPCAParamErrorID             = 21
-	missingDefaultPolicyPCAErrorID        = 22
-	missingErrorPolicyPCAErrorID          = 23
-	notImplementedPCAErrorID              = 24
-	mapperArgumentTypeErrorID             = 25
-	conditionTypeErrorID                  = 26
-	unknownEffectErrorID                  = 27
-	noSMPItemsErrorID                     = 28
-	tooManySMPItemsErrorID                = 29
-	unknownMatchFunctionErrorID           = 30
-	matchFunctionCastErrorID              = 31
-	matchFunctionArgsNumberErrorID        = 32
-	invalidMatchFunctionArgErrorID        = 33
-	matchFunctionBothValuesErrorID        = 34
-	matchFunctionBothAttrsErrorID         = 35
-	unknownFunctionErrorID                = 36
-	functionCastErrorID                   = 37
-	unknownAttributeErrorID               = 38
-	unknownTypeErrorID                    = 39
-	invalidTypeErrorID                    = 40
-	missingContentErrorID                 = 41
-	notImplementedValueTypeErrorID        = 42
-	invalidAddressErrorID                 = 43
-	invalidNetworkErrorID                 = 44
-	invalidDomainErrorID                  = 45
-	selectorURIErrorID                    = 46
-	selectorLocationErrorID               = 47
-	unsupportedSelectorSchemeErrorID      = 48
-	entityAmbiguityErrorID                = 49
-	entityMissingKeyErrorID               = 50
-	unknownPolicyUpdateOperationErrorID   = 51
-	invalidPolicyUpdatePathElementErrorID = 52
+	unknownMapperPCAOrderID               = 17
+	notImplementedRCAErrorID              = 18
+	unknownPCAErrorID                     = 19
+	missingPCAErrorID                     = 20
+	invalidPCAErrorID                     = 21
+	missingMapPCAParamErrorID             = 22
+	missingDefaultPolicyPCAErrorID        = 23
+	missingErrorPolicyPCAErrorID          = 24
+	notImplementedPCAErrorID              = 25
+	mapperArgumentTypeErrorID             = 26
+	conditionTypeErrorID                  = 27
+	unknownEffectErrorID                  = 28
+	noSMPItemsErrorID                     = 29
+	tooManySMPItemsErrorID                = 30
+	unknownMatchFunctionErrorID           = 31
+	matchFunctionCastErrorID              = 32
+	matchFunctionArgsNumberErrorID        = 33
+	invalidMatchFunctionArgErrorID        = 34
+	matchFunctionBothValuesErrorID        = 35
+	matchFunctionBothAttrsErrorID         = 36
+	unknownFunctionErrorID                = 37
+	functionCastErrorID                   = 38
+	unknownAttributeErrorID               = 39
+	unknownTypeErrorID                    = 40
+	invalidTypeErrorID                    = 41
+	missingContentErrorID                 = 42
+	notImplementedValueTypeErrorID        = 43
+	invalidAddressErrorID                 = 44
+	invalidNetworkErrorID                 = 45
+	invalidDomainErrorID                  = 46
+	selectorURIErrorID                    = 47
+	selectorLocationErrorID               = 48
+	unsupportedSelectorSchemeErrorID      = 49
+	entityAmbiguityErrorID                = 50
+	entityMissingKeyErrorID               = 51
+	unknownPolicyUpdateOperationErrorID   = 52
+	invalidPolicyUpdatePathElementErrorID = 53
 )
 
 type externalError struct {
@@ -327,6 +328,21 @@ func newMissingErrorRuleRCAError(ID string) *missingErrorRuleRCAError {
 
 func (e *missingErrorRuleRCAError) Error() string {
 	return e.errorf("No rule with ID %q to use as on error rule", e.ID)
+}
+
+type unknownMapperPCAOrder struct {
+	errorLink
+	ord string
+}
+
+func newUnknownMapperPCAOrder(ord string) *unknownMapperPCAOrder {
+	return &unknownMapperPCAOrder{
+		errorLink: errorLink{id: unknownMapperPCAOrderID},
+		ord:       ord}
+}
+
+func (e *unknownMapperPCAOrder) Error() string {
+	return e.errorf("Unknown policy ordering for mapper \"%s\"", e.ord)
 }
 
 type notImplementedRCAError struct {

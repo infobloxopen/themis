@@ -142,7 +142,15 @@ errors:
     type: string
   msg: "No rule with ID %q to use as on error rule"
   args:
-  - field: ID 
+  - field: ID
+
+- id: unknownMapperPCAOrder
+  fields:
+  - id: ord
+    type: string
+  msg: "Unknown policy ordering for mapper \"%s\""
+  args:
+  - field: ord
 
 - id: notImplementedRCAError
   fields:
