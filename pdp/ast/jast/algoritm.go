@@ -103,11 +103,13 @@ func buildMapperRuleCombiningAlgParams(ctx context, alg *caParams, rules []*pdp.
 	}
 
 	var subAlg pdp.RuleCombiningAlg
-	if alg.subAlg != nil {
+	t := alg.arg.GetResultType()
+	if alg.subAlg != nil && (t == pdp.TypeSetOfStrings || t == pdp.TypeListOfStrings) {
 		maker, params, err := ctx.buildRuleCombiningAlg(alg.subAlg, rules)
 		if err != nil {
 			return nil, err
 		}
+
 		subAlg = maker(nil, params)
 	}
 
@@ -117,6 +119,7 @@ func buildMapperRuleCombiningAlgParams(ctx context, alg *caParams, rules []*pdp.
 		Def:       alg.defID,
 		ErrOk:     alg.errOk,
 		Err:       alg.errID,
+		Order:     alg.order,
 		Algorithm: subAlg}, nil
 }
 
@@ -281,7 +284,7 @@ func (ctx context) unmarshalCombiningAlgObj(d *json.Decoder) (*caParams, error) 
 
 			params.order, ok = pdp.MapperPCAOrderIDs[strings.ToLower(s)]
 			if !ok {
-				err = newUnknownMapperPCAOrder(s)
+				err = newUnknownMapperCAOrder(s)
 				if idOk {
 					err = bindErrorf(err, "%q", params.id)
 				}

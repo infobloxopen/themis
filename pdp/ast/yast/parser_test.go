@@ -310,6 +310,26 @@ policies:
       - effect: Permit
       obligations:
       - strAttr: "Third Rule"
+  - id: Reodering Mapper Policy
+    alg:
+      id: Mapper
+      map:
+        attr: lsAttr
+      order: Internal
+      alg: FirstApplicableEffect
+    rules:
+    - id: first
+      effect: Permit
+      obligations:
+      - strAttr: "First Rule"
+    - id: second
+      effect: Permit
+      obligations:
+      - strAttr: "Second Rule"
+    - id: third
+      effect: Permit
+      obligations:
+      - strAttr: "Third Rule"
 `
 )
 

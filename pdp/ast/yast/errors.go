@@ -27,42 +27,43 @@ const (
 	missingDefaultRuleRCAErrorID          = 15
 	missingErrorRuleRCAErrorID            = 16
 	unknownMapperPCAOrderID               = 17
-	notImplementedRCAErrorID              = 18
-	unknownPCAErrorID                     = 19
-	missingPCAErrorID                     = 20
-	invalidPCAErrorID                     = 21
-	missingMapPCAParamErrorID             = 22
-	missingDefaultPolicyPCAErrorID        = 23
-	missingErrorPolicyPCAErrorID          = 24
-	notImplementedPCAErrorID              = 25
-	mapperArgumentTypeErrorID             = 26
-	conditionTypeErrorID                  = 27
-	unknownEffectErrorID                  = 28
-	noSMPItemsErrorID                     = 29
-	tooManySMPItemsErrorID                = 30
-	unknownMatchFunctionErrorID           = 31
-	matchFunctionCastErrorID              = 32
-	matchFunctionArgsNumberErrorID        = 33
-	invalidMatchFunctionArgErrorID        = 34
-	matchFunctionBothValuesErrorID        = 35
-	matchFunctionBothAttrsErrorID         = 36
-	unknownFunctionErrorID                = 37
-	functionCastErrorID                   = 38
-	unknownAttributeErrorID               = 39
-	unknownTypeErrorID                    = 40
-	invalidTypeErrorID                    = 41
-	missingContentErrorID                 = 42
-	notImplementedValueTypeErrorID        = 43
-	invalidAddressErrorID                 = 44
-	invalidNetworkErrorID                 = 45
-	invalidDomainErrorID                  = 46
-	selectorURIErrorID                    = 47
-	selectorLocationErrorID               = 48
-	unsupportedSelectorSchemeErrorID      = 49
-	entityAmbiguityErrorID                = 50
-	entityMissingKeyErrorID               = 51
-	unknownPolicyUpdateOperationErrorID   = 52
-	invalidPolicyUpdatePathElementErrorID = 53
+	unknownMapperRCAOrderID               = 18
+	notImplementedRCAErrorID              = 19
+	unknownPCAErrorID                     = 20
+	missingPCAErrorID                     = 21
+	invalidPCAErrorID                     = 22
+	missingMapPCAParamErrorID             = 23
+	missingDefaultPolicyPCAErrorID        = 24
+	missingErrorPolicyPCAErrorID          = 25
+	notImplementedPCAErrorID              = 26
+	mapperArgumentTypeErrorID             = 27
+	conditionTypeErrorID                  = 28
+	unknownEffectErrorID                  = 29
+	noSMPItemsErrorID                     = 30
+	tooManySMPItemsErrorID                = 31
+	unknownMatchFunctionErrorID           = 32
+	matchFunctionCastErrorID              = 33
+	matchFunctionArgsNumberErrorID        = 34
+	invalidMatchFunctionArgErrorID        = 35
+	matchFunctionBothValuesErrorID        = 36
+	matchFunctionBothAttrsErrorID         = 37
+	unknownFunctionErrorID                = 38
+	functionCastErrorID                   = 39
+	unknownAttributeErrorID               = 40
+	unknownTypeErrorID                    = 41
+	invalidTypeErrorID                    = 42
+	missingContentErrorID                 = 43
+	notImplementedValueTypeErrorID        = 44
+	invalidAddressErrorID                 = 45
+	invalidNetworkErrorID                 = 46
+	invalidDomainErrorID                  = 47
+	selectorURIErrorID                    = 48
+	selectorLocationErrorID               = 49
+	unsupportedSelectorSchemeErrorID      = 50
+	entityAmbiguityErrorID                = 51
+	entityMissingKeyErrorID               = 52
+	unknownPolicyUpdateOperationErrorID   = 53
+	invalidPolicyUpdatePathElementErrorID = 54
 )
 
 type externalError struct {
@@ -343,6 +344,21 @@ func newUnknownMapperPCAOrder(ord string) *unknownMapperPCAOrder {
 
 func (e *unknownMapperPCAOrder) Error() string {
 	return e.errorf("Unknown policy ordering for mapper \"%s\"", e.ord)
+}
+
+type unknownMapperRCAOrder struct {
+	errorLink
+	ord string
+}
+
+func newUnknownMapperRCAOrder(ord string) *unknownMapperRCAOrder {
+	return &unknownMapperRCAOrder{
+		errorLink: errorLink{id: unknownMapperRCAOrderID},
+		ord:       ord}
+}
+
+func (e *unknownMapperRCAOrder) Error() string {
+	return e.errorf("Unknown rule ordering for mapper \"%s\"", e.ord)
 }
 
 type notImplementedRCAError struct {

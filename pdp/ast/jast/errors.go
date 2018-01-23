@@ -40,7 +40,7 @@ const (
 	functionCastErrorID                 = 27
 	unknownAttributeErrorID             = 28
 	missingAttributeErrorID             = 29
-	unknownMapperPCAOrderID             = 30
+	unknownMapperCAOrderID              = 30
 	unknownTypeErrorID                  = 31
 	invalidTypeErrorID                  = 32
 	missingContentErrorID               = 33
@@ -516,19 +516,19 @@ func (e *missingAttributeError) Error() string {
 	return e.errorf("Missing %q attribute %q", e.obj, e.attr)
 }
 
-type unknownMapperPCAOrder struct {
+type unknownMapperCAOrder struct {
 	errorLink
 	ord string
 }
 
-func newUnknownMapperPCAOrder(ord string) *unknownMapperPCAOrder {
-	return &unknownMapperPCAOrder{
-		errorLink: errorLink{id: unknownMapperPCAOrderID},
+func newUnknownMapperCAOrder(ord string) *unknownMapperCAOrder {
+	return &unknownMapperCAOrder{
+		errorLink: errorLink{id: unknownMapperCAOrderID},
 		ord:       ord}
 }
 
-func (e *unknownMapperPCAOrder) Error() string {
-	return e.errorf("Unknown policy ordering for mapper \"%s\"", e.ord)
+func (e *unknownMapperCAOrder) Error() string {
+	return e.errorf("Unknown ordering for mapper \"%s\"", e.ord)
 }
 
 type unknownTypeError struct {

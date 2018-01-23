@@ -152,6 +152,14 @@ errors:
   args:
   - field: ord
 
+- id: unknownMapperRCAOrder
+  fields:
+  - id: ord
+    type: string
+  msg: "Unknown rule ordering for mapper \"%s\""
+  args:
+  - field: ord
+
 - id: notImplementedRCAError
   fields:
   - id: ID
