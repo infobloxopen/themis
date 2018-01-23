@@ -29,7 +29,8 @@ func (f functionStringEqual) describe() string {
 	return "equal"
 }
 
-func (f functionStringEqual) calculate(ctx *Context) (AttributeValue, error) {
+// Calculate implements Expression interface and returns calculated value
+func (f functionStringEqual) Calculate(ctx *Context) (AttributeValue, error) {
 	first, err := ctx.calculateStringExpression(f.first)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())

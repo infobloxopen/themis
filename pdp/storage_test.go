@@ -20,7 +20,7 @@ func TestStorage(t *testing.T) {
 	s := NewPolicyStorage(root, nil, nil)
 	sr := s.Root()
 	if sr != root {
-		t.Errorf("Expected stored root policy to be exactly root policy but got different %p != %p", sr, root)
+		t.Errorf("Expected stored root policy to be exactly root policy but got different")
 	}
 }
 

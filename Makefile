@@ -123,6 +123,12 @@ fmt-egen:
 	@echo "Checking EGen format..."
 	@$(AT)/egen && $(GOFMTCHECK)
 
+.PHONY: linter
+linter:
+	go get -u github.com/alecthomas/gometalinter
+	gometalinter --install golint
+	gometalinter --deadline=1m --disable-all --enable=gofmt --enable=golint --enable=vet --exclude=^vendor/ --exclude=^pb/ ./...
+
 # Per package build targets
 .PHONY: build-pepcli
 build-pepcli: build-dir

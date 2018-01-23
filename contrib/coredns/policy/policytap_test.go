@@ -40,11 +40,11 @@ func TestSendCRExtraNoMsg(t *testing.T) {
 		ResponseWriter: &test.ResponseWriter{},
 		Tapper:         &trapper,
 	}
-	proxyRW := NewProxyWriter(&tapRW)
+	proxyRW := newProxyWriter(&tapRW)
 
 	io := newIORoutine(100 * time.Millisecond)
-	tapIO := NewPolicyDnstapSender(io)
-	tapIO.SendCRExtraMsg(proxyRW, nil)
+	tapIO := newPolicyDnstapSender(io)
+	tapIO.sendCRExtraMsg(proxyRW, nil)
 	_, ok := <-io.dnstapChan
 	if ok {
 		t.Errorf("Unexpected msg received")
@@ -66,12 +66,12 @@ func TestSendCRExtraInvalidMsg(t *testing.T) {
 		ResponseWriter: &test.ResponseWriter{},
 		Tapper:         &trapper,
 	}
-	proxyRW := NewProxyWriter(&tapRW)
+	proxyRW := newProxyWriter(&tapRW)
 	proxyRW.WriteMsg(&msg)
 
 	io := newIORoutine(100 * time.Millisecond)
-	tapIO := NewPolicyDnstapSender(io)
-	tapIO.SendCRExtraMsg(proxyRW, nil)
+	tapIO := newPolicyDnstapSender(io)
+	tapIO.sendCRExtraMsg(proxyRW, nil)
 	_, ok := <-io.dnstapChan
 	if ok {
 		t.Errorf("Unexpected msg received")
@@ -92,24 +92,24 @@ func TestSendCRExtraMsg(t *testing.T) {
 		ResponseWriter: &test.ResponseWriter{},
 		Tapper:         &trapper,
 	}
-	proxyRW := NewProxyWriter(&tapRW)
+	proxyRW := newProxyWriter(&tapRW)
 	proxyRW.WriteMsg(&msg)
 
 	testAttrHolder := &attrHolder{attrsReqDomain: []*pdp.Attribute{
-		{Id: AttrNameType, Value: TypeValueQuery},
-		{Id: AttrNameDomainName, Value: "test.com"},
-		{Id: AttrNameSourceIP, Value: "10.0.0.7"},
+		{Id: attrNameType, Value: typeValueQuery},
+		{Id: attrNameDomainName, Value: "test.com"},
+		{Id: attrNameSourceIP, Value: "10.0.0.7"},
 	}}
 
 	io := newIORoutine(5000 * time.Millisecond)
-	tapIO := NewPolicyDnstapSender(io)
-	tapIO.SendCRExtraMsg(proxyRW, testAttrHolder)
+	tapIO := newPolicyDnstapSender(io)
+	tapIO.sendCRExtraMsg(proxyRW, testAttrHolder)
 
 	expectedAttrs := []*pdp.Attribute{
-		{Id: AttrNameDomainName, Value: "test.com"},
-		{Id: AttrNameSourceIP, Value: "10.0.0.7"},
-		{Id: AttrNamePolicyAction, Value: "0"},
-		{Id: AttrNameType, Value: TypeValueQuery},
+		{Id: attrNameDomainName, Value: "test.com"},
+		{Id: attrNameSourceIP, Value: "10.0.0.7"},
+		{Id: attrNamePolicyAction, Value: "0"},
+		{Id: attrNameType, Value: typeValueQuery},
 	}
 	checkCRExtraResult(t, io, proxyRW, expectedAttrs)
 
@@ -119,7 +119,7 @@ func TestSendCRExtraMsg(t *testing.T) {
 	}
 }
 
-func checkCRExtraResult(t *testing.T, io testIORoutine, proxyRW *ProxyWriter, attrs []*pdp.Attribute) {
+func checkCRExtraResult(t *testing.T, io testIORoutine, proxyRW *proxyWriter, attrs []*pdp.Attribute) {
 	dnstapMsg, ok := <-io.dnstapChan
 	if !ok {
 		t.Errorf("Receiving Dnstap message was timed out")
@@ -157,7 +157,7 @@ checkAttr:
 	}
 }
 
-func checkCRMessage(t *testing.T, msg *tap.Message, proxyRW *ProxyWriter) {
+func checkCRMessage(t *testing.T, msg *tap.Message, proxyRW *proxyWriter) {
 	if msg == nil {
 		t.Errorf("CR message not found")
 		return
@@ -183,7 +183,7 @@ func TestProxyWriter(t *testing.T) {
 	//		ResponseWriter: &test.ResponseWriter{},
 	//		Tapper:         &trapper,
 	//	}
-	proxyRW := NewProxyWriter(&taprw.ResponseWriter{
+	proxyRW := newProxyWriter(&taprw.ResponseWriter{
 		Query:          new(dns.Msg),
 		ResponseWriter: &test.ResponseWriter{},
 		Tapper:         &trapper,
@@ -197,7 +197,7 @@ func TestProxyWriter(t *testing.T) {
 		t.Error("Failed to turn off standard CQ or CR dnstap message")
 	}
 
-	proxyRW = NewProxyWriter(&test.ResponseWriter{})
+	proxyRW = newProxyWriter(&test.ResponseWriter{})
 	if proxyRW != nil {
 		t.Error("ProxyWriter was unexpextedly created")
 	}

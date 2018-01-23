@@ -9,6 +9,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+// MemLimits structure contains memory limit levels to manage GC
 type MemLimits struct {
 	limit uint64
 	reset float64
@@ -17,6 +18,7 @@ type MemLimits struct {
 	back  float64
 }
 
+// MakeMemLimits fills MemLimits structure with given parameters
 func MakeMemLimits(limit uint64, reset, soft, back, frag float64) (MemLimits, error) {
 	m := MemLimits{limit: limit}
 	if m.limit > 0 {

@@ -29,7 +29,8 @@ func (f functionSetOfStringsContains) describe() string {
 	return "contains"
 }
 
-func (f functionSetOfStringsContains) calculate(ctx *Context) (AttributeValue, error) {
+// Calculate implements Expression interface and returns calculated value
+func (f functionSetOfStringsContains) Calculate(ctx *Context) (AttributeValue, error) {
 	set, err := ctx.calculateSetOfStringsExpression(f.set)
 	if err != nil {
 		return undefinedValue, bindError(err, f.describe())

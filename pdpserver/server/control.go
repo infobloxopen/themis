@@ -51,6 +51,8 @@ func newTag(s string) (*uuid.UUID, error) {
 	return &t, nil
 }
 
+// Request is a server handler for gRPC call
+// It serves PAP control requests
 func (s *Server) Request(ctx context.Context, in *pb.Item) (*pb.Response, error) {
 	s.opts.logger.Info("Got new control request")
 
@@ -100,6 +102,8 @@ func (s *Server) getHead(stream pb.PDPControl_UploadServer) (int32, *streamReade
 	return chunk.Id, newStreamReader(chunk.Id, chunk.Data, stream, s.opts.logger), nil
 }
 
+// Upload is a server handler for gRPC call
+// It uploads data from PAP and save it to PDP
 func (s *Server) Upload(stream pb.PDPControl_UploadServer) error {
 	s.opts.logger.Info("Got new data stream")
 
@@ -139,6 +143,8 @@ func (s *Server) Upload(stream pb.PDPControl_UploadServer) error {
 	return err
 }
 
+// Apply is a server handler for gRPC call
+// It applies data previously saved in PDP
 func (s *Server) Apply(ctx context.Context, in *pb.Update) (*pb.Response, error) {
 	s.opts.logger.Info("Got apply command")
 
@@ -164,6 +170,8 @@ func (s *Server) Apply(ctx context.Context, in *pb.Update) (*pb.Response, error)
 	return res, err
 }
 
+// NotifyReady is a server handler for gRPC call
+// It starts handling decision requests
 func (s *Server) NotifyReady(ctx context.Context, m *pb.Empty) (*pb.Response, error) {
 	s.opts.logger.Info("Got notified about readiness")
 

@@ -17,7 +17,7 @@ func TestBooleanNot(t *testing.T) {
 		t.Errorf("Expected %q type but got %q", TypeNames[TypeBoolean], TypeNames[rt])
 	}
 
-	v, err := e.calculate(nil)
+	v, err := e.Calculate(nil)
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
@@ -46,7 +46,7 @@ func TestBooleanOr(t *testing.T) {
 		t.Errorf("Expected %q type but got %q", TypeNames[TypeBoolean], TypeNames[rt])
 	}
 
-	v, err := e.calculate(nil)
+	v, err := e.Calculate(nil)
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
@@ -61,7 +61,7 @@ func TestBooleanOr(t *testing.T) {
 
 	args = []Expression{MakeBooleanValue(false), MakeBooleanValue(false), MakeBooleanValue(false)}
 	e = maker(args)
-	v, err = e.calculate(nil)
+	v, err = e.Calculate(nil)
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
@@ -90,7 +90,7 @@ func TestBooleanAnd(t *testing.T) {
 		t.Errorf("Expected %q type but got %q", TypeNames[TypeBoolean], TypeNames[rt])
 	}
 
-	v, err := e.calculate(nil)
+	v, err := e.Calculate(nil)
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
@@ -105,7 +105,7 @@ func TestBooleanAnd(t *testing.T) {
 
 	args = []Expression{MakeBooleanValue(true), MakeBooleanValue(true), MakeBooleanValue(false)}
 	e = maker(args)
-	v, err = e.calculate(nil)
+	v, err = e.Calculate(nil)
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {

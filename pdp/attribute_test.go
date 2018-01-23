@@ -32,7 +32,7 @@ func TestAttribute(t *testing.T) {
 		t.Errorf("Expected %q as value description but got %q", expDesc, d)
 	}
 
-	r, err := v.calculate(ctx)
+	r, err := v.Calculate(ctx)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
 	} else if r.t != v.t || r.v != v.v {
@@ -761,7 +761,7 @@ func TestAttributeDesignator(t *testing.T) {
 		t.Errorf("Expected %q type but got %q", TypeNames[TypeString], TypeNames[dat])
 	}
 
-	_, err = d.calculate(ctx)
+	_, err = d.Calculate(ctx)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
 	}

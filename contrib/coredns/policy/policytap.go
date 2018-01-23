@@ -12,50 +12,50 @@ import (
 	"github.com/miekg/dns"
 )
 
-// ProxyWriter is designed for intercepting a DNS response being writen to
+// proxyWriter is designed for intercepting a DNS response being writen to
 // ResponseWriter. It also provides access to the base ResponseWriter of type
 // "github.com/coredns/coredns/plugin/dnstap/taprw".ResponseWriter
-type ProxyWriter struct {
+type proxyWriter struct {
 	*taprw.ResponseWriter
 	msg *dns.Msg
 }
 
-// NewProxyWriter function creates new ProxyWriter from a ResponseWriter derived
+// newProxyWriter function creates new proxyWriter from a ResponseWriter derived
 // from "github.com/coredns/coredns/plugin/dnstap/taprw".ResponseWriter and
 // turns off sending CQ and CR dnstap messages by dnstap plugin
-// If ResponseWriter is of other type, NewProxyWriter returns nil
-func NewProxyWriter(w dns.ResponseWriter) *ProxyWriter {
+// If ResponseWriter is of other type, newProxyWriter returns nil
+func newProxyWriter(w dns.ResponseWriter) *proxyWriter {
 	if tapRW, ok := w.(*taprw.ResponseWriter); ok {
 		// turn off sending the CQ and CR dnstap messages by dnstap plugin
 		tapRW.Send = &taprw.SendOption{}
-		return &ProxyWriter{ResponseWriter: tapRW}
+		return &proxyWriter{ResponseWriter: tapRW}
 	}
 	return nil
 }
 
 // WriteMsg saves pointer to DNS message and forwards it to base ResponseWriter
-func (w *ProxyWriter) WriteMsg(msg *dns.Msg) error {
+func (w *proxyWriter) WriteMsg(msg *dns.Msg) error {
 	w.msg = msg
 	return w.ResponseWriter.WriteMsg(msg)
 }
 
-type DnstapSender interface {
-	SendCRExtraMsg(pw *ProxyWriter, ah *attrHolder)
+type dnstapSender interface {
+	sendCRExtraMsg(pw *proxyWriter, ah *attrHolder)
 }
 
 type policyDnstapSender struct {
 	ior dnstap.IORoutine
 }
 
-func NewPolicyDnstapSender(io dnstap.IORoutine) DnstapSender {
+func newPolicyDnstapSender(io dnstap.IORoutine) dnstapSender {
 	return &policyDnstapSender{ior: io}
 }
 
-// SendCRExtraMsg creates Client Response (CR) dnstap Message and writes an array
+// sendCRExtraMsg creates Client Response (CR) dnstap Message and writes an array
 // of extra attributes to Dnstap.Extra field. Then it asynchronously sends the
 // message with IORoutine interface
 // Parameter tapIO must not be nil
-func (s *policyDnstapSender) SendCRExtraMsg(pw *ProxyWriter, ah *attrHolder) {
+func (s *policyDnstapSender) sendCRExtraMsg(pw *proxyWriter, ah *attrHolder) {
 	if pw == nil || pw.msg == nil {
 		log.Printf("[ERROR] Failed to create dnstap CR message - no DNS response message found")
 		return

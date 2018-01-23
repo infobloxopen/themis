@@ -150,6 +150,8 @@ func (s *Server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, i
 	return re, errs, attrs
 }
 
+// Validate is a server handler for gRPC call
+// It handles PDP decision requests
 func (s *Server) Validate(ctx context.Context, in *pb.Request) (*pb.Response, error) {
 	s.RLock()
 	p := s.p

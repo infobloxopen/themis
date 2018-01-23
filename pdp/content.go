@@ -437,6 +437,11 @@ func MakeContentMappingItem(id string, t int, k []int, v ContentSubItem) *Conten
 		k:  k}
 }
 
+// GetType returns content item type
+func (c *ContentItem) GetType() int {
+	return c.t
+}
+
 func (c *ContentItem) typeCheck(path []AttributeValue, v interface{}) (ContentSubItem, error) {
 	item, ok := v.(*ContentItem)
 	if !ok {
@@ -658,7 +663,7 @@ func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, erro
 		m := c.r
 		loc := []string{""}
 		for _, e := range path[:d-1] {
-			key, err := e.calculate(ctx)
+			key, err := e.Calculate(ctx)
 			if err != nil {
 				return undefinedValue, bindError(err, strings.Join(loc, "/"))
 			}
@@ -671,7 +676,7 @@ func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, erro
 			}
 		}
 
-		key, err := path[d-1].calculate(ctx)
+		key, err := path[d-1].Calculate(ctx)
 		if err != nil {
 			return undefinedValue, bindError(err, strings.Join(loc, "/"))
 		}

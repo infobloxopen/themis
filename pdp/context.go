@@ -169,12 +169,13 @@ func (c *Context) getAttribute(a Attribute) (AttributeValue, error) {
 	panic(fmt.Errorf("expected AttributeValue or map[int]AttributeValue but got: %T, %#v", v, v))
 }
 
-func (c *Context) getContentItem(cID, iID string) (*ContentItem, error) {
+// GetContentItem returns content item value
+func (c *Context) GetContentItem(cID, iID string) (*ContentItem, error) {
 	return c.c.Get(cID, iID)
 }
 
 func (c *Context) calculateBooleanExpression(e Expression) (bool, error) {
-	v, err := e.calculate(c)
+	v, err := e.Calculate(c)
 	if err != nil {
 		return false, err
 	}
@@ -183,7 +184,7 @@ func (c *Context) calculateBooleanExpression(e Expression) (bool, error) {
 }
 
 func (c *Context) calculateStringExpression(e Expression) (string, error) {
-	v, err := e.calculate(c)
+	v, err := e.Calculate(c)
 	if err != nil {
 		return "", err
 	}
@@ -192,7 +193,7 @@ func (c *Context) calculateStringExpression(e Expression) (string, error) {
 }
 
 func (c *Context) calculateAddressExpression(e Expression) (net.IP, error) {
-	v, err := e.calculate(c)
+	v, err := e.Calculate(c)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +202,7 @@ func (c *Context) calculateAddressExpression(e Expression) (net.IP, error) {
 }
 
 func (c *Context) calculateDomainExpression(e Expression) (string, error) {
-	v, err := e.calculate(c)
+	v, err := e.Calculate(c)
 	if err != nil {
 		return "", err
 	}
@@ -210,7 +211,7 @@ func (c *Context) calculateDomainExpression(e Expression) (string, error) {
 }
 
 func (c *Context) calculateNetworkExpression(e Expression) (*net.IPNet, error) {
-	v, err := e.calculate(c)
+	v, err := e.Calculate(c)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +220,7 @@ func (c *Context) calculateNetworkExpression(e Expression) (*net.IPNet, error) {
 }
 
 func (c *Context) calculateSetOfStringsExpression(e Expression) (*strtree.Tree, error) {
-	v, err := e.calculate(c)
+	v, err := e.Calculate(c)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +229,7 @@ func (c *Context) calculateSetOfStringsExpression(e Expression) (*strtree.Tree, 
 }
 
 func (c *Context) calculateSetOfNetworksExpression(e Expression) (*iptree.Tree, error) {
-	v, err := e.calculate(c)
+	v, err := e.Calculate(c)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +238,7 @@ func (c *Context) calculateSetOfNetworksExpression(e Expression) (*iptree.Tree, 
 }
 
 func (c *Context) calculateSetOfDomainsExpression(e Expression) (*domaintree.Node, error) {
-	v, err := e.calculate(c)
+	v, err := e.Calculate(c)
 	if err != nil {
 		return nil, err
 	}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
+	"github.com/infobloxopen/themis/pdp/selector/local"
 )
 
 func (ctx context) unmarshalAdjustedArguments(val pdp.Expression, attr pdp.Expression, d *json.Decoder) (pdp.Expression, pdp.Expression, error) {
@@ -22,7 +23,7 @@ func (ctx context) unmarshalAdjustedArguments(val pdp.Expression, attr pdp.Expre
 
 		return a, attr, nil
 
-	case pdp.LocalSelector:
+	case local.LocalSelector:
 		if val != nil {
 			return nil, nil, newMatchFunctionBothValuesError()
 		}
