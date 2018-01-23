@@ -493,7 +493,8 @@ The algorithm is capable to select particular child policy or rule with no evalu
 - **map** - expression to get resulting policy or rule id (it can be string, set of strings or list of strings expression);
 - **default** - policy or rule id to evaluate if result of map expression doesn't match any child id (optional, if absent mapper policy effect is **Indeterminate**);
 - **error** - policy or rule id to evaluate if map expression can't be evaluated (optional, if absent mapper policy effect is **Indeterminate**);
-- **alg** - nested algorithm to use if map expression result is set of strings or list of strings (required if map is set of strings or list of strings expression, otherwise ignored). Other mapper can be used here (but for it **default** and **error** fields are ignored).
+- **alg** - nested algorithm to use if map expression result is set of strings or list of strings (required if map is set of strings or list of strings expression, otherwise ignored). Other mapper can be used here (but for it **default** and **error** fields are ignored);
+- **order** - chooses order in which policies or rules selected by map expression are passed to nested algorithm. The order can be "External" (default) and "Internal". With external order policies or rules follow order of ids returned by map expression. Internal order stands for order of the policies or rules as they appear in parent policy set or policy.
 
 Any hidden child policy or rule is ignored by mapper algorithm.
 
@@ -518,6 +519,7 @@ alg:
       type: list of strings
   default: DenyRule
   alg: FirstApplicableEffect
+  order: Internal
 ```
 
 and content for them:

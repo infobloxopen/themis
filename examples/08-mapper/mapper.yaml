@@ -70,3 +70,43 @@ policies:
       effect: Permit
       obligations:
       - p: Second PermitCom
+  - id: External
+    alg:
+      id: Mapper
+      map:
+        val:
+          type: List Of Strings
+          content:
+          - Second
+          - First
+      alg: FirstApplicableEffect
+      order: External
+    rules:
+    - id: First
+      effect: Permit
+      obligations:
+      - p: External First
+    - id: Second
+      effect: Permit
+      obligations:
+      - p: External Second
+  - id: Internal
+    alg:
+      id: Mapper
+      map:
+        val:
+          type: List Of Strings
+          content:
+          - Second
+          - First
+      alg: FirstApplicableEffect
+      order: Internal
+    rules:
+    - id: First
+      effect: Permit
+      obligations:
+      - p: Internal First
+    - id: Second
+      effect: Permit
+      obligations:
+      - p: Internal Second
