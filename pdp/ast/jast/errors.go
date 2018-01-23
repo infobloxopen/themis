@@ -40,20 +40,21 @@ const (
 	functionCastErrorID                 = 27
 	unknownAttributeErrorID             = 28
 	missingAttributeErrorID             = 29
-	unknownTypeErrorID                  = 30
-	invalidTypeErrorID                  = 31
-	missingContentErrorID               = 32
-	notImplementedValueTypeErrorID      = 33
-	invalidAddressErrorID               = 34
-	invalidNetworkErrorID               = 35
-	invalidDomainErrorID                = 36
-	selectorURIErrorID                  = 37
-	selectorLocationErrorID             = 38
-	unsupportedSelectorSchemeErrorID    = 39
-	entityAmbiguityErrorID              = 40
-	entityMissingKeyErrorID             = 41
-	unknownPolicyUpdateOperationErrorID = 42
-	missingContentTypeErrorID           = 43
+	unknownMapperPCAOrderID             = 30
+	unknownTypeErrorID                  = 31
+	invalidTypeErrorID                  = 32
+	missingContentErrorID               = 33
+	notImplementedValueTypeErrorID      = 34
+	invalidAddressErrorID               = 35
+	invalidNetworkErrorID               = 36
+	invalidDomainErrorID                = 37
+	selectorURIErrorID                  = 38
+	selectorLocationErrorID             = 39
+	unsupportedSelectorSchemeErrorID    = 40
+	entityAmbiguityErrorID              = 41
+	entityMissingKeyErrorID             = 42
+	unknownPolicyUpdateOperationErrorID = 43
+	missingContentTypeErrorID           = 44
 )
 
 type externalError struct {
@@ -513,6 +514,21 @@ func newMissingAttributeError(attr, obj string) *missingAttributeError {
 
 func (e *missingAttributeError) Error() string {
 	return e.errorf("Missing %q attribute %q", e.obj, e.attr)
+}
+
+type unknownMapperPCAOrder struct {
+	errorLink
+	ord string
+}
+
+func newUnknownMapperPCAOrder(ord string) *unknownMapperPCAOrder {
+	return &unknownMapperPCAOrder{
+		errorLink: errorLink{id: unknownMapperPCAOrderID},
+		ord:       ord}
+}
+
+func (e *unknownMapperPCAOrder) Error() string {
+	return e.errorf("Unknown policy ordering for mapper \"%s\"", e.ord)
 }
 
 type unknownTypeError struct {

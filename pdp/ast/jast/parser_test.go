@@ -541,6 +541,61 @@ const (
             ]
           }
         ]
+      },
+      {
+        "id": "Reodering Mapper Policy Set",
+        "alg": {
+          "id": "Mapper",
+          "map": {
+            "attr": "lsAttr"
+          },
+          "order": "Internal",
+          "alg": "FirstApplicableEffect"
+        },
+        "policies": [
+          {
+            "id": "first",
+            "alg": "FirstApplicableEffect",
+            "rules": [
+              {
+                "effect": "Permit"
+              }
+            ],
+            "obligations": [
+              {
+                "strAttr": "First Rule"
+              }
+            ]
+          },
+          {
+            "id": "second",
+            "alg": "FirstApplicableEffect",
+            "rules": [
+              {
+                "effect": "Permit"
+              }
+            ],
+            "obligations": [
+              {
+                "strAttr": "Second Rule"
+              }
+            ]
+          },
+          {
+            "id": "third",
+            "alg": "FirstApplicableEffect",
+            "rules": [
+              {
+                "effect": "Permit"
+              }
+            ],
+            "obligations": [
+              {
+                "strAttr": "Third Rule"
+              }
+            ]
+          }
+        ]
       }
     ]
   }

@@ -248,6 +248,14 @@ errors:
   - field: obj
   - field: attr
 
+- id: unknownMapperPCAOrder
+  fields:
+  - id: ord
+    type: string
+  msg: "Unknown policy ordering for mapper \"%s\""
+  args:
+  - field: ord
+
 - id: unknownTypeError
   fields:
   - id: t

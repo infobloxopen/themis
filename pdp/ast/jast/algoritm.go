@@ -2,6 +2,7 @@ package jast
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/infobloxopen/themis/jparser"
@@ -30,6 +31,7 @@ type caParams struct {
 	errOk  bool
 	errID  string
 	arg    pdp.Expression
+	order  int
 	subAlg interface{}
 }
 
@@ -57,11 +59,13 @@ func buildMapperPolicyCombiningAlgParams(ctx context, alg *caParams, policies []
 	}
 
 	var subAlg pdp.PolicyCombiningAlg
-	if alg.subAlg != nil {
+	t := alg.arg.GetResultType()
+	if alg.subAlg != nil && (t == pdp.TypeSetOfStrings || t == pdp.TypeListOfStrings) {
 		maker, params, err := ctx.buildPolicyCombiningAlg(alg.subAlg, policies)
 		if err != nil {
 			return nil, err
 		}
+
 		subAlg = maker(nil, params)
 	}
 
@@ -71,6 +75,7 @@ func buildMapperPolicyCombiningAlgParams(ctx context, alg *caParams, policies []
 		Def:       alg.defID,
 		ErrOk:     alg.errOk,
 		Err:       alg.errID,
+		Order:     alg.order,
 		Algorithm: subAlg}, nil
 }
 
@@ -181,52 +186,107 @@ func (ctx context) buildPolicyCombiningAlg(alg interface{}, policies []pdp.Evalu
 
 func (ctx context) unmarshalCombiningAlgObj(d *json.Decoder) (*caParams, error) {
 	var (
-		mapOk  bool
 		params caParams
-		id     string
+		idOk   bool
+		mapOk  bool
 	)
 
 	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
-		var err error
+		var (
+			err error
+			ok  bool
+		)
 
 		switch strings.ToLower(k) {
 		case yastTagID:
-			id, err = jparser.GetString(d, "algorithm id")
-			return err
+			params.id, err = jparser.GetString(d, "id")
+			if err != nil {
+				if idOk {
+					err = bindErrorf(err, "%q", params.id)
+				}
+
+				return err
+			}
+
+			idOk = true
+			return nil
 
 		case yastTagMap:
-			mapOk = true
 			err = jparser.CheckObjectStart(d, "expression")
 			if err != nil {
-				return bindErrorf(err, "%s", id)
+				if idOk {
+					err = bindErrorf(err, "%q", params.id)
+				}
+
+				return err
 			}
 
 			params.arg, err = ctx.unmarshalExpression(d)
 			if err != nil {
-				return bindErrorf(err, "%s", id)
+				if idOk {
+					err = bindErrorf(err, "%q", params.id)
+				}
+
+				return err
 			}
 
 			t := params.arg.GetResultType()
 			if t != pdp.TypeString && t != pdp.TypeSetOfStrings && t != pdp.TypeListOfStrings {
-				return bindErrorf(newMapperArgumentTypeError(t), "%s", id)
+				err = newMapperArgumentTypeError(t)
+				if idOk {
+					err = bindErrorf(err, "%q", params.id)
+				}
+
+				return err
 			}
 
+			mapOk = true
 			return nil
 
 		case yastTagDefault:
-			params.defOk = true
 			params.defID, err = jparser.GetString(d, "algorithm default id")
 			if err != nil {
-				return bindErrorf(err, "%s", id)
+				if idOk {
+					err = bindErrorf(err, "%q", params.id)
+				}
+
+				return err
 			}
 
+			params.defOk = true
 			return nil
 
 		case yastTagError:
-			params.errOk = true
 			params.errID, err = jparser.GetString(d, "algorithm error id")
 			if err != nil {
-				return bindErrorf(err, "%s", id)
+				if idOk {
+					err = bindErrorf(err, "%q", params.id)
+				}
+
+				return err
+			}
+
+			params.errOk = true
+			return nil
+
+		case yastTagOrder:
+			s, err := jparser.GetString(d, "ordering option")
+			if err != nil {
+				if idOk {
+					err = bindErrorf(err, "%q", params.id)
+				}
+
+				return err
+			}
+
+			params.order, ok = pdp.MapperPCAOrderIDs[strings.ToLower(s)]
+			if !ok {
+				err = newUnknownMapperPCAOrder(s)
+				if idOk {
+					err = bindErrorf(err, "%q", params.id)
+				}
+
+				return err
 			}
 
 			return nil
@@ -234,7 +294,11 @@ func (ctx context) unmarshalCombiningAlgObj(d *json.Decoder) (*caParams, error) 
 		case yastTagAlg:
 			params.subAlg, err = ctx.unmarshalCombiningAlg(d)
 			if err != nil {
-				return bindErrorf(err, "%s", id)
+				if idOk {
+					err = bindErrorf(err, "%q", params.id)
+				}
+
+				return err
 			}
 
 			return nil
@@ -245,15 +309,17 @@ func (ctx context) unmarshalCombiningAlgObj(d *json.Decoder) (*caParams, error) 
 		return nil, err
 	}
 
-	if id == "" {
+	if !idOk {
 		return nil, newMissingAttributeError(yastTagID, "algorithm")
 	}
 
 	if !mapOk {
+		if idOk {
+			return nil, bindError(newMissingAttributeError(yastTagMap, fmt.Sprintf("%q", params.id)), "algorithm")
+		}
+
 		return nil, newMissingAttributeError(yastTagMap, "algorithm")
 	}
-
-	params.id = id
 
 	return &params, nil
 }
