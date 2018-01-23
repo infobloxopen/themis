@@ -4,39 +4,20 @@ import (
 	"strings"
 
 	"github.com/infobloxopen/themis/pdp"
-	"github.com/infobloxopen/themis/pdp/selector/local"
 )
 
-func (ctx context) getAdjustedArguments(v interface{}, val pdp.Expression, attr pdp.Expression) (pdp.Expression, pdp.Expression, boundError) {
+func (ctx context) getTargetCompatibleArgument(v interface{}) (pdp.Expression, int, boundError) {
 	e, err := ctx.unmarshalExpression(v)
 	if err != nil {
-		return nil, nil, err
+		return nil, 0, err
 	}
 
-	switch a := e.(type) {
-	case pdp.AttributeValue:
-		if val != nil {
-			return nil, nil, newMatchFunctionBothValuesError()
-		}
-
-		return a, attr, nil
-
-	case local.LocalSelector:
-		if val != nil {
-			return nil, nil, newMatchFunctionBothValuesError()
-		}
-
-		return a, attr, nil
-
-	case pdp.AttributeDesignator:
-		if attr != nil {
-			return nil, nil, newMatchFunctionBothAttrsError()
-		}
-
-		return val, a, nil
+	TCAID, ok := pdp.CheckExpressionAsTargetArgument(e)
+	if !ok {
+		return nil, 0, newInvalidMatchFunctionArgError(e)
 	}
 
-	return nil, nil, newInvalidMatchFunctionArgError(e)
+	return e, TCAID, nil
 }
 
 func (ctx context) getAdjustedArgumentPair(v interface{}) (pdp.Expression, pdp.Expression, boundError) {
@@ -45,14 +26,24 @@ func (ctx context) getAdjustedArgumentPair(v interface{}) (pdp.Expression, pdp.E
 		return nil, nil, newMatchFunctionArgsNumberError(len(args))
 	}
 
-	first, second, err := ctx.getAdjustedArguments(args[0], nil, nil)
+	first, firstTCAID, err := ctx.getTargetCompatibleArgument(args[0])
 	if err != nil {
 		return nil, nil, err
 	}
 
-	first, second, err = ctx.getAdjustedArguments(args[1], first, second)
+	second, secondTCAID, err := ctx.getTargetCompatibleArgument(args[1])
 	if err != nil {
 		return nil, nil, err
+	}
+
+	if firstTCAID == pdp.TargetCompatibleArgumentAttributeValue &&
+		secondTCAID == pdp.TargetCompatibleArgumentAttributeValue {
+		return nil, nil, newMatchFunctionBothValuesError()
+	}
+
+	if firstTCAID == pdp.TargetCompatibleArgumentAttributeDesignator &&
+		secondTCAID == pdp.TargetCompatibleArgumentAttributeDesignator {
+		return nil, nil, newMatchFunctionBothAttrsError()
 	}
 
 	return first, second, nil

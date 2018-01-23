@@ -67,12 +67,12 @@ policies:
         - example.com
     - target: # set of strings
       - contains:
-        - attr: s
         - val:
             type: set of strings
             content:
             - first
             - second
+        - attr: s
       effect: Permit
       obligations:
       - ss:
@@ -80,12 +80,12 @@ policies:
         - second
     - target: # set of networks
       - contains:
-        - attr: a
         - val:
             type: set of networks
             content:
             - 192.0.2.0/28
             - 192.0.2.16/28
+        - attr: a
       effect: Permit
       obligations:
       - sn:
