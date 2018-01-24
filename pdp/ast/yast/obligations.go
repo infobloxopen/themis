@@ -23,19 +23,20 @@ func (ctx context) unmarshalObligationItem(v interface{}) (pdp.AttributeAssignme
 		return pdp.AttributeAssignmentExpression{}, newUnknownAttributeError(ID)
 	}
 
-	/*
 	var e pdp.Expression
-	e, err = ctx.unmarshalValueByType(a.GetType(), v)
-	if err != nil {
+	m, err = ctx.validateMap(v, "obligation assignment")
+	if err == nil {
+		// if it's a map, assume it's an expression
 		e, err = ctx.unmarshalExpression(v)
 		if err != nil {
 			return pdp.AttributeAssignmentExpression{}, bindError(err, ID)
 		}
-	}
-	*/
-	e, err := ctx.unmarshalExpression(v)
-	if err != nil {
-		return pdp.AttributeAssignmentExpression{}, bindError(err, ID)
+	} else {
+		// if it's not a map, assume it's an immediate value
+		e, err = ctx.unmarshalValueByType(a.GetType(), v)
+		if err != nil {
+			return pdp.AttributeAssignmentExpression{}, bindError(err, ID)
+		}
 	}
 
 	return pdp.MakeAttributeAssignmentExpression(a, e), nil
