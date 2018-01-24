@@ -71,7 +71,7 @@ $ pepcli -i mapper.requests.yaml test
   obligation:
     - id: "p"
       type: "string"
-      value: "Internal Second"
+      value: "Internal First"
 ```
 
 PDP logs:
@@ -134,5 +134,5 @@ DEBU[0033] Request context                               context="content:
 attributes:
 - p.(String): "Internal""
 DEBU[0033] Response                                      effect=PERMIT obligation="attributes:
-- p.(string): "Internal Second"" reason=Ok
+- p.(string): "Internal First"" reason=Ok
 ```

@@ -554,6 +554,17 @@ func makeSimpleHiddenPolicy(rules ...*Rule) *Policy {
 	)
 }
 
+func makeSimplePermitPolicyWithObligations(ID string, obligations []AttributeAssignmentExpression) *Policy {
+	return NewPolicy(
+		ID, false,
+		Target{},
+		[]*Rule{makeSimpleHiddenRule(EffectPermit)},
+		makeFirstApplicableEffectRCA,
+		nil,
+		obligations,
+	)
+}
+
 func makeSimpleRule(ID string, effect int) *Rule {
 	return NewRule(
 		ID, false,
@@ -571,6 +582,16 @@ func makeSimpleHiddenRule(effect int) *Rule {
 		nil,
 		effect,
 		nil,
+	)
+}
+
+func makeSimplePermitRuleWithObligations(ID string, obligations []AttributeAssignmentExpression) *Rule {
+	return NewRule(
+		ID, false,
+		Target{},
+		nil,
+		EffectPermit,
+		obligations,
 	)
 }
 

@@ -2,6 +2,7 @@ package pdp
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/infobloxopen/go-trees/strtree"
@@ -12,6 +13,7 @@ type mapperRCA struct {
 	rules     *strtree.Tree
 	def       *Rule
 	err       *Rule
+	order     int
 	algorithm RuleCombiningAlg
 }
 
@@ -172,6 +174,7 @@ func makeMapperRCA(rules []*Rule, params interface{}) RuleCombiningAlg {
 		rules:     m,
 		def:       def,
 		err:       err,
+		order:     mapperParams.Order,
 		algorithm: mapperParams.Algorithm}
 }
 
@@ -224,6 +227,7 @@ func (a mapperRCA) add(ID string, child, old *Rule) RuleCombiningAlg {
 		rules:     a.rules.Insert(ID, child),
 		def:       def,
 		err:       err,
+		order:     a.order,
 		algorithm: a.algorithm}
 }
 
@@ -251,6 +255,7 @@ func (a mapperRCA) del(ID string, old *Rule) RuleCombiningAlg {
 		rules:     rules,
 		def:       def,
 		err:       err,
+		order:     a.order,
 		algorithm: a.algorithm}
 }
 
@@ -273,7 +278,11 @@ func (a mapperRCA) execute(rules []*Rule, ctx *Context) Response {
 			return a.calculateErrorRule(ctx, err)
 		}
 
-		r := a.algorithm.execute(collectSubRules(IDs, a.getRulesMap(rules)), ctx)
+		sub := collectSubRules(IDs, a.getRulesMap(rules))
+		if len(sub) > 1 && a.order == MapperRCAInternalOrder {
+			sort.Sort(byRuleOrder(sub))
+		}
+		r := a.algorithm.execute(sub, ctx)
 		if r.Effect == EffectNotApplicable && a.def != nil {
 			return a.def.calculate(ctx)
 		}

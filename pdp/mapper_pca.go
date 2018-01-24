@@ -2,6 +2,7 @@ package pdp
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/infobloxopen/go-trees/strtree"
@@ -12,6 +13,7 @@ type mapperPCA struct {
 	policies  *strtree.Tree
 	def       Evaluable
 	err       Evaluable
+	order     int
 	algorithm PolicyCombiningAlg
 }
 
@@ -142,6 +144,7 @@ func makeMapperPCA(policies []Evaluable, params interface{}) PolicyCombiningAlg 
 		policies:  m,
 		def:       def,
 		err:       err,
+		order:     mapperParams.Order,
 		algorithm: mapperParams.Algorithm}
 }
 
@@ -194,6 +197,7 @@ func (a mapperPCA) add(ID string, child, old Evaluable) PolicyCombiningAlg {
 		policies:  a.policies.Insert(ID, child),
 		def:       def,
 		err:       err,
+		order:     a.order,
 		algorithm: a.algorithm}
 }
 
@@ -221,6 +225,7 @@ func (a mapperPCA) del(ID string, old Evaluable) PolicyCombiningAlg {
 		policies:  policies,
 		def:       def,
 		err:       err,
+		order:     a.order,
 		algorithm: a.algorithm}
 }
 
@@ -243,7 +248,11 @@ func (a mapperPCA) execute(policies []Evaluable, ctx *Context) Response {
 			return a.calculateErrorPolicy(ctx, err)
 		}
 
-		r := a.algorithm.execute(collectSubPolicies(IDs, a.getPoliciesMap(policies)), ctx)
+		sub := collectSubPolicies(IDs, a.getPoliciesMap(policies))
+		if len(sub) > 1 && a.order == MapperPCAInternalOrder {
+			sort.Sort(byPolicyOrder(sub))
+		}
+		r := a.algorithm.execute(sub, ctx)
 		if r.Effect == EffectNotApplicable && a.def != nil {
 			return a.def.Calculate(ctx)
 		}
