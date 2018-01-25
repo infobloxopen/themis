@@ -41,7 +41,12 @@ func (f functionFloatSubtract) calculate(ctx *Context) (AttributeValue, error) {
 		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 
-	return MakeFloatValue(first - second), nil
+	res := first - second
+	if err = floatErrorCheck(res); err != nil {
+		return undefinedValue, bindError(err, f.describe())
+	}
+
+	return MakeFloatValue(res), nil
 }
 
 func functionFloatSubtractValidator(args []Expression) functionMaker {
