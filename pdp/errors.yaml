@@ -680,3 +680,23 @@ errors:
   args:
   - expr: TypeNames[e.expected]
   - field: value
+
+- id: integerDivideByZeroError
+  fields:
+  msg: "Integer divisor has a value of 0"
+  args:
+
+- id: floatDivideByZeroError
+  fields:
+  msg: "Float divisor has a value of 0"
+  args:
+
+- id: floatNanError
+  fields:
+  msg: "Float result has a value of NaN"
+  args:
+
+- id: floatInfError
+  fields:
+  msg: "Float result has a value of Inf"
+  args:
