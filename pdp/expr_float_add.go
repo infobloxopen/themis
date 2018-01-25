@@ -1,10 +1,23 @@
 package pdp
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+)
 
 type functionFloatAdd struct {
 	first  Expression
 	second Expression
+}
+
+func floatErrorCheck(f float64) error {
+	if math.IsNaN(f) {
+		return newFloatNanError()
+	} else if math.IsInf(f, 0) {
+		return newFloatInfError()
+	}
+
+	return nil
 }
 
 func makeFunctionFloatAdd(first, second Expression) Expression {
@@ -41,7 +54,12 @@ func (f functionFloatAdd) calculate(ctx *Context) (AttributeValue, error) {
 		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 
-	return MakeFloatValue(first + second), nil
+	res := first + second
+	if err = floatErrorCheck(res); err != nil {
+		return undefinedValue, bindError(err, f.describe())
+	}
+
+	return MakeFloatValue(res), nil
 }
 
 func functionFloatAddValidator(args []Expression) functionMaker {
