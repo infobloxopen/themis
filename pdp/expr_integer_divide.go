@@ -41,6 +41,10 @@ func (f functionIntegerDivide) calculate(ctx *Context) (AttributeValue, error) {
 		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 
+	if second == 0 {
+		return undefinedValue, bindError(bindError(newIntegerDivideByZeroError(), "second argument"), f.describe())
+	}
+
 	return MakeIntegerValue(first / second), nil
 }
 

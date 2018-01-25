@@ -41,7 +41,16 @@ func (f functionFloatDivide) calculate(ctx *Context) (AttributeValue, error) {
 		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 
-	return MakeFloatValue(first / second), nil
+	if second == 0. {
+		return undefinedValue, bindError(bindError(newFloatDivideByZeroError(), "second argument"), f.describe())
+	}
+
+	res := first / second
+	if err = floatErrorCheck(res); err != nil {
+		return undefinedValue, bindError(err, f.describe())
+	}
+
+	return MakeFloatValue(res), nil
 }
 
 func functionFloatDivideValidator(args []Expression) functionMaker {
