@@ -39,11 +39,28 @@ func (ctx context) unmarshalObligationItem(d *json.Decoder) (pdp.AttributeAssign
 			if err != nil {
 				return bindError(err, k)
 			}
-		} else {
-			e, err = ctx.unmarshalValueByType(a.GetType(), d)
+		} else if delim == jparser.DelimArrayStart {
+			val, err := jparser.GetArray(d, "obligations")
+			e, err = ctx.unmarshalValueByTypeObject(a.GetType(), val)
 			if err != nil {
 				return err
 			}
+			/*
+				arr, err := jparser.GetArray(d, "array")
+				if err != nil {
+					return err
+				}
+				// Assume list of string
+				strArr := make([]string, len(arr))
+				for _, elem := range arr {
+					str, ok := elem.(string)
+					if !ok {
+						return bindError(fmt.Errorf("string conversion error"), k)
+					}
+					strArr = append(strArr, str)
+				}
+				e = pdp.MakeListOfStringsValue(strArr)
+			*/
 		}
 		return nil
 	}, "obligation"); err != nil {
