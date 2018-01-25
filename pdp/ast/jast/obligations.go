@@ -3,6 +3,7 @@ package jast
 import (
 	"encoding/json"
 
+	//	"fmt"
 	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
 )
@@ -10,7 +11,6 @@ import (
 func (ctx context) unmarshalObligationItem(d *json.Decoder) (pdp.AttributeAssignmentExpression, error) {
 	var (
 		a pdp.Attribute
-		v pdp.AttributeValue
 		e pdp.Expression
 	)
 
@@ -25,18 +25,43 @@ func (ctx context) unmarshalObligationItem(d *json.Decoder) (pdp.AttributeAssign
 			return newUnknownAttributeError(k)
 		}
 
-		if err = jparser.CheckObjectStart(d, "argument"); err == nil {
+		delim, val, err := jparser.CheckObjectStartOrValue(d, "argument")
+		if err != nil {
+			return err
+		}
+		if delim == "" {
+			e, err = ctx.unmarshalValueByTypeObject(a.GetType(), val)
+			if err != nil {
+				return err
+			}
+		} else if delim == jparser.DelimObjectStart {
 			e, err = ctx.unmarshalExpression(d)
 			if err != nil {
 				return bindError(err, k)
 			}
-		} else {
-			v, err = ctx.unmarshalValueByType(a.GetType(), d)
+		} else if delim == jparser.DelimArrayStart {
+			val, err := jparser.GetArray(d, "obligations")
+			e, err = ctx.unmarshalValueByTypeObject(a.GetType(), val)
 			if err != nil {
 				return err
 			}
+			/*
+				arr, err := jparser.GetArray(d, "array")
+				if err != nil {
+					return err
+				}
+				// Assume list of string
+				strArr := make([]string, len(arr))
+				for _, elem := range arr {
+					str, ok := elem.(string)
+					if !ok {
+						return bindError(fmt.Errorf("string conversion error"), k)
+					}
+					strArr = append(strArr, str)
+				}
+				e = pdp.MakeListOfStringsValue(strArr)
+			*/
 		}
-
 		return nil
 	}, "obligation"); err != nil {
 		return pdp.AttributeAssignmentExpression{}, err
