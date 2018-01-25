@@ -83,6 +83,10 @@ const (
 	invalidContentDomainMapErrorID            = 70
 	invalidContentValueErrorID                = 71
 	invalidContentValueTypeErrorID            = 72
+	integerDivideByZeroErrorID                = 73
+	floatDivideByZeroErrorID                  = 74
+	floatNanErrorID                           = 75
+	floatInfErrorID                           = 76
 )
 
 type externalError struct {
@@ -1292,4 +1296,56 @@ func newInvalidContentValueTypeError(value interface{}, expected int) *invalidCo
 
 func (e *invalidContentValueTypeError) Error() string {
 	return e.errorf("Expected value of type %s but got %T", TypeNames[e.expected], e.value)
+}
+
+type integerDivideByZeroError struct {
+	errorLink
+}
+
+func newIntegerDivideByZeroError() *integerDivideByZeroError {
+	return &integerDivideByZeroError{
+		errorLink: errorLink{id: integerDivideByZeroErrorID}}
+}
+
+func (e *integerDivideByZeroError) Error() string {
+	return e.errorf("Integer divisor has a value of 0")
+}
+
+type floatDivideByZeroError struct {
+	errorLink
+}
+
+func newFloatDivideByZeroError() *floatDivideByZeroError {
+	return &floatDivideByZeroError{
+		errorLink: errorLink{id: floatDivideByZeroErrorID}}
+}
+
+func (e *floatDivideByZeroError) Error() string {
+	return e.errorf("Float divisor has a value of 0")
+}
+
+type floatNanError struct {
+	errorLink
+}
+
+func newFloatNanError() *floatNanError {
+	return &floatNanError{
+		errorLink: errorLink{id: floatNanErrorID}}
+}
+
+func (e *floatNanError) Error() string {
+	return e.errorf("Float result has a value of NaN")
+}
+
+type floatInfError struct {
+	errorLink
+}
+
+func newFloatInfError() *floatInfError {
+	return &floatInfError{
+		errorLink: errorLink{id: floatInfErrorID}}
+}
+
+func (e *floatInfError) Error() string {
+	return e.errorf("Float result has a value of Inf")
 }
