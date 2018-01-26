@@ -45,15 +45,16 @@ const (
 	missingContentErrorID               = 32
 	notImplementedValueTypeErrorID      = 33
 	invalidAddressErrorID               = 34
-	invalidNetworkErrorID               = 35
-	invalidDomainErrorID                = 36
-	selectorURIErrorID                  = 37
-	selectorLocationErrorID             = 38
-	unsupportedSelectorSchemeErrorID    = 39
-	entityAmbiguityErrorID              = 40
-	entityMissingKeyErrorID             = 41
-	unknownPolicyUpdateOperationErrorID = 42
-	missingContentTypeErrorID           = 43
+	integerOverflowErrorID              = 35
+	invalidNetworkErrorID               = 36
+	invalidDomainErrorID                = 37
+	selectorURIErrorID                  = 38
+	selectorLocationErrorID             = 39
+	unsupportedSelectorSchemeErrorID    = 40
+	entityAmbiguityErrorID              = 41
+	entityMissingKeyErrorID             = 42
+	unknownPolicyUpdateOperationErrorID = 43
+	missingContentTypeErrorID           = 44
 )
 
 type externalError struct {
@@ -586,6 +587,21 @@ func newInvalidAddressError(s string) *invalidAddressError {
 
 func (e *invalidAddressError) Error() string {
 	return e.errorf("Expected value of address type but got %q", e.s)
+}
+
+type integerOverflowError struct {
+	errorLink
+	x float64
+}
+
+func newIntegerOverflowError(x float64) *integerOverflowError {
+	return &integerOverflowError{
+		errorLink: errorLink{id: integerOverflowErrorID},
+		x:         x}
+}
+
+func (e *integerOverflowError) Error() string {
+	return e.errorf("%f overflows integer", e.x)
 }
 
 type invalidNetworkError struct {

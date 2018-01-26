@@ -20,7 +20,7 @@ const (
 func Exec(addr string, opts []pep.Option, in, out string, n int, v interface{}) error {
 	reqs, err := requests.Load(in)
 	if err != nil {
-		return fmt.Errorf("can't load requests from \"%s\"", in)
+		return fmt.Errorf("can't load requests from \"%s\": %s", in, err)
 	}
 
 	if n < 1 {

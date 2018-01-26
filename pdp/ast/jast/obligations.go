@@ -10,7 +10,8 @@ import (
 func (ctx context) unmarshalObligationItem(d *json.Decoder) (pdp.AttributeAssignmentExpression, error) {
 	var (
 		a pdp.Attribute
-		e pdp.AttributeValue
+		v pdp.AttributeValue
+		e pdp.Expression
 	)
 
 	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
@@ -24,9 +25,16 @@ func (ctx context) unmarshalObligationItem(d *json.Decoder) (pdp.AttributeAssign
 			return newUnknownAttributeError(k)
 		}
 
-		e, err = ctx.unmarshalValueByType(a.GetType(), d)
-		if err != nil {
-			return bindError(err, k)
+		if err = jparser.CheckObjectStart(d, "argument"); err == nil {
+			e, err = ctx.unmarshalExpression(d)
+			if err != nil {
+				return bindError(err, k)
+			}
+		} else {
+			v, err = ctx.unmarshalValueByType(a.GetType(), d)
+			if err != nil {
+				return err
+			}
 		}
 
 		return nil
@@ -42,7 +50,7 @@ func (ctx *context) unmarshalObligations(d *json.Decoder) ([]pdp.AttributeAssign
 		return nil, err
 	}
 
-	r := []pdp.AttributeAssignmentExpression{}
+	var r []pdp.AttributeAssignmentExpression
 	if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
 		o, err := ctx.unmarshalObligationItem(d)
 		if err != nil {

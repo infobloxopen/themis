@@ -23,7 +23,17 @@ func (ctx context) unmarshalObligationItem(v interface{}) (pdp.AttributeAssignme
 		return pdp.AttributeAssignmentExpression{}, newUnknownAttributeError(ID)
 	}
 
-	e, err := ctx.unmarshalValueByType(a.GetType(), v)
+	/*
+		var e pdp.Expression
+		e, err = ctx.unmarshalValueByType(a.GetType(), v)
+		if err != nil {
+			e, err = ctx.unmarshalExpression(v)
+			if err != nil {
+				return pdp.AttributeAssignmentExpression{}, bindError(err, ID)
+			}
+		}
+	*/
+	e, err := ctx.unmarshalExpression(v)
 	if err != nil {
 		return pdp.AttributeAssignmentExpression{}, bindError(err, ID)
 	}
@@ -41,7 +51,7 @@ func (ctx context) unmarshalObligations(m map[interface{}]interface{}) ([]pdp.At
 		return nil, nil
 	}
 
-	r := []pdp.AttributeAssignmentExpression{}
+	var r []pdp.AttributeAssignmentExpression
 	for i, item := range items {
 		o, err := ctx.unmarshalObligationItem(item)
 		if err != nil {
