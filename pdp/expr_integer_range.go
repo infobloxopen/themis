@@ -33,7 +33,7 @@ func (f functionIntegerRange) describe() string {
 	return "range"
 }
 
-func (f functionIntegerRange) calculate(ctx *Context) (AttributeValue, error) {
+func (f functionIntegerRange) Calculate(ctx *Context) (AttributeValue, error) {
 	min, err := ctx.calculateIntegerExpression(f.min)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "min argument"), f.describe())

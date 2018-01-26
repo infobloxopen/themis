@@ -30,7 +30,7 @@ func (f functionIntegerDivide) describe() string {
 	return "divide"
 }
 
-func (f functionIntegerDivide) calculate(ctx *Context) (AttributeValue, error) {
+func (f functionIntegerDivide) Calculate(ctx *Context) (AttributeValue, error) {
 	first, err := ctx.calculateIntegerExpression(f.first)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())

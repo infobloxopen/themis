@@ -30,7 +30,7 @@ func (f functionFloatEqual) describe() string {
 	return "equal"
 }
 
-func (f functionFloatEqual) calculate(ctx *Context) (AttributeValue, error) {
+func (f functionFloatEqual) Calculate(ctx *Context) (AttributeValue, error) {
 	first, err := ctx.calculateFloatOrIntegerExpression(f.first)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())
