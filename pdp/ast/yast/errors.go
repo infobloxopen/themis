@@ -13,55 +13,59 @@ const (
 	rootKeysErrorID                       = 1
 	stringErrorID                         = 2
 	missingStringErrorID                  = 3
-	mapErrorID                            = 4
-	missingMapErrorID                     = 5
-	listErrorID                           = 6
-	missingListErrorID                    = 7
-	attributeTypeErrorID                  = 8
-	policyAmbiguityErrorID                = 9
-	policyMissingKeyErrorID               = 10
-	unknownRCAErrorID                     = 11
-	missingRCAErrorID                     = 12
-	invalidRCAErrorID                     = 13
-	missingMapRCAParamErrorID             = 14
-	missingDefaultRuleRCAErrorID          = 15
-	missingErrorRuleRCAErrorID            = 16
-	notImplementedRCAErrorID              = 17
-	unknownPCAErrorID                     = 18
-	missingPCAErrorID                     = 19
-	invalidPCAErrorID                     = 20
-	missingMapPCAParamErrorID             = 21
-	missingDefaultPolicyPCAErrorID        = 22
-	missingErrorPolicyPCAErrorID          = 23
-	notImplementedPCAErrorID              = 24
-	mapperArgumentTypeErrorID             = 25
-	conditionTypeErrorID                  = 26
-	unknownEffectErrorID                  = 27
-	noSMPItemsErrorID                     = 28
-	tooManySMPItemsErrorID                = 29
-	unknownMatchFunctionErrorID           = 30
-	matchFunctionCastErrorID              = 31
-	matchFunctionArgsNumberErrorID        = 32
-	invalidMatchFunctionArgErrorID        = 33
-	matchFunctionBothValuesErrorID        = 34
-	matchFunctionBothAttrsErrorID         = 35
-	unknownFunctionErrorID                = 36
-	functionCastErrorID                   = 37
-	unknownAttributeErrorID               = 38
-	unknownTypeErrorID                    = 39
-	invalidTypeErrorID                    = 40
-	missingContentErrorID                 = 41
-	notImplementedValueTypeErrorID        = 42
-	invalidAddressErrorID                 = 43
-	invalidNetworkErrorID                 = 44
-	invalidDomainErrorID                  = 45
-	selectorURIErrorID                    = 46
-	selectorLocationErrorID               = 47
-	unsupportedSelectorSchemeErrorID      = 48
-	entityAmbiguityErrorID                = 49
-	entityMissingKeyErrorID               = 50
-	unknownPolicyUpdateOperationErrorID   = 51
-	invalidPolicyUpdatePathElementErrorID = 52
+	integerErrorID                        = 4
+	floatErrorID                          = 5
+	integerUint64OverflowErrorID          = 6
+	integerFloat64OverflowErrorID         = 7
+	mapErrorID                            = 8
+	missingMapErrorID                     = 9
+	listErrorID                           = 10
+	missingListErrorID                    = 11
+	attributeTypeErrorID                  = 12
+	policyAmbiguityErrorID                = 13
+	policyMissingKeyErrorID               = 14
+	unknownRCAErrorID                     = 15
+	missingRCAErrorID                     = 16
+	invalidRCAErrorID                     = 17
+	missingMapRCAParamErrorID             = 18
+	missingDefaultRuleRCAErrorID          = 19
+	missingErrorRuleRCAErrorID            = 20
+	notImplementedRCAErrorID              = 21
+	unknownPCAErrorID                     = 22
+	missingPCAErrorID                     = 23
+	invalidPCAErrorID                     = 24
+	missingMapPCAParamErrorID             = 25
+	missingDefaultPolicyPCAErrorID        = 26
+	missingErrorPolicyPCAErrorID          = 27
+	notImplementedPCAErrorID              = 28
+	mapperArgumentTypeErrorID             = 29
+	conditionTypeErrorID                  = 30
+	unknownEffectErrorID                  = 31
+	noSMPItemsErrorID                     = 32
+	tooManySMPItemsErrorID                = 33
+	unknownMatchFunctionErrorID           = 34
+	matchFunctionCastErrorID              = 35
+	matchFunctionArgsNumberErrorID        = 36
+	invalidMatchFunctionArgErrorID        = 37
+	matchFunctionBothValuesErrorID        = 38
+	matchFunctionBothAttrsErrorID         = 39
+	unknownFunctionErrorID                = 40
+	functionCastErrorID                   = 41
+	unknownAttributeErrorID               = 42
+	unknownTypeErrorID                    = 43
+	invalidTypeErrorID                    = 44
+	missingContentErrorID                 = 45
+	notImplementedValueTypeErrorID        = 46
+	invalidAddressErrorID                 = 47
+	invalidNetworkErrorID                 = 48
+	invalidDomainErrorID                  = 49
+	selectorURIErrorID                    = 50
+	selectorLocationErrorID               = 51
+	unsupportedSelectorSchemeErrorID      = 52
+	entityAmbiguityErrorID                = 53
+	entityMissingKeyErrorID               = 54
+	unknownPolicyUpdateOperationErrorID   = 55
+	invalidPolicyUpdatePathElementErrorID = 56
 )
 
 type externalError struct {
@@ -136,6 +140,74 @@ func newMissingStringError(desc string) *missingStringError {
 
 func (e *missingStringError) Error() string {
 	return e.errorf("Missing %s", e.desc)
+}
+
+type integerError struct {
+	errorLink
+	v    interface{}
+	desc string
+}
+
+func newIntegerError(v interface{}, desc string) *integerError {
+	return &integerError{
+		errorLink: errorLink{id: integerErrorID},
+		v:         v,
+		desc:      desc}
+}
+
+func (e *integerError) Error() string {
+	return e.errorf("Expected %s but got %T", e.desc, e.v)
+}
+
+type floatError struct {
+	errorLink
+	v    interface{}
+	desc string
+}
+
+func newFloatError(v interface{}, desc string) *floatError {
+	return &floatError{
+		errorLink: errorLink{id: floatErrorID},
+		v:         v,
+		desc:      desc}
+}
+
+func (e *floatError) Error() string {
+	return e.errorf("Expected %s but got %T", e.desc, e.v)
+}
+
+type integerUint64OverflowError struct {
+	errorLink
+	v    uint64
+	desc string
+}
+
+func newIntegerUint64OverflowError(v uint64, desc string) *integerUint64OverflowError {
+	return &integerUint64OverflowError{
+		errorLink: errorLink{id: integerUint64OverflowErrorID},
+		v:         v,
+		desc:      desc}
+}
+
+func (e *integerUint64OverflowError) Error() string {
+	return e.errorf("%d overflows %s", e.v, e.desc)
+}
+
+type integerFloat64OverflowError struct {
+	errorLink
+	v    float64
+	desc string
+}
+
+func newIntegerFloat64OverflowError(v float64, desc string) *integerFloat64OverflowError {
+	return &integerFloat64OverflowError{
+		errorLink: errorLink{id: integerFloat64OverflowErrorID},
+		v:         v,
+		desc:      desc}
+}
+
+func (e *integerFloat64OverflowError) Error() string {
+	return e.errorf("%f overflows %s", e.v, e.desc)
 }
 
 type mapError struct {

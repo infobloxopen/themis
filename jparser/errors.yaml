@@ -278,3 +278,15 @@ errors:
   - field: desc
   - field: token
   - field: token
+
+- id: numberCastError
+  fields:
+  - id: token
+    type: json.Token
+  - id: desc
+    type: string
+  msg: "Expected number as %s but got %T (%#v)"
+  args:
+  - field: desc
+  - field: token
+  - field: token

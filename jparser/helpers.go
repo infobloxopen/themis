@@ -83,6 +83,29 @@ func CheckObjectStart(d *json.Decoder, desc string) error {
 	return nil
 }
 
+// CheckObjectOrValueStart checks whether next token is:
+//  1) Delimiter - if so, check further whether it's a '{'
+//  2) If not delimiter, check if it's either a number or a string
+func CheckObjectStartOrValue(d *json.Decoder, desc string) (string, interface{}, error) {
+	t, err := d.Token()
+	if err != nil {
+		return "", nil, err
+	}
+	//fmt.Printf("Type of t is %T\n", t)
+	//fmt.Printf("Value of t is %v\n", t)
+
+	switch v := t.(type) {
+	case json.Delim:
+		if v.String() == DelimObjectStart || v.String() == DelimArrayStart {
+			return v.String(), nil, nil
+		} else {
+			return "", nil, newObjectStartDelimiterError(v, DelimObjectStart, desc)
+		}
+	}
+
+	return "", t, nil
+}
+
 // CheckArrayStart checks whether next token is '[' in JSON byte stream.
 func CheckArrayStart(d *json.Decoder, desc string) error {
 	t, err := d.Token()
@@ -277,7 +300,7 @@ func GetUndefined(d *json.Decoder, desc string) (interface{}, error) {
 
 // GetObject unmarshals whole object from JSON byte stream to a list of Piars.
 func GetObject(d *json.Decoder, desc string) ([]Pair, error) {
-	obj := []Pair{}
+	var obj []Pair
 
 	for {
 		t, err := d.Token()
@@ -310,7 +333,7 @@ func GetObject(d *json.Decoder, desc string) ([]Pair, error) {
 // GetArray unmarshals whole array from JSON byte stream to an []interface{}.
 // []interface{} item is an array of Pairs or primitive value or []interface{}.
 func GetArray(d *json.Decoder, desc string) ([]interface{}, error) {
-	arr := []interface{}{}
+	var arr []interface{}
 	i := 1
 	for {
 		src := fmt.Sprintf("%d", i)
@@ -381,6 +404,21 @@ func GetString(d *json.Decoder, desc string) (string, error) {
 	}
 
 	return s, nil
+}
+
+// GetNumber unmarshals number from JSON byte stream.
+func GetNumber(d *json.Decoder, desc string) (float64, error) {
+	t, err := d.Token()
+	if err != nil {
+		return 0, err
+	}
+
+	n, ok := t.(float64)
+	if !ok {
+		return 0, newNumberCastError(t, desc)
+	}
+
+	return n, nil
 }
 
 // GetStringSequence iterates over object keys or string array items in JSON byte stream.

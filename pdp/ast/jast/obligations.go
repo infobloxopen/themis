@@ -3,6 +3,7 @@ package jast
 import (
 	"encoding/json"
 
+	//	"fmt"
 	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
 )
@@ -10,7 +11,7 @@ import (
 func (ctx context) unmarshalObligationItem(d *json.Decoder) (pdp.AttributeAssignmentExpression, error) {
 	var (
 		a pdp.Attribute
-		e pdp.AttributeValue
+		e pdp.Expression
 	)
 
 	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
@@ -24,11 +25,43 @@ func (ctx context) unmarshalObligationItem(d *json.Decoder) (pdp.AttributeAssign
 			return newUnknownAttributeError(k)
 		}
 
-		e, err = ctx.unmarshalValueByType(a.GetType(), d)
+		delim, val, err := jparser.CheckObjectStartOrValue(d, "argument")
 		if err != nil {
-			return bindError(err, k)
+			return err
 		}
-
+		if delim == "" {
+			e, err = ctx.unmarshalValueByTypeObject(a.GetType(), val)
+			if err != nil {
+				return err
+			}
+		} else if delim == jparser.DelimObjectStart {
+			e, err = ctx.unmarshalExpression(d)
+			if err != nil {
+				return bindError(err, k)
+			}
+		} else if delim == jparser.DelimArrayStart {
+			val, err := jparser.GetArray(d, "obligations")
+			e, err = ctx.unmarshalValueByTypeObject(a.GetType(), val)
+			if err != nil {
+				return err
+			}
+			/*
+				arr, err := jparser.GetArray(d, "array")
+				if err != nil {
+					return err
+				}
+				// Assume list of string
+				strArr := make([]string, len(arr))
+				for _, elem := range arr {
+					str, ok := elem.(string)
+					if !ok {
+						return bindError(fmt.Errorf("string conversion error"), k)
+					}
+					strArr = append(strArr, str)
+				}
+				e = pdp.MakeListOfStringsValue(strArr)
+			*/
+		}
 		return nil
 	}, "obligation"); err != nil {
 		return pdp.AttributeAssignmentExpression{}, err
@@ -42,7 +75,7 @@ func (ctx *context) unmarshalObligations(d *json.Decoder) ([]pdp.AttributeAssign
 		return nil, err
 	}
 
-	r := []pdp.AttributeAssignmentExpression{}
+	var r []pdp.AttributeAssignmentExpression
 	if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
 		o, err := ctx.unmarshalObligationItem(d)
 		if err != nil {

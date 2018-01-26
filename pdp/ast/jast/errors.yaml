@@ -283,6 +283,14 @@ errors:
   args:
   - field: s
 
+- id: integerOverflowError
+  fields:
+  - id: x
+    type: float64
+  msg: "%f overflows integer"
+  args:
+  - field: x
+
 - id: invalidNetworkError
   fields:
   - id: s
@@ -359,3 +367,97 @@ errors:
 
 - id: missingContentTypeError
   msg: "Value 'type' attribute is missing or placed after 'content' attribute"
+
+- id: stringError
+  fields:
+  - id: v
+    type: interface{}
+  - id: desc
+    type: string
+  msg: "Expected %s but got %T"
+  args:
+  - field: desc
+  - field: v
+
+- id: missingStringError
+  fields:
+  - id: desc
+    type: string
+  msg: "Missing %s"
+  args:
+  - field: desc
+
+- id: integerUint64OverflowError
+  fields:
+  - id: v
+    type: uint64
+  - id: desc
+    type: string
+  msg: "%d overflows %s"
+  args:
+  - field: v
+  - field: desc
+
+- id: integerFloat64OverflowError
+  fields:
+  - id: v
+    type: float64
+  - id: desc
+    type: string
+  msg: "%f overflows %s"
+  args:
+  - field: v
+  - field: desc
+
+- id: mapError
+  fields:
+  - id: v
+    type: interface{}
+  - id: desc
+    type: string
+  msg: "Expected %s but got %T"
+  args:
+  - field: desc
+  - field: v
+
+- id: missingMapError
+  fields:
+  - id: desc
+    type: string
+  msg: "Missing %s"
+  args:
+  - field: desc
+
+- id: listError
+  fields:
+  - id: v
+    type: interface{}
+  - id: desc
+    type: string
+  msg: "Expected %s but got %T"
+  args:
+  - field: desc
+  - field: v
+
+- id: integerError
+  fields:
+  - id: v
+    type: interface{}
+  - id: desc
+    type: string
+  msg: "Expected %s but got %T"
+  args:
+  - field: desc
+  - field: v
+
+- id: floatError
+  fields:
+  - id: v
+    type: interface{}
+  - id: desc
+    type: string
+  msg: "Expected %s but got %T"
+  args:
+  - field: desc
+  - field: v
+

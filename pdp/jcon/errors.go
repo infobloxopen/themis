@@ -12,29 +12,31 @@ const (
 	externalErrorID                       = 0
 	objectKeyErrorID                      = 1
 	booleanCastErrorID                    = 2
-	stringCastErrorID                     = 3
-	addressCastErrorID                    = 4
-	networkCastErrorID                    = 5
-	domainCastErrorID                     = 6
-	addressNetworkCastErrorID             = 7
-	unknownContentFieldErrorID            = 8
-	unknownContentItemFieldErrorID        = 9
-	unknownTypeErrorID                    = 10
-	invalidContentItemTypeErrorID         = 11
-	invalidContentKeyTypeErrorID          = 12
-	unknownDataFormatErrorID              = 13
-	duplicateContentItemFieldErrorID      = 14
-	missingContentDataErrorID             = 15
-	missingContentTypeErrorID             = 16
-	invalidSequenceContentItemNodeErrorID = 17
-	invalidMapContentItemNodeErrorID      = 18
-	unknownCommadFieldErrorID             = 19
-	duplicateCommandFieldErrorID          = 20
-	missingCommandOpErrorID               = 21
-	missingCommandPathErrorID             = 22
-	missingCommandEntityErrorID           = 23
-	unknownContentUpdateOperationErrorID  = 24
-	arrayEndDelimiterErrorID              = 25
+	numberCastErrorID                     = 3
+	integerOverflowErrorID                = 4
+	stringCastErrorID                     = 5
+	addressCastErrorID                    = 6
+	networkCastErrorID                    = 7
+	domainCastErrorID                     = 8
+	addressNetworkCastErrorID             = 9
+	unknownContentFieldErrorID            = 10
+	unknownContentItemFieldErrorID        = 11
+	unknownTypeErrorID                    = 12
+	invalidContentItemTypeErrorID         = 13
+	invalidContentKeyTypeErrorID          = 14
+	unknownDataFormatErrorID              = 15
+	duplicateContentItemFieldErrorID      = 16
+	missingContentDataErrorID             = 17
+	missingContentTypeErrorID             = 18
+	invalidSequenceContentItemNodeErrorID = 19
+	invalidMapContentItemNodeErrorID      = 20
+	unknownCommadFieldErrorID             = 21
+	duplicateCommandFieldErrorID          = 22
+	missingCommandOpErrorID               = 23
+	missingCommandPathErrorID             = 24
+	missingCommandEntityErrorID           = 25
+	unknownContentUpdateOperationErrorID  = 26
+	arrayEndDelimiterErrorID              = 27
 )
 
 type externalError struct {
@@ -82,6 +84,38 @@ func newBooleanCastError(token json.Token, desc string) *booleanCastError {
 
 func (e *booleanCastError) Error() string {
 	return e.errorf("Expected boolean as %s but got %T (%#v)", e.desc, e.token, e.token)
+}
+
+type numberCastError struct {
+	errorLink
+	token json.Token
+	desc  string
+}
+
+func newNumberCastError(token json.Token, desc string) *numberCastError {
+	return &numberCastError{
+		errorLink: errorLink{id: numberCastErrorID},
+		token:     token,
+		desc:      desc}
+}
+
+func (e *numberCastError) Error() string {
+	return e.errorf("Expected number as %s but got %T (%#v)", e.desc, e.token, e.token)
+}
+
+type integerOverflowError struct {
+	errorLink
+	x float64
+}
+
+func newIntegerOverflowError(x float64) *integerOverflowError {
+	return &integerOverflowError{
+		errorLink: errorLink{id: integerOverflowErrorID},
+		x:         x}
+}
+
+func (e *integerOverflowError) Error() string {
+	return e.errorf("%f overflows integer", e.x)
 }
 
 type stringCastError struct {
