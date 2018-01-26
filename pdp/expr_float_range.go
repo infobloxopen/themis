@@ -32,7 +32,7 @@ func (f functionFloatRange) describe() string {
 	return "range"
 }
 
-func (f functionFloatRange) calculate(ctx *Context) (AttributeValue, error) {
+func (f functionFloatRange) Calculate(ctx *Context) (AttributeValue, error) {
 	min, err := ctx.calculateFloatOrIntegerExpression(f.min)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "min argument"), f.describe())

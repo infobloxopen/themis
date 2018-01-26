@@ -203,7 +203,7 @@ func (c *Context) calculateStringExpression(e Expression) (string, error) {
 }
 
 func (c *Context) calculateIntegerExpression(e Expression) (int64, error) {
-	v, err := e.calculate(c)
+	v, err := e.Calculate(c)
 	if err != nil {
 		return 0, err
 	}
@@ -212,7 +212,7 @@ func (c *Context) calculateIntegerExpression(e Expression) (int64, error) {
 }
 
 func (c *Context) calculateFloatExpression(e Expression) (float64, error) {
-	v, err := e.calculate(c)
+	v, err := e.Calculate(c)
 	if err != nil {
 		return 0, err
 	}
@@ -221,7 +221,7 @@ func (c *Context) calculateFloatExpression(e Expression) (float64, error) {
 }
 
 func (c *Context) calculateFloatOrIntegerExpression(e Expression) (float64, error) {
-	v, err := e.calculate(c)
+	v, err := e.Calculate(c)
 	if err != nil {
 		return 0, err
 	}
