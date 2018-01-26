@@ -184,27 +184,26 @@ func (p *Policy) putChild(child *Rule) *Policy {
 	ID, _ := child.GetID()
 
 	var rules []*Rule
-	if len(p.rules) > 0 {
-		i, old, err := p.getChild(ID)
-		if err == nil {
-			child.ord = old.ord
 
-			rules = make([]*Rule, len(p.rules))
-			if i > 0 {
-				copy(rules, p.rules[:i])
-			}
+	i, old, err := p.getChild(ID)
+	if err == nil {
+		child.ord = old.ord
 
-			rules[i] = child
-
-			if i+1 < len(p.rules) {
-				copy(rules[i+1:], p.rules[i+1:])
-			}
-		} else {
-			child.ord = p.rules[len(p.rules)-1].ord + 1
-			rules = make([]*Rule, len(p.rules)+1)
-			copy(rules, p.rules)
-			rules[len(p.rules)] = child
+		rules = make([]*Rule, len(p.rules))
+		if i > 0 {
+			copy(rules, p.rules[:i])
 		}
+
+		rules[i] = child
+
+		if i+1 < len(p.rules) {
+			copy(rules[i+1:], p.rules[i+1:])
+		}
+	} else if len(p.rules) > 0 {
+		child.ord = p.rules[len(p.rules)-1].ord + 1
+		rules = make([]*Rule, len(p.rules)+1)
+		copy(rules, p.rules)
+		rules[len(p.rules)] = child
 	} else {
 		child.ord = 0
 		rules = []*Rule{child}
@@ -212,7 +211,7 @@ func (p *Policy) putChild(child *Rule) *Policy {
 
 	algorithm := p.algorithm
 	if m, ok := algorithm.(mapperRCA); ok {
-		algorithm = m.add(ID, child, nil)
+		algorithm = m.add(ID, child, old)
 	}
 
 	return p.updatedCopy(rules, algorithm)

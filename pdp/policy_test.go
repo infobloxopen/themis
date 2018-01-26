@@ -351,7 +351,8 @@ func TestPolicyAppend(t *testing.T) {
 		t.Errorf("Expected new policy but got %T (%#v)", newE, newE)
 	}
 
-	newE, err = newE.Append([]string{}, &Rule{id: "first", effect: EffectDeny})
+	newFirstRule := &Rule{id: "first", effect: EffectDeny}
+	newE, err = newE.Append([]string{}, newFirstRule)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
 	} else if newP, ok := newE.(*Policy); ok {
@@ -371,6 +372,12 @@ func TestPolicyAppend(t *testing.T) {
 		}
 
 		assertMapperRCAMapKeys(newP.algorithm, "after insert \"first\"", t, "first", "fourth", "second", "third")
+
+		if m, ok := newP.algorithm.(mapperRCA); ok {
+			if m.def != newFirstRule {
+				t.Errorf("Expected default rule to be new \"first\" rule %p but got %p", newFirstRule, m.def)
+			}
+		}
 	} else {
 		t.Errorf("Expected new policy but got %T (%#v)", newE, newE)
 	}
@@ -527,6 +534,12 @@ func TestPolicyDelete(t *testing.T) {
 		}
 
 		assertMapperRCAMapKeys(newP.algorithm, "after deletion", t, "first", "third")
+
+		if m, ok := newP.algorithm.(mapperRCA); ok {
+			if m.err != nil {
+				t.Errorf("Expected error rule to be nil but got %p", m.err)
+			}
+		}
 	} else {
 		t.Errorf("Expected new policy but got %T (%#v)", newE, newE)
 	}

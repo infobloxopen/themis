@@ -444,6 +444,12 @@ func TestPolicySetAppend(t *testing.T) {
 		}
 
 		assertMapperPCAMapKeys(newP.algorithm, "after insert \"fourth\"", t, "first", "fourth", "second", "third")
+
+		if m, ok := newP.algorithm.(mapperPCA); ok {
+			if m.def != testFirstPol {
+				t.Errorf("Expected default policy to be new \"first\" policy %p but got %p", testFirstPol, m.def)
+			}
+		}
 	} else {
 		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
 	}
@@ -659,6 +665,12 @@ func TestPolicySetDelete(t *testing.T) {
 		}
 
 		assertMapperPCAMapKeys(newP.algorithm, "after deletion", t, "first", "third")
+
+		if m, ok := newP.algorithm.(mapperPCA); ok {
+			if m.err != nil {
+				t.Errorf("Expected error policy to be nil but got %p", m.err)
+			}
+		}
 	} else {
 		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
 	}

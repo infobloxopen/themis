@@ -213,28 +213,27 @@ func (p *PolicySet) putChild(child Evaluable) Evaluable {
 	ID, _ := child.GetID()
 
 	var policies []Evaluable
-	if len(p.policies) > 0 {
-		i, old, err := p.getChild(ID)
-		if err == nil {
-			child.setOrder(old.getOrder())
 
-			policies = make([]Evaluable, len(p.policies))
-			if i > 0 {
-				copy(policies, p.policies[:i])
-			}
+	i, old, err := p.getChild(ID)
+	if err == nil {
+		child.setOrder(old.getOrder())
 
-			policies[i] = child
-
-			if i+1 < len(p.policies) {
-				copy(policies[i+1:], p.policies[i+1:])
-			}
-		} else {
-			child.setOrder(p.policies[len(p.policies)-1].getOrder() + 1)
-
-			policies = make([]Evaluable, len(p.policies)+1)
-			copy(policies, p.policies)
-			policies[len(p.policies)] = child
+		policies = make([]Evaluable, len(p.policies))
+		if i > 0 {
+			copy(policies, p.policies[:i])
 		}
+
+		policies[i] = child
+
+		if i+1 < len(p.policies) {
+			copy(policies[i+1:], p.policies[i+1:])
+		}
+	} else if len(p.policies) > 0 {
+		child.setOrder(p.policies[len(p.policies)-1].getOrder() + 1)
+
+		policies = make([]Evaluable, len(p.policies)+1)
+		copy(policies, p.policies)
+		policies[len(p.policies)] = child
 	} else {
 		child.setOrder(0)
 		policies = []Evaluable{child}
@@ -242,7 +241,7 @@ func (p *PolicySet) putChild(child Evaluable) Evaluable {
 
 	algorithm := p.algorithm
 	if m, ok := algorithm.(mapperPCA); ok {
-		algorithm = m.add(ID, child, nil)
+		algorithm = m.add(ID, child, old)
 	}
 
 	return p.updatedCopy(policies, algorithm)
