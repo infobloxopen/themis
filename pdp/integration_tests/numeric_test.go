@@ -32,6 +32,7 @@ type testCase struct {
 	attrs              []*pb.Attribute
 	expected           int
 	expectedObligation string
+	expectedError      string
 }
 
 type testSuite struct {
@@ -103,7 +104,11 @@ func validateTestSuite(ts testSuite, t *testing.T) {
 					r := p.Root().Calculate(ctx)
 					effect, obligations, err := r.Status()
 					if err != nil {
-						t.Fatalf("Expected no error while evaluating policy but got: %s", err)
+						if tc.expectedError == "" {
+							t.Fatalf("Expected no error while evaluating policy but got: %s", err)
+						} else if !strings.Contains(err.Error(), tc.expectedError) {
+							t.Fatalf("Expected error while evaluating policy '%s', but got '%s'", tc.expectedError, err)
+						}
 					}
 
 					if effect != tc.expected {
@@ -1224,6 +1229,27 @@ policies:
 				},
 				expected: pdp.EffectNotApplicable,
 			},
+			{
+				attrs: []*pb.Attribute{
+					{
+						Id:    "a",
+						Type:  "Integer",
+						Value: "1",
+					},
+					{
+						Id:    "b",
+						Type:  "Integer",
+						Value: "0",
+					},
+					{
+						Id:    "c",
+						Type:  "Integer",
+						Value: "1",
+					},
+				},
+				expected:      pdp.EffectIndeterminateP,
+				expectedError: "Integer divisor has a value of 0",
+			},
 		},
 	}
 
@@ -1942,12 +1968,12 @@ policies:
 					{
 						Id:    "a",
 						Type:  "Float",
-						Value: "0.",
+						Value: "1.9e+200",
 					},
 					{
 						Id:    "b",
 						Type:  "Float",
-						Value: "1.",
+						Value: "1.9e+233",
 					},
 					{
 						Id:    "c",
@@ -1955,7 +1981,8 @@ policies:
 						Value: "1.",
 					},
 				},
-				expected: pdp.EffectNotApplicable,
+				expected:      pdp.EffectIndeterminateP,
+				expectedError: "Float result has a value of Inf",
 			},
 		},
 	}
@@ -2187,12 +2214,12 @@ policies:
 					{
 						Id:    "a",
 						Type:  "Float",
-						Value: "0.",
+						Value: "1.",
 					},
 					{
 						Id:    "b",
 						Type:  "Float",
-						Value: "1.",
+						Value: "0.",
 					},
 					{
 						Id:    "c",
@@ -2200,7 +2227,8 @@ policies:
 						Value: "1.",
 					},
 				},
-				expected: pdp.EffectNotApplicable,
+				expected:      pdp.EffectIndeterminateP,
+				expectedError: "Float divisor has a value of 0",
 			},
 		},
 	}
