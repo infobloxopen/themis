@@ -74,7 +74,12 @@ const (
             "effect": "Deny",
             "obligations": [
               {
-                "r": "Default Deny Policy"
+                "r": {
+                   "val": {
+                      "type": "string",
+                      "content": "Default Deny Policy"
+                   }
+                }
               }
             ]
           }
@@ -95,7 +100,12 @@ const (
             "effect": "Deny",
             "obligations": [
               {
-                "r": "Default Deny rule"
+                "r": {
+                   "val": {
+                      "type": "string",
+                      "content": "Default Deny rule"
+                   }
+                }
               }
             ]
           },
@@ -104,7 +114,12 @@ const (
             "effect": "Permit",
             "obligations": [
               {
-                "r": "Some rule"
+                "r": {
+                   "val": {
+                      "type": "string",
+                      "content": "Some rule"
+                   }
+                }
               }
             ]
           }
@@ -118,7 +133,12 @@ const (
             "effect": "Deny",
             "obligations": [
               {
-                "r": "Useless policy"
+                "r": {
+                   "val": {
+                      "type": "string",
+                      "content": "Useless policy"
+                   }
+                }
               }
             ]
           }
@@ -148,7 +168,12 @@ const (
               "effect": "permit",
               "obligations": [
                 {
-                  "r": "First Added Update Item"
+                  "r": {
+                     "val": {
+                        "type": "string",
+                        "content": "First Added Update Item"
+                     }
+                  }
                 }
               ]
             }
@@ -171,7 +196,12 @@ const (
           "effect": "permit",
           "obligations": [
             {
-              "r": "Second Added Update Item"
+              "r": {
+                 "val": {
+                    "type": "string",
+                    "content": "Second Added Update Item"
+                 }
+              }
             }
           ]
         }
@@ -189,7 +219,12 @@ const (
       "effect": "permit",
       "obligations": [
         {
-          "r": "Third Added Update Item"
+          "r": {
+             "val": {
+                "type": "string",
+                "content": "Third Added Update Item"
+             }
+          }
         }
       ]
     }
@@ -482,7 +517,12 @@ const (
                 "effect": "Permit",
                 "obligations": [
                   {
-                    "strAttr": "Nested Mappers Policy Set Permit"
+                    "strAttr": {
+                       "val": {
+                          "type": "string",
+                          "content": "Nested Mappers Policy Set Permit"
+                       }
+                    }
                   }
                 ]
               }
@@ -496,7 +536,12 @@ const (
                 "effect": "Deny",
                 "obligations": [
                   {
-                    "strAttr": "Nested Mappers Policy Set Deny"
+                    "strAttr": {
+                       "val": {
+                          "type": "string",
+                          "content": "Nested Mappers Policy Set Deny"
+                       }
+                    }
                   }
                 ]
               }
@@ -537,7 +582,12 @@ const (
             "effect": "Permit",
             "obligations": [
               {
-                "strAttr": "Nested Mappers Policy Permit"
+                "strAttr": {
+                   "val": {
+                      "type": "string",
+                      "content": "Nested Mappers Policy Permit"
+                   }
+                }
               }
             ]
           },
@@ -546,17 +596,32 @@ const (
             "effect": "Deny",
             "obligations": [
               {
-                "strAttr": "Nested Mappers Policy Deny"
+                "strAttr": {
+                   "val": {
+                      "type": "string",
+                      "content": "Nested Mappers Policy Deny"
+                   }
+                }
               },
               {
-                "lsAttr": [
-                  "first",
-                  "second",
-                  "third"
-                ]
+                "lsAttr": {
+                   "val": {
+                      "type": "list of strings",
+                      "content": [
+                         "first",
+                         "second",
+                         "third"
+                      ]
+                   }
+                }
               },
               {
-                "intAttr": 9.007199254740992e+15
+                "intAttr": {
+                   "val": {
+                       "type": "integer",
+                       "content": 9.007199254740992e+15
+                   }
+                }
               }
             ]
           },

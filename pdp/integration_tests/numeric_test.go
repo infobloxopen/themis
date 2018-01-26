@@ -3332,17 +3332,24 @@ policies:
   - id: Below
     effect: Permit
     obligations:
-      - r: Below
-
+      - r:
+         val:
+           type: string
+           content: Below
   - id: Above
     effect: Permit
     obligations:
-      - r: Above
-
+      - r:
+         val:
+           type: string
+           content: Above
   - id: Within
     effect: Permit
     obligations:
-      - r: Within
+      - r:
+         val:
+           type: string
+           content: Within
 `,
 			JSON: `{
   "attributes": {
@@ -3375,7 +3382,12 @@ policies:
         "effect": "Permit",
         "Obligations": [
            {
-               "r": "Below"
+              "r": {
+                 "val": {
+                     "type": "string",
+                     "content": "Below"
+                 }
+              }
            }
         ]
       },
@@ -3384,7 +3396,12 @@ policies:
         "effect": "Permit",
         "Obligations": [
            {
-               "r": "Above"
+              "r": {
+                 "val": {
+                     "type": "string",
+                     "content": "Above"
+                 }
+              }
            }
         ]
       },
@@ -3393,7 +3410,12 @@ policies:
         "effect": "Permit",
         "Obligations": [
            {
-               "r": "Within"
+              "r": {
+                 "val": {
+                     "type": "string",
+                     "content": "Within"
+                 }
+              }
            }
         ]
       }

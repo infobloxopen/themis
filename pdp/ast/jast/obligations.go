@@ -5,8 +5,6 @@ import (
 
 	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
-
-	"fmt"
 )
 
 func (ctx context) unmarshalObligationItem(d *json.Decoder) (pdp.AttributeAssignmentExpression, error) {
@@ -33,7 +31,6 @@ func (ctx context) unmarshalObligationItem(d *json.Decoder) (pdp.AttributeAssign
 				return bindError(err, k)
 			}
 		} else {
-			fmt.Printf("[TRACE]: expecting AttributeValue\n")
 			v, err = ctx.unmarshalValueByType(a.GetType(), d)
 			if err != nil {
 				return err
