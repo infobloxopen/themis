@@ -84,6 +84,8 @@ type policyPlugin struct {
 	debugSuffix string
 	streams     int
 	hotSpot     bool
+	ident       string
+	passthrough []string
 }
 
 func newPolicyPlugin() *policyPlugin {
@@ -140,6 +142,12 @@ func (p *policyPlugin) parseOption(c *caddy.Controller) error {
 
 	case "transfer":
 		return p.parseTransfer(c)
+
+	case "debug_id":
+		return p.parseDebugID(c)
+
+	case "passthrough":
+		return p.parsePassthrough(c)
 	}
 
 	return errInvalidOption
@@ -335,6 +343,28 @@ func parseOptionGroup(ah *attrHolder, data []byte, options []*edns0Map) bool {
 	return srcIPFound
 }
 
+func (p *policyPlugin) parseDebugID(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) != 1 {
+		return c.ArgErr()
+	}
+
+	p.ident = args[0]
+
+	return nil
+}
+
+func (p *policyPlugin) parsePassthrough(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) <= 0 {
+		return c.ArgErr()
+	}
+
+	p.passthrough = args
+
+	return nil
+}
+
 func (p *policyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) {
 	ipID := attrNameSourceIP
 
@@ -397,6 +427,9 @@ func (p *policyPlugin) setDebugQueryAnswer(ah *attrHolder, r *dns.Msg, status in
 			debugQueryInfo += join(item.Id, item.Value)
 		}
 	}
+	if p.ident != "" {
+		debugQueryInfo += join("ident", p.ident)
+	}
 
 	hdr := dns.RR_Header{Name: r.Question[0].Name + p.debugSuffix, Rrtype: dns.TypeTXT, Class: dns.ClassCHAOS, Ttl: 0}
 	r.Answer = append(r.Answer, &dns.TXT{Hdr: hdr, Txt: []string{debugQueryInfo}})
@@ -448,8 +481,14 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		sendExtra bool
 	)
 
-	debugQuery := p.decodeDebugMsg(r)
 	qName, qType := getNameType(r)
+	for _, s := range p.passthrough {
+		if strings.HasSuffix(qName, s) {
+			return plugin.NextOrFailure(p.Name(), p.next, ctx, w, r)
+		}
+	}
+
+	debugQuery := p.decodeDebugMsg(r)
 	ah := newAttrHolder(qName, qType, p.transfer)
 	p.getAttrsFromEDNS0(ah, r, getRemoteIP(w))
 

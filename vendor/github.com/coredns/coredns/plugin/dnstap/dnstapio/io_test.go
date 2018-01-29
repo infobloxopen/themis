@@ -1,78 +1,162 @@
 package dnstapio
 
 import (
-	"bytes"
-	"io/ioutil"
-	"log"
+	"net"
 	"sync"
 	"testing"
 	"time"
 
 	tap "github.com/dnstap/golang-dnstap"
+	fs "github.com/farsightsec/golang-framestream"
 )
 
-func init() {
-	log.SetOutput(ioutil.Discard)
+const (
+	endpointTCP    = "localhost:0"
+	endpointSocket = "dnstap.sock"
+)
+
+var (
+	msgType = tap.Dnstap_MESSAGE
+	msg     = tap.Dnstap{Type: &msgType}
+)
+
+func accept(t *testing.T, l net.Listener, count int) {
+	server, err := l.Accept()
+	if err != nil {
+		t.Fatalf("server accept: %s", err)
+		return
+	}
+
+	dec, err := fs.NewDecoder(server, &fs.DecoderOptions{
+		ContentType:   []byte("protobuf:dnstap.Dnstap"),
+		Bidirectional: true,
+	})
+	if err != nil {
+		t.Fatalf("server decoder: %s", err)
+		return
+	}
+
+	for i := 0; i < count; i++ {
+		if _, err := dec.Decode(); err != nil {
+			t.Errorf("server decode: %s", err)
+		}
+	}
+
+	if err := server.Close(); err != nil {
+		t.Error(err)
+	}
 }
 
-type buf struct {
-	*bytes.Buffer
-	cost time.Duration
-}
+func TestTransport(t *testing.T) {
+	transport := [2][3]string{
+		{"tcp", endpointTCP, "false"},
+		{"unix", endpointSocket, "true"},
+	}
 
-func (b buf) Write(frame []byte) (int, error) {
-	time.Sleep(b.cost)
-	return b.Buffer.Write(frame)
-}
+	for _, param := range transport {
+		// Start TCP listener
+		l, err := net.Listen(param[0], param[1])
+		if err != nil {
+			t.Fatalf("Cannot start listener: %s", err)
+		}
 
-func (b buf) Close() error {
-	return nil
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			accept(t, l, 1)
+			wg.Done()
+		}()
+
+		dio := New(l.Addr().String(), param[2] == "true")
+		dio.Connect()
+
+		dio.Dnstap(msg)
+
+		wg.Wait()
+		l.Close()
+		dio.Close()
+	}
 }
 
 func TestRace(t *testing.T) {
-	b := buf{&bytes.Buffer{}, 100 * time.Millisecond}
-	dio := New(b)
-	wg := &sync.WaitGroup{}
-	wg.Add(10)
-	for i := 0; i < 10; i++ {
-		timeout := time.After(time.Second)
+	count := 10
+
+	// Start TCP listener
+	l, err := net.Listen("tcp", endpointTCP)
+	if err != nil {
+		t.Fatalf("Cannot start listener: %s", err)
+	}
+	defer l.Close()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		accept(t, l, count)
+		wg.Done()
+	}()
+
+	dio := New(l.Addr().String(), false)
+	dio.Connect()
+	defer dio.Close()
+
+	wg.Add(count)
+	for i := 0; i < count; i++ {
 		go func() {
-			for {
-				select {
-				case <-timeout:
-					wg.Done()
-					return
-				default:
-					time.Sleep(50 * time.Millisecond)
-					t := tap.Dnstap_MESSAGE
-					dio.Dnstap(tap.Dnstap{Type: &t})
-				}
-			}
+			time.Sleep(50 * time.Millisecond)
+			dio.Dnstap(msg)
+			wg.Done()
 		}()
 	}
+
 	wg.Wait()
 }
 
-func TestClose(t *testing.T) {
-	done := make(chan bool)
-	var dio *DnstapIO
-	go func() {
-		b := buf{&bytes.Buffer{}, 0}
-		dio = New(b)
-		dio.Close()
-		close(done)
-	}()
-	select {
-	case <-done:
-	case <-time.After(time.Second):
-		t.Fatal("Not closing.")
+func TestReconnect(t *testing.T) {
+	count := 5
+
+	// Start TCP listener
+	l, err := net.Listen("tcp", endpointTCP)
+	if err != nil {
+		t.Fatalf("Cannot start listener: %s", err)
 	}
-	func() {
-		defer func() {
-			if err := recover(); err == nil {
-				t.Fatal("Send on closed channel.")
-			}
-		}()
-		dio.Dnstap(tap.Dnstap{})
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		accept(t, l, 1)
+		wg.Done()
 	}()
+
+	addr := l.Addr().String()
+	dio := New(addr, false)
+	dio.Connect()
+	defer dio.Close()
+
+	msg := tap.Dnstap_MESSAGE
+	dio.Dnstap(tap.Dnstap{Type: &msg})
+
+	wg.Wait()
+
+	// Close listener
+	l.Close()
+
+	// And start TCP listener again on the same port
+	l, err = net.Listen("tcp", addr)
+	if err != nil {
+		t.Fatalf("Cannot start listener: %s", err)
+	}
+	defer l.Close()
+
+	wg.Add(1)
+	go func() {
+		accept(t, l, 1)
+		wg.Done()
+	}()
+
+	for i := 0; i < count; i++ {
+		time.Sleep(time.Second)
+		dio.Dnstap(tap.Dnstap{Type: &msg})
+	}
+
+	wg.Wait()
 }

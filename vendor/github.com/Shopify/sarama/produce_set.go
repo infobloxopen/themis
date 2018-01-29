@@ -84,9 +84,9 @@ func (ps *produceSet) add(msg *ProducerMessage) error {
 		size += len(key) + len(val)
 		if len(msg.Headers) > 0 {
 			rec.Headers = make([]*RecordHeader, len(msg.Headers))
-			for i, h := range msg.Headers {
-				rec.Headers[i] = &h
-				size += len(h.Key) + len(h.Value) + 2*binary.MaxVarintLen32
+			for i := range msg.Headers {
+				rec.Headers[i] = &msg.Headers[i]
+				size += len(rec.Headers[i].Key) + len(rec.Headers[i].Value) + 2*binary.MaxVarintLen32
 			}
 		}
 		set.recordsToSend.recordBatch.addRecord(rec)
@@ -122,6 +122,10 @@ func (ps *produceSet) buildRequest() *ProduceRequest {
 	for topic, partitionSet := range ps.msgs {
 		for partition, set := range partitionSet {
 			if req.Version >= 3 {
+				for i, record := range set.recordsToSend.recordBatch.Records {
+					record.OffsetDelta = int64(i)
+				}
+
 				req.AddBatch(topic, partition, set.recordsToSend.recordBatch)
 				continue
 			}
@@ -132,6 +136,17 @@ func (ps *produceSet) buildRequest() *ProduceRequest {
 				// and sent as the payload of a single fake "message" with the appropriate codec
 				// set and no key. When the server sees a message with a compression codec, it
 				// decompresses the payload and treats the result as its message set.
+
+				if ps.parent.conf.Version.IsAtLeast(V0_10_0_0) {
+					// If our version is 0.10 or later, assign relative offsets
+					// to the inner messages. This lets the broker avoid
+					// recompressing the message set.
+					// (See https://cwiki.apache.org/confluence/display/KAFKA/KIP-31+-+Move+to+relative+offsets+in+compressed+message+sets
+					// for details on relative offsets.)
+					for i, msg := range set.recordsToSend.msgSet.Messages {
+						msg.Offset = int64(i)
+					}
+				}
 				payload, err := encode(set.recordsToSend.msgSet, ps.parent.conf.MetricRegistry)
 				if err != nil {
 					Logger.Println(err) // if this happens, it's basically our fault.

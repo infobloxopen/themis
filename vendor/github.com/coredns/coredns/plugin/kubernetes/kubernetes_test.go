@@ -7,8 +7,8 @@ import (
 	"github.com/coredns/coredns/request"
 
 	"github.com/miekg/dns"
+	api "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
-	api "k8s.io/client-go/pkg/api/v1"
 )
 
 func TestWildcard(t *testing.T) {
@@ -101,6 +101,7 @@ func (APIConnServiceTest) SvcIndex(string) []*api.Service {
 					Protocol: "tcp",
 					Port:     80,
 				}},
+				Type: api.ServiceTypeExternalName,
 			},
 		},
 	}
@@ -144,6 +145,7 @@ func (APIConnServiceTest) ServiceList() []*api.Service {
 					Protocol: "tcp",
 					Port:     80,
 				}},
+				Type: api.ServiceTypeExternalName,
 			},
 		},
 	}
@@ -328,6 +330,14 @@ func (APIConnServiceTest) GetNodeByName(name string) (*api.Node, error) {
 	return &api.Node{
 		ObjectMeta: meta.ObjectMeta{
 			Name: "test.node.foo.bar",
+		},
+	}, nil
+}
+
+func (APIConnServiceTest) GetNamespaceByName(name string) (*api.Namespace, error) {
+	return &api.Namespace{
+		ObjectMeta: meta.ObjectMeta{
+			Name: name,
 		},
 	}, nil
 }

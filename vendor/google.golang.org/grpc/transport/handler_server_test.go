@@ -199,9 +199,10 @@ func TestHandlerTransport_NewServerHandlerTransport(t *testing.T) {
 			},
 			check: func(ht *serverHandlerTransport, tt *testCase) error {
 				want := metadata.MD{
-					"meta-bar":   {"bar-val1", "bar-val2"},
-					"user-agent": {"x/y a/b"},
-					"meta-foo":   {"foo-val"},
+					"meta-bar":     {"bar-val1", "bar-val2"},
+					"user-agent":   {"x/y a/b"},
+					"meta-foo":     {"foo-val"},
+					"content-type": {"application/grpc"},
 				}
 
 				if !reflect.DeepEqual(ht.headerMD, want) {
@@ -391,9 +392,10 @@ func TestHandlerTransport_HandleStreams_Timeout(t *testing.T) {
 	}
 }
 
+// TestHandlerTransport_HandleStreams_MultiWriteStatus ensures that
+// concurrent "WriteStatus"s do not panic writing to closed "writes" channel.
 func TestHandlerTransport_HandleStreams_MultiWriteStatus(t *testing.T) {
-	st := newHandleStreamTest(t)
-	handleStream := func(s *Stream) {
+	testHandlerTransportHandleStreams(t, func(st *handleStreamTest, s *Stream) {
 		if want := "/service/foo.bar"; s.method != want {
 			t.Errorf("stream method = %q; want %q", s.method, want)
 		}
@@ -408,9 +410,27 @@ func TestHandlerTransport_HandleStreams_MultiWriteStatus(t *testing.T) {
 			}()
 		}
 		wg.Wait()
-	}
+	})
+}
+
+// TestHandlerTransport_HandleStreams_WriteStatusWrite ensures that "Write"
+// following "WriteStatus" does not panic writing to closed "writes" channel.
+func TestHandlerTransport_HandleStreams_WriteStatusWrite(t *testing.T) {
+	testHandlerTransportHandleStreams(t, func(st *handleStreamTest, s *Stream) {
+		if want := "/service/foo.bar"; s.method != want {
+			t.Errorf("stream method = %q; want %q", s.method, want)
+		}
+		st.bodyw.Close() // no body
+
+		st.ht.WriteStatus(s, status.New(codes.OK, ""))
+		st.ht.Write(s, []byte("hdr"), []byte("data"), &Options{})
+	})
+}
+
+func testHandlerTransportHandleStreams(t *testing.T, handleStream func(st *handleStreamTest, s *Stream)) {
+	st := newHandleStreamTest(t)
 	st.ht.HandleStreams(
-		func(s *Stream) { go handleStream(s) },
+		func(s *Stream) { go handleStream(st, s) },
 		func(ctx context.Context, method string) context.Context { return ctx },
 	)
 }

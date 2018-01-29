@@ -26,11 +26,10 @@ import _ "github.com/gogo/protobuf/gogoproto"
 import github_com_gogo_protobuf_test "github.com/gogo/protobuf/test"
 import github_com_gogo_protobuf_test_custom "github.com/gogo/protobuf/test/custom"
 
-import github_com_gogo_protobuf_protoc_gen_gogo_descriptor "github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
-import github_com_gogo_protobuf_proto "github.com/gogo/protobuf/proto"
-import compress_gzip "compress/gzip"
+import descriptor "github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
+import gzip "compress/gzip"
 import bytes "bytes"
-import io_ioutil "io/ioutil"
+import ioutil "io/ioutil"
 
 import strings "strings"
 import reflect "reflect"
@@ -172,11 +171,11 @@ func init() {
 	proto.RegisterType((*R)(nil), "test.R")
 	proto.RegisterType((*CastType)(nil), "test.CastType")
 }
-func (this *B) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *B) Description() (desc *descriptor.FileDescriptorSet) {
 	return ExampleDescription()
 }
-func ExampleDescription() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
-	d := &github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet{}
+func ExampleDescription() (desc *descriptor.FileDescriptorSet) {
+	d := &descriptor.FileDescriptorSet{}
 	var gzipped = []byte{
 		// 3959 bytes of a gzipped FileDescriptorSet
 		0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x5a, 0x6b, 0x70, 0x1b, 0xd7,
@@ -429,15 +428,15 @@ func ExampleDescription() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descri
 		0x69, 0x71, 0xec, 0xce, 0x32, 0x00, 0x00,
 	}
 	r := bytes.NewReader(gzipped)
-	gzipr, err := compress_gzip.NewReader(r)
+	gzipr, err := gzip.NewReader(r)
 	if err != nil {
 		panic(err)
 	}
-	ungzipped, err := io_ioutil.ReadAll(gzipr)
+	ungzipped, err := ioutil.ReadAll(gzipr)
 	if err != nil {
 		panic(err)
 	}
-	if err := github_com_gogo_protobuf_proto.Unmarshal(ungzipped, d); err != nil {
+	if err := proto.Unmarshal(ungzipped, d); err != nil {
 		panic(err)
 	}
 	return d
@@ -483,10 +482,7 @@ func (this *A) VerboseEqual(that interface{}) error {
 }
 func (this *A) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*A)
@@ -499,10 +495,7 @@ func (this *A) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -563,10 +556,7 @@ func (this *B) VerboseEqual(that interface{}) error {
 }
 func (this *B) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*B)
@@ -579,10 +569,7 @@ func (this *B) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -643,10 +630,7 @@ func (this *C) VerboseEqual(that interface{}) error {
 }
 func (this *C) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*C)
@@ -659,10 +643,7 @@ func (this *C) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -718,10 +699,7 @@ func (this *U) VerboseEqual(that interface{}) error {
 }
 func (this *U) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*U)
@@ -734,10 +712,7 @@ func (this *U) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -787,10 +762,7 @@ func (this *E) VerboseEqual(that interface{}) error {
 }
 func (this *E) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*E)
@@ -803,10 +775,7 @@ func (this *E) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -856,10 +825,7 @@ func (this *R) VerboseEqual(that interface{}) error {
 }
 func (this *R) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*R)
@@ -872,10 +838,7 @@ func (this *R) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -931,10 +894,7 @@ func (this *CastType) VerboseEqual(that interface{}) error {
 }
 func (this *CastType) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*CastType)
@@ -947,10 +907,7 @@ func (this *CastType) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -970,17 +927,17 @@ func (this *CastType) Equal(that interface{}) bool {
 }
 
 type AFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetDescription() string
 	GetNumber() int64
 	GetId() github_com_gogo_protobuf_test.Uuid
 }
 
-func (this *A) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *A) Proto() proto.Message {
 	return this
 }
 
-func (this *A) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *A) TestProto() proto.Message {
 	return NewAFromFace(this)
 }
 
@@ -1415,7 +1372,7 @@ func NewPopulatedE(r randyExample, easy bool) *E {
 				wire = 5
 			}
 			dAtA := randFieldExample(nil, r, fieldNumber, wire)
-			github_com_gogo_protobuf_proto.SetRawExtension(this, int32(fieldNumber), dAtA)
+			proto.SetRawExtension(this, int32(fieldNumber), dAtA)
 		}
 	}
 	return this
@@ -1678,7 +1635,7 @@ func (this *E) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&E{`,
-		`XXX_extensions:` + github_com_gogo_protobuf_proto.StringFromExtensionsBytes(this.XXX_extensions) + `,`,
+		`XXX_extensions:` + proto.StringFromExtensionsBytes(this.XXX_extensions) + `,`,
 		`XXX_unrecognized:` + fmt.Sprintf("%v", this.XXX_unrecognized) + `,`,
 		`}`,
 	}, "")
@@ -2214,7 +2171,7 @@ func (m *E) Unmarshal(dAtA []byte) error {
 				if (iNdEx + skippy) > l {
 					return io.ErrUnexpectedEOF
 				}
-				github_com_gogo_protobuf_proto.AppendExtension(m, int32(fieldNum), dAtA[iNdEx:iNdEx+skippy])
+				proto.AppendExtension(m, int32(fieldNum), dAtA[iNdEx:iNdEx+skippy])
 				iNdEx += skippy
 			} else {
 				iNdEx = preIndex

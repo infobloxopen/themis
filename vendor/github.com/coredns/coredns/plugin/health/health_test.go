@@ -1,20 +1,33 @@
 package health
 
-// TODO(miek): enable again if plugin gets health check.
-/*
+import (
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"testing"
+	"time"
+
+	"github.com/coredns/coredns/plugin/erratic"
+)
+
 func TestHealth(t *testing.T) {
-	h := health{Addr: ":0"}
+	h := newHealth(":0")
 	h.h = append(h.h, &erratic.Erratic{})
 
-	if err := h.Startup(); err != nil {
+	if err := h.OnStartup(); err != nil {
 		t.Fatalf("Unable to startup the health server: %v", err)
 	}
-	defer h.Shutdown()
+	defer h.OnShutdown()
+
+	go func() {
+		<-h.pollstop
+		return
+	}()
 
 	// Reconstruct the http address based on the port allocated by operating system.
 	address := fmt.Sprintf("http://%s%s", h.ln.Addr().String(), path)
 
-	// Norhing set should be unhealthy
+	// Nothing set should return unhealthy
 	response, err := http.Get(address)
 	if err != nil {
 		t.Fatalf("Unable to query %s: %v", address, err)
@@ -24,8 +37,7 @@ func TestHealth(t *testing.T) {
 	}
 	response.Body.Close()
 
-	// Make healthy
-	h.Poll()
+	h.poll()
 
 	response, err = http.Get(address)
 	if err != nil {
@@ -44,4 +56,22 @@ func TestHealth(t *testing.T) {
 		t.Errorf("Invalid response body: expecting 'OK', got '%s'", string(content))
 	}
 }
-*/
+
+func TestHealthLameduck(t *testing.T) {
+	h := newHealth(":0")
+	h.lameduck = 250 * time.Millisecond
+	h.h = append(h.h, &erratic.Erratic{})
+
+	if err := h.OnStartup(); err != nil {
+		t.Fatalf("Unable to startup the health server: %v", err)
+	}
+
+	// Both these things are behind a sync.Once, fake reading from the channels.
+	go func() {
+		<-h.pollstop
+		<-h.stop
+		return
+	}()
+
+	h.OnShutdown()
+}

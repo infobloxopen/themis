@@ -19,16 +19,15 @@ import fmt "fmt"
 import math "math"
 import _ "github.com/gogo/protobuf/gogoproto"
 
-import github_com_gogo_protobuf_protoc_gen_gogo_descriptor "github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
-import github_com_gogo_protobuf_proto "github.com/gogo/protobuf/proto"
-import compress_gzip "compress/gzip"
+import descriptor "github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
+import gzip "compress/gzip"
 import bytes "bytes"
-import io_ioutil "io/ioutil"
+import ioutil "io/ioutil"
 
 import strings "strings"
 import reflect "reflect"
 
-import encoding_binary "encoding/binary"
+import binary "encoding/binary"
 
 import io "io"
 
@@ -107,23 +106,23 @@ func init() {
 	proto.RegisterType((*OldWithGroup_Group1)(nil), "unrecognizedgroup.OldWithGroup.Group1")
 	proto.RegisterType((*OldWithGroup_Group2)(nil), "unrecognizedgroup.OldWithGroup.Group2")
 }
-func (this *NewNoGroup) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NewNoGroup) Description() (desc *descriptor.FileDescriptorSet) {
 	return UnrecognizedgroupDescription()
 }
-func (this *A) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *A) Description() (desc *descriptor.FileDescriptorSet) {
 	return UnrecognizedgroupDescription()
 }
-func (this *OldWithGroup) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *OldWithGroup) Description() (desc *descriptor.FileDescriptorSet) {
 	return UnrecognizedgroupDescription()
 }
-func (this *OldWithGroup_Group1) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *OldWithGroup_Group1) Description() (desc *descriptor.FileDescriptorSet) {
 	return UnrecognizedgroupDescription()
 }
-func (this *OldWithGroup_Group2) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *OldWithGroup_Group2) Description() (desc *descriptor.FileDescriptorSet) {
 	return UnrecognizedgroupDescription()
 }
-func UnrecognizedgroupDescription() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
-	d := &github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet{}
+func UnrecognizedgroupDescription() (desc *descriptor.FileDescriptorSet) {
+	d := &descriptor.FileDescriptorSet{}
 	var gzipped = []byte{
 		// 3866 bytes of a gzipped FileDescriptorSet
 		0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x5a, 0x5b, 0x70, 0x1b, 0xe7,
@@ -370,15 +369,15 @@ func UnrecognizedgroupDescription() (desc *github_com_gogo_protobuf_protoc_gen_g
 		0xff, 0xff, 0x87, 0x2f, 0x10, 0x76, 0xfc, 0x32, 0x00, 0x00,
 	}
 	r := bytes.NewReader(gzipped)
-	gzipr, err := compress_gzip.NewReader(r)
+	gzipr, err := gzip.NewReader(r)
 	if err != nil {
 		panic(err)
 	}
-	ungzipped, err := io_ioutil.ReadAll(gzipr)
+	ungzipped, err := ioutil.ReadAll(gzipr)
 	if err != nil {
 		panic(err)
 	}
-	if err := github_com_gogo_protobuf_proto.Unmarshal(ungzipped, d); err != nil {
+	if err := proto.Unmarshal(ungzipped, d); err != nil {
 		panic(err)
 	}
 	return d
@@ -435,10 +434,7 @@ func (this *NewNoGroup) VerboseEqual(that interface{}) error {
 }
 func (this *NewNoGroup) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NewNoGroup)
@@ -451,10 +447,7 @@ func (this *NewNoGroup) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -524,10 +517,7 @@ func (this *A) VerboseEqual(that interface{}) error {
 }
 func (this *A) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*A)
@@ -540,10 +530,7 @@ func (this *A) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -616,10 +603,7 @@ func (this *OldWithGroup) VerboseEqual(that interface{}) error {
 }
 func (this *OldWithGroup) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*OldWithGroup)
@@ -632,10 +616,7 @@ func (this *OldWithGroup) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -725,10 +706,7 @@ func (this *OldWithGroup_Group1) VerboseEqual(that interface{}) error {
 }
 func (this *OldWithGroup_Group1) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*OldWithGroup_Group1)
@@ -741,10 +719,7 @@ func (this *OldWithGroup_Group1) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -828,10 +803,7 @@ func (this *OldWithGroup_Group2) VerboseEqual(that interface{}) error {
 }
 func (this *OldWithGroup_Group2) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*OldWithGroup_Group2)
@@ -844,10 +816,7 @@ func (this *OldWithGroup_Group2) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -1005,7 +974,7 @@ func (m *NewNoGroup) MarshalTo(dAtA []byte) (int, error) {
 			dAtA[i] = 0x19
 			i++
 			f1 := math.Float64bits(float64(num))
-			encoding_binary.LittleEndian.PutUint64(dAtA[i:], uint64(f1))
+			binary.LittleEndian.PutUint64(dAtA[i:], uint64(f1))
 			i += 8
 		}
 	}
@@ -1433,7 +1402,7 @@ func (m *NewNoGroup) Unmarshal(dAtA []byte) error {
 				if (iNdEx + 8) > l {
 					return io.ErrUnexpectedEOF
 				}
-				v = uint64(encoding_binary.LittleEndian.Uint64(dAtA[iNdEx:]))
+				v = uint64(binary.LittleEndian.Uint64(dAtA[iNdEx:]))
 				iNdEx += 8
 				v2 := float64(math.Float64frombits(v))
 				m.Field3 = append(m.Field3, v2)
@@ -1465,7 +1434,7 @@ func (m *NewNoGroup) Unmarshal(dAtA []byte) error {
 					if (iNdEx + 8) > l {
 						return io.ErrUnexpectedEOF
 					}
-					v = uint64(encoding_binary.LittleEndian.Uint64(dAtA[iNdEx:]))
+					v = uint64(binary.LittleEndian.Uint64(dAtA[iNdEx:]))
 					iNdEx += 8
 					v2 := float64(math.Float64frombits(v))
 					m.Field3 = append(m.Field3, v2)

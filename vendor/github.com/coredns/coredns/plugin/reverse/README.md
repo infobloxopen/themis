@@ -1,6 +1,13 @@
 # reverse
 
-*reverse* allows for dynamic responses to PTR and the related A/AAAA requests.
+## Name
+
+*reverse* - allows for dynamic responses to PTR and the related A/AAAA requests.
+
+## Description
+
+If a request matches a regular expression (see Template Syntax below) this plugin will generate a
+response. This is only done for "address" records (PTR, A and AAAA).
 
 ## Syntax
 
@@ -8,7 +15,7 @@
 reverse NETWORK... {
     hostname TEMPLATE
     [ttl TTL]
-    [fallthrough]
+    [fallthrough [ZONES...]]
     [wildcard]
 ~~~
 
@@ -16,6 +23,9 @@ reverse NETWORK... {
 * `hostname` injects the IP and zone to a template for the hostname. Defaults to "ip-{IP}.{zone[1]}". See below for template.
 * `ttl` defaults to 60
 * `fallthrough` if zone matches and no record can be generated, pass request to the next plugin.
+  If **[ZONES...]** is omitted, then fallthrough happens for all zones for which the plugin
+  is authoritative. If specific zones are listed (for example `in-addr.arpa` and `ip6.arpa`), then only
+  queries for those zones will be subject to fallthrough.
 * `wildcard` allows matches to catch all subdomains as well.
 
 ### Template Syntax

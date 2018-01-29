@@ -45,6 +45,11 @@ func (rw Rewrite) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg
 	for _, rule := range rw.Rules {
 		switch result := rule.Rewrite(w, r); result {
 		case RewriteDone:
+			respRule := rule.GetResponseRule()
+			if respRule.Active == true {
+				wr.ResponseRewrite = true
+				wr.ResponseRules = append(wr.ResponseRules, respRule)
+			}
 			if rule.Mode() == Stop {
 				if rw.noRevert {
 					return plugin.NextOrFailure(rw.Name(), rw.Next, ctx, w, r)
@@ -70,8 +75,10 @@ func (rw Rewrite) Name() string { return "rewrite" }
 type Rule interface {
 	// Rewrite rewrites the current request.
 	Rewrite(dns.ResponseWriter, *dns.Msg) Result
-	// Mode returns the processing mode stop or continue
+	// Mode returns the processing mode stop or continue.
 	Mode() string
+	// GetResponseRule returns the rule to rewrite response with, if any.
+	GetResponseRule() ResponseRule
 }
 
 func newRule(args ...string) (Rule, error) {
@@ -100,16 +107,16 @@ func newRule(args ...string) (Rule, error) {
 		startArg = 1
 	}
 
-	if ruleType != "edns0" && expectNumArgs != 3 {
+	if ruleType != "edns0" && ruleType != "name" && expectNumArgs != 3 {
 		return nil, fmt.Errorf("%s rules must have exactly two arguments", ruleType)
 	}
 	switch ruleType {
 	case "name":
-		return newNameRule(args[startArg], args[startArg+1])
+		return newNameRule(mode, args[startArg:]...)
 	case "class":
-		return newClassRule(args[startArg], args[startArg+1])
+		return newClassRule(mode, args[startArg:]...)
 	case "type":
-		return newTypeRule(args[startArg], args[startArg+1])
+		return newTypeRule(mode, args[startArg:]...)
 	case "edns0":
 		return newEdns0Rule(mode, args[startArg:]...)
 	default:

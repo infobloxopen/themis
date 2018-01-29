@@ -9,9 +9,10 @@ package dnsserver
 // feel the effects of all other plugin below
 // (after) them during a request, but they must not
 // care what plugin above them are doing.
-
-var directives = []string{
+var Directives = []string{
 	"tls",
+	"reload",
+	"nsid",
 	"root",
 	"bind",
 	"debug",
@@ -23,22 +24,26 @@ var directives = []string{
 	"log",
 	"dnstap",
 	"chaos",
+	"loadbalance",
 	"cache",
 	"rewrite",
-	"loadbalance",
 	"dnssec",
 	"autopath",
 	"reverse",
+	"template",
 	"hosts",
+	"route53",
 	"federation",
 	"kubernetes",
 	"file",
 	"auto",
 	"secondary",
 	"etcd",
+	"forward",
 	"proxy",
 	"erratic",
 	"whoami",
+	"on",
 	"startup",
 	"shutdown",
 }

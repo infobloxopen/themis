@@ -1,6 +1,10 @@
 # kubernetes
 
-The *kubernetes* plugin enables the reading zone data from a Kubernetes cluster.
+## Name
+
+*kubernetes* - enables the reading zone data from a Kubernetes cluster.
+
+## Description
 
 It implements the [Kubernetes DNS-Based Service Discovery
 Specification](https://github.com/kubernetes/dns/blob/master/docs/specification.md).
@@ -26,7 +30,7 @@ all the zones the plugin should be authoritative for.
 ```
 kubernetes [ZONES...] {
     resyncperiod DURATION
-    endpoint URL
+    endpoint URL [URL...]
     tls CERT KEY CACERT
     namespaces NAMESPACE...
     labels EXPRESSION
@@ -34,19 +38,19 @@ kubernetes [ZONES...] {
     endpoint_pod_names
     upstream ADDRESS...
     ttl TTL
-    fallthrough
+    fallthrough [ZONES...]
 }
 ```
 
 * `resyncperiod` specifies the Kubernetes data API **DURATION** period.
 * `endpoint` specifies the **URL** for a remote k8s API endpoint.
    If omitted, it will connect to k8s in-cluster using the cluster service account.
-   Multiple k8s API endpoints could be specified, separated by `,`s, e.g.
-   `endpoint http://k8s-endpoint1:8080,http://k8s-endpoint2:8080`. CoreDNS
+   Multiple k8s API endpoints could be specified:
+   `endpoint http://k8s-endpoint1:8080 http://k8s-endpoint2:8080`. CoreDNS
    will automatically perform a healthcheck and proxy to the healthy k8s API endpoint.
 * `tls` **CERT** **KEY** **CACERT** are the TLS cert, key and the CA cert file names for remote k8s connection.
    This option is ignored if connecting in-cluster (i.e. endpoint is not specified).
-* `namespaces` **NAMESPACE [NAMESPACE...]**, exposed only the k8s namespaces listed.
+* `namespaces` **NAMESPACE [NAMESPACE...]**, only exposes the k8s namespaces listed.
    If this option is omitted all namespaces are exposed
 * `labels` **EXPRESSION** only exposes the records for Kubernetes objects that match this label selector.
    The label selector syntax is described in the
@@ -66,24 +70,32 @@ kubernetes [ZONES...] {
      option requires substantially more memory than in insecure mode, since it will maintain a watch
      on all pods.
 
-* `endpoint_pod_names` Use the pod name of the pod targeted by the endpoint as 
+* `endpoint_pod_names` uses the pod name of the pod targeted by the endpoint as
    the endpoint name in A records, e.g.
    `endpoint-name.my-service.namespace.svc.cluster.local. in A 1.2.3.4`
-   By default, the endpoint-name name selection is as follows: Use the hostname 
+   By default, the endpoint-name name selection is as follows: Use the hostname
    of the endpoint, or if hostname is not set, use the dashed form of the endpoint
-   ip address (e.g. `1-2-3-4.my-service.namespace.svc.cluster.local.`)
+   IP address (e.g. `1-2-3-4.my-service.namespace.svc.cluster.local.`)
    If this directive is included, then name selection for endpoints changes as
    follows: Use the hostname of the endpoint, or if hostname is not set, use the
-   pod name of the pod targeted by the endpoint. If there is no pod targeted by 
-   the endpoint, use the dashed ip address form.
+   pod name of the pod targeted by the endpoint. If there is no pod targeted by
+   the endpoint, use the dashed IP address form.
 * `upstream` **ADDRESS [ADDRESS...]** defines the upstream resolvers used for resolving services
-  that point to external hosts (External Services).  **ADDRESS** can be an ip, an ip:port, or a path
+  that point to external hosts (External Services).  **ADDRESS** can be an IP, an IP:port, or a path
   to a file structured like resolv.conf.
 * `ttl` allows you to set a custom TTL for responses. The default (and allowed minimum) is to use
   5 seconds, the maximum is capped at 3600 seconds.
-* `fallthrough`  If a query for a record in the cluster zone results in NXDOMAIN, normally that is
-  what the response will be. However, if you specify this option, the query will instead be passed
-  on down the plugin chain, which can include another plugin to handle the query.
+* `fallthrough` **[ZONES...]** If a query for a record in the zones for which the plugin is authoritative
+  results in NXDOMAIN, normally that is what the response will be. However, if you specify this option,
+  the query will instead be passed on down the plugin chain, which can include another plugin to handle
+  the query. If **[ZONES...]** is omitted, then fallthrough happens for all zones for which the plugin
+  is authoritative. If specific zones are listed (for example `in-addr.arpa` and `ip6.arpa`), then only
+  queries for those zones will be subject to fallthrough.
+
+## Health
+
+This plugin implements dynamic health checking. Currently this is limited to reporting healthy when
+the API has synced.
 
 ## Examples
 
@@ -169,11 +181,8 @@ feature enables serving federated domains from the kubernetes clusters.
 Some query labels accept a wildcard value to match any value.  If a label is a valid wildcard (\*,
 or the word "any"), then that label will match all values.  The labels that accept wildcards are:
 
- * _service_ in an `A` record request: _service_.namespace.svc.zone.
-   * e.g. `*.ns.svc.myzone.local`
- * _namespace_ in an `A` record request: service._namespace_.svc.zone.
-   * e.g. `nginx.*.svc.myzone.local`
- * _port and/or protocol_ in an `SRV` request: __port_.__protocol_.service.namespace.svc.zone.
-   * e.g. `_http.*.service.ns.svc.`
- * multiple wild cards are allowed in a single query.
-   * e.g. `A` Request `*.*.svc.zone.` or `SRV` request `*.*.*.*.svc.zone.`
+ * _service_ in an `A` record request: _service_.namespace.svc.zone, e.g. `*.ns.svc.myzone.local`
+ * _namespace_ in an `A` record request: service._namespace_.svc.zone, e.g. `nginx.*.svc.myzone.local`
+ * _port and/or protocol_ in an `SRV` request: __port_.__protocol_.service.namespace.svc.zone.,
+   e.g. `_http.*.service.ns.svc.`
+ * multiple wild cards are allowed in a single query, e.g. `A` Request `*.*.svc.zone.` or `SRV` request `*.*.*.*.svc.zone.`

@@ -20,6 +20,9 @@ the faster we will be able to help you. Check out
 Please be kind. :smile: Remember that CoreDNS comes at no cost to you, and you're
 getting free help.
 
+We are using [Stable Bot](https://github.com/probot/stale) to close inactive issues. If you feel an
+issue should not be closed you can add the "pinned" label to it or just update the bug every now and
+then.
 
 ## Minor improvements and new tests
 

@@ -49,17 +49,67 @@ These containers may be in various states, and may not build everything.
 * stretch
   * make check in lib/cpp fails due to https://svn.boost.org/trac10/ticket/12507
 
-## Building Locally ##
+## Building like Travis CI does, locally ##
 
-From the Apache Thrift code base root:
+We recommend you build locally the same way Travis CI does, so that when you submit your pull request you will run into fewer surprises.  To make it a little easier, put the following into your `~/.bash_aliases` file:
 
-* Build the image
+    # Kill all running containers.
+    alias dockerkillall='docker kill $(docker ps -q)'
 
-	docker build -t thrift build/docker/ubuntu-xenial
+    # Delete all stopped containers.
+    alias dockercleanc='printf "\n>>> Deleting stopped containers\n\n" && docker rm $(docker ps -a -q)'
 
-* Open a command prompt in the image
+    # Delete all untagged images.
+    alias dockercleani='printf "\n>>> Deleting untagged images\n\n" && docker rmi $(docker images -q -f dangling=true)'
 
-	docker run -v $(pwd):/thrift/src -it thrift /bin/bash
+    # Delete all stopped containers and untagged images.
+    alias dockerclean='dockercleanc || true && dockercleani'
+
+    # Build a thrift docker image (run from top level of git repo): argument #1 is image type (ubuntu, centos, etc).
+    function dockerbuild
+    {
+      docker build -t $1 build/docker/$1
+    }
+
+    # Run a thrift docker image: argument #1 is image type (ubuntu, centos, etc).
+    function dockerrun
+    {
+      docker run -v $(pwd):/thrift/src -it $1 /bin/bash
+    }
+
+To pull down the current image being used to build (the same way Travis CI does it) - if it is out of date in any way it will build a new one for you:
+
+    thrift$ DOCKER_REPO=thrift/thrift-build DISTRO=ubuntu-xenial build/docker/refresh.sh
+
+To run all unit tests (just like Travis CI):
+
+    thrift$ dockerrun ubuntu-xenial
+    root@8caf56b0ce7b:/thrift/src# build/docker/scripts/autotools.sh
+
+To run the cross tests (just like Travis CI):
+
+    thrift$ dockerrun ubuntu-xenial
+    root@8caf56b0ce7b:/thrift/src# build/docker/scripts/cross-test.sh
+
+When you are done, you want to clean up occasionally so that docker isn't using lots of extra disk space:
+
+    thrift$ dockerclean
+
+You need to run the docker commands from the root of the git repository for them to work.
+
+When you are done in the root docker shell you can `exit` to go back to your user host shell.  Once the unit tests and cross test passes locally, then submit he changes, and squash the pull request to one commit to make it easier to merge.  Thanks.  I am going to update the docker README.md with this information so others can leverage it too.  Now you are building like Travis CI does!
+
+## Raw Commands for Building with Docker ##
+
+If you do not want to use the same scripts Travis CI does, you can do it manually:
+
+Build the image:
+
+    thrift$ docker build -t thrift build/docker/ubuntu-xenial
+
+Open a command prompt in the image:
+
+    thrift$ docker run -v $(pwd):/thrift/src -it thrift /bin/bash
 
 ## Core Tool Versions per Dockerfile ##
 
@@ -84,35 +134,35 @@ Last updated: October 1, 2017
 
 ## Compiler/Language Versions per Dockerfile ##
 
-Last updated: October 1, 2017
-
 | Language  | ubuntu-trusty | ubuntu-xenial | ubuntu-artful | Notes |
 | :-------- | :------------ | :------------ | :------------ | :---- |
+| as of     | Oct 01, 2017  | Jan 11, 2018  | Oct 01, 2017  |       |
 | as3       |               |               |               | Not in CI |
 | C++ gcc   | 4.8.4         | 5.4.0         | 7.2.0         |       |
 | C++ clang | 3.4           | 3.8           | 4.0           |       |
-| C# (mono) | 3.2.8.0       | 4.2.1         | 4.6.2.7       |       |
+| C# (mono) | 3.2.8.0       | 4.2.1.0       | 4.6.2.7       |       |
 | c_glib    | 2.40.2        | 2.48.2        | 2.54.0        |       |
 | cocoa     |               |               |               | Not in CI |
 | d         | 2.070.2       | 2.073.2       | 2.076.0       |       |
-| dart      | 1.20.1        | 1.24.2        |               | artful: apt repo not compatible with apt 1.4? |
+| dart      | 1.20.1        | 1.22.1        | 1.24.2        |       |
 | delphi    |               |               |               | Not in CI |
-| dotnet    |               | 2.0.0         |               | Needs to be added to artful |
+| dotnet    |               | 2.0.3         | 2.0.3         |       |
 | erlang    | R16B03        | 18.3          | 20.0.4        |       |
 | go        | 1.2.1         | 1.6.2         | 1.8.3         |       |
 | haskell   | 7.6.3         | 7.10.3        | 8.0.2         |       |
 | haxe      |               | 3.2.1         | 3.4.2         | disabled in trusty builds - cores on install v3.0.0, disabled in artful builds - see THRIFT-4352 |
-| java      | 1.7.0_151     | 1.8.0_131     | 1.8.0_144     |       |
+| java      | 1.7.0_151     | 1.8.0_151     | 1.8.0_151     |       |
 | js        |               |               |               | Unsure how to look for version info? |
-| lua       | 5.1.5         | 5.2.4         | 5.3.3         |       |
-| nodejs    |               | 4.2.6         | 8.8.1         | trusty has node.js 0.10.0 which is too old |
+| lua       | 5.1.5         | 5.2.4         | 5.2.4         | Lua 5.3: see THRIFT-4386 |
+| nodejs    |               | 4.2.6         | 8.9.1         | trusty has node.js 0.10.0 which is too old |
 | ocaml     |               | 4.02.3        | 4.04.0        |       |
 | perl      | 5.18.2        | 5.22.1        | 5.26.0        |       |
 | php       | 5.5.9         | 7.0.22        | 7.1.8         |       |
 | python    | 2.7.6         | 2.7.12        | 2.7.14        |       |
 | python3   | 3.4.3         | 3.5.2         | 3.6.3         |       |
 | ruby      | 1.9.3p484     | 2.3.1p112     | 2.3.3p222     |       |
-| rust      | 1.15.1        | 1.15.1        | 1.18.0        |       |
+| rust      | 1.15.1        | 1.17.0        | 1.18.0        |       |
 | smalltalk |               |               |               | Not in CI |
 | swift     |               |               |               | Not in CI |
+
 

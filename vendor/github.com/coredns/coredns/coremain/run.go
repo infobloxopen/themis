@@ -15,26 +15,9 @@ import (
 	"github.com/mholt/caddy"
 
 	"github.com/coredns/coredns/core/dnsserver"
-
-	// Plug in CoreDNS
-	_ "github.com/coredns/coredns/core"
 )
 
 func init() {
-	// Reset flag.CommandLine to get rid of unwanted flags for instance from glog (used in kubernetes).
-	// And readd the once we want to keep.
-	flag.VisitAll(func(f *flag.Flag) {
-		if _, ok := flagsBlacklist[f.Name]; ok {
-			return
-		}
-		flagsToKeep = append(flagsToKeep, f)
-	})
-
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	for _, f := range flagsToKeep {
-		flag.Var(f.Value, f.Name, f.Usage)
-	}
-
 	caddy.TrapSignals()
 	caddy.DefaultConfigFile = "Corefile"
 	caddy.Quiet = true // don't show init stuff from caddy
@@ -52,11 +35,24 @@ func init() {
 	caddy.SetDefaultCaddyfileLoader("default", caddy.LoaderFunc(defaultLoader))
 
 	caddy.AppName = coreName
-	caddy.AppVersion = coreVersion
+	caddy.AppVersion = CoreVersion
 }
 
 // Run is CoreDNS's main() function.
 func Run() {
+	// Reset flag.CommandLine to get rid of unwanted flags for instance from glog (used in kubernetes).
+	// And readd the once we want to keep.
+	flag.VisitAll(func(f *flag.Flag) {
+		if _, ok := flagsBlacklist[f.Name]; ok {
+			return
+		}
+		flagsToKeep = append(flagsToKeep, f)
+	})
+
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	for _, f := range flagsToKeep {
+		flag.Var(f.Value, f.Name, f.Usage)
+	}
 
 	flag.Parse()
 
@@ -100,6 +96,9 @@ func Run() {
 	if !dnsserver.Quiet {
 		showVersion()
 	}
+
+	// Execute instantiation events
+	caddy.EmitEvent(caddy.InstanceStartupEvent, instance)
 
 	// Twiddle your thumbs
 	instance.Wait()
@@ -180,7 +179,7 @@ func versionString() string {
 // e.g.,
 // linux/amd64, go1.8.3, a6d2d7b5
 func releaseString() string {
-	return fmt.Sprintf("%s/%s, %s, %s\n", runtime.GOOS, runtime.GOARCH, runtime.Version(), gitCommit)
+	return fmt.Sprintf("%s/%s, %s, %s\n", runtime.GOOS, runtime.GOARCH, runtime.Version(), GitCommit)
 }
 
 // setVersion figures out the version information
@@ -193,7 +192,7 @@ func setVersion() {
 	if gitNearestTag != "" || gitTag != "" {
 		if devBuild && gitNearestTag != "" {
 			appVersion = fmt.Sprintf("%s (+%s %s)",
-				strings.TrimPrefix(gitNearestTag, "v"), gitCommit, buildDate)
+				strings.TrimPrefix(gitNearestTag, "v"), GitCommit, buildDate)
 		} else if gitTag != "" {
 			appVersion = strings.TrimPrefix(gitTag, "v")
 		}
@@ -252,7 +251,7 @@ var (
 	buildDate        string // date -u
 	gitTag           string // git describe --exact-match HEAD 2> /dev/null
 	gitNearestTag    string // git describe --abbrev=0 --tags HEAD
-	gitCommit        string // git rev-parse HEAD
+	GitCommit        string // git rev-parse HEAD
 	gitShortStat     string // git diff-index --shortstat
 	gitFilesModified string // git diff-index --name-only HEAD
 )

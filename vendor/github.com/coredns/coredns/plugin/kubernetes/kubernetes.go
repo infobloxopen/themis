@@ -12,15 +12,16 @@ import (
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/etcd/msg"
 	"github.com/coredns/coredns/plugin/pkg/dnsutil"
+	"github.com/coredns/coredns/plugin/pkg/fall"
 	"github.com/coredns/coredns/plugin/pkg/healthcheck"
 	"github.com/coredns/coredns/plugin/proxy"
 	"github.com/coredns/coredns/request"
 
 	"github.com/miekg/dns"
+	api "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
-	api "k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -40,7 +41,7 @@ type Kubernetes struct {
 	Namespaces       map[string]bool
 	podMode          string
 	endpointNameMode bool
-	Fallthrough      bool
+	Fall             fall.F
 	ttl              uint32
 
 	primaryZoneIndex   int
@@ -71,13 +72,18 @@ const (
 	podModeInsecure = "insecure"
 	// DNSSchemaVersion is the schema version: https://github.com/kubernetes/dns/blob/master/docs/specification.md
 	DNSSchemaVersion = "1.0.1"
+	// Svc is the DNS schema for kubernetes services
+	Svc = "svc"
+	// Pod is the DNS schema for kubernetes pods
+	Pod = "pod"
+	// defaultTTL to apply to all answers.
+	defaultTTL = 5
 )
 
 var (
 	errNoItems        = errors.New("no items found")
 	errNsNotExposed   = errors.New("namespace is not exposed")
 	errInvalidRequest = errors.New("invalid query name")
-	errPodsDisabled   = errors.New("pod records disabled")
 )
 
 // Services implements the ServiceBackend interface.
@@ -223,6 +229,9 @@ func (k *Kubernetes) getClientConfig() (*rest.Config, error) {
 	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, overrides)
 
 	cc, err := clientConfig.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
 	cc.ContentType = "application/vnd.kubernetes.protobuf"
 	return cc, err
 
@@ -247,7 +256,7 @@ func (k *Kubernetes) initKubeCache(opts dnsControlOpts) (err error) {
 		if err != nil {
 			return fmt.Errorf("unable to create Selector for LabelSelector '%s': %q", opts.labelSelector, err)
 		}
-		opts.selector = &selector
+		opts.selector = selector
 	}
 
 	opts.initPodCache = k.podMode == podModeVerified
@@ -295,14 +304,13 @@ func endpointHostname(addr api.EndpointAddress, endpointNameMode bool) string {
 
 func (k *Kubernetes) findPods(r recordRequest, zone string) (pods []msg.Service, err error) {
 	if k.podMode == podModeDisabled {
-		return nil, errPodsDisabled
+		return nil, errNoItems
 	}
 
 	namespace := r.namespace
 	podname := r.service
 	zonePath := msg.Path(zone, "coredns")
 	ip := ""
-	err = errNoItems
 
 	if strings.Count(podname, "-") == 3 && !strings.Contains(podname, "--") {
 		ip = strings.Replace(podname, "-", ".", -1)
@@ -311,7 +319,24 @@ func (k *Kubernetes) findPods(r recordRequest, zone string) (pods []msg.Service,
 	}
 
 	if k.podMode == podModeInsecure {
-		return []msg.Service{{Key: strings.Join([]string{zonePath, Pod, namespace, podname}, "/"), Host: ip}}, nil
+		if !wildcard(namespace) && !k.namespace(namespace) { // no wildcard, but namespace does not exist
+			return nil, errNoItems
+		}
+
+		// If ip does not parse as an IP address, we return an error, otherwise we assume a CNAME and will try to resolve it in backend_lookup.go
+		if net.ParseIP(ip) == nil {
+			return nil, errNoItems
+		}
+
+		return []msg.Service{{Key: strings.Join([]string{zonePath, Pod, namespace, podname}, "/"), Host: ip, TTL: k.ttl}}, err
+	}
+
+	err = errNoItems
+	if wildcard(podname) && !wildcard(namespace) {
+		// If namespace exist, err should be nil, so that we return nodata instead of NXDOMAIN
+		if k.namespace(namespace) {
+			err = nil
+		}
 	}
 
 	// PodModeVerified
@@ -320,9 +345,10 @@ func (k *Kubernetes) findPods(r recordRequest, zone string) (pods []msg.Service,
 		if wildcard(namespace) && !k.namespaceExposed(p.Namespace) {
 			continue
 		}
+
 		// check for matching ip and namespace
 		if ip == p.Status.PodIP && match(namespace, p.Namespace) {
-			s := msg.Service{Key: strings.Join([]string{zonePath, Pod, namespace, podname}, "/"), Host: ip}
+			s := msg.Service{Key: strings.Join([]string{zonePath, Pod, namespace, podname}, "/"), Host: ip, TTL: k.ttl}
 			pods = append(pods, s)
 
 			err = nil
@@ -334,7 +360,14 @@ func (k *Kubernetes) findPods(r recordRequest, zone string) (pods []msg.Service,
 // findServices returns the services matching r from the cache.
 func (k *Kubernetes) findServices(r recordRequest, zone string) (services []msg.Service, err error) {
 	zonePath := msg.Path(zone, "coredns")
-	err = errNoItems // Set to errNoItems to signal really nothing found, gets reset when name is matched.
+
+	err = errNoItems
+	if wildcard(r.service) && !wildcard(r.namespace) {
+		// If namespace exist, err should be nil, so that we return nodata instead of NXDOMAIN
+		if k.namespace(namespace) {
+			err = nil
+		}
+	}
 
 	var (
 		endpointsListFunc func() []*api.Endpoints
@@ -402,16 +435,15 @@ func (k *Kubernetes) findServices(r recordRequest, zone string) (services []msg.
 		}
 
 		// External service
-		if svc.Spec.ExternalName != "" {
+		if svc.Spec.Type == api.ServiceTypeExternalName {
 			s := msg.Service{Key: strings.Join([]string{zonePath, Svc, svc.Namespace, svc.Name}, "/"), Host: svc.Spec.ExternalName, TTL: k.ttl}
 			if t, _ := s.HostType(); t == dns.TypeCNAME {
 				s.Key = strings.Join([]string{zonePath, Svc, svc.Namespace, svc.Name}, "/")
 				services = append(services, s)
 
 				err = nil
-
-				continue
 			}
+			continue
 		}
 
 		// ClusterIP service
@@ -446,21 +478,3 @@ func match(a, b string) bool {
 func wildcard(s string) bool {
 	return s == "*" || s == "any"
 }
-
-// namespaceExposed returns true when the namespace is exposed.
-func (k *Kubernetes) namespaceExposed(namespace string) bool {
-	_, ok := k.Namespaces[namespace]
-	if len(k.Namespaces) > 0 && !ok {
-		return false
-	}
-	return true
-}
-
-const (
-	// Svc is the DNS schema for kubernetes services
-	Svc = "svc"
-	// Pod is the DNS schema for kubernetes pods
-	Pod = "pod"
-	// defaultTTL to apply to all answers.
-	defaultTTL = 5
-)

@@ -3,8 +3,8 @@ package federation
 import (
 	"github.com/coredns/coredns/plugin/kubernetes"
 
+	api "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
-	api "k8s.io/client-go/pkg/api/v1"
 )
 
 type APIConnFederationTest struct{}
@@ -179,6 +179,14 @@ func (APIConnFederationTest) GetNodeByName(name string) (*api.Node, error) {
 				kubernetes.LabelRegion: "fd-r",
 				kubernetes.LabelZone:   "fd-az",
 			},
+		},
+	}, nil
+}
+
+func (APIConnFederationTest) GetNamespaceByName(name string) (*api.Namespace, error) {
+	return &api.Namespace{
+		ObjectMeta: meta.ObjectMeta{
+			Name: name,
 		},
 	}, nil
 }

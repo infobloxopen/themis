@@ -102,7 +102,7 @@ func (p Proxy) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 			if backendErr == nil {
 				w.WriteMsg(reply)
 
-				RequestDuration.WithLabelValues(state.Proto(), upstream.Exchanger().Protocol(), familyToString(state.Family()), host.Name).Observe(float64(time.Since(start) / time.Millisecond))
+				RequestDuration.WithLabelValues(state.Proto(), upstream.Exchanger().Protocol(), familyToString(state.Family()), host.Name).Observe(time.Since(start).Seconds())
 
 				return 0, taperr
 			}
@@ -118,6 +118,14 @@ func (p Proxy) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 					// host - which my be the *same* one as we don't set any uh.Fails.
 					continue
 				}
+			}
+
+			// If protocol is https_google we do the health checks wrong, i.e. we're healthchecking the wrong
+			// endpoint, hence the health check code below should not be executed. See issue #1202.
+			// This is an ugly hack and the thing requires a rethink. Possibly in conjunction with moving
+			// to the *forward* plugin.
+			if upstream.Exchanger().Protocol() == "https_google" {
+				continue
 			}
 
 			timeout := host.FailTimeout

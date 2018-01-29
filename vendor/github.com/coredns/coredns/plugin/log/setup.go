@@ -1,7 +1,6 @@
 package log
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -29,13 +28,7 @@ func setup(c *caddy.Controller) error {
 	// Open the log files for writing when the server starts
 	c.OnStartup(func() error {
 		for i := 0; i < len(rules); i++ {
-			// We only support stdout
-			writer := os.Stdout
-			if rules[i].OutputFile != "stdout" {
-				return plugin.Error("log", fmt.Errorf("invalid log file: %s", rules[i].OutputFile))
-			}
-
-			rules[i].Log = log.New(writer, "", 0)
+			rules[i].Log = log.New(os.Stdout, "", 0)
 		}
 
 		return nil
@@ -57,37 +50,30 @@ func logParse(c *caddy.Controller) ([]Rule, error) {
 		if len(args) == 0 {
 			// Nothing specified; use defaults
 			rules = append(rules, Rule{
-				NameScope:  ".",
-				OutputFile: DefaultLogFilename,
-				Format:     DefaultLogFormat,
+				NameScope: ".",
+				Format:    DefaultLogFormat,
 			})
 		} else if len(args) == 1 {
-			// Only an output file specified.
 			rules = append(rules, Rule{
-				NameScope:  ".",
-				OutputFile: args[0],
-				Format:     DefaultLogFormat,
+				NameScope: dns.Fqdn(args[0]),
+				Format:    DefaultLogFormat,
 			})
 		} else {
-			// Name scope, output file, and maybe a format specified
-
+			// Name scope, and maybe a format specified
 			format := DefaultLogFormat
 
-			if len(args) > 2 {
-				switch args[2] {
-				case "{common}":
-					format = CommonLogFormat
-				case "{combined}":
-					format = CombinedLogFormat
-				default:
-					format = args[2]
-				}
+			switch args[1] {
+			case "{common}":
+				format = CommonLogFormat
+			case "{combined}":
+				format = CombinedLogFormat
+			default:
+				format = args[1]
 			}
 
 			rules = append(rules, Rule{
-				NameScope:  dns.Fqdn(args[0]),
-				OutputFile: args[1],
-				Format:     format,
+				NameScope: dns.Fqdn(args[0]),
+				Format:    format,
 			})
 		}
 

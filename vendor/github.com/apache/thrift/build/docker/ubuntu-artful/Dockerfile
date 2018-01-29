@@ -16,8 +16,6 @@
 # - cpp: stock boost 1.62 in artful has a nasty bug so we use stock boost 1.63
 # - d: does not come with Ubuntu so we're installing the latest
 # - d: deimos for libevent and openssl omitted - not compatible / build errors
-# - dart: dart repository doesn't work with apt 1.4 in artful
-# - dotnetcore, because netcore is for 1.0.0-preview and 2.0.0 is out
 # - haxe: see THRIFT-4352, but test/haxe cores during testing
 #         and hxcpp 3.4.64 is not compatible with artful
 #
@@ -26,8 +24,10 @@ FROM buildpack-deps:artful-scm
 MAINTAINER Apache Thrift <dev@thrift.apache.org>
 ENV DEBIAN_FRONTEND noninteractive
 
-RUN apt-get update && \ 
-    apt-get dist-upgrade -y && \ 
+### Add apt repos
+
+RUN apt-get update && \
+    apt-get dist-upgrade -y && \
     apt-get install -y --no-install-recommends \
       apt \
       apt-transport-https \
@@ -41,15 +41,27 @@ RUN apt-get update && \
 # RUN echo "deb http://download.mono-project.com/repo/debian xenial main" | tee /etc/apt/sources.list.d/mono.list && \
 #     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A6A19B38D3D831EF
 
-# dotnet (core) 2.0.0 - project isn't ready for this yet:
-# RUN curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.gpg && \
-#     echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-xenial-prod xenial main" > /etc/apt/sources.list.d/dotnetdev.list
+# dotnet (core)
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.gpg && \
+    echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-artful-prod artful main" > \
+      /etc/apt/sources.list.d/dotnetdev.list
 
-# node.js (this step runs apt-get update internally) - if we ever want a later version
-RUN curl -sL https://deb.nodesource.com/setup_8.x | bash -
+# node.js
+RUN curl -sL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add - \
+    echo "deb https://deb.nodesource.com/node_8.x artful main" | tee /etc/apt/sources.list.d/nodesource.list
+
+# D
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys EBCF975E5BA24D5E && \
+        wget http://master.dl.sourceforge.net/project/d-apt/files/d-apt.list -O /etc/apt/sources.list.d/d-apt.list && \
+        wget -qO - https://dlang.org/d-keyring.gpg | apt-key add -
+
+# Dart
+RUN curl https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - && \
+    curl https://storage.googleapis.com/download.dartlang.org/linux/debian/dart_stable.list > \
+      /etc/apt/sources.list.d/dart_stable.list
 
 ### install general dependencies
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
 `# General dependencies` \
       bash-completion \
       bison \
@@ -80,11 +92,7 @@ RUN apt-get install -y --no-install-recommends \
 `# csharp (mono) dependencies` \
       mono-devel
 
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys EBCF975E5BA24D5E && \
-    wget http://master.dl.sourceforge.net/project/d-apt/files/d-apt.list -O /etc/apt/sources.list.d/d-apt.list && \
-    wget -qO - https://dlang.org/d-keyring.gpg | apt-key add - && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
+RUN apt-get install -y --no-install-recommends \
       `# D dependencies` \
       dmd-bin \
       libphobos2-dev \
@@ -106,19 +114,14 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys EBCF975E5BA24D5E &&
 #     mv openssl-master/C/* /usr/include/dmd/druntime/import/C/ && \
 #     rm -rf openssl-master
 
-# dart is disabled because the repository won't sync properly with apt 1.4
-# RUN curl https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - && \
-#     curl https://storage.googleapis.com/download.dartlang.org/linux/debian/dart_stable.list > /etc/apt/sources.list.d/dart_stable.list && \
-#     apt-get update && \
-#     apt-get install -y --no-install-recommends \
-#       `# Dart dependencies` \
-#       dart
-# ENV PATH /usr/lib/dart/bin:$PATH
+RUN apt-get install -y --no-install-recommends \
+      `# Dart dependencies` \
+      dart/stable
+ENV PATH /usr/lib/dart/bin:$PATH
 
-# project isn't ready for this quite yet:
-# RUN apt-get install -y --no-install-recommends \
-# `# dotnet core dependencies` \
-#       dotnet-sdk-2.0.0
+RUN apt-get install -y --no-install-recommends \
+`# dotnet core dependencies` \
+      dotnet-sdk-2.0.3
 
 RUN apt-get install -y --no-install-recommends \
 `# Erlang dependencies` \
@@ -149,7 +152,7 @@ RUN apt-get install -y --no-install-recommends \
 #       neko \
 #       neko-dev
 # RUN haxelib setup --always /usr/share/haxe/lib && \
-#     haxelib install --always hxcpp
+#     haxelib install --always hxcpp 2>&1 > /dev/null
 
 RUN apt-get install -y --no-install-recommends \
 `# Java dependencies` \
@@ -160,12 +163,11 @@ RUN apt-get install -y --no-install-recommends \
 
 RUN apt-get install -y --no-install-recommends \
 `# Lua dependencies` \
-      lua5.3 \
-      lua5.3-dev && \
-    ln -s /usr/bin/lua5.3 /usr/bin/lua && \
-    ln -s /usr/bin/luac5.3 /usr/bin/luac
+      lua5.2 \
+      lua5.2-dev
 # https://bugs.launchpad.net/ubuntu/+source/lua5.3/+bug/1707212
 # lua5.3 does not install alternatives!
+# need to update our luasocket code, lua doesn't have luaL_openlib any more
 
 RUN apt-get install -y --no-install-recommends \
 `# Node.js dependencies` \
@@ -193,7 +195,7 @@ RUN apt-get install -y --no-install-recommends \
       php-dev \
       php-pear \
       re2c \
-      phpunit
+      composer
 
 RUN apt-get install -y --no-install-recommends \
 `# Python dependencies` \

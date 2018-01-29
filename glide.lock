@@ -1,8 +1,8 @@
 hash: 77a6718b8f335167b7d23fc6f9f284ff146242d5082cb061f4f8cdfe6e1b63b4
-updated: 2017-11-08T18:44:55.429191044+03:00
+updated: 2018-01-29T15:11:03.35962713+03:00
 imports:
 - name: github.com/apache/thrift
-  version: 4f77ab8e296d64c57e6ea1c6e3f0f152bc7d6a3a
+  version: 3d556248a8b97310da49939195330691dfe9d9ad
   subpackages:
   - lib/go/thrift
 - name: github.com/beorn7/perks
@@ -10,7 +10,7 @@ imports:
   subpackages:
   - quantile
 - name: github.com/coredns/coredns
-  version: 3527be6c0056acbcd8dc9848ff96be2136c68ed5
+  version: 399073ec6b17c96f64912b4504390632e9a04aff
   subpackages:
   - core/dnsserver
   - pb
@@ -18,7 +18,6 @@ imports:
   - plugin/dnstap
   - plugin/dnstap/dnstapio
   - plugin/dnstap/msg
-  - plugin/dnstap/out
   - plugin/dnstap/taprw
   - plugin/dnstap/test
   - plugin/etcd/msg
@@ -37,7 +36,7 @@ imports:
 - name: github.com/dnstap/golang-dnstap
   version: 2cf77a2b5e11ac8d0ba3892772ac8e1f7b528344
 - name: github.com/eapache/go-resiliency
-  version: b1fe83b5b03f624450823b751b662259ffc6af70
+  version: ef9aaa7ea8bd2448429af1a77cf41b2b3b34bdd6
   subpackages:
   - breaker
 - name: github.com/eapache/go-xerial-snappy
@@ -45,14 +44,14 @@ imports:
 - name: github.com/eapache/queue
   version: 44cc805cf13205b55f69e14bcb69867d1ae92f98
 - name: github.com/farsightsec/golang-framestream
-  version: dec85654e8b8cf6712870afb14ee53d1c98cd5e2
+  version: c06a5734334d9629b3db143d74b47eb94ea68612
 - name: github.com/flynn/go-shlex
   version: 3f9db97f856818214da2e1057f8ad84803971cff
   repo: https://github.com/flynn/go-shlex
 - name: github.com/go-logfmt/logfmt
   version: 390ab7935ee28ec6b286364bba9b4dd6410cb3d5
 - name: github.com/gogo/protobuf
-  version: 3813b83578b9b352e1f48fc4c5aef53c93d0a76d
+  version: 26de2f9a7d3b1826f275e7a97c8cad5080589426
   subpackages:
   - proto
 - name: github.com/golang/protobuf
@@ -66,9 +65,9 @@ imports:
 - name: github.com/golang/snappy
   version: 553a641470496b2327abcac10b36396bd98e45c9
 - name: github.com/google/uuid
-  version: e367a344cbe8e08149f9951115dc299ebd42b919
+  version: 064e2069ce9c359c118179501254f67d7d37ba24
 - name: github.com/grpc-ecosystem/grpc-opentracing
-  version: 01f8541d537215b2867e2745a1eb85c58c7c6b81
+  version: 0e7658f8ee99ee5aa683e2a032b8880091b7a055
   subpackages:
   - go/otgrpc
 - name: github.com/infobloxopen/go-trees
@@ -85,22 +84,22 @@ imports:
   subpackages:
   - pbutil
 - name: github.com/mholt/caddy
-  version: 9a22cda15dcea8822d0ac5686eba6e084cd19272
+  version: 106d62b0674b582c8fe26a5719378a4261849a94
   subpackages:
   - caddyfile
 - name: github.com/miekg/dns
-  version: 0f3adef2e2201d72e50309a36fc99d8a9d1a4960
+  version: 5364553f1ee9cddc7ac8b62dce148309c386695b
   subpackages:
   - internal/socket
 - name: github.com/opentracing-contrib/go-observer
   version: a52f2342449246d5bcc273e65cbdcfa5f7d6c63c
 - name: github.com/opentracing/opentracing-go
-  version: 1361b9cd60be79c4c3a7fa9841b3c132e40066a7
+  version: 216894e5277dc6098f93ceca97beb6101610b418
   subpackages:
   - ext
   - log
 - name: github.com/openzipkin/zipkin-go-opentracing
-  version: 45e90b00710a4c34a1a7d8a78d90f9b010b0bd4d
+  version: 6bb822a7f15fdc5800b9822a6ac1bfa0b7d9195d
   subpackages:
   - flag
   - thrift/gen-go/scribe
@@ -108,52 +107,61 @@ imports:
   - types
   - wire
 - name: github.com/pierrec/lz4
-  version: 08c27939df1bd95e881e2c2367a749964ad1fceb
+  version: ed8d4cc3b461464e69798080a0092bd028910298
 - name: github.com/pierrec/xxHash
   version: a0006b13c722f7f12368c00a3d3c2ae8a999a0c6
   subpackages:
   - xxHash32
 - name: github.com/prometheus/client_golang
-  version: 5cec1d0429b02e4323e042eb04dafdb079ddf568
+  version: 06bc6e01f4baf4ee783ffcd23abfcb0b0f9dfada
   subpackages:
   - prometheus
 - name: github.com/prometheus/client_model
-  version: 6f3806018612930941127f2a7c6c453ba2c527d2
+  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: e3fb1a1acd7605367a2b378bc2e2f893c05174b7
+  version: 89604d197083d4781071d3c65855d24ecfb0a563
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: a6e9df898b1336106c743392c48ee0b71f5c4efa
+  version: cb4147076ac75738c9a7d279075a253c0cc5acbd
   subpackages:
+  - internal/util
+  - nfs
   - xfs
 - name: github.com/rcrowley/go-metrics
-  version: 1f30fe9094a513ce4c700b9a54458bbb0c96996c
+  version: 8732c616f52954686704c8645fe1a9d59e9df7c1
 - name: github.com/Shopify/sarama
-  version: b305748200a6396c34b89fe5dacc768cb1a7ea69
+  version: 0f4f8caef994ca7e4f9072c1858b7c6761ed498f
 - name: github.com/Sirupsen/logrus
-  version: 89742aefa4b206dcf400792f3bd35b542998eb3b
+  version: ba1b36c82c5e05c4f912a88eab0dcd91a171688f
 - name: golang.org/x/crypto
   version: 2faea1465de239e4babd8f5905cc25b781712442
   repo: https://go.googlesource.com/crypto
   subpackages:
   - acme
   - curve25519
+  - ed25519
+  - ed25519/internal/edwards25519
   - hkdf
   - ocsp
   - ssh/terminal
 - name: golang.org/x/net
   version: f5079bd7f6f74e23c4d65efa0f4ce14cbd6a3c0f
   subpackages:
+  - bpf
   - context
   - http2
   - http2/hpack
   - idna
+  - internal/iana
+  - internal/socket
   - internal/timeseries
+  - ipv4
+  - ipv6
   - lex/httplex
   - trace
 - name: golang.org/x/sys
@@ -169,18 +177,20 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: google.golang.org/genproto
-  version: 11c7f9e547da6db876260ce49ea7536985904c9b
+  version: 4eb30f4778eed4c258ba66527a0d4f9ec8a36c45
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: abd3e10d785b2ef7e32b5207eb7c303301a4ac84
+  version: 0bd008f5fadb62d228f12b18d016709e8139a7af
   subpackages:
   - balancer
+  - balancer/base
   - balancer/roundrobin
   - codes
   - connectivity
   - credentials
   - encoding
+  - encoding/proto
   - grpclb/grpc_lb_v1/messages
   - grpclog
   - internal
@@ -196,7 +206,7 @@ imports:
   - tap
   - transport
 - name: gopkg.in/yaml.v2
-  version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
+  version: d670f9405373e636a5a2765eea47fac0c9bc91a4
 testImports:
 - name: github.com/pmezard/go-difflib
   version: 792786c7400a136282c1664665ae0a8db921c6c2

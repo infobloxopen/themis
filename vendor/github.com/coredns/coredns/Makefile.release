@@ -21,8 +21,11 @@
 # * Get an access token: https://help.github.com/articles/creating-an-access-token-for-command-line-use/
 # * export GITHUB_ACCESS_TOKEN=<token>
 # * Up the version in coremain/version.go
-# * Run: make -f Makefile.release release
-#   * will *commit* your change with 'Release $VERSION'
+# * Run: make DOCKER=coredns -f Makefile.release release
+#   * runs make -f Makefile.doc
+#   	* this is a noop if ronn can't be found
+#   * perform a go generate
+#   * will *commit* your change(s) with 'Release $VERSION'
 #   * push to github
 #   * build the release and do all that fluff.
 #
@@ -32,13 +35,16 @@
 # * We use the manifest-tool from https://github.com/estesp/manifest-tool to build the manifest list
 # * Make sure you have the binary in your path.
 #
-# * Run: make -f Makefile.release docker
+# * Run: make DOCKER=coredns -f Makefile.release docker
 #
-# Docker push should happen after you make the new release and uploaded it to
-# Github.
-EMPTY :=
-SPACE := $(EMPTY) $(EMPTY)
-COMMA := $(EMPTY),$(EMPTY)
+# Docker push should happen after you make the new release and uploaded it to Github.
+#
+# If you want to push to a personal registry, point DOCKER to something else, i.e.
+#
+# * make DOCKER=miek -f Makefile.release docker
+EMPTY:=
+SPACE:=$(EMPTY) $(EMPTY)
+COMMA:=$(EMPTY),$(EMPTY)
 
 ifeq (, $(shell which gh-release))
     $(error "No gh-release in $$PATH, install with: go get github.com/progrium/gh-release")
@@ -48,21 +54,30 @@ ifeq (, $(shell which manifest-tool))
     $(error "No manifest-tool in $$PATH, install with: go get github.com/estesp/manifest-tool")
 endif
 
+DOCKER:=
 NAME:=coredns
-VERSION:=$(shell grep 'coreVersion' coremain/version.go | awk '{ print $$3 }' | tr -d '"')
+VERSION:=$(shell grep 'CoreVersion' coremain/version.go | awk '{ print $$3 }' | tr -d '"')
 GITHUB:=coredns
-DOCKER:=coredns
 DOCKER_IMAGE_NAME:=$(DOCKER)/$(NAME)
 GITCOMMIT:=$(shell git describe --dirty --always)
 LINUX_ARCH:=amd64 arm arm64 ppc64le s390x
 PLATFORMS:=$(subst $(SPACE),$(COMMA),$(foreach arch,$(LINUX_ARCH),linux/$(arch)))
 
+ifeq ($(DOCKER),)
+    $(error "Please specify Docker registry to use. Use DOCKER=coredns for releases")
+endif
+
 all:
 	@echo Use the 'release' target to start a release
 
-release: commit push build tar upload
+release: pre commit push build tar upload
 
-docker: docker-build docker-upload
+docker: docker-build docker-push
+
+.PHONY: pre
+pre:
+	go generate
+	$(MAKE) -f Makefile.doc
 
 .PHONY: push
 push:
@@ -84,7 +99,7 @@ build:
 	mkdir -p build/windows/amd64 && $(MAKE) coredns BINARY=build/windows/amd64/$(NAME) SYSTEM="GOOS=windows GOARCH=amd64" CHECKS="" VERBOSE=""
 	@echo Building: linux/$(LINUX_ARCH)  $(VERSION) ;\
 	for arch in $(LINUX_ARCH); do \
-	    mkdir -p build/linux/amd64  && $(MAKE) coredns BINARY=build/linux/$$arch/$(NAME) SYSTEM="GOOS=linux GOARCH=$$arch" CHECKS="" VERBOSE="" ;\
+	    mkdir -p build/linux/$$arch  && $(MAKE) coredns BINARY=build/linux/$$arch/$(NAME) SYSTEM="GOOS=linux GOARCH=$$arch" CHECKS="" VERBOSE="" ;\
 	done
 
 .PHONY: tar
@@ -136,9 +151,9 @@ docker-build: tar
 	    docker tag coredns $(DOCKER_IMAGE_NAME):coredns-$$arch ;\
 	done
 
-.PHONY: docker-upload
-docker-upload:
-	@echo Pushing: $(VERSION)
+.PHONY: docker-push
+docker-push:
+	@echo Pushing: $(VERSION) to $(DOCKER_IMAGE_NAME)
 	for arch in $(LINUX_ARCH); do \
 	    docker push $(DOCKER_IMAGE_NAME):coredns-$$arch ;\
 	done

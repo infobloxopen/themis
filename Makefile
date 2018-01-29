@@ -114,7 +114,7 @@ fmt-pdpserver:
 
 .PHONY: fmt-plugin
 fmt-plugin:
-	@echo "Checking PE-CoreDNS Middleware format..."
+	@echo "Checking CoreDNS PEP plugin format..."
 	@$(AT)/contrib/coredns/policy && $(GOFMTCHECK)
 	@$(AT)/contrib/coredns/policy/dnstap && $(GOFMTCHECK)
 
