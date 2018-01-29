@@ -10,9 +10,9 @@ policy {
     edns0 CODE NAME [SRCTYPE DSTTYPE] [SIZE START END]
     ...
     debug_query_suffix SUFFIX
+    debug_id ID
     streams COUNT
     transfer ATTR_1, ATTR_2, ... ATTR_N
-    ident ID
     passthrough SUFFIX_1, SUFFIX_2, ... SUFFIX_N
 }
 ~~~
@@ -33,11 +33,11 @@ Param START and END (last data byte index + 1) allow to get separate part of edn
 
 Option debug_query_suffix SUFFIX (should have dot at the end) enables debug query feature.
 
+Option debug_id set string that is used for debug query response as unique id for determine what CoreDNS instance replies on the request.
+
 Option streams set gRPC streams count for PDP connection.
 
 Option transfer defines set of attributes (from domain validation response) that should be inserted into IP validation request.
-
-Option ident set string that is used for debug query response as unique id for determine what CoreDNS instance replies on the request.
 
 Option passthrough defines set of domain name suffixes, domain that contains one of these is resolved without validation, each suffix should have dot at the end.
 
@@ -53,9 +53,9 @@ policy {
     edns0 0xffea source_ip ip address
     edns0 0xffeb client_name bytes string
     debug_query_suffix debug.
+    debug_id instance_1
     streams 100
     transfer gid uid
-    ident instance_1
     passthrough mycompanyname.com. mycompanyname.org.
 }
 ~~~

@@ -259,7 +259,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			input: `.:53 {
                         policy {
 							endpoint 10.2.4.1:5555
-                            ident corednsinstance
+                            debug_id corednsinstance
                         }
                     }`,
 			endpoints: []string{"10.2.4.1:5555"},
@@ -268,7 +268,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			input: `.:53 {
                         policy {
 							endpoint 10.2.4.1:5555
-                            ident
+                            debug_id
                         }
                     }`,
 			endpoints:  []string{"10.2.4.1:5555"},

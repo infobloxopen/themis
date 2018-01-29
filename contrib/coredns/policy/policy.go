@@ -143,8 +143,8 @@ func (p *policyPlugin) parseOption(c *caddy.Controller) error {
 	case "transfer":
 		return p.parseTransfer(c)
 
-	case "ident":
-		return p.parseIdent(c)
+	case "debug_id":
+		return p.parseDebugID(c)
 
 	case "passthrough":
 		return p.parsePassthrough(c)
@@ -343,7 +343,7 @@ func parseOptionGroup(ah *attrHolder, data []byte, options []*edns0Map) bool {
 	return srcIPFound
 }
 
-func (p *policyPlugin) parseIdent(c *caddy.Controller) error {
+func (p *policyPlugin) parseDebugID(c *caddy.Controller) error {
 	args := c.RemainingArgs()
 	if len(args) != 1 {
 		return c.ArgErr()
