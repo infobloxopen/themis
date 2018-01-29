@@ -481,14 +481,13 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		sendExtra bool
 	)
 
+	debugQuery := p.decodeDebugMsg(r)
 	qName, qType := getNameType(r)
 	for _, s := range p.passthrough {
 		if strings.HasSuffix(qName, s) {
 			return plugin.NextOrFailure(p.Name(), p.next, ctx, w, r)
 		}
 	}
-
-	debugQuery := p.decodeDebugMsg(r)
 	ah := newAttrHolder(qName, qType, p.transfer)
 	p.getAttrsFromEDNS0(ah, r, getRemoteIP(w))
 
