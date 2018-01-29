@@ -1,6 +1,12 @@
 # etcd
 
-*etcd* enables reading zone data from an etcd instance. The data in etcd has to be encoded as
+## Name
+
+*etcd* - enables reading zone data from an etcd instance.
+
+## Description
+
+The data in etcd has to be encoded as
 a [message](https://github.com/skynetservices/skydns/blob/2fcff74cdc9f9a7dd64189a447ef27ac354b725f/msg/service.go#L26)
 like [SkyDNS](https://github.com/skynetservices/skydns). It should also work just like SkyDNS.
 
@@ -23,7 +29,7 @@ If you want to `round robin` A and AAAA responses look at the `loadbalance` plug
 ~~~
 etcd [ZONES...] {
     stubzones
-    fallthrough
+    fallthrough [ZONES...]
     path PATH
     endpoint ENDPOINT...
     upstream ADDRESS...
@@ -34,6 +40,9 @@ etcd [ZONES...] {
 * `stubzones` enables the stub zones feature. The stubzone is *only* done in the etcd tree located
     under the *first* zone specified.
 * `fallthrough` If zone matches but no record can be generated, pass request to the next plugin.
+  If **[ZONES...]** is omitted, then fallthrough happens for all zones for which the plugin
+  is authoritative. If specific zones are listed (for example `in-addr.arpa` and `ip6.arpa`), then only
+  queries for those zones will be subject to fallthrough.
 * **PATH** the path inside etcd. Defaults to "/skydns".
 * **ENDPOINT** the etcd endpoints. Defaults to "http://localhost:2397".
 * `upstream` upstream resolvers to be used resolve external names found in etcd (think CNAMEs)
@@ -41,10 +50,13 @@ etcd [ZONES...] {
   the proxy plugin. **ADDRESS** can be an IP address, and IP:port or a string pointing to a file
   that is structured as /etc/resolv.conf.
 * `tls` followed by:
-  * no arguments, if the server certificate is signed by a system-installed CA and no client cert is needed
-  * a single argument that is the CA PEM file, if the server cert is not signed by a system CA and no client cert is needed
-  * two arguments - path to cert PEM file, the path to private key PEM file - if the server certificate is signed by a system-installed CA and a client certificate is needed
-  * three arguments - path to cert PEM file, path to client private key PEM file, path to CA PEM file - if the server certificate is not signed by a system-installed CA and client certificate is needed
+
+    * no arguments, if the server certificate is signed by a system-installed CA and no client cert is needed
+    * a single argument that is the CA PEM file, if the server cert is not signed by a system CA and no client cert is needed
+    * two arguments - path to cert PEM file, the path to private key PEM file - if the server certificate is signed by a system-installed CA and a client certificate is needed
+    * three arguments - path to cert PEM file, path to client private key PEM file, path to CA PEM
+      file - if the server certificate is not signed by a system-installed CA and client certificate
+      is needed.
 
 ## Examples
 
@@ -79,6 +91,14 @@ when resolving external pointing CNAMEs.
 }
 ~~~
 
+Multiple endpoints are supported as well.
+
+~~~
+etcd skydns.local {
+    endpoint http://localhost:2379 http://localhost:4001
+...
+~~~
+
 
 ### Reverse zones
 
@@ -106,3 +126,7 @@ Querying with dig:
 % dig @localhost -x 10.0.0.127 +short
 reverse.skydns.local.
 ~~~
+
+## Bugs
+
+Only the etcdv2 protocol is supported.

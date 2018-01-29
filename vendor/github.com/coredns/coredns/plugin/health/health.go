@@ -7,12 +7,15 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"time"
 )
 
 var once sync.Once
 
+// Health implements healthchecks by polling plugins.
 type health struct {
-	Addr string
+	Addr     string
+	lameduck time.Duration
 
 	ln  net.Listener
 	mux *http.ServeMux
@@ -21,9 +24,17 @@ type health struct {
 	h []Healther
 	sync.RWMutex
 	ok bool // ok is the global boolean indicating an all healthy plugin stack
+
+	stop     chan bool
+	pollstop chan bool
 }
 
-func (h *health) Startup() error {
+// newHealth returns a new initialized health.
+func newHealth(addr string) *health {
+	return &health{Addr: addr, stop: make(chan bool), pollstop: make(chan bool)}
+}
+
+func (h *health) OnStartup() error {
 	if h.Addr == "" {
 		h.Addr = defAddr
 	}
@@ -51,14 +62,29 @@ func (h *health) Startup() error {
 		go func() {
 			http.Serve(h.ln, h.mux)
 		}()
+		go func() {
+			h.overloaded()
+		}()
 	})
 	return nil
 }
 
-func (h *health) Shutdown() error {
+func (h *health) OnShutdown() error {
+	// Stop polling plugins
+	h.pollstop <- true
+	// NACK health
+	h.SetOk(false)
+
+	if h.lameduck > 0 {
+		log.Printf("[INFO] Going into lameduck mode for %s", h.lameduck)
+		time.Sleep(h.lameduck)
+	}
+
 	if h.ln != nil {
 		return h.ln.Close()
 	}
+
+	h.stop <- true
 	return nil
 }
 

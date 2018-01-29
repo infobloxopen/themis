@@ -84,12 +84,11 @@ import github_com_gogo_protobuf_test_custom "github.com/gogo/protobuf/test/custo
 import github_com_gogo_protobuf_test_custom_dash_type "github.com/gogo/protobuf/test/custom-dash-type"
 
 import bytes "bytes"
-import github_com_gogo_protobuf_sortkeys "github.com/gogo/protobuf/sortkeys"
-import github_com_gogo_protobuf_proto "github.com/gogo/protobuf/proto"
+import sortkeys "github.com/gogo/protobuf/sortkeys"
 
-import github_com_gogo_protobuf_protoc_gen_gogo_descriptor "github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
-import compress_gzip "compress/gzip"
-import io_ioutil "io/ioutil"
+import descriptor "github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
+import gzip "compress/gzip"
+import ioutil "io/ioutil"
 
 import strconv "strconv"
 
@@ -4819,8 +4818,8 @@ func (this *MyExtendable) Compare(that interface{}) int {
 	} else if that1.Field1 != nil {
 		return -1
 	}
-	thismap := github_com_gogo_protobuf_proto.GetUnsafeExtensionsMap(this)
-	thatmap := github_com_gogo_protobuf_proto.GetUnsafeExtensionsMap(that1)
+	thismap := proto.GetUnsafeExtensionsMap(this)
+	thatmap := proto.GetUnsafeExtensionsMap(that1)
 	extkeys := make([]int32, 0, len(thismap)+len(thatmap))
 	for k := range thismap {
 		extkeys = append(extkeys, k)
@@ -4830,7 +4829,7 @@ func (this *MyExtendable) Compare(that interface{}) int {
 			extkeys = append(extkeys, k)
 		}
 	}
-	github_com_gogo_protobuf_sortkeys.Int32s(extkeys)
+	sortkeys.Int32s(extkeys)
 	for _, k := range extkeys {
 		if v, ok := thismap[k]; ok {
 			if v2, ok := thatmap[k]; ok {
@@ -4901,8 +4900,8 @@ func (this *OtherExtenable) Compare(that interface{}) int {
 	if c := this.M.Compare(that1.M); c != 0 {
 		return c
 	}
-	thismap := github_com_gogo_protobuf_proto.GetUnsafeExtensionsMap(this)
-	thatmap := github_com_gogo_protobuf_proto.GetUnsafeExtensionsMap(that1)
+	thismap := proto.GetUnsafeExtensionsMap(this)
+	thatmap := proto.GetUnsafeExtensionsMap(that1)
 	extkeys := make([]int32, 0, len(thismap)+len(thatmap))
 	for k := range thismap {
 		extkeys = append(extkeys, k)
@@ -4912,7 +4911,7 @@ func (this *OtherExtenable) Compare(that interface{}) int {
 			extkeys = append(extkeys, k)
 		}
 	}
-	github_com_gogo_protobuf_sortkeys.Int32s(extkeys)
+	sortkeys.Int32s(extkeys)
 	for _, k := range extkeys {
 		if v, ok := thismap[k]; ok {
 			if v2, ok := thatmap[k]; ok {
@@ -6759,212 +6758,212 @@ func (this *ProtoType) Compare(that interface{}) int {
 	}
 	return 0
 }
-func (this *NidOptNative) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NidOptNative) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NinOptNative) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NinOptNative) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NidRepNative) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NidRepNative) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NinRepNative) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NinRepNative) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NidRepPackedNative) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NidRepPackedNative) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NinRepPackedNative) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NinRepPackedNative) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NidOptStruct) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NidOptStruct) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NinOptStruct) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NinOptStruct) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NidRepStruct) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NidRepStruct) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NinRepStruct) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NinRepStruct) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NidEmbeddedStruct) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NidEmbeddedStruct) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NinEmbeddedStruct) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NinEmbeddedStruct) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NidNestedStruct) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NidNestedStruct) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NinNestedStruct) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NinNestedStruct) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NidOptCustom) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NidOptCustom) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *CustomDash) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *CustomDash) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NinOptCustom) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NinOptCustom) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NidRepCustom) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NidRepCustom) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NinRepCustom) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NinRepCustom) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NinOptNativeUnion) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NinOptNativeUnion) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NinOptStructUnion) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NinOptStructUnion) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NinEmbeddedStructUnion) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NinEmbeddedStructUnion) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NinNestedStructUnion) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NinNestedStructUnion) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *Tree) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *Tree) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *OrBranch) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *OrBranch) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *AndBranch) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *AndBranch) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *Leaf) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *Leaf) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *DeepTree) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *DeepTree) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *ADeepBranch) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *ADeepBranch) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *AndDeepBranch) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *AndDeepBranch) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *DeepLeaf) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *DeepLeaf) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *Nil) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *Nil) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NidOptEnum) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NidOptEnum) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NinOptEnum) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NinOptEnum) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NidRepEnum) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NidRepEnum) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NinRepEnum) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NinRepEnum) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NinOptEnumDefault) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NinOptEnumDefault) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *AnotherNinOptEnum) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *AnotherNinOptEnum) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *AnotherNinOptEnumDefault) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *AnotherNinOptEnumDefault) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *Timer) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *Timer) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *MyExtendable) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *MyExtendable) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *OtherExtenable) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *OtherExtenable) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NestedDefinition) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NestedDefinition) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NestedDefinition_NestedMessage) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NestedDefinition_NestedMessage) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NestedDefinition_NestedMessage_NestedNestedMsg) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NestedDefinition_NestedMessage_NestedNestedMsg) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NestedScope) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NestedScope) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NinOptNativeDefault) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NinOptNativeDefault) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *CustomContainer) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *CustomContainer) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *CustomNameNidOptNative) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *CustomNameNidOptNative) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *CustomNameNinOptNative) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *CustomNameNinOptNative) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *CustomNameNinRepNative) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *CustomNameNinRepNative) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *CustomNameNinStruct) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *CustomNameNinStruct) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *CustomNameCustomType) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *CustomNameCustomType) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *CustomNameNinEmbeddedStructUnion) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *CustomNameNinEmbeddedStructUnion) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *CustomNameEnum) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *CustomNameEnum) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NoExtensionsMap) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NoExtensionsMap) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *Unrecognized) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *Unrecognized) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *UnrecognizedWithInner) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *UnrecognizedWithInner) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *UnrecognizedWithInner_Inner) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *UnrecognizedWithInner_Inner) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *UnrecognizedWithEmbed) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *UnrecognizedWithEmbed) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *UnrecognizedWithEmbed_Embedded) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *UnrecognizedWithEmbed_Embedded) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *Node) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *Node) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NonByteCustomType) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NonByteCustomType) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NidOptNonByteCustomType) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NidOptNonByteCustomType) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NinOptNonByteCustomType) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NinOptNonByteCustomType) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NidRepNonByteCustomType) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NidRepNonByteCustomType) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *NinRepNonByteCustomType) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *NinRepNonByteCustomType) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func (this *ProtoType) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *ProtoType) Description() (desc *descriptor.FileDescriptorSet) {
 	return ThetestDescription()
 }
-func ThetestDescription() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
-	d := &github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet{}
+func ThetestDescription() (desc *descriptor.FileDescriptorSet) {
+	d := &descriptor.FileDescriptorSet{}
 	var gzipped = []byte{
 		// 6609 bytes of a gzipped FileDescriptorSet
 		0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xcc, 0x7c, 0x6b, 0x70, 0x1b, 0xd7,
@@ -7383,15 +7382,15 @@ func ThetestDescription() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descri
 		0x00,
 	}
 	r := bytes.NewReader(gzipped)
-	gzipr, err := compress_gzip.NewReader(r)
+	gzipr, err := gzip.NewReader(r)
 	if err != nil {
 		panic(err)
 	}
-	ungzipped, err := io_ioutil.ReadAll(gzipr)
+	ungzipped, err := ioutil.ReadAll(gzipr)
 	if err != nil {
 		panic(err)
 	}
-	if err := github_com_gogo_protobuf_proto.Unmarshal(ungzipped, d); err != nil {
+	if err := proto.Unmarshal(ungzipped, d); err != nil {
 		panic(err)
 	}
 	return d
@@ -7508,10 +7507,7 @@ func (this *NidOptNative) VerboseEqual(that interface{}) error {
 }
 func (this *NidOptNative) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NidOptNative)
@@ -7524,10 +7520,7 @@ func (this *NidOptNative) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -7742,10 +7735,7 @@ func (this *NinOptNative) VerboseEqual(that interface{}) error {
 }
 func (this *NinOptNative) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NinOptNative)
@@ -7758,10 +7748,7 @@ func (this *NinOptNative) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -8051,10 +8038,7 @@ func (this *NidRepNative) VerboseEqual(that interface{}) error {
 }
 func (this *NidRepNative) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NidRepNative)
@@ -8067,10 +8051,7 @@ func (this *NidRepNative) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -8351,10 +8332,7 @@ func (this *NinRepNative) VerboseEqual(that interface{}) error {
 }
 func (this *NinRepNative) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NinRepNative)
@@ -8367,10 +8345,7 @@ func (this *NinRepNative) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -8635,10 +8610,7 @@ func (this *NidRepPackedNative) VerboseEqual(that interface{}) error {
 }
 func (this *NidRepPackedNative) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NidRepPackedNative)
@@ -8651,10 +8623,7 @@ func (this *NidRepPackedNative) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -8903,10 +8872,7 @@ func (this *NinRepPackedNative) VerboseEqual(that interface{}) error {
 }
 func (this *NinRepPackedNative) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NinRepPackedNative)
@@ -8919,10 +8885,7 @@ func (this *NinRepPackedNative) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -9097,10 +9060,7 @@ func (this *NidOptStruct) VerboseEqual(that interface{}) error {
 }
 func (this *NidOptStruct) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NidOptStruct)
@@ -9113,10 +9073,7 @@ func (this *NidOptStruct) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -9253,10 +9210,7 @@ func (this *NinOptStruct) VerboseEqual(that interface{}) error {
 }
 func (this *NinOptStruct) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NinOptStruct)
@@ -9269,10 +9223,7 @@ func (this *NinOptStruct) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -9459,10 +9410,7 @@ func (this *NidRepStruct) VerboseEqual(that interface{}) error {
 }
 func (this *NidRepStruct) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NidRepStruct)
@@ -9475,10 +9423,7 @@ func (this *NidRepStruct) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -9679,10 +9624,7 @@ func (this *NinRepStruct) VerboseEqual(that interface{}) error {
 }
 func (this *NinRepStruct) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NinRepStruct)
@@ -9695,10 +9637,7 @@ func (this *NinRepStruct) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -9828,10 +9767,7 @@ func (this *NidEmbeddedStruct) VerboseEqual(that interface{}) error {
 }
 func (this *NidEmbeddedStruct) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NidEmbeddedStruct)
@@ -9844,10 +9780,7 @@ func (this *NidEmbeddedStruct) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -9912,10 +9845,7 @@ func (this *NinEmbeddedStruct) VerboseEqual(that interface{}) error {
 }
 func (this *NinEmbeddedStruct) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NinEmbeddedStruct)
@@ -9928,10 +9858,7 @@ func (this *NinEmbeddedStruct) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -9998,10 +9925,7 @@ func (this *NidNestedStruct) VerboseEqual(that interface{}) error {
 }
 func (this *NidNestedStruct) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NidNestedStruct)
@@ -10014,10 +9938,7 @@ func (this *NidNestedStruct) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -10080,10 +10001,7 @@ func (this *NinNestedStruct) VerboseEqual(that interface{}) error {
 }
 func (this *NinNestedStruct) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NinNestedStruct)
@@ -10096,10 +10014,7 @@ func (this *NinNestedStruct) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -10157,10 +10072,7 @@ func (this *NidOptCustom) VerboseEqual(that interface{}) error {
 }
 func (this *NidOptCustom) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NidOptCustom)
@@ -10173,10 +10085,7 @@ func (this *NidOptCustom) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -10230,10 +10139,7 @@ func (this *CustomDash) VerboseEqual(that interface{}) error {
 }
 func (this *CustomDash) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*CustomDash)
@@ -10246,10 +10152,7 @@ func (this *CustomDash) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -10311,10 +10214,7 @@ func (this *NinOptCustom) VerboseEqual(that interface{}) error {
 }
 func (this *NinOptCustom) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NinOptCustom)
@@ -10327,10 +10227,7 @@ func (this *NinOptCustom) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -10401,10 +10298,7 @@ func (this *NidRepCustom) VerboseEqual(that interface{}) error {
 }
 func (this *NidRepCustom) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NidRepCustom)
@@ -10417,10 +10311,7 @@ func (this *NidRepCustom) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -10493,10 +10384,7 @@ func (this *NinRepCustom) VerboseEqual(that interface{}) error {
 }
 func (this *NinRepCustom) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NinRepCustom)
@@ -10509,10 +10397,7 @@ func (this *NinRepCustom) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -10644,10 +10529,7 @@ func (this *NinOptNativeUnion) VerboseEqual(that interface{}) error {
 }
 func (this *NinOptNativeUnion) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NinOptNativeUnion)
@@ -10660,10 +10542,7 @@ func (this *NinOptNativeUnion) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -10842,10 +10721,7 @@ func (this *NinOptStructUnion) VerboseEqual(that interface{}) error {
 }
 func (this *NinOptStructUnion) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NinOptStructUnion)
@@ -10858,10 +10734,7 @@ func (this *NinOptStructUnion) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -10980,10 +10853,7 @@ func (this *NinEmbeddedStructUnion) VerboseEqual(that interface{}) error {
 }
 func (this *NinEmbeddedStructUnion) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NinEmbeddedStructUnion)
@@ -10996,10 +10866,7 @@ func (this *NinEmbeddedStructUnion) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -11064,10 +10931,7 @@ func (this *NinNestedStructUnion) VerboseEqual(that interface{}) error {
 }
 func (this *NinNestedStructUnion) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NinNestedStructUnion)
@@ -11080,10 +10944,7 @@ func (this *NinNestedStructUnion) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -11142,10 +11003,7 @@ func (this *Tree) VerboseEqual(that interface{}) error {
 }
 func (this *Tree) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*Tree)
@@ -11158,10 +11016,7 @@ func (this *Tree) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -11217,10 +11072,7 @@ func (this *OrBranch) VerboseEqual(that interface{}) error {
 }
 func (this *OrBranch) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*OrBranch)
@@ -11233,10 +11085,7 @@ func (this *OrBranch) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -11289,10 +11138,7 @@ func (this *AndBranch) VerboseEqual(that interface{}) error {
 }
 func (this *AndBranch) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AndBranch)
@@ -11305,10 +11151,7 @@ func (this *AndBranch) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -11361,10 +11204,7 @@ func (this *Leaf) VerboseEqual(that interface{}) error {
 }
 func (this *Leaf) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*Leaf)
@@ -11377,10 +11217,7 @@ func (this *Leaf) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -11436,10 +11273,7 @@ func (this *DeepTree) VerboseEqual(that interface{}) error {
 }
 func (this *DeepTree) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*DeepTree)
@@ -11452,10 +11286,7 @@ func (this *DeepTree) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -11508,10 +11339,7 @@ func (this *ADeepBranch) VerboseEqual(that interface{}) error {
 }
 func (this *ADeepBranch) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*ADeepBranch)
@@ -11524,10 +11352,7 @@ func (this *ADeepBranch) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -11577,10 +11402,7 @@ func (this *AndDeepBranch) VerboseEqual(that interface{}) error {
 }
 func (this *AndDeepBranch) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AndDeepBranch)
@@ -11593,10 +11415,7 @@ func (this *AndDeepBranch) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -11646,10 +11465,7 @@ func (this *DeepLeaf) VerboseEqual(that interface{}) error {
 }
 func (this *DeepLeaf) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*DeepLeaf)
@@ -11662,10 +11478,7 @@ func (this *DeepLeaf) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -11709,10 +11522,7 @@ func (this *Nil) VerboseEqual(that interface{}) error {
 }
 func (this *Nil) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*Nil)
@@ -11725,10 +11535,7 @@ func (this *Nil) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -11772,10 +11579,7 @@ func (this *NidOptEnum) VerboseEqual(that interface{}) error {
 }
 func (this *NidOptEnum) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NidOptEnum)
@@ -11788,10 +11592,7 @@ func (this *NidOptEnum) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -11862,10 +11663,7 @@ func (this *NinOptEnum) VerboseEqual(that interface{}) error {
 }
 func (this *NinOptEnum) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NinOptEnum)
@@ -11878,10 +11676,7 @@ func (this *NinOptEnum) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -11973,10 +11768,7 @@ func (this *NidRepEnum) VerboseEqual(that interface{}) error {
 }
 func (this *NidRepEnum) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NidRepEnum)
@@ -11989,10 +11781,7 @@ func (this *NidRepEnum) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -12081,10 +11870,7 @@ func (this *NinRepEnum) VerboseEqual(that interface{}) error {
 }
 func (this *NinRepEnum) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NinRepEnum)
@@ -12097,10 +11883,7 @@ func (this *NinRepEnum) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -12192,10 +11975,7 @@ func (this *NinOptEnumDefault) VerboseEqual(that interface{}) error {
 }
 func (this *NinOptEnumDefault) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NinOptEnumDefault)
@@ -12208,10 +11988,7 @@ func (this *NinOptEnumDefault) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -12306,10 +12083,7 @@ func (this *AnotherNinOptEnum) VerboseEqual(that interface{}) error {
 }
 func (this *AnotherNinOptEnum) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AnotherNinOptEnum)
@@ -12322,10 +12096,7 @@ func (this *AnotherNinOptEnum) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -12420,10 +12191,7 @@ func (this *AnotherNinOptEnumDefault) VerboseEqual(that interface{}) error {
 }
 func (this *AnotherNinOptEnumDefault) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AnotherNinOptEnumDefault)
@@ -12436,10 +12204,7 @@ func (this *AnotherNinOptEnumDefault) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -12516,10 +12281,7 @@ func (this *Timer) VerboseEqual(that interface{}) error {
 }
 func (this *Timer) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*Timer)
@@ -12532,10 +12294,7 @@ func (this *Timer) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -12587,8 +12346,8 @@ func (this *MyExtendable) VerboseEqual(that interface{}) error {
 	} else if that1.Field1 != nil {
 		return fmt.Errorf("Field1 this(%v) Not Equal that(%v)", this.Field1, that1.Field1)
 	}
-	thismap := github_com_gogo_protobuf_proto.GetUnsafeExtensionsMap(this)
-	thatmap := github_com_gogo_protobuf_proto.GetUnsafeExtensionsMap(that1)
+	thismap := proto.GetUnsafeExtensionsMap(this)
+	thatmap := proto.GetUnsafeExtensionsMap(that1)
 	for k, v := range thismap {
 		if v2, ok := thatmap[k]; ok {
 			if !v.Equal(&v2) {
@@ -12610,10 +12369,7 @@ func (this *MyExtendable) VerboseEqual(that interface{}) error {
 }
 func (this *MyExtendable) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*MyExtendable)
@@ -12626,10 +12382,7 @@ func (this *MyExtendable) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -12642,8 +12395,8 @@ func (this *MyExtendable) Equal(that interface{}) bool {
 	} else if that1.Field1 != nil {
 		return false
 	}
-	thismap := github_com_gogo_protobuf_proto.GetUnsafeExtensionsMap(this)
-	thatmap := github_com_gogo_protobuf_proto.GetUnsafeExtensionsMap(that1)
+	thismap := proto.GetUnsafeExtensionsMap(this)
+	thatmap := proto.GetUnsafeExtensionsMap(that1)
 	for k, v := range thismap {
 		if v2, ok := thatmap[k]; ok {
 			if !v.Equal(&v2) {
@@ -12709,8 +12462,8 @@ func (this *OtherExtenable) VerboseEqual(that interface{}) error {
 	if !this.M.Equal(that1.M) {
 		return fmt.Errorf("M this(%v) Not Equal that(%v)", this.M, that1.M)
 	}
-	thismap := github_com_gogo_protobuf_proto.GetUnsafeExtensionsMap(this)
-	thatmap := github_com_gogo_protobuf_proto.GetUnsafeExtensionsMap(that1)
+	thismap := proto.GetUnsafeExtensionsMap(this)
+	thatmap := proto.GetUnsafeExtensionsMap(that1)
 	for k, v := range thismap {
 		if v2, ok := thatmap[k]; ok {
 			if !v.Equal(&v2) {
@@ -12732,10 +12485,7 @@ func (this *OtherExtenable) VerboseEqual(that interface{}) error {
 }
 func (this *OtherExtenable) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*OtherExtenable)
@@ -12748,10 +12498,7 @@ func (this *OtherExtenable) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -12776,8 +12523,8 @@ func (this *OtherExtenable) Equal(that interface{}) bool {
 	if !this.M.Equal(that1.M) {
 		return false
 	}
-	thismap := github_com_gogo_protobuf_proto.GetUnsafeExtensionsMap(this)
-	thatmap := github_com_gogo_protobuf_proto.GetUnsafeExtensionsMap(that1)
+	thismap := proto.GetUnsafeExtensionsMap(this)
+	thatmap := proto.GetUnsafeExtensionsMap(that1)
 	for k, v := range thismap {
 		if v2, ok := thatmap[k]; ok {
 			if !v.Equal(&v2) {
@@ -12853,10 +12600,7 @@ func (this *NestedDefinition) VerboseEqual(that interface{}) error {
 }
 func (this *NestedDefinition) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NestedDefinition)
@@ -12869,10 +12613,7 @@ func (this *NestedDefinition) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -12949,10 +12690,7 @@ func (this *NestedDefinition_NestedMessage) VerboseEqual(that interface{}) error
 }
 func (this *NestedDefinition_NestedMessage) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NestedDefinition_NestedMessage)
@@ -12965,10 +12703,7 @@ func (this *NestedDefinition_NestedMessage) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -13030,10 +12765,7 @@ func (this *NestedDefinition_NestedMessage_NestedNestedMsg) VerboseEqual(that in
 }
 func (this *NestedDefinition_NestedMessage_NestedNestedMsg) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NestedDefinition_NestedMessage_NestedNestedMsg)
@@ -13046,10 +12778,7 @@ func (this *NestedDefinition_NestedMessage_NestedNestedMsg) Equal(that interface
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -13114,10 +12843,7 @@ func (this *NestedScope) VerboseEqual(that interface{}) error {
 }
 func (this *NestedScope) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NestedScope)
@@ -13130,10 +12856,7 @@ func (this *NestedScope) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -13318,10 +13041,7 @@ func (this *NinOptNativeDefault) VerboseEqual(that interface{}) error {
 }
 func (this *NinOptNativeDefault) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NinOptNativeDefault)
@@ -13334,10 +13054,7 @@ func (this *NinOptNativeDefault) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -13510,10 +13227,7 @@ func (this *CustomContainer) VerboseEqual(that interface{}) error {
 }
 func (this *CustomContainer) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*CustomContainer)
@@ -13526,10 +13240,7 @@ func (this *CustomContainer) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -13618,10 +13329,7 @@ func (this *CustomNameNidOptNative) VerboseEqual(that interface{}) error {
 }
 func (this *CustomNameNidOptNative) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*CustomNameNidOptNative)
@@ -13634,10 +13342,7 @@ func (this *CustomNameNidOptNative) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -13852,10 +13557,7 @@ func (this *CustomNameNinOptNative) VerboseEqual(that interface{}) error {
 }
 func (this *CustomNameNinOptNative) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*CustomNameNinOptNative)
@@ -13868,10 +13570,7 @@ func (this *CustomNameNinOptNative) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -14161,10 +13860,7 @@ func (this *CustomNameNinRepNative) VerboseEqual(that interface{}) error {
 }
 func (this *CustomNameNinRepNative) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*CustomNameNinRepNative)
@@ -14177,10 +13873,7 @@ func (this *CustomNameNinRepNative) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -14412,10 +14105,7 @@ func (this *CustomNameNinStruct) VerboseEqual(that interface{}) error {
 }
 func (this *CustomNameNinStruct) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*CustomNameNinStruct)
@@ -14428,10 +14118,7 @@ func (this *CustomNameNinStruct) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -14573,10 +14260,7 @@ func (this *CustomNameCustomType) VerboseEqual(that interface{}) error {
 }
 func (this *CustomNameCustomType) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*CustomNameCustomType)
@@ -14589,10 +14273,7 @@ func (this *CustomNameCustomType) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -14678,10 +14359,7 @@ func (this *CustomNameNinEmbeddedStructUnion) VerboseEqual(that interface{}) err
 }
 func (this *CustomNameNinEmbeddedStructUnion) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*CustomNameNinEmbeddedStructUnion)
@@ -14694,10 +14372,7 @@ func (this *CustomNameNinEmbeddedStructUnion) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -14770,10 +14445,7 @@ func (this *CustomNameEnum) VerboseEqual(that interface{}) error {
 }
 func (this *CustomNameEnum) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*CustomNameEnum)
@@ -14786,10 +14458,7 @@ func (this *CustomNameEnum) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -14859,10 +14528,7 @@ func (this *NoExtensionsMap) VerboseEqual(that interface{}) error {
 }
 func (this *NoExtensionsMap) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NoExtensionsMap)
@@ -14875,10 +14541,7 @@ func (this *NoExtensionsMap) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -14937,10 +14600,7 @@ func (this *Unrecognized) VerboseEqual(that interface{}) error {
 }
 func (this *Unrecognized) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*Unrecognized)
@@ -14953,10 +14613,7 @@ func (this *Unrecognized) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -15020,10 +14677,7 @@ func (this *UnrecognizedWithInner) VerboseEqual(that interface{}) error {
 }
 func (this *UnrecognizedWithInner) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*UnrecognizedWithInner)
@@ -15036,10 +14690,7 @@ func (this *UnrecognizedWithInner) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -15103,10 +14754,7 @@ func (this *UnrecognizedWithInner_Inner) VerboseEqual(that interface{}) error {
 }
 func (this *UnrecognizedWithInner_Inner) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*UnrecognizedWithInner_Inner)
@@ -15119,10 +14767,7 @@ func (this *UnrecognizedWithInner_Inner) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -15181,10 +14826,7 @@ func (this *UnrecognizedWithEmbed) VerboseEqual(that interface{}) error {
 }
 func (this *UnrecognizedWithEmbed) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*UnrecognizedWithEmbed)
@@ -15197,10 +14839,7 @@ func (this *UnrecognizedWithEmbed) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -15259,10 +14898,7 @@ func (this *UnrecognizedWithEmbed_Embedded) VerboseEqual(that interface{}) error
 }
 func (this *UnrecognizedWithEmbed_Embedded) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*UnrecognizedWithEmbed_Embedded)
@@ -15275,10 +14911,7 @@ func (this *UnrecognizedWithEmbed_Embedded) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -15342,10 +14975,7 @@ func (this *Node) VerboseEqual(that interface{}) error {
 }
 func (this *Node) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*Node)
@@ -15358,10 +14988,7 @@ func (this *Node) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -15426,10 +15053,7 @@ func (this *NonByteCustomType) VerboseEqual(that interface{}) error {
 }
 func (this *NonByteCustomType) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NonByteCustomType)
@@ -15442,10 +15066,7 @@ func (this *NonByteCustomType) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -15496,10 +15117,7 @@ func (this *NidOptNonByteCustomType) VerboseEqual(that interface{}) error {
 }
 func (this *NidOptNonByteCustomType) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NidOptNonByteCustomType)
@@ -15512,10 +15130,7 @@ func (this *NidOptNonByteCustomType) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -15566,10 +15181,7 @@ func (this *NinOptNonByteCustomType) VerboseEqual(that interface{}) error {
 }
 func (this *NinOptNonByteCustomType) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NinOptNonByteCustomType)
@@ -15582,10 +15194,7 @@ func (this *NinOptNonByteCustomType) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -15641,10 +15250,7 @@ func (this *NidRepNonByteCustomType) VerboseEqual(that interface{}) error {
 }
 func (this *NidRepNonByteCustomType) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NidRepNonByteCustomType)
@@ -15657,10 +15263,7 @@ func (this *NidRepNonByteCustomType) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -15717,10 +15320,7 @@ func (this *NinRepNonByteCustomType) VerboseEqual(that interface{}) error {
 }
 func (this *NinRepNonByteCustomType) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*NinRepNonByteCustomType)
@@ -15733,10 +15333,7 @@ func (this *NinRepNonByteCustomType) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -15794,10 +15391,7 @@ func (this *ProtoType) VerboseEqual(that interface{}) error {
 }
 func (this *ProtoType) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*ProtoType)
@@ -15810,10 +15404,7 @@ func (this *ProtoType) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -15833,7 +15424,7 @@ func (this *ProtoType) Equal(that interface{}) bool {
 }
 
 type NidOptNativeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() float64
 	GetField2() float32
 	GetField3() int32
@@ -15851,11 +15442,11 @@ type NidOptNativeFace interface {
 	GetField15() []byte
 }
 
-func (this *NidOptNative) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NidOptNative) Proto() proto.Message {
 	return this
 }
 
-func (this *NidOptNative) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NidOptNative) TestProto() proto.Message {
 	return NewNidOptNativeFromFace(this)
 }
 
@@ -15940,7 +15531,7 @@ func NewNidOptNativeFromFace(that NidOptNativeFace) *NidOptNative {
 }
 
 type NinOptNativeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() *float64
 	GetField2() *float32
 	GetField3() *int32
@@ -15958,11 +15549,11 @@ type NinOptNativeFace interface {
 	GetField15() []byte
 }
 
-func (this *NinOptNative) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NinOptNative) Proto() proto.Message {
 	return this
 }
 
-func (this *NinOptNative) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NinOptNative) TestProto() proto.Message {
 	return NewNinOptNativeFromFace(this)
 }
 
@@ -16047,7 +15638,7 @@ func NewNinOptNativeFromFace(that NinOptNativeFace) *NinOptNative {
 }
 
 type NidRepNativeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() []float64
 	GetField2() []float32
 	GetField3() []int32
@@ -16065,11 +15656,11 @@ type NidRepNativeFace interface {
 	GetField15() [][]byte
 }
 
-func (this *NidRepNative) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NidRepNative) Proto() proto.Message {
 	return this
 }
 
-func (this *NidRepNative) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NidRepNative) TestProto() proto.Message {
 	return NewNidRepNativeFromFace(this)
 }
 
@@ -16154,7 +15745,7 @@ func NewNidRepNativeFromFace(that NidRepNativeFace) *NidRepNative {
 }
 
 type NinRepNativeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() []float64
 	GetField2() []float32
 	GetField3() []int32
@@ -16172,11 +15763,11 @@ type NinRepNativeFace interface {
 	GetField15() [][]byte
 }
 
-func (this *NinRepNative) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NinRepNative) Proto() proto.Message {
 	return this
 }
 
-func (this *NinRepNative) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NinRepNative) TestProto() proto.Message {
 	return NewNinRepNativeFromFace(this)
 }
 
@@ -16261,7 +15852,7 @@ func NewNinRepNativeFromFace(that NinRepNativeFace) *NinRepNative {
 }
 
 type NidRepPackedNativeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() []float64
 	GetField2() []float32
 	GetField3() []int32
@@ -16277,11 +15868,11 @@ type NidRepPackedNativeFace interface {
 	GetField13() []bool
 }
 
-func (this *NidRepPackedNative) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NidRepPackedNative) Proto() proto.Message {
 	return this
 }
 
-func (this *NidRepPackedNative) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NidRepPackedNative) TestProto() proto.Message {
 	return NewNidRepPackedNativeFromFace(this)
 }
 
@@ -16356,7 +15947,7 @@ func NewNidRepPackedNativeFromFace(that NidRepPackedNativeFace) *NidRepPackedNat
 }
 
 type NinRepPackedNativeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() []float64
 	GetField2() []float32
 	GetField3() []int32
@@ -16372,11 +15963,11 @@ type NinRepPackedNativeFace interface {
 	GetField13() []bool
 }
 
-func (this *NinRepPackedNative) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NinRepPackedNative) Proto() proto.Message {
 	return this
 }
 
-func (this *NinRepPackedNative) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NinRepPackedNative) TestProto() proto.Message {
 	return NewNinRepPackedNativeFromFace(this)
 }
 
@@ -16451,7 +16042,7 @@ func NewNinRepPackedNativeFromFace(that NinRepPackedNativeFace) *NinRepPackedNat
 }
 
 type NidOptStructFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() float64
 	GetField2() float32
 	GetField3() NidOptNative
@@ -16464,11 +16055,11 @@ type NidOptStructFace interface {
 	GetField15() []byte
 }
 
-func (this *NidOptStruct) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NidOptStruct) Proto() proto.Message {
 	return this
 }
 
-func (this *NidOptStruct) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NidOptStruct) TestProto() proto.Message {
 	return NewNidOptStructFromFace(this)
 }
 
@@ -16528,7 +16119,7 @@ func NewNidOptStructFromFace(that NidOptStructFace) *NidOptStruct {
 }
 
 type NinOptStructFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() *float64
 	GetField2() *float32
 	GetField3() *NidOptNative
@@ -16541,11 +16132,11 @@ type NinOptStructFace interface {
 	GetField15() []byte
 }
 
-func (this *NinOptStruct) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NinOptStruct) Proto() proto.Message {
 	return this
 }
 
-func (this *NinOptStruct) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NinOptStruct) TestProto() proto.Message {
 	return NewNinOptStructFromFace(this)
 }
 
@@ -16605,7 +16196,7 @@ func NewNinOptStructFromFace(that NinOptStructFace) *NinOptStruct {
 }
 
 type NidRepStructFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() []float64
 	GetField2() []float32
 	GetField3() []NidOptNative
@@ -16618,11 +16209,11 @@ type NidRepStructFace interface {
 	GetField15() [][]byte
 }
 
-func (this *NidRepStruct) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NidRepStruct) Proto() proto.Message {
 	return this
 }
 
-func (this *NidRepStruct) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NidRepStruct) TestProto() proto.Message {
 	return NewNidRepStructFromFace(this)
 }
 
@@ -16682,7 +16273,7 @@ func NewNidRepStructFromFace(that NidRepStructFace) *NidRepStruct {
 }
 
 type NinRepStructFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() []float64
 	GetField2() []float32
 	GetField3() []*NidOptNative
@@ -16695,11 +16286,11 @@ type NinRepStructFace interface {
 	GetField15() [][]byte
 }
 
-func (this *NinRepStruct) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NinRepStruct) Proto() proto.Message {
 	return this
 }
 
-func (this *NinRepStruct) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NinRepStruct) TestProto() proto.Message {
 	return NewNinRepStructFromFace(this)
 }
 
@@ -16759,17 +16350,17 @@ func NewNinRepStructFromFace(that NinRepStructFace) *NinRepStruct {
 }
 
 type NidEmbeddedStructFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetNidOptNative() *NidOptNative
 	GetField200() NidOptNative
 	GetField210() bool
 }
 
-func (this *NidEmbeddedStruct) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NidEmbeddedStruct) Proto() proto.Message {
 	return this
 }
 
-func (this *NidEmbeddedStruct) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NidEmbeddedStruct) TestProto() proto.Message {
 	return NewNidEmbeddedStructFromFace(this)
 }
 
@@ -16794,17 +16385,17 @@ func NewNidEmbeddedStructFromFace(that NidEmbeddedStructFace) *NidEmbeddedStruct
 }
 
 type NinEmbeddedStructFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetNidOptNative() *NidOptNative
 	GetField200() *NidOptNative
 	GetField210() *bool
 }
 
-func (this *NinEmbeddedStruct) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NinEmbeddedStruct) Proto() proto.Message {
 	return this
 }
 
-func (this *NinEmbeddedStruct) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NinEmbeddedStruct) TestProto() proto.Message {
 	return NewNinEmbeddedStructFromFace(this)
 }
 
@@ -16829,16 +16420,16 @@ func NewNinEmbeddedStructFromFace(that NinEmbeddedStructFace) *NinEmbeddedStruct
 }
 
 type NidNestedStructFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() NidOptStruct
 	GetField2() []NidRepStruct
 }
 
-func (this *NidNestedStruct) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NidNestedStruct) Proto() proto.Message {
 	return this
 }
 
-func (this *NidNestedStruct) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NidNestedStruct) TestProto() proto.Message {
 	return NewNidNestedStructFromFace(this)
 }
 
@@ -16858,16 +16449,16 @@ func NewNidNestedStructFromFace(that NidNestedStructFace) *NidNestedStruct {
 }
 
 type NinNestedStructFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() *NinOptStruct
 	GetField2() []*NinRepStruct
 }
 
-func (this *NinNestedStruct) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NinNestedStruct) Proto() proto.Message {
 	return this
 }
 
-func (this *NinNestedStruct) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NinNestedStruct) TestProto() proto.Message {
 	return NewNinNestedStructFromFace(this)
 }
 
@@ -16887,16 +16478,16 @@ func NewNinNestedStructFromFace(that NinNestedStructFace) *NinNestedStruct {
 }
 
 type NidOptCustomFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetId() Uuid
 	GetValue() github_com_gogo_protobuf_test_custom.Uint128
 }
 
-func (this *NidOptCustom) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NidOptCustom) Proto() proto.Message {
 	return this
 }
 
-func (this *NidOptCustom) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NidOptCustom) TestProto() proto.Message {
 	return NewNidOptCustomFromFace(this)
 }
 
@@ -16916,15 +16507,15 @@ func NewNidOptCustomFromFace(that NidOptCustomFace) *NidOptCustom {
 }
 
 type CustomDashFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetValue() *github_com_gogo_protobuf_test_custom_dash_type.Bytes
 }
 
-func (this *CustomDash) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *CustomDash) Proto() proto.Message {
 	return this
 }
 
-func (this *CustomDash) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *CustomDash) TestProto() proto.Message {
 	return NewCustomDashFromFace(this)
 }
 
@@ -16939,16 +16530,16 @@ func NewCustomDashFromFace(that CustomDashFace) *CustomDash {
 }
 
 type NinOptCustomFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetId() *Uuid
 	GetValue() *github_com_gogo_protobuf_test_custom.Uint128
 }
 
-func (this *NinOptCustom) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NinOptCustom) Proto() proto.Message {
 	return this
 }
 
-func (this *NinOptCustom) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NinOptCustom) TestProto() proto.Message {
 	return NewNinOptCustomFromFace(this)
 }
 
@@ -16968,16 +16559,16 @@ func NewNinOptCustomFromFace(that NinOptCustomFace) *NinOptCustom {
 }
 
 type NidRepCustomFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetId() []Uuid
 	GetValue() []github_com_gogo_protobuf_test_custom.Uint128
 }
 
-func (this *NidRepCustom) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NidRepCustom) Proto() proto.Message {
 	return this
 }
 
-func (this *NidRepCustom) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NidRepCustom) TestProto() proto.Message {
 	return NewNidRepCustomFromFace(this)
 }
 
@@ -16997,16 +16588,16 @@ func NewNidRepCustomFromFace(that NidRepCustomFace) *NidRepCustom {
 }
 
 type NinRepCustomFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetId() []Uuid
 	GetValue() []github_com_gogo_protobuf_test_custom.Uint128
 }
 
-func (this *NinRepCustom) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NinRepCustom) Proto() proto.Message {
 	return this
 }
 
-func (this *NinRepCustom) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NinRepCustom) TestProto() proto.Message {
 	return NewNinRepCustomFromFace(this)
 }
 
@@ -17026,7 +16617,7 @@ func NewNinRepCustomFromFace(that NinRepCustomFace) *NinRepCustom {
 }
 
 type NinOptNativeUnionFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() *float64
 	GetField2() *float32
 	GetField3() *int32
@@ -17038,11 +16629,11 @@ type NinOptNativeUnionFace interface {
 	GetField15() []byte
 }
 
-func (this *NinOptNativeUnion) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NinOptNativeUnion) Proto() proto.Message {
 	return this
 }
 
-func (this *NinOptNativeUnion) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NinOptNativeUnion) TestProto() proto.Message {
 	return NewNinOptNativeUnionFromFace(this)
 }
 
@@ -17097,7 +16688,7 @@ func NewNinOptNativeUnionFromFace(that NinOptNativeUnionFace) *NinOptNativeUnion
 }
 
 type NinOptStructUnionFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() *float64
 	GetField2() *float32
 	GetField3() *NidOptNative
@@ -17109,11 +16700,11 @@ type NinOptStructUnionFace interface {
 	GetField15() []byte
 }
 
-func (this *NinOptStructUnion) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NinOptStructUnion) Proto() proto.Message {
 	return this
 }
 
-func (this *NinOptStructUnion) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NinOptStructUnion) TestProto() proto.Message {
 	return NewNinOptStructUnionFromFace(this)
 }
 
@@ -17168,17 +16759,17 @@ func NewNinOptStructUnionFromFace(that NinOptStructUnionFace) *NinOptStructUnion
 }
 
 type NinEmbeddedStructUnionFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetNidOptNative() *NidOptNative
 	GetField200() *NinOptNative
 	GetField210() *bool
 }
 
-func (this *NinEmbeddedStructUnion) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NinEmbeddedStructUnion) Proto() proto.Message {
 	return this
 }
 
-func (this *NinEmbeddedStructUnion) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NinEmbeddedStructUnion) TestProto() proto.Message {
 	return NewNinEmbeddedStructUnionFromFace(this)
 }
 
@@ -17203,17 +16794,17 @@ func NewNinEmbeddedStructUnionFromFace(that NinEmbeddedStructUnionFace) *NinEmbe
 }
 
 type NinNestedStructUnionFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() *NinOptNativeUnion
 	GetField2() *NinOptStructUnion
 	GetField3() *NinEmbeddedStructUnion
 }
 
-func (this *NinNestedStructUnion) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NinNestedStructUnion) Proto() proto.Message {
 	return this
 }
 
-func (this *NinNestedStructUnion) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NinNestedStructUnion) TestProto() proto.Message {
 	return NewNinNestedStructUnionFromFace(this)
 }
 
@@ -17238,17 +16829,17 @@ func NewNinNestedStructUnionFromFace(that NinNestedStructUnionFace) *NinNestedSt
 }
 
 type TreeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetOr() *OrBranch
 	GetAnd() *AndBranch
 	GetLeaf() *Leaf
 }
 
-func (this *Tree) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *Tree) Proto() proto.Message {
 	return this
 }
 
-func (this *Tree) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *Tree) TestProto() proto.Message {
 	return NewTreeFromFace(this)
 }
 
@@ -17273,16 +16864,16 @@ func NewTreeFromFace(that TreeFace) *Tree {
 }
 
 type OrBranchFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetLeft() Tree
 	GetRight() Tree
 }
 
-func (this *OrBranch) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *OrBranch) Proto() proto.Message {
 	return this
 }
 
-func (this *OrBranch) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *OrBranch) TestProto() proto.Message {
 	return NewOrBranchFromFace(this)
 }
 
@@ -17302,16 +16893,16 @@ func NewOrBranchFromFace(that OrBranchFace) *OrBranch {
 }
 
 type AndBranchFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetLeft() Tree
 	GetRight() Tree
 }
 
-func (this *AndBranch) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *AndBranch) Proto() proto.Message {
 	return this
 }
 
-func (this *AndBranch) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *AndBranch) TestProto() proto.Message {
 	return NewAndBranchFromFace(this)
 }
 
@@ -17331,16 +16922,16 @@ func NewAndBranchFromFace(that AndBranchFace) *AndBranch {
 }
 
 type LeafFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetValue() int64
 	GetStrValue() string
 }
 
-func (this *Leaf) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *Leaf) Proto() proto.Message {
 	return this
 }
 
-func (this *Leaf) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *Leaf) TestProto() proto.Message {
 	return NewLeafFromFace(this)
 }
 
@@ -17360,17 +16951,17 @@ func NewLeafFromFace(that LeafFace) *Leaf {
 }
 
 type DeepTreeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetDown() *ADeepBranch
 	GetAnd() *AndDeepBranch
 	GetLeaf() *DeepLeaf
 }
 
-func (this *DeepTree) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *DeepTree) Proto() proto.Message {
 	return this
 }
 
-func (this *DeepTree) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *DeepTree) TestProto() proto.Message {
 	return NewDeepTreeFromFace(this)
 }
 
@@ -17395,15 +16986,15 @@ func NewDeepTreeFromFace(that DeepTreeFace) *DeepTree {
 }
 
 type ADeepBranchFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetDown() DeepTree
 }
 
-func (this *ADeepBranch) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *ADeepBranch) Proto() proto.Message {
 	return this
 }
 
-func (this *ADeepBranch) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *ADeepBranch) TestProto() proto.Message {
 	return NewADeepBranchFromFace(this)
 }
 
@@ -17418,16 +17009,16 @@ func NewADeepBranchFromFace(that ADeepBranchFace) *ADeepBranch {
 }
 
 type AndDeepBranchFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetLeft() DeepTree
 	GetRight() DeepTree
 }
 
-func (this *AndDeepBranch) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *AndDeepBranch) Proto() proto.Message {
 	return this
 }
 
-func (this *AndDeepBranch) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *AndDeepBranch) TestProto() proto.Message {
 	return NewAndDeepBranchFromFace(this)
 }
 
@@ -17447,15 +17038,15 @@ func NewAndDeepBranchFromFace(that AndDeepBranchFace) *AndDeepBranch {
 }
 
 type DeepLeafFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetTree() Tree
 }
 
-func (this *DeepLeaf) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *DeepLeaf) Proto() proto.Message {
 	return this
 }
 
-func (this *DeepLeaf) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *DeepLeaf) TestProto() proto.Message {
 	return NewDeepLeafFromFace(this)
 }
 
@@ -17470,14 +17061,14 @@ func NewDeepLeafFromFace(that DeepLeafFace) *DeepLeaf {
 }
 
 type NilFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 }
 
-func (this *Nil) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *Nil) Proto() proto.Message {
 	return this
 }
 
-func (this *Nil) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *Nil) TestProto() proto.Message {
 	return NewNilFromFace(this)
 }
 
@@ -17487,15 +17078,15 @@ func NewNilFromFace(that NilFace) *Nil {
 }
 
 type NidOptEnumFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() TheTestEnum
 }
 
-func (this *NidOptEnum) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NidOptEnum) Proto() proto.Message {
 	return this
 }
 
-func (this *NidOptEnum) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NidOptEnum) TestProto() proto.Message {
 	return NewNidOptEnumFromFace(this)
 }
 
@@ -17510,17 +17101,17 @@ func NewNidOptEnumFromFace(that NidOptEnumFace) *NidOptEnum {
 }
 
 type NinOptEnumFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() *TheTestEnum
 	GetField2() *YetAnotherTestEnum
 	GetField3() *YetYetAnotherTestEnum
 }
 
-func (this *NinOptEnum) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NinOptEnum) Proto() proto.Message {
 	return this
 }
 
-func (this *NinOptEnum) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NinOptEnum) TestProto() proto.Message {
 	return NewNinOptEnumFromFace(this)
 }
 
@@ -17545,17 +17136,17 @@ func NewNinOptEnumFromFace(that NinOptEnumFace) *NinOptEnum {
 }
 
 type NidRepEnumFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() []TheTestEnum
 	GetField2() []YetAnotherTestEnum
 	GetField3() []YetYetAnotherTestEnum
 }
 
-func (this *NidRepEnum) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NidRepEnum) Proto() proto.Message {
 	return this
 }
 
-func (this *NidRepEnum) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NidRepEnum) TestProto() proto.Message {
 	return NewNidRepEnumFromFace(this)
 }
 
@@ -17580,17 +17171,17 @@ func NewNidRepEnumFromFace(that NidRepEnumFace) *NidRepEnum {
 }
 
 type NinRepEnumFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() []TheTestEnum
 	GetField2() []YetAnotherTestEnum
 	GetField3() []YetYetAnotherTestEnum
 }
 
-func (this *NinRepEnum) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NinRepEnum) Proto() proto.Message {
 	return this
 }
 
-func (this *NinRepEnum) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NinRepEnum) TestProto() proto.Message {
 	return NewNinRepEnumFromFace(this)
 }
 
@@ -17615,17 +17206,17 @@ func NewNinRepEnumFromFace(that NinRepEnumFace) *NinRepEnum {
 }
 
 type AnotherNinOptEnumFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() *AnotherTestEnum
 	GetField2() *YetAnotherTestEnum
 	GetField3() *YetYetAnotherTestEnum
 }
 
-func (this *AnotherNinOptEnum) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *AnotherNinOptEnum) Proto() proto.Message {
 	return this
 }
 
-func (this *AnotherNinOptEnum) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *AnotherNinOptEnum) TestProto() proto.Message {
 	return NewAnotherNinOptEnumFromFace(this)
 }
 
@@ -17650,17 +17241,17 @@ func NewAnotherNinOptEnumFromFace(that AnotherNinOptEnumFace) *AnotherNinOptEnum
 }
 
 type TimerFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetTime1() int64
 	GetTime2() int64
 	GetData() []byte
 }
 
-func (this *Timer) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *Timer) Proto() proto.Message {
 	return this
 }
 
-func (this *Timer) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *Timer) TestProto() proto.Message {
 	return NewTimerFromFace(this)
 }
 
@@ -17685,18 +17276,18 @@ func NewTimerFromFace(that TimerFace) *Timer {
 }
 
 type NestedDefinitionFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() *int64
 	GetEnumField() *NestedDefinition_NestedEnum
 	GetNNM() *NestedDefinition_NestedMessage_NestedNestedMsg
 	GetNM() *NestedDefinition_NestedMessage
 }
 
-func (this *NestedDefinition) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NestedDefinition) Proto() proto.Message {
 	return this
 }
 
-func (this *NestedDefinition) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NestedDefinition) TestProto() proto.Message {
 	return NewNestedDefinitionFromFace(this)
 }
 
@@ -17726,16 +17317,16 @@ func NewNestedDefinitionFromFace(that NestedDefinitionFace) *NestedDefinition {
 }
 
 type NestedDefinition_NestedMessageFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetNestedField1() *uint64
 	GetNNM() *NestedDefinition_NestedMessage_NestedNestedMsg
 }
 
-func (this *NestedDefinition_NestedMessage) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NestedDefinition_NestedMessage) Proto() proto.Message {
 	return this
 }
 
-func (this *NestedDefinition_NestedMessage) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NestedDefinition_NestedMessage) TestProto() proto.Message {
 	return NewNestedDefinition_NestedMessageFromFace(this)
 }
 
@@ -17755,15 +17346,15 @@ func NewNestedDefinition_NestedMessageFromFace(that NestedDefinition_NestedMessa
 }
 
 type NestedDefinition_NestedMessage_NestedNestedMsgFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetNestedNestedField1() *string
 }
 
-func (this *NestedDefinition_NestedMessage_NestedNestedMsg) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NestedDefinition_NestedMessage_NestedNestedMsg) Proto() proto.Message {
 	return this
 }
 
-func (this *NestedDefinition_NestedMessage_NestedNestedMsg) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NestedDefinition_NestedMessage_NestedNestedMsg) TestProto() proto.Message {
 	return NewNestedDefinition_NestedMessage_NestedNestedMsgFromFace(this)
 }
 
@@ -17778,17 +17369,17 @@ func NewNestedDefinition_NestedMessage_NestedNestedMsgFromFace(that NestedDefini
 }
 
 type NestedScopeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetA() *NestedDefinition_NestedMessage_NestedNestedMsg
 	GetB() *NestedDefinition_NestedEnum
 	GetC() *NestedDefinition_NestedMessage
 }
 
-func (this *NestedScope) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NestedScope) Proto() proto.Message {
 	return this
 }
 
-func (this *NestedScope) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NestedScope) TestProto() proto.Message {
 	return NewNestedScopeFromFace(this)
 }
 
@@ -17813,15 +17404,15 @@ func NewNestedScopeFromFace(that NestedScopeFace) *NestedScope {
 }
 
 type CustomContainerFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetCustomStruct() NidOptCustom
 }
 
-func (this *CustomContainer) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *CustomContainer) Proto() proto.Message {
 	return this
 }
 
-func (this *CustomContainer) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *CustomContainer) TestProto() proto.Message {
 	return NewCustomContainerFromFace(this)
 }
 
@@ -17836,7 +17427,7 @@ func NewCustomContainerFromFace(that CustomContainerFace) *CustomContainer {
 }
 
 type CustomNameNidOptNativeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetFieldA() float64
 	GetFieldB() float32
 	GetFieldC() int32
@@ -17854,11 +17445,11 @@ type CustomNameNidOptNativeFace interface {
 	GetFieldO() []byte
 }
 
-func (this *CustomNameNidOptNative) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *CustomNameNidOptNative) Proto() proto.Message {
 	return this
 }
 
-func (this *CustomNameNidOptNative) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *CustomNameNidOptNative) TestProto() proto.Message {
 	return NewCustomNameNidOptNativeFromFace(this)
 }
 
@@ -17943,7 +17534,7 @@ func NewCustomNameNidOptNativeFromFace(that CustomNameNidOptNativeFace) *CustomN
 }
 
 type CustomNameNinOptNativeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetFieldA() *float64
 	GetFieldB() *float32
 	GetFieldC() *int32
@@ -17961,11 +17552,11 @@ type CustomNameNinOptNativeFace interface {
 	GetFieldO() []byte
 }
 
-func (this *CustomNameNinOptNative) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *CustomNameNinOptNative) Proto() proto.Message {
 	return this
 }
 
-func (this *CustomNameNinOptNative) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *CustomNameNinOptNative) TestProto() proto.Message {
 	return NewCustomNameNinOptNativeFromFace(this)
 }
 
@@ -18050,7 +17641,7 @@ func NewCustomNameNinOptNativeFromFace(that CustomNameNinOptNativeFace) *CustomN
 }
 
 type CustomNameNinRepNativeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetFieldA() []float64
 	GetFieldB() []float32
 	GetFieldC() []int32
@@ -18068,11 +17659,11 @@ type CustomNameNinRepNativeFace interface {
 	GetFieldO() [][]byte
 }
 
-func (this *CustomNameNinRepNative) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *CustomNameNinRepNative) Proto() proto.Message {
 	return this
 }
 
-func (this *CustomNameNinRepNative) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *CustomNameNinRepNative) TestProto() proto.Message {
 	return NewCustomNameNinRepNativeFromFace(this)
 }
 
@@ -18157,7 +17748,7 @@ func NewCustomNameNinRepNativeFromFace(that CustomNameNinRepNativeFace) *CustomN
 }
 
 type CustomNameNinStructFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetFieldA() *float64
 	GetFieldB() *float32
 	GetFieldC() *NidOptNative
@@ -18170,11 +17761,11 @@ type CustomNameNinStructFace interface {
 	GetFieldJ() []byte
 }
 
-func (this *CustomNameNinStruct) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *CustomNameNinStruct) Proto() proto.Message {
 	return this
 }
 
-func (this *CustomNameNinStruct) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *CustomNameNinStruct) TestProto() proto.Message {
 	return NewCustomNameNinStructFromFace(this)
 }
 
@@ -18234,18 +17825,18 @@ func NewCustomNameNinStructFromFace(that CustomNameNinStructFace) *CustomNameNin
 }
 
 type CustomNameCustomTypeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetFieldA() *Uuid
 	GetFieldB() *github_com_gogo_protobuf_test_custom.Uint128
 	GetFieldC() []Uuid
 	GetFieldD() []github_com_gogo_protobuf_test_custom.Uint128
 }
 
-func (this *CustomNameCustomType) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *CustomNameCustomType) Proto() proto.Message {
 	return this
 }
 
-func (this *CustomNameCustomType) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *CustomNameCustomType) TestProto() proto.Message {
 	return NewCustomNameCustomTypeFromFace(this)
 }
 
@@ -18275,17 +17866,17 @@ func NewCustomNameCustomTypeFromFace(that CustomNameCustomTypeFace) *CustomNameC
 }
 
 type CustomNameNinEmbeddedStructUnionFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetNidOptNative() *NidOptNative
 	GetFieldA() *NinOptNative
 	GetFieldB() *bool
 }
 
-func (this *CustomNameNinEmbeddedStructUnion) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *CustomNameNinEmbeddedStructUnion) Proto() proto.Message {
 	return this
 }
 
-func (this *CustomNameNinEmbeddedStructUnion) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *CustomNameNinEmbeddedStructUnion) TestProto() proto.Message {
 	return NewCustomNameNinEmbeddedStructUnionFromFace(this)
 }
 
@@ -18310,16 +17901,16 @@ func NewCustomNameNinEmbeddedStructUnionFromFace(that CustomNameNinEmbeddedStruc
 }
 
 type CustomNameEnumFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetFieldA() *TheTestEnum
 	GetFieldB() []TheTestEnum
 }
 
-func (this *CustomNameEnum) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *CustomNameEnum) Proto() proto.Message {
 	return this
 }
 
-func (this *CustomNameEnum) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *CustomNameEnum) TestProto() proto.Message {
 	return NewCustomNameEnumFromFace(this)
 }
 
@@ -18339,15 +17930,15 @@ func NewCustomNameEnumFromFace(that CustomNameEnumFace) *CustomNameEnum {
 }
 
 type UnrecognizedFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() *string
 }
 
-func (this *Unrecognized) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *Unrecognized) Proto() proto.Message {
 	return this
 }
 
-func (this *Unrecognized) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *Unrecognized) TestProto() proto.Message {
 	return NewUnrecognizedFromFace(this)
 }
 
@@ -18362,16 +17953,16 @@ func NewUnrecognizedFromFace(that UnrecognizedFace) *Unrecognized {
 }
 
 type UnrecognizedWithInnerFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetEmbedded() []*UnrecognizedWithInner_Inner
 	GetField2() *string
 }
 
-func (this *UnrecognizedWithInner) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *UnrecognizedWithInner) Proto() proto.Message {
 	return this
 }
 
-func (this *UnrecognizedWithInner) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *UnrecognizedWithInner) TestProto() proto.Message {
 	return NewUnrecognizedWithInnerFromFace(this)
 }
 
@@ -18391,15 +17982,15 @@ func NewUnrecognizedWithInnerFromFace(that UnrecognizedWithInnerFace) *Unrecogni
 }
 
 type UnrecognizedWithInner_InnerFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() *uint32
 }
 
-func (this *UnrecognizedWithInner_Inner) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *UnrecognizedWithInner_Inner) Proto() proto.Message {
 	return this
 }
 
-func (this *UnrecognizedWithInner_Inner) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *UnrecognizedWithInner_Inner) TestProto() proto.Message {
 	return NewUnrecognizedWithInner_InnerFromFace(this)
 }
 
@@ -18414,16 +18005,16 @@ func NewUnrecognizedWithInner_InnerFromFace(that UnrecognizedWithInner_InnerFace
 }
 
 type UnrecognizedWithEmbedFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetUnrecognizedWithEmbed_Embedded() UnrecognizedWithEmbed_Embedded
 	GetField2() *string
 }
 
-func (this *UnrecognizedWithEmbed) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *UnrecognizedWithEmbed) Proto() proto.Message {
 	return this
 }
 
-func (this *UnrecognizedWithEmbed) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *UnrecognizedWithEmbed) TestProto() proto.Message {
 	return NewUnrecognizedWithEmbedFromFace(this)
 }
 
@@ -18443,15 +18034,15 @@ func NewUnrecognizedWithEmbedFromFace(that UnrecognizedWithEmbedFace) *Unrecogni
 }
 
 type UnrecognizedWithEmbed_EmbeddedFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() *uint32
 }
 
-func (this *UnrecognizedWithEmbed_Embedded) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *UnrecognizedWithEmbed_Embedded) Proto() proto.Message {
 	return this
 }
 
-func (this *UnrecognizedWithEmbed_Embedded) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *UnrecognizedWithEmbed_Embedded) TestProto() proto.Message {
 	return NewUnrecognizedWithEmbed_EmbeddedFromFace(this)
 }
 
@@ -18466,16 +18057,16 @@ func NewUnrecognizedWithEmbed_EmbeddedFromFace(that UnrecognizedWithEmbed_Embedd
 }
 
 type NodeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetLabel() *string
 	GetChildren() []*Node
 }
 
-func (this *Node) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *Node) Proto() proto.Message {
 	return this
 }
 
-func (this *Node) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *Node) TestProto() proto.Message {
 	return NewNodeFromFace(this)
 }
 
@@ -18495,15 +18086,15 @@ func NewNodeFromFace(that NodeFace) *Node {
 }
 
 type NonByteCustomTypeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() *T
 }
 
-func (this *NonByteCustomType) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NonByteCustomType) Proto() proto.Message {
 	return this
 }
 
-func (this *NonByteCustomType) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NonByteCustomType) TestProto() proto.Message {
 	return NewNonByteCustomTypeFromFace(this)
 }
 
@@ -18518,15 +18109,15 @@ func NewNonByteCustomTypeFromFace(that NonByteCustomTypeFace) *NonByteCustomType
 }
 
 type NidOptNonByteCustomTypeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() T
 }
 
-func (this *NidOptNonByteCustomType) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NidOptNonByteCustomType) Proto() proto.Message {
 	return this
 }
 
-func (this *NidOptNonByteCustomType) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NidOptNonByteCustomType) TestProto() proto.Message {
 	return NewNidOptNonByteCustomTypeFromFace(this)
 }
 
@@ -18541,15 +18132,15 @@ func NewNidOptNonByteCustomTypeFromFace(that NidOptNonByteCustomTypeFace) *NidOp
 }
 
 type NinOptNonByteCustomTypeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() *T
 }
 
-func (this *NinOptNonByteCustomType) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NinOptNonByteCustomType) Proto() proto.Message {
 	return this
 }
 
-func (this *NinOptNonByteCustomType) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NinOptNonByteCustomType) TestProto() proto.Message {
 	return NewNinOptNonByteCustomTypeFromFace(this)
 }
 
@@ -18564,15 +18155,15 @@ func NewNinOptNonByteCustomTypeFromFace(that NinOptNonByteCustomTypeFace) *NinOp
 }
 
 type NidRepNonByteCustomTypeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() []T
 }
 
-func (this *NidRepNonByteCustomType) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NidRepNonByteCustomType) Proto() proto.Message {
 	return this
 }
 
-func (this *NidRepNonByteCustomType) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NidRepNonByteCustomType) TestProto() proto.Message {
 	return NewNidRepNonByteCustomTypeFromFace(this)
 }
 
@@ -18587,15 +18178,15 @@ func NewNidRepNonByteCustomTypeFromFace(that NidRepNonByteCustomTypeFace) *NidRe
 }
 
 type NinRepNonByteCustomTypeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField1() []T
 }
 
-func (this *NinRepNonByteCustomType) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *NinRepNonByteCustomType) Proto() proto.Message {
 	return this
 }
 
-func (this *NinRepNonByteCustomType) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *NinRepNonByteCustomType) TestProto() proto.Message {
 	return NewNinRepNonByteCustomTypeFromFace(this)
 }
 
@@ -18610,15 +18201,15 @@ func NewNinRepNonByteCustomTypeFromFace(that NinRepNonByteCustomTypeFace) *NinRe
 }
 
 type ProtoTypeFace interface {
-	Proto() github_com_gogo_protobuf_proto.Message
+	Proto() proto.Message
 	GetField2() *string
 }
 
-func (this *ProtoType) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *ProtoType) Proto() proto.Message {
 	return this
 }
 
-func (this *ProtoType) TestProto() github_com_gogo_protobuf_proto.Message {
+func (this *ProtoType) TestProto() proto.Message {
 	return NewProtoTypeFromFace(this)
 }
 
@@ -20295,8 +19886,8 @@ func valueToGoStringThetest(v interface{}, typ string) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
 }
-func extensionToGoStringThetest(m github_com_gogo_protobuf_proto.Message) string {
-	e := github_com_gogo_protobuf_proto.GetUnsafeExtensionsMap(m)
+func extensionToGoStringThetest(m proto.Message) string {
+	e := proto.GetUnsafeExtensionsMap(m)
 	if e == nil {
 		return "nil"
 	}
@@ -21831,7 +21422,7 @@ func NewPopulatedMyExtendable(r randyThetest, easy bool) *MyExtendable {
 				wire = 5
 			}
 			dAtA := randFieldThetest(nil, r, fieldNumber, wire)
-			github_com_gogo_protobuf_proto.SetRawExtension(this, int32(fieldNumber), dAtA)
+			proto.SetRawExtension(this, int32(fieldNumber), dAtA)
 		}
 	}
 	if !easy && r.Intn(10) != 0 {
@@ -21875,7 +21466,7 @@ func NewPopulatedOtherExtenable(r randyThetest, easy bool) *OtherExtenable {
 				wire = 5
 			}
 			dAtA := randFieldThetest(nil, r, fieldNumber, wire)
-			github_com_gogo_protobuf_proto.SetRawExtension(this, int32(fieldNumber), dAtA)
+			proto.SetRawExtension(this, int32(fieldNumber), dAtA)
 		}
 	}
 	if !easy && r.Intn(10) != 0 {
@@ -22489,7 +22080,7 @@ func NewPopulatedNoExtensionsMap(r randyThetest, easy bool) *NoExtensionsMap {
 				wire = 5
 			}
 			dAtA := randFieldThetest(nil, r, fieldNumber, wire)
-			github_com_gogo_protobuf_proto.SetRawExtension(this, int32(fieldNumber), dAtA)
+			proto.SetRawExtension(this, int32(fieldNumber), dAtA)
 		}
 	}
 	if !easy && r.Intn(10) != 0 {
@@ -23840,7 +23431,7 @@ func (m *MyExtendable) Size() (n int) {
 	if m.Field1 != nil {
 		n += 1 + sovThetest(uint64(*m.Field1))
 	}
-	n += github_com_gogo_protobuf_proto.SizeOfInternalExtension(m)
+	n += proto.SizeOfInternalExtension(m)
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -23860,7 +23451,7 @@ func (m *OtherExtenable) Size() (n int) {
 		l = m.M.Size()
 		n += 1 + l + sovThetest(uint64(l))
 	}
-	n += github_com_gogo_protobuf_proto.SizeOfInternalExtension(m)
+	n += proto.SizeOfInternalExtension(m)
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -25076,7 +24667,7 @@ func (this *MyExtendable) String() string {
 	}
 	s := strings.Join([]string{`&MyExtendable{`,
 		`Field1:` + valueToStringThetest(this.Field1) + `,`,
-		`XXX_InternalExtensions:` + github_com_gogo_protobuf_proto.StringFromInternalExtension(this) + `,`,
+		`XXX_InternalExtensions:` + proto.StringFromInternalExtension(this) + `,`,
 		`XXX_unrecognized:` + fmt.Sprintf("%v", this.XXX_unrecognized) + `,`,
 		`}`,
 	}, "")
@@ -25090,7 +24681,7 @@ func (this *OtherExtenable) String() string {
 		`Field2:` + valueToStringThetest(this.Field2) + `,`,
 		`Field13:` + valueToStringThetest(this.Field13) + `,`,
 		`M:` + strings.Replace(fmt.Sprintf("%v", this.M), "MyExtendable", "MyExtendable", 1) + `,`,
-		`XXX_InternalExtensions:` + github_com_gogo_protobuf_proto.StringFromInternalExtension(this) + `,`,
+		`XXX_InternalExtensions:` + proto.StringFromInternalExtension(this) + `,`,
 		`XXX_unrecognized:` + fmt.Sprintf("%v", this.XXX_unrecognized) + `,`,
 		`}`,
 	}, "")
@@ -25322,7 +24913,7 @@ func (this *NoExtensionsMap) String() string {
 	}
 	s := strings.Join([]string{`&NoExtensionsMap{`,
 		`Field1:` + valueToStringThetest(this.Field1) + `,`,
-		`XXX_extensions:` + github_com_gogo_protobuf_proto.StringFromExtensionsBytes(this.XXX_extensions) + `,`,
+		`XXX_extensions:` + proto.StringFromExtensionsBytes(this.XXX_extensions) + `,`,
 		`XXX_unrecognized:` + fmt.Sprintf("%v", this.XXX_unrecognized) + `,`,
 		`}`,
 	}, "")

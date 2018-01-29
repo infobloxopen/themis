@@ -36,7 +36,3 @@ func (h *health) poll() {
 	}
 	h.SetOk(true)
 }
-
-// Plugins that implements the Healther interface.
-// TODO(miek): none yet.
-var healthers = map[string]bool{}

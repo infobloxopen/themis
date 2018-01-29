@@ -70,18 +70,15 @@ func (l Logger) Name() string { return "log" }
 
 // Rule configures the logging plugin.
 type Rule struct {
-	NameScope  string
-	Class      response.Class
-	OutputFile string
-	Format     string
-	Log        *log.Logger
+	NameScope string
+	Class     response.Class
+	Format    string
+	Log       *log.Logger
 }
 
 const (
-	// DefaultLogFilename is the default output name. This is the only supported value.
-	DefaultLogFilename = "stdout"
 	// CommonLogFormat is the common log format.
-	CommonLogFormat = `{remote} ` + CommonLogEmptyValue + ` [{when}] "{type} {class} {name} {proto} {size} {>do} {>bufsize}" {rcode} {>rflags} {rsize} {duration}`
+	CommonLogFormat = `{remote} ` + CommonLogEmptyValue + ` [{when}] {>id} "{type} {class} {name} {proto} {size} {>do} {>bufsize}" {rcode} {>rflags} {rsize} {duration}`
 	// CommonLogEmptyValue is the common empty log value.
 	CommonLogEmptyValue = "-"
 	// CombinedLogFormat is the combined log format.

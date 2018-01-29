@@ -1,6 +1,15 @@
 # log
 
-*log* enables query logging to standard output.
+## Name
+
+*log* - enables query logging to standard output.
+
+## Description
+
+By just using *log* you dump all queries (and parts for the reply) on standard output. Options exist
+to tweak the output a little.
+
+Note that for busy servers this will incur a performance hit.
 
 ## Syntax
 
@@ -10,14 +19,10 @@ log
 
 * With no arguments, a query log entry is written to *stdout* in the common log format for all requests
 
-~~~ txt
-log [stdout]
-~~~
-
 Or if you want/need slightly more control:
 
 ~~~ txt
-log [NAME] stdout [FORMAT]
+log [NAME] [FORMAT]
 ~~~
 
 * `NAME` is the name to match in order to be logged
@@ -26,7 +31,7 @@ log [NAME] stdout [FORMAT]
 You can further specify the class of responses that get logged:
 
 ~~~ txt
-log [NAME] stdout [FORMAT] {
+log [NAME] [FORMAT] {
     class [success|denial|error|all]
 }
 ~~~
@@ -70,7 +75,7 @@ The following place holders are supported:
 The default Common Log Format is:
 
 ~~~ txt
-`{remote} - [{when}] "{type} {class} {name} {proto} {size} {>do} {>bufsize}" {rcode} {>rflags} {rsize} {duration}`
+`{remote} - [{when}] {>id} "{type} {class} {name} {proto} {size} {>do} {>bufsize}" {rcode} {>rflags} {rsize} {duration}`
 ~~~
 
 ## Examples
@@ -88,7 +93,7 @@ Custom log format, for all zones (`.`)
 
 ~~~ corefile
 . {
-    log . stdout "{proto} Request: {name} {type} {>id}"
+    log . "{proto} Request: {name} {type} {>id}"
 }
 ~~~
 
@@ -96,7 +101,7 @@ Only log denials for example.org (and below to a file)
 
 ~~~ corefile
 . {
-    log example.org stdout {
+    log example.org {
         class denial
     }
 }

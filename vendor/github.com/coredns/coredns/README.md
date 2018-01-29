@@ -3,6 +3,7 @@
 [![Documentation](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/coredns/coredns)
 [![Build Status](https://img.shields.io/travis/coredns/coredns/master.svg?label=build)](https://travis-ci.org/coredns/coredns)
 [![Code Coverage](https://img.shields.io/codecov/c/github/coredns/coredns/master.svg)](https://codecov.io/github/coredns/coredns?branch=master)
+[![Docker Pulls](https://img.shields.io/docker/pulls/coredns/coredns.svg)](https://hub.docker.com/r/coredns/coredns)
 [![Go Report Card](https://goreportcard.com/badge/github.com/coredns/coredns)](https://goreportcard.com/report/coredns/coredns)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fcoredns%2Fcoredns.svg?type=shield)](https://app.fossa.io/projects/git%2Bhttps%3A%2F%2Fgithub.com%2Fcoredns%2Fcoredns?ref=badge_shield)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/1250/badge)](https://bestpractices.coreinfrastructure.org/projects/1250)
@@ -39,6 +40,7 @@ Currently CoreDNS is able to:
 * Provide metrics (by using Prometheus) (*metrics*).
 * Provide query (*log*) and error (*error*) logging.
 * Support the CH class: `version.bind` and friends (*chaos*).
+* Support the RFC 5001 DNS name server identifier (NSID) option (*nsid*).
 * Profiling support (*pprof*).
 * Rewrite queries (qtype, qclass and qname) (*rewrite*).
 * Echo back the IP address, transport and port number used (*whoami*). This is also the default

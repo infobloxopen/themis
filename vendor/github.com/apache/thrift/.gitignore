@@ -24,8 +24,14 @@
 tags
 
 .*project
+.classpath
+.settings
+.checkstyle
 junit*.properties
 .idea
+*.iml
+*.ipr
+*.iws
 gen-*
 Makefile
 Makefile.in
@@ -44,6 +50,7 @@ project.lock.json
 .DS_Store
 .svn
 .vagrant
+.vscode
 
 /contrib/.vagrant/
 /aclocal/libtool.m4
@@ -221,7 +228,10 @@ project.lock.json
 /lib/erl/test/Thrift_omit_without.thrift
 /lib/haxe/test/bin
 /lib/hs/dist
+/lib/java/.gradle
+/lib/java/android/.gradle
 /lib/java/build
+/lib/java/target
 /lib/js/dist
 /lib/js/doc
 /lib/js/package-lock.json
@@ -289,6 +299,8 @@ project.lock.json
 /ltmain.sh
 /missing
 /node_modules/
+/vendor/
+/composer.lock
 /stamp-h1
 /test/features/results.json
 /test/results.json

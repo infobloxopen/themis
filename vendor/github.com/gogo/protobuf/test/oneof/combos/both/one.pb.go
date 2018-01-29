@@ -23,16 +23,15 @@ import _ "github.com/gogo/protobuf/gogoproto"
 import github_com_gogo_protobuf_test_custom "github.com/gogo/protobuf/test/custom"
 import github_com_gogo_protobuf_test_casttype "github.com/gogo/protobuf/test/casttype"
 
-import github_com_gogo_protobuf_protoc_gen_gogo_descriptor "github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
-import github_com_gogo_protobuf_proto "github.com/gogo/protobuf/proto"
-import compress_gzip "compress/gzip"
+import descriptor "github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
+import gzip "compress/gzip"
 import bytes "bytes"
-import io_ioutil "io/ioutil"
+import ioutil "io/ioutil"
 
 import strings "strings"
 import reflect "reflect"
 
-import encoding_binary "encoding/binary"
+import binary "encoding/binary"
 
 import io "io"
 
@@ -977,20 +976,20 @@ func init() {
 	proto.RegisterType((*TwoOneofs)(nil), "one.TwoOneofs")
 	proto.RegisterType((*CustomOneof)(nil), "one.CustomOneof")
 }
-func (this *Subby) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *Subby) Description() (desc *descriptor.FileDescriptorSet) {
 	return OneDescription()
 }
-func (this *AllTypesOneOf) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *AllTypesOneOf) Description() (desc *descriptor.FileDescriptorSet) {
 	return OneDescription()
 }
-func (this *TwoOneofs) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *TwoOneofs) Description() (desc *descriptor.FileDescriptorSet) {
 	return OneDescription()
 }
-func (this *CustomOneof) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *CustomOneof) Description() (desc *descriptor.FileDescriptorSet) {
 	return OneDescription()
 }
-func OneDescription() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
-	d := &github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet{}
+func OneDescription() (desc *descriptor.FileDescriptorSet) {
+	d := &descriptor.FileDescriptorSet{}
 	var gzipped = []byte{
 		// 4152 bytes of a gzipped FileDescriptorSet
 		0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x5a, 0x6b, 0x6c, 0x1c, 0xd7,
@@ -1255,15 +1254,15 @@ func OneDescription() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor
 		0xbb, 0x8f, 0xfb, 0x36, 0x04, 0x35, 0x00, 0x00,
 	}
 	r := bytes.NewReader(gzipped)
-	gzipr, err := compress_gzip.NewReader(r)
+	gzipr, err := gzip.NewReader(r)
 	if err != nil {
 		panic(err)
 	}
-	ungzipped, err := io_ioutil.ReadAll(gzipr)
+	ungzipped, err := ioutil.ReadAll(gzipr)
 	if err != nil {
 		panic(err)
 	}
-	if err := github_com_gogo_protobuf_proto.Unmarshal(ungzipped, d); err != nil {
+	if err := proto.Unmarshal(ungzipped, d); err != nil {
 		panic(err)
 	}
 	return d
@@ -1309,10 +1308,7 @@ func (this *Subby) VerboseEqual(that interface{}) error {
 }
 func (this *Subby) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*Subby)
@@ -1325,10 +1321,7 @@ func (this *Subby) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -1867,10 +1860,7 @@ func (this *AllTypesOneOf_SubMessage) VerboseEqual(that interface{}) error {
 }
 func (this *AllTypesOneOf) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AllTypesOneOf)
@@ -1883,10 +1873,7 @@ func (this *AllTypesOneOf) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -1906,10 +1893,7 @@ func (this *AllTypesOneOf) Equal(that interface{}) bool {
 }
 func (this *AllTypesOneOf_Field1) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AllTypesOneOf_Field1)
@@ -1922,10 +1906,7 @@ func (this *AllTypesOneOf_Field1) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -1936,10 +1917,7 @@ func (this *AllTypesOneOf_Field1) Equal(that interface{}) bool {
 }
 func (this *AllTypesOneOf_Field2) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AllTypesOneOf_Field2)
@@ -1952,10 +1930,7 @@ func (this *AllTypesOneOf_Field2) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -1966,10 +1941,7 @@ func (this *AllTypesOneOf_Field2) Equal(that interface{}) bool {
 }
 func (this *AllTypesOneOf_Field3) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AllTypesOneOf_Field3)
@@ -1982,10 +1954,7 @@ func (this *AllTypesOneOf_Field3) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -1996,10 +1965,7 @@ func (this *AllTypesOneOf_Field3) Equal(that interface{}) bool {
 }
 func (this *AllTypesOneOf_Field4) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AllTypesOneOf_Field4)
@@ -2012,10 +1978,7 @@ func (this *AllTypesOneOf_Field4) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -2026,10 +1989,7 @@ func (this *AllTypesOneOf_Field4) Equal(that interface{}) bool {
 }
 func (this *AllTypesOneOf_Field5) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AllTypesOneOf_Field5)
@@ -2042,10 +2002,7 @@ func (this *AllTypesOneOf_Field5) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -2056,10 +2013,7 @@ func (this *AllTypesOneOf_Field5) Equal(that interface{}) bool {
 }
 func (this *AllTypesOneOf_Field6) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AllTypesOneOf_Field6)
@@ -2072,10 +2026,7 @@ func (this *AllTypesOneOf_Field6) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -2086,10 +2037,7 @@ func (this *AllTypesOneOf_Field6) Equal(that interface{}) bool {
 }
 func (this *AllTypesOneOf_Field7) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AllTypesOneOf_Field7)
@@ -2102,10 +2050,7 @@ func (this *AllTypesOneOf_Field7) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -2116,10 +2061,7 @@ func (this *AllTypesOneOf_Field7) Equal(that interface{}) bool {
 }
 func (this *AllTypesOneOf_Field8) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AllTypesOneOf_Field8)
@@ -2132,10 +2074,7 @@ func (this *AllTypesOneOf_Field8) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -2146,10 +2085,7 @@ func (this *AllTypesOneOf_Field8) Equal(that interface{}) bool {
 }
 func (this *AllTypesOneOf_Field9) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AllTypesOneOf_Field9)
@@ -2162,10 +2098,7 @@ func (this *AllTypesOneOf_Field9) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -2176,10 +2109,7 @@ func (this *AllTypesOneOf_Field9) Equal(that interface{}) bool {
 }
 func (this *AllTypesOneOf_Field10) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AllTypesOneOf_Field10)
@@ -2192,10 +2122,7 @@ func (this *AllTypesOneOf_Field10) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -2206,10 +2133,7 @@ func (this *AllTypesOneOf_Field10) Equal(that interface{}) bool {
 }
 func (this *AllTypesOneOf_Field11) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AllTypesOneOf_Field11)
@@ -2222,10 +2146,7 @@ func (this *AllTypesOneOf_Field11) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -2236,10 +2157,7 @@ func (this *AllTypesOneOf_Field11) Equal(that interface{}) bool {
 }
 func (this *AllTypesOneOf_Field12) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AllTypesOneOf_Field12)
@@ -2252,10 +2170,7 @@ func (this *AllTypesOneOf_Field12) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -2266,10 +2181,7 @@ func (this *AllTypesOneOf_Field12) Equal(that interface{}) bool {
 }
 func (this *AllTypesOneOf_Field13) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AllTypesOneOf_Field13)
@@ -2282,10 +2194,7 @@ func (this *AllTypesOneOf_Field13) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -2296,10 +2205,7 @@ func (this *AllTypesOneOf_Field13) Equal(that interface{}) bool {
 }
 func (this *AllTypesOneOf_Field14) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AllTypesOneOf_Field14)
@@ -2312,10 +2218,7 @@ func (this *AllTypesOneOf_Field14) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -2326,10 +2229,7 @@ func (this *AllTypesOneOf_Field14) Equal(that interface{}) bool {
 }
 func (this *AllTypesOneOf_Field15) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AllTypesOneOf_Field15)
@@ -2342,10 +2242,7 @@ func (this *AllTypesOneOf_Field15) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -2356,10 +2253,7 @@ func (this *AllTypesOneOf_Field15) Equal(that interface{}) bool {
 }
 func (this *AllTypesOneOf_SubMessage) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*AllTypesOneOf_SubMessage)
@@ -2372,10 +2266,7 @@ func (this *AllTypesOneOf_SubMessage) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -2614,10 +2505,7 @@ func (this *TwoOneofs_SubMessage2) VerboseEqual(that interface{}) error {
 }
 func (this *TwoOneofs) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*TwoOneofs)
@@ -2630,10 +2518,7 @@ func (this *TwoOneofs) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -2662,10 +2547,7 @@ func (this *TwoOneofs) Equal(that interface{}) bool {
 }
 func (this *TwoOneofs_Field1) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*TwoOneofs_Field1)
@@ -2678,10 +2560,7 @@ func (this *TwoOneofs_Field1) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -2692,10 +2571,7 @@ func (this *TwoOneofs_Field1) Equal(that interface{}) bool {
 }
 func (this *TwoOneofs_Field2) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*TwoOneofs_Field2)
@@ -2708,10 +2584,7 @@ func (this *TwoOneofs_Field2) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -2722,10 +2595,7 @@ func (this *TwoOneofs_Field2) Equal(that interface{}) bool {
 }
 func (this *TwoOneofs_Field3) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*TwoOneofs_Field3)
@@ -2738,10 +2608,7 @@ func (this *TwoOneofs_Field3) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -2752,10 +2619,7 @@ func (this *TwoOneofs_Field3) Equal(that interface{}) bool {
 }
 func (this *TwoOneofs_Field34) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*TwoOneofs_Field34)
@@ -2768,10 +2632,7 @@ func (this *TwoOneofs_Field34) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -2782,10 +2643,7 @@ func (this *TwoOneofs_Field34) Equal(that interface{}) bool {
 }
 func (this *TwoOneofs_Field35) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*TwoOneofs_Field35)
@@ -2798,10 +2656,7 @@ func (this *TwoOneofs_Field35) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -2812,10 +2667,7 @@ func (this *TwoOneofs_Field35) Equal(that interface{}) bool {
 }
 func (this *TwoOneofs_SubMessage2) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*TwoOneofs_SubMessage2)
@@ -2828,10 +2680,7 @@ func (this *TwoOneofs_SubMessage2) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -3001,10 +2850,7 @@ func (this *CustomOneof_MyCustomName) VerboseEqual(that interface{}) error {
 }
 func (this *CustomOneof) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*CustomOneof)
@@ -3017,10 +2863,7 @@ func (this *CustomOneof) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -3040,10 +2883,7 @@ func (this *CustomOneof) Equal(that interface{}) bool {
 }
 func (this *CustomOneof_Stringy) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*CustomOneof_Stringy)
@@ -3056,10 +2896,7 @@ func (this *CustomOneof_Stringy) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -3070,10 +2907,7 @@ func (this *CustomOneof_Stringy) Equal(that interface{}) bool {
 }
 func (this *CustomOneof_CustomType) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*CustomOneof_CustomType)
@@ -3086,10 +2920,7 @@ func (this *CustomOneof_CustomType) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -3100,10 +2931,7 @@ func (this *CustomOneof_CustomType) Equal(that interface{}) bool {
 }
 func (this *CustomOneof_CastType) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*CustomOneof_CastType)
@@ -3116,10 +2944,7 @@ func (this *CustomOneof_CastType) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -3130,10 +2955,7 @@ func (this *CustomOneof_CastType) Equal(that interface{}) bool {
 }
 func (this *CustomOneof_MyCustomName) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*CustomOneof_MyCustomName)
@@ -3146,10 +2968,7 @@ func (this *CustomOneof_MyCustomName) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -3496,7 +3315,7 @@ func (m *AllTypesOneOf_Field1) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	dAtA[i] = 0x9
 	i++
-	encoding_binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(m.Field1))))
+	binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(m.Field1))))
 	i += 8
 	return i, nil
 }
@@ -3504,7 +3323,7 @@ func (m *AllTypesOneOf_Field2) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	dAtA[i] = 0x15
 	i++
-	encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.Field2))))
+	binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.Field2))))
 	i += 4
 	return i, nil
 }
@@ -3554,7 +3373,7 @@ func (m *AllTypesOneOf_Field9) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	dAtA[i] = 0x4d
 	i++
-	encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(m.Field9))
+	binary.LittleEndian.PutUint32(dAtA[i:], uint32(m.Field9))
 	i += 4
 	return i, nil
 }
@@ -3562,7 +3381,7 @@ func (m *AllTypesOneOf_Field10) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	dAtA[i] = 0x55
 	i++
-	encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(m.Field10))
+	binary.LittleEndian.PutUint32(dAtA[i:], uint32(m.Field10))
 	i += 4
 	return i, nil
 }
@@ -3570,7 +3389,7 @@ func (m *AllTypesOneOf_Field11) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	dAtA[i] = 0x59
 	i++
-	encoding_binary.LittleEndian.PutUint64(dAtA[i:], uint64(m.Field11))
+	binary.LittleEndian.PutUint64(dAtA[i:], uint64(m.Field11))
 	i += 8
 	return i, nil
 }
@@ -3578,7 +3397,7 @@ func (m *AllTypesOneOf_Field12) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	dAtA[i] = 0x61
 	i++
-	encoding_binary.LittleEndian.PutUint64(dAtA[i:], uint64(m.Field12))
+	binary.LittleEndian.PutUint64(dAtA[i:], uint64(m.Field12))
 	i += 8
 	return i, nil
 }
@@ -3667,7 +3486,7 @@ func (m *TwoOneofs_Field1) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	dAtA[i] = 0x9
 	i++
-	encoding_binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(m.Field1))))
+	binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(m.Field1))))
 	i += 8
 	return i, nil
 }
@@ -3675,7 +3494,7 @@ func (m *TwoOneofs_Field2) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	dAtA[i] = 0x15
 	i++
-	encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.Field2))))
+	binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.Field2))))
 	i += 4
 	return i, nil
 }
@@ -4820,7 +4639,7 @@ func (m *AllTypesOneOf) Unmarshal(dAtA []byte) error {
 			if (iNdEx + 8) > l {
 				return io.ErrUnexpectedEOF
 			}
-			v = uint64(encoding_binary.LittleEndian.Uint64(dAtA[iNdEx:]))
+			v = uint64(binary.LittleEndian.Uint64(dAtA[iNdEx:]))
 			iNdEx += 8
 			m.TestOneof = &AllTypesOneOf_Field1{float64(math.Float64frombits(v))}
 		case 2:
@@ -4831,7 +4650,7 @@ func (m *AllTypesOneOf) Unmarshal(dAtA []byte) error {
 			if (iNdEx + 4) > l {
 				return io.ErrUnexpectedEOF
 			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			v = uint32(binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 			iNdEx += 4
 			m.TestOneof = &AllTypesOneOf_Field2{float32(math.Float32frombits(v))}
 		case 3:
@@ -4964,7 +4783,7 @@ func (m *AllTypesOneOf) Unmarshal(dAtA []byte) error {
 			if (iNdEx + 4) > l {
 				return io.ErrUnexpectedEOF
 			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			v = uint32(binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 			iNdEx += 4
 			m.TestOneof = &AllTypesOneOf_Field9{v}
 		case 10:
@@ -4975,7 +4794,7 @@ func (m *AllTypesOneOf) Unmarshal(dAtA []byte) error {
 			if (iNdEx + 4) > l {
 				return io.ErrUnexpectedEOF
 			}
-			v = int32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			v = int32(binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 			iNdEx += 4
 			m.TestOneof = &AllTypesOneOf_Field10{v}
 		case 11:
@@ -4986,7 +4805,7 @@ func (m *AllTypesOneOf) Unmarshal(dAtA []byte) error {
 			if (iNdEx + 8) > l {
 				return io.ErrUnexpectedEOF
 			}
-			v = uint64(encoding_binary.LittleEndian.Uint64(dAtA[iNdEx:]))
+			v = uint64(binary.LittleEndian.Uint64(dAtA[iNdEx:]))
 			iNdEx += 8
 			m.TestOneof = &AllTypesOneOf_Field11{v}
 		case 12:
@@ -4997,7 +4816,7 @@ func (m *AllTypesOneOf) Unmarshal(dAtA []byte) error {
 			if (iNdEx + 8) > l {
 				return io.ErrUnexpectedEOF
 			}
-			v = int64(encoding_binary.LittleEndian.Uint64(dAtA[iNdEx:]))
+			v = int64(binary.LittleEndian.Uint64(dAtA[iNdEx:]))
 			iNdEx += 8
 			m.TestOneof = &AllTypesOneOf_Field12{v}
 		case 13:
@@ -5171,7 +4990,7 @@ func (m *TwoOneofs) Unmarshal(dAtA []byte) error {
 			if (iNdEx + 8) > l {
 				return io.ErrUnexpectedEOF
 			}
-			v = uint64(encoding_binary.LittleEndian.Uint64(dAtA[iNdEx:]))
+			v = uint64(binary.LittleEndian.Uint64(dAtA[iNdEx:]))
 			iNdEx += 8
 			m.One = &TwoOneofs_Field1{float64(math.Float64frombits(v))}
 		case 2:
@@ -5182,7 +5001,7 @@ func (m *TwoOneofs) Unmarshal(dAtA []byte) error {
 			if (iNdEx + 4) > l {
 				return io.ErrUnexpectedEOF
 			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			v = uint32(binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 			iNdEx += 4
 			m.One = &TwoOneofs_Field2{float32(math.Float32frombits(v))}
 		case 3:

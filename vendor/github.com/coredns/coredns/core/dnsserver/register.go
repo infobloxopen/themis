@@ -22,7 +22,7 @@ func init() {
 	flag.StringVar(&Port, serverType+".port", DefaultPort, "Default port")
 
 	caddy.RegisterServerType(serverType, caddy.ServerType{
-		Directives: func() []string { return directives },
+		Directives: func() []string { return Directives },
 		DefaultInput: func() caddy.Input {
 			return caddy.CaddyfileInput{
 				Filepath:       "Corefile",
@@ -80,7 +80,7 @@ func (h *dnsContext) InspectServerBlocks(sourceFile string, serverBlocks []caddy
 			}
 
 			ones, bits := za.IPNet.Mask.Size()
-			if (bits-ones)%8 != 0 { // only do this for non-octet bounderies
+			if (bits-ones)%8 != 0 { // only do this for non-octet boundaries
 				cfg.FilterFunc = func(s string) bool {
 					// TODO(miek): strings.ToLower! Slow and allocates new string.
 					addr := dnsutil.ExtractAddressFromReverse(strings.ToLower(s))
@@ -165,6 +165,21 @@ func (c *Config) Handler(name string) plugin.Handler {
 		return h
 	}
 	return nil
+}
+
+// Handlers returns a slice of plugins that have been registered. This can be used to
+// inspect and interact with registered plugins but cannot be used to remove or add plugins.
+// Note that this is order dependent and the order is defined in directives.go, i.e. if your plugin
+// comes before the plugin you are checking; it will not be there (yet).
+func (c *Config) Handlers() []plugin.Handler {
+	if c.registry == nil {
+		return nil
+	}
+	hs := make([]plugin.Handler, 0, len(c.registry))
+	for k := range c.registry {
+		hs = append(hs, c.registry[k])
+	}
+	return hs
 }
 
 // groupSiteConfigsByListenAddr groups site configs by their listen

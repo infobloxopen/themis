@@ -389,10 +389,12 @@ func TestConsumerExtraOffsets(t *testing.T) {
 	newFetchResponse.AddRecord("my_topic", 0, nil, testMsg, 2)
 	newFetchResponse.AddRecord("my_topic", 0, nil, testMsg, 3)
 	newFetchResponse.AddRecord("my_topic", 0, nil, testMsg, 4)
+	newFetchResponse.SetLastOffsetDelta("my_topic", 0, 4)
 	newFetchResponse.SetLastStableOffset("my_topic", 0, 4)
 	for _, fetchResponse1 := range []*FetchResponse{legacyFetchResponse, newFetchResponse} {
 		var offsetResponseVersion int16
 		cfg := NewConfig()
+		cfg.Consumer.Return.Errors = true
 		if fetchResponse1.Version >= 4 {
 			cfg.Version = V0_11_0_0
 			offsetResponseVersion = 1
@@ -426,13 +428,67 @@ func TestConsumerExtraOffsets(t *testing.T) {
 
 		// Then: messages with offsets 1 and 2 are not returned even though they
 		// are present in the response.
-		assertMessageOffset(t, <-consumer.Messages(), 3)
-		assertMessageOffset(t, <-consumer.Messages(), 4)
+		select {
+		case msg := <-consumer.Messages():
+			assertMessageOffset(t, msg, 3)
+		case err := <-consumer.Errors():
+			t.Fatal(err)
+		}
+
+		select {
+		case msg := <-consumer.Messages():
+			assertMessageOffset(t, msg, 4)
+		case err := <-consumer.Errors():
+			t.Fatal(err)
+		}
 
 		safeClose(t, consumer)
 		safeClose(t, master)
 		broker0.Close()
 	}
+}
+
+func TestConsumeMessageWithNewerFetchAPIVersion(t *testing.T) {
+	// Given
+	fetchResponse1 := &FetchResponse{Version: 4}
+	fetchResponse1.AddMessage("my_topic", 0, nil, testMsg, 1)
+	fetchResponse1.AddMessage("my_topic", 0, nil, testMsg, 2)
+
+	cfg := NewConfig()
+	cfg.Version = V0_11_0_0
+
+	broker0 := NewMockBroker(t, 0)
+	fetchResponse2 := &FetchResponse{}
+	fetchResponse2.Version = 4
+	fetchResponse2.AddError("my_topic", 0, ErrNoError)
+	broker0.SetHandlerByMap(map[string]MockResponse{
+		"MetadataRequest": NewMockMetadataResponse(t).
+			SetBroker(broker0.Addr(), broker0.BrokerID()).
+			SetLeader("my_topic", 0, broker0.BrokerID()),
+		"OffsetRequest": NewMockOffsetResponse(t).
+			SetVersion(1).
+			SetOffset("my_topic", 0, OffsetNewest, 1234).
+			SetOffset("my_topic", 0, OffsetOldest, 0),
+		"FetchRequest": NewMockSequence(fetchResponse1, fetchResponse2),
+	})
+
+	master, err := NewConsumer([]string{broker0.Addr()}, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// When
+	consumer, err := master.ConsumePartition("my_topic", 0, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertMessageOffset(t, <-consumer.Messages(), 1)
+	assertMessageOffset(t, <-consumer.Messages(), 2)
+
+	safeClose(t, consumer)
+	safeClose(t, master)
+	broker0.Close()
 }
 
 // It is fine if offsets of fetched messages are not sequential (although
@@ -447,6 +503,7 @@ func TestConsumerNonSequentialOffsets(t *testing.T) {
 	newFetchResponse.AddRecord("my_topic", 0, nil, testMsg, 5)
 	newFetchResponse.AddRecord("my_topic", 0, nil, testMsg, 7)
 	newFetchResponse.AddRecord("my_topic", 0, nil, testMsg, 11)
+	newFetchResponse.SetLastOffsetDelta("my_topic", 0, 11)
 	newFetchResponse.SetLastStableOffset("my_topic", 0, 11)
 	for _, fetchResponse1 := range []*FetchResponse{legacyFetchResponse, newFetchResponse} {
 		var offsetResponseVersion int16

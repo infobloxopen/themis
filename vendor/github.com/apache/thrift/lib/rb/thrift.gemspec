@@ -9,8 +9,8 @@ Gem::Specification.new do |s|
   s.homepage    = 'http://thrift.apache.org'
   s.summary     = %q{Ruby bindings for Apache Thrift}
   s.description = %q{Ruby bindings for the Apache Thrift RPC system}
-  s.license = 'Apache 2.0'
-  s.extensions = ['ext/extconf.rb']
+  s.license     = 'Apache-2.0'
+  s.extensions  = ['ext/extconf.rb']
 
   s.has_rdoc      = true
   s.rdoc_options  = %w[--line-numbers --inline-source --title Thrift --main README]
@@ -29,7 +29,7 @@ Gem::Specification.new do |s|
 
   s.add_development_dependency 'rspec', ['>= 2.10.0', '< 2.14.0']
   s.add_development_dependency "rack", "~> 1.5"
-  s.add_development_dependency "rack-test", "~> 0.6"
+  s.add_development_dependency "rack-test", "< 0.8.0" # until we no longer build on trusty, then "~> 0.8.2"
   s.add_development_dependency "thin", "~> 1.5"
   s.add_development_dependency "bundler", "~> 1"
   s.add_development_dependency 'rake', '~> 10.5'

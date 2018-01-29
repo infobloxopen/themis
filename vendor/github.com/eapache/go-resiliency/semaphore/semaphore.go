@@ -43,3 +43,10 @@ func (s *Semaphore) Acquire() error {
 func (s *Semaphore) Release() {
 	<-s.sem
 }
+
+// IsEmpty will return true if no tickets are being held at that instant.
+// It is safe to call concurrently with Acquire and Release, though do note
+// that the result may then be unpredictable.
+func (s *Semaphore) IsEmpty() bool {
+	return len(s.sem) == 0
+}

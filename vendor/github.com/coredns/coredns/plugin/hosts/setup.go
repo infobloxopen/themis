@@ -105,14 +105,9 @@ func hostsParse(c *caddy.Controller) (Hosts, error) {
 		for c.NextBlock() {
 			switch c.Val() {
 			case "fallthrough":
-				args := c.RemainingArgs()
-				if len(args) == 0 {
-					h.Fallthrough = true
-					continue
-				}
-				return h, c.ArgErr()
+				h.Fall.SetZonesFromArgs(c.RemainingArgs())
 			default:
-				if !h.Fallthrough {
+				if len(h.Fall.Zones) == 0 {
 					line := strings.Join(append([]string{c.Val()}, c.RemainingArgs()...), " ")
 					inline = append(inline, line)
 					continue

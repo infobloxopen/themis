@@ -27,16 +27,15 @@ import fmt "fmt"
 import math "math"
 import _ "github.com/gogo/protobuf/gogoproto"
 
-import github_com_gogo_protobuf_protoc_gen_gogo_descriptor "github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
-import github_com_gogo_protobuf_proto "github.com/gogo/protobuf/proto"
-import compress_gzip "compress/gzip"
+import descriptor "github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
+import gzip "compress/gzip"
 import bytes "bytes"
-import io_ioutil "io/ioutil"
+import ioutil "io/ioutil"
 
 import strings "strings"
 import reflect "reflect"
 
-import encoding_binary "encoding/binary"
+import binary "encoding/binary"
 
 import io "io"
 
@@ -177,41 +176,41 @@ func init() {
 	proto.RegisterType((*OldU)(nil), "unrecognized.OldU")
 	proto.RegisterType((*OldUnoM)(nil), "unrecognized.OldUnoM")
 }
-func (this *A) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *A) Description() (desc *descriptor.FileDescriptorSet) {
 	return UnrecognizedDescription()
 }
-func (this *B) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *B) Description() (desc *descriptor.FileDescriptorSet) {
 	return UnrecognizedDescription()
 }
-func (this *D) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *D) Description() (desc *descriptor.FileDescriptorSet) {
 	return UnrecognizedDescription()
 }
-func (this *C) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *C) Description() (desc *descriptor.FileDescriptorSet) {
 	return UnrecognizedDescription()
 }
-func (this *U) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *U) Description() (desc *descriptor.FileDescriptorSet) {
 	return UnrecognizedDescription()
 }
-func (this *UnoM) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *UnoM) Description() (desc *descriptor.FileDescriptorSet) {
 	return UnrecognizedDescription()
 }
-func (this *OldA) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *OldA) Description() (desc *descriptor.FileDescriptorSet) {
 	return UnrecognizedDescription()
 }
-func (this *OldB) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *OldB) Description() (desc *descriptor.FileDescriptorSet) {
 	return UnrecognizedDescription()
 }
-func (this *OldC) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *OldC) Description() (desc *descriptor.FileDescriptorSet) {
 	return UnrecognizedDescription()
 }
-func (this *OldU) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *OldU) Description() (desc *descriptor.FileDescriptorSet) {
 	return UnrecognizedDescription()
 }
-func (this *OldUnoM) Description() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
+func (this *OldUnoM) Description() (desc *descriptor.FileDescriptorSet) {
 	return UnrecognizedDescription()
 }
-func UnrecognizedDescription() (desc *github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet) {
-	d := &github_com_gogo_protobuf_protoc_gen_gogo_descriptor.FileDescriptorSet{}
+func UnrecognizedDescription() (desc *descriptor.FileDescriptorSet) {
+	d := &descriptor.FileDescriptorSet{}
 	var gzipped = []byte{
 		// 3976 bytes of a gzipped FileDescriptorSet
 		0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x5b, 0x5d, 0x70, 0xdc, 0xd6,
@@ -465,15 +464,15 @@ func UnrecognizedDescription() (desc *github_com_gogo_protobuf_protoc_gen_gogo_d
 		0xfd, 0x83, 0xff, 0xfe, 0x8a, 0x34, 0x00, 0x00,
 	}
 	r := bytes.NewReader(gzipped)
-	gzipr, err := compress_gzip.NewReader(r)
+	gzipr, err := gzip.NewReader(r)
 	if err != nil {
 		panic(err)
 	}
-	ungzipped, err := io_ioutil.ReadAll(gzipr)
+	ungzipped, err := ioutil.ReadAll(gzipr)
 	if err != nil {
 		panic(err)
 	}
-	if err := github_com_gogo_protobuf_proto.Unmarshal(ungzipped, d); err != nil {
+	if err := proto.Unmarshal(ungzipped, d); err != nil {
 		panic(err)
 	}
 	return d
@@ -524,10 +523,7 @@ func (this *A) VerboseEqual(that interface{}) error {
 }
 func (this *A) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*A)
@@ -540,10 +536,7 @@ func (this *A) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -607,10 +600,7 @@ func (this *B) VerboseEqual(that interface{}) error {
 }
 func (this *B) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*B)
@@ -623,10 +613,7 @@ func (this *B) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -685,10 +672,7 @@ func (this *D) VerboseEqual(that interface{}) error {
 }
 func (this *D) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*D)
@@ -701,10 +685,7 @@ func (this *D) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -806,10 +787,7 @@ func (this *C) VerboseEqual(that interface{}) error {
 }
 func (this *C) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*C)
@@ -822,10 +800,7 @@ func (this *C) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -932,10 +907,7 @@ func (this *U) VerboseEqual(that interface{}) error {
 }
 func (this *U) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*U)
@@ -948,10 +920,7 @@ func (this *U) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -1020,10 +989,7 @@ func (this *UnoM) VerboseEqual(that interface{}) error {
 }
 func (this *UnoM) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*UnoM)
@@ -1036,10 +1002,7 @@ func (this *UnoM) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -1108,10 +1071,7 @@ func (this *OldA) VerboseEqual(that interface{}) error {
 }
 func (this *OldA) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*OldA)
@@ -1124,10 +1084,7 @@ func (this *OldA) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -1188,10 +1145,7 @@ func (this *OldB) VerboseEqual(that interface{}) error {
 }
 func (this *OldB) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*OldB)
@@ -1204,10 +1158,7 @@ func (this *OldB) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -1298,10 +1249,7 @@ func (this *OldC) VerboseEqual(that interface{}) error {
 }
 func (this *OldC) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*OldC)
@@ -1314,10 +1262,7 @@ func (this *OldC) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -1419,10 +1364,7 @@ func (this *OldU) VerboseEqual(that interface{}) error {
 }
 func (this *OldU) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*OldU)
@@ -1435,10 +1377,7 @@ func (this *OldU) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -1513,10 +1452,7 @@ func (this *OldUnoM) VerboseEqual(that interface{}) error {
 }
 func (this *OldUnoM) Equal(that interface{}) bool {
 	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	}
 
 	that1, ok := that.(*OldUnoM)
@@ -1529,10 +1465,7 @@ func (this *OldUnoM) Equal(that interface{}) bool {
 		}
 	}
 	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
+		return this == nil
 	} else if this == nil {
 		return false
 	}
@@ -1903,7 +1836,7 @@ func (m *C) MarshalTo(dAtA []byte) (int, error) {
 	if m.Field2 != nil {
 		dAtA[i] = 0x11
 		i++
-		encoding_binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(*m.Field2))))
+		binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(*m.Field2))))
 		i += 8
 	}
 	if m.Field3 != nil {
@@ -1915,7 +1848,7 @@ func (m *C) MarshalTo(dAtA []byte) (int, error) {
 	if m.Field4 != nil {
 		dAtA[i] = 0x21
 		i++
-		encoding_binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(*m.Field4))))
+		binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(*m.Field4))))
 		i += 8
 	}
 	if len(m.Field5) > 0 {
@@ -1936,7 +1869,7 @@ func (m *C) MarshalTo(dAtA []byte) (int, error) {
 			dAtA[i] = 0x3d
 			i++
 			f4 := math.Float32bits(float32(num))
-			encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(f4))
+			binary.LittleEndian.PutUint32(dAtA[i:], uint32(f4))
 			i += 4
 		}
 	}
@@ -1966,7 +1899,7 @@ func (m *U) MarshalTo(dAtA []byte) (int, error) {
 			dAtA[i] = 0x11
 			i++
 			f5 := math.Float64bits(float64(num))
-			encoding_binary.LittleEndian.PutUint64(dAtA[i:], uint64(f5))
+			binary.LittleEndian.PutUint64(dAtA[i:], uint64(f5))
 			i += 8
 		}
 	}
@@ -2077,7 +2010,7 @@ func (m *OldC) MarshalTo(dAtA []byte) (int, error) {
 	if m.Field2 != nil {
 		dAtA[i] = 0x11
 		i++
-		encoding_binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(*m.Field2))))
+		binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(*m.Field2))))
 		i += 8
 	}
 	if m.Field3 != nil {
@@ -2096,7 +2029,7 @@ func (m *OldC) MarshalTo(dAtA []byte) (int, error) {
 			dAtA[i] = 0x3d
 			i++
 			f8 := math.Float32bits(float32(num))
-			encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(f8))
+			binary.LittleEndian.PutUint32(dAtA[i:], uint32(f8))
 			i += 4
 		}
 	}
@@ -2132,7 +2065,7 @@ func (m *OldU) MarshalTo(dAtA []byte) (int, error) {
 			dAtA[i] = 0x11
 			i++
 			f9 := math.Float64bits(float64(num))
-			encoding_binary.LittleEndian.PutUint64(dAtA[i:], uint64(f9))
+			binary.LittleEndian.PutUint64(dAtA[i:], uint64(f9))
 			i += 8
 		}
 	}
@@ -3173,7 +3106,7 @@ func (m *C) Unmarshal(dAtA []byte) error {
 			if (iNdEx + 8) > l {
 				return io.ErrUnexpectedEOF
 			}
-			v = uint64(encoding_binary.LittleEndian.Uint64(dAtA[iNdEx:]))
+			v = uint64(binary.LittleEndian.Uint64(dAtA[iNdEx:]))
 			iNdEx += 8
 			v2 := float64(math.Float64frombits(v))
 			m.Field2 = &v2
@@ -3215,7 +3148,7 @@ func (m *C) Unmarshal(dAtA []byte) error {
 			if (iNdEx + 8) > l {
 				return io.ErrUnexpectedEOF
 			}
-			v = uint64(encoding_binary.LittleEndian.Uint64(dAtA[iNdEx:]))
+			v = uint64(binary.LittleEndian.Uint64(dAtA[iNdEx:]))
 			iNdEx += 8
 			v2 := float64(math.Float64frombits(v))
 			m.Field4 = &v2
@@ -3274,7 +3207,7 @@ func (m *C) Unmarshal(dAtA []byte) error {
 				if (iNdEx + 4) > l {
 					return io.ErrUnexpectedEOF
 				}
-				v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+				v = uint32(binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 				iNdEx += 4
 				v2 := float32(math.Float32frombits(v))
 				m.Field7 = append(m.Field7, v2)
@@ -3306,7 +3239,7 @@ func (m *C) Unmarshal(dAtA []byte) error {
 					if (iNdEx + 4) > l {
 						return io.ErrUnexpectedEOF
 					}
-					v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+					v = uint32(binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 					iNdEx += 4
 					v2 := float32(math.Float32frombits(v))
 					m.Field7 = append(m.Field7, v2)
@@ -3371,7 +3304,7 @@ func (m *U) Unmarshal(dAtA []byte) error {
 				if (iNdEx + 8) > l {
 					return io.ErrUnexpectedEOF
 				}
-				v = uint64(encoding_binary.LittleEndian.Uint64(dAtA[iNdEx:]))
+				v = uint64(binary.LittleEndian.Uint64(dAtA[iNdEx:]))
 				iNdEx += 8
 				v2 := float64(math.Float64frombits(v))
 				m.Field2 = append(m.Field2, v2)
@@ -3403,7 +3336,7 @@ func (m *U) Unmarshal(dAtA []byte) error {
 					if (iNdEx + 8) > l {
 						return io.ErrUnexpectedEOF
 					}
-					v = uint64(encoding_binary.LittleEndian.Uint64(dAtA[iNdEx:]))
+					v = uint64(binary.LittleEndian.Uint64(dAtA[iNdEx:]))
 					iNdEx += 8
 					v2 := float64(math.Float64frombits(v))
 					m.Field2 = append(m.Field2, v2)
@@ -3727,7 +3660,7 @@ func (m *OldC) Unmarshal(dAtA []byte) error {
 			if (iNdEx + 8) > l {
 				return io.ErrUnexpectedEOF
 			}
-			v = uint64(encoding_binary.LittleEndian.Uint64(dAtA[iNdEx:]))
+			v = uint64(binary.LittleEndian.Uint64(dAtA[iNdEx:]))
 			iNdEx += 8
 			v2 := float64(math.Float64frombits(v))
 			m.Field2 = &v2
@@ -3787,7 +3720,7 @@ func (m *OldC) Unmarshal(dAtA []byte) error {
 				if (iNdEx + 4) > l {
 					return io.ErrUnexpectedEOF
 				}
-				v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+				v = uint32(binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 				iNdEx += 4
 				v2 := float32(math.Float32frombits(v))
 				m.Field7 = append(m.Field7, v2)
@@ -3819,7 +3752,7 @@ func (m *OldC) Unmarshal(dAtA []byte) error {
 					if (iNdEx + 4) > l {
 						return io.ErrUnexpectedEOF
 					}
-					v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+					v = uint32(binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 					iNdEx += 4
 					v2 := float32(math.Float32frombits(v))
 					m.Field7 = append(m.Field7, v2)
@@ -3914,7 +3847,7 @@ func (m *OldU) Unmarshal(dAtA []byte) error {
 				if (iNdEx + 8) > l {
 					return io.ErrUnexpectedEOF
 				}
-				v = uint64(encoding_binary.LittleEndian.Uint64(dAtA[iNdEx:]))
+				v = uint64(binary.LittleEndian.Uint64(dAtA[iNdEx:]))
 				iNdEx += 8
 				v2 := float64(math.Float64frombits(v))
 				m.Field2 = append(m.Field2, v2)
@@ -3946,7 +3879,7 @@ func (m *OldU) Unmarshal(dAtA []byte) error {
 					if (iNdEx + 8) > l {
 						return io.ErrUnexpectedEOF
 					}
-					v = uint64(encoding_binary.LittleEndian.Uint64(dAtA[iNdEx:]))
+					v = uint64(binary.LittleEndian.Uint64(dAtA[iNdEx:]))
 					iNdEx += 8
 					v2 := float64(math.Float64frombits(v))
 					m.Field2 = append(m.Field2, v2)

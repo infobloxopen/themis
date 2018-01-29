@@ -127,12 +127,16 @@ func (z *Zone) Lookup(state request.Request, qname string) ([]dns.RR, []dns.RR, 
 
 		// If we see NS records, it means the name as been delegated, and we should return the delegation.
 		if nsrrs := elem.Types(dns.TypeNS); nsrrs != nil {
-			glue := z.Glue(nsrrs, do)
-			// If qtype == NS, we should returns success to put RRs in answer.
-			if qtype == dns.TypeNS {
-				return nsrrs, nil, glue, Success
+
+			// If the query is specifically for DS and the qname matches the delegated name, we should
+			// return the DS in the answer section and leave the rest empty, i.e. just continue the loop
+			// and continue searching.
+			if qtype == dns.TypeDS && elem.Name() == qname {
+				i++
+				continue
 			}
 
+			glue := z.Glue(nsrrs, do)
 			if do {
 				dss := z.typeFromElem(elem, dns.TypeDS, do)
 				nsrrs = append(nsrrs, dss...)
@@ -231,7 +235,10 @@ func (z *Zone) Lookup(state request.Request, qname string) ([]dns.RR, []dns.RR, 
 
 	ret := z.soa(do)
 	if do {
-		deny, _ := z.Tree.Prev(qname) // TODO(miek): *found* was not used here.
+		deny, found := z.Tree.Prev(qname)
+		if !found {
+			goto Out
+		}
 		nsec := z.typeFromElem(deny, dns.TypeNSEC, do)
 		ret = append(ret, nsec...)
 

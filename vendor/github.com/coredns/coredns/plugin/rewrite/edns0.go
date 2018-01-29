@@ -78,6 +78,11 @@ func (rule *edns0NsidRule) Mode() string {
 	return rule.mode
 }
 
+// GetResponseRule return a rule to rewrite the response with. Currently not implemented.
+func (rule *edns0NsidRule) GetResponseRule() ResponseRule {
+	return ResponseRule{}
+}
+
 // Rewrite will alter the request EDNS0 local options
 func (rule *edns0LocalRule) Rewrite(w dns.ResponseWriter, r *dns.Msg) Result {
 	result := RewriteIgnored
@@ -113,6 +118,11 @@ func (rule *edns0LocalRule) Rewrite(w dns.ResponseWriter, r *dns.Msg) Result {
 // Mode returns the processing mode
 func (rule *edns0LocalRule) Mode() string {
 	return rule.mode
+}
+
+// GetResponseRule return a rule to rewrite the response with. Currently not implemented.
+func (rule *edns0LocalRule) GetResponseRule() ResponseRule {
+	return ResponseRule{}
 }
 
 // newEdns0Rule creates an EDNS0 rule of the appropriate type based on the args
@@ -194,7 +204,7 @@ func (rule *edns0VariableRule) ipToWire(family int, ipAddr string) ([]byte, erro
 	case 2:
 		return net.ParseIP(ipAddr).To16(), nil
 	}
-	return nil, fmt.Errorf("Invalid IP address family (i.e. version) %d", family)
+	return nil, fmt.Errorf("invalid IP address family (i.e. version) %d", family)
 }
 
 // uint16ToWire writes unit16 to wire/binary format
@@ -266,7 +276,7 @@ func (rule *edns0VariableRule) ruleData(w dns.ResponseWriter, r *dns.Msg) ([]byt
 		return rule.portToWire(port)
 	}
 
-	return nil, fmt.Errorf("Unable to extract data for variable %s", rule.variable)
+	return nil, fmt.Errorf("unable to extract data for variable %s", rule.variable)
 }
 
 // Rewrite will alter the request EDNS0 local options with specified variables
@@ -310,6 +320,11 @@ func (rule *edns0VariableRule) Rewrite(w dns.ResponseWriter, r *dns.Msg) Result 
 // Mode returns the processing mode
 func (rule *edns0VariableRule) Mode() string {
 	return rule.mode
+}
+
+// GetResponseRule return a rule to rewrite the response with. Currently not implemented.
+func (rule *edns0VariableRule) GetResponseRule() ResponseRule {
+	return ResponseRule{}
 }
 
 func isValidVariable(variable string) bool {
@@ -368,7 +383,6 @@ func (rule *edns0SubnetRule) fillEcsData(w dns.ResponseWriter, r *dns.Msg,
 		return fmt.Errorf("unable to fill data for EDNS0 subnet due to invalid IP family")
 	}
 
-	ecs.DraftOption = false
 	ecs.Family = uint16(family)
 	ecs.SourceScope = 0
 
@@ -422,6 +436,11 @@ func (rule *edns0SubnetRule) Rewrite(w dns.ResponseWriter, r *dns.Msg) Result {
 // Mode returns the processing mode
 func (rule *edns0SubnetRule) Mode() string {
 	return rule.mode
+}
+
+// GetResponseRule return a rule to rewrite the response with. Currently not implemented.
+func (rule *edns0SubnetRule) GetResponseRule() ResponseRule {
+	return ResponseRule{}
 }
 
 // These are all defined actions.

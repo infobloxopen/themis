@@ -27,32 +27,36 @@ ENV DEBIAN_FRONTEND noninteractive
 
 ### Add apt repos
 
-RUN apt-get update && apt-get dist-upgrade -y && apt-get install -y --no-install-recommends apt apt-transport-https curl wget apt-utils
+RUN apt-get update && \
+    apt-get dist-upgrade -y && \
+    apt-get install -y --no-install-recommends \
+      apt \
+      apt-transport-https \
+      apt-utils \
+      curl \
+      software-properties-common \
+      wget
 
 # csharp (mono)
 # RUN echo "deb http://download.mono-project.com/repo/debian xenial main" | tee /etc/apt/sources.list.d/mono.list && \
 #     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A6A19B38D3D831EF
 
 # D
-RUN wget http://master.dl.sourceforge.net/project/d-apt/files/d-apt.list -O /etc/apt/sources.list.d/d-apt.list && \
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys EBCF975E5BA24D5E && \
+    wget http://master.dl.sourceforge.net/project/d-apt/files/d-apt.list -O /etc/apt/sources.list.d/d-apt.list && \
     wget -qO - https://dlang.org/d-keyring.gpg | apt-key add -
 ENV D_VERSION 2.073.2-0
 
 # Dart
 RUN curl https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - && \
-    curl https://storage.googleapis.com/download.dartlang.org/linux/debian/dart_stable.list > /etc/apt/sources.list.d/dart_stable.list && \
-    sed -i /etc/apt/sources.list.d/dart_stable.list -e 's/https:/http:/g'
-# since ubuntu-artful can't run dart, we'll run 1.240 on xenial for now
-ENV DART_VERSION 1.24.2-1
+    curl https://storage.googleapis.com/download.dartlang.org/linux/debian/dart_stable.list > \
+      /etc/apt/sources.list.d/dart_stable.list
+ENV DART_VERSION 1.22.1-1
 
-# dotnet (core) 2.0.0
+# dotnet (core)
 RUN curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.gpg && \
-    echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-xenial-prod xenial main" > /etc/apt/sources.list.d/dotnetdev.list
-
-# node.js (this step runs apt-get update internally)
-# note: node 8.5 introduced some issues with directory handling / jsdoc / something... using 7.x for now
-# RUN curl -sL https://deb.nodesource.com/setup_7.x | bash
-
+    echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-xenial-prod xenial main" > \
+      /etc/apt/sources.list.d/dotnetdev.list
 
 ### install general dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -121,7 +125,7 @@ ENV PATH /usr/lib/dart/bin:$PATH
 
 RUN apt-get install -y --no-install-recommends \
 `# dotnet core dependencies` \
-      dotnet-sdk-2.0.0
+      dotnet-sdk-2.0.3
 
 RUN apt-get install -y --no-install-recommends \
 `# Erlang dependencies` \
@@ -150,9 +154,9 @@ RUN apt-get install -y --no-install-recommends \
       haxe \
       neko \
       neko-dev \
-      libneko0
-RUN haxelib setup --always /usr/share/haxe/lib && \
-    haxelib install --always hxcpp 3.4.64
+      libneko0 && \
+    haxelib setup --always /usr/share/haxe/lib && \
+    haxelib install --always hxcpp 3.4.64 2>&1 > /dev/null
 # note: hxcpp 3.4.185 (latest) no longer ships static libraries, and caused a build failure
 
 RUN apt-get install -y --no-install-recommends \
@@ -197,7 +201,7 @@ RUN apt-get install -y --no-install-recommends \
       php7.0-dev \
       php-pear \
       re2c \
-      phpunit
+      composer
 
 RUN apt-get install -y --no-install-recommends \
 `# Python dependencies` \
