@@ -29,6 +29,7 @@ var (
 func TestPolicy(t *testing.T) {
 	p := newPolicyPlugin()
 	p.transfer[AttrNamePolicyID] = struct{}{}
+	p.passthrough = []string{"google.com."}
 	p.next = handler()
 
 	tests := []struct {
@@ -295,6 +296,14 @@ func TestPolicy(t *testing.T) {
 			status:    dns.RcodeNameError,
 			err:       nil,
 		},
+		{
+			query:      "google.com.",
+			queryType:  dns.TypeA,
+			status:     dns.RcodeSuccess,
+			response:   &pdp.Response{Effect: pdp.Response_PERMIT},
+			responseIP: &pdp.Response{Effect: pdp.Response_PERMIT},
+			err:        nil,
+		},
 	}
 
 	for _, withDnstap := range [2]bool{false, true} {
@@ -438,6 +447,10 @@ func handler() plugin.Handler {
 	return plugin.HandlerFunc(func(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 		q := r.Question[0].Name
 		switch q {
+		case "google.com.":
+			r.Answer = []dns.RR{
+				test.A("google.com.		600	IN	A			77.55.12.89"),
+			}
 		case "test.com.":
 			r.Answer = []dns.RR{
 				test.A("test.com.		600	IN	A			10.240.0.1"),

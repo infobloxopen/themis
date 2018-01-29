@@ -85,6 +85,7 @@ type policyPlugin struct {
 	streams     int
 	hotSpot     bool
 	ident       string
+	passthrough []string
 }
 
 func newPolicyPlugin() *policyPlugin {
@@ -144,6 +145,9 @@ func (p *policyPlugin) parseOption(c *caddy.Controller) error {
 
 	case "ident":
 		return p.parseIdent(c)
+
+	case "passthrough":
+		return p.parsePassthrough(c)
 	}
 
 	return errInvalidOption
@@ -350,6 +354,17 @@ func (p *policyPlugin) parseIdent(c *caddy.Controller) error {
 	return nil
 }
 
+func (p *policyPlugin) parsePassthrough(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) <= 0 {
+		return c.ArgErr()
+	}
+
+	p.passthrough = args
+
+	return nil
+}
+
 func (p *policyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) {
 	ipID := attrNameSourceIP
 
@@ -466,8 +481,14 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		sendExtra bool
 	)
 
-	debugQuery := p.decodeDebugMsg(r)
 	qName, qType := getNameType(r)
+	for _, s := range p.passthrough {
+		if strings.HasSuffix(qName, s) {
+			return plugin.NextOrFailure(p.Name(), p.next, ctx, w, r)
+		}
+	}
+
+	debugQuery := p.decodeDebugMsg(r)
 	ah := newAttrHolder(qName, qType, p.transfer)
 	p.getAttrsFromEDNS0(ah, r, getRemoteIP(w))
 
