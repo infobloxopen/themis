@@ -255,6 +255,25 @@ func TestPolicyConfigParse(t *testing.T) {
 			endpoints:  []string{"10.2.4.1:5555"},
 			errContent: "Wrong argument count or unexpected line ending",
 		},
+		{
+			input: `.:53 {
+                        policy {
+							endpoint 10.2.4.1:5555
+                            ident corednsinstance
+                        }
+                    }`,
+			endpoints: []string{"10.2.4.1:5555"},
+		},
+		{
+			input: `.:53 {
+                        policy {
+							endpoint 10.2.4.1:5555
+                            ident
+                        }
+                    }`,
+			endpoints:  []string{"10.2.4.1:5555"},
+			errContent: "Wrong argument count or unexpected line ending",
+		},
 	}
 
 	for _, test := range tests {

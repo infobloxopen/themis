@@ -84,6 +84,7 @@ type policyPlugin struct {
 	debugSuffix string
 	streams     int
 	hotSpot     bool
+	ident       string
 }
 
 func newPolicyPlugin() *policyPlugin {
@@ -140,6 +141,9 @@ func (p *policyPlugin) parseOption(c *caddy.Controller) error {
 
 	case "transfer":
 		return p.parseTransfer(c)
+
+	case "ident":
+		return p.parseIdent(c)
 	}
 
 	return errInvalidOption
@@ -335,6 +339,17 @@ func parseOptionGroup(ah *attrHolder, data []byte, options []*edns0Map) bool {
 	return srcIPFound
 }
 
+func (p *policyPlugin) parseIdent(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) != 1 {
+		return c.ArgErr()
+	}
+
+	p.ident = args[0]
+
+	return nil
+}
+
 func (p *policyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) {
 	ipID := attrNameSourceIP
 
@@ -396,6 +411,9 @@ func (p *policyPlugin) setDebugQueryAnswer(ah *attrHolder, r *dns.Msg, status in
 		for _, item := range ah.attrsRespRespip {
 			debugQueryInfo += join(item.Id, item.Value)
 		}
+	}
+	if p.ident != "" {
+		debugQueryInfo += join("ident", p.ident)
 	}
 
 	hdr := dns.RR_Header{Name: r.Question[0].Name + p.debugSuffix, Rrtype: dns.TypeTXT, Class: dns.ClassCHAOS, Ttl: 0}
