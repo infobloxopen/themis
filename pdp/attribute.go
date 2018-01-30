@@ -467,7 +467,7 @@ func (v AttributeValue) Serialize() (string, error) {
 		return strconv.FormatInt(v.v.(int64), 10), nil
 
 	case TypeFloat:
-		return strconv.FormatFloat(v.v.(float64), byte('G'), 16, 64), nil
+		return strconv.FormatFloat(v.v.(float64), 'G', -1, 64), nil
 
 	case TypeAddress:
 		return v.v.(net.IP).String(), nil
