@@ -45,7 +45,7 @@ func newConnRetryPool(conns []*streamConn, timeout time.Duration) *connRetryPool
 
 func (p *connRetryPool) tryStart() {
 	if atomic.CompareAndSwapUint32(p.state, crpIdle, crpFull) {
-		go p.worker()
+		go p.worker(p.ch)
 	}
 }
 
@@ -126,8 +126,8 @@ func (p *connRetryPool) put(c *streamConn) {
 	}
 }
 
-func (p *connRetryPool) worker() {
-	for c := range p.ch {
+func (p *connRetryPool) worker(ch chan *streamConn) {
+	for c := range ch {
 		go p.reconnect(c)
 	}
 }
