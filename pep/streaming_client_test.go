@@ -139,8 +139,52 @@ func TestStreamingClientValidationWithHotSpotBalancer(t *testing.T) {
 	}
 }
 
-func TestStreamingClientValidationNoConnection(t *testing.T) {
-	c := NewClient(WithStreams(1))
+func TestStreamingClientValidationNoConnectionZeroTimeout(t *testing.T) {
+	c := NewClient(
+		WithStreams(1),
+		WithConnectionTimeout(0),
+	)
+	err := c.Connect("127.0.0.1:5555")
+	if err != nil {
+		t.Fatalf("expected no error but got %s", err)
+	}
+	defer c.Close()
+
+	done := make(chan bool)
+
+	go func() {
+		in := decisionRequest{
+			Direction: "Any",
+			Policy:    "AllPermitPolicy",
+			Domain:    "example.com",
+		}
+		var out decisionResponse
+		err = c.Validate(in, &out)
+		if err != nil {
+			if err != ErrorNotConnected {
+				t.Errorf("expected not connected error but got %s", err)
+			}
+		} else {
+			t.Errorf("expected error but got response: %#v", out)
+		}
+
+		close(done)
+	}()
+
+	select {
+	case <-time.After(10 * time.Second):
+		t.Errorf("expected no connection error but got nothing after 10 seconds")
+		c.Close()
+
+	case <-done:
+	}
+}
+
+func TestStreamingClientValidationNoConnectionTimeout(t *testing.T) {
+	c := NewClient(
+		WithStreams(1),
+		WithConnectionTimeout(3*time.Second),
+	)
 	err := c.Connect("127.0.0.1:5555")
 	if err != nil {
 		t.Fatalf("expected no error but got %s", err)

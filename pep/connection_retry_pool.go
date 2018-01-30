@@ -24,7 +24,7 @@ type connRetryPool struct {
 	m *sync.RWMutex
 }
 
-func newConnRetryPool(conns []*streamConn) *connRetryPool {
+func newConnRetryPool(conns []*streamConn, timeout time.Duration) *connRetryPool {
 	state := crpIdle
 
 	ch := make(chan *streamConn, len(conns))
@@ -34,7 +34,7 @@ func newConnRetryPool(conns []*streamConn) *connRetryPool {
 	count := uint32(len(conns))
 
 	return &connRetryPool{
-		timeout: -1,
+		timeout: timeout,
 		state:   &state,
 		ch:      ch,
 		count:   &count,
@@ -87,13 +87,13 @@ func (p *connRetryPool) wait() bool {
 			}()
 
 			for state != crpWorking && state != crpStopping {
+				p.c.Wait()
 				select {
 				default:
 				case <-done:
 					break
 				}
 
-				p.c.Wait()
 				state = atomic.LoadUint32(p.state)
 			}
 		}(state)
