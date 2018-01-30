@@ -169,7 +169,7 @@ func TestStreamingClientValidationNoConnection(t *testing.T) {
 	}()
 
 	select {
-	case <-time.After(10*time.Second):
+	case <-time.After(10 * time.Second):
 		t.Errorf("expected no connection error but got nothing after 10 seconds")
 		c.Close()
 
