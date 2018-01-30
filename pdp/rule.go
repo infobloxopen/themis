@@ -4,6 +4,7 @@ import "fmt"
 
 // Rule represents PDP rule (child or PDP policy).
 type Rule struct {
+	ord         int
 	id          string
 	hidden      bool
 	target      Target
@@ -70,3 +71,9 @@ func (r Rule) calculate(ctx *Context) Response {
 
 	return Response{r.effect, nil, r.obligations}
 }
+
+type byRuleOrder []*Rule
+
+func (r byRuleOrder) Len() int           { return len(r) }
+func (r byRuleOrder) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
+func (r byRuleOrder) Less(i, j int) bool { return r[i].ord < r[j].ord }

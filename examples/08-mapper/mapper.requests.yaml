@@ -24,3 +24,9 @@ requests:
 # Second policy denies net
 - p: Second
   d: example.net
+
+# External policy permits by second rule
+- p: External
+
+# External policy permits by second rule
+- p: Internal

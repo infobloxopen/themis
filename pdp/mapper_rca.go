@@ -2,6 +2,8 @@ package pdp
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/infobloxopen/go-trees/strtree"
 )
@@ -11,6 +13,7 @@ type mapperRCA struct {
 	rules     *strtree.Tree
 	def       *Rule
 	err       *Rule
+	order     int
 	algorithm RuleCombiningAlg
 }
 
@@ -33,9 +36,55 @@ type MapperRCAParams struct {
 	// evaluated).
 	Err string
 
+	// Order selects how to sort choosen rules if argument returns several ids.
+	// Currently mapper supports two options: external order - sort rules
+	// in the same order as ids returned, internal - sort by position in parent
+	// policy.
+	Order int
+
 	// Algorithm is additional rule combining algorithm which is used when
 	// argument can return several ids.
 	Algorithm RuleCombiningAlg
+}
+
+// MapperRCA*Order constants represents all possible values suitable for Order
+// field of MapperRCAParams structure.
+const (
+	// MapperRCAExternalOrder stands for external order - sorting in the same
+	// order as ids returned by mapper argument.
+	MapperRCAExternalOrder = iota
+	// MapperRCAInternalOrder designates internal order - sorting by position
+	// in parent policy.
+	MapperRCAInternalOrder
+
+	totalMapperRCAOrders
+)
+
+// MapperRCAOrder* collections bind order value names and IDs.
+var (
+	// MapperRCAOrderNames is a list of humanreadable option value names.
+	// The order must be kept in sync with MapperRCA*Order constants order.
+	MapperRCAOrderNames = []string{
+		"External",
+		"Internal",
+	}
+
+	// MapperRCAOrderKeys maps MapperRCA*Order constants to order IDs.
+	// The ID is all lower case order name. The slice is filled by init
+	// function.
+	MapperRCAOrderKeys = []string{}
+	// MapperRCAOrderIDs maps order IDs to MapperRCA*Order constants.
+	// The map is filled by init function.
+	MapperRCAOrderIDs = map[string]int{}
+)
+
+func init() {
+	MapperRCAOrderKeys = make([]string, totalMapperRCAOrders)
+	for i := 0; i < totalMapperRCAOrders; i++ {
+		key := strings.ToLower(MapperRCAOrderNames[i])
+		MapperRCAOrderKeys[i] = key
+		MapperRCAOrderIDs[key] = i
+	}
 }
 
 func getSetOfIDs(v AttributeValue) ([]string, error) {
@@ -125,6 +174,7 @@ func makeMapperRCA(rules []*Rule, params interface{}) RuleCombiningAlg {
 		rules:     m,
 		def:       def,
 		err:       err,
+		order:     mapperParams.Order,
 		algorithm: mapperParams.Algorithm}
 }
 
@@ -177,6 +227,7 @@ func (a mapperRCA) add(ID string, child, old *Rule) RuleCombiningAlg {
 		rules:     a.rules.Insert(ID, child),
 		def:       def,
 		err:       err,
+		order:     a.order,
 		algorithm: a.algorithm}
 }
 
@@ -204,6 +255,7 @@ func (a mapperRCA) del(ID string, old *Rule) RuleCombiningAlg {
 		rules:     rules,
 		def:       def,
 		err:       err,
+		order:     a.order,
 		algorithm: a.algorithm}
 }
 
@@ -226,7 +278,11 @@ func (a mapperRCA) execute(rules []*Rule, ctx *Context) Response {
 			return a.calculateErrorRule(ctx, err)
 		}
 
-		r := a.algorithm.execute(collectSubRules(IDs, a.getRulesMap(rules)), ctx)
+		sub := collectSubRules(IDs, a.getRulesMap(rules))
+		if len(sub) > 1 && a.order == MapperRCAInternalOrder {
+			sort.Sort(byRuleOrder(sub))
+		}
+		r := a.algorithm.execute(sub, ctx)
 		if r.Effect == EffectNotApplicable && a.def != nil {
 			return a.def.calculate(ctx)
 		}

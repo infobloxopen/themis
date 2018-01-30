@@ -9,6 +9,13 @@ import (
 	"github.com/infobloxopen/go-trees/strtree"
 )
 
+func TestTypes(t *testing.T) {
+	if typesTotal != len(TypeNames) {
+		t.Errorf("Expected total number of types to be equal to number of type names "+
+			"but got typesTotal = %d and len(TypeNames) = %d", typesTotal, len(TypeNames))
+	}
+}
+
 func TestAttribute(t *testing.T) {
 	ctx, err := NewContext(nil, 0, nil)
 	if err != nil {

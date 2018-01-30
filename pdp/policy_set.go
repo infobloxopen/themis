@@ -33,6 +33,7 @@ var (
 
 // PolicySet represens PDP policy set (the set groups other policy sets and policies).
 type PolicySet struct {
+	ord         int
 	id          string
 	hidden      bool
 	target      Target
@@ -46,6 +47,10 @@ type PolicySet struct {
 // instance of algorithm it uses one of makers from PolicyCombiningAlgs or
 // PolicyCombiningParamAlgs and its parameters if it requires any.
 func NewPolicySet(ID string, hidden bool, target Target, policies []Evaluable, makePCA PolicyCombiningAlgMaker, params interface{}, obligations []AttributeAssignmentExpression) *PolicySet {
+	for i, p := range policies {
+		p.setOrder(i)
+	}
+
 	return &PolicySet{
 		id:          ID,
 		hidden:      hidden,
@@ -112,7 +117,7 @@ func (p *PolicySet) Append(path []string, v interface{}) (Evaluable, error) {
 	if len(path) > 0 {
 		ID := path[0]
 
-		child, err := p.getChild(ID)
+		_, child, err := p.getChild(ID)
 		if err != nil {
 			return p, bindError(err, p.id)
 		}
@@ -154,7 +159,7 @@ func (p *PolicySet) Delete(path []string) (Evaluable, error) {
 	ID := path[0]
 
 	if len(path) > 1 {
-		child, err := p.getChild(ID)
+		_, child, err := p.getChild(ID)
 		if err != nil {
 			return p, bindError(err, p.id)
 		}
@@ -175,93 +180,97 @@ func (p *PolicySet) Delete(path []string) (Evaluable, error) {
 	return r, nil
 }
 
-func (p *PolicySet) getChild(ID string) (Evaluable, error) {
-	for _, child := range p.policies {
+func (p *PolicySet) getOrder() int {
+	return p.ord
+}
+
+func (p *PolicySet) setOrder(ord int) {
+	p.ord = ord
+}
+
+func (p *PolicySet) updatedCopy(policies []Evaluable, algorithm PolicyCombiningAlg) *PolicySet {
+	return &PolicySet{
+		ord:         p.ord,
+		id:          p.id,
+		target:      p.target,
+		policies:    policies,
+		obligations: p.obligations,
+		algorithm:   algorithm,
+	}
+}
+
+func (p *PolicySet) getChild(ID string) (int, Evaluable, error) {
+	for i, child := range p.policies {
 		if pID, ok := child.GetID(); ok && pID == ID {
-			return child, nil
+			return i, child, nil
 		}
 	}
 
-	return nil, newMissingPolicySetChildError(ID)
+	return -1, nil, newMissingPolicySetChildError(ID)
 }
 
 func (p *PolicySet) putChild(child Evaluable) Evaluable {
 	ID, _ := child.GetID()
 
-	for i, old := range p.policies {
-		if pID, ok := old.GetID(); ok && pID == ID {
-			policies := []Evaluable{}
-			if i > 0 {
-				policies = append(policies, p.policies[:i]...)
-			}
+	var policies []Evaluable
 
-			policies = append(policies, child)
+	i, old, err := p.getChild(ID)
+	if err == nil {
+		child.setOrder(old.getOrder())
 
-			if i+1 < len(p.policies) {
-				policies = append(policies, p.policies[i+1:]...)
-			}
-
-			algorithm := p.algorithm
-			if m, ok := algorithm.(mapperPCA); ok {
-				algorithm = m.add(ID, child, old)
-			}
-
-			return &PolicySet{
-				id:          p.id,
-				target:      p.target,
-				policies:    policies,
-				obligations: p.obligations,
-				algorithm:   algorithm}
+		policies = make([]Evaluable, len(p.policies))
+		if i > 0 {
+			copy(policies, p.policies[:i])
 		}
-	}
 
-	policies := p.policies
-	if policies == nil {
-		policies = []Evaluable{child}
+		policies[i] = child
+
+		if i+1 < len(p.policies) {
+			copy(policies[i+1:], p.policies[i+1:])
+		}
+	} else if len(p.policies) > 0 {
+		child.setOrder(p.policies[len(p.policies)-1].getOrder() + 1)
+
+		policies = make([]Evaluable, len(p.policies)+1)
+		copy(policies, p.policies)
+		policies[len(p.policies)] = child
 	} else {
-		policies = append(policies, child)
+		child.setOrder(0)
+		policies = []Evaluable{child}
 	}
 
 	algorithm := p.algorithm
 	if m, ok := algorithm.(mapperPCA); ok {
-		algorithm = m.add(ID, child, nil)
+		algorithm = m.add(ID, child, old)
 	}
 
-	return &PolicySet{
-		id:          p.id,
-		target:      p.target,
-		policies:    policies,
-		obligations: p.obligations,
-		algorithm:   algorithm}
+	return p.updatedCopy(policies, algorithm)
 }
 
 func (p *PolicySet) delChild(ID string) (Evaluable, error) {
-	for i, old := range p.policies {
-		if pID, ok := old.GetID(); ok && pID == ID {
-			policies := []Evaluable{}
-			if i > 0 {
-				policies = append(policies, p.policies[:i]...)
-			}
+	i, old, err := p.getChild(ID)
+	if err != nil {
+		return nil, err
+	}
 
-			if i+1 < len(p.policies) {
-				policies = append(policies, p.policies[i+1:]...)
-			}
+	var policies []Evaluable
+	if len(p.policies) > 1 {
+		policies = make([]Evaluable, len(p.policies)-1)
+		if i > 0 {
+			copy(policies, p.policies[:i])
+		}
 
-			algorithm := p.algorithm
-			if m, ok := algorithm.(mapperPCA); ok {
-				algorithm = m.del(ID, old)
-			}
-
-			return &PolicySet{
-				id:          p.id,
-				target:      p.target,
-				policies:    policies,
-				obligations: p.obligations,
-				algorithm:   algorithm}, nil
+		if i+1 < len(p.policies) {
+			copy(policies[i:], p.policies[i+1:])
 		}
 	}
 
-	return nil, newMissingPolicySetChildError(ID)
+	algorithm := p.algorithm
+	if m, ok := algorithm.(mapperPCA); ok {
+		algorithm = m.del(ID, old)
+	}
+
+	return p.updatedCopy(policies, algorithm), nil
 }
 
 type firstApplicableEffectPCA struct {
@@ -358,3 +367,9 @@ func (a denyOverridesPCA) execute(policies []Evaluable, ctx *Context) Response {
 
 	return Response{EffectNotApplicable, nil, nil}
 }
+
+type byPolicyOrder []Evaluable
+
+func (e byPolicyOrder) Len() int           { return len(e) }
+func (e byPolicyOrder) Swap(i, j int)      { e[i], e[j] = e[j], e[i] }
+func (e byPolicyOrder) Less(i, j int) bool { return e[i].getOrder() < e[j].getOrder() }

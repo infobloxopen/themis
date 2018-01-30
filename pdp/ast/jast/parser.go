@@ -21,6 +21,7 @@ const (
 	yastTagMap        = "map"
 	yastTagDefault    = "default"
 	yastTagError      = "error"
+	yastTagOrder      = "order"
 	yastTagEffect     = "effect"
 	yastTagObligation = "obligations"
 	yastTagAny        = "any"

@@ -26,42 +26,44 @@ const (
 	missingMapRCAParamErrorID             = 14
 	missingDefaultRuleRCAErrorID          = 15
 	missingErrorRuleRCAErrorID            = 16
-	notImplementedRCAErrorID              = 17
-	unknownPCAErrorID                     = 18
-	missingPCAErrorID                     = 19
-	invalidPCAErrorID                     = 20
-	missingMapPCAParamErrorID             = 21
-	missingDefaultPolicyPCAErrorID        = 22
-	missingErrorPolicyPCAErrorID          = 23
-	notImplementedPCAErrorID              = 24
-	mapperArgumentTypeErrorID             = 25
-	conditionTypeErrorID                  = 26
-	unknownEffectErrorID                  = 27
-	noSMPItemsErrorID                     = 28
-	tooManySMPItemsErrorID                = 29
-	unknownMatchFunctionErrorID           = 30
-	matchFunctionCastErrorID              = 31
-	matchFunctionArgsNumberErrorID        = 32
-	invalidMatchFunctionArgErrorID        = 33
-	matchFunctionBothValuesErrorID        = 34
-	matchFunctionBothAttrsErrorID         = 35
-	unknownFunctionErrorID                = 36
-	functionCastErrorID                   = 37
-	unknownAttributeErrorID               = 38
-	unknownTypeErrorID                    = 39
-	invalidTypeErrorID                    = 40
-	missingContentErrorID                 = 41
-	notImplementedValueTypeErrorID        = 42
-	invalidAddressErrorID                 = 43
-	invalidNetworkErrorID                 = 44
-	invalidDomainErrorID                  = 45
-	selectorURIErrorID                    = 46
-	selectorLocationErrorID               = 47
-	unsupportedSelectorSchemeErrorID      = 48
-	entityAmbiguityErrorID                = 49
-	entityMissingKeyErrorID               = 50
-	unknownPolicyUpdateOperationErrorID   = 51
-	invalidPolicyUpdatePathElementErrorID = 52
+	unknownMapperPCAOrderID               = 17
+	unknownMapperRCAOrderID               = 18
+	notImplementedRCAErrorID              = 19
+	unknownPCAErrorID                     = 20
+	missingPCAErrorID                     = 21
+	invalidPCAErrorID                     = 22
+	missingMapPCAParamErrorID             = 23
+	missingDefaultPolicyPCAErrorID        = 24
+	missingErrorPolicyPCAErrorID          = 25
+	notImplementedPCAErrorID              = 26
+	mapperArgumentTypeErrorID             = 27
+	conditionTypeErrorID                  = 28
+	unknownEffectErrorID                  = 29
+	noSMPItemsErrorID                     = 30
+	tooManySMPItemsErrorID                = 31
+	unknownMatchFunctionErrorID           = 32
+	matchFunctionCastErrorID              = 33
+	matchFunctionArgsNumberErrorID        = 34
+	invalidMatchFunctionArgErrorID        = 35
+	matchFunctionBothValuesErrorID        = 36
+	matchFunctionBothAttrsErrorID         = 37
+	unknownFunctionErrorID                = 38
+	functionCastErrorID                   = 39
+	unknownAttributeErrorID               = 40
+	unknownTypeErrorID                    = 41
+	invalidTypeErrorID                    = 42
+	missingContentErrorID                 = 43
+	notImplementedValueTypeErrorID        = 44
+	invalidAddressErrorID                 = 45
+	invalidNetworkErrorID                 = 46
+	invalidDomainErrorID                  = 47
+	selectorURIErrorID                    = 48
+	selectorLocationErrorID               = 49
+	unsupportedSelectorSchemeErrorID      = 50
+	entityAmbiguityErrorID                = 51
+	entityMissingKeyErrorID               = 52
+	unknownPolicyUpdateOperationErrorID   = 53
+	invalidPolicyUpdatePathElementErrorID = 54
 )
 
 type externalError struct {
@@ -327,6 +329,36 @@ func newMissingErrorRuleRCAError(ID string) *missingErrorRuleRCAError {
 
 func (e *missingErrorRuleRCAError) Error() string {
 	return e.errorf("No rule with ID %q to use as on error rule", e.ID)
+}
+
+type unknownMapperPCAOrder struct {
+	errorLink
+	ord string
+}
+
+func newUnknownMapperPCAOrder(ord string) *unknownMapperPCAOrder {
+	return &unknownMapperPCAOrder{
+		errorLink: errorLink{id: unknownMapperPCAOrderID},
+		ord:       ord}
+}
+
+func (e *unknownMapperPCAOrder) Error() string {
+	return e.errorf("Unknown policy ordering for mapper \"%s\"", e.ord)
+}
+
+type unknownMapperRCAOrder struct {
+	errorLink
+	ord string
+}
+
+func newUnknownMapperRCAOrder(ord string) *unknownMapperRCAOrder {
+	return &unknownMapperRCAOrder{
+		errorLink: errorLink{id: unknownMapperRCAOrderID},
+		ord:       ord}
+}
+
+func (e *unknownMapperRCAOrder) Error() string {
+	return e.errorf("Unknown rule ordering for mapper \"%s\"", e.ord)
 }
 
 type notImplementedRCAError struct {

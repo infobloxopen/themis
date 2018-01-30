@@ -248,6 +248,14 @@ errors:
   - field: obj
   - field: attr
 
+- id: unknownMapperCAOrder
+  fields:
+  - id: ord
+    type: string
+  msg: "Unknown ordering for mapper \"%s\""
+  args:
+  - field: ord
+
 - id: unknownTypeError
   fields:
   - id: t

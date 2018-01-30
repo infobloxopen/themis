@@ -31,6 +31,7 @@ var (
 
 // Policy represent PDP policy (minimal evaluable entity).
 type Policy struct {
+	ord         int
 	id          string
 	hidden      bool
 	target      Target
@@ -44,6 +45,10 @@ type Policy struct {
 // uses one of makers from RuleCombiningAlgs or RuleCombiningParamAlgs and its
 // parameters if it requires any.
 func NewPolicy(ID string, hidden bool, target Target, rules []*Rule, makeRCA RuleCombiningAlgMaker, params interface{}, obligations []AttributeAssignmentExpression) *Policy {
+	for i, r := range rules {
+		r.ord = i
+	}
+
 	return &Policy{
 		id:          ID,
 		hidden:      hidden,
@@ -146,82 +151,96 @@ func (p *Policy) Delete(path []string) (Evaluable, error) {
 	return r, nil
 }
 
-func (p *Policy) putChild(child *Rule) *Policy {
-	ID, _ := child.GetID()
-	for i, old := range p.rules {
-		if rID, ok := old.GetID(); ok && rID == ID {
-			rules := []*Rule{}
-			if i > 0 {
-				rules = append(rules, p.rules[:i]...)
-			}
+func (p *Policy) getOrder() int {
+	return p.ord
+}
 
-			rules = append(rules, child)
+func (p *Policy) setOrder(ord int) {
+	p.ord = ord
+}
 
-			if i+1 < len(p.rules) {
-				rules = append(rules, p.rules[i+1:]...)
-			}
-
-			algorithm := p.algorithm
-			if m, ok := algorithm.(mapperRCA); ok {
-				algorithm = m.add(ID, child, old)
-			}
-
-			return &Policy{
-				id:          p.id,
-				target:      p.target,
-				rules:       rules,
-				obligations: p.obligations,
-				algorithm:   algorithm}
-		}
-	}
-
-	rules := p.rules
-	if rules == nil {
-		rules = []*Rule{child}
-	} else {
-		rules = append(rules, child)
-	}
-
-	algorithm := p.algorithm
-	if m, ok := algorithm.(mapperRCA); ok {
-		algorithm = m.add(ID, child, nil)
-	}
-
+func (p *Policy) updatedCopy(rules []*Rule, algorithm RuleCombiningAlg) *Policy {
 	return &Policy{
+		ord:         p.ord,
 		id:          p.id,
 		target:      p.target,
 		rules:       rules,
 		obligations: p.obligations,
-		algorithm:   algorithm}
+		algorithm:   algorithm,
+	}
 }
 
-func (p *Policy) delChild(ID string) (*Policy, error) {
-	for i, old := range p.rules {
-		if rID, ok := old.GetID(); ok && rID == ID {
-			rules := []*Rule{}
-			if i > 0 {
-				rules = append(rules, p.rules[:i]...)
-			}
-
-			if i+1 < len(p.rules) {
-				rules = append(rules, p.rules[i+1:]...)
-			}
-
-			algorithm := p.algorithm
-			if m, ok := algorithm.(mapperRCA); ok {
-				algorithm = m.del(ID, old)
-			}
-
-			return &Policy{
-				id:          p.id,
-				target:      p.target,
-				rules:       rules,
-				obligations: p.obligations,
-				algorithm:   algorithm}, nil
+func (p *Policy) getChild(ID string) (int, *Rule, error) {
+	for i, r := range p.rules {
+		if rID, ok := r.GetID(); ok && rID == ID {
+			return i, r, nil
 		}
 	}
 
-	return nil, newMissingPolicyChildError(ID)
+	return -1, nil, newMissingPolicyChildError(ID)
+}
+
+func (p *Policy) putChild(child *Rule) *Policy {
+	ID, _ := child.GetID()
+
+	var rules []*Rule
+
+	i, old, err := p.getChild(ID)
+	if err == nil {
+		child.ord = old.ord
+
+		rules = make([]*Rule, len(p.rules))
+		if i > 0 {
+			copy(rules, p.rules[:i])
+		}
+
+		rules[i] = child
+
+		if i+1 < len(p.rules) {
+			copy(rules[i+1:], p.rules[i+1:])
+		}
+	} else if len(p.rules) > 0 {
+		child.ord = p.rules[len(p.rules)-1].ord + 1
+		rules = make([]*Rule, len(p.rules)+1)
+		copy(rules, p.rules)
+		rules[len(p.rules)] = child
+	} else {
+		child.ord = 0
+		rules = []*Rule{child}
+	}
+
+	algorithm := p.algorithm
+	if m, ok := algorithm.(mapperRCA); ok {
+		algorithm = m.add(ID, child, old)
+	}
+
+	return p.updatedCopy(rules, algorithm)
+}
+
+func (p *Policy) delChild(ID string) (*Policy, error) {
+	i, old, err := p.getChild(ID)
+	if err != nil {
+		return nil, err
+	}
+
+	var rules []*Rule
+	if len(p.rules) > 1 {
+		rules = make([]*Rule, len(p.rules)-1)
+		if i > 0 {
+			copy(rules, p.rules[:i])
+		}
+
+		if i+1 < len(p.rules) {
+			copy(rules[i:], p.rules[i+1:])
+		}
+	}
+
+	algorithm := p.algorithm
+	if m, ok := algorithm.(mapperRCA); ok {
+		algorithm = m.del(ID, old)
+	}
+
+	return p.updatedCopy(rules, algorithm), nil
 }
 
 type firstApplicableEffectRCA struct {

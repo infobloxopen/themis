@@ -1,6 +1,10 @@
 package pdp
 
-import "testing"
+import (
+	"sort"
+	"strings"
+	"testing"
+)
 
 func TestPolicySet(t *testing.T) {
 	c := &Context{
@@ -11,9 +15,7 @@ func TestPolicySet(t *testing.T) {
 
 	testID := "Test Policy"
 
-	p := PolicySet{
-		id:        testID,
-		algorithm: firstApplicableEffectPCA{}}
+	p := makeSimplePolicySet(testID)
 	ID, ok := p.GetID()
 	if !ok {
 		t.Errorf("Expected policy set ID %q but got hidden policy set", testID)
@@ -27,7 +29,7 @@ func TestPolicySet(t *testing.T) {
 			effectNames[EffectNotApplicable], effectNames[r.Effect])
 	}
 
-	p = PolicySet{
+	p = &PolicySet{
 		id:        testID,
 		target:    makeSimpleStringTarget("missing", "test"),
 		algorithm: firstApplicableEffectPCA{}}
@@ -44,7 +46,7 @@ func TestPolicySet(t *testing.T) {
 			"not found attribute but got %T (%s)", r.status, r.status)
 	}
 
-	p = PolicySet{
+	p = &PolicySet{
 		id:        testID,
 		target:    makeSimpleStringTarget("missing-type", "test"),
 		algorithm: firstApplicableEffectPCA{}}
@@ -61,7 +63,7 @@ func TestPolicySet(t *testing.T) {
 			"attribute with wrong type but got %T (%s)", r.status, r.status)
 	}
 
-	p = PolicySet{
+	p = &PolicySet{
 		id:        testID,
 		target:    makeSimpleStringTarget("example-string", "test"),
 		algorithm: firstApplicableEffectPCA{}}
@@ -78,13 +80,12 @@ func TestPolicySet(t *testing.T) {
 			"attribute with not maching value but got %T (%s)", r.status, r.status)
 	}
 
-	p = PolicySet{
+	p = &PolicySet{
 		id:     testID,
 		target: makeSimpleStringTarget("test-string", "test"),
 		policies: []Evaluable{
-			&Policy{
-				rules:     []*Rule{{effect: EffectPermit}},
-				algorithm: firstApplicableEffectRCA{}}},
+			makeSimpleHiddenPolicy(makeSimpleHiddenRule(EffectPermit)),
+		},
 		obligations: makeSingleStringObligation("obligation", "test"),
 		algorithm:   firstApplicableEffectPCA{}}
 
@@ -99,19 +100,10 @@ func TestPolicySet(t *testing.T) {
 			r.status, r.status)
 	}
 
-	defaultPolicy := &Policy{
-		id:        "Default",
-		rules:     []*Rule{{effect: EffectDeny}},
-		algorithm: firstApplicableEffectRCA{}}
-	errorPolicy := &Policy{
-		id:        "Error",
-		rules:     []*Rule{{effect: EffectDeny}},
-		algorithm: firstApplicableEffectRCA{}}
-	permitPolicy := &Policy{
-		id:        "Permit",
-		rules:     []*Rule{{effect: EffectPermit}},
-		algorithm: firstApplicableEffectRCA{}}
-	p = PolicySet{
+	defaultPolicy := makeSimplePolicy("Default", makeSimpleHiddenRule(EffectDeny))
+	errorPolicy := makeSimplePolicy("Error", makeSimpleHiddenRule(EffectDeny))
+	permitPolicy := makeSimplePolicy("Permit", makeSimpleHiddenRule(EffectPermit))
+	p = &PolicySet{
 		id:       testID,
 		policies: []Evaluable{defaultPolicy, errorPolicy, permitPolicy},
 		algorithm: makeMapperPCA(
@@ -162,222 +154,234 @@ func TestPolicySet(t *testing.T) {
 }
 
 func TestPolicySetAppend(t *testing.T) {
-	testPermitPol := &PolicySet{
-		id: "test",
-		policies: []Evaluable{
-			&Policy{
-				id:        "permit",
-				rules:     []*Rule{{id: "permit", effect: EffectPermit}},
-				algorithm: firstApplicableEffectRCA{}}},
-		algorithm: firstApplicableEffectPCA{}}
+	testPermitPol := makeSimplePolicySet("test",
+		makeSimplePolicy("permit", makeSimpleRule("permit", EffectPermit)),
+	)
 
-	p := &PolicySet{id: "test", algorithm: firstApplicableEffectPCA{}}
-	newP, err := p.Append([]string{}, testPermitPol)
+	p := makeSimplePolicySet("test")
+	p.ord = 5
+
+	newE, err := p.Append([]string{}, testPermitPol)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else {
+	} else if newP, ok := newE.(*PolicySet); ok {
 		if p == newP {
 			t.Errorf("Expected different new policy set but got the same")
 		}
+
+		if newP.ord != p.ord {
+			t.Errorf("Expected unchanged order %d but got %d", p.ord, newP.ord)
+		}
+
+		if len(newP.policies) == 1 {
+			p := newP.policies[0]
+			ord := p.getOrder()
+			if ord != 0 {
+				t.Errorf("Expected index of the only index to be 0 but got %d", ord)
+			}
+		} else {
+			t.Errorf("Expected only appended item but got %d items", len(newP.policies))
+		}
+	} else {
+		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
 	}
 
-	p = &PolicySet{hidden: true, algorithm: firstApplicableEffectPCA{}}
-	newP, err = p.Append([]string{}, testPermitPol)
+	newE, err = p.Append([]string{"test"}, testPermitPol)
 	if err == nil {
-		t.Errorf("Expected error but got policy %#v", newP)
-	} else if _, ok := err.(*hiddenPolicySetModificationError); !ok {
-		t.Errorf("Expected *hiddenPolicySetModificationError but got %T (%s)", err, err)
-	}
-
-	p = &PolicySet{id: "test", algorithm: firstApplicableEffectPCA{}}
-	newP, err = p.Append([]string{"test"}, testPermitPol)
-	if err == nil {
-		t.Errorf("Expected error but got policy %#v", newP)
+		t.Errorf("Expected error but got policy %#v", newE)
 	} else if _, ok := err.(*missingPolicySetChildError); !ok {
 		t.Errorf("Expected *missingPolicySetChildError but got %T (%s)", err, err)
 	}
 
-	p = &PolicySet{
-		id:        "test",
-		policies:  []Evaluable{&Policy{id: "test", algorithm: firstApplicableEffectRCA{}}},
-		algorithm: firstApplicableEffectPCA{}}
-	newP, err = p.Append([]string{"test"}, &Rule{hidden: true, effect: EffectPermit})
+	newE, err = p.Append([]string{}, &Rule{id: "permit", effect: EffectPermit})
 	if err == nil {
-		t.Errorf("Expected error but got policy %#v", newP)
-	} else if _, ok := err.(*hiddenRuleAppendError); !ok {
-		t.Errorf("Expected *hiddenRuleAppendError but got %T (%s)", err, err)
-	}
-
-	p = &PolicySet{id: "test", algorithm: firstApplicableEffectPCA{}}
-	newP, err = p.Append([]string{}, &Rule{id: "permit", effect: EffectPermit})
-	if err == nil {
-		t.Errorf("Expected error but got policy %#v", newP)
+		t.Errorf("Expected error but got policy %#v", newE)
 	} else if _, ok := err.(*invalidPolicySetItemTypeError); !ok {
 		t.Errorf("Expected *invalidPolicySetItemTypeError but got %T (%s)", err, err)
 	}
 
-	p = &PolicySet{id: "test", algorithm: firstApplicableEffectPCA{}}
-	newP, err = p.Append([]string{}, &PolicySet{hidden: true, algorithm: firstApplicableEffectPCA{}})
+	newE, err = p.Append([]string{}, &PolicySet{hidden: true, algorithm: firstApplicableEffectPCA{}})
 	if err == nil {
-		t.Errorf("Expected error but got policy %#v", newP)
+		t.Errorf("Expected error but got policy %#v", newE)
 	} else if _, ok := err.(*hiddenPolicyAppendError); !ok {
 		t.Errorf("Expected *hiddenPolicyAppendError but got %T (%s)", err, err)
 	}
 
-	p = &PolicySet{
-		id:        "test",
-		policies:  []Evaluable{&Policy{id: "test", algorithm: firstApplicableEffectRCA{}}},
-		algorithm: firstApplicableEffectPCA{}}
-	newP, err = p.Append([]string{"test"}, &Rule{id: "test", effect: EffectPermit})
+	p = makeSimpleHiddenPolicySet()
+	newE, err = p.Append([]string{}, testPermitPol)
+	if err == nil {
+		t.Errorf("Expected error but got policy %#v", newE)
+	} else if _, ok := err.(*hiddenPolicySetModificationError); !ok {
+		t.Errorf("Expected *hiddenPolicySetModificationError but got %T (%s)", err, err)
+	}
+
+	p = makeSimplePolicySet("test", makeSimplePolicy("test"))
+	newE, err = p.Append([]string{"test"},
+		makeSimpleHiddenRule(EffectPermit),
+	)
+	if err == nil {
+		t.Errorf("Expected error but got policy %#v", newE)
+	} else if _, ok := err.(*hiddenRuleAppendError); !ok {
+		t.Errorf("Expected *hiddenRuleAppendError but got %T (%s)", err, err)
+	}
+
+	_, err = p.Append([]string{"test"},
+		makeSimpleRule("test", EffectPermit),
+	)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
 	}
 
-	testFirstPol := &Policy{
-		id:        "first",
-		rules:     []*Rule{{id: "deny", effect: EffectDeny}},
-		algorithm: firstApplicableEffectRCA{}}
-	testSecondPol := &Policy{
-		id:        "second",
-		rules:     []*Rule{{id: "deny", effect: EffectDeny}},
-		algorithm: firstApplicableEffectRCA{}}
-	testThirdPermitPol := &Policy{
-		id:        "third",
-		rules:     []*Rule{{id: "permit", effect: EffectPermit}},
-		algorithm: firstApplicableEffectRCA{}}
-	testThirdDenyPol := &Policy{
-		id:        "third",
-		rules:     []*Rule{{id: "deny", effect: EffectDeny}},
-		algorithm: firstApplicableEffectRCA{}}
+	testFirstPol := makeSimplePolicy("first", makeSimpleRule("deny", EffectDeny))
+	testSecondPol := makeSimplePolicy("second", makeSimpleRule("deny", EffectDeny))
+	testThirdPermitPol := makeSimplePolicy("third", makeSimpleRule("permit", EffectPermit))
+	testThirdDenyPol := makeSimplePolicy("third", makeSimpleRule("deny", EffectDeny))
 
-	p = &PolicySet{
-		id: "test",
-		policies: []Evaluable{
-			&Policy{
-				id:        "first",
-				rules:     []*Rule{{id: "permit", effect: EffectPermit}},
-				algorithm: firstApplicableEffectRCA{}},
-			&Policy{
-				id:        "second",
-				rules:     []*Rule{{id: "permit", effect: EffectPermit}},
-				algorithm: firstApplicableEffectRCA{}}},
-		algorithm: firstApplicableEffectPCA{}}
-	newP, err = p.Append([]string{}, testThirdPermitPol)
+	p = makeSimplePolicySet("test",
+		makeSimplePolicy("first", makeSimpleRule("permit", EffectPermit)),
+		makeSimplePolicy("second", makeSimpleRule("permit", EffectPermit)),
+	)
+	if len(p.policies) == 2 {
+		for i, e := range p.policies {
+			ord := e.getOrder()
+			if ord != i {
+				id, ok := e.GetID()
+				if !ok {
+					id = "hidden"
+				}
+
+				t.Errorf("Expected %q policy to get %d order but got %d", id, i, ord)
+			}
+		}
+	} else {
+		t.Errorf("Expected 2 policies in the policy set but got %d", len(p.policies))
+	}
+
+	newE, err = p.Append([]string{}, testThirdPermitPol)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else {
-		if p, ok := newP.(*PolicySet); ok {
-			if len(p.policies) == 3 {
-				p := p.policies[2]
-				if p, ok := p.(*Policy); ok {
-					if p.id != "third" {
-						t.Errorf("Expected \"third\" policy added to the end but got %q", p.id)
-					}
-				} else {
-					t.Errorf("Expected policy as third item of policy set but got %T (%#v)", p, p)
+	} else if newP, ok := newE.(*PolicySet); ok {
+		if len(newP.policies) == 3 {
+			e := newP.policies[2]
+			if p, ok := e.(*Policy); ok {
+				if p.id != "third" {
+					t.Errorf("Expected \"third\" policy added to the end but got %q", p.id)
+				}
+
+				if p.ord != 2 {
+					t.Errorf("Expected the last rule to get order 2 but got %d", p.ord)
 				}
 			} else {
-				t.Errorf("Expected three policies after append but got %d", len(p.policies))
+				t.Errorf("Expected policy as third item of policy set but got %T (%#v)", e, e)
 			}
 		} else {
-			t.Errorf("Expected new policy set but got %T (%#v)", newP, newP)
+			t.Errorf("Expected three policies after append but got %d", len(newP.policies))
 		}
+	} else {
+		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
 	}
 
-	newP, err = newP.Append([]string{}, testFirstPol)
+	newE, err = newE.Append([]string{}, testFirstPol)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else {
-		if p, ok := newP.(*PolicySet); ok {
-			if len(p.policies) == 3 {
-				p := p.policies[0]
-				if p, ok := p.(*Policy); ok {
-					if p.id != "first" {
-						t.Errorf("Expected \"first\" policy replaced at the begining but got %q", p.id)
-					} else if p.rules[0].effect != EffectDeny {
-						t.Errorf("Expected \"first\" policy became deny but it's still %s",
-							effectNames[p.rules[0].effect])
+	} else if newP, ok := newE.(*PolicySet); ok {
+		if len(newP.policies) == 3 {
+			e := newP.policies[0]
+			if p, ok := e.(*Policy); ok {
+				if p.id != "first" {
+					t.Errorf("Expected \"first\" policy replaced at the begining but got %q", p.id)
+				} else if len(p.rules) == 1 {
+					r := p.rules[0]
+					if r.effect != EffectDeny {
+						t.Errorf("Expected \"first\" policy became deny but it's still %s", effectNames[r.effect])
 					}
 				} else {
-					t.Errorf("Expected policy as first item of policy set but got %T (%#v)", p, p)
+					t.Errorf("Expected \"first\" policy to have the only rule but got %d", len(p.rules))
+				}
+
+				if p.ord != 0 {
+					t.Errorf("Expected the first policy to keep order 0 but got %d", p.ord)
 				}
 			} else {
-				t.Errorf("Expected three policies after append but got %d", len(p.policies))
+				t.Errorf("Expected policy as first item of policy set but got %T (%#v)", e, e)
 			}
 		} else {
-			t.Errorf("Expected new policy set but got %T (%#v)", newP, newP)
+			t.Errorf("Expected three policies after append but got %d", len(newP.policies))
 		}
+	} else {
+		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
 	}
 
-	newP, err = newP.Append([]string{}, testSecondPol)
+	newE, err = newE.Append([]string{}, testSecondPol)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else {
-		if p, ok := newP.(*PolicySet); ok {
-			if len(p.policies) == 3 {
-				p := p.policies[1]
-				if p, ok := p.(*Policy); ok {
-					if p.id != "second" {
-						t.Errorf("Expected \"second\" policy replaced at the middle but got %q", p.id)
-					} else if p.rules[0].effect != EffectDeny {
-						t.Errorf("Expected \"second\" policy became deny but it's still %s",
-							effectNames[p.rules[0].effect])
+	} else if newP, ok := newE.(*PolicySet); ok {
+		if len(newP.policies) == 3 {
+			e := newP.policies[1]
+			if p, ok := e.(*Policy); ok {
+				if p.id != "second" {
+					t.Errorf("Expected \"second\" policy replaced at the middle but got %q", p.id)
+				} else if len(p.rules) == 1 {
+					r := p.rules[0]
+					if r.effect != EffectDeny {
+						t.Errorf("Expected \"second\" policy became deny but it's still %s", effectNames[r.effect])
 					}
 				} else {
-					t.Errorf("Expected policy as second item of policy set but got %T (%#v)", p, p)
+					t.Errorf("Expected \"second\" policy to have the only rule but got %d", len(p.rules))
+				}
+
+				if p.ord != 1 {
+					t.Errorf("Expected second policy to keep order 1 but got %d", p.ord)
 				}
 			} else {
-				t.Errorf("Expected three policies after append but got %d", len(p.policies))
+				t.Errorf("Expected policy as second item of policy set but got %T (%#v)", e, e)
 			}
 		} else {
-			t.Errorf("Expected new policy set but got %T (%#v)", newP, newP)
+			t.Errorf("Expected three policies after append but got %d", len(newP.policies))
 		}
+	} else {
+		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
 	}
 
-	newP, err = newP.Append([]string{}, testThirdDenyPol)
+	newE, err = newE.Append([]string{}, testThirdDenyPol)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else {
-		if p, ok := newP.(*PolicySet); ok {
-			if len(p.policies) == 3 {
-				p := p.policies[2]
-				if p, ok := p.(*Policy); ok {
-					if p.id != "third" {
-						t.Errorf("Expected \"third\" policy replaced at the end but got %q", p.id)
-					} else if p.rules[0].effect != EffectDeny {
-						t.Errorf("Expected \"third\" policy became deny but it's still %s",
-							effectNames[p.rules[0].effect])
+	} else if newP, ok := newE.(*PolicySet); ok {
+		if len(newP.policies) == 3 {
+			e := newP.policies[2]
+			if p, ok := e.(*Policy); ok {
+				if p.id != "third" {
+					t.Errorf("Expected \"third\" policy replaced at the end but got %q", p.id)
+				} else if len(p.rules) == 1 {
+					r := p.rules[0]
+					if r.effect != EffectDeny {
+						t.Errorf("Expected \"third\" policy became deny but it's still %s", effectNames[r.effect])
 					}
 				} else {
-					t.Errorf("Expected policy as third item of policy set but got %T (%#v)", p, p)
+					t.Errorf("Expected \"third\" policy to have the only rule but got %d", len(p.rules))
+				}
+
+				if p.ord != 2 {
+					t.Errorf("Expected third policy to keep order 2 but got %d", p.ord)
 				}
 			} else {
-				t.Errorf("Expected three policies after append but got %d", len(p.policies))
+				t.Errorf("Expected policy as third item of policy set but got %T (%#v)", e, e)
 			}
 		} else {
-			t.Errorf("Expected new policy but got %T (%#v)", newP, newP)
+			t.Errorf("Expected three policies after append but got %d", len(newP.policies))
 		}
+	} else {
+		t.Errorf("Expected new policy but got %T (%#v)", newE, newE)
 	}
 
-	testFourthPol := &Policy{
-		id:        "fourth",
-		rules:     []*Rule{{id: "permit", effect: EffectPermit}},
-		algorithm: firstApplicableEffectRCA{}}
+	testFourthPol := makeSimplePolicy("fourth", makeSimpleRule("permit", EffectPermit))
 
 	p = NewPolicySet("test", false, Target{},
 		[]Evaluable{
-			&Policy{
-				id:        "first",
-				rules:     []*Rule{{id: "permit", effect: EffectPermit}},
-				algorithm: firstApplicableEffectRCA{}},
-			&Policy{
-				id:        "second",
-				rules:     []*Rule{{id: "permit", effect: EffectPermit}},
-				algorithm: firstApplicableEffectRCA{}},
-			&Policy{
-				id:        "third",
-				rules:     []*Rule{{id: "permit", effect: EffectPermit}},
-				algorithm: firstApplicableEffectRCA{}}},
+			makeSimplePolicy("first", makeSimpleRule("permit", EffectPermit)),
+			makeSimplePolicy("second", makeSimpleRule("permit", EffectPermit)),
+			makeSimplePolicy("third", makeSimpleRule("permit", EffectPermit)),
+		},
 		makeMapperPCA, MapperPCAParams{
 			Argument: AttributeDesignator{a: Attribute{id: "k", t: TypeString}},
 			DefOk:    true,
@@ -385,145 +389,184 @@ func TestPolicySetAppend(t *testing.T) {
 			ErrOk:    true,
 			Err:      "second"},
 		nil)
-	newP, err = p.Append([]string{}, testFourthPol)
+	newE, err = p.Append([]string{}, testFourthPol)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else {
-		if p, ok := newP.(*PolicySet); ok {
-			if len(p.policies) == 4 {
-				p := p.policies[3]
-				if p, ok := p.(*Policy); ok {
-					if p.id != "fourth" {
-						t.Errorf("Expected \"fourth\" policy added to the end but got %q", p.id)
-					}
-				} else {
-					t.Errorf("Expected policy as fourth item of policy set but got %T (%#v)", p, p)
+	} else if newP, ok := newE.(*PolicySet); ok {
+		if len(newP.policies) == 4 {
+			e := newP.policies[3]
+			if p, ok := e.(*Policy); ok {
+				if p.id != "fourth" {
+					t.Errorf("Expected \"fourth\" policy added to the end but got %q", p.id)
+				}
+
+				if p.ord != 3 {
+					t.Errorf("Expected fourth policy to get order 3 but got %d", p.ord)
 				}
 			} else {
-				t.Errorf("Expected four policies after append but got %d", len(p.policies))
+				t.Errorf("Expected policy as fourth item of policy set but got %T (%#v)", e, e)
 			}
-
-			assertMapperPCAMapKeys(p.algorithm, "after insert \"fourth\"", t, "first", "fourth", "second", "third")
 		} else {
-			t.Errorf("Expected new policy set but got %T (%#v)", newP, newP)
+			t.Errorf("Expected four policies after append but got %d", len(newP.policies))
 		}
+
+		assertMapperPCAMapKeys(newP.algorithm, "after insert \"fourth\"", t, "first", "fourth", "second", "third")
+	} else {
+		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
 	}
 
-	newP, err = newP.Append([]string{}, testFirstPol)
+	newE, err = newE.Append([]string{}, testFirstPol)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else {
-		if p, ok := newP.(*PolicySet); ok {
-			if len(p.policies) == 4 {
-				p := p.policies[0]
-				if p, ok := p.(*Policy); ok {
-					if p.id != "first" {
-						t.Errorf("Expected \"first\" policy replaced at the begining but got %q", p.id)
-					} else if p.rules[0].effect != EffectDeny {
-						t.Errorf("Expected \"first\" policy became deny but it's still %s",
-							effectNames[p.rules[0].effect])
+	} else if newP, ok := newE.(*PolicySet); ok {
+		if len(newP.policies) == 4 {
+			e := newP.policies[0]
+			if p, ok := e.(*Policy); ok {
+				if p.id != "first" {
+					t.Errorf("Expected \"first\" policy replaced at the begining but got %q", p.id)
+				} else if len(p.rules) == 1 {
+					r := p.rules[0]
+					if r.effect != EffectDeny {
+						t.Errorf("Expected \"first\" policy became deny but it's still %s", effectNames[r.effect])
 					}
 				} else {
-					t.Errorf("Expected policy as first item of policy set but got %T (%#v)", p, p)
+					t.Errorf("Expected \"first\" policy to have the only rule but got %d", len(p.rules))
+				}
+
+				if p.ord != 0 {
+					t.Errorf("Expected the first policy to keep order 0 but got %d", p.ord)
 				}
 			} else {
-				t.Errorf("Expected four policies after append but got %d", len(p.policies))
+				t.Errorf("Expected policy as first item of policy set but got %T (%#v)", e, e)
 			}
-
-			assertMapperPCAMapKeys(p.algorithm, "after insert \"fourth\"", t, "first", "fourth", "second", "third")
 		} else {
-			t.Errorf("Expected new policy set but got %T (%#v)", newP, newP)
+			t.Errorf("Expected four policies after append but got %d", len(newP.policies))
 		}
+
+		assertMapperPCAMapKeys(newP.algorithm, "after insert \"fourth\"", t, "first", "fourth", "second", "third")
+
+		if m, ok := newP.algorithm.(mapperPCA); ok {
+			if m.def != testFirstPol {
+				t.Errorf("Expected default policy to be new \"first\" policy %p but got %p", testFirstPol, m.def)
+			}
+		}
+	} else {
+		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
 	}
 }
 
 func TestPolicySetDelete(t *testing.T) {
-	p := &PolicySet{
-		id: "test",
-		policies: []Evaluable{
-			&Policy{
-				id:        "first",
-				rules:     []*Rule{{id: "permit", effect: EffectPermit}},
-				algorithm: firstApplicableEffectRCA{}},
-			&Policy{
-				id:        "second",
-				rules:     []*Rule{{id: "permit", effect: EffectPermit}},
-				algorithm: firstApplicableEffectRCA{}},
-			&Policy{
-				id:        "third",
-				rules:     []*Rule{{id: "permit", effect: EffectPermit}},
-				algorithm: firstApplicableEffectRCA{}}},
-		algorithm: firstApplicableEffectPCA{}}
-
-	newP, err := p.Delete([]string{"second"})
-	if err != nil {
-		t.Errorf("Expected no error but got %s", err)
-	} else if p, ok := newP.(*PolicySet); ok {
-		if len(p.policies) == 2 {
-			p1, ok1 := p.policies[0].(*Policy)
-			p2, ok2 := p.policies[1].(*Policy)
-			if ok1 && ok2 {
-				if p1.id != "first" || p2.id != "third" {
-					t.Errorf("Expected \"first\" and \"third\" policies remaining but got %q and %q", p1.id, p2.id)
+	p := makeSimplePolicySet("test",
+		makeSimplePolicy("first", makeSimpleRule("permit", EffectPermit)),
+		makeSimplePolicy("second", makeSimpleRule("permit", EffectPermit)),
+		makeSimplePolicy("third", makeSimpleRule("permit", EffectPermit)),
+	)
+	if len(p.policies) == 3 {
+		for i, e := range p.policies {
+			ord := e.getOrder()
+			if ord != i {
+				id, ok := e.GetID()
+				if !ok {
+					id = "hidden"
 				}
-			} else {
-				t.Errorf("Expected two policies after delete but got %T and %T", p.policies[0], p.policies[1])
+
+				t.Errorf("Expected %q policy to get %d order but got %d", id, i, ord)
 			}
-		} else {
-			t.Errorf("Expected two policies after delete but got %d", len(p.policies))
 		}
 	} else {
-		t.Errorf("Expected new policy set but got %T (%#v)", newP, newP)
+		t.Errorf("Expected 3 policies in the policy set but got %d", len(p.policies))
 	}
 
-	newP, err = p.Delete([]string{"first"})
+	newE, err := p.Delete([]string{"second"})
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else if p, ok := newP.(*PolicySet); ok {
-		if len(p.policies) == 2 {
-			p1, ok1 := p.policies[0].(*Policy)
-			p2, ok2 := p.policies[1].(*Policy)
-			if ok1 && ok2 {
-				if p1.id != "second" || p2.id != "third" {
-					t.Errorf("Expected \"second\" and \"third\" policies remaining but got %q and %q", p1.id, p2.id)
+	} else if newP, ok := newE.(*PolicySet); ok {
+		if len(newP.policies) == 2 {
+			e1 := newP.policies[0]
+			e3 := newP.policies[1]
+
+			p1, ok1 := e1.(*Policy)
+			p3, ok3 := e3.(*Policy)
+			if ok1 && ok3 {
+				if p1.id != "first" || p3.id != "third" {
+					t.Errorf("Expected \"first\" and \"third\" policies remaining but got %q and %q", p1.id, p3.id)
+				}
+
+				if p1.ord != 0 || p3.ord != 2 {
+					t.Errorf("Expected remaining policies to keep their orders but got %d and %d", p1.ord, p3.ord)
 				}
 			} else {
-				t.Errorf("Expected two policies after delete but got %T and %T", p.policies[0], p.policies[1])
+				t.Errorf("Expected two policies after delete but got %T and %T", e1, e3)
 			}
 		} else {
-			t.Errorf("Expected two policies after delete but got %d", len(p.policies))
+			t.Errorf("Expected two policies after delete but got %d", len(newP.policies))
 		}
 	} else {
-		t.Errorf("Expected new policy set but got %T (%#v)", newP, newP)
+		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
 	}
 
-	newP, err = p.Delete([]string{"third"})
+	newE, err = p.Delete([]string{"first"})
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else if p, ok := newP.(*PolicySet); ok {
-		if len(p.policies) == 2 {
-			p1, ok1 := p.policies[0].(*Policy)
-			p2, ok2 := p.policies[1].(*Policy)
+	} else if newP, ok := newE.(*PolicySet); ok {
+		if len(newP.policies) == 2 {
+			e2 := newP.policies[0]
+			e3 := newP.policies[1]
+
+			p2, ok2 := e2.(*Policy)
+			p3, ok3 := e3.(*Policy)
+			if ok2 && ok3 {
+				if p2.id != "second" || p3.id != "third" {
+					t.Errorf("Expected \"second\" and \"third\" policies remaining but got %q and %q", p2.id, p3.id)
+				}
+
+				if p2.ord != 1 || p3.ord != 2 {
+					t.Errorf("Expected remaining policies to keep their orders but got %d and %d", p2.ord, p3.ord)
+				}
+			} else {
+				t.Errorf("Expected two policies after delete but got %T and %T", e2, e3)
+			}
+		} else {
+			t.Errorf("Expected two policies after delete but got %d", len(newP.policies))
+		}
+	} else {
+		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
+	}
+
+	newE, err = p.Delete([]string{"third"})
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if newP, ok := newE.(*PolicySet); ok {
+		if len(newP.policies) == 2 {
+			e1 := newP.policies[0]
+			e2 := newP.policies[1]
+
+			p1, ok1 := e1.(*Policy)
+			p2, ok2 := e2.(*Policy)
 			if ok1 && ok2 {
 				if p1.id != "first" || p2.id != "second" {
 					t.Errorf("Expected \"first\" and \"second\" policies remaining but got %q and %q", p1.id, p2.id)
 				}
+
+				if p1.ord != 0 || p2.ord != 1 {
+					t.Errorf("Expected remaining policies to keep their orders but got %d and %d", p1.ord, p2.ord)
+				}
 			} else {
-				t.Errorf("Expected two policies after delete but got %T and %T", p.policies[0], p.policies[1])
+				t.Errorf("Expected two policies after delete but got %T and %T", e1, e2)
 			}
 		} else {
-			t.Errorf("Expected two policies after delete but got %d", len(p.policies))
+			t.Errorf("Expected two policies after delete but got %d", len(newP.policies))
 		}
 	} else {
-		t.Errorf("Expected new policy set but got %T (%#v)", newP, newP)
+		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
 	}
 
-	newP, err = p.Delete([]string{"first", "permit"})
+	newE, err = p.Delete([]string{"first", "permit"})
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else if p, ok := newP.(*PolicySet); ok {
-		if len(p.policies) == 3 {
-			p := p.policies[0]
+	} else if newP, ok := newE.(*PolicySet); ok {
+		if len(newP.policies) == 3 {
+			p := newP.policies[0]
 			if p, ok := p.(*Policy); ok {
 				if p.id == "first" {
 					if len(p.rules) > 0 {
@@ -533,80 +576,62 @@ func TestPolicySetDelete(t *testing.T) {
 					t.Errorf("Expected \"first\" policy at the beginning but got %q", p.id)
 				}
 			} else {
-				t.Errorf("Expected policy as first item of policy set but got %T (%#v)", p, p)
+				t.Errorf("Expected policy as first item of policy set but got %T (%#v)", newP, newP)
 			}
 		} else {
-			t.Errorf("Expected three policies after nested delete but got %d", len(p.policies))
+			t.Errorf("Expected three policies after nested delete but got %d", len(newP.policies))
 		}
 	} else {
-		t.Errorf("Expected new policy set but got %T (%#v)", newP, newP)
+		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
 	}
 
-	newP, err = p.Delete([]string{"fourth"})
+	newE, err = p.Delete([]string{"fourth"})
 	if err == nil {
-		t.Errorf("Expected error but got new policy %T (%#v)", newP, newP)
+		t.Errorf("Expected error but got new policy %T (%#v)", newE, newE)
 	} else if _, ok := err.(*missingPolicySetChildError); !ok {
 		t.Errorf("Expected *missingPolicySetChildError but got %T (%s)", err, err)
 	}
 
-	newP, err = p.Delete([]string{"fourth", "permit"})
+	newE, err = p.Delete([]string{"fourth", "permit"})
 	if err == nil {
-		t.Errorf("Expected error but got new policy %T (%#v)", newP, newP)
+		t.Errorf("Expected error but got new policy %T (%#v)", newE, newE)
 	} else if _, ok := err.(*missingPolicySetChildError); !ok {
 		t.Errorf("Expected *missingPolicySetChildError but got %T (%s)", err, err)
 	}
 
-	newP, err = p.Delete([]string{"first", "deny"})
+	newE, err = p.Delete([]string{"first", "deny"})
 	if err == nil {
-		t.Errorf("Expected error but got new policy %T (%#v)", newP, newP)
+		t.Errorf("Expected error but got new policy %T (%#v)", newE, newE)
 	} else if _, ok := err.(*missingPolicyChildError); !ok {
 		t.Errorf("Expected *missingPolicyChildError but got %T (%s)", err, err)
 	}
 
-	p = &PolicySet{
-		hidden: true,
-		policies: []Evaluable{
-			&Policy{
-				id:        "first",
-				rules:     []*Rule{{id: "permit", effect: EffectPermit}},
-				algorithm: firstApplicableEffectRCA{}}},
-		algorithm: firstApplicableEffectPCA{}}
-	newP, err = p.Delete([]string{"first"})
+	p = makeSimpleHiddenPolicySet(
+		makeSimplePolicy("first", makeSimpleRule("permit", EffectPermit)),
+	)
+	newE, err = p.Delete([]string{"first"})
 	if err == nil {
-		t.Errorf("Expected error but got new policy %T (%#v)", newP, newP)
+		t.Errorf("Expected error but got new policy %T (%#v)", newE, newE)
 	} else if _, ok := err.(*hiddenPolicySetModificationError); !ok {
 		t.Errorf("Expected *hiddenPolicySetModificationError but got %T (%s)", err, err)
 	}
 
-	p = &PolicySet{
-		id: "test",
-		policies: []Evaluable{
-			&Policy{
-				id:        "first",
-				rules:     []*Rule{{id: "permit", effect: EffectPermit}},
-				algorithm: firstApplicableEffectRCA{}}},
-		algorithm: firstApplicableEffectPCA{}}
-	newP, err = p.Delete([]string{})
+	p = makeSimplePolicySet("test",
+		makeSimplePolicy("first", makeSimpleRule("permit", EffectPermit)),
+	)
+	newE, err = p.Delete([]string{})
 	if err == nil {
-		t.Errorf("Expected error but got new policy %T (%#v)", newP, newP)
+		t.Errorf("Expected error but got new policy %T (%#v)", newE, newE)
 	} else if _, ok := err.(*tooShortPathPolicySetModificationError); !ok {
 		t.Errorf("Expected *tooShortPathPolicySetModificationError but got %T (%s)", err, err)
 	}
 
 	p = NewPolicySet("test", false, Target{},
 		[]Evaluable{
-			&Policy{
-				id:        "first",
-				rules:     []*Rule{{id: "permit", effect: EffectPermit}},
-				algorithm: firstApplicableEffectRCA{}},
-			&Policy{
-				id:        "second",
-				rules:     []*Rule{{id: "permit", effect: EffectPermit}},
-				algorithm: firstApplicableEffectRCA{}},
-			&Policy{
-				id:        "third",
-				rules:     []*Rule{{id: "permit", effect: EffectPermit}},
-				algorithm: firstApplicableEffectRCA{}}},
+			makeSimplePolicy("first", makeSimpleRule("permit", EffectPermit)),
+			makeSimplePolicy("second", makeSimpleRule("permit", EffectPermit)),
+			makeSimplePolicy("third", makeSimpleRule("permit", EffectPermit)),
+		},
 		makeMapperPCA, MapperPCAParams{
 			Argument: AttributeDesignator{a: Attribute{id: "k", t: TypeString}},
 			DefOk:    true,
@@ -614,28 +639,101 @@ func TestPolicySetDelete(t *testing.T) {
 			ErrOk:    true,
 			Err:      "second"},
 		nil)
-	newP, err = p.Delete([]string{"second"})
+	newE, err = p.Delete([]string{"second"})
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else if p, ok := newP.(*PolicySet); ok {
-		if len(p.policies) == 2 {
-			p1, ok1 := p.policies[0].(*Policy)
-			p2, ok2 := p.policies[1].(*Policy)
-			if ok1 && ok2 {
-				if p1.id != "first" || p2.id != "third" {
-					t.Errorf("Expected \"first\" and \"third\" policies remaining but got %q and %q", p1.id, p2.id)
+	} else if newP, ok := newE.(*PolicySet); ok {
+		if len(newP.policies) == 2 {
+			e1 := newP.policies[0]
+			e3 := newP.policies[1]
+
+			p1, ok1 := e1.(*Policy)
+			p3, ok3 := e3.(*Policy)
+			if ok1 && ok3 {
+				if p1.id != "first" || p3.id != "third" {
+					t.Errorf("Expected \"first\" and \"third\" policies remaining but got %q and %q", p1.id, p3.id)
+				}
+
+				if p1.ord != 0 || p3.ord != 2 {
+					t.Errorf("Expected remaining policies to keep their orders but got %d and %d", p1.ord, p3.ord)
 				}
 			} else {
-				t.Errorf("Expected two policies after delete but got %T and %T", p.policies[0], p.policies[1])
+				t.Errorf("Expected two policies after delete but got %T and %T", e1, e3)
 			}
 		} else {
-			t.Errorf("Expected two policies after delete but got %d", len(p.policies))
+			t.Errorf("Expected two policies after delete but got %d", len(newP.policies))
 		}
 
-		assertMapperPCAMapKeys(p.algorithm, "after deletion", t, "first", "third")
+		assertMapperPCAMapKeys(newP.algorithm, "after deletion", t, "first", "third")
+
+		if m, ok := newP.algorithm.(mapperPCA); ok {
+			if m.err != nil {
+				t.Errorf("Expected error policy to be nil but got %p", m.err)
+			}
+		}
 	} else {
-		t.Errorf("Expected new policy set but got %T (%#v)", newP, newP)
+		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
 	}
+}
+
+func TestSortPoliciesByOrder(t *testing.T) {
+	policies := []Evaluable{
+		&PolicySet{
+			ord: 1,
+			id:  "second",
+		},
+		&PolicySet{
+			ord: 3,
+			id:  "fourth",
+		},
+		&Policy{
+			ord: 0,
+			id:  "first",
+		},
+		&Policy{
+			ord: 2,
+			id:  "third",
+		},
+	}
+
+	sort.Sort(byPolicyOrder(policies))
+
+	ids := make([]string, len(policies))
+	for i, p := range policies {
+		id, ok := p.GetID()
+		if !ok {
+			id = "hidden"
+		}
+
+		ids[i] = id
+	}
+	s := strings.Join(ids, ", ")
+	e := "first, second, third, fourth"
+	if s != e {
+		t.Errorf("Expected policies in order \"%s\" but got \"%s\"", e, s)
+	}
+}
+
+func makeSimplePolicySet(ID string, policies ...Evaluable) *PolicySet {
+	return NewPolicySet(
+		ID, false,
+		Target{},
+		policies,
+		makeFirstApplicableEffectPCA,
+		nil,
+		nil,
+	)
+}
+
+func makeSimpleHiddenPolicySet(policies ...Evaluable) *PolicySet {
+	return NewPolicySet(
+		"", true,
+		Target{},
+		policies,
+		makeFirstApplicableEffectPCA,
+		nil,
+		nil,
+	)
 }
 
 func assertMapperPCAMapKeys(a PolicyCombiningAlg, desc string, t *testing.T, expected ...string) {
