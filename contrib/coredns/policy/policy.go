@@ -501,11 +501,12 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	if ah.action == typeAllow || ah.action == typeLog {
 		// resolve domain name to IP
 		responseWriter := new(writer)
-		status, err = plugin.NextOrFailure(p.Name(), p.next, ctx, responseWriter, r)
+		_, err = plugin.NextOrFailure(p.Name(), p.next, ctx, responseWriter, r)
 		if err != nil {
 			status = dns.RcodeServerFailure
 		} else {
 			respMsg = responseWriter.Msg
+			status = respMsg.Rcode
 			address := extractRespIP(respMsg)
 			// if external resolver ret code is not RcodeSuccess
 			// address is not filled from the answer

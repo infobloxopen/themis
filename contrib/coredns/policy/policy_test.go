@@ -446,6 +446,9 @@ func TestPPConnect(t *testing.T) {
 func handler() plugin.Handler {
 	return plugin.HandlerFunc(func(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 		q := r.Question[0].Name
+		var err error
+		r.Rcode = dns.RcodeSuccess
+		r.Response = true
 		switch q {
 		case "google.com.":
 			r.Answer = []dns.RR{
@@ -468,13 +471,13 @@ func handler() plugin.Handler {
 				test.AAAA("redirect.net.	600	IN	AAAA		2001:db8:0:200:0:0:0:7"),
 			}
 		case "nxdomain.org.":
-			w.WriteMsg(r)
-			return dns.RcodeNameError, nil
+			r.Rcode = dns.RcodeNameError
 		default:
-			return dns.RcodeServerFailure, errFakeResolver
+			r.Rcode = dns.RcodeServerFailure
+			err = errFakeResolver
 		}
 		w.WriteMsg(r)
-		return dns.RcodeSuccess, nil
+		return r.Rcode, err
 	})
 }
 
