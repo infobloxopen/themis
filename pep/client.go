@@ -122,6 +122,19 @@ func WithConnectionTimeout(timeout time.Duration) Option {
 	}
 }
 
+// WithConnectionStateNotification returns an Option which sets connection
+// state notification callback. The callback is called before connection
+// attempt with state StreamingConnectionConnecting, on successfull connect
+// with state StreamingConnectionEstablished. If connection attempt fails
+// the callback is called with state StreamingConnectionFailure and with error
+// occured during the attempt. State StreamingConnectionBroken is used when
+// during request validation connection to any PDP server appears not working.
+func WithConnectionStateNotification(callback ConnectionStateNotificationCallback) Option {
+	return func(o *options) {
+		o.connStateCb = callback
+	}
+}
+
 const (
 	noBalancer = iota
 	roundRobinBalancer
@@ -134,6 +147,7 @@ type options struct {
 	tracer      ot.Tracer
 	maxStreams  int
 	connTimeout time.Duration
+	connStateCb ConnectionStateNotificationCallback
 }
 
 // NewClient creates client instance using given options.

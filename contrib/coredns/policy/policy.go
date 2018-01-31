@@ -12,6 +12,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/coredns/coredns/plugin"
@@ -75,26 +76,30 @@ type edns0Map struct {
 // policyPlugin represents a plugin instance that can validate DNS
 // requests and replies using PDP server.
 type policyPlugin struct {
-	endpoints   []string
-	options     map[uint16][]*edns0Map
-	transfer    map[string]struct{}
-	tapIO       dnstapSender
-	trace       plugin.Handler
-	next        plugin.Handler
-	pdp         pep.Client
-	debugSuffix string
-	streams     int
-	hotSpot     bool
-	ident       string
-	passthrough []string
-	connTimeout time.Duration
+	endpoints       []string
+	options         map[uint16][]*edns0Map
+	transfer        map[string]struct{}
+	tapIO           dnstapSender
+	trace           plugin.Handler
+	next            plugin.Handler
+	pdp             pep.Client
+	debugSuffix     string
+	streams         int
+	hotSpot         bool
+	ident           string
+	passthrough     []string
+	connTimeout     time.Duration
+	connAttempts    map[string]*uint32
+	unkConnAttempts *uint32
 }
 
 func newPolicyPlugin() *policyPlugin {
 	return &policyPlugin{
-		options:     make(map[uint16][]*edns0Map),
-		transfer:    make(map[string]struct{}),
-		connTimeout: -1,
+		options:         make(map[uint16][]*edns0Map),
+		transfer:        make(map[string]struct{}),
+		connTimeout:     -1,
+		connAttempts:    make(map[string]*uint32),
+		unkConnAttempts: new(uint32),
 	}
 }
 
@@ -102,8 +107,13 @@ func newPolicyPlugin() *policyPlugin {
 func (p *policyPlugin) connect() error {
 	log.Printf("[DEBUG] Connecting %v", p)
 
+	for _, addr := range p.endpoints {
+		p.connAttempts[addr] = new(uint32)
+	}
+
 	opts := []pep.Option{
 		pep.WithConnectionTimeout(p.connTimeout),
+		pep.WithConnectionStateNotification(p.connStateCb),
 	}
 	if p.streams <= 0 || !p.hotSpot {
 		opts = append(opts, pep.WithRoundRobinBalancer(p.endpoints...))
@@ -394,6 +404,53 @@ func (p *policyPlugin) parseConnectionTimeout(c *caddy.Controller) error {
 	}
 
 	return nil
+}
+
+func (p *policyPlugin) connStateCb(addr string, state int, err error) {
+	switch state {
+	default:
+		if err != nil {
+			log.Printf("[DEBUG] Unknown connection notification %s (%s)", addr, err)
+		} else {
+			log.Printf("[DEBUG] Unknown connection notification %s", addr)
+		}
+
+	case pep.StreamingConnectionEstablished:
+		ptr, ok := p.connAttempts[addr]
+		if !ok {
+			ptr = p.unkConnAttempts
+		}
+		atomic.StoreUint32(ptr, 0)
+
+		log.Printf("[INFO] Connected to %s", addr)
+
+	case pep.StreamingConnectionBroken:
+		log.Printf("[ERROR] Connection to %s has been broken", addr)
+
+	case pep.StreamingConnectionConnecting:
+		ptr, ok := p.connAttempts[addr]
+		if !ok {
+			ptr = p.unkConnAttempts
+		}
+		count := atomic.AddUint32(ptr, 1)
+
+		if count <= 1 || count > 100 {
+			log.Printf("[ERROR] Connecting to %s", addr)
+		}
+
+		if count > 100 {
+			atomic.StoreUint32(ptr, 1)
+		}
+
+	case pep.StreamingConnectionFailure:
+		ptr, ok := p.connAttempts[addr]
+		if !ok {
+			ptr = p.unkConnAttempts
+		}
+		if atomic.LoadUint32(ptr) <= 1 {
+			log.Printf("[ERROR] Failed to connect to %s (%s)", addr, err)
+		}
+	}
 }
 
 func (p *policyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) {
