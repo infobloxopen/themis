@@ -15,9 +15,28 @@ import (
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
+// ConnectionStateNotificationCallback is a function type for connection state
+// notifications.
+type ConnectionStateNotificationCallback func(address string, state int, err error)
+
+// StreamingConnection* constants designate different states of connection
+// to particular PDP on notification callback call.
+const (
+	// StreamingConnectionEstablished stands for succesfully established connection.
+	StreamingConnectionEstablished = iota
+	// StreamingConnectionBroken is passed to notification callback when
+	// connection appears broken during a validation call.
+	StreamingConnectionBroken
+	// StreamingConnectionConnecting marks a connection attempt.
+	StreamingConnectionConnecting
+	// StreamingConnectionFailure used when a connection attempt fails.
+	// In the case err gets value of an error occured.
+	StreamingConnectionFailure
+)
+
 const connectionResetPercent float64 = 0.3
 
-func makeStreamConns(addrs []string, streams int, tracer opentracing.Tracer, timeout time.Duration) ([]*streamConn, *connRetryPool) {
+func makeStreamConns(addrs []string, streams int, tracer opentracing.Tracer, timeout time.Duration, cb ConnectionStateNotificationCallback) ([]*streamConn, *connRetryPool) {
 	total := len(addrs)
 	if total > streams {
 		total = streams
@@ -32,7 +51,7 @@ func makeStreamConns(addrs []string, streams int, tracer opentracing.Tracer, tim
 			count++
 		}
 
-		conns[i] = newStreamConn(addrs[i], count, tracer)
+		conns[i] = newStreamConn(addrs[i], count, tracer, cb)
 	}
 
 	crp := newConnRetryPool(conns, timeout)
@@ -79,15 +98,18 @@ type streamConn struct {
 	streams []*stream
 	index   chan int
 	retry   chan boundStream
+
+	notify ConnectionStateNotificationCallback
 }
 
-func newStreamConn(addr string, streams int, tracer opentracing.Tracer) *streamConn {
+func newStreamConn(addr string, streams int, tracer opentracing.Tracer, cb ConnectionStateNotificationCallback) *streamConn {
 	c := &streamConn{
 		addr:    addr,
 		tracer:  tracer,
 		limit:   int(float64(streams)*connectionResetPercent + 0.5),
 		lock:    new(sync.RWMutex),
 		streams: make([]*stream, streams),
+		notify:  cb,
 	}
 
 	for i := range c.streams {
@@ -146,7 +168,18 @@ func (c *streamConn) exitConnect() bool {
 	return true
 }
 
-func (c *streamConn) tryConnect(addr string, tracer opentracing.Tracer, timeout time.Duration) error {
+func (c *streamConn) tryConnect(addr string, tracer opentracing.Tracer, timeout time.Duration) (err error) {
+	if c.notify != nil {
+		go c.notify(addr, StreamingConnectionConnecting, nil)
+		defer func() {
+			state := StreamingConnectionEstablished
+			if err != nil {
+				state = StreamingConnectionFailure
+			}
+
+			go c.notify(addr, state, err)
+		}()
+	}
 	opts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
@@ -167,9 +200,10 @@ func (c *streamConn) tryConnect(addr string, tracer opentracing.Tracer, timeout 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	conn, err := grpc.DialContext(ctx, addr, opts...)
+	var conn *grpc.ClientConn
+	conn, err = grpc.DialContext(ctx, addr, opts...)
 	if err != nil {
-		return err
+		return
 	}
 
 	client := pb.NewPDPClient(conn)
@@ -178,7 +212,8 @@ func (c *streamConn) tryConnect(addr string, tracer opentracing.Tracer, timeout 
 	c.client = client
 	c.lock.Unlock()
 
-	ready, err := c.connectStreams()
+	var ready int
+	ready, err = c.connectStreams()
 	if err != nil {
 		c.lock.Lock()
 		defer c.lock.Unlock()
@@ -186,14 +221,14 @@ func (c *streamConn) tryConnect(addr string, tracer opentracing.Tracer, timeout 
 		closeStreams(c.streams[0:ready], nil)
 		c.closeConnInternal()
 
-		return err
+		return
 	}
 
-	if c.exitConnect() {
-		return nil
+	if !c.exitConnect() {
+		err = errStreamConnWrongState
 	}
 
-	return errStreamConnWrongState
+	return
 }
 
 func (c *streamConn) newValidationStream() (pb.PDP_NewValidationStreamClient, error) {
@@ -340,6 +375,10 @@ func (c *streamConn) closeConnInternal() {
 }
 
 func (c *streamConn) markDisconnected() bool {
+	if c.notify != nil {
+		go c.notify(c.addr, StreamingConnectionBroken, nil)
+	}
+
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

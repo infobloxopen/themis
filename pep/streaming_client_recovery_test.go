@@ -35,7 +35,15 @@ func singleClientRecovery(streams int, t *testing.T) {
 
 	defer s.Stop()
 
-	c := NewClient(WithStreams(streams))
+	c := NewClient(
+		WithStreams(streams),
+		WithConnectionStateNotification(func(addr string, state int, err error) {
+			if streams > 1 && state == StreamingConnectionBroken {
+				t.Errorf("unexpected connection failure when number of streams set to %d "+
+					"(expected only stream failure)", streams)
+			}
+		}),
+	)
 	err = c.Connect(fakeServerAddress)
 	if err != nil {
 		t.Fatalf("can't connect to fake server: %s", err)
@@ -88,6 +96,12 @@ func hotSotBalancedClientRecovery(streams int, t *testing.T) {
 			fakeServerAddress,
 			fakeServerAltAddress,
 		),
+		WithConnectionStateNotification(func(addr string, state int, err error) {
+			if streams > 1 && state == StreamingConnectionBroken {
+				t.Errorf("unexpected connection failure when number of streams set to %d "+
+					"(expected only stream failure)", streams)
+			}
+		}),
 	)
 	err = c.Connect(fakeServerAddress)
 	if err != nil {
