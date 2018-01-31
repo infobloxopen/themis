@@ -512,6 +512,9 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		sendExtra bool
 	)
 
+	// turn off default Cq and Cr dnstap messages
+	resetCqCr(ctx)
+
 	debugQuery := p.decodeDebugMsg(r)
 	qName, qType := getNameType(r)
 	for _, s := range p.passthrough {
@@ -578,6 +581,7 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		status = dns.RcodeNameError
 	case typeRefuse:
 		status = dns.RcodeRefused
+		sendExtra = true
 	default:
 		status = dns.RcodeServerFailure
 		err = errInvalidAction
@@ -593,16 +597,13 @@ Exit:
 		r.Question[0].Qclass = dns.ClassCHAOS
 		sendExtra = false
 	}
-	if p.tapIO != nil && status != dns.RcodeRefused && status != dns.RcodeServerFailure {
-		if pw := newProxyWriter(w); pw != nil {
-			pw.WriteMsg(r)
-			if !sendExtra {
-				ah = nil
-			}
-			p.tapIO.sendCRExtraMsg(pw, ah)
+
+	w.WriteMsg(r)
+	if p.tapIO != nil && status != dns.RcodeServerFailure {
+		if !sendExtra {
+			ah = nil
 		}
-	} else {
-		w.WriteMsg(r)
+		p.tapIO.sendCRExtraMsg(w, r, ah)
 	}
 	return status, err
 }
