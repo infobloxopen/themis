@@ -65,7 +65,7 @@ func (c *streamingClient) Connect(addr string) error {
 		addrs = []string{addr}
 	}
 
-	conns, crp := makeStreamConns(addrs, c.opts.maxStreams, c.opts.tracer)
+	conns, crp := makeStreamConns(addrs, c.opts.maxStreams, c.opts.tracer, c.opts.connTimeout)
 	c.conns = conns
 	c.crp = crp
 

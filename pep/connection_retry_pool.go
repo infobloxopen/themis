@@ -3,6 +3,7 @@ package pep
 import (
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 const (
@@ -13,7 +14,8 @@ const (
 )
 
 type connRetryPool struct {
-	state *uint32
+	timeout time.Duration
+	state   *uint32
 
 	ch    chan *streamConn
 	count *uint32
@@ -22,7 +24,7 @@ type connRetryPool struct {
 	m *sync.RWMutex
 }
 
-func newConnRetryPool(conns []*streamConn) *connRetryPool {
+func newConnRetryPool(conns []*streamConn, timeout time.Duration) *connRetryPool {
 	state := crpIdle
 
 	ch := make(chan *streamConn, len(conns))
@@ -32,17 +34,18 @@ func newConnRetryPool(conns []*streamConn) *connRetryPool {
 	count := uint32(len(conns))
 
 	return &connRetryPool{
-		state: &state,
-		ch:    ch,
-		count: &count,
-		c:     sync.NewCond(new(sync.Mutex)),
-		m:     new(sync.RWMutex),
+		timeout: timeout,
+		state:   &state,
+		ch:      ch,
+		count:   &count,
+		c:       sync.NewCond(new(sync.Mutex)),
+		m:       new(sync.RWMutex),
 	}
 }
 
 func (p *connRetryPool) tryStart() {
 	if atomic.CompareAndSwapUint32(p.state, crpIdle, crpFull) {
-		go p.worker()
+		go p.worker(p.ch)
 	}
 }
 
@@ -62,20 +65,48 @@ func (p *connRetryPool) check() bool {
 }
 
 func (p *connRetryPool) wait() bool {
-	p.c.L.Lock()
-	defer p.c.L.Unlock()
+	state := atomic.LoadUint32(p.state)
+	if p.timeout < 0 {
+		p.c.L.Lock()
+		defer p.c.L.Unlock()
 
-	for {
-		switch atomic.LoadUint32(p.state) {
-		case crpStopping:
-			return false
+		for state != crpWorking && state != crpStopping {
+			p.c.Wait()
+			state = atomic.LoadUint32(p.state)
+		}
+	} else if p.timeout > 0 {
+		sch := make(chan bool)
 
-		case crpWorking:
-			return true
+		done := make(chan bool)
+		defer close(done)
+		go func(state uint32) {
+			p.c.L.Lock()
+			defer func() {
+				p.c.L.Unlock()
+				close(sch)
+			}()
+
+			for state != crpWorking && state != crpStopping {
+				p.c.Wait()
+				select {
+				default:
+				case <-done:
+					break
+				}
+
+				state = atomic.LoadUint32(p.state)
+			}
+		}(state)
+
+		select {
+		case <-time.After(p.timeout):
+		case <-sch:
 		}
 
-		p.c.Wait()
+		state = atomic.LoadUint32(p.state)
 	}
+
+	return state == crpWorking
 }
 
 func (p *connRetryPool) put(c *streamConn) {
@@ -95,8 +126,8 @@ func (p *connRetryPool) put(c *streamConn) {
 	}
 }
 
-func (p *connRetryPool) worker() {
-	for c := range p.ch {
+func (p *connRetryPool) worker(ch chan *streamConn) {
+	for c := range ch {
 		go p.reconnect(c)
 	}
 }

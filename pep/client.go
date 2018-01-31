@@ -11,6 +11,7 @@ package pep
 
 import (
 	"errors"
+	"time"
 
 	ot "github.com/opentracing/opentracing-go"
 )
@@ -112,6 +113,15 @@ func WithStreams(n int) Option {
 	}
 }
 
+// WithConnectionTimeout returns an Option which sets validation timeout
+// for the case when no connection can be established. Negative value means
+// no timeout. Zero - don't wait for connection, fail immediately.
+func WithConnectionTimeout(timeout time.Duration) Option {
+	return func(o *options) {
+		o.connTimeout = timeout
+	}
+}
+
 const (
 	noBalancer = iota
 	roundRobinBalancer
@@ -119,15 +129,18 @@ const (
 )
 
 type options struct {
-	addresses  []string
-	balancer   int
-	tracer     ot.Tracer
-	maxStreams int
+	addresses   []string
+	balancer    int
+	tracer      ot.Tracer
+	maxStreams  int
+	connTimeout time.Duration
 }
 
 // NewClient creates client instance using given options.
 func NewClient(opts ...Option) Client {
-	o := options{}
+	o := options{
+		connTimeout: -1,
+	}
 	for _, opt := range opts {
 		opt(&o)
 	}

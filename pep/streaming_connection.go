@@ -17,7 +17,7 @@ import (
 
 const connectionResetPercent float64 = 0.3
 
-func makeStreamConns(addrs []string, streams int, tracer opentracing.Tracer) ([]*streamConn, *connRetryPool) {
+func makeStreamConns(addrs []string, streams int, tracer opentracing.Tracer, timeout time.Duration) ([]*streamConn, *connRetryPool) {
 	total := len(addrs)
 	if total > streams {
 		total = streams
@@ -35,7 +35,7 @@ func makeStreamConns(addrs []string, streams int, tracer opentracing.Tracer) ([]
 		conns[i] = newStreamConn(addrs[i], count, tracer)
 	}
 
-	crp := newConnRetryPool(conns)
+	crp := newConnRetryPool(conns, timeout)
 	for _, c := range conns {
 		c.crp = crp
 	}

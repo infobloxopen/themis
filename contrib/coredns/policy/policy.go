@@ -12,6 +12,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/pkg/trace"
@@ -86,17 +87,24 @@ type policyPlugin struct {
 	hotSpot     bool
 	ident       string
 	passthrough []string
+	connTimeout time.Duration
 }
 
 func newPolicyPlugin() *policyPlugin {
-	return &policyPlugin{options: make(map[uint16][]*edns0Map), transfer: make(map[string]struct{})}
+	return &policyPlugin{
+		options:     make(map[uint16][]*edns0Map),
+		transfer:    make(map[string]struct{}),
+		connTimeout: -1,
+	}
 }
 
 // connect establishes connection to PDP server.
 func (p *policyPlugin) connect() error {
 	log.Printf("[DEBUG] Connecting %v", p)
 
-	opts := []pep.Option{}
+	opts := []pep.Option{
+		pep.WithConnectionTimeout(p.connTimeout),
+	}
 	if p.streams <= 0 || !p.hotSpot {
 		opts = append(opts, pep.WithRoundRobinBalancer(p.endpoints...))
 	}
@@ -148,6 +156,9 @@ func (p *policyPlugin) parseOption(c *caddy.Controller) error {
 
 	case "passthrough":
 		return p.parsePassthrough(c)
+
+	case "connection_timeout":
+		return p.parseConnectionTimeout(c)
 	}
 
 	return errInvalidOption
@@ -361,6 +372,26 @@ func (p *policyPlugin) parsePassthrough(c *caddy.Controller) error {
 	}
 
 	p.passthrough = args
+
+	return nil
+}
+
+func (p *policyPlugin) parseConnectionTimeout(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) != 1 {
+		return c.ArgErr()
+	}
+
+	if strings.ToLower(args[0]) == "no" {
+		p.connTimeout = -1
+	} else {
+		timeout, err := time.ParseDuration(args[0])
+		if err != nil {
+			return fmt.Errorf("Could not parse timeout: %s", err)
+		}
+
+		p.connTimeout = timeout
+	}
 
 	return nil
 }
