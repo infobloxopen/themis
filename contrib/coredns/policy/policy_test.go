@@ -279,6 +279,14 @@ func TestPolicy(t *testing.T) {
 				Obligation: []*pdp.Attribute{{Id: attrNameRefuse, Value: "true"}}},
 			status: dns.RcodeRefused,
 			err:    nil,
+			attrs: []*pdp.Attribute{
+				{Id: attrNameDomainName, Value: "test.org"},
+				{Id: attrNameDNSQtype, Value: "1"},
+				{Id: attrNameSourceIP, Value: "10.240.0.1"},
+				{Id: attrNamePolicyAction, Value: "5"},
+				{Id: attrNameRefuse, Value: "true"},
+				{Id: attrNameType, Value: typeValueQuery},
+			},
 		},
 		{
 			query:     "test.com.",
@@ -288,6 +296,15 @@ func TestPolicy(t *testing.T) {
 				Obligation: []*pdp.Attribute{{Id: attrNameRefuse, Value: "true"}}},
 			status: dns.RcodeRefused,
 			err:    nil,
+			attrs: []*pdp.Attribute{
+				{Id: attrNameDomainName, Value: "test.com"},
+				{Id: attrNameDNSQtype, Value: "1"},
+				{Id: attrNameSourceIP, Value: "10.240.0.1"},
+				{Id: attrNameAddress, Value: "10.240.0.1"},
+				{Id: attrNamePolicyAction, Value: "5"},
+				{Id: attrNameRefuse, Value: "true"},
+				{Id: attrNameType, Value: typeValueResponse},
+			},
 		},
 		{
 			query:     "nxdomain.org.",
@@ -694,7 +711,7 @@ func (s *testDnstapSender) reset() {
 	s.attrs = nil
 }
 
-func (s *testDnstapSender) sendCRExtraMsg(pw *proxyWriter, ah *attrHolder) {
+func (s *testDnstapSender) sendCRExtraMsg(w dns.ResponseWriter, msg *dns.Msg, ah *attrHolder) {
 	if ah != nil {
 		s.attrs = ah.convertAttrs()
 	}

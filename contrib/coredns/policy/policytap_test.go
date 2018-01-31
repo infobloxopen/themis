@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coredns/coredns/plugin/dnstap"
 	"github.com/coredns/coredns/plugin/dnstap/taprw"
 	dtest "github.com/coredns/coredns/plugin/dnstap/test"
 	"github.com/coredns/coredns/plugin/test"
@@ -12,6 +13,7 @@ import (
 	pb "github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 	pdp "github.com/infobloxopen/themis/pdp-service"
 	"github.com/miekg/dns"
+	context "golang.org/x/net/context"
 )
 
 type testIORoutine struct {
@@ -35,16 +37,15 @@ func (tapIO testIORoutine) Dnstap(msg tap.Dnstap) {
 
 func TestSendCRExtraNoMsg(t *testing.T) {
 	trapper := dtest.TrapTapper{Full: true}
-	tapRW := taprw.ResponseWriter{
+	tapRW := &taprw.ResponseWriter{
 		Query:          new(dns.Msg),
 		ResponseWriter: &test.ResponseWriter{},
 		Tapper:         &trapper,
 	}
-	proxyRW := newProxyWriter(&tapRW)
 
 	io := newIORoutine(100 * time.Millisecond)
 	tapIO := newPolicyDnstapSender(io)
-	tapIO.sendCRExtraMsg(proxyRW, nil)
+	tapIO.sendCRExtraMsg(tapRW, nil, nil)
 	_, ok := <-io.dnstapChan
 	if ok {
 		t.Errorf("Unexpected msg received")
@@ -61,17 +62,16 @@ func TestSendCRExtraInvalidMsg(t *testing.T) {
 	msg.Rcode = -1
 
 	trapper := dtest.TrapTapper{Full: true}
-	tapRW := taprw.ResponseWriter{
+	tapRW := &taprw.ResponseWriter{
 		Query:          new(dns.Msg),
 		ResponseWriter: &test.ResponseWriter{},
 		Tapper:         &trapper,
 	}
-	proxyRW := newProxyWriter(&tapRW)
-	proxyRW.WriteMsg(&msg)
+	tapRW.WriteMsg(&msg)
 
 	io := newIORoutine(100 * time.Millisecond)
 	tapIO := newPolicyDnstapSender(io)
-	tapIO.sendCRExtraMsg(proxyRW, nil)
+	tapIO.sendCRExtraMsg(tapRW, &msg, nil)
 	_, ok := <-io.dnstapChan
 	if ok {
 		t.Errorf("Unexpected msg received")
@@ -87,13 +87,13 @@ func TestSendCRExtraMsg(t *testing.T) {
 	}
 
 	trapper := dtest.TrapTapper{Full: true}
-	tapRW := taprw.ResponseWriter{
+	tapRW := &taprw.ResponseWriter{
 		Query:          new(dns.Msg),
 		ResponseWriter: &test.ResponseWriter{},
 		Tapper:         &trapper,
+		Send:           &taprw.SendOption{Cq: false, Cr: false},
 	}
-	proxyRW := newProxyWriter(&tapRW)
-	proxyRW.WriteMsg(&msg)
+	tapRW.WriteMsg(&msg)
 
 	testAttrHolder := &attrHolder{attrsReqDomain: []*pdp.Attribute{
 		{Id: attrNameType, Value: typeValueQuery},
@@ -103,7 +103,7 @@ func TestSendCRExtraMsg(t *testing.T) {
 
 	io := newIORoutine(5000 * time.Millisecond)
 	tapIO := newPolicyDnstapSender(io)
-	tapIO.sendCRExtraMsg(proxyRW, testAttrHolder)
+	tapIO.sendCRExtraMsg(tapRW, &msg, testAttrHolder)
 
 	expectedAttrs := []*pdp.Attribute{
 		{Id: attrNameDomainName, Value: "test.com"},
@@ -111,7 +111,7 @@ func TestSendCRExtraMsg(t *testing.T) {
 		{Id: attrNamePolicyAction, Value: "0"},
 		{Id: attrNameType, Value: typeValueQuery},
 	}
-	checkCRExtraResult(t, io, proxyRW, expectedAttrs)
+	checkCRExtraResult(t, io, &msg, expectedAttrs)
 
 	if l := len(trapper.Trap); l != 0 {
 		t.Errorf("Dnstap unexpectedly sent %d messages", l)
@@ -119,7 +119,7 @@ func TestSendCRExtraMsg(t *testing.T) {
 	}
 }
 
-func checkCRExtraResult(t *testing.T, io testIORoutine, proxyRW *proxyWriter, attrs []*pdp.Attribute) {
+func checkCRExtraResult(t *testing.T, io testIORoutine, orgMsg *dns.Msg, attrs []*pdp.Attribute) {
 	dnstapMsg, ok := <-io.dnstapChan
 	if !ok {
 		t.Errorf("Receiving Dnstap message was timed out")
@@ -133,7 +133,7 @@ func checkCRExtraResult(t *testing.T, io testIORoutine, proxyRW *proxyWriter, at
 	}
 
 	checkExtraAttrs(t, extra.GetAttrs(), attrs)
-	checkCRMessage(t, dnstapMsg.Message, proxyRW)
+	checkCRMessage(t, dnstapMsg.Message, orgMsg)
 }
 
 func checkExtraAttrs(t *testing.T, actual []*pb.DnstapAttribute, expected []*pdp.Attribute) {
@@ -157,14 +157,14 @@ checkAttr:
 	}
 }
 
-func checkCRMessage(t *testing.T, msg *tap.Message, proxyRW *proxyWriter) {
+func checkCRMessage(t *testing.T, msg *tap.Message, orgMsg *dns.Msg) {
 	if msg == nil {
 		t.Errorf("CR message not found")
 		return
 	}
 
 	d := dtest.TestingData()
-	bin, err := proxyRW.msg.Pack()
+	bin, err := orgMsg.Pack()
 	if err != nil {
 		t.Errorf("Failed to pack message (%v)", err)
 		return
@@ -176,29 +176,11 @@ func checkCRMessage(t *testing.T, msg *tap.Message, proxyRW *proxyWriter) {
 	}
 }
 
-func TestProxyWriter(t *testing.T) {
-	trapper := dtest.TrapTapper{Full: true}
-	//	tapRW := taprw.ResponseWriter{
-	//		Query:          new(dns.Msg),
-	//		ResponseWriter: &test.ResponseWriter{},
-	//		Tapper:         &trapper,
-	//	}
-	proxyRW := newProxyWriter(&taprw.ResponseWriter{
-		Query:          new(dns.Msg),
-		ResponseWriter: &test.ResponseWriter{},
-		Tapper:         &trapper,
-	})
-
-	if proxyRW == nil {
-		t.Error("Failed to create ProxyWriter")
-	}
-	send := proxyRW.ResponseWriter.Send
-	if send == nil || send.Cq || send.Cr {
-		t.Error("Failed to turn off standard CQ or CR dnstap message")
-	}
-
-	proxyRW = newProxyWriter(&test.ResponseWriter{})
-	if proxyRW != nil {
-		t.Error("ProxyWriter was unexpextedly created")
+func TestRestCqCr(t *testing.T) {
+	so := &taprw.SendOption{Cq: true, Cr: true}
+	ctx := context.WithValue(context.Background(), dnstap.DnstapSendOption, so)
+	resetCqCr(ctx)
+	if so.Cq || so.Cr {
+		t.Errorf("Failed to reset Cq/Cr flags")
 	}
 }
