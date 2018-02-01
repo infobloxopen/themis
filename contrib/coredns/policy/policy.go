@@ -140,7 +140,6 @@ func (p *policyPlugin) connect() error {
 func (p *policyPlugin) closeConn() {
 	if p.pdp != nil {
 		p.pdp.Close()
-		p.pdp = nil
 	}
 }
 
