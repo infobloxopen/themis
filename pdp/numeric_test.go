@@ -42,6 +42,7 @@ func TestIntegerEqual(t *testing.T) {
 			v, err := e.Calculate(ctx)
 			if err != nil {
 				t.Errorf("Expect Calculate() returns no error, but got '%s'", err)
+				return
 			}
 
 			expect := (tc.a == tc.b)
@@ -91,6 +92,7 @@ func TestIntegerGreater(t *testing.T) {
 			v, err := e.Calculate(ctx)
 			if err != nil {
 				t.Errorf("Expect Calculate() returns no error, but got '%s'", err)
+				return
 			}
 
 			expect := (tc.a > tc.b)
@@ -140,6 +142,7 @@ func TestIntegerAdd(t *testing.T) {
 			v, err := e.Calculate(ctx)
 			if err != nil {
 				t.Errorf("Expect Calculate() returns no error, but got '%s'", err)
+				return
 			}
 
 			expect := (tc.a + tc.b)
@@ -189,6 +192,7 @@ func TestIntegerSubtract(t *testing.T) {
 			v, err := e.Calculate(ctx)
 			if err != nil {
 				t.Errorf("Expect Calculate() returns no error, but got '%s'", err)
+				return
 			}
 
 			expect := (tc.a - tc.b)
@@ -238,6 +242,7 @@ func TestIntegerMultiply(t *testing.T) {
 			v, err := e.Calculate(ctx)
 			if err != nil {
 				t.Errorf("Expect Calculate() returns no error, but got '%s'", err)
+				return
 			}
 
 			expect := (tc.a * tc.b)
@@ -301,6 +306,7 @@ func TestIntegerDivide(t *testing.T) {
 				return
 			} else if tc.err != "" {
 				t.Errorf("Expect Calculate() returns error contains '%s', but got nil", tc.err)
+				return
 			}
 
 			var expect int64
@@ -362,6 +368,7 @@ func TestFloatGreater(t *testing.T) {
 			v, err := e.Calculate(ctx)
 			if err != nil {
 				t.Errorf("Expect Calculate() returns no error, but got '%s'", err)
+				return
 			}
 
 			expect := (tc.a > tc.b)
@@ -541,6 +548,7 @@ func TestFloatMultiply(t *testing.T) {
 				return
 			} else if tc.err != "" {
 				t.Errorf("Expect Calculate() returns error contains '%s', but got nil", tc.err)
+				return
 			}
 
 			expect := (tc.a * tc.b)
@@ -605,6 +613,7 @@ func TestFloatDivide(t *testing.T) {
 				return
 			} else if tc.err != "" {
 				t.Errorf("Expect Calculate() returns error contains '%s', but got nil", tc.err)
+				return
 			}
 
 			expect := (tc.a / tc.b)
@@ -658,6 +667,7 @@ func TestFloatIntegerEqual(t *testing.T) {
 			v, err := e.Calculate(ctx)
 			if err != nil {
 				t.Errorf("Expect Calculate() returns no error, but got '%s'", err)
+				return
 			}
 
 			expect := (tc.a == float64(tc.b))
@@ -714,6 +724,7 @@ func TestFloatIntegerGreater(t *testing.T) {
 			v, err := e.Calculate(ctx)
 			if err != nil {
 				t.Errorf("Expect Calculate() returns no error, but got '%s'", err)
+				return
 			}
 
 			expect := (tc.a > float64(tc.b))
@@ -770,6 +781,7 @@ func TestFloatIntegerAdd(t *testing.T) {
 			v, err := e.Calculate(ctx)
 			if err != nil {
 				t.Errorf("Expect Calculate() returns no error, but got '%s'", err)
+				return
 			}
 
 			expect := (tc.a + float64(tc.b))
@@ -826,6 +838,7 @@ func TestFloatIntegerSubtract(t *testing.T) {
 			v, err := e.Calculate(ctx)
 			if err != nil {
 				t.Errorf("Expect Calculate() returns no error, but got '%s'", err)
+				return
 			}
 
 			expect := (tc.a - float64(tc.b))
@@ -893,6 +906,7 @@ func TestFloatIntegerMultiply(t *testing.T) {
 				return
 			} else if tc.err != "" {
 				t.Errorf("Expect Calculate() returns error contains '%s', but got nil", tc.err)
+				return
 			}
 
 			expect := (tc.a * float64(tc.b))
@@ -958,6 +972,7 @@ func TestFloatIntegerDivide(t *testing.T) {
 				return
 			} else if tc.err != "" {
 				t.Errorf("Expect Calculate() returns error contains '%s', but got nil", tc.err)
+				return
 			}
 
 			expect := (tc.a / float64(tc.b))
@@ -966,6 +981,54 @@ func TestFloatIntegerDivide(t *testing.T) {
 				t.Errorf("Expect float result with no error, but got '%s'", err)
 			} else if res != expect {
 				t.Errorf("Expect result '%d', but got '%d'", expect, res)
+			}
+		})
+	}
+}
+
+// Test Float Range: range min max val
+func TestFloatRange(t *testing.T) {
+	ctx, err := NewContext(nil, 0, nil)
+	if err != nil {
+		t.Fatalf("Expected context but got error %s", err)
+	}
+
+	testCases := []struct {
+		min, max, val float64
+		expect        string
+	}{
+		{
+			min: 1.0, max: 5.0, val: 0.1,
+			expect: "Below",
+		},
+		{
+			min: 1.0, max: 5.0, val: 11.1,
+			expect: "Above",
+		},
+		{
+			min: 1.0, max: 5.0, val: 3.3,
+			expect: "Within",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("Float Range: range %G %G %G", tc.min, tc.max, tc.val), func(t *testing.T) {
+			min := MakeFloatValue(tc.min)
+			max := MakeFloatValue(tc.max)
+			val := MakeFloatValue(tc.val)
+			e := makeFunctionFloatRange(min, max, val)
+
+			v, err := e.Calculate(ctx)
+			if err != nil {
+				t.Errorf("Expect Calculate() returns no error, but got '%s'", err)
+				return
+			}
+
+			res, err := v.str()
+			if err != nil {
+				t.Errorf("Expect string result with no error, but got '%s'", err)
+			} else if res != tc.expect {
+				t.Errorf("Expect result '%s', but got '%s'", tc.expect, res)
 			}
 		})
 	}
