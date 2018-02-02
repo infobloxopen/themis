@@ -244,6 +244,10 @@ const (
     "boolAttr": "boolean",
     "strAttr": "string",
     "intAttr": "integer",
+    "floatAttr": "float",
+    "minAttr": "float",
+    "maxAttr": "float",
+    "valAttr": "float",
     "addrAttr": "address",
     "netAttr": "network",
     "domAttr": "domain",
@@ -640,6 +644,325 @@ const (
                 }
               ]
             }
+          },
+          {
+            "id": "FloatEqual",
+            "effect": "Deny",
+            "target": [
+              {
+                "equal": [
+                  {
+                    "attr": "floatAttr"
+                  },
+                  {
+                    "val": {
+                      "type": "float",
+                      "content": 0.0
+                    }
+                  }
+                ]
+              }
+            ],
+            "condition": {
+              "equal": [
+                {
+                  "attr": "floatAttr"
+                },
+                {
+                  "val": {
+                    "type": "float",
+                    "content": 0.0
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "id": "IntGreater",
+            "effect": "Deny",
+            "target": [
+              {
+                "equal": [
+                  {
+                    "attr": "intAttr"
+                  },
+                  {
+                    "val": {
+                      "type": "integer",
+                      "content": 0
+                    }
+                  }
+                ]
+              }
+            ],
+            "condition": {
+              "greater": [
+                {
+                  "attr": "intAttr"
+                },
+                {
+                  "val": {
+                    "type": "integer",
+                    "content": 0
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "id": "FloatGreater",
+            "effect": "Deny",
+            "target": [
+              {
+                "equal": [
+                  {
+                    "attr": "floatAttr"
+                  },
+                  {
+                    "val": {
+                      "type": "float",
+                      "content": 0.0
+                    }
+                  }
+                ]
+              }
+            ],
+            "condition": {
+              "greater": [
+                {
+                  "attr": "floatAttr"
+                },
+                {
+                  "val": {
+                    "type": "float",
+                    "content": 0.0
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "id": "NumAdd",
+            "effect": "Deny",
+            "target": [
+              {
+                "equal": [
+                  {
+                    "attr": "intAttr"
+                  },
+                  {
+                    "val": {
+                      "type": "integer",
+                      "content": 0
+                    }
+                  }
+                ]
+              }
+            ],
+            "condition": {
+              "greater": [
+                {
+                  "add": [
+                    {
+                      "attr": "intAttr"
+                    },
+                    {
+                      "attr": "floatAttr"
+                    }
+                  ]
+                },
+                {
+                  "val": {
+                    "type": "integer",
+                    "content": 10
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "id": "NumSubtract",
+            "effect": "Deny",
+            "target": [
+              {
+                "equal": [
+                  {
+                    "attr": "intAttr"
+                  },
+                  {
+                    "val": {
+                      "type": "integer",
+                      "content": 0
+                    }
+                  }
+                ]
+              }
+            ],
+            "condition": {
+              "greater": [
+                {
+                  "subtract": [
+                    {
+                      "attr": "floatAttr"
+                    },
+                    {
+                      "attr": "intAttr"
+                    }
+                  ]
+                },
+                {
+                  "val": {
+                    "type": "float",
+                    "content": 10.0
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "id": "NumMultiply",
+            "effect": "Deny",
+            "target": [
+              {
+                "equal": [
+                  {
+                    "attr": "intAttr"
+                  },
+                  {
+                    "val": {
+                      "type": "integer",
+                      "content": 10
+                    }
+                  }
+                ]
+              }
+            ],
+            "condition": {
+              "greater": [
+                {
+                  "multiply": [
+                    {
+                      "attr": "floatAttr"
+                    },
+                    {
+                      "attr": "intAttr"
+                    }
+                  ]
+                },
+                {
+                  "val": {
+                    "type": "float",
+                    "content": 10.0
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "id": "NumDivide",
+            "effect": "Deny",
+            "target": [
+              {
+                "equal": [
+                  {
+                    "attr": "floatAttr"
+                  },
+                  {
+                    "val": {
+                      "type": "float",
+                      "content": 10.0
+                    }
+                  }
+                ]
+              }
+            ],
+            "condition": {
+              "greater": [
+                {
+                  "divide": [
+                    {
+                      "attr": "floatAttr"
+                    },
+                    {
+                      "attr": "intAttr"
+                    }
+                  ]
+                },
+                {
+                  "val": {
+                    "type": "float",
+                    "content": 10.0
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "Test Float Range Policies",
+        "alg": {
+           "id": "mapper",
+           "map": {
+              "range": [
+                {
+                   "attr": "minAttr"
+                },
+                {
+                   "attr": "maxAttr"
+                },
+                {
+                   "attr": "valAttr"
+                }
+              ]
+            }
+         },
+        "rules": [
+          {
+            "id": "Below",
+            "effect": "Permit",
+            "obligations": [
+               {
+                  "strAttr": {
+                     "val": {
+                      "type": "string",
+                      "content": "Below"
+                    }
+                  }
+               }
+            ]
+          },
+          {
+            "id": "Above",
+            "effect": "Permit",
+            "obligations": [
+               {
+                  "strAttr": {
+                    "val": {
+                      "type": "string",
+                      "content": "Above"
+                    }
+                  }
+               }
+            ]
+          },
+          {
+            "id": "Within",
+            "effect": "Permit",
+            "obligations": [
+               {
+                  "floatAttr": {
+                    "divide": [
+                      {
+                        "attr": "valAttr"
+                      },
+                      {
+                        "attr": "minAttr"
+                      }
+                    ]
+                  }
+               }
+            ]
           }
         ]
       },

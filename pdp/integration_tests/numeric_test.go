@@ -3340,7 +3340,7 @@ policies:
 func TestFloatRange(t *testing.T) {
 	ts := testSuite{
 		policies: map[policyFormat]string{
-			YAML: `# Policy set for Float Integer Division
+			YAML: `# Policy set for Float Range
 attributes:
   a: float
   b: float
@@ -3389,7 +3389,7 @@ policies:
     "r": "string"
   },
   "policies": {
-    "id": "Test Integer Range Policies",
+    "id": "Test Float Range Policies",
     "alg": {
        "id": "mapper",
        "map": {
