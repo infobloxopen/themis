@@ -664,7 +664,12 @@ const (
             ],
             "obligations": [
               {
-                "strAttr": "First Rule"
+                "strAttr": {
+                  "val": {
+                    "type": "string",
+                    "content": "First Rule"
+                  }
+                }
               }
             ]
           },
@@ -678,7 +683,12 @@ const (
             ],
             "obligations": [
               {
-                "strAttr": "Second Rule"
+                "strAttr": {
+                  "val": {
+                    "type": "string",
+                    "content": "Second Rule"
+                  }
+                }
               }
             ]
           },
@@ -692,7 +702,12 @@ const (
             ],
             "obligations": [
               {
-                "strAttr": "Third Rule"
+                "strAttr": {
+                  "val": {
+                    "type": "string",
+                    "content": "Third Rule"
+                  }
+                }
               }
             ]
           }
@@ -714,7 +729,12 @@ const (
             "effect": "Permit",
             "obligations": [
               {
-                "strAttr": "First Rule"
+                "strAttr": {
+                  "val": {
+                    "type": "string",
+                    "content": "First Rule"
+                  }
+                }
               }
             ]
           },
@@ -723,7 +743,12 @@ const (
             "effect": "Permit",
             "obligations": [
               {
-                "strAttr": "Second Rule"
+                "strAttr": {
+                  "val": {
+                    "type": "string",
+                    "content": "Second Rule"
+                  }
+                }
               }
             ]
           },
@@ -732,7 +757,12 @@ const (
             "effect": "Permit",
             "obligations": [
               {
-                "strAttr": "Third Rule"
+                "strAttr": {
+                  "val": {
+                    "type": "string",
+                    "content": "Third Rule"
+                  }
+                }
               }
             ]
           }
