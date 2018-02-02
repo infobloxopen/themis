@@ -765,6 +765,38 @@ const (
                 }
               }
             ]
+          },
+          {
+            "id": "IntEqual",
+            "effect": "Deny",
+            "target": [
+              {
+                "equal": [
+                  {
+                    "attr": "intAttr"
+                  },
+                  {
+                    "val": {
+                      "type": "integer",
+                      "content": 0
+                    }
+                  }
+                ]
+              }
+            ],
+            "condition": {
+              "equal": [
+                {
+                  "attr": "intAttr"
+                },
+                {
+                  "val": {
+                    "type": "integer",
+                    "content": 0
+                  }
+                }
+              ]
+            }
           }
         ]
       }
