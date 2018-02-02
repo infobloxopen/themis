@@ -17,7 +17,10 @@ policies:
   rules:
   - effect: Permit
     obligations:
-    - x: AllPermitRule
+    - x:
+       val:
+         type: string
+         content: AllPermitRule
 `
 
 func TestUnaryClientValidation(t *testing.T) {

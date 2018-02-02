@@ -31,10 +31,7 @@ func (ctx context) unmarshalObligationItem(d *json.Decoder) (pdp.AttributeAssign
 				return bindError(err, k)
 			}
 		} else {
-			v, err = ctx.unmarshalValueByType(a.GetType(), d)
-			if err != nil {
-				return err
-			}
+			return bindError(err, k)
 		}
 
 		return nil

@@ -35,27 +35,45 @@ policies:
   - id: DefaultRule
     effect: Deny
     obligations:
-    - x: DefaultRule
+    - x:
+       val:
+         type: string
+         content: DefaultRule
   - id: First
     effect: Permit
     obligations:
-    - x: First
+    - x:
+       val:
+         type: string
+         content: First
   - id: Second
     effect: Permit
     obligations:
-    - x: Second
+    - x:
+       val:
+         type: string
+         content: Second
   - id: Third
     effect: Permit
     obligations:
-    - x: Third
+    - x:
+       val:
+         type: string
+         content: Third
   - id: Fourth
     effect: Permit
     obligations:
-    - x: Fourth
+    - x:
+       val:
+         type: string
+         content: Fourth
   - id: Fifth
     effect: Permit
     obligations:
-    - x: Fifth
+    - x:
+       val:
+         type: string
+         content: Fifth
 `
 	twoStageBenchmarkPolicySet = `# Policy set for benchmark 2-level nesting policy
 attributes:
@@ -80,7 +98,10 @@ policies:
     rules:
     - effect: Deny
       obligations:
-      - x: DefaultPolicy
+      - x:
+         val:
+           type: string
+           content: DefaultPolicy
 
   - id: P1
     alg:
@@ -97,15 +118,24 @@ policies:
     - id: DefaultRule
       effect: Deny
       obligations:
-      - x: P1.DefaultRule
+      - x:
+         val:
+           type: string
+           content: P1.DefaultRule
     - id: First
       effect: Permit
       obligations:
-      - x: P1.First
+      - x:
+         val:
+           type: string
+           content: P1.First
     - id: Second
       effect: Permit
       obligations:
-      - x: P1.Second
+      - x:
+         val:
+           type: string
+           content: P1.Second
 
   - id: P2
     alg:
@@ -122,15 +152,24 @@ policies:
     - id: DefaultRule
       effect: Deny
       obligations:
-      - x: P2.DefaultRule
+      - x:
+         val:
+           type: string
+           content: P2.DefaultRule
     - id: Second
       effect: Permit
       obligations:
-      - x: P2.Second
+      - x:
+         val:
+           type: string
+           content: P2.Second
     - id: Third
       effect: Permit
       obligations:
-      - x: P2.Third
+      - x:
+         val:
+           type: string
+           content: P2.Third
 
   - id: P3
     alg:
@@ -147,15 +186,24 @@ policies:
     - id: DefaultRule
       effect: Deny
       obligations:
-      - x: P3.DefaultRule
+      - x:
+         val:
+           type: string
+           content: P3.DefaultRule
     - id: Third
       effect: Permit
       obligations:
-      - x: P3.Third
+      - x:
+         val:
+           type: string
+           content: P3.Third
     - id: Fourth
       effect: Permit
       obligations:
-      - x: P3.Fourth
+      - x:
+         val:
+           type: string
+           content: P3.Fourth
 
   - id: P4
     alg:
@@ -172,15 +220,24 @@ policies:
     - id: DefaultRule
       effect: Deny
       obligations:
-      - x: P4.DefaultRule
+      - x:
+         val:
+           type: string
+           content: P4.DefaultRule
     - id: Fourth
       effect: Permit
       obligations:
-      - x: P4.Fourth
+      - x:
+         val:
+           type: string
+           content: P4.Fourth
     - id: Fifth
       effect: Permit
       obligations:
-      - x: P4.Fifth
+      - x:
+         val:
+           type: string
+           content: P4.Fifth
 
   - id: P5
     alg:
@@ -197,15 +254,24 @@ policies:
     - id: DefaultRule
       effect: Deny
       obligations:
-      - x: P5.DefaultRule
+      - x:
+         val:
+           type: string
+           content: P5.DefaultRule
     - id: Fifth
       effect: Permit
       obligations:
-      - x: P5.Fifth
+      - x:
+         val:
+           type: string
+           content: P5.Fifth
     - id: First
       effect: Permit
       obligations:
-      - x: P5.First
+      - x:
+         val:
+           type: string
+           content: P5.First
 `
 
 	threeStageBenchmarkPolicySet = `# Policy set for benchmark 3-level nesting policy
@@ -240,7 +306,10 @@ policies:
       rules:
       - effect: Deny
         obligations:
-        - x: DefaultPolicy
+        - x:
+           val:
+             type: string
+             content: DefaultPolicy
 
     - id: P1
       alg:
@@ -257,15 +326,24 @@ policies:
       - id: DefaultRule
         effect: Deny
         obligations:
-        - x: P1.DefaultRule
+        - x:
+           val:
+             type: string
+             content: P1.DefaultRule
       - id: First
         effect: Permit
         obligations:
-        - x: P1.First
+        - x:
+           val:
+             type: string
+             content: P1.First
       - id: Second
         effect: Permit
         obligations:
-        - x: P1.Second
+        - x:
+           val:
+             type: string
+             content: P1.Second
 
     - id: P2
       alg:
@@ -282,15 +360,24 @@ policies:
       - id: DefaultRule
         effect: Deny
         obligations:
-        - x: P2.DefaultRule
+        - x:
+           val:
+             type: string
+             content: P2.DefaultRule
       - id: Second
         effect: Permit
         obligations:
-        - x: P2.Second
+        - x:
+           val:
+             type: string
+             content: P2.Second
       - id: Third
         effect: Permit
         obligations:
-        - x: P2.Third
+        - x:
+           val:
+             type: string
+             content: P2.Third
 
     - id: P3
       alg:
@@ -307,15 +394,24 @@ policies:
       - id: DefaultRule
         effect: Deny
         obligations:
-        - x: P3.DefaultRule
+        - x:
+           val:
+             type: string
+             content: P3.DefaultRule
       - id: Third
         effect: Permit
         obligations:
-        - x: P3.Third
+        - x:
+           val:
+             type: string
+             content: P3.Third
       - id: Fourth
         effect: Permit
         obligations:
-        - x: P3.Fourth
+        - x:
+           val:
+             type: string
+             content: P3.Fourth
 
     - id: P4
       alg:
@@ -332,15 +428,24 @@ policies:
       - id: DefaultRule
         effect: Deny
         obligations:
-        - x: P4.DefaultRule
+        - x:
+           val:
+             type: string
+             content: P4.DefaultRule
       - id: Fourth
         effect: Permit
         obligations:
-        - x: P4.Fourth
+        - x:
+           val:
+             type: string
+             content: P4.Fourth
       - id: Fifth
         effect: Permit
         obligations:
-        - x: P4.Fifth
+        - x:
+           val:
+             type: string
+             content: P4.Fifth
 
     - id: P5
       alg:
@@ -357,15 +462,24 @@ policies:
       - id: DefaultRule
         effect: Deny
         obligations:
-        - x: P5.DefaultRule
+        - x:
+           val:
+             type: string
+             content: P5.DefaultRule
       - id: Fifth
         effect: Permit
         obligations:
-        - x: P5.Fifth
+        - x:
+           val:
+             type: string
+             content: P5.Fifth
       - id: First
         effect: Permit
         obligations:
-        - x: P5.First
+        - x:
+           val:
+             type: string
+             content: P5.First
 
   - target:
     - equal:
@@ -389,7 +503,10 @@ policies:
       rules:
       - effect: Deny
         obligations:
-        - x: DefaultPolicy
+        - x:
+           val:
+             type: string
+             content: DefaultPolicy
 
     - id: P1
       alg:
@@ -406,15 +523,24 @@ policies:
       - id: DefaultRule
         effect: Deny
         obligations:
-        - x: P1.DefaultRule
+        - x:
+           val:
+             type: string
+             content: P1.DefaultRule
       - id: First
         effect: Permit
         obligations:
-        - x: P1.First
+        - x:
+           val:
+             type: string
+             content: P1.First
       - id: Second
         effect: Permit
         obligations:
-        - x: P1.Second
+        - x:
+           val:
+             type: string
+             content: P1.Second
 
     - id: P2
       alg:
@@ -431,15 +557,24 @@ policies:
       - id: DefaultRule
         effect: Deny
         obligations:
-        - x: P2.DefaultRule
+        - x:
+           val:
+             type: string
+             content: P2.DefaultRule
       - id: Second
         effect: Permit
         obligations:
-        - x: P2.Second
+        - x:
+           val:
+             type: string
+             content: P2.Second
       - id: Third
         effect: Permit
         obligations:
-        - x: P2.Third
+        - x:
+           val:
+             type: string
+             content: P2.Third
 
     - id: P3
       alg:
@@ -456,15 +591,24 @@ policies:
       - id: DefaultRule
         effect: Deny
         obligations:
-        - x: P3.DefaultRule
+        - x:
+           val:
+             type: string
+             content: P3.DefaultRule
       - id: Third
         effect: Permit
         obligations:
-        - x: P3.Third
+        - x:
+           val:
+             type: string
+             content: P3.Third
       - id: Fourth
         effect: Permit
         obligations:
-        - x: P3.Fourth
+        - x:
+           val:
+             type: string
+             content: P3.Fourth
 
     - id: P4
       alg:
@@ -481,15 +625,24 @@ policies:
       - id: DefaultRule
         effect: Deny
         obligations:
-        - x: P4.DefaultRule
+        - x:
+           val:
+             type: string
+             content: P4.DefaultRule
       - id: Fourth
         effect: Permit
         obligations:
-        - x: P4.Fourth
+        - x:
+           val:
+             type: string
+             content: P4.Fourth
       - id: Fifth
         effect: Permit
         obligations:
-        - x: P4.Fifth
+        - x:
+           val:
+             type: string
+             content: P4.Fifth
 
     - id: P5
       alg:
@@ -506,21 +659,33 @@ policies:
       - id: DefaultRule
         effect: Deny
         obligations:
-        - x: P5.DefaultRule
+        - x:
+           val:
+             type: string
+             content: P5.DefaultRule
       - id: Fifth
         effect: Permit
         obligations:
-        - x: P5.Fifth
+        - x:
+           val:
+             type: string
+             content: P5.Fifth
       - id: First
         effect: Permit
         obligations:
-        - x: P5.First
+        - x:
+           val:
+             type: string
+             content: P5.First
 
   - alg: FirstApplicableEffect
     rules:
     - effect: Deny
       obligations:
-      - x: Root Deny
+      - x:
+         val:
+           type: string
+           content: Root Deny
 `
 
 	benchmarkContent = `{

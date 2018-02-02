@@ -271,18 +271,18 @@ policies:
       - effect: Permit
         obligations:
         - strAttr:
-            val:
-              type: string
-              content: "Nested Mappers Policy Set Permit"
+           val:
+             type: string
+             content: "Nested Mappers Policy Set Permit"
     - id: Error
       alg: FirstApplicableEffect
       rules:
       - effect: Deny
         obligations:
         - strAttr:
-            val:
-              type: string
-              content: "Nested Mappers Policy Set Deny"
+           val:
+             type: string
+             content: "Nested Mappers Policy Set Deny"
   - id: Nested Mappers Policy
     alg:
       id: Mapper
@@ -304,27 +304,27 @@ policies:
       effect: Permit
       obligations:
       - strAttr:
-          val:
-            type: string
-            content: "Nested Mappers Policy Permit"
+         val:
+           type: string
+           content: "Nested Mappers Policy Permit"
     - id: Error
       effect: Deny
       obligations:
       - strAttr:
-          val:
-            type: string
-            content: "Nested Mappers Policy Deny"
+         val:
+           type: string
+           content: "Nested Mappers Policy Deny"
       - lsAttr:
-          val:
-            type: list of strings
-            content:
-              - first
-              - second
-              - third
+         val:
+           type: list of strings
+           content:
+             - first
+             - second
+             - third
       - intAttr:
-          val:
-            type: integer
-            content: 9.007199254740992e+15
+         val:
+           type: integer
+           content: 9.007199254740992e+15
     - id: IntEqual
       effect: Deny
       target:
