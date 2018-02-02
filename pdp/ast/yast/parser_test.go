@@ -366,19 +366,28 @@ policies:
       rules:
       - effect: Permit
       obligations:
-      - strAttr: "First Rule"
+      - strAttr:
+         val:
+           type: string
+           content: "First Rule"
     - id: second
       alg: FirstApplicableEffect
       rules:
       - effect: Permit
       obligations:
-      - strAttr: "Second Rule"
+      - strAttr:
+         val:
+           type: string
+           content: "Second Rule"
     - id: third
       alg: FirstApplicableEffect
       rules:
       - effect: Permit
       obligations:
-      - strAttr: "Third Rule"
+      - strAttr:
+         val:
+           type: string
+           content: "Third Rule"
   - id: Reodering Mapper Policy
     alg:
       id: Mapper
@@ -390,15 +399,24 @@ policies:
     - id: first
       effect: Permit
       obligations:
-      - strAttr: "First Rule"
+      - strAttr:
+         val:
+           type: string
+           content: "First Rule"
     - id: second
       effect: Permit
       obligations:
-      - strAttr: "Second Rule"
+      - strAttr:
+         val:
+           type: string
+           content: "Second Rule"
     - id: third
       effect: Permit
       obligations:
-      - strAttr: "Third Rule"
+      - strAttr:
+         val:
+           type: string
+           content: "Third Rule"
 `
 )
 
