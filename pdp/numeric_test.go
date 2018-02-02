@@ -323,6 +323,54 @@ func TestIntegerDivide(t *testing.T) {
 	}
 }
 
+// Test Integer Range: range min max val
+func TestIntegerRange(t *testing.T) {
+	ctx, err := NewContext(nil, 0, nil)
+	if err != nil {
+		t.Fatalf("Expected context but got error %s", err)
+	}
+
+	testCases := []struct {
+		min, max, val int64
+		expect        string
+	}{
+		{
+			min: 1, max: 5, val: 0,
+			expect: "Below",
+		},
+		{
+			min: 1, max: 5, val: 7,
+			expect: "Above",
+		},
+		{
+			min: 1, max: 5, val: 3,
+			expect: "Within",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("Integer Range: range %d %d %d", tc.min, tc.max, tc.val), func(t *testing.T) {
+			min := MakeIntegerValue(tc.min)
+			max := MakeIntegerValue(tc.max)
+			val := MakeIntegerValue(tc.val)
+			e := makeFunctionIntegerRange(min, max, val)
+
+			v, err := e.Calculate(ctx)
+			if err != nil {
+				t.Errorf("Expect Calculate() returns no error, but got '%s'", err)
+				return
+			}
+
+			res, err := v.str()
+			if err != nil {
+				t.Errorf("Expect string result with no error, but got '%s'", err)
+			} else if res != tc.expect {
+				t.Errorf("Expect result '%s', but got '%s'", tc.expect, res)
+			}
+		})
+	}
+}
+
 // Test Float Greater a > b
 func TestFloatGreater(t *testing.T) {
 	ctx, err := NewContext(nil, 0, nil)
