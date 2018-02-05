@@ -10,7 +10,6 @@ import (
 func (ctx context) unmarshalObligationItem(d *json.Decoder) (pdp.AttributeAssignmentExpression, error) {
 	var (
 		a pdp.Attribute
-		v pdp.AttributeValue
 		e pdp.Expression
 	)
 
@@ -33,7 +32,6 @@ func (ctx context) unmarshalObligationItem(d *json.Decoder) (pdp.AttributeAssign
 		} else {
 			return bindError(err, k)
 		}
-
 		return nil
 	}, "obligation"); err != nil {
 		return pdp.AttributeAssignmentExpression{}, err

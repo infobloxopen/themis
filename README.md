@@ -28,6 +28,8 @@ In case of any **Indeterminate** effect **status** contains textual representati
 Some application may require more details for particular decision. For example if application can write log it may need a flag attached to decision which says when to do it. These details can be delivered as **obligations**. The **obligations** are set of attributes like in request context. Each attribute has name, type and value. Attribute name is arbitrary string (request context requires pair of attribute name and type to be unique). Following types are defined:
 - **boolean**;
 - **string**;
+- **integer** - signed 64-bit integer;
+- **float** - 64-bit floating point number;
 - **address** - IPv4 or IPv6 address;
 - **network** - IPv4 or IPv6 network address;
 - **domain** - domain name;
@@ -36,7 +38,7 @@ Some application may require more details for particular decision. For example i
 - **set of networks** - set of IPv4 or IPv6 network addresses (unordered);
 - **list of strings**. 
 
-**Boolean** value is accepted as "1", "t", "T", "TRUE", "true", "True", "0", "f", "F", "FALSE", "false", "False" and serialized to "true" and "false". **Address** accepted in dotted decimal ("192.0.2.1") form or in IPv6 ("2001:db8::68") form and serialized respectively. **Network** is accepted as a CIDR notation IP address and prefix (for example "192.0.2.0/24" or "2001:db8::/32"). **Domain** name is accepted in human readable format described by [RFC1035](https://www.ietf.org/rfc/rfc1035.txt), [2181](https://www.ietf.org/rfc/rfc2181.txt) and [4343](https://www.ietf.org/rfc/rfc4343.txt). **Set of strings**, **set of domains**, **set of networks** and **list of strings** aren't accepted in request context but can appear in responce's obligations as comma separated list of values.
+**Boolean** value is accepted as "1", "t", "T", "TRUE", "true", "True", "0", "f", "F", "FALSE", "false", "False" and serialized to "true" and "false". **Float** value can be specified using decimal format (e.g. 3.1416) or scientific notation (e.g. 6.022E+23). **Address** accepted in dotted decimal ("192.0.2.1") form or in IPv6 ("2001:db8::68") form and serialized respectively. **Network** is accepted as a CIDR notation IP address and prefix (for example "192.0.2.0/24" or "2001:db8::/32"). **Domain** name is accepted as string of labels separated by dots (string is converted from punycode to ASCII and validated with regualar expression "^[-.\_A-Za-z0-9]+$" (**TODO**: need to rework according to RFC1035, 2181 and 4343). **Set of strings**, **set of domains**, **set of networks** and **list of strings** aren't accepted in request context but can appear in response's obligations as comma separated list of values.
 
 ## Policies
 PDP uses YAML based language (YAML Abstract Syntax Tree or YAST) or JSON based language (JSON Abstract Syntax Tree or JAST) to define **policies** and specifically constructed JSON to define local **content**  (JSON Content or JCON). YAST can be converted to JAST (and vise versa) with any YAML to JSON convertor.
@@ -154,7 +156,10 @@ policies:
   rules:
   - effect: Deny
 obligations:
-- a: "192.0.2.1"
+- a:
+   val:
+     type: address
+     content: "192.0.2.1"
 ```
 
 ### Policy
@@ -180,7 +185,10 @@ alg: FirstApplicableEffect
 rules:
 - effect: Permit
 obligations:
-- a: "192.0.2.1"
+- a:
+   val:
+     type: address
+     content: "192.0.2.1"
 ```
 
 ### Rule
@@ -213,7 +221,11 @@ condition: # not (c contains 192.0.2.1 or b)
     - attr: b
 effect: Permit
 obligations:
-- a: "192.0.2.1"
+- a:
+   val:
+     type: address
+     content: "192.0.2.1"
+
 ```
 
 ### Target
@@ -307,9 +319,17 @@ target:
 
 ### Condition
 Condition is rule field which can be any boolean expression (for example see above "Rule with all its fields"). Following functions available to make such expression:
-- **equal** - expects two string arguments (result is true if the arguments are equal)
+- **equal** - expects two arguments, where the result is true if the arguments are equal. The two arguments can be:
+    - both strings
+    - both integers, in which case, the comparison will be performed using integer arithmetic.
+    - both floats, in which case, the comparison will be performed using floating point arithmetic.
+    - a float and an integer, in which case, the integer is promoted to float before floating point arithmetic is applied.
+- **greater** - expects two arguments, where the result is true if the first argument is greater than the second. The two arguments can be:
+    - both integers, in which case, the comparison will be performed using integer arithmetic.
+    - both floats, in which case, the comparison will be performed using floating point arithmetic.
+    - a float and an integer, in which case, the integer is promoted to float before floating point arithmetic is applied.
 - **contains**:
-  - string contains substring - expects two string arguments first is a string to search in and second is a substring to serach for;
+  - string contains substring - expects two string arguments first is a string to search in and second is a substring to search for;
   - network constains address;
   - set of strings contains string;
   - set of networks contains address;
@@ -320,7 +340,7 @@ Condition is rule field which can be any boolean expression (for example see abo
 In any expression attribute can be referred with **attr** keyword and immediate value with **val** keyword (see below). There is special **selector** expression which is described below.
 
 ### Immediate Value
-Immediate value can be reffered with **val** keyword and has fields:
+Immediate value can be refered with **val** keyword and has fields:
 - **type** - value type (any of available types);
 - **content** - value data.
 For **obligations** only data itself requires as type can be derived from attribute definition.
@@ -335,7 +355,10 @@ val:
   content: test
 ...
 obligations:
-- s: example
+- s:
+   val:
+     type: string
+     content: example
 ...
 # Address
 val:
@@ -343,7 +366,10 @@ val:
   content: 192.0.2.1
 ...
 obligations:
-- a: 192.0.2.2
+- a:
+   val:
+     type: address
+     content: 192.0.2.2
 ...
 # Network
 val:
@@ -351,7 +377,10 @@ val:
   content: 192.0.2.0/28
 ...
 obligations:
-- c: 192.0.2.16/28
+- c:
+   val:
+     type: network
+     content: 192.0.2.16/28
 ...
 # Domain
 val:
@@ -359,7 +388,10 @@ val:
   content: example.com
 ...
 obligations:
-- d: example.net
+- d:
+   val:
+     type: domain
+     content: example.com
 ...
 # Set of Strings
 val:
@@ -370,8 +402,11 @@ val:
 ...
 obligations:
 - ss:
-  - first
-  - second
+    val:
+      type: set of strings
+      content:
+      - first
+      - second
 ...
 # Set of Networks
 val:
@@ -382,8 +417,11 @@ val:
 ...
 obligations:
 - sn:
-  - 192.0.2.0/28
-  - 192.0.2.16/28
+    val:
+      type: set of networks
+      content:
+      - 192.0.2.0/28
+      - 192.0.2.16/28
 ...
 # Set of Domains
 val:
@@ -394,8 +432,11 @@ val:
 ...
 obligations:
 - sd:
-  - example.org
-  - example.edu
+    val:
+      type: set of domains
+      content:
+      - example.com
+      - example.net
 ...
 # List of Strings
 val:
@@ -406,8 +447,11 @@ val:
 ...
 obligations:
 - ls:
-  - first
-  - second
+    val:
+      type: list of strings
+      content:
+      - first
+      - second
 ```
 
 ### Selector
@@ -454,6 +498,27 @@ Content for the example:
   }
 }
 ```
+
+### Numerical Expression
+A numerical expression is constructed using the following numerical functions:
+- **add** - accepts two arguments, where the result is the sum of the arguments
+- **subtract** - accepts two arguments, where the result is first argument subtracted by the second argument
+- **multiply** - accepts two arguments, where the result is the product of the arguments
+- **divide** - accepts two arguments, where the result is the first argument divided by the second argument
+- **range** - accepts three arguments - the first two of which specify a range, and the third a value to be compared against the range. The arguments are:
+  - **min** - the minimum value of the range
+  - **max** - the maximum value of the range
+  - **val** - the value to compare against the range
+
+  The result of the **range** function is a string, which can be one of the following:
+  - **Below** - if **val** is less than **min**
+  - **Above** - if **val** is greater than **max**
+  - **Within** - if it's not one of the above
+
+Each of the above numerical functions performs the respective numerical operation using either integer or floating point arithmetic according to the following rule:
+- if all the arguments are integers, the operation is performed using integer arithmetic and the result returned as an integer. (In the case of **range**, the result is a string)
+- if all the arguments are floats, the operation is performed using floating point arithmetic and the result returned as a float. (In the case of **range**, the result is a string)
+- if the arguments include a combination of integers and floats, the integers are first promoted to floats and then operation is performed using floating point arithmetic. The result is returned as a float. (In the case of **range**, the result is a string)
 
 ### Local Content
 Local content is a set of content **items** (see example above). It's identified by **id** field which can be any string with no slash character (`/`). Each content item also has id (key of "items" JSON object) and following fields:
