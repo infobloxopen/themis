@@ -1,6 +1,10 @@
 package yast
 
-import "github.com/infobloxopen/themis/pdp"
+import (
+	"math"
+
+	"github.com/infobloxopen/themis/pdp"
+)
 
 type context struct {
 	attrs map[string]pdp.Attribute
@@ -41,6 +45,50 @@ func (ctx context) extractStringOpt(m map[interface{}]interface{}, k string, des
 
 	s, err := ctx.validateString(v, desc)
 	return s, true, err
+}
+
+func (ctx context) validateInteger(v interface{}, desc string) (int64, boundError) {
+	switch v := v.(type) {
+	case int:
+		return int64(v), nil
+
+	case int64:
+		return v, nil
+
+	case uint64:
+		if v > math.MaxInt64 {
+			return 0, newIntegerUint64OverflowError(v, desc)
+		}
+
+		return int64(v), nil
+
+	case float64:
+		if v < -9007199254740992 || v > 9007199254740992 {
+			return 0, newIntegerFloat64OverflowError(v, desc)
+		}
+
+		return int64(v), nil
+	}
+
+	return 0, newIntegerError(v, desc)
+}
+
+func (ctx context) validateFloat(v interface{}, desc string) (float64, boundError) {
+	switch v := v.(type) {
+	case int:
+		return float64(v), nil
+
+	case int64:
+		return float64(v), nil
+
+	case uint64:
+		return float64(v), nil
+
+	case float64:
+		return float64(v), nil
+	}
+
+	return 0, newFloatError(v, desc)
 }
 
 func (ctx context) validateMap(v interface{}, desc string) (map[interface{}]interface{}, boundError) {

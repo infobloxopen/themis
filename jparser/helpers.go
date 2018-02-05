@@ -277,7 +277,7 @@ func GetUndefined(d *json.Decoder, desc string) (interface{}, error) {
 
 // GetObject unmarshals whole object from JSON byte stream to a list of Piars.
 func GetObject(d *json.Decoder, desc string) ([]Pair, error) {
-	obj := []Pair{}
+	var obj []Pair
 
 	for {
 		t, err := d.Token()
@@ -310,7 +310,7 @@ func GetObject(d *json.Decoder, desc string) ([]Pair, error) {
 // GetArray unmarshals whole array from JSON byte stream to an []interface{}.
 // []interface{} item is an array of Pairs or primitive value or []interface{}.
 func GetArray(d *json.Decoder, desc string) ([]interface{}, error) {
-	arr := []interface{}{}
+	var arr []interface{}
 	i := 1
 	for {
 		src := fmt.Sprintf("%d", i)
@@ -381,6 +381,21 @@ func GetString(d *json.Decoder, desc string) (string, error) {
 	}
 
 	return s, nil
+}
+
+// GetNumber unmarshals number from JSON byte stream.
+func GetNumber(d *json.Decoder, desc string) (float64, error) {
+	t, err := d.Token()
+	if err != nil {
+		return 0, err
+	}
+
+	n, ok := t.(float64)
+	if !ok {
+		return 0, newNumberCastError(t, desc)
+	}
+
+	return n, nil
 }
 
 // GetStringSequence iterates over object keys or string array items in JSON byte stream.

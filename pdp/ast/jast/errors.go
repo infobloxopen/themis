@@ -46,15 +46,25 @@ const (
 	missingContentErrorID               = 33
 	notImplementedValueTypeErrorID      = 34
 	invalidAddressErrorID               = 35
-	invalidNetworkErrorID               = 36
-	invalidDomainErrorID                = 37
-	selectorURIErrorID                  = 38
-	selectorLocationErrorID             = 39
-	unsupportedSelectorSchemeErrorID    = 40
-	entityAmbiguityErrorID              = 41
-	entityMissingKeyErrorID             = 42
-	unknownPolicyUpdateOperationErrorID = 43
-	missingContentTypeErrorID           = 44
+	integerOverflowErrorID              = 36
+	invalidNetworkErrorID               = 37
+	invalidDomainErrorID                = 38
+	selectorURIErrorID                  = 39
+	selectorLocationErrorID             = 40
+	unsupportedSelectorSchemeErrorID    = 41
+	entityAmbiguityErrorID              = 42
+	entityMissingKeyErrorID             = 43
+	unknownPolicyUpdateOperationErrorID = 44
+	missingContentTypeErrorID           = 45
+	stringErrorID                       = 46
+	missingStringErrorID                = 47
+	integerUint64OverflowErrorID        = 48
+	integerFloat64OverflowErrorID       = 49
+	mapErrorID                          = 50
+	missingMapErrorID                   = 51
+	listErrorID                         = 52
+	integerErrorID                      = 53
+	floatErrorID                        = 54
 )
 
 type externalError struct {
@@ -604,6 +614,21 @@ func (e *invalidAddressError) Error() string {
 	return e.errorf("Expected value of address type but got %q", e.s)
 }
 
+type integerOverflowError struct {
+	errorLink
+	x float64
+}
+
+func newIntegerOverflowError(x float64) *integerOverflowError {
+	return &integerOverflowError{
+		errorLink: errorLink{id: integerOverflowErrorID},
+		x:         x}
+}
+
+func (e *integerOverflowError) Error() string {
+	return e.errorf("%f overflows integer", e.x)
+}
+
 type invalidNetworkError struct {
 	errorLink
 	s   string
@@ -743,4 +768,153 @@ func newMissingContentTypeError() *missingContentTypeError {
 
 func (e *missingContentTypeError) Error() string {
 	return e.errorf("Value 'type' attribute is missing or placed after 'content' attribute")
+}
+
+type stringError struct {
+	errorLink
+	v    interface{}
+	desc string
+}
+
+func newStringError(v interface{}, desc string) *stringError {
+	return &stringError{
+		errorLink: errorLink{id: stringErrorID},
+		v:         v,
+		desc:      desc}
+}
+
+func (e *stringError) Error() string {
+	return e.errorf("Expected %s but got %T", e.desc, e.v)
+}
+
+type missingStringError struct {
+	errorLink
+	desc string
+}
+
+func newMissingStringError(desc string) *missingStringError {
+	return &missingStringError{
+		errorLink: errorLink{id: missingStringErrorID},
+		desc:      desc}
+}
+
+func (e *missingStringError) Error() string {
+	return e.errorf("Missing %s", e.desc)
+}
+
+type integerUint64OverflowError struct {
+	errorLink
+	v    uint64
+	desc string
+}
+
+func newIntegerUint64OverflowError(v uint64, desc string) *integerUint64OverflowError {
+	return &integerUint64OverflowError{
+		errorLink: errorLink{id: integerUint64OverflowErrorID},
+		v:         v,
+		desc:      desc}
+}
+
+func (e *integerUint64OverflowError) Error() string {
+	return e.errorf("%d overflows %s", e.v, e.desc)
+}
+
+type integerFloat64OverflowError struct {
+	errorLink
+	v    float64
+	desc string
+}
+
+func newIntegerFloat64OverflowError(v float64, desc string) *integerFloat64OverflowError {
+	return &integerFloat64OverflowError{
+		errorLink: errorLink{id: integerFloat64OverflowErrorID},
+		v:         v,
+		desc:      desc}
+}
+
+func (e *integerFloat64OverflowError) Error() string {
+	return e.errorf("%f overflows %s", e.v, e.desc)
+}
+
+type mapError struct {
+	errorLink
+	v    interface{}
+	desc string
+}
+
+func newMapError(v interface{}, desc string) *mapError {
+	return &mapError{
+		errorLink: errorLink{id: mapErrorID},
+		v:         v,
+		desc:      desc}
+}
+
+func (e *mapError) Error() string {
+	return e.errorf("Expected %s but got %T", e.desc, e.v)
+}
+
+type missingMapError struct {
+	errorLink
+	desc string
+}
+
+func newMissingMapError(desc string) *missingMapError {
+	return &missingMapError{
+		errorLink: errorLink{id: missingMapErrorID},
+		desc:      desc}
+}
+
+func (e *missingMapError) Error() string {
+	return e.errorf("Missing %s", e.desc)
+}
+
+type listError struct {
+	errorLink
+	v    interface{}
+	desc string
+}
+
+func newListError(v interface{}, desc string) *listError {
+	return &listError{
+		errorLink: errorLink{id: listErrorID},
+		v:         v,
+		desc:      desc}
+}
+
+func (e *listError) Error() string {
+	return e.errorf("Expected %s but got %T", e.desc, e.v)
+}
+
+type integerError struct {
+	errorLink
+	v    interface{}
+	desc string
+}
+
+func newIntegerError(v interface{}, desc string) *integerError {
+	return &integerError{
+		errorLink: errorLink{id: integerErrorID},
+		v:         v,
+		desc:      desc}
+}
+
+func (e *integerError) Error() string {
+	return e.errorf("Expected %s but got %T", e.desc, e.v)
+}
+
+type floatError struct {
+	errorLink
+	v    interface{}
+	desc string
+}
+
+func newFloatError(v interface{}, desc string) *floatError {
+	return &floatError{
+		errorLink: errorLink{id: floatErrorID},
+		v:         v,
+		desc:      desc}
+}
+
+func (e *floatError) Error() string {
+	return e.errorf("Expected %s but got %T", e.desc, e.v)
 }

@@ -35,6 +35,26 @@ errors:
   - field: token
   - field: token
 
+- id: numberCastError
+  fields:
+  - id: token
+    type: json.Token
+  - id: desc
+    type: string
+  msg: "Expected number as %s but got %T (%#v)"
+  args:
+  - field: desc
+  - field: token
+  - field: token
+
+- id: integerOverflowError
+  fields:
+  - id: x
+    type: float64
+  msg: "%f overflows integer"
+  args:
+  - field: x
+
 - id: stringCastError
   fields:
   - id: token
