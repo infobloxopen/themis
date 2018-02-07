@@ -19,7 +19,6 @@ import (
 	"log"
 	"net"
 	"sort"
-	"sync"
 
 	"github.com/mholt/caddy/caddyfile"
 )
@@ -39,7 +38,7 @@ var (
 
 	// eventHooks is a map of hook name to Hook. All hooks plugins
 	// must have a name.
-	eventHooks = sync.Map{}
+	eventHooks = make(map[string]EventHook)
 
 	// parsingCallbacks maps server type to map of directive
 	// to list of callback functions. These aren't really
@@ -68,15 +67,12 @@ func DescribePlugins() string {
 		str += "  " + defaultCaddyfileLoader.name + "\n"
 	}
 
-	// List the event hook plugins
-	hooks := ""
-	eventHooks.Range(func(k, _ interface{}) bool {
-		hooks += "  hook." + k.(string) + "\n"
-		return true
-	})
-	if hooks != "" {
+	if len(eventHooks) > 0 {
+		// List the event hook plugins
 		str += "\nEvent hook plugins:\n"
-		str += hooks
+		for hookPlugin := range eventHooks {
+			str += "  hook." + hookPlugin + "\n"
+		}
 	}
 
 	// Let's alphabetize the rest of these...
@@ -252,23 +248,23 @@ func RegisterEventHook(name string, hook EventHook) {
 	if name == "" {
 		panic("event hook must have a name")
 	}
-	_, dup := eventHooks.LoadOrStore(name, hook)
-	if dup {
+	if _, dup := eventHooks[name]; dup {
 		panic("hook named " + name + " already registered")
 	}
+	eventHooks[name] = hook
 }
 
 // EmitEvent executes the different hooks passing the EventType as an
 // argument. This is a blocking function. Hook developers should
 // use 'go' keyword if they don't want to block Caddy.
 func EmitEvent(event EventName, info interface{}) {
-	eventHooks.Range(func(k, v interface{}) bool {
-		err := v.(EventHook)(event, info)
+	for name, hook := range eventHooks {
+		err := hook(event, info)
+
 		if err != nil {
-			log.Printf("error on '%s' hook: %v", k.(string), err)
+			log.Printf("error on '%s' hook: %v", name, err)
 		}
-		return true
-	})
+	}
 }
 
 // ParsingCallback is a function that is called after

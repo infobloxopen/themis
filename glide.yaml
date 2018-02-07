@@ -17,6 +17,7 @@ import:
   subpackages:
   - go/otgrpc
 - package: github.com/mholt/caddy
+  version: e2997ac974d194c0fef32a2c98d07a84237876fd
 - package: github.com/miekg/dns
   subpackages:
   - internal/socket
