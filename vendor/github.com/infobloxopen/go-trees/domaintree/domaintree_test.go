@@ -18,7 +18,9 @@ func TestInsert(t *testing.T) {
 	r2 := r1.Insert("test.com", "2")
 	r3 := r2.Insert("test.net", "3")
 	r4 := r3.Insert("example.com", "4")
-	r5 := r4.Insert("www.test.com", "5")
+	r5 := r4.Insert("www.test.com.", "5")
+	r6 := r5.Insert(".", "6")
+	r6a := r6.Insert("", "6a")
 
 	assertTree(r, "empty tree", t)
 
@@ -36,15 +38,31 @@ func TestInsert(t *testing.T) {
 
 	assertTree(r4, "four elements tree", t,
 		"\"com\": \"1\"\n",
-		"\"example.com\": \"4\"\n",
 		"\"test.com\": \"2\"\n",
+		"\"example.com\": \"4\"\n",
 		"\"test.net\": \"3\"\n")
 
 	assertTree(r5, "five elements tree", t,
 		"\"com\": \"1\"\n",
-		"\"example.com\": \"4\"\n",
 		"\"test.com\": \"2\"\n",
 		"\"www.test.com\": \"5\"\n",
+		"\"example.com\": \"4\"\n",
+		"\"test.net\": \"3\"\n")
+
+	assertTree(r6, "siz elements tree", t,
+		"\"\": \"6\"\n",
+		"\"com\": \"1\"\n",
+		"\"test.com\": \"2\"\n",
+		"\"www.test.com\": \"5\"\n",
+		"\"example.com\": \"4\"\n",
+		"\"test.net\": \"3\"\n")
+
+	assertTree(r6a, "five elements tree", t,
+		"\"\": \"6a\"\n",
+		"\"com\": \"1\"\n",
+		"\"test.com\": \"2\"\n",
+		"\"www.test.com\": \"5\"\n",
+		"\"example.com\": \"4\"\n",
 		"\"test.net\": \"3\"\n")
 
 	r = r.Insert("AbCdEfGhIjKlMnOpQrStUvWxYz.aBcDeFgHiJkLmNoPqRsTuVwXyZ", "test")
@@ -74,16 +92,16 @@ func TestInplaceInsert(t *testing.T) {
 	r.InplaceInsert("example.com", "4")
 	assertTree(r, "four elements inplace tree", t,
 		"\"com\": \"1\"\n",
-		"\"example.com\": \"4\"\n",
 		"\"test.com\": \"2\"\n",
+		"\"example.com\": \"4\"\n",
 		"\"test.net\": \"3\"\n")
 
 	r.InplaceInsert("www.test.com", "5")
 	assertTree(r, "five elements tree", t,
 		"\"com\": \"1\"\n",
-		"\"example.com\": \"4\"\n",
 		"\"test.com\": \"2\"\n",
 		"\"www.test.com\": \"5\"\n",
+		"\"example.com\": \"4\"\n",
 		"\"test.net\": \"3\"\n")
 }
 
@@ -113,6 +131,76 @@ func TestGet(t *testing.T) {
 
 	v, ok = r.Get("nS.tEsT.cOm")
 	assertValue(v, ok, "2", true, "fetching \"nS.tEsT.cOm\" from tree", t)
+}
+
+func TestWireGet(t *testing.T) {
+	var r *Node
+
+	v, ok, err := r.WireGet(WireDomainNameLower("\x04test\x03com\x00"))
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		assertValue(v, ok, "", false, "fetching from empty tree", t)
+	}
+
+	r = r.Insert("com", "1")
+	r = r.Insert("test.com", "2")
+	r = r.Insert("test.net", "3")
+	r = r.Insert("example.com", "4")
+	r = r.Insert("www.test.com", "5")
+
+	_, _, err = r.WireGet(WireDomainNameLower("\xC0\x2F"))
+	if err != ErrCompressedDN {
+		t.Errorf("Expected %q error but got %q", ErrCompressedDN, err)
+	}
+
+	_, _, err = r.WireGet(WireDomainNameLower("\x04test\x20com\x00"))
+	if err != ErrLabelTooLong {
+		t.Errorf("Expected %q error but got %q", ErrLabelTooLong, err)
+	}
+
+	_, _, err = r.WireGet(WireDomainNameLower("\x04test\x00\x03com\x00"))
+	if err != ErrEmptyLabel {
+		t.Errorf("Expected %q error but got %q", ErrEmptyLabel, err)
+	}
+
+	_, _, err = r.WireGet(WireDomainNameLower(
+		"\x3ftoooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo" +
+			"\x3floooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong" +
+			"\x3fdoooooooooooooooooooooooooooooooooooooooooooooooooooooooooomain" +
+			"\x3fnaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaame" +
+			"\x00"))
+	if err != ErrNameTooLong {
+		t.Errorf("Expected %q error but got %q", ErrNameTooLong, err)
+	}
+
+	v, ok, err = r.WireGet(WireDomainNameLower("\x04test\x03com\x00"))
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		assertValue(v, ok, "2", true, "fetching \"test.com\" from tree", t)
+	}
+
+	v, ok, err = r.WireGet(WireDomainNameLower("\x03www\x04test\x03com\x00"))
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		assertValue(v, ok, "5", true, "fetching \"www.test.com\" from tree", t)
+	}
+
+	v, ok, err = r.WireGet(WireDomainNameLower("\x02ns\x04test\x03com\x00"))
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		assertValue(v, ok, "2", true, "fetching \"ns.test.com\" from tree", t)
+	}
+
+	v, ok, err = r.WireGet(WireDomainNameLower("\x04test\x03org\x00"))
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		assertValue(v, ok, "", false, "fetching \"test.org\" from tree", t)
+	}
 }
 
 func TestDelete(t *testing.T) {
@@ -201,7 +289,7 @@ func assertTree(r *Node, desc string, t *testing.T, e ...string) {
 
 	diff, err := difflib.GetContextDiffString(ctx)
 	if err != nil {
-		panic(fmt.Errorf("Can't compare \"%s\": %s", desc, err))
+		panic(fmt.Errorf("can't compare \"%s\": %s", desc, err))
 	}
 
 	if len(diff) > 0 {

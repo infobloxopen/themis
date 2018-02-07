@@ -1,8 +1,8 @@
 hash: 77a6718b8f335167b7d23fc6f9f284ff146242d5082cb061f4f8cdfe6e1b63b4
-updated: 2018-01-29T15:11:03.35962713+03:00
+updated: 2018-02-07T17:43:19.037698+03:00
 imports:
 - name: github.com/apache/thrift
-  version: 3d556248a8b97310da49939195330691dfe9d9ad
+  version: 00645162ba1e73ea4fd6e7a47cecf910a29b3281
   subpackages:
   - lib/go/thrift
 - name: github.com/beorn7/perks
@@ -10,7 +10,7 @@ imports:
   subpackages:
   - quantile
 - name: github.com/coredns/coredns
-  version: 399073ec6b17c96f64912b4504390632e9a04aff
+  version: f636930c5cb72537e34856f2eb0e68ec17202f0e
   subpackages:
   - core/dnsserver
   - pb
@@ -30,7 +30,7 @@ imports:
   - plugin/test
   - request
 - name: github.com/davecgh/go-spew
-  version: ecdeabc65495df2dec95d7c4a4c3e021903035e5
+  version: 87df7c60d5820d0f8ae11afede5aa52325c09717
   subpackages:
   - spew
 - name: github.com/dnstap/golang-dnstap
@@ -51,7 +51,7 @@ imports:
 - name: github.com/go-logfmt/logfmt
   version: 390ab7935ee28ec6b286364bba9b4dd6410cb3d5
 - name: github.com/gogo/protobuf
-  version: 26de2f9a7d3b1826f275e7a97c8cad5080589426
+  version: 1adfc126b41513cc696b209667c8656ea7aac67c
   subpackages:
   - proto
 - name: github.com/golang/protobuf
@@ -65,14 +65,15 @@ imports:
 - name: github.com/golang/snappy
   version: 553a641470496b2327abcac10b36396bd98e45c9
 - name: github.com/google/uuid
-  version: 064e2069ce9c359c118179501254f67d7d37ba24
+  version: dec09d789f3dba190787f8b4454c7d3c936fed9e
 - name: github.com/grpc-ecosystem/grpc-opentracing
   version: 0e7658f8ee99ee5aa683e2a032b8880091b7a055
   subpackages:
   - go/otgrpc
 - name: github.com/infobloxopen/go-trees
-  version: 7665ffa2af9ca81c9b31b34ad797f9e1ea3043c1
+  version: 4d2dde9ff34039b1d9af83301295430869ea7c73
   subpackages:
+  - dltree
   - domaintree
   - iptree
   - numtree
@@ -84,7 +85,7 @@ imports:
   subpackages:
   - pbutil
 - name: github.com/mholt/caddy
-  version: 106d62b0674b582c8fe26a5719378a4261849a94
+  version: a50f3a4cfe0da94801f9c2561a812025806a22eb
   subpackages:
   - caddyfile
 - name: github.com/miekg/dns
@@ -94,12 +95,12 @@ imports:
 - name: github.com/opentracing-contrib/go-observer
   version: a52f2342449246d5bcc273e65cbdcfa5f7d6c63c
 - name: github.com/opentracing/opentracing-go
-  version: 216894e5277dc6098f93ceca97beb6101610b418
+  version: db37fa5964ade72399b2ac8201123b8623256d75
   subpackages:
   - ext
   - log
 - name: github.com/openzipkin/zipkin-go-opentracing
-  version: 6bb822a7f15fdc5800b9822a6ac1bfa0b7d9195d
+  version: 4c9fbcbd6d73a644fd17214fe475296780c68fb5
   subpackages:
   - flag
   - thrift/gen-go/scribe
@@ -113,7 +114,7 @@ imports:
   subpackages:
   - xxHash32
 - name: github.com/prometheus/client_golang
-  version: 06bc6e01f4baf4ee783ffcd23abfcb0b0f9dfada
+  version: 9bb6ab929dcbe1c8393cd9ef70387cb69811bd1c
   subpackages:
   - prometheus
 - name: github.com/prometheus/client_model
@@ -135,9 +136,9 @@ imports:
 - name: github.com/rcrowley/go-metrics
   version: 8732c616f52954686704c8645fe1a9d59e9df7c1
 - name: github.com/Shopify/sarama
-  version: 0f4f8caef994ca7e4f9072c1858b7c6761ed498f
+  version: 541689b9f4212043471eb537fa72da507025d3ea
 - name: github.com/Sirupsen/logrus
-  version: ba1b36c82c5e05c4f912a88eab0dcd91a171688f
+  version: dcf2d47dfb9dfc8f2727c7096e358cadac7d1423
 - name: golang.org/x/crypto
   version: 2faea1465de239e4babd8f5905cc25b781712442
   repo: https://go.googlesource.com/crypto
@@ -177,11 +178,11 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: google.golang.org/genproto
-  version: 4eb30f4778eed4c258ba66527a0d4f9ec8a36c45
+  version: 2b5a72b8730b0b16380010cfe5286c42108d88e7
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 0bd008f5fadb62d228f12b18d016709e8139a7af
+  version: 7646b5360d049a7ca31e9133315db43456f39e2e
   subpackages:
   - balancer
   - balancer/base
