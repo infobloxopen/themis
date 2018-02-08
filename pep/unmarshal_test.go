@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/infobloxopen/go-trees/domaintree"
+
 	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
@@ -166,7 +168,7 @@ func TestUnmarshalTaggedStruct(t *testing.T) {
 	nv := pdp.MakeNetworkValue(n)
 
 	da := pdp.MakeAttribute("da", pdp.TypeDomain)
-	dv := pdp.MakeDomainValue("example.com")
+	dv := pdp.MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03com\x00"))
 
 	assignments := []pdp.AttributeAssignmentExpression{
 		pdp.MakeAttributeAssignmentExpression(ba, bv),
@@ -420,6 +422,6 @@ func SprintfTestTaggedStruct(v TestTaggedResponseStruct) string {
 func SprintfTestTaggedAllTypesStruct(v TestTaggedAllTypesResponseStruct) string {
 	return fmt.Sprintf("\tEffect: %v\n\tReason: %v\n"+
 		"\tBool: %v\n\tString: %v\n\tAddress:%v\n"+
-		"\tNetwork: %v\n\tDomain: %v\n",
+		"\tNetwork: %v\n\tDomain: %q\n",
 		v.Effect, v.Reason, v.Bool, v.String, v.Address.String(), v.Network.String(), v.Domain)
 }

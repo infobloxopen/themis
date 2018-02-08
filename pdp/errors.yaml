@@ -100,6 +100,17 @@ errors:
   - field: s
   - field: err
 
+- id: invalidDomainNameStringCastError
+  fields:
+  - id: s
+    type: string
+  - id: err
+    type: error
+  msg: "Can't treat %q as domain name (%s)"
+  args:
+  - field: s
+  - field: err
+
 - id: attributeValueTypeError
   fields:
   - id: expected

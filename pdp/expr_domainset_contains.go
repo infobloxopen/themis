@@ -40,7 +40,10 @@ func (f functionSetOfDomainsContains) Calculate(ctx *Context) (AttributeValue, e
 		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 
-	_, ok := set.Get(value)
+	_, ok, err := set.WireGet(value)
+	if err != nil {
+		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
+	}
 	return MakeBooleanValue(ok), nil
 }
 

@@ -201,10 +201,10 @@ func (c *Context) calculateAddressExpression(e Expression) (net.IP, error) {
 	return v.address()
 }
 
-func (c *Context) calculateDomainExpression(e Expression) (string, error) {
+func (c *Context) calculateDomainExpression(e Expression) (domaintree.WireDomainNameLower, error) {
 	v, err := e.Calculate(c)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	return v.domain()

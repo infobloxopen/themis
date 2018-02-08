@@ -121,7 +121,7 @@ func (c *contentItem) ppValue(v interface{}) (interface{}, error) {
 			return nil, newStringCastError(v, "domain value")
 		}
 
-		d, err := pdp.AdjustDomainName(s)
+		d, err := domaintree.MakeWireDomainNameLower(s)
 		if err != nil {
 			return nil, newDomainCastError(s, err)
 		}
@@ -171,13 +171,7 @@ func (c *contentItem) ppValue(v interface{}) (interface{}, error) {
 	case pdp.TypeSetOfDomains:
 		m := &domaintree.Node{}
 		err := ppStringSequence(v, "set of domains value", func(s string) error {
-			d, err := pdp.AdjustDomainName(s)
-			if err != nil {
-				return newDomainCastError(s, err)
-			}
-
-			m.InplaceInsert(d, nil)
-
+			m.InplaceInsert(s, nil)
 			return nil
 		})
 		if err != nil {

@@ -17,7 +17,8 @@ var ContentKeyTypes = map[int]bool{
 	TypeString:  true,
 	TypeAddress: true,
 	TypeNetwork: true,
-	TypeDomain:  true}
+	TypeDomain:  true,
+}
 
 // LocalContentStorage is a storage of all independent local contents.
 type LocalContentStorage struct {
@@ -889,7 +890,11 @@ func (m ContentDomainMap) getValue(key AttributeValue, t int) (AttributeValue, e
 		return undefinedValue, err
 	}
 
-	v, ok := m.tree.Get(d)
+	v, ok, err := m.tree.WireGet(d)
+	if err != nil {
+		return undefinedValue, err
+	}
+
 	if !ok {
 		return undefinedValue, newMissingValueError()
 	}
@@ -903,7 +908,11 @@ func (m ContentDomainMap) next(key AttributeValue) (ContentSubItem, error) {
 		return nil, err
 	}
 
-	v, ok := m.tree.Get(d)
+	v, ok, err := m.tree.WireGet(d)
+	if err != nil {
+		return nil, err
+	}
+
 	if !ok {
 		return nil, newMissingValueError()
 	}
@@ -923,10 +932,10 @@ func (m ContentDomainMap) put(key AttributeValue, value ContentSubItem) (Content
 	}
 
 	if v, ok := value.(ContentValue); ok {
-		return MakeContentDomainMap(m.tree.Insert(d, v.value)), nil
+		return MakeContentDomainMap(m.tree.Insert(d.String(), v.value)), nil
 	}
 
-	return MakeContentDomainMap(m.tree.Insert(d, value)), nil
+	return MakeContentDomainMap(m.tree.Insert(d.String(), value)), nil
 }
 
 func (m ContentDomainMap) del(key AttributeValue) (ContentSubItem, error) {
@@ -935,7 +944,7 @@ func (m ContentDomainMap) del(key AttributeValue) (ContentSubItem, error) {
 		return m, err
 	}
 
-	t, ok := m.tree.Delete(d)
+	t, ok := m.tree.Delete(d.String())
 	if !ok {
 		return m, newMissingValueError()
 	}
@@ -973,7 +982,7 @@ func (v ContentValue) getValue(key AttributeValue, t int) (AttributeValue, error
 		return MakeNetworkValue(v.value.(*net.IPNet)), nil
 
 	case TypeDomain:
-		return MakeDomainValue(v.value.(string)), nil
+		return MakeDomainValue(v.value.(domaintree.WireDomainNameLower)), nil
 
 	case TypeSetOfStrings:
 		return MakeSetOfStringsValue(v.value.(*strtree.Tree)), nil
