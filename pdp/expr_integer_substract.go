@@ -30,7 +30,7 @@ func (f functionIntegerSubtract) describe() string {
 	return "subtract"
 }
 
-func (f functionIntegerSubtract) calculate(ctx *Context) (AttributeValue, error) {
+func (f functionIntegerSubtract) Calculate(ctx *Context) (AttributeValue, error) {
 	first, err := ctx.calculateIntegerExpression(f.first)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())

@@ -30,7 +30,7 @@ func (f functionIntegerGreater) describe() string {
 	return "greater"
 }
 
-func (f functionIntegerGreater) calculate(ctx *Context) (AttributeValue, error) {
+func (f functionIntegerGreater) Calculate(ctx *Context) (AttributeValue, error) {
 	first, err := ctx.calculateIntegerExpression(f.first)
 	if err != nil {
 		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())
