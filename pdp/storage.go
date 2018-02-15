@@ -143,6 +143,14 @@ func (c *command) describe() string {
 		}
 	}
 
+	if nil != c.entity {
+		if evaluable, ok := c.entity.(Evaluable); ok {
+			if id, ok := evaluable.GetID(); ok {
+				qpath = append(qpath, strconv.Quote(id))
+			}
+		}
+	}
+
 	return fmt.Sprintf("%s (%s)", sop, strings.Join(qpath, "/"))
 }
 
