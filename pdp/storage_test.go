@@ -232,8 +232,8 @@ func TestStorageTransactionalUpdate(t *testing.T) {
 
 	eUpd := fmt.Sprintf("policy update: %s - %s\n"+
 		"commands:\n"+
-		"- Add (\"test\"/\"first\")\n"+
-		"- Delete (\"test\"/\"del\")", tag.String(), newTag.String())
+		"- Add path (\"test\"/\"first\")\n"+
+		"- Delete path (\"test\"/\"del\")", tag.String(), newTag.String())
 	sUpd := u.String()
 	if sUpd != eUpd {
 		t.Errorf("Expected:\n%s\n\nupdate but got:\n%s\n\n", eUpd, sUpd)
