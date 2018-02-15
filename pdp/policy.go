@@ -59,8 +59,16 @@ func NewPolicy(ID string, hidden bool, target Target, rules []*Rule, makeRCA Rul
 }
 
 func (p *Policy) describe() string {
+	ruleIDs := make([]string, len(p.rules))
+	ruleIdx := 0
+	for _, rule := range p.rules {
+		if ruleID, ok := rule.GetID(); ok {
+			ruleIDs[ruleIdx] = ruleID
+			ruleIdx++
+		}
+	}
 	if pid, ok := p.GetID(); ok {
-		return fmt.Sprintf("policy %q", pid)
+		return fmt.Sprintf("policy %q rules(%v)", pid, ruleIDs[:ruleIdx])
 	}
 
 	return "hidden policy"

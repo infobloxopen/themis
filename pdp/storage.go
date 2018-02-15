@@ -143,15 +143,17 @@ func (c *command) describe() string {
 		}
 	}
 
+	opPath := strings.Join(qpath, "/")
 	if nil != c.entity {
 		if evaluable, ok := c.entity.(Evaluable); ok {
-			if id, ok := evaluable.GetID(); ok {
-				qpath = append(qpath, strconv.Quote(id))
-			}
+			// change to something on path
+			return fmt.Sprintf("%s %s to\n  path: (%s)",
+				sop, evaluable.describe(), opPath)
 		}
 	}
 
-	return fmt.Sprintf("%s (%s)", sop, strings.Join(qpath, "/"))
+	// change directly to path
+	return fmt.Sprintf("%s path (%s)", sop, opPath)
 }
 
 // PolicyStorageTransaction represents transaction for policy storage.
