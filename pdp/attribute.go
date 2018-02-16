@@ -20,6 +20,10 @@ const (
 	TypeBoolean
 	// TypeString is string data type.
 	TypeString
+	// TypeInteger is integer data type.
+	TypeInteger
+	// TypeFloat is float data type.
+	TypeFloat
 	// TypeAddress is IPv4 or IPv6 address data type.
 	TypeAddress
 	// TypeNetwork is IPv4 or IPv6 network data type.
@@ -47,6 +51,8 @@ var (
 		"Undefined",
 		"Boolean",
 		"String",
+		"Integer",
+		"Float",
 		"Address",
 		"Network",
 		"Domain",
@@ -57,7 +63,7 @@ var (
 
 	// TypeKeys maps Type* constants to type IDs. Type ID is all lower case
 	// type name. The slice is filled by init function.
-	TypeKeys = []string{}
+	TypeKeys []string
 	// TypeIDs maps type IDs to Type* constants. The map is filled by init
 	// function.
 	TypeIDs = map[string]int{}
@@ -116,6 +122,20 @@ func MakeBooleanValue(v bool) AttributeValue {
 func MakeStringValue(v string) AttributeValue {
 	return AttributeValue{
 		t: TypeString,
+		v: v}
+}
+
+// MakeIntegerValue creates instance of integer attribute value.
+func MakeIntegerValue(v int64) AttributeValue {
+	return AttributeValue{
+		t: TypeInteger,
+		v: v}
+}
+
+// MakeFloatValue creates instance of float attribute value.
+func MakeFloatValue(v float64) AttributeValue {
+	return AttributeValue{
+		t: TypeFloat,
 		v: v}
 }
 
@@ -192,6 +212,22 @@ func MakeValueFromString(t int, s string) (AttributeValue, error) {
 	case TypeString:
 		return MakeStringValue(s), nil
 
+	case TypeInteger:
+		n, err := strconv.ParseInt(s, 0, 64)
+		if err != nil {
+			return undefinedValue, newInvalidIntegerStringCastError(s, err)
+		}
+
+		return MakeIntegerValue(n), nil
+
+	case TypeFloat:
+		f, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			return undefinedValue, newInvalidFloatStringCastError(s, err)
+		}
+
+		return MakeFloatValue(f), nil
+
 	case TypeAddress:
 		a := net.ParseIP(s)
 		if a == nil {
@@ -237,6 +273,12 @@ func (v AttributeValue) describe() string {
 	case TypeString:
 		return fmt.Sprintf("%q", v.v.(string))
 
+	case TypeInteger:
+		return strconv.FormatInt(v.v.(int64), 10)
+
+	case TypeFloat:
+		return strconv.FormatFloat(v.v.(float64), 'G', -1, 64)
+
 	case TypeAddress:
 		return v.v.(net.IP).String()
 
@@ -247,7 +289,7 @@ func (v AttributeValue) describe() string {
 		return fmt.Sprintf("domain(%s)", v.v.(domaintree.WireDomainNameLower).String())
 
 	case TypeSetOfStrings:
-		s := []string{}
+		var s []string
 		for p := range v.v.(*strtree.Tree).Enumerate() {
 			s = append(s, fmt.Sprintf("%q", p.Key))
 			if len(s) > 2 {
@@ -259,7 +301,7 @@ func (v AttributeValue) describe() string {
 		return fmt.Sprintf("set(%s)", strings.Join(s, ", "))
 
 	case TypeSetOfNetworks:
-		s := []string{}
+		var s []string
 		for p := range v.v.(*iptree.Tree).Enumerate() {
 			s = append(s, p.Key.String())
 			if len(s) > 2 {
@@ -271,7 +313,7 @@ func (v AttributeValue) describe() string {
 		return fmt.Sprintf("set(%s)", strings.Join(s, ", "))
 
 	case TypeSetOfDomains:
-		s := []string{}
+		var s []string
 		for p := range v.v.(*domaintree.Node).Enumerate() {
 			s = append(s, fmt.Sprintf("%q", p.Key))
 			if len(s) > 2 {
@@ -283,7 +325,7 @@ func (v AttributeValue) describe() string {
 		return fmt.Sprintf("domains(%s)", strings.Join(s, ", "))
 
 	case TypeListOfStrings:
-		s := []string{}
+		var s []string
 		for _, item := range v.v.([]string) {
 			s = append(s, fmt.Sprintf("%q", item))
 			if len(s) > 2 {
@@ -322,6 +364,24 @@ func (v AttributeValue) str() (string, error) {
 	}
 
 	return v.v.(string), nil
+}
+
+func (v AttributeValue) integer() (int64, error) {
+	err := v.typeCheck(TypeInteger)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.v.(int64), nil
+}
+
+func (v AttributeValue) float() (float64, error) {
+	err := v.typeCheck(TypeFloat)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.v.(float64), nil
 }
 
 func (v AttributeValue) address() (net.IP, error) {
@@ -405,6 +465,12 @@ func (v AttributeValue) Serialize() (string, error) {
 	case TypeString:
 		return v.v.(string), nil
 
+	case TypeInteger:
+		return strconv.FormatInt(v.v.(int64), 10), nil
+
+	case TypeFloat:
+		return strconv.FormatFloat(v.v.(float64), 'G', -1, 64), nil
+
 	case TypeAddress:
 		return v.v.(net.IP).String(), nil
 
@@ -423,7 +489,7 @@ func (v AttributeValue) Serialize() (string, error) {
 		return strings.Join(s, ","), nil
 
 	case TypeSetOfNetworks:
-		s := []string{}
+		var s []string
 		for p := range v.v.(*iptree.Tree).Enumerate() {
 			s = append(s, strconv.Quote(p.Key.String()))
 		}
@@ -431,7 +497,7 @@ func (v AttributeValue) Serialize() (string, error) {
 		return strings.Join(s, ","), nil
 
 	case TypeSetOfDomains:
-		s := []string{}
+		var s []string
 		for p := range v.v.(*domaintree.Node).Enumerate() {
 			s = append(s, strconv.Quote(p.Key))
 		}
@@ -439,7 +505,7 @@ func (v AttributeValue) Serialize() (string, error) {
 		return strings.Join(s, ","), nil
 
 	case TypeListOfStrings:
-		s := []string{}
+		var s []string
 		for _, item := range v.v.([]string) {
 			s = append(s, strconv.Quote(item))
 		}

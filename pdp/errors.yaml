@@ -70,6 +70,28 @@ errors:
   - field: s
   - field: err
 
+- id: invalidIntegerStringCastError
+  fields:
+  - id: s
+    type: string
+  - id: err
+    type: error
+  msg: "Can't treat %q as integer (%s)"
+  args:
+  - field: s
+  - field: err
+
+- id: invalidFloatStringCastError
+  fields:
+  - id: s
+    type: string
+  - id: err
+    type: error
+  msg: "Can't treat %q as float (%s)"
+  args:
+  - field: s
+  - field: err
+
 - id: invalidAddressStringCastError
   fields:
   - id: s
@@ -669,3 +691,23 @@ errors:
   args:
   - expr: TypeNames[e.expected]
   - field: value
+
+- id: integerDivideByZeroError
+  fields:
+  msg: "Integer divisor has a value of 0"
+  args:
+
+- id: floatDivideByZeroError
+  fields:
+  msg: "Float divisor has a value of 0"
+  args:
+
+- id: floatNanError
+  fields:
+  msg: "Float result has a value of NaN"
+  args:
+
+- id: floatInfError
+  fields:
+  msg: "Float result has a value of Inf"
+  args:

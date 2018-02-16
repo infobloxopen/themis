@@ -3,6 +3,7 @@ package pep
 import (
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"reflect"
 	"strconv"
@@ -22,20 +23,37 @@ var (
 	// ErrorInvalidStruct indicates that input structure has struct field
 	// (client can't marshal nested structures).
 	ErrorInvalidStruct = errors.New("marshalling for the struct hasn't been implemented")
+	// ErrorIntegerOverflow indicates that input structure contains integer
+	// which doesn't fit to int64.
+	ErrorIntegerOverflow = errors.New("integer overflow")
 )
 
 type fieldMarshaller func(v reflect.Value) (string, string, error)
 
 var (
 	marshallersByKind = map[reflect.Kind]fieldMarshaller{
-		reflect.Bool:   boolMarshaller,
-		reflect.String: stringMarshaller,
-		reflect.Slice:  sliceMarshaller,
-		reflect.Struct: structMarshaller}
+		reflect.Bool:    boolMarshaller,
+		reflect.String:  stringMarshaller,
+		reflect.Int:     intMarshaller,
+		reflect.Int8:    intMarshaller,
+		reflect.Int16:   intMarshaller,
+		reflect.Int32:   intMarshaller,
+		reflect.Int64:   intMarshaller,
+		reflect.Uint:    intMarshaller,
+		reflect.Uint8:   intMarshaller,
+		reflect.Uint16:  intMarshaller,
+		reflect.Uint32:  intMarshaller,
+		reflect.Uint64:  intMarshaller,
+		reflect.Float32: floatMarshaller,
+		reflect.Float64: floatMarshaller,
+		reflect.Slice:   sliceMarshaller,
+		reflect.Struct:  structMarshaller}
 
 	marshallersByTag = map[string]fieldMarshaller{
 		"boolean": boolMarshaller,
 		"string":  stringMarshaller,
+		"integer": intMarshaller,
+		"float":   floatMarshaller,
 		"address": addressMarshaller,
 		"network": networkMarshaller,
 		"domain":  domainMarshaller}
@@ -46,6 +64,8 @@ var (
 	typeByTag = map[string]reflect.Type{
 		"boolean": reflect.TypeOf(true),
 		"string":  reflect.TypeOf("string"),
+		"integer": reflect.TypeOf(0),
+		"float":   reflect.TypeOf(0.),
 		"address": netIPType,
 		"network": netIPNetType,
 		"domain":  reflect.TypeOf("string")}
@@ -62,8 +82,8 @@ type reqFieldsInfo struct {
 	err    error
 }
 
-func makeTaggetFieldsInfo(fields []reflect.StructField, typeName string) reqFieldsInfo {
-	out := []reqFieldInfo{}
+func makeTaggedFieldsInfo(fields []reflect.StructField, typeName string) reqFieldsInfo {
+	var out []reqFieldInfo
 	for i, f := range fields {
 		tag, ok := getTag(f)
 		if !ok {
@@ -111,8 +131,8 @@ func makeTaggetFieldsInfo(fields []reflect.StructField, typeName string) reqFiel
 	return reqFieldsInfo{fields: out}
 }
 
-func makeUntaggedFieldsInfo(fields []reflect.StructField, typeName string) reqFieldsInfo {
-	out := []reqFieldInfo{}
+func makeUntaggedFieldsInfo(fields []reflect.StructField) reqFieldsInfo {
+	var out []reqFieldInfo
 	for i, f := range fields {
 		name, ok := getName(f)
 		if !ok {
@@ -182,9 +202,9 @@ func getFields(t reflect.Type) reqFieldsInfo {
 	typeCacheLock.Lock()
 	var info reqFieldsInfo
 	if tagged {
-		info = makeTaggetFieldsInfo(fields, t.Name())
+		info = makeTaggedFieldsInfo(fields, t.Name())
 	} else {
-		info = makeUntaggedFieldsInfo(fields, t.Name())
+		info = makeUntaggedFieldsInfo(fields)
 	}
 	typeCache[key] = info
 	typeCacheLock.Unlock()
@@ -244,6 +264,40 @@ func boolMarshaller(v reflect.Value) (string, string, error) {
 
 func stringMarshaller(v reflect.Value) (string, string, error) {
 	return v.String(), "string", nil
+}
+
+func intMarshaller(v reflect.Value) (string, string, error) {
+	var s string
+	switch v.Kind() {
+	default:
+		panic(fmt.Errorf("expected any integer value but got %q (%s)", v.Type().Name(), v.String()))
+
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		s = strconv.FormatInt(v.Int(), 10)
+
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		n := v.Uint()
+		if n > math.MaxInt64 {
+			return "", "", ErrorIntegerOverflow
+		}
+
+		s = strconv.FormatUint(n, 10)
+	}
+
+	return s, "integer", nil
+}
+
+func floatMarshaller(v reflect.Value) (string, string, error) {
+	var s string
+	switch v.Kind() {
+	default:
+		panic(fmt.Errorf("expected any float value but got %q (%s)", v.Type().Name(), v.String()))
+
+	case reflect.Float32, reflect.Float64:
+		s = strconv.FormatFloat(v.Float(), 'g', -1, 64)
+	}
+
+	return s, "float", nil
 }
 
 func sliceMarshaller(v reflect.Value) (string, string, error) {

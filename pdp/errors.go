@@ -18,69 +18,75 @@ const (
 	invalidTypeStringCastErrorID              = 5
 	notImplementedStringCastErrorID           = 6
 	invalidBooleanStringCastErrorID           = 7
-	invalidAddressStringCastErrorID           = 8
-	invalidNetworkStringCastErrorID           = 9
-	invalidAddressNetworkStringCastErrorID    = 10
-	invalidDomainNameStringCastErrorID        = 11
-	attributeValueTypeErrorID                 = 12
-	duplicateAttributeValueErrorID            = 13
-	unknownTypeSerializationErrorID           = 14
-	invalidTypeSerializationErrorID           = 15
-	assignmentTypeMismatchID                  = 16
-	mapperArgumentTypeErrorID                 = 17
-	UntaggedPolicyModificationErrorID         = 18
-	MissingPolicyTagErrorID                   = 19
-	PolicyTagsNotMatchErrorID                 = 20
-	emptyPathModificationErrorID              = 21
-	invalidRootPolicyItemTypeErrorID          = 22
-	hiddenRootPolicyAppendErrorID             = 23
-	invalidRootPolicyErrorID                  = 24
-	hiddenPolicySetModificationErrorID        = 25
-	invalidPolicySetItemTypeErrorID           = 26
-	tooShortPathPolicySetModificationErrorID  = 27
-	missingPolicySetChildErrorID              = 28
-	hiddenPolicyAppendErrorID                 = 29
-	policyTransactionTagsNotMatchErrorID      = 30
-	failedPolicyTransactionErrorID            = 31
-	unknownPolicyUpdateOperationErrorID       = 32
-	hiddenPolicyModificationErrorID           = 33
-	tooLongPathPolicyModificationErrorID      = 34
-	tooShortPathPolicyModificationErrorID     = 35
-	invalidPolicyItemTypeErrorID              = 36
-	hiddenRuleAppendErrorID                   = 37
-	missingPolicyChildErrorID                 = 38
-	missingContentErrorID                     = 39
-	invalidContentStorageItemID               = 40
-	missingContentItemErrorID                 = 41
-	invalidContentItemErrorID                 = 42
-	invalidContentItemTypeErrorID             = 43
-	invalidSelectorPathErrorID                = 44
-	networkMapKeyValueTypeErrorID             = 45
-	mapContentSubitemErrorID                  = 46
-	invalidContentModificationErrorID         = 47
-	missingPathContentModificationErrorID     = 48
-	tooLongPathContentModificationErrorID     = 49
-	invalidContentValueModificationErrorID    = 50
-	UntaggedContentModificationErrorID        = 51
-	MissingContentTagErrorID                  = 52
-	ContentTagsNotMatchErrorID                = 53
-	unknownContentUpdateOperationErrorID      = 54
-	failedContentTransactionErrorID           = 55
-	contentTransactionIDNotMatchErrorID       = 56
-	contentTransactionTagsNotMatchErrorID     = 57
-	tooShortRawPathContentModificationErrorID = 58
-	tooLongRawPathContentModificationErrorID  = 59
-	invalidContentUpdateDataErrorID           = 60
-	invalidContentUpdateResultTypeErrorID     = 61
-	invalidContentUpdateKeysErrorID           = 62
-	unknownContentItemResultTypeErrorID       = 63
-	invalidContentItemResultTypeErrorID       = 64
-	invalidContentKeyTypeErrorID              = 65
-	invalidContentStringMapErrorID            = 66
-	invalidContentNetworkMapErrorID           = 67
-	invalidContentDomainMapErrorID            = 68
-	invalidContentValueErrorID                = 69
-	invalidContentValueTypeErrorID            = 70
+	invalidIntegerStringCastErrorID           = 8
+	invalidFloatStringCastErrorID             = 9
+	invalidAddressStringCastErrorID           = 10
+	invalidNetworkStringCastErrorID           = 11
+	invalidAddressNetworkStringCastErrorID    = 12
+	invalidDomainNameStringCastErrorID        = 13
+	attributeValueTypeErrorID                 = 14
+	duplicateAttributeValueErrorID            = 15
+	unknownTypeSerializationErrorID           = 16
+	invalidTypeSerializationErrorID           = 17
+	assignmentTypeMismatchID                  = 18
+	mapperArgumentTypeErrorID                 = 19
+	UntaggedPolicyModificationErrorID         = 20
+	MissingPolicyTagErrorID                   = 21
+	PolicyTagsNotMatchErrorID                 = 22
+	emptyPathModificationErrorID              = 23
+	invalidRootPolicyItemTypeErrorID          = 24
+	hiddenRootPolicyAppendErrorID             = 25
+	invalidRootPolicyErrorID                  = 26
+	hiddenPolicySetModificationErrorID        = 27
+	invalidPolicySetItemTypeErrorID           = 28
+	tooShortPathPolicySetModificationErrorID  = 29
+	missingPolicySetChildErrorID              = 30
+	hiddenPolicyAppendErrorID                 = 31
+	policyTransactionTagsNotMatchErrorID      = 32
+	failedPolicyTransactionErrorID            = 33
+	unknownPolicyUpdateOperationErrorID       = 34
+	hiddenPolicyModificationErrorID           = 35
+	tooLongPathPolicyModificationErrorID      = 36
+	tooShortPathPolicyModificationErrorID     = 37
+	invalidPolicyItemTypeErrorID              = 38
+	hiddenRuleAppendErrorID                   = 39
+	missingPolicyChildErrorID                 = 40
+	missingContentErrorID                     = 41
+	invalidContentStorageItemID               = 42
+	missingContentItemErrorID                 = 43
+	invalidContentItemErrorID                 = 44
+	invalidContentItemTypeErrorID             = 45
+	invalidSelectorPathErrorID                = 46
+	networkMapKeyValueTypeErrorID             = 47
+	mapContentSubitemErrorID                  = 48
+	invalidContentModificationErrorID         = 49
+	missingPathContentModificationErrorID     = 50
+	tooLongPathContentModificationErrorID     = 51
+	invalidContentValueModificationErrorID    = 52
+	UntaggedContentModificationErrorID        = 53
+	MissingContentTagErrorID                  = 54
+	ContentTagsNotMatchErrorID                = 55
+	unknownContentUpdateOperationErrorID      = 56
+	failedContentTransactionErrorID           = 57
+	contentTransactionIDNotMatchErrorID       = 58
+	contentTransactionTagsNotMatchErrorID     = 59
+	tooShortRawPathContentModificationErrorID = 60
+	tooLongRawPathContentModificationErrorID  = 61
+	invalidContentUpdateDataErrorID           = 62
+	invalidContentUpdateResultTypeErrorID     = 63
+	invalidContentUpdateKeysErrorID           = 64
+	unknownContentItemResultTypeErrorID       = 65
+	invalidContentItemResultTypeErrorID       = 66
+	invalidContentKeyTypeErrorID              = 67
+	invalidContentStringMapErrorID            = 68
+	invalidContentNetworkMapErrorID           = 69
+	invalidContentDomainMapErrorID            = 70
+	invalidContentValueErrorID                = 71
+	invalidContentValueTypeErrorID            = 72
+	integerDivideByZeroErrorID                = 73
+	floatDivideByZeroErrorID                  = 74
+	floatNanErrorID                           = 75
+	floatInfErrorID                           = 76
 )
 
 type externalError struct {
@@ -205,6 +211,40 @@ func newInvalidBooleanStringCastError(s string, err error) *invalidBooleanString
 
 func (e *invalidBooleanStringCastError) Error() string {
 	return e.errorf("Can't treat %q as boolean (%s)", e.s, e.err)
+}
+
+type invalidIntegerStringCastError struct {
+	errorLink
+	s   string
+	err error
+}
+
+func newInvalidIntegerStringCastError(s string, err error) *invalidIntegerStringCastError {
+	return &invalidIntegerStringCastError{
+		errorLink: errorLink{id: invalidIntegerStringCastErrorID},
+		s:         s,
+		err:       err}
+}
+
+func (e *invalidIntegerStringCastError) Error() string {
+	return e.errorf("Can't treat %q as integer (%s)", e.s, e.err)
+}
+
+type invalidFloatStringCastError struct {
+	errorLink
+	s   string
+	err error
+}
+
+func newInvalidFloatStringCastError(s string, err error) *invalidFloatStringCastError {
+	return &invalidFloatStringCastError{
+		errorLink: errorLink{id: invalidFloatStringCastErrorID},
+		s:         s,
+		err:       err}
+}
+
+func (e *invalidFloatStringCastError) Error() string {
+	return e.errorf("Can't treat %q as float (%s)", e.s, e.err)
 }
 
 type invalidAddressStringCastError struct {
@@ -1256,4 +1296,56 @@ func newInvalidContentValueTypeError(value interface{}, expected int) *invalidCo
 
 func (e *invalidContentValueTypeError) Error() string {
 	return e.errorf("Expected value of type %s but got %T", TypeNames[e.expected], e.value)
+}
+
+type integerDivideByZeroError struct {
+	errorLink
+}
+
+func newIntegerDivideByZeroError() *integerDivideByZeroError {
+	return &integerDivideByZeroError{
+		errorLink: errorLink{id: integerDivideByZeroErrorID}}
+}
+
+func (e *integerDivideByZeroError) Error() string {
+	return e.errorf("Integer divisor has a value of 0")
+}
+
+type floatDivideByZeroError struct {
+	errorLink
+}
+
+func newFloatDivideByZeroError() *floatDivideByZeroError {
+	return &floatDivideByZeroError{
+		errorLink: errorLink{id: floatDivideByZeroErrorID}}
+}
+
+func (e *floatDivideByZeroError) Error() string {
+	return e.errorf("Float divisor has a value of 0")
+}
+
+type floatNanError struct {
+	errorLink
+}
+
+func newFloatNanError() *floatNanError {
+	return &floatNanError{
+		errorLink: errorLink{id: floatNanErrorID}}
+}
+
+func (e *floatNanError) Error() string {
+	return e.errorf("Float result has a value of NaN")
+}
+
+type floatInfError struct {
+	errorLink
+}
+
+func newFloatInfError() *floatInfError {
+	return &floatInfError{
+		errorLink: errorLink{id: floatInfErrorID}}
+}
+
+func (e *floatInfError) Error() string {
+	return e.errorf("Float result has a value of Inf")
 }

@@ -68,6 +68,8 @@ type attributeMarshaller func(value interface{}) (string, error)
 var marshallers = map[int]attributeMarshaller{
 	pdp.TypeBoolean: booleanMarshaller,
 	pdp.TypeString:  stringMarshaller,
+	pdp.TypeInteger: integerMarshaller,
+	pdp.TypeFloat:   floatMarshaller,
 	pdp.TypeAddress: addressMarshaller,
 	pdp.TypeNetwork: networkMarshaller,
 	pdp.TypeDomain:  domainMarshaller}
@@ -140,6 +142,58 @@ func stringMarshaller(value interface{}) (string, error) {
 	}
 
 	return s, nil
+}
+
+func integerMarshaller(value interface{}) (string, error) {
+	var err error
+	switch value := value.(type) {
+	case int:
+		return strconv.FormatInt(int64(value), 10), nil
+	case int64:
+		return strconv.FormatInt(value, 10), nil
+	case uint:
+		return strconv.FormatInt(int64(value), 10), nil
+	case uint64:
+		return strconv.FormatInt(int64(value), 10), nil
+	case float64:
+		if value > -9007199254740992 && value < 9007199254740992 {
+			return strconv.FormatInt(int64(value), 10), nil
+		}
+		err = fmt.Errorf("can't marshal %T as int64", value)
+
+	case string:
+		_, err = strconv.ParseInt(value, 10, 64)
+		if err == nil {
+			return value, nil
+		}
+		err = fmt.Errorf("can't marshal \"%s\" as int64", value)
+	}
+
+	return "", err
+}
+
+func floatMarshaller(value interface{}) (string, error) {
+	var err error
+	switch value := value.(type) {
+	case int:
+		return strconv.FormatFloat(float64(value), 'g', -1, 64), nil
+	case int64:
+		return strconv.FormatFloat(float64(value), 'g', -1, 64), nil
+	case uint:
+		return strconv.FormatFloat(float64(value), 'g', -1, 64), nil
+	case uint64:
+		return strconv.FormatFloat(float64(value), 'g', -1, 64), nil
+	case float64:
+		return strconv.FormatFloat(value, 'g', -1, 64), nil
+	case string:
+		_, err = strconv.ParseFloat(value, 64)
+		if err == nil {
+			return value, nil
+		}
+		err = fmt.Errorf("can't marshal \"%s\" as float64", value)
+	}
+
+	return "", err
 }
 
 func addressMarshaller(value interface{}) (string, error) {

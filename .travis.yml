@@ -5,7 +5,9 @@ go:
   - 1.8
 
 script:
-  - make
+  - mkdir $HOME/gopath/src/github.com/infobloxopen/
+  - ln -s $HOME/gopath/src/github.com/yuewko/themis $HOME/gopath/src/github.com/infobloxopen/themis
+  - 'SRCROOT=$HOME/gopath/src/github.com/infobloxopen/themis/; cd $SRCROOT; make SRCROOT=$SRCROOT'
 
 after_success:
-  - bash <(curl -s https://codecov.io/bash)
+  - 'cd $HOME/gopath/src/github.com/infobloxopen/themis/; bash <(curl -s https://codecov.io/bash)'

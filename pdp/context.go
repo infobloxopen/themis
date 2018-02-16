@@ -20,7 +20,7 @@ const (
 	EffectPermit
 
 	// EffectNotApplicable indicates that policies don't contain any policy
-	// and rule applicabe to the request.
+	// and rule applicable to the request.
 	EffectNotApplicable
 
 	// EffectIndeterminate indicates that evaluation can't be done for
@@ -36,6 +36,8 @@ const (
 	// the request but if it could effect would be only EffectDeny or
 	// EffectPermit.
 	EffectIndeterminateDP
+
+	EffectOutOfRange
 )
 
 var (
@@ -59,6 +61,14 @@ var (
 type Context struct {
 	a map[string]interface{}
 	c *LocalContentStorage
+}
+
+// EffectNameFromEnum returns human readable name for Effect enum
+func EffectNameFromEnum(effectEnum int) string {
+	if effectEnum >= EffectOutOfRange {
+		return "EffectOutOfRange"
+	}
+	return effectNames[effectEnum]
 }
 
 // NewContext creates new instance of context. It requires pointer to local
@@ -190,6 +200,41 @@ func (c *Context) calculateStringExpression(e Expression) (string, error) {
 	}
 
 	return v.str()
+}
+
+func (c *Context) calculateIntegerExpression(e Expression) (int64, error) {
+	v, err := e.Calculate(c)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.integer()
+}
+
+func (c *Context) calculateFloatExpression(e Expression) (float64, error) {
+	v, err := e.Calculate(c)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.float()
+}
+
+func (c *Context) calculateFloatOrIntegerExpression(e Expression) (float64, error) {
+	v, err := e.Calculate(c)
+	if err != nil {
+		return 0, err
+	}
+
+	if v.GetResultType() == TypeInteger {
+		intVal, err := v.integer()
+		if err != nil {
+			return 0, err
+		}
+
+		return float64(intVal), nil
+	}
+	return v.float()
 }
 
 func (c *Context) calculateAddressExpression(e Expression) (net.IP, error) {

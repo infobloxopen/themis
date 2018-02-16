@@ -129,6 +129,26 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 	case pdp.TypeString:
 		return jparser.GetString(d, "value")
 
+	case pdp.TypeInteger:
+		x, err := jparser.GetNumber(d, "value")
+		if err != nil {
+			return nil, err
+		}
+
+		if x < -9007199254740992 || x > 9007199254740992 {
+			return nil, newIntegerOverflowError(x)
+		}
+
+		return int64(x), nil
+
+	case pdp.TypeFloat:
+		x, err := jparser.GetNumber(d, "value")
+		if err != nil {
+			return nil, err
+		}
+
+		return float64(x), nil
+
 	case pdp.TypeAddress:
 		s, err := jparser.GetString(d, "address value")
 		if err != nil {
@@ -253,7 +273,7 @@ func (c *contentItem) unmarshalDataField(d *json.Decoder) error {
 	if c.vReady {
 		v, err := c.unmarshalTypedData(d, 0)
 		if err != nil {
-			return nil
+			return err
 		}
 
 		if len(c.k) <= 0 {
@@ -264,7 +284,7 @@ func (c *contentItem) unmarshalDataField(d *json.Decoder) error {
 	} else {
 		v, err := jparser.GetUndefined(d, "content")
 		if err != nil {
-			return nil
+			return err
 		}
 
 		c.v = v
