@@ -143,7 +143,17 @@ func (c *command) describe() string {
 		}
 	}
 
-	return fmt.Sprintf("%s (%s)", sop, strings.Join(qpath, "/"))
+	opPath := strings.Join(qpath, "/")
+	if nil != c.entity {
+		if evaluable, ok := c.entity.(Evaluable); ok {
+			// change to something on path
+			return fmt.Sprintf("%s %s to\n  path: (%s)",
+				sop, evaluable.describe(), opPath)
+		}
+	}
+
+	// change directly to path
+	return fmt.Sprintf("%s path (%s)", sop, opPath)
 }
 
 // PolicyStorageTransaction represents transaction for policy storage.

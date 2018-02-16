@@ -270,4 +270,5 @@ type Evaluable interface {
 
 	getOrder() int
 	setOrder(ord int)
+	describe() string
 }
