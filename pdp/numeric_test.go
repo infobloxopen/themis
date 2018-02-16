@@ -2,6 +2,7 @@ package pdp
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -1077,6 +1078,251 @@ func TestFloatRange(t *testing.T) {
 				t.Errorf("Expect string result with no error, but got '%s'", err)
 			} else if res != tc.expect {
 				t.Errorf("Expect result '%s', but got '%s'", tc.expect, res)
+			}
+		})
+	}
+}
+
+func TestFunctionArgumentValidators(t *testing.T) {
+	type testCase struct {
+		argTypes         []int
+		expectFunc       reflect.Type
+		expectResultType int
+	}
+
+	type testSuite struct {
+		funcName  string
+		testCases []testCase
+	}
+
+	testSuites := []testSuite{
+		{
+			funcName: "add",
+			testCases: []testCase{
+				{
+					argTypes:         []int{TypeInteger, TypeInteger},
+					expectFunc:       reflect.TypeOf(functionIntegerAdd{}),
+					expectResultType: TypeInteger,
+				},
+				{
+					argTypes:         []int{TypeInteger, TypeFloat},
+					expectFunc:       reflect.TypeOf(functionFloatAdd{}),
+					expectResultType: TypeFloat,
+				},
+				{
+					argTypes:         []int{TypeFloat, TypeInteger},
+					expectFunc:       reflect.TypeOf(functionFloatAdd{}),
+					expectResultType: TypeFloat,
+				},
+				{
+					argTypes:         []int{TypeFloat, TypeFloat},
+					expectFunc:       reflect.TypeOf(functionFloatAdd{}),
+					expectResultType: TypeFloat,
+				},
+			},
+		},
+		{
+			funcName: "subtract",
+			testCases: []testCase{
+				{
+					argTypes:         []int{TypeInteger, TypeInteger},
+					expectFunc:       reflect.TypeOf(functionIntegerSubtract{}),
+					expectResultType: TypeInteger,
+				},
+				{
+					argTypes:         []int{TypeInteger, TypeFloat},
+					expectFunc:       reflect.TypeOf(functionFloatSubtract{}),
+					expectResultType: TypeFloat,
+				},
+				{
+					argTypes:         []int{TypeFloat, TypeInteger},
+					expectFunc:       reflect.TypeOf(functionFloatSubtract{}),
+					expectResultType: TypeFloat,
+				},
+				{
+					argTypes:         []int{TypeFloat, TypeFloat},
+					expectFunc:       reflect.TypeOf(functionFloatSubtract{}),
+					expectResultType: TypeFloat,
+				},
+			},
+		},
+		{
+			funcName: "multiply",
+			testCases: []testCase{
+				{
+					argTypes:         []int{TypeInteger, TypeInteger},
+					expectFunc:       reflect.TypeOf(functionIntegerMultiply{}),
+					expectResultType: TypeInteger,
+				},
+				{
+					argTypes:         []int{TypeInteger, TypeFloat},
+					expectFunc:       reflect.TypeOf(functionFloatMultiply{}),
+					expectResultType: TypeFloat,
+				},
+				{
+					argTypes:         []int{TypeFloat, TypeInteger},
+					expectFunc:       reflect.TypeOf(functionFloatMultiply{}),
+					expectResultType: TypeFloat,
+				},
+				{
+					argTypes:         []int{TypeFloat, TypeFloat},
+					expectFunc:       reflect.TypeOf(functionFloatMultiply{}),
+					expectResultType: TypeFloat,
+				},
+			},
+		},
+		{
+			funcName: "divide",
+			testCases: []testCase{
+				{
+					argTypes:         []int{TypeInteger, TypeInteger},
+					expectFunc:       reflect.TypeOf(functionIntegerDivide{}),
+					expectResultType: TypeInteger,
+				},
+				{
+					argTypes:         []int{TypeInteger, TypeFloat},
+					expectFunc:       reflect.TypeOf(functionFloatDivide{}),
+					expectResultType: TypeFloat,
+				},
+				{
+					argTypes:         []int{TypeFloat, TypeInteger},
+					expectFunc:       reflect.TypeOf(functionFloatDivide{}),
+					expectResultType: TypeFloat,
+				},
+				{
+					argTypes:         []int{TypeFloat, TypeFloat},
+					expectFunc:       reflect.TypeOf(functionFloatDivide{}),
+					expectResultType: TypeFloat,
+				},
+			},
+		},
+		{
+			funcName: "equal",
+			testCases: []testCase{
+				{
+					argTypes:         []int{TypeInteger, TypeInteger},
+					expectFunc:       reflect.TypeOf(functionIntegerEqual{}),
+					expectResultType: TypeBoolean,
+				},
+				{
+					argTypes:         []int{TypeInteger, TypeFloat},
+					expectFunc:       reflect.TypeOf(functionFloatEqual{}),
+					expectResultType: TypeBoolean,
+				},
+				{
+					argTypes:         []int{TypeFloat, TypeInteger},
+					expectFunc:       reflect.TypeOf(functionFloatEqual{}),
+					expectResultType: TypeBoolean,
+				},
+				{
+					argTypes:         []int{TypeFloat, TypeFloat},
+					expectFunc:       reflect.TypeOf(functionFloatEqual{}),
+					expectResultType: TypeBoolean,
+				},
+			},
+		},
+		{
+			funcName: "greater",
+			testCases: []testCase{
+				{
+					argTypes:         []int{TypeInteger, TypeInteger},
+					expectFunc:       reflect.TypeOf(functionIntegerGreater{}),
+					expectResultType: TypeBoolean,
+				},
+				{
+					argTypes:         []int{TypeInteger, TypeFloat},
+					expectFunc:       reflect.TypeOf(functionFloatGreater{}),
+					expectResultType: TypeBoolean,
+				},
+				{
+					argTypes:         []int{TypeFloat, TypeInteger},
+					expectFunc:       reflect.TypeOf(functionFloatGreater{}),
+					expectResultType: TypeBoolean,
+				},
+				{
+					argTypes:         []int{TypeFloat, TypeFloat},
+					expectFunc:       reflect.TypeOf(functionFloatGreater{}),
+					expectResultType: TypeBoolean,
+				},
+			},
+		},
+		{
+			funcName: "range",
+			testCases: []testCase{
+				{
+					argTypes:         []int{TypeInteger, TypeInteger, TypeInteger},
+					expectFunc:       reflect.TypeOf(functionIntegerRange{}),
+					expectResultType: TypeString,
+				},
+				{
+					argTypes:         []int{TypeInteger, TypeInteger, TypeFloat},
+					expectFunc:       reflect.TypeOf(functionFloatRange{}),
+					expectResultType: TypeString,
+				},
+				{
+					argTypes:         []int{TypeInteger, TypeFloat, TypeInteger},
+					expectFunc:       reflect.TypeOf(functionFloatRange{}),
+					expectResultType: TypeString,
+				},
+				{
+					argTypes:         []int{TypeInteger, TypeFloat, TypeFloat},
+					expectFunc:       reflect.TypeOf(functionFloatRange{}),
+					expectResultType: TypeString,
+				},
+				{
+					argTypes:         []int{TypeFloat, TypeInteger, TypeInteger},
+					expectFunc:       reflect.TypeOf(functionFloatRange{}),
+					expectResultType: TypeString,
+				},
+				{
+					argTypes:         []int{TypeFloat, TypeInteger, TypeFloat},
+					expectFunc:       reflect.TypeOf(functionFloatRange{}),
+					expectResultType: TypeString,
+				},
+				{
+					argTypes:         []int{TypeFloat, TypeFloat, TypeInteger},
+					expectFunc:       reflect.TypeOf(functionFloatRange{}),
+					expectResultType: TypeString,
+				},
+				{
+					argTypes:         []int{TypeFloat, TypeFloat, TypeFloat},
+					expectFunc:       reflect.TypeOf(functionFloatRange{}),
+					expectResultType: TypeString,
+				},
+			},
+		},
+	}
+
+	for _, ts := range testSuites {
+		t.Run(fmt.Sprintf("Validators for \"%s\"", ts.funcName), func(t *testing.T) {
+			for _, tc := range ts.testCases {
+				t.Run(fmt.Sprintf("Argument Types: %v", tc.argTypes), func(t *testing.T) {
+
+					args := make([]Expression, len(tc.argTypes))
+					for i, argType := range tc.argTypes {
+						expr, err := MakeValueFromString(argType, "1")
+						if err != nil {
+							t.Fatalf("Unexpected error making expression of type %s", TypeNames[argType])
+							return
+						}
+						args[i] = expr
+					}
+
+					for _, fav := range FunctionArgumentValidators[ts.funcName] {
+						funcMaker := fav(args)
+						if funcMaker != nil {
+							numFunc := funcMaker(args)
+							if tc.expectFunc != reflect.TypeOf(numFunc) {
+								t.Errorf("Expected numeric function is '%v' but got '%v'", tc.expectFunc, reflect.TypeOf(numFunc))
+							}
+							if tc.expectResultType != numFunc.GetResultType() {
+								t.Errorf("Expected result type is '%s' but got '%s'", TypeNames[tc.expectResultType], TypeNames[numFunc.GetResultType()])
+							}
+							return
+						}
+					}
+					t.Error("Expect to find function maker but none found")
+				})
 			}
 		})
 	}
