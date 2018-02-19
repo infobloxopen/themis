@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"math"
+	"os"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -48,19 +49,20 @@ func (s *stringSet) Set(v string) error {
 var conf config
 
 func init() {
-	verbose := flag.Int("v", 1, "log verbosity (0 - error, 1 - warn (default), 2 - info, 3 - debug)")
-	flag.StringVar(&conf.policy, "p", "", "policy file to start with")
-	policyFmt := flag.String("pfmt", policyFormatNameYAML, "policy data format \"yaml\" or \"json\"")
-	flag.Var(&conf.content, "j", "JSON content files to start with")
-	flag.StringVar(&conf.serviceEP, "l", ":5555", "listen for decision requests on this address:port")
-	flag.StringVar(&conf.controlEP, "c", ":5554", "listen for policies on this address:port")
-	flag.StringVar(&conf.tracingEP, "t", "", "OpenZipkin tracing endpoint")
-	flag.StringVar(&conf.healthEP, "health", "", "health check endpoint")
-	flag.StringVar(&conf.profilerEP, "pprof", "", "performance profiler endpoint")
-	limit := flag.Uint64("mem-limit", 0, "memory limit in megabytes")
-	flag.UintVar(&conf.maxStreams, "max-streams", 0, "maximum number of parallel gRPC streams (0 - use gRPC default)")
+	fs := flag.NewFlagSet("", flag.ExitOnError)
+	verbose := fs.Int("v", 1, "log verbosity (0 - error, 1 - warn (default), 2 - info, 3 - debug)")
+	fs.StringVar(&conf.policy, "p", "", "policy file to start with")
+	policyFmt := fs.String("pfmt", policyFormatNameYAML, "policy data format \"yaml\" or \"json\"")
+	fs.Var(&conf.content, "j", "JSON content files to start with")
+	fs.StringVar(&conf.serviceEP, "l", ":5555", "listen for decision requests on this address:port")
+	fs.StringVar(&conf.controlEP, "c", ":5554", "listen for policies on this address:port")
+	fs.StringVar(&conf.tracingEP, "t", "", "OpenZipkin tracing endpoint")
+	fs.StringVar(&conf.healthEP, "health", "", "health check endpoint")
+	fs.StringVar(&conf.profilerEP, "pprof", "", "performance profiler endpoint")
+	limit := fs.Uint64("mem-limit", 0, "memory limit in megabytes")
+	fs.UintVar(&conf.maxStreams, "max-streams", 0, "maximum number of parallel gRPC streams (0 - use gRPC default)")
 
-	flag.Parse()
+	fs.Parse(os.Args[1:])
 
 	initLogging(*verbose)
 
