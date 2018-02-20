@@ -504,6 +504,16 @@ func (c *ContentItem) typeCheck(path []AttributeValue, v interface{}) (ContentSu
 			return nil, newInvalidContentValueTypeError(subItem.value, TypeBoolean)
 		}
 
+	case TypeInteger:
+		if _, ok := subItem.value.(int64); !ok {
+			return nil, newInvalidContentValueTypeError(subItem.value, TypeInteger)
+		}
+
+	case TypeFloat:
+		if _, ok := subItem.value.(float64); !ok {
+			return nil, newInvalidContentValueTypeError(subItem.value, TypeFloat)
+		}
+
 	case TypeString:
 		if _, ok := subItem.value.(string); !ok {
 			return nil, newInvalidContentValueTypeError(subItem.value, TypeString)
@@ -974,6 +984,12 @@ func (v ContentValue) getValue(key AttributeValue, t int) (AttributeValue, error
 
 	case TypeString:
 		return MakeStringValue(v.value.(string)), nil
+
+	case TypeInteger:
+		return MakeIntegerValue(v.value.(int64)), nil
+
+	case TypeFloat:
+		return MakeFloatValue(v.value.(float64)), nil
 
 	case TypeAddress:
 		return MakeAddressValue(v.value.(net.IP)), nil

@@ -175,6 +175,13 @@ const (
 				"key": "value"
 			}
 		},
+        "integer": {
+            "type": "integer",
+            "keys": ["string"],
+            "data": {
+                "key": 9.007199254740992e+15
+            }
+        },
 		"address": {
 			"type": "address",
 			"keys": ["string"],
@@ -271,6 +278,13 @@ const (
 			"type": "string",
 			"keys": ["string"]
 		},
+        "integer": {
+            "type": "integer",
+            "keys": ["string"],
+            "data": {
+                "key": 9.007199254740992e+15
+            }
+        },
 		"address": {
 			"data": {
 				"key": "192.0.2.1"

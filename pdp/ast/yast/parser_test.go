@@ -58,7 +58,10 @@ policies:
     rules:
     - effect: Deny
       obligations:
-      - r: Default Deny Policy
+      - r:
+         val:
+           type: string
+           content: Default Deny Policy
   - id: Parent policy
     alg:
       id: mapper
@@ -69,17 +72,26 @@ policies:
     - id: Deny rule
       effect: Deny
       obligations:
-      - r: Default Deny rule
+      - r:
+         val:
+           type: string
+           content: Default Deny rule
     - id: Some rule
       effect: Permit
       obligations:
-      - r: Some rule
+      - r:
+         val:
+           type: string
+           content: Some rule
   - id: Useless policy
     alg: FirstApplicableEffect
     rules:
     - effect: Deny
       obligations:
-      - r: Useless policy
+      - r:
+         val:
+           type: string
+           content: Useless policy
 `
 
 	simpleUpdate = `# Simple several commands update
@@ -96,7 +108,10 @@ policies:
       - id: Permit Rule
         effect: permit
         obligations:
-        - r: First Added Update Item
+        - r:
+           val:
+             type: string
+             content: First Added Update Item
 
 - op: add
   path:
@@ -108,7 +123,10 @@ policies:
     - id: Permit Rule
       effect: permit
       obligations:
-      - r: Second Added Update Item
+      - r:
+         val:
+           type: string
+           content: Second Added Update Item
 
 - op: add
   path:
@@ -118,7 +136,10 @@ policies:
     id: Permit Rule
     effect: permit
     obligations:
-    - r: Third Added Update Item
+    - r:
+       val:
+         type: string
+         content: Third Added Update Item
 
 - op: delete
   path:
@@ -130,6 +151,11 @@ policies:
 attributes:
   boolAttr: boolean
   strAttr: string
+  intAttr: integer
+  floatAttr: float
+  minAttr: float
+  maxAttr: float
+  valAttr: float
   addrAttr: address
   netAttr: network
   domAttr: domain
@@ -248,13 +274,19 @@ policies:
       rules:
       - effect: Permit
         obligations:
-        - strAttr: "Nested Mappers Policy Set Permit"
+        - strAttr:
+           val:
+             type: string
+             content: "Nested Mappers Policy Set Permit"
     - id: Error
       alg: FirstApplicableEffect
       rules:
       - effect: Deny
         obligations:
-        - strAttr: "Nested Mappers Policy Set Deny"
+        - strAttr:
+           val:
+             type: string
+             content: "Nested Mappers Policy Set Deny"
   - id: Nested Mappers Policy
     alg:
       id: Mapper
@@ -275,15 +307,181 @@ policies:
     - id: Default
       effect: Permit
       obligations:
-      - strAttr: "Nested Mappers Policy Permit"
+      - strAttr:
+         val:
+           type: string
+           content: "Nested Mappers Policy Permit"
     - id: Error
       effect: Deny
       obligations:
-      - strAttr: "Nested Mappers Policy Deny"
+      - strAttr:
+         val:
+           type: string
+           content: "Nested Mappers Policy Deny"
       - lsAttr:
-        - first
-        - second
-        - third
+         val:
+           type: list of strings
+           content:
+             - first
+             - second
+             - third
+      - intAttr:
+         val:
+           type: integer
+           content: 9.007199254740992e+15
+    - id: IntEqual
+      effect: Deny
+      target:
+      - equal:
+        - attr: intAttr
+        - val:
+            type: integer
+            content: 0
+      condition:
+        equal:
+        - attr: intAttr
+        - val:
+            type: integer
+            content: 0
+    - id: FloatEqual
+      effect: Deny
+      target:
+      - equal:
+        - attr: floatAttr
+        - val:
+            type: float
+            content: 0.0
+      condition:
+        equal:
+        - attr: intAttr
+        - val:
+            type: integer
+            content: 0
+    - id: IntGreater
+      effect: Deny
+      target:
+      - equal:
+        - attr: intAttr
+        - val:
+            type: integer
+            content: 0
+      condition:
+        greater:
+        - attr: intAttr
+        - val:
+            type: integer
+            content: 0
+    - id: FloatGreater
+      effect: Deny
+      target:
+      - equal:
+        - attr: floatAttr
+        - val:
+            type: float
+            content: 0.0
+      condition:
+        greater:
+        - attr: floatAttr
+        - val:
+            type: float
+            content: 0
+    - id: NumAdd
+      effect: Deny
+      target:
+      - equal:
+        - attr: intAttr
+        - val:
+            type: integer
+            content: 0
+      condition:
+        greater:
+        - add:
+            - attr: intAttr
+            - attr: floatAttr
+        - val:
+            type: integer
+            content: 10
+    - id: NumSubtract
+      effect: Deny
+      target:
+      - equal:
+        - attr: intAttr
+        - val:
+            type: integer
+            content: 0
+      condition:
+        greater:
+        - subtract:
+            - attr: floatAttr
+            - attr: intAttr
+        - val:
+            type: float
+            content: 10.0
+    - id: NumMultiply
+      effect: Deny
+      target:
+      - equal:
+        - attr: floatAttr
+        - val:
+            type: float
+            content: 10.0
+      condition:
+        greater:
+        - multiply:
+            - attr: floatAttr
+            - attr: intAttr
+        - val:
+            type: float
+            content: 10.0
+    - id: NumDivide
+      effect: Deny
+      target:
+      - equal:
+        - attr: floatAttr
+        - val:
+            type: float
+            content: 10.0
+      condition:
+        greater:
+        - divide:
+            - attr: floatAttr
+            - attr: intAttr
+        - val:
+            type: float
+            content: 10.0
+  - id: Float Range Policy
+    alg:
+      id: Mapper
+      map:
+        range:
+          - attr: minAttr
+          - attr: maxAttr
+          - attr: valAttr
+      alg: FirstApplicableEffect
+    rules:
+    - id: Below
+      effect: Permit
+      obligations:
+      - strAttr:
+         val:
+           type: string
+           content: Below
+  
+    - id: Above
+      effect: Permit
+      obligations:
+      - strAttr:
+         val:
+           type: string
+           content: Above
+  
+    - id: Within
+      effect: Permit
+      obligations:
+      - floatAttr:
+         divide:
+           - attr: valAttr
+           - attr: minAttr
   - id: Reodering Mapper Policy Set
     alg:
       id: Mapper
@@ -297,19 +495,28 @@ policies:
       rules:
       - effect: Permit
       obligations:
-      - strAttr: "First Rule"
+      - strAttr:
+         val:
+           type: string
+           content: "First Rule"
     - id: second
       alg: FirstApplicableEffect
       rules:
       - effect: Permit
       obligations:
-      - strAttr: "Second Rule"
+      - strAttr:
+         val:
+           type: string
+           content: "Second Rule"
     - id: third
       alg: FirstApplicableEffect
       rules:
       - effect: Permit
       obligations:
-      - strAttr: "Third Rule"
+      - strAttr:
+         val:
+           type: string
+           content: "Third Rule"
   - id: Reodering Mapper Policy
     alg:
       id: Mapper
@@ -321,15 +528,24 @@ policies:
     - id: first
       effect: Permit
       obligations:
-      - strAttr: "First Rule"
+      - strAttr:
+         val:
+           type: string
+           content: "First Rule"
     - id: second
       effect: Permit
       obligations:
-      - strAttr: "Second Rule"
+      - strAttr:
+         val:
+           type: string
+           content: "Second Rule"
     - id: third
       effect: Permit
       obligations:
-      - strAttr: "Third Rule"
+      - strAttr:
+         val:
+           type: string
+           content: "Third Rule"
 `
 )
 

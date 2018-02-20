@@ -192,7 +192,16 @@ type twoArgumentsFunctionType func(first, second Expression) Expression
 var TargetCompatibleExpressions = map[string]map[int]map[int]twoArgumentsFunctionType{
 	"equal": {
 		TypeString: {
-			TypeString: makeFunctionStringEqual}},
+			TypeString: makeFunctionStringEqual},
+		TypeInteger: {
+			TypeInteger: makeFunctionIntegerEqual},
+		TypeFloat: {
+			TypeFloat: makeFunctionFloatEqual}},
+	"greater": {
+		TypeInteger: {
+			TypeInteger: makeFunctionIntegerGreater},
+		TypeFloat: {
+			TypeFloat: makeFunctionFloatGreater}},
 	"contains": {
 		TypeString: {
 			TypeString: makeFunctionStringContains},
