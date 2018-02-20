@@ -83,6 +83,30 @@ func TestAttribute(t *testing.T) {
 		t.Errorf("Expected %q as value description but got %q", expDesc, d)
 	}
 
+	v = MakeIntegerValue(123)
+	vt = v.GetResultType()
+	if vt != TypeInteger {
+		t.Errorf("Expected %q as value type but got %q", TypeNames[TypeInteger], TypeNames[vt])
+	}
+
+	expDesc = "123"
+	d = v.describe()
+	if d != expDesc {
+		t.Errorf("Expected %q as value description but got %q", expDesc, d)
+	}
+
+	v = MakeFloatValue(123.456)
+	vt = v.GetResultType()
+	if vt != TypeFloat {
+		t.Errorf("Expected %q as value type but got %q", TypeNames[TypeFloat], TypeNames[vt])
+	}
+
+	expDesc = "123.456"
+	d = v.describe()
+	if d != expDesc {
+		t.Errorf("Expected %q as value description but got %q", expDesc, d)
+	}
+
 	v = MakeAddressValue(net.ParseIP("192.0.2.1"))
 	vt = v.GetResultType()
 	if vt != TypeAddress {
@@ -275,6 +299,53 @@ func TestMakeValueFromSting(t *testing.T) {
 		}
 	}
 
+	v, err = MakeValueFromString(TypeInteger, "654321")
+	if err != nil {
+		t.Errorf("Expected integer attribute value but got error: %s", err)
+	} else {
+		expDesc := "654321"
+		d := v.describe()
+		if d != expDesc {
+			t.Errorf("Expected %s as value description but got %s", expDesc, d)
+		}
+	}
+
+	v, err = MakeValueFromString(TypeInteger, "not integer value")
+	if err == nil {
+		t.Errorf("Expected error but got value: %s", v.describe())
+	} else if _, ok := err.(*invalidIntegerStringCastError); !ok {
+		t.Errorf("Expected *invalidIntegerStringCastError but got %T (%s)", err, err)
+	}
+
+	v, err = MakeValueFromString(TypeFloat, "654.321")
+	if err != nil {
+		t.Errorf("Expected integer attribute value but got error: %s", err)
+	} else {
+		expDesc := "654.321"
+		d := v.describe()
+		if d != expDesc {
+			t.Errorf("Expected %s as value description but got %s", expDesc, d)
+		}
+	}
+
+	v, err = MakeValueFromString(TypeFloat, "0.00000000000654321")
+	if err != nil {
+		t.Errorf("Expected integer attribute value but got error: %s", err)
+	} else {
+		expDesc := "6.54321E-12"
+		d := v.describe()
+		if d != expDesc {
+			t.Errorf("Expected %s as value description but got %s", expDesc, d)
+		}
+	}
+
+	v, err = MakeValueFromString(TypeFloat, "not float value")
+	if err == nil {
+		t.Errorf("Expected error but got value: %s", v.describe())
+	} else if _, ok := err.(*invalidFloatStringCastError); !ok {
+		t.Errorf("Expected *invalidFloatStringCastError but got %T (%s)", err, err)
+	}
+
 	v, err = MakeValueFromString(TypeAddress, "192.0.2.1")
 	if err != nil {
 		t.Errorf("Expected address attribute value but got error: %s", err)
@@ -333,6 +404,44 @@ func TestAttributeValueTypeCast(t *testing.T) {
 			t.Errorf("Expected boolean value but got error: %s", err)
 		} else if !b {
 			t.Errorf("Expected true as attribute value but got %#v", b)
+		}
+
+		s, err := v.str()
+		if err == nil {
+			t.Errorf("Expected error but got string %q", s)
+		} else if _, ok := err.(*attributeValueTypeError); !ok {
+			t.Errorf("Expected *attributeValueTypeError but got %T (%s)", err, err)
+		}
+	}
+
+	v, err = MakeValueFromString(TypeInteger, "34567")
+	if err != nil {
+		t.Errorf("Expected integer attribute value but got error: %s", err)
+	} else {
+		i, err := v.integer()
+		if err != nil {
+			t.Errorf("Expected integer value but got error: %s", err)
+		} else if i != 34567 {
+			t.Errorf("Expected %d as attribute value but got %#v", 34567, i)
+		}
+
+		s, err := v.str()
+		if err == nil {
+			t.Errorf("Expected error but got string %q", s)
+		} else if _, ok := err.(*attributeValueTypeError); !ok {
+			t.Errorf("Expected *attributeValueTypeError but got %T (%s)", err, err)
+		}
+	}
+
+	v, err = MakeValueFromString(TypeFloat, "12345.678")
+	if err != nil {
+		t.Errorf("Expected float attribute value but got error: %s", err)
+	} else {
+		f, err := v.float()
+		if err != nil {
+			t.Errorf("Expected float value but got error: %s", err)
+		} else if f != 12345.678 {
+			t.Errorf("Expected %g as attribute value but got %#v", 12345.678, f)
 		}
 
 		s, err := v.str()
@@ -566,6 +675,30 @@ func TestAttributeValueSerialize(t *testing.T) {
 		}
 	}
 
+	v, err = MakeValueFromString(TypeInteger, "47238")
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		s, err := v.Serialize()
+		if err != nil {
+			t.Errorf("Expected no error but got %s", err)
+		} else if s != "47238" {
+			t.Errorf("Expected \"true\" but got %q", s)
+		}
+	}
+
+	v, err = MakeValueFromString(TypeFloat, "3.1415927")
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		s, err := v.Serialize()
+		if err != nil {
+			t.Errorf("Expected no error but got %s", err)
+		} else if s != "3.1415927" {
+			t.Errorf("Expected \"true\" but got %q", s)
+		}
+	}
+
 	v, err = MakeValueFromString(TypeString, "test")
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
@@ -707,7 +840,7 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
 	} else if id != a.id || tName != TypeKeys[a.t] || s != expect {
-		t.Errorf("Expected %q, %q, %q but got %q, %q, %q", a.id, TypeNames[a.t], expect, id, tName, s)
+		t.Errorf("Expected %q, %q, %q but got %q, %q, %q", a.id, TypeKeys[a.t], expect, id, tName, s)
 	}
 
 	dv := MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03com\x00"))
@@ -738,6 +871,76 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 		t.Errorf("Expected *ssignmentTypeMismatch error but got %T (%s)", err, err)
 	}
 
+	fv := MakeFloatValue(2.718282)
+	v = MakeStringValue(expect)
+	e = makeFunctionStringEqual(v, fv)
+	a = Attribute{
+		id: "test-id",
+		t:  TypeInteger}
+
+	ae = MakeAttributeAssignmentExpression(a, e)
+	id, tName, s, err = ae.Serialize(ctx)
+	if err == nil {
+		t.Errorf("Expected error but got %q, %q, %q", id, tName, s)
+	} else if _, ok := err.(*attributeValueTypeError); !ok {
+		t.Errorf("Expected *attributeValueTypeError error but got %T (%s)", err, err)
+	}
+
+	v = MakeFloatValue(1234.567)
+	a = Attribute{
+		id: "test-id",
+		t:  TypeInteger}
+	ae = MakeAttributeAssignmentExpression(a, v)
+	id, tName, s, err = ae.Serialize(ctx)
+	if err == nil {
+		t.Errorf("Expected error but got %q, %q, %q", id, tName, s)
+	} else if _, ok := err.(*assignmentTypeMismatch); !ok {
+		t.Errorf("Expected *ssignmentTypeMismatch error but got %T (%s)", err, err)
+	}
+
+	iv := MakeIntegerValue(45678)
+	v = MakeStringValue(expect)
+	e = makeFunctionStringEqual(v, iv)
+	a = Attribute{
+		id: "test-id",
+		t:  TypeFloat}
+
+	ae = MakeAttributeAssignmentExpression(a, e)
+	id, tName, s, err = ae.Serialize(ctx)
+	if err == nil {
+		t.Errorf("Expected error but got %q, %q, %q", id, tName, s)
+	} else if _, ok := err.(*attributeValueTypeError); !ok {
+		t.Errorf("Expected *attributeValueTypeError error but got %T (%s)", err, err)
+	}
+
+	expect = "45679.23"
+	iv = MakeIntegerValue(45678)
+	fv = MakeFloatValue(1.23)
+	e = makeFunctionFloatAdd(fv, iv)
+	a = Attribute{
+		id: "test-id",
+		t:  TypeFloat}
+
+	ae = MakeAttributeAssignmentExpression(a, e)
+	id, tName, s, err = ae.Serialize(ctx)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if id != a.id || tName != TypeKeys[a.t] || s != expect {
+		t.Errorf("Expected %q, %q, %q but got %q, %q, %q", a.id, TypeKeys[a.t], expect, id, tName, s)
+	}
+
+	v = MakeIntegerValue(12345)
+	a = Attribute{
+		id: "test-id",
+		t:  TypeFloat}
+	ae = MakeAttributeAssignmentExpression(a, v)
+	id, tName, s, err = ae.Serialize(ctx)
+	if err == nil {
+		t.Errorf("Expected error but got %q, %q, %q", id, tName, s)
+	} else if _, ok := err.(*assignmentTypeMismatch); !ok {
+		t.Errorf("Expected *ssignmentTypeMismatch error but got %T (%s)", err, err)
+	}
+
 	v = undefinedValue
 	a = Attribute{
 		id: "test-id",
@@ -752,8 +955,26 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 }
 
 func TestAttributeDesignator(t *testing.T) {
-	ctx, err := NewContext(nil, 1, func(i int) (string, AttributeValue, error) {
-		return "test-id", MakeStringValue("test-value"), nil
+	testAttributes := []struct {
+		id  string
+		val AttributeValue
+	}{
+		{
+			id:  "test-id",
+			val: MakeStringValue("test-value"),
+		},
+		{
+			id:  "test-id-i",
+			val: MakeIntegerValue(12345),
+		},
+		{
+			id:  "test-id-f",
+			val: MakeFloatValue(67.89),
+		},
+	}
+
+	ctx, err := NewContext(nil, len(testAttributes), func(i int) (string, AttributeValue, error) {
+		return testAttributes[i].id, testAttributes[i].val, nil
 	})
 	if err != nil {
 		t.Fatalf("Expected context but got error %s", err)
@@ -766,6 +987,34 @@ func TestAttributeDesignator(t *testing.T) {
 	dat := d.GetResultType()
 	if dat != TypeString {
 		t.Errorf("Expected %q type but got %q", TypeNames[TypeString], TypeNames[dat])
+	}
+
+	_, err = d.Calculate(ctx)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	}
+
+	i := Attribute{
+		id: "test-id-i",
+		t:  TypeInteger}
+	d = MakeAttributeDesignator(i)
+	dat = d.GetResultType()
+	if dat != TypeInteger {
+		t.Errorf("Expected %q type but got %q", TypeNames[TypeInteger], TypeNames[dat])
+	}
+
+	_, err = d.Calculate(ctx)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	}
+
+	f := Attribute{
+		id: "test-id-f",
+		t:  TypeFloat}
+	d = MakeAttributeDesignator(f)
+	dat = d.GetResultType()
+	if dat != TypeFloat {
+		t.Errorf("Expected %q type but got %q", TypeNames[TypeFloat], TypeNames[dat])
 	}
 
 	_, err = d.Calculate(ctx)

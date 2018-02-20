@@ -22,6 +22,28 @@ func (ctx context) unmarshalStringValue(d *json.Decoder) (pdp.AttributeValue, er
 	return pdp.MakeStringValue(s), nil
 }
 
+func (ctx context) unmarshalIntegerValue(d *json.Decoder) (pdp.AttributeValue, error) {
+	x, err := jparser.GetNumber(d, "value of integer type")
+	if err != nil {
+		return pdp.AttributeValue{}, err
+	}
+
+	if x < -9007199254740992 || x > 9007199254740992 {
+		return pdp.AttributeValue{}, newIntegerOverflowError(x)
+	}
+
+	return pdp.MakeIntegerValue(int64(x)), nil
+}
+
+func (ctx context) unmarshalFloatValue(d *json.Decoder) (pdp.AttributeValue, error) {
+	x, err := jparser.GetNumber(d, "value of float type")
+	if err != nil {
+		return pdp.AttributeValue{}, err
+	}
+
+	return pdp.MakeFloatValue(float64(x)), nil
+}
+
 func (ctx context) unmarshalAddressValue(d *json.Decoder) (pdp.AttributeValue, error) {
 	s, err := jparser.GetString(d, "value of address type")
 	if err != nil {
@@ -140,6 +162,12 @@ func (ctx context) unmarshalValueByType(t int, d *json.Decoder) (pdp.AttributeVa
 	switch t {
 	case pdp.TypeString:
 		return ctx.unmarshalStringValue(d)
+
+	case pdp.TypeInteger:
+		return ctx.unmarshalIntegerValue(d)
+
+	case pdp.TypeFloat:
+		return ctx.unmarshalFloatValue(d)
 
 	case pdp.TypeAddress:
 		return ctx.unmarshalAddressValue(d)

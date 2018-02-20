@@ -2,6 +2,7 @@ package pep
 
 import (
 	"fmt"
+	"math"
 	"net"
 	"reflect"
 	"strings"
@@ -16,6 +17,7 @@ type DummyStruct struct {
 type TestStruct struct {
 	Bool    bool
 	Int     int
+	Float   float64
 	String  string
 	If      interface{}
 	Address net.IP
@@ -29,26 +31,26 @@ type TestTaggedStruct struct {
 	Bool1   bool
 	Bool2   bool      `pdp:""`
 	Bool3   bool      `pdp:"flag"`
+	Int     int       `pdp:"i,integer"`
+	Float   float64   `pdp:"f,float"`
 	Domain  string    `pdp:"d,domain"`
 	Address net.IP    `pdp:""`
 	network net.IPNet `pdp:"net,network"`
 }
 
 type TestInvalidStruct1 struct {
-	Int int `pdp:"number,integer"`
-}
-
-type TestInvalidStruct2 struct {
 	String string `pdp:",address"`
 }
 
-type TestInvalidStruct3 struct {
+type TestInvalidStruct2 struct {
 	If interface{} `pdp:""`
 }
 
 var (
 	TestAttributes = []*pb.Attribute{
 		{"Bool", "boolean", "true"},
+		{"Int", "integer", "5"},
+		{"Float", "float", "555.5"},
 		{"String", "string", "test"},
 		{"Address", "address", "1.2.3.4"},
 		{"Network", "network", "1.2.3.4/32"}}
@@ -56,6 +58,8 @@ var (
 	TestTaggedAttributes = []*pb.Attribute{
 		{"Bool2", "boolean", "false"},
 		{"flag", "boolean", "true"},
+		{"i", "integer", "2147483647"},
+		{"f", "float", "12345.6789"},
 		{"d", "domain", "example.com"},
 		{"Address", "address", "1.2.3.4"},
 		{"net", "network", "1.2.3.4/32"}}
@@ -63,7 +67,7 @@ var (
 
 func TestMarshalUntaggedStruct(t *testing.T) {
 	_, n, _ := net.ParseCIDR("1.2.3.4/32")
-	v := TestStruct{true, 5, "test", "interface", net.ParseIP("1.2.3.4"), "hide", *n, []int{1, 2, 3, 4}, DummyStruct{}}
+	v := TestStruct{true, 5, 555.5, "test", "interface", net.ParseIP("1.2.3.4"), "hide", *n, []int{1, 2, 3, 4}, DummyStruct{}}
 	attrs, err := marshalValue(reflect.ValueOf(v))
 	if err != nil {
 		t.Errorf("Expected no error but got: %s", err)
@@ -74,7 +78,7 @@ func TestMarshalUntaggedStruct(t *testing.T) {
 
 func TestMarshalTaggedStruct(t *testing.T) {
 	_, n, _ := net.ParseCIDR("1.2.3.4/32")
-	v := TestTaggedStruct{true, false, true, "example.com", net.ParseIP("1.2.3.4"), *n}
+	v := TestTaggedStruct{true, false, true, math.MaxInt32, 12345.6789, "example.com", net.ParseIP("1.2.3.4"), *n}
 	attrs, err := marshalValue(reflect.ValueOf(v))
 	if err != nil {
 		t.Errorf("Expected no error but got: %s", err)
@@ -87,16 +91,6 @@ func TestMarshalInvalidStructs(t *testing.T) {
 	v1 := TestInvalidStruct1{}
 	_, err := marshalValue(reflect.ValueOf(v1))
 	if err != nil {
-		if !strings.Contains(err.Error(), "unknown type") {
-			t.Errorf("Exepcted \"unknown type\" error but got:\n%s", err)
-		}
-	} else {
-		t.Errorf("Exepcted \"unknown type\" error")
-	}
-
-	v2 := TestInvalidStruct2{}
-	_, err = marshalValue(reflect.ValueOf(v2))
-	if err != nil {
 		if !strings.Contains(err.Error(), "can't marshal") {
 			t.Errorf("Exepcted \"can't marshal\" error but got:\n%s", err)
 		}
@@ -104,8 +98,8 @@ func TestMarshalInvalidStructs(t *testing.T) {
 		t.Errorf("Exepcted \"can't marshal\" error")
 	}
 
-	v3 := TestInvalidStruct3{}
-	_, err = marshalValue(reflect.ValueOf(v3))
+	v2 := TestInvalidStruct2{}
+	_, err = marshalValue(reflect.ValueOf(v2))
 	if err != nil {
 		if !strings.Contains(err.Error(), "can't marshal") {
 			t.Errorf("Exepcted \"can't marshal\" error but got:\n%s", err)

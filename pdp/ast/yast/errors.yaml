@@ -54,6 +54,50 @@ errors:
   args:
   - field: desc
 
+- id: integerError
+  fields:
+  - id: v
+    type: interface{}
+  - id: desc
+    type: string
+  msg: "Expected %s but got %T"
+  args:
+  - field: desc
+  - field: v
+
+- id: floatError
+  fields:
+  - id: v
+    type: interface{}
+  - id: desc
+    type: string
+  msg: "Expected %s but got %T"
+  args:
+  - field: desc
+  - field: v
+
+- id: integerUint64OverflowError
+  fields:
+  - id: v
+    type: uint64
+  - id: desc
+    type: string
+  msg: "%d overflows %s"
+  args:
+  - field: v
+  - field: desc
+
+- id: integerFloat64OverflowError
+  fields:
+  - id: v
+    type: float64
+  - id: desc
+    type: string
+  msg: "%f overflows %s"
+  args:
+  - field: v
+  - field: desc
+
 - id: mapError
   fields:
   - id: v
