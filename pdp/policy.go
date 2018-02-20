@@ -1,6 +1,12 @@
 package pdp
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
+
+const nDisplayRuleLimit = 5
 
 // RuleCombiningAlg represent abstract rule combining algorithm. The algorithm
 // defines how to evaluate policy rules and how to get paticular result.
@@ -63,12 +69,15 @@ func (p *Policy) describe() string {
 	ruleIdx := 0
 	for _, rule := range p.rules {
 		if ruleID, ok := rule.GetID(); ok {
-			ruleIDs[ruleIdx] = ruleID
+			ruleIDs[ruleIdx] = strconv.Quote(ruleID)
 			ruleIdx++
 		}
 	}
+	if ruleIdx > nDisplayRuleLimit {
+		ruleIDs = append(ruleIDs[:nDisplayRuleLimit-1], "...", ruleIDs[ruleIdx-1])
+	}
 	if pid, ok := p.GetID(); ok {
-		return fmt.Sprintf("policy %q rules(%v)", pid, ruleIDs[:ruleIdx])
+		return fmt.Sprintf("policy %q rules(%v)", pid, strings.Join(ruleIDs[:ruleIdx], ", "))
 	}
 
 	return "hidden policy"
