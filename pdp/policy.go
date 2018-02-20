@@ -77,7 +77,7 @@ func (p *Policy) describe() string {
 		ruleIDs = append(ruleIDs[:nDisplayRuleLimit-1], "...", ruleIDs[ruleIdx-1])
 	}
 	if pid, ok := p.GetID(); ok {
-		return fmt.Sprintf("policy %q rules(%v)", pid, strings.Join(ruleIDs[:ruleIdx], ", "))
+		return fmt.Sprintf("policy %q rules(%s)", pid, strings.Join(ruleIDs[:ruleIdx], ", "))
 	}
 
 	return "hidden policy"
