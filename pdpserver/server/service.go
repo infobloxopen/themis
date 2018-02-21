@@ -118,9 +118,7 @@ func (s *Server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, i
 		return pb.Response_INDETERMINATE, []error{err}, nil
 	}
 
-	if s.opts.logger.Level >= log.DebugLevel {
-		s.opts.logger.WithField("context", ctx).Debug("Request context")
-	}
+	s.opts.logger.WithField("context", ctx).Debug("Request context")
 
 	errs := []error{}
 
@@ -167,13 +165,11 @@ func (s *Server) Validate(ctx context.Context, in *pb.Request) (*pb.Response, er
 		status = errs[0].Error()
 	}
 
-	if s.opts.logger.Level >= log.DebugLevel {
-		s.opts.logger.WithFields(log.Fields{
-			"effect":     pb.Response_Effect_name[int32(effect)],
-			"reason":     status,
-			"obligation": obligation(attrs),
-		}).Debug("Response")
-	}
+	s.opts.logger.WithFields(log.Fields{
+		"effect":     pb.Response_Effect_name[int32(effect)],
+		"reason":     status,
+		"obligation": obligation(attrs),
+	}).Debug("Response")
 
 	return &pb.Response{
 		Effect:     effect,
