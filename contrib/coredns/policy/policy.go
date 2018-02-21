@@ -646,7 +646,7 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 Exit:
 	r.Rcode = status
 	r.Response = true
-	r.Extra = nil
+	clearEdns(r)
 	if debugQuery {
 		r.Question[0].Name = r.Question[0].Name + p.debugSuffix
 		r.Question[0].Qtype = dns.TypeTXT
@@ -662,6 +662,18 @@ Exit:
 		p.tapIO.sendCRExtraMsg(w, r, ah)
 	}
 	return status, err
+}
+
+func clearEdns(r *dns.Msg) {
+	for _, rr := range r.Extra {
+		// preserve DO flag
+		if rr.(*dns.OPT).Do() {
+			r.Extra = nil
+			r.SetEdns0(4096, true)
+			return
+		}
+	}
+	r.Extra = nil
 }
 
 // Name implements the Handler interface
