@@ -139,7 +139,12 @@ func (p *policyPlugin) connect() error {
 // closeConn terminates previously established connection.
 func (p *policyPlugin) closeConn() {
 	if p.pdp != nil {
-		p.pdp.Close()
+		go func() {
+			// Delay closing connection, so that the queries in progress
+			// were able to complete successfully
+			time.Sleep(30 * time.Second)
+			p.pdp.Close()
+		}()
 	}
 }
 
