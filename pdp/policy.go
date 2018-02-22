@@ -66,22 +66,32 @@ func NewPolicy(ID string, hidden bool, target Target, rules []*Rule, makeRCA Rul
 
 func (p *Policy) describe() string {
 	var (
+		iRule   int
 		ruleStr string
 		nRules  = len(p.rules)
 		ruleIDs = make([]string, nDisplayRuleLimit)
-		ruleIdx = 0
+		pubIdx  = 0
 	)
-	for i := 0; i < nRules && ruleIdx < nDisplayRuleLimit; i++ {
-		if ruleID, ok := p.rules[i].GetID(); ok {
-			ruleIDs[ruleIdx] = strconv.Quote(ruleID)
-			ruleIdx++
+	// find the first nDisplayRuleLimit-1 visible rules
+	for iRule = 0; iRule < nRules && pubIdx < nDisplayRuleLimit-1; iRule++ {
+		if ruleID, ok := p.rules[iRule].GetID(); ok {
+			ruleIDs[pubIdx] = strconv.Quote(ruleID)
+			pubIdx++
 		}
 	}
-	// assert ruleIdx <= nDisplayRuleLimit
-	if ruleIdx == nDisplayRuleLimit {
-		ruleStr = strings.Join(ruleIDs[:nDisplayRuleLimit-1], ", ") + ", ..., " + ruleIDs[nDisplayRuleLimit-1]
+	// look for the last visible ruleID
+	for j := nRules - 1; j > iRule && pubIdx < nDisplayRuleLimit; j++ {
+		if ruleID, ok := p.rules[j].GetID(); ok {
+			ruleIDs[pubIdx] = strconv.Quote(ruleID)
+			pubIdx++
+		}
+	}
+	// assert pubIdx <= nDisplayRuleLimit
+	if pubIdx == nDisplayRuleLimit {
+		ruleStr = strings.Join(ruleIDs[:nDisplayRuleLimit-1], ", ") +
+			", ..., " + ruleIDs[nDisplayRuleLimit-1]
 	} else {
-		ruleStr = strings.Join(ruleIDs[:ruleIdx], ", ")
+		ruleStr = strings.Join(ruleIDs[:pubIdx], ", ")
 	}
 	if pid, ok := p.GetID(); ok {
 		return fmt.Sprintf("policy %q rules(%s)", pid, ruleStr)
