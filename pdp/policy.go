@@ -65,19 +65,26 @@ func NewPolicy(ID string, hidden bool, target Target, rules []*Rule, makeRCA Rul
 }
 
 func (p *Policy) describe() string {
-	ruleIDs := make([]string, len(p.rules))
-	ruleIdx := 0
-	for _, rule := range p.rules {
-		if ruleID, ok := rule.GetID(); ok {
+	var (
+		ruleStr string
+		nRules  = len(p.rules)
+		ruleIDs = make([]string, nDisplayRuleLimit)
+		ruleIdx = 0
+	)
+	for i := 0; i < nRules && ruleIdx < nDisplayRuleLimit; i++ {
+		if ruleID, ok := p.rules[i].GetID(); ok {
 			ruleIDs[ruleIdx] = strconv.Quote(ruleID)
 			ruleIdx++
 		}
 	}
-	if ruleIdx > nDisplayRuleLimit {
-		ruleIDs = append(ruleIDs[:nDisplayRuleLimit-1], "...", ruleIDs[ruleIdx-1])
+	// assert ruleIdx <= nDisplayRuleLimit
+	if ruleIdx == nDisplayRuleLimit {
+		ruleStr = strings.Join(ruleIDs[:nDisplayRuleLimit-1], ", ") + ", ..., " + ruleIDs[nDisplayRuleLimit-1]
+	} else {
+		ruleStr = strings.Join(ruleIDs[:ruleIdx], ", ")
 	}
 	if pid, ok := p.GetID(); ok {
-		return fmt.Sprintf("policy %q rules(%s)", pid, strings.Join(ruleIDs[:ruleIdx], ", "))
+		return fmt.Sprintf("policy %q rules(%s)", pid, ruleStr)
 	}
 
 	return "hidden policy"
