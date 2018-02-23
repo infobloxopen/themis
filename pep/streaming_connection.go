@@ -237,7 +237,7 @@ func (c *streamConn) newValidationStream() (pb.PDP_NewValidationStreamClient, er
 	client := c.client
 	c.lock.RUnlock()
 
-	if state != scisConnected && state != scisConnecting {
+	if (state != scisConnected && state != scisConnecting) || client == nil {
 		return nil, errStreamConnWrongState
 	}
 

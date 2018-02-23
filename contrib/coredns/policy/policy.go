@@ -12,6 +12,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -91,6 +92,7 @@ type policyPlugin struct {
 	connTimeout     time.Duration
 	connAttempts    map[string]*uint32
 	unkConnAttempts *uint32
+	wg              sync.WaitGroup
 }
 
 func newPolicyPlugin() *policyPlugin {
@@ -139,7 +141,10 @@ func (p *policyPlugin) connect() error {
 // closeConn terminates previously established connection.
 func (p *policyPlugin) closeConn() {
 	if p.pdp != nil {
-		p.pdp.Close()
+		go func() {
+			p.wg.Wait()
+			p.pdp.Close()
+		}()
 	}
 }
 
@@ -433,11 +438,12 @@ func (p *policyPlugin) connStateCb(addr string, state int, err error) {
 		}
 		count := atomic.AddUint32(ptr, 1)
 
-		if count <= 1 || count > 100 {
-			log.Printf("[ERROR] Connecting to %s", addr)
+		if count <= 1 {
+			log.Printf("[INFO] Connecting to %s", addr)
 		}
 
 		if count > 100 {
+			log.Printf("[ERROR] Connecting to %s", addr)
 			atomic.StoreUint32(ptr, 1)
 		}
 
@@ -567,6 +573,8 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		err       error
 		sendExtra bool
 	)
+	p.wg.Add(1)
+	defer p.wg.Done()
 
 	// turn off default Cq and Cr dnstap messages
 	resetCqCr(ctx)
