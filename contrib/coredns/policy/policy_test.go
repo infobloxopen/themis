@@ -434,6 +434,12 @@ func TestPPConnect(t *testing.T) {
 
 	p.closeConn()
 
+	p = newPolicyPlugin()
+	p.endpoints = []string{
+		"127.0.0.1:5555",
+		"127.0.0.2:5555",
+	}
+
 	// Test streaming gRPC connection with hot spot.
 	p.streams = 82
 	p.hotSpot = true
