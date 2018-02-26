@@ -675,10 +675,12 @@ Exit:
 func clearEdns(r *dns.Msg) {
 	for _, rr := range r.Extra {
 		// preserve DO flag
-		if rr.(*dns.OPT).Do() {
-			r.Extra = nil
-			r.SetEdns0(4096, true)
-			return
+		if rr, ok := rr.(*dns.OPT); ok {
+			if rr.Do() {
+				r.Extra = nil
+				r.SetEdns0(4096, true)
+				return
+			}
 		}
 	}
 	r.Extra = nil
