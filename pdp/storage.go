@@ -121,10 +121,12 @@ func (u *PolicyUpdate) String() string {
 	return strings.Join(lines, "\n")
 }
 
+// PolicyUpdateDetail stores detailed information for policy updates
 type PolicyUpdateDetail map[string][]*Rule
 
+// NewPolicyUpdateDetail maps visible policy ids in the update to its Rules
 func NewPolicyUpdateDetail(update *PolicyUpdate) PolicyUpdateDetail {
-	var updatedPolicies PolicyUpdateDetail
+	updatedPolicies := make(PolicyUpdateDetail)
 	for _, cmd := range update.cmds {
 		if policy, ok := cmd.entity.(*Policy); ok {
 			if pid, ok := policy.GetID(); ok {
@@ -135,6 +137,9 @@ func NewPolicyUpdateDetail(update *PolicyUpdate) PolicyUpdateDetail {
 	return updatedPolicies
 }
 
+// GetDetail returns a description of the policy update where
+// each line shows the policy id and policy's first nShow-1
+// visible rule ids and the last visible rule id
 func (detail PolicyUpdateDetail) GetDetail(nShow uint) string {
 	policies := make([]string, 0, len(detail))
 	for pid, rules := range detail {
@@ -172,10 +177,13 @@ func (detail PolicyUpdateDetail) GetDetail(nShow uint) string {
 	return strings.Join(policies, "\n")
 }
 
+// FilterLevel specifies that PolicyUpdateDetail will only reveal
+// details when the log level is Debug
 func (detail PolicyUpdateDetail) FilterLevel() logrus.Level {
 	return logrus.DebugLevel
 }
 
+// String returns the less detailed information
 func (detail PolicyUpdateDetail) String() string {
 	// only show policy ids in case detail mode is not supported
 	pids := make([]string, 0, len(detail))
