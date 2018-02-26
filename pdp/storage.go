@@ -141,7 +141,8 @@ func NewPolicyUpdateDetail(update *PolicyUpdate) PolicyUpdateDetail {
 // each line shows the policy id and policy's first nShow-1
 // visible rule ids and the last visible rule id
 func (detail PolicyUpdateDetail) GetDetail(nShow uint) string {
-	policies := make([]string, 0, len(detail))
+	// first line is empty to enforce one policy per line format
+	policies := make([]string, 1, len(detail)+1)
 	for pid, rules := range detail {
 		var (
 			iRule   int
@@ -172,9 +173,9 @@ func (detail PolicyUpdateDetail) GetDetail(nShow uint) string {
 		} else {
 			ruleStr = strings.Join(ruleIDs[:pubIdx], ", ")
 		}
-		policies = append(policies, fmt.Sprintf("policy %q rules(%s)", pid, ruleStr))
+		policies = append(policies, fmt.Sprintf("\tpolicy %q rules(%s)", pid, ruleStr))
 	}
-	return strings.Join(policies, "\n")
+	return fmt.Sprintf("policy details:%s", strings.Join(policies, "\n"))
 }
 
 // FilterLevel specifies that PolicyUpdateDetail will only reveal
@@ -190,7 +191,7 @@ func (detail PolicyUpdateDetail) String() string {
 	for pid := range detail {
 		pids = append(pids, pid)
 	}
-	return strings.Join(pids, ", ")
+	return fmt.Sprintf("policies:[%s]", strings.Join(pids, ", "))
 }
 
 type command struct {

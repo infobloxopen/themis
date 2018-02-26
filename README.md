@@ -788,10 +788,10 @@ PDP accepts the update:
 ...
 INFO[0373] Got new control request
 INFO[0373] Got new data stream
-DEBU[0373] Policy update                                 update=policy update: 823f79f2-0001-4eb2-9ba0-2a8c1b284443 - 93a17ce2-788d-476f-bd11-a5580a2f35f3
+DEBU[0373] Policy update                                 detail="policies:[]" update="policy update: 823f79f2-0001-4eb2-9ba0-2a8c1b284443 - 93a17ce2-788d-476f-bd11-a5580a2f35f3
 commands:
 - Add path ("Root")
-- Delete path ("Root"/"First Rule")
+- Delete path ("Root"/"First Rule")"
 INFO[0373] Got apply command
 INFO[0373] Policy update has been applied                curr-tag=93a17ce2-788d-476f-bd11-a5580a2f35f3 id=3 prev-tag=823f79f2-0001-4eb2-9ba0-2a8c1b284443
 ...
