@@ -790,8 +790,8 @@ INFO[0373] Got new control request
 INFO[0373] Got new data stream
 DEBU[0373] Policy update                                 update=policy update: 823f79f2-0001-4eb2-9ba0-2a8c1b284443 - 93a17ce2-788d-476f-bd11-a5580a2f35f3
 commands:
-- Add ("Root")
-- Delete ("Root"/"First Rule")
+- Add path ("Root")
+- Delete path ("Root"/"First Rule")
 INFO[0373] Got apply command
 INFO[0373] Policy update has been applied                curr-tag=93a17ce2-788d-476f-bd11-a5580a2f35f3 id=3 prev-tag=823f79f2-0001-4eb2-9ba0-2a8c1b284443
 ...
@@ -891,16 +891,56 @@ INFO[2190] Got new data stream
 DEBU[2190] Content update                                update=content update: 823f79f2-0001-4eb2-9ba0-2a8c1b284443 - 93a17ce2-788d-476f-bd11-a5580a2f35f3
 content: "content"
 commands:
-- Delete ("domain-addresses"/"good"/"example.com")
-- Add ("domain-addresses"/"good"/"example.com")
-- Delete ("domain-addresses"/"bad"/"example.com")
-- Add ("domain-addresses"/"bad"/"example.com")
+- Delete path ("domain-addresses"/"good"/"example.com")
+- Add path ("domain-addresses"/"good"/"example.com")
+- Delete path ("domain-addresses"/"bad"/"example.com")
+- Add path ("domain-addresses"/"bad"/"example.com")
 INFO[2190] Got apply command
 INFO[2190] Content update has been applied               cid=content curr-tag=93a17ce2-788d-476f-bd11-a5580a2f35f3 id=5 
 ...
 ```
 
-Contents with different ids and policies can be updated independently and in paralel.
+Contents with different ids and policies can be updated independently and in parallel.
+
+## Embedding PDP Server Library
+
+PDPServer's server logic can be embedded as a library.
+
+### Enhancing Logger
+
+The server's logger must implement logrus.FieldLogger interface (https://github.com/sirupsen/logrus/blob/master/logrus.go). If the logger is not an instance of logrus.Logger, we recommend the logger also implement the LevelCheckable interface.
+
+```
+type LevelCheckable interface {
+  GetLevel() logrus.Level
+}
+```
+
+Optionally, the logger may consume detailed information as a value of "detail" key
+using WithField/WithFields functions. The detailed information should be passed in as an array of strings or an implementation of the DetailedInfo interface.
+
+```
+type DetailedInfo interface {
+	GetDetail(nShow uint) string
+	FilterLevel() logrus.Level
+	String() string
+}
+```
+
+An example of such log extension can be
+
+```
+type SampleLogger struct {
+	*log.Logger
+}
+
+func (logger *SampleLogger) WithFields(fields log.Fields) *log.Entry {
+  ...
+  detail := fields["detail"].(server.DetailedInfo)
+  fields["detail"] = detail.GetDetail(5)
+  ...
+}
+```
 
 # References
 **[XACML-V3.0]** *eXtensible Access Control Markup Language (XACML) Version 3.0.* 22 January 2013. OASIS Standard. http://docs.oasis-open.org/xacml/3.0/xacml-3.0-core-spec-os-en.html.

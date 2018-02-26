@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Sirupsen/logrus"
+
 	"github.com/google/uuid"
 )
 
@@ -117,6 +119,70 @@ func (u *PolicyUpdate) String() string {
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+type PolicyUpdateDetail map[string][]*Rule
+
+func NewPolicyUpdateDetail(update *PolicyUpdate) PolicyUpdateDetail {
+	var updatedPolicies PolicyUpdateDetail
+	for _, cmd := range update.cmds {
+		if policy, ok := cmd.entity.(*Policy); ok {
+			if pid, ok := policy.GetID(); ok {
+				updatedPolicies[pid] = policy.rules
+			}
+		}
+	}
+	return updatedPolicies
+}
+
+func (detail PolicyUpdateDetail) GetDetail(nShow uint) string {
+	policies := make([]string, 0, len(detail))
+	for pid, rules := range detail {
+		var (
+			iRule   int
+			ruleStr string
+			pubIdx  uint
+			nRules  = len(rules)
+			ruleIDs = make([]string, nShow)
+		)
+
+		// find the first nShow-1 visible rules
+		for iRule = 0; iRule < nRules && pubIdx < nShow-1; iRule++ {
+			if ruleID, ok := rules[iRule].GetID(); ok {
+				ruleIDs[pubIdx] = strconv.Quote(ruleID)
+				pubIdx++
+			}
+		}
+		// look for the last visible ruleID
+		for j := nRules - 1; j > iRule && pubIdx < nShow; j++ {
+			if ruleID, ok := rules[j].GetID(); ok {
+				ruleIDs[pubIdx] = strconv.Quote(ruleID)
+				pubIdx++
+			}
+		}
+		// assert pubIdx <= nShow
+		if pubIdx == nShow {
+			ruleStr = strings.Join(ruleIDs[:nShow-1], ", ") +
+				", ..., " + ruleIDs[nShow-1]
+		} else {
+			ruleStr = strings.Join(ruleIDs[:pubIdx], ", ")
+		}
+		policies = append(policies, fmt.Sprintf("policy %q rules(%s)", pid, ruleStr))
+	}
+	return strings.Join(policies, "\n")
+}
+
+func (detail PolicyUpdateDetail) FilterLevel() logrus.Level {
+	return logrus.DebugLevel
+}
+
+func (detail PolicyUpdateDetail) String() string {
+	// only show policy ids in case detail mode is not supported
+	pids := make([]string, 0, len(detail))
+	for pid := range detail {
+		pids = append(pids, pid)
+	}
+	return strings.Join(pids, ", ")
 }
 
 type command struct {

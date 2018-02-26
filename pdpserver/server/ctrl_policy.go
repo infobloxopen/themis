@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-control"
 
 	log "github.com/Sirupsen/logrus"
@@ -58,7 +59,10 @@ func (s *Server) uploadPolicyUpdate(id int32, r *streamReader, req *item, stream
 		return stream.SendAndClose(controlFail(newPolicyUpdateParseError(id, req, err)))
 	}
 
-	s.opts.logger.WithField("update", u).Debug("Policy update")
+	s.opts.logger.WithFields(log.Fields{
+		"update": u,
+		"detail": pdp.NewPolicyUpdateDetail(u),
+	}).Debug("Policy update")
 
 	err = t.Apply(u)
 	if err != nil {
