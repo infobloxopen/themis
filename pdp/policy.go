@@ -1,6 +1,12 @@
 package pdp
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
+
+const nDisplayRuleLimit = 5
 
 // RuleCombiningAlg represent abstract rule combining algorithm. The algorithm
 // defines how to evaluate policy rules and how to get paticular result.
@@ -59,16 +65,36 @@ func NewPolicy(ID string, hidden bool, target Target, rules []*Rule, makeRCA Rul
 }
 
 func (p *Policy) describe() string {
-	ruleIDs := make([]string, len(p.rules))
-	ruleIdx := 0
-	for _, rule := range p.rules {
-		if ruleID, ok := rule.GetID(); ok {
-			ruleIDs[ruleIdx] = ruleID
-			ruleIdx++
+	var (
+		iRule   int
+		ruleStr string
+		nRules  = len(p.rules)
+		ruleIDs = make([]string, nDisplayRuleLimit)
+		pubIdx  = 0
+	)
+	// find the first nDisplayRuleLimit-1 visible rules
+	for iRule = 0; iRule < nRules && pubIdx < nDisplayRuleLimit-1; iRule++ {
+		if ruleID, ok := p.rules[iRule].GetID(); ok {
+			ruleIDs[pubIdx] = strconv.Quote(ruleID)
+			pubIdx++
 		}
 	}
+	// look for the last visible ruleID
+	for j := nRules - 1; j > iRule && pubIdx < nDisplayRuleLimit; j++ {
+		if ruleID, ok := p.rules[j].GetID(); ok {
+			ruleIDs[pubIdx] = strconv.Quote(ruleID)
+			pubIdx++
+		}
+	}
+	// assert pubIdx <= nDisplayRuleLimit
+	if pubIdx == nDisplayRuleLimit {
+		ruleStr = strings.Join(ruleIDs[:nDisplayRuleLimit-1], ", ") +
+			", ..., " + ruleIDs[nDisplayRuleLimit-1]
+	} else {
+		ruleStr = strings.Join(ruleIDs[:pubIdx], ", ")
+	}
 	if pid, ok := p.GetID(); ok {
-		return fmt.Sprintf("policy %q rules(%v)", pid, ruleIDs[:ruleIdx])
+		return fmt.Sprintf("policy %q rules(%s)", pid, ruleStr)
 	}
 
 	return "hidden policy"
