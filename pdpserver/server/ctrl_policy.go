@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-control"
 
 	log "github.com/Sirupsen/logrus"
@@ -58,7 +59,10 @@ func (s *Server) uploadPolicyUpdate(id int32, r *streamReader, req *item, stream
 		return stream.SendAndClose(controlFail(newPolicyUpdateParseError(id, req, err)))
 	}
 
-	log.WithField("update", u).Debug("Policy update")
+	s.opts.logger.WithFields(log.Fields{
+		"update": u,
+		"detail": pdp.NewPolicyUpdateDetail(u),
+	}).Debug("Policy update")
 
 	err = t.Apply(u)
 	if err != nil {
@@ -81,9 +85,9 @@ func (s *Server) applyPolicy(id int32, req *item) (*pb.Response, error) {
 		s.Unlock()
 
 		if req.toTag == nil {
-			log.WithField("id", id).Info("New policy has been applied")
+			s.opts.logger.WithField("id", id).Info("New policy has been applied")
 		} else {
-			log.WithFields(log.Fields{
+			s.opts.logger.WithFields(log.Fields{
 				"id":  id,
 				"tag": req.toTag.String()}).Info("New policy has been applied")
 		}
@@ -101,7 +105,7 @@ func (s *Server) applyPolicy(id int32, req *item) (*pb.Response, error) {
 		s.p = p
 		s.Unlock()
 
-		log.WithFields(log.Fields{
+		s.opts.logger.WithFields(log.Fields{
 			"id":       id,
 			"prev-tag": req.fromTag,
 			"curr-tag": req.toTag}).Info("Policy update has been applied")

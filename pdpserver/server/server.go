@@ -35,7 +35,7 @@ type transport struct {
 type Option func(*options)
 
 // WithLogger returns a Option which sets logger
-func WithLogger(logger *log.Logger) Option {
+func WithLogger(logger log.FieldLogger) Option {
 	return func(o *options) {
 		o.logger = logger
 	}
@@ -98,7 +98,7 @@ func WithMemLimits(limits MemLimits) Option {
 }
 
 type options struct {
-	logger    *log.Logger
+	logger    log.FieldLogger
 	parser    ast.Parser
 	service   string
 	control   string

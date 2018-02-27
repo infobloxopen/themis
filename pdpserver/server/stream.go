@@ -14,10 +14,10 @@ type streamReader struct {
 	chunk  []byte
 	offset int
 	eof    bool
-	logger *log.Logger
+	logger log.FieldLogger
 }
 
-func newStreamReader(id int32, head string, stream pb.PDPControl_UploadServer, logger *log.Logger) *streamReader {
+func newStreamReader(id int32, head string, stream pb.PDPControl_UploadServer, logger log.FieldLogger) *streamReader {
 	return &streamReader{
 		id:     id,
 		stream: stream,

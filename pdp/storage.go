@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Sirupsen/logrus"
+
 	"github.com/google/uuid"
 )
 
@@ -117,6 +119,79 @@ func (u *PolicyUpdate) String() string {
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+// PolicyUpdateDetail stores detailed information for policy updates
+type PolicyUpdateDetail map[string][]*Rule
+
+// NewPolicyUpdateDetail maps visible policy ids in the update to its Rules
+func NewPolicyUpdateDetail(update *PolicyUpdate) PolicyUpdateDetail {
+	updatedPolicies := make(PolicyUpdateDetail)
+	for _, cmd := range update.cmds {
+		if policy, ok := cmd.entity.(*Policy); ok {
+			if pid, ok := policy.GetID(); ok {
+				updatedPolicies[pid] = policy.rules
+			}
+		}
+	}
+	return updatedPolicies
+}
+
+// GetDetail returns a description of the policy update where
+// each line shows the policy id and policy's first nShow-1
+// visible rule ids and the last visible rule id
+func (detail PolicyUpdateDetail) GetDetail(nShow uint) string {
+	// first line is empty to enforce one policy per line format
+	policies := make([]string, 1, len(detail)+1)
+	for pid, rules := range detail {
+		var (
+			iRule   int
+			ruleStr string
+			pubIdx  uint
+			nRules  = len(rules)
+			ruleIDs = make([]string, nShow)
+		)
+
+		// find the first nShow-1 visible rules
+		for iRule = 0; iRule < nRules && pubIdx < nShow-1; iRule++ {
+			if ruleID, ok := rules[iRule].GetID(); ok {
+				ruleIDs[pubIdx] = strconv.Quote(ruleID)
+				pubIdx++
+			}
+		}
+		// look for the last visible ruleID
+		for j := nRules - 1; j > iRule && pubIdx < nShow; j++ {
+			if ruleID, ok := rules[j].GetID(); ok {
+				ruleIDs[pubIdx] = strconv.Quote(ruleID)
+				pubIdx++
+			}
+		}
+		// assert pubIdx <= nShow
+		if pubIdx == nShow {
+			ruleStr = strings.Join(ruleIDs[:nShow-1], ", ") +
+				", ..., " + ruleIDs[nShow-1]
+		} else {
+			ruleStr = strings.Join(ruleIDs[:pubIdx], ", ")
+		}
+		policies = append(policies, fmt.Sprintf("\tpolicy %q rules(%s)", pid, ruleStr))
+	}
+	return fmt.Sprintf("policy details:%s", strings.Join(policies, "\n"))
+}
+
+// FilterLevel specifies that PolicyUpdateDetail will only reveal
+// details when the log level is Debug
+func (detail PolicyUpdateDetail) FilterLevel() logrus.Level {
+	return logrus.DebugLevel
+}
+
+// String returns the less detailed information
+func (detail PolicyUpdateDetail) String() string {
+	// only show policy ids in case detail mode is not supported
+	pids := make([]string, 0, len(detail))
+	for pid := range detail {
+		pids = append(pids, pid)
+	}
+	return fmt.Sprintf("policies:[%s]", strings.Join(pids, ", "))
 }
 
 type command struct {
