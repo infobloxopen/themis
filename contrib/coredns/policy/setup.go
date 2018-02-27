@@ -39,12 +39,7 @@ func setup(c *caddy.Controller) error {
 		return nil
 	})
 
-	c.OnRestart(func() error {
-		policyPlugin.closeConn()
-		return nil
-	})
-
-	c.OnFinalShutdown(func() error {
+	c.OnShutdown(func() error {
 		policyPlugin.closeConn()
 		return nil
 	})
