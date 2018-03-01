@@ -2,7 +2,7 @@ package: github.com/infobloxopen/themis
 import:
 - package: github.com/sirupsen/logrus
 - package: github.com/coredns/coredns
-  version: 86be6d2532693dd4b900548fdc5e4820bf0bec9f
+  version: f697b33283afe695554888eb0cf9f5451c481470
   subpackages:
   - core/dnsserver
   - plugin
@@ -18,7 +18,6 @@ import:
   subpackages:
   - go/otgrpc
 - package: github.com/mholt/caddy
-  version: e2997ac974d194c0fef32a2c98d07a84237876fd
 - package: github.com/miekg/dns
   subpackages:
   - internal/socket
@@ -42,5 +41,3 @@ import:
   - strtree
   - iptree
 - package: github.com/dnstap/golang-dnstap
-- package: github.com/Shopify/sarama
-  version: f144d1183f4254fdf160c6fb01a32deea71e8702

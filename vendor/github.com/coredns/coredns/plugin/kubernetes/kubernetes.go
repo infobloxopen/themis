@@ -274,6 +274,10 @@ func (k *Kubernetes) Records(state request.Request, exact bool) ([]msg.Service, 
 		return nil, e
 	}
 
+	if dnsutil.IsReverse(state.Name()) > 0 {
+		return nil, errNoItems
+	}
+
 	if !wildcard(r.namespace) && !k.namespaceExposed(r.namespace) {
 		return nil, errNsNotExposed
 	}
