@@ -403,7 +403,7 @@ func (s *Server) Serve() error {
 		}(s.health.iface)
 	}
 
-	if err := s.listenStorage(); err != nil {
+	if err := s.listenQuery(); err != nil {
 		return err
 	}
 

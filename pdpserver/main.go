@@ -21,7 +21,7 @@ func main() {
 		server.WithHealthAt(conf.healthEP),
 		server.WithProfilerAt(conf.profilerEP),
 		server.WithTracingAt(conf.tracingEP),
-		server.WithQueryAt(":5552"),
+		server.WithQueryAt(conf.queryEP),
 		server.WithMemLimits(conf.mem),
 		server.WithMaxGRPCStreams(uint32(conf.maxStreams)),
 	)

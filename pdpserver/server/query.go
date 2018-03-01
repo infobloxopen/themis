@@ -26,7 +26,7 @@ func queryIndexHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Para
 	fmt.Fprint(w, storageQueryCommands)
 }
 
-func (s *Server) listenStorage() error {
+func (s *Server) listenQuery() error {
 	if len(s.opts.queryEP) <= 0 {
 		return nil
 	}
