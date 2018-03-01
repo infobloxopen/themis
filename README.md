@@ -902,6 +902,23 @@ INFO[2190] Content update has been applied               cid=content curr-tag=93
 
 Contents with different ids and policies can be updated independently and in parallel.
 
+## Debugging Options
+
+PDPServer provides options to query for rules and policies by id.
+
+On startup, PDPServer can optionally listen to a query endpoint (using the `-query flag`).
+By default, the query endpoint is localhost:8080.
+
+While running, the server provides the following RESTful api through the query endpoint:
+
+- Check if a rule exists: `GET /storage/exists/<ruleId>`
+
+- Check the rules in a policy: `GET /storage/rules/<policyId>`
+
+- Get at most n rules from a policy: `GET /storage/rules/<policyId>/<n>`
+
+- Get all policy ids: `GET /storage/policies`
+
 # References
 **[XACML-V3.0]** *eXtensible Access Control Markup Language (XACML) Version 3.0.* 22 January 2013. OASIS Standard. http://docs.oasis-open.org/xacml/3.0/xacml-3.0-core-spec-os-en.html.
 
