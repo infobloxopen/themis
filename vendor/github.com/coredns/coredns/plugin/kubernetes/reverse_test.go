@@ -22,6 +22,7 @@ func (APIConnReverseTest) SvcIndex(string) []*api.Service  { return nil }
 func (APIConnReverseTest) EpIndex(string) []*api.Endpoints { return nil }
 func (APIConnReverseTest) EndpointsList() []*api.Endpoints { return nil }
 func (APIConnReverseTest) ServiceList() []*api.Service     { return nil }
+func (APIConnReverseTest) Modified() int64                 { return 0 }
 
 func (APIConnReverseTest) SvcIndexReverse(ip string) []*api.Service {
 	if ip != "192.168.1.100" {
@@ -154,7 +155,7 @@ func TestReverse(t *testing.T) {
 		},
 		{
 			Qname: "101.0.0.10.in-addr.arpa.", Qtype: dns.TypePTR,
-			Rcode: dns.RcodeSuccess,
+			Rcode: dns.RcodeNameError,
 			Ns: []dns.RR{
 				test.SOA("0.10.in-addr.arpa.	300	IN	SOA	ns.dns.0.10.in-addr.arpa. hostmaster.0.10.in-addr.arpa. 1502782828 7200 1800 86400 60"),
 			},

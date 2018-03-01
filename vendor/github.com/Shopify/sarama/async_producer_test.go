@@ -639,7 +639,6 @@ func TestAsyncProducerFlusherRetryCondition(t *testing.T) {
 
 	leader.SetHandlerByMap(map[string]MockResponse{
 		"ProduceRequest": NewMockProduceResponse(t).
-			SetVersion(0).
 			SetError("my_topic", 0, ErrNoError),
 	})
 

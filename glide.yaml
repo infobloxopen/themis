@@ -1,7 +1,8 @@
 package: github.com/infobloxopen/themis
 import:
-- package: github.com/Sirupsen/logrus
+- package: github.com/sirupsen/logrus
 - package: github.com/coredns/coredns
+  version: 86be6d2532693dd4b900548fdc5e4820bf0bec9f
   subpackages:
   - core/dnsserver
   - plugin
@@ -41,3 +42,5 @@ import:
   - strtree
   - iptree
 - package: github.com/dnstap/golang-dnstap
+- package: github.com/Shopify/sarama
+  version: f144d1183f4254fdf160c6fb01a32deea71e8702

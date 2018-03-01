@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"

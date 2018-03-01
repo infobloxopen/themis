@@ -1,7 +1,7 @@
 package pdp
 
 import (
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 type SelectorFunc func(string, []Expression, int) (Expression, error)

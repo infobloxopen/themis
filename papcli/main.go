@@ -6,7 +6,7 @@ import (
 
 	"github.com/infobloxopen/themis/pdpctrl-client"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {

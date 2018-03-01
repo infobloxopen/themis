@@ -203,6 +203,73 @@ func TestWireGet(t *testing.T) {
 	}
 }
 
+func TestDeleteSubdomains(t *testing.T) {
+	var r *Node
+
+	r, ok := r.DeleteSubdomains("test.com")
+	if ok {
+		t.Error("Expected no deletion from empty tree but got deleted something")
+	}
+
+	r = r.Insert("com", "1")
+	r = r.Insert("test.com", "2")
+	r = r.Insert("test.net", "3")
+	r = r.Insert("example.com", "4")
+	r = r.Insert("www.test.com", "5")
+	r = r.Insert("www.test.org", "6")
+
+	r, ok = r.DeleteSubdomains("ns.test.com")
+	if ok {
+		t.Error("Expected \"ns.test.com\" to be not deleted as it's absent in the tree")
+	}
+
+	r, ok = r.DeleteSubdomains("test.com")
+	if !ok {
+		t.Error("Expected \"test.com\" to be deleted")
+	}
+
+	r, ok = r.DeleteSubdomains("www.test.com")
+	if ok {
+		t.Error("Expected \"www.test.com\" to be not deleted as it should be deleted with \"test.com\"")
+	}
+
+	r, ok = r.DeleteSubdomains("com")
+	if !ok {
+		t.Error("Expected \"com\" to be deleted")
+	}
+
+	assertTree(r, "tree with no \"com\"", t,
+		"\"test.net\": \"3\"\n",
+		"\"www.test.org\": \"6\"\n")
+
+	r, ok = r.DeleteSubdomains("test.net")
+	if !ok {
+		t.Error("Expected \"test.net\" to be deleted")
+	}
+
+	r, ok = r.DeleteSubdomains("")
+	if !ok {
+		t.Error("Expected not empty tree to be cleaned up")
+	}
+
+	r, ok = r.DeleteSubdomains("")
+	if ok {
+		t.Error("Expected nothing to clean up from empty tree")
+	}
+
+	r = r.Insert("com", "1")
+	r = r.Insert("test.com", "2")
+	r = r.Insert("test.net", "3")
+	r = r.Insert("example.com", "4")
+	r = r.Insert("www.test.com", "5")
+	r = r.Insert("www.test.org", "6")
+
+	r, ok = r.DeleteSubdomains("WwW.tEsT.cOm")
+	if !ok {
+		t.Error("Expected \"WwW.tEsT.cOm\" to be deleted")
+	}
+}
+
 func TestDelete(t *testing.T) {
 	var r *Node
 
@@ -229,8 +296,8 @@ func TestDelete(t *testing.T) {
 	}
 
 	r, ok = r.Delete("www.test.com")
-	if ok {
-		t.Error("Expected \"www.test.com\" to be not deleted as it should be deleted with \"test.com\"")
+	if !ok {
+		t.Error("Expected \"www.test.com\" to be deleted")
 	}
 
 	r, ok = r.Delete("com")
@@ -238,7 +305,8 @@ func TestDelete(t *testing.T) {
 		t.Error("Expected \"com\" to be deleted")
 	}
 
-	assertTree(r, "tree with no \"com\"", t,
+	assertTree(r, "tree", t,
+		"\"example.com\": \"4\"\n",
 		"\"test.net\": \"3\"\n",
 		"\"www.test.org\": \"6\"\n")
 
