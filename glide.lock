@@ -1,5 +1,5 @@
-hash: 3d8c1b8d10c5aa73fa728e19dc528a1bc123210196c17f2bd55a044b9a9eb9ff
-updated: 2018-03-01T19:53:55.352849+03:00
+hash: b3af93bd5a24a79c3c7e1f6ef82ee5075cb5e5b5d6538233a5cd325a47432f0f
+updated: 2018-03-02T13:24:25.554948014+03:00
 imports:
 - name: github.com/apache/thrift
   version: d907cc92db5b93e699a4282e979d097ea863215a
@@ -10,7 +10,7 @@ imports:
   subpackages:
   - quantile
 - name: github.com/coredns/coredns
-  version: f697b33283afe695554888eb0cf9f5451c481470
+  version: a131c22d24d7d035d5da4d0067439dae367a5c5b
   subpackages:
   - core/dnsserver
   - pb
@@ -178,7 +178,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: google.golang.org/genproto
-  version: 2d9486acae19cf9bd0c093d7dc236a323726a9e4
+  version: 2c5e7ac708aaa719366570dd82bda44541ca2a63
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
