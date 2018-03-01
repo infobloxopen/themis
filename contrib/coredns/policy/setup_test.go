@@ -348,6 +348,23 @@ func TestPolicyConfigParse(t *testing.T) {
                     }`,
 			errContent: errors.New("Could not parse timeout: time: invalid duration invalid"),
 		},
+		{
+			input: `.:53 {
+                        policy {
+							endpoint 10.2.4.1:5555
+                            log
+                        }
+                    }`,
+		},
+		{
+			input: `.:53 {
+                        policy {
+							endpoint 10.2.4.1:5555
+                            log stdout
+                        }
+                    }`,
+			errContent: errors.New("Wrong argument count or unexpected line ending"),
+		},
 	}
 
 	for _, test := range tests {
