@@ -167,7 +167,7 @@ func TestProduceSetCompressedRequestBuilding(t *testing.T) {
 		t.Error("Wrong request version")
 	}
 
-	for _, msgBlock := range req.records["t1"][0].msgSet.Messages {
+	for _, msgBlock := range req.records["t1"][0].MsgSet.Messages {
 		msg := msgBlock.Msg
 		err := msg.decodeSet()
 		if err != nil {
@@ -179,7 +179,7 @@ func TestProduceSetCompressedRequestBuilding(t *testing.T) {
 				t.Error("Wrong compressed message version")
 			}
 			if compMsgBlock.Offset != int64(i) {
-				t.Error("Wrong relative inner offset")
+				t.Errorf("Wrong relative inner offset, expected %d, got %d", i, compMsgBlock.Offset)
 			}
 		}
 		if msg.Version != 1 {
@@ -227,7 +227,7 @@ func TestProduceSetV3RequestBuilding(t *testing.T) {
 		t.Error("Wrong request version")
 	}
 
-	batch := req.records["t1"][0].recordBatch
+	batch := req.records["t1"][0].RecordBatch
 	if batch.FirstTimestamp != now {
 		t.Errorf("Wrong first timestamp: %v", batch.FirstTimestamp)
 	}
@@ -235,6 +235,10 @@ func TestProduceSetV3RequestBuilding(t *testing.T) {
 		rec := batch.Records[i]
 		if rec.TimestampDelta != time.Duration(i)*time.Second {
 			t.Errorf("Wrong timestamp delta: %v", rec.TimestampDelta)
+		}
+
+		if rec.OffsetDelta != int64(i) {
+			t.Errorf("Wrong relative inner offset, expected %d, got %d", i, rec.OffsetDelta)
 		}
 
 		for j, h := range batch.Records[i].Headers {

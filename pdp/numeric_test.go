@@ -582,7 +582,7 @@ func TestFloatMultiply(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("Float Multiply %d * %d", tc.a, tc.b), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Float Multiply %g * %g", tc.a, tc.b), func(t *testing.T) {
 			a := MakeFloatValue(tc.a)
 			b := MakeFloatValue(tc.b)
 			e := makeFunctionFloatMultiply(a, b)
@@ -605,7 +605,7 @@ func TestFloatMultiply(t *testing.T) {
 			if err != nil {
 				t.Errorf("Expect float result with no error, but got '%s'", err)
 			} else if res != expect {
-				t.Errorf("Expect result '%d', but got '%d'", expect, res)
+				t.Errorf("Expect result '%g', but got '%g'", expect, res)
 			}
 		})
 	}
@@ -647,7 +647,7 @@ func TestFloatDivide(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("Float Divide %d / %d", tc.a, tc.b), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Float Divide %g / %g", tc.a, tc.b), func(t *testing.T) {
 			a := MakeFloatValue(tc.a)
 			b := MakeFloatValue(tc.b)
 			e := makeFunctionFloatDivide(a, b)
@@ -670,7 +670,7 @@ func TestFloatDivide(t *testing.T) {
 			if err != nil {
 				t.Errorf("Expect float result with no error, but got '%s'", err)
 			} else if res != expect {
-				t.Errorf("Expect result '%d', but got '%d'", expect, res)
+				t.Errorf("Expect result '%g', but got '%g'", expect, res)
 			}
 		})
 	}
@@ -1006,7 +1006,7 @@ func TestFloatIntegerDivide(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("Float-Integer Divide %d / %d", tc.a, tc.b), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Float-Integer Divide %g / %d", tc.a, tc.b), func(t *testing.T) {
 			a := MakeFloatValue(tc.a)
 			b := MakeIntegerValue(tc.b)
 			e := makeFunctionFloatDivide(a, b)
@@ -1029,7 +1029,7 @@ func TestFloatIntegerDivide(t *testing.T) {
 			if err != nil {
 				t.Errorf("Expect float result with no error, but got '%s'", err)
 			} else if res != expect {
-				t.Errorf("Expect result '%d', but got '%d'", expect, res)
+				t.Errorf("Expect result '%g', but got '%g'", expect, res)
 			}
 		})
 	}

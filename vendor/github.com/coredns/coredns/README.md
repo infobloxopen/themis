@@ -11,14 +11,11 @@
 CoreDNS (written in Go) chains [plugins](https://coredns.io/plugins). Each plugin performs a DNS
 function.
 
-CoreDNS is a [Cloud Native Computing Foundation](https://cncf.io) inception level project.
+CoreDNS is a [Cloud Native Computing Foundation](https://cncf.io) incubating level project.
 
-CoreDNS is the successor to [SkyDNS](https://github.com/skynetservices/skydns). SkyDNS is a thin
-layer that exposes services in etcd in the DNS. CoreDNS builds on this idea and is a **generic** DNS
-server that can talk to multiple backends (etcd, kubernetes, etc.).
-
-CoreDNS aims to be a fast and flexible DNS server. The keyword here is *flexible*: with CoreDNS you
-are able to do what you want with your DNS data. And if not: write a plugin!
+CoreDNS is a fast and flexible DNS server. The keyword here is *flexible*: with CoreDNS you
+are able to do what you want with your DNS data by utilizing plugins. If some functionality is not
+provided out of the box you can add it by [writing a plugin](https://coredns.io/explugins).
 
 CoreDNS can listen for DNS request coming in over UDP/TCP (go'old DNS), TLS ([RFC
 7858](https://tools.ietf.org/html/rfc7858)) and [gRPC](https://grpc.io) (not a standard).
@@ -32,54 +29,46 @@ Currently CoreDNS is able to:
 * Allow for zone transfers, i.e., act as a primary server (*file*).
 * Automatically load zone files from disk (*auto*).
 * Caching (*cache*).
-* Health checking endpoint (*health*).
-* Use etcd as a backend, i.e., a 101.5% replacement for
-  [SkyDNS](https://github.com/skynetservices/skydns) (*etcd*).
+* Use etcd as a backend (replace [SkyDNS](https://github.com/skynetservices/skydns)) (*etcd*).
 * Use k8s (kubernetes) as a backend (*kubernetes*).
-* Serve as a proxy to forward queries to some other (recursive) nameserver (*proxy*).
+* Serve as a proxy to forward queries to some other (recursive) nameserver (*proxy*, and *forward*).
 * Provide metrics (by using Prometheus) (*metrics*).
 * Provide query (*log*) and error (*error*) logging.
 * Support the CH class: `version.bind` and friends (*chaos*).
 * Support the RFC 5001 DNS name server identifier (NSID) option (*nsid*).
 * Profiling support (*pprof*).
-* Rewrite queries (qtype, qclass and qname) (*rewrite*).
-* Echo back the IP address, transport and port number used (*whoami*). This is also the default
-  plugin that gets loaded when CoreDNS can't find a Corefile to load.
+* Rewrite queries (qtype, qclass and qname) (*rewrite* and *template*).
 
-Each of the plugins has a README.md of its own, see [coredns.io/plugins](https://coredns.io/plugins)
+And more. Each of the plugins is documented. See [coredns.io/plugins](https://coredns.io/plugins)
 for all in-tree plugins, and [coredns.io/explugins](https://coredns.io/explugins) for all
 out-of-tree plugins.
 
-## Status
-
-CoreDNS can be used as an authoritative nameserver for your domains. CoreDNS should be able to
-provide you with enough functionality to replace parts of BIND 9, Knot, NSD or PowerDNS and SkyDNS.
-
-## Compilation
+## Compilation from Source
 
 Check out the project and do dependency resolution with:
 
-    go get github.com/coredns/coredns
+~~~
+% go get github.com/coredns/coredns
+~~~
 
-Some of the dependencies require Go version 1.8 or later.
+Some of the dependencies require Go version 1.9 or later.
 
-(If you already have the source of CoreDNS checked out in the appropriate place in your `GOPATH`, you can get all
-dependencies with `go get ./...`.)
+We vendor most (not all!) packages. Building from scratch is easiest, by just using `make`:
 
-Then use `go build` as you would normally do:
-
-    go build
+~~~
+% make
+~~~
 
 This should yield a `coredns` binary.
 
 ## Compilation with Docker
 
 CoreDNS requires Go to compile. However, if you already have docker installed and prefer not to setup
-a Go environment, you could build coredns easily:
+a Go environment, you could build CoreDNS easily:
 
 ```
 $ docker run --rm -i -t -v $PWD:/go/src/github.com/coredns/coredns \
-      -w /go/src/github.com/coredns/coredns golang:1.9 make
+      -w /go/src/github.com/coredns/coredns golang:1.10 make
 ```
 
 The above command alone will have `coredns` binary generated.
@@ -110,7 +99,7 @@ Start a simple proxy, you'll need to be root to start listening on port 53.
 
 ~~~ corefile
 .:53 {
-    proxy . 8.8.8.8:53
+    forward . 8.8.8.8:53
     log
 }
 ~~~
@@ -140,7 +129,7 @@ nameserver *and* rewrite ANY queries to HINFO.
 ~~~ txt
 .:1053 {
     rewrite ANY HINFO
-    proxy . 8.8.8.8:53
+    forward . 8.8.8.8:53
 
     file /var/lib/coredns/example.org.signed example.org {
         transfer to *
@@ -163,7 +152,7 @@ Means you are authoritative for `0.0.10.in-addr.arpa.`.
 This also works for IPv6 addresses. If for some reason you want to serve a zone named `10.0.0.0/24`
 add the closing dot: `10.0.0.0/24.` as this also stops the conversion.
 
-This even works for CIDR (See RFC 1518 and 1519) addressing, i.e `10.0.0.0/25`, CoreDNS will then
+This even works for CIDR (See RFC 1518 and 1519) addressing, i.e. `10.0.0.0/25`, CoreDNS will then
 check if the `in-addr` request falls in the correct range.
 
 Listening on TLS and for gRPC? Use:
@@ -186,14 +175,26 @@ When no transport protocol is specified the default `dns://` is assumed.
 
 ## Community
 
+We're most active on Slack (and Github):
+
+- Slack: #coredns on <https://slack.cncf.io>
+- Github: <https://github.com/coredns/coredns>
+
+More resources can be found:
+
 - Website: <https://coredns.io>
 - Blog: <https://blog.coredns.io>
 - Twitter: [@corednsio](https://twitter.com/corednsio)
-- Github: <https://github.com/coredns/coredns>
 - Mailing list/group: <coredns-discuss@googlegroups.com>
-- Slack: #coredns on <https://slack.cncf.io>
 
 ## Deployment
 
 Examples for deployment via systemd and other use cases can be found in the
 [deployment repository](https://github.com/coredns/deployment).
+
+## Security
+
+If you find a security vulnerability or any security related issues,
+please DO NOT file a public issue, instead send your report privately to
+`security@coredns.io`. Security reports are greatly appreciated and we
+will publicly thank you for it.

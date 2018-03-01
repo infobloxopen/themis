@@ -9,9 +9,10 @@ import (
 
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
+	"github.com/coredns/coredns/plugin/pkg/dnsutil"
 	"github.com/coredns/coredns/plugin/pkg/parse"
-
 	"github.com/coredns/coredns/plugin/pkg/upstream"
+
 	"github.com/mholt/caddy"
 	"github.com/miekg/dns"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -70,12 +71,18 @@ func (k *Kubernetes) RegisterKubeCache(c *caddy.Controller) {
 }
 
 func kubernetesParse(c *caddy.Controller) (*Kubernetes, error) {
-	var k8s *Kubernetes
-	var err error
-	for i := 1; c.Next(); i++ {
-		if i > 1 {
-			return nil, fmt.Errorf("only one kubernetes section allowed per server block")
+	var (
+		k8s *Kubernetes
+		err error
+	)
+
+	i := 0
+	for c.Next() {
+		if i > 0 {
+			return nil, plugin.ErrOnce
 		}
+		i++
+
 		k8s, err = ParseStanza(c)
 		if err != nil {
 			return k8s, err
@@ -113,7 +120,7 @@ func ParseStanza(c *caddy.Controller) (*Kubernetes, error) {
 
 	k8s.primaryZoneIndex = -1
 	for i, z := range k8s.Zones {
-		if strings.HasSuffix(z, "in-addr.arpa.") || strings.HasSuffix(z, "ip6.arpa.") {
+		if dnsutil.IsReverse(z) > 0 {
 			continue
 		}
 		k8s.primaryZoneIndex = i

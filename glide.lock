@@ -1,5 +1,5 @@
-hash: 8773932d4304e2e616c33f68df3bb0624597879b337787bc746382863b76b502
-updated: 2018-03-01T17:34:03.268656+03:00
+hash: 3d8c1b8d10c5aa73fa728e19dc528a1bc123210196c17f2bd55a044b9a9eb9ff
+updated: 2018-03-01T19:53:55.352849+03:00
 imports:
 - name: github.com/apache/thrift
   version: d907cc92db5b93e699a4282e979d097ea863215a
@@ -10,7 +10,7 @@ imports:
   subpackages:
   - quantile
 - name: github.com/coredns/coredns
-  version: 86be6d2532693dd4b900548fdc5e4820bf0bec9f
+  version: f697b33283afe695554888eb0cf9f5451c481470
   subpackages:
   - core/dnsserver
   - pb
@@ -85,7 +85,7 @@ imports:
   subpackages:
   - pbutil
 - name: github.com/mholt/caddy
-  version: e2997ac974d194c0fef32a2c98d07a84237876fd
+  version: 5552dcbbc7f630ada7c7d030b37c2efdce750ace
   subpackages:
   - caddyfile
 - name: github.com/miekg/dns
@@ -136,7 +136,7 @@ imports:
 - name: github.com/rcrowley/go-metrics
   version: 8732c616f52954686704c8645fe1a9d59e9df7c1
 - name: github.com/Shopify/sarama
-  version: f144d1183f4254fdf160c6fb01a32deea71e8702
+  version: eae91468c24263f06ae73dce45eb26252c73b1d6
 - name: github.com/sirupsen/logrus
   version: f4ee69125072b22721efbe639bd0da9c9d19b8cc
 - name: golang.org/x/crypto
