@@ -14,6 +14,7 @@ policy {
     streams COUNT
     transfer ATTR_1, ATTR_2, ... ATTR_N
     passthrough SUFFIX_1, SUFFIX_2, ... SUFFIX_N
+    log
 }
 ~~~
 
@@ -43,6 +44,8 @@ Option passthrough defines set of domain name suffixes, domain that contains one
 
 Option connection_timeout sets timeout for query validation when no PDP server are available. Negative value or "no" keyword means wait forever. This is default behavior. With zero timeout validation fails instantly if there is no PDP servers. The option works only if gRPC streams are greater than 0.
 
+Option log enables log PDP request and response
+
 ## Example
 
 ~~~ txt
@@ -58,6 +61,7 @@ policy {
     streams 100
     transfer gid uid
     passthrough mycompanyname.com. mycompanyname.org.
+    log
 }
 ~~~
 

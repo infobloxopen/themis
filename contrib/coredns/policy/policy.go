@@ -93,6 +93,7 @@ type policyPlugin struct {
 	connAttempts    map[string]*uint32
 	unkConnAttempts *uint32
 	wg              sync.WaitGroup
+	log             bool
 }
 
 func newPolicyPlugin() *policyPlugin {
@@ -173,6 +174,9 @@ func (p *policyPlugin) parseOption(c *caddy.Controller) error {
 
 	case "connection_timeout":
 		return p.parseConnectionTimeout(c)
+
+	case "log":
+		return p.parseLog(c)
 	}
 
 	return errInvalidOption
@@ -407,6 +411,15 @@ func (p *policyPlugin) parseConnectionTimeout(c *caddy.Controller) error {
 		p.connTimeout = timeout
 	}
 
+	return nil
+}
+
+func (p *policyPlugin) parseLog(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) != 0 {
+		return c.ArgErr()
+	}
+	p.log = true
 	return nil
 }
 
@@ -740,11 +753,19 @@ func (p *policyPlugin) validate(ah *attrHolder, addr string) error {
 		req.Attributes = ah.attrsReqRespip
 	}
 
+	if p.log {
+		log.Printf("[INFO] PDP request: %+v", req)
+	}
+
 	response := new(pdp.Response)
 	err := p.pdp.Validate(req, response)
 	if err != nil {
 		log.Printf("[ERROR] Policy validation failed due to error %s", err)
 		return err
+	}
+
+	if p.log {
+		log.Printf("[INFO] PDP response: %+v", response)
 	}
 
 	ah.addResponse(response, len(addr) > 0)
