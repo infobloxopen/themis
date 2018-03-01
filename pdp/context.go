@@ -313,7 +313,19 @@ type Evaluable interface {
 	Append(path []string, v interface{}) (Evaluable, error)
 	Delete(path []string) (Evaluable, error)
 
+	FindPolicies() []*Policy
+	FindPolicy(string) (*Policy, error)
+	FindRule(string) (*Rule, error)
+
 	getOrder() int
 	setOrder(ord int)
 	describe() string
+}
+
+func policyNotFound(id string) error {
+	return fmt.Errorf("policy %s not found", id)
+}
+
+func ruleNotFound(id string) error {
+	return fmt.Errorf("rule %s not found", id)
 }

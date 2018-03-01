@@ -83,6 +83,13 @@ func WithTracingAt(addr string) Option {
 	}
 }
 
+// WithQueryAt returns an Opton which sets query endpoint
+func WithQueryAt(addr string) Option {
+	return func(o *options) {
+		o.queryEP = addr
+	}
+}
+
 // WithMaxGRPCStreams returns a Option which sets maximum gRPC streams count
 func WithMaxGRPCStreams(limit uint32) Option {
 	return func(o *options) {
@@ -105,6 +112,7 @@ type options struct {
 	health    string
 	profiler  string
 	tracing   string
+	queryEP   string
 	memLimits *MemLimits
 	streams   uint32
 }
@@ -393,6 +401,10 @@ func (s *Server) Serve() error {
 		go func(l net.Listener) {
 			s.errCh <- healthServer.Serve(l)
 		}(s.health.iface)
+	}
+
+	if err := s.listenStorage(); err != nil {
+		return err
 	}
 
 	if s.profiler != nil {

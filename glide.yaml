@@ -41,3 +41,4 @@ import:
   - strtree
   - iptree
 - package: github.com/dnstap/golang-dnstap
+- package: github.com/julienschmidt/httprouter

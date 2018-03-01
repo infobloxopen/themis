@@ -59,16 +59,8 @@ func NewPolicy(ID string, hidden bool, target Target, rules []*Rule, makeRCA Rul
 }
 
 func (p *Policy) describe() string {
-	ruleIDs := make([]string, len(p.rules))
-	ruleIdx := 0
-	for _, rule := range p.rules {
-		if ruleID, ok := rule.GetID(); ok {
-			ruleIDs[ruleIdx] = ruleID
-			ruleIdx++
-		}
-	}
 	if pid, ok := p.GetID(); ok {
-		return fmt.Sprintf("policy %q rules(%v)", pid, ruleIDs[:ruleIdx])
+		return fmt.Sprintf("policy %q", pid)
 	}
 
 	return "hidden policy"
@@ -78,6 +70,10 @@ func (p *Policy) describe() string {
 // isn't hidden.
 func (p *Policy) GetID() (string, bool) {
 	return p.id, !p.hidden
+}
+
+func (p *Policy) GetRules() ([]*Rule, bool) {
+	return p.rules, !p.hidden
 }
 
 // Calculate implements Evaluable interface and evaluates policy for given
@@ -157,6 +153,29 @@ func (p *Policy) Delete(path []string) (Evaluable, error) {
 	}
 
 	return r, nil
+}
+
+func (p *Policy) FindPolicies() []*Policy {
+	if p.hidden {
+		return []*Policy{}
+	}
+	return []*Policy{p}
+}
+
+func (p *Policy) FindPolicy(id string) (*Policy, error) {
+	if pid, ok := p.GetID(); ok && pid == id {
+		return p, nil
+	}
+	return nil, policyNotFound(id)
+}
+
+func (p *Policy) FindRule(id string) (*Rule, error) {
+	for _, rule := range p.rules {
+		if rid, ok := rule.GetID(); ok && rid == id {
+			return rule, nil
+		}
+	}
+	return nil, ruleNotFound(id)
 }
 
 func (p *Policy) getOrder() int {

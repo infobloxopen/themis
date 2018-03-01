@@ -57,6 +57,30 @@ func (s *PolicyStorage) NewTransaction(tag *uuid.UUID) (*PolicyStorageTransactio
 	return &PolicyStorageTransaction{tag: *tag, attrs: s.attrs, policies: s.policies}, nil
 }
 
+// GetAllPolicies returns all policies in storage
+func (s *PolicyStorage) GetAllPolicies() []*Policy {
+	if s.policies == nil {
+		return []*Policy{}
+	}
+	return s.policies.FindPolicies()
+}
+
+// GetPolicy returns Policy with id in storage if possible, otherwise return nil, err
+func (s *PolicyStorage) GetPolicy(id string) (*Policy, error) {
+	if s.policies == nil {
+		return nil, fmt.Errorf("PolicyStorage has no policies")
+	}
+	return s.policies.FindPolicy(id)
+}
+
+// GetRule returns Rule with id in storage if possible, otherwise return nil, err
+func (s *PolicyStorage) GetRule(id string) (*Rule, error) {
+	if s.policies == nil {
+		return nil, fmt.Errorf("PolicyStorage has no policies")
+	}
+	return s.policies.FindRule(id)
+}
+
 // Here set of supported update operations is defined.
 const (
 	// UOAdd stands for add operation (add or append item to a collection).

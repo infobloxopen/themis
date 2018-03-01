@@ -180,6 +180,37 @@ func (p *PolicySet) Delete(path []string) (Evaluable, error) {
 	return r, nil
 }
 
+func (p *PolicySet) FindPolicies() []*Policy {
+	var out []*Policy
+	for _, evaluable := range p.policies {
+		switch policy := evaluable.(type) {
+		case *Policy:
+			out = append(out, policy)
+		case *PolicySet:
+			out = append(out, policy.FindPolicies()...)
+		}
+	}
+	return out
+}
+
+func (p *PolicySet) FindPolicy(id string) (*Policy, error) {
+	for _, subitem := range p.policies {
+		if out, err := subitem.FindPolicy(id); err == nil {
+			return out, nil
+		}
+	}
+	return nil, policyNotFound(id)
+}
+
+func (p *PolicySet) FindRule(id string) (*Rule, error) {
+	for _, subitem := range p.policies {
+		if out, err := subitem.FindRule(id); err == nil {
+			return out, nil
+		}
+	}
+	return nil, ruleNotFound(id)
+}
+
 func (p *PolicySet) getOrder() int {
 	return p.ord
 }
