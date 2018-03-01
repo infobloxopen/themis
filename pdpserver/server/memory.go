@@ -6,7 +6,7 @@ import (
 	"runtime/debug"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // MemLimits structure contains memory limit levels to manage GC

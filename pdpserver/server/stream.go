@@ -3,7 +3,7 @@ package server
 import (
 	"io"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	pb "github.com/infobloxopen/themis/pdp-control"
 )

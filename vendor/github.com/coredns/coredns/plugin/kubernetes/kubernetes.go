@@ -14,7 +14,7 @@ import (
 	"github.com/coredns/coredns/plugin/pkg/dnsutil"
 	"github.com/coredns/coredns/plugin/pkg/fall"
 	"github.com/coredns/coredns/plugin/pkg/healthcheck"
-	"github.com/coredns/coredns/plugin/proxy"
+	"github.com/coredns/coredns/plugin/pkg/upstream"
 	"github.com/coredns/coredns/request"
 
 	"github.com/miekg/dns"
@@ -31,7 +31,7 @@ import (
 type Kubernetes struct {
 	Next             plugin.Handler
 	Zones            []string
-	Proxy            proxy.Proxy // Proxy for looking up names during the resolution process
+	Upstream         upstream.Upstream
 	APIServerList    []string
 	APIProxy         *apiProxy
 	APICertAuth      string
@@ -43,10 +43,12 @@ type Kubernetes struct {
 	endpointNameMode bool
 	Fall             fall.F
 	ttl              uint32
+	opts             dnsControlOpts
 
 	primaryZoneIndex   int
 	interfaceAddrsFunc func() net.IP
 	autoPathSearch     []string // Local search path from /etc/resolv.conf. Needed for autopath.
+	TransferTo         []string
 }
 
 // New returns a initialized Kubernetes. It default interfaceAddrFunc to return 127.0.0.1. All other
@@ -57,7 +59,6 @@ func New(zones []string) *Kubernetes {
 	k.Namespaces = make(map[string]bool)
 	k.interfaceAddrsFunc = func() net.IP { return net.ParseIP("127.0.0.1") }
 	k.podMode = podModeDisabled
-	k.Proxy = proxy.Proxy{}
 	k.ttl = defaultTTL
 
 	return k
@@ -144,7 +145,7 @@ func (k *Kubernetes) primaryZone() string { return k.Zones[k.primaryZoneIndex] }
 
 // Lookup implements the ServiceBackend interface.
 func (k *Kubernetes) Lookup(state request.Request, name string, typ uint16) (*dns.Msg, error) {
-	return k.Proxy.Lookup(state, name, typ)
+	return k.Upstream.Lookup(state, name, typ)
 }
 
 // IsNameError implements the ServiceBackend interface.
@@ -237,8 +238,8 @@ func (k *Kubernetes) getClientConfig() (*rest.Config, error) {
 
 }
 
-// initKubeCache initializes a new Kubernetes cache.
-func (k *Kubernetes) initKubeCache(opts dnsControlOpts) (err error) {
+// InitKubeCache initializes a new Kubernetes cache.
+func (k *Kubernetes) InitKubeCache() (err error) {
 
 	config, err := k.getClientConfig()
 	if err != nil {
@@ -250,18 +251,18 @@ func (k *Kubernetes) initKubeCache(opts dnsControlOpts) (err error) {
 		return fmt.Errorf("failed to create kubernetes notification controller: %q", err)
 	}
 
-	if opts.labelSelector != nil {
+	if k.opts.labelSelector != nil {
 		var selector labels.Selector
-		selector, err = meta.LabelSelectorAsSelector(opts.labelSelector)
+		selector, err = meta.LabelSelectorAsSelector(k.opts.labelSelector)
 		if err != nil {
-			return fmt.Errorf("unable to create Selector for LabelSelector '%s': %q", opts.labelSelector, err)
+			return fmt.Errorf("unable to create Selector for LabelSelector '%s': %q", k.opts.labelSelector, err)
 		}
-		opts.selector = selector
+		k.opts.selector = selector
 	}
 
-	opts.initPodCache = k.podMode == podModeVerified
+	k.opts.initPodCache = k.podMode == podModeVerified
 
-	k.APIConn = newdnsController(kubeClient, opts)
+	k.APIConn = newdnsController(kubeClient, k.opts)
 
 	return err
 }

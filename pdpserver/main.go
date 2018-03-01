@@ -4,7 +4,7 @@ import (
 	_ "net/http/pprof"
 	"runtime"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/infobloxopen/themis/pdpserver/server"
 )

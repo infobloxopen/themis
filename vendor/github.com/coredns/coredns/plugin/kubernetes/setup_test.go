@@ -7,6 +7,7 @@ import (
 
 	"github.com/coredns/coredns/plugin/pkg/fall"
 
+	"github.com/coredns/coredns/plugin/proxy"
 	"github.com/mholt/caddy"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -382,11 +383,25 @@ func TestKubernetesParse(t *testing.T) {
 			fall.Zero,
 			nil,
 		},
+		// More than one Kubernetes not allowed
+		{
+			`kubernetes coredns.local
+kubernetes cluster.local`,
+			true,
+			"only one kubernetes section allowed per server block",
+			-1,
+			0,
+			defaultResyncPeriod,
+			"",
+			podModeDisabled,
+			fall.Zero,
+			nil,
+		},
 	}
 
 	for i, test := range tests {
 		c := caddy.NewTestController("dns", test.input)
-		k8sController, opts, err := kubernetesParse(c)
+		k8sController, err := kubernetesParse(c)
 
 		if test.shouldErr && err == nil {
 			t.Errorf("Test %d: Expected error, but did not find error for input '%s'. Error was: '%v'", i, test.input, err)
@@ -426,14 +441,14 @@ func TestKubernetesParse(t *testing.T) {
 		}
 
 		//    ResyncPeriod
-		foundResyncPeriod := opts.resyncPeriod
+		foundResyncPeriod := k8sController.opts.resyncPeriod
 		if foundResyncPeriod != test.expectedResyncPeriod {
 			t.Errorf("Test %d: Expected kubernetes controller to be initialized with resync period '%s'. Instead found period '%s' for input '%s'", i, test.expectedResyncPeriod, foundResyncPeriod, test.input)
 		}
 
 		//    Labels
-		if opts.labelSelector != nil {
-			foundLabelSelectorString := meta.FormatLabelSelector(opts.labelSelector)
+		if k8sController.opts.labelSelector != nil {
+			foundLabelSelectorString := meta.FormatLabelSelector(k8sController.opts.labelSelector)
 			if foundLabelSelectorString != test.expectedLabelSelector {
 				t.Errorf("Test %d: Expected kubernetes controller to be initialized with label selector '%s'. Instead found selector '%s' for input '%s'", i, test.expectedLabelSelector, foundLabelSelectorString, test.input)
 			}
@@ -449,7 +464,10 @@ func TestKubernetesParse(t *testing.T) {
 			t.Errorf("Test %d: Expected kubernetes controller to be initialized with fallthrough '%v'. Instead found fallthrough '%v' for input '%s'", i, test.expectedFallthrough, k8sController.Fall, test.input)
 		}
 		// upstream
-		foundUpstreams := k8sController.Proxy.Upstreams
+		var foundUpstreams *[]proxy.Upstream
+		if k8sController.Upstream.Forward != nil {
+			foundUpstreams = k8sController.Upstream.Forward.Upstreams
+		}
 		if test.expectedUpstreams == nil {
 			if foundUpstreams != nil {
 				t.Errorf("Test %d: Expected kubernetes controller to not be initialized with upstreams for input '%s'", i, test.input)
@@ -473,7 +491,7 @@ func TestKubernetesParse(t *testing.T) {
 	}
 }
 
-func TestKubernetesEndpointsParse(t *testing.T) {
+func TestKubernetesParseEndpointPodNames(t *testing.T) {
 	tests := []struct {
 		input                string // Corefile data as string
 		shouldErr            bool   // true if test case is exected to produce an error.
@@ -510,7 +528,7 @@ func TestKubernetesEndpointsParse(t *testing.T) {
 
 	for i, test := range tests {
 		c := caddy.NewTestController("dns", test.input)
-		k8sController, _, err := kubernetesParse(c)
+		k8sController, err := kubernetesParse(c)
 
 		if test.shouldErr && err == nil {
 			t.Errorf("Test %d: Expected error, but did not find error for input '%s'. Error was: '%v'", i, test.input, err)
@@ -532,6 +550,68 @@ func TestKubernetesEndpointsParse(t *testing.T) {
 		foundEndpointNameMode := k8sController.endpointNameMode
 		if foundEndpointNameMode != test.expectedEndpointMode {
 			t.Errorf("Test %d: Expected kubernetes controller to be initialized with endpoints mode '%v'. Instead found endpoints mode '%v' for input '%s'", i, test.expectedEndpointMode, foundEndpointNameMode, test.input)
+		}
+	}
+}
+
+func TestKubernetesParseNoEndpoints(t *testing.T) {
+	tests := []struct {
+		input                 string // Corefile data as string
+		shouldErr             bool   // true if test case is exected to produce an error.
+		expectedErrContent    string // substring from the expected error. Empty for positive cases.
+		expectedEndpointsInit bool
+	}{
+		// valid
+		{
+			`kubernetes coredns.local {
+	noendpoints
+}`,
+			false,
+			"",
+			false,
+		},
+		// invalid
+		{
+			`kubernetes coredns.local {
+	noendpoints ixnay on the endpointsay
+}`,
+			true,
+			"rong argument count or unexpected",
+			true,
+		},
+		// not set
+		{
+			`kubernetes coredns.local {
+}`,
+			false,
+			"",
+			true,
+		},
+	}
+
+	for i, test := range tests {
+		c := caddy.NewTestController("dns", test.input)
+		k8sController, err := kubernetesParse(c)
+
+		if test.shouldErr && err == nil {
+			t.Errorf("Test %d: Expected error, but did not find error for input '%s'. Error was: '%v'", i, test.input, err)
+		}
+
+		if err != nil {
+			if !test.shouldErr {
+				t.Errorf("Test %d: Expected no error but found one for input %s. Error was: %v", i, test.input, err)
+				continue
+			}
+
+			if !strings.Contains(err.Error(), test.expectedErrContent) {
+				t.Errorf("Test %d: Expected error to contain: %v, found error: %v, input: %s", i, test.expectedErrContent, err, test.input)
+			}
+			continue
+		}
+
+		foundEndpointsInit := k8sController.opts.initEndpointsCache
+		if foundEndpointsInit != test.expectedEndpointsInit {
+			t.Errorf("Test %d: Expected kubernetes controller to be initialized with endpoints watch '%v'. Instead found endpoints watch '%v' for input '%s'", i, test.expectedEndpointsInit, foundEndpointsInit, test.input)
 		}
 	}
 }

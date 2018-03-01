@@ -41,7 +41,7 @@ type Server struct {
 }
 
 // NewServer returns a new CoreDNS server and compiles all plugins in to it. By default CH class
-// queries are blocked unless the chaos or proxy is loaded.
+// queries are blocked unless queries from enableChaos are loaded.
 func NewServer(addr string, group []*Config) (*Server, error) {
 
 	s := &Server{
@@ -79,7 +79,8 @@ func NewServer(addr string, group []*Config) (*Server, error) {
 					s.trace = t
 				}
 			}
-			if stack.Name() == "chaos" || stack.Name() == "proxy" {
+			// Unblock CH class queries when any of these plugins are loaded.
+			if _, ok := enableChaos[stack.Name()]; ok {
 				s.classChaos = true
 			}
 		}
@@ -94,7 +95,7 @@ func NewServer(addr string, group []*Config) (*Server, error) {
 func (s *Server) Serve(l net.Listener) error {
 	s.m.Lock()
 	s.server[tcp] = &dns.Server{Listener: l, Net: "tcp", Handler: dns.HandlerFunc(func(w dns.ResponseWriter, r *dns.Msg) {
-		ctx := context.Background()
+		ctx := context.WithValue(context.Background(), Key{}, s)
 		s.ServeDNS(ctx, w, r)
 	})}
 	s.m.Unlock()
@@ -107,7 +108,7 @@ func (s *Server) Serve(l net.Listener) error {
 func (s *Server) ServePacket(p net.PacketConn) error {
 	s.m.Lock()
 	s.server[udp] = &dns.Server{PacketConn: p, Net: "udp", Handler: dns.HandlerFunc(func(w dns.ResponseWriter, r *dns.Msg) {
-		ctx := context.Background()
+		ctx := context.WithValue(context.Background(), Key{}, s)
 		s.ServeDNS(ctx, w, r)
 	})}
 	s.m.Unlock()
@@ -206,6 +207,12 @@ func (s *Server) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg)
 		return
 	}
 
+	ctx, err := incrementDepthAndCheck(ctx)
+	if err != nil {
+		DefaultErrorFunc(w, r, dns.RcodeServerFailure)
+		return
+	}
+
 	q := r.Question[0].Name
 	b := make([]byte, len(q))
 	var off int
@@ -286,8 +293,22 @@ func (s *Server) OnStartupComplete() {
 		return
 	}
 
-	for zone, config := range s.zones {
-		fmt.Println(zone + ":" + config.Port)
+	for zone := range s.zones {
+		// split addr into protocol, IP and Port
+		_, ip, port, err := SplitProtocolHostPort(s.Addr)
+
+		if err != nil {
+			// this should not happen, but we need to take care of it anyway
+			fmt.Println(zone + ":" + s.Addr)
+			return
+		}
+		if ip == "" {
+			fmt.Println(zone + ":" + port)
+			return
+		}
+		// if the server is listening on a specific address let's make it visible in the log,
+		// so one can differentiate between all active listeners
+		fmt.Println(zone + ":" + port + " on " + ip)
 	}
 }
 
@@ -314,10 +335,43 @@ func DefaultErrorFunc(w dns.ResponseWriter, r *dns.Msg, rc int) {
 	w.WriteMsg(answer)
 }
 
+// incrementDepthAndCheck increments the loop counter in the context, and returns an error if
+// the counter exceeds the max number of re-entries
+func incrementDepthAndCheck(ctx context.Context) (context.Context, error) {
+	// Loop counter for self directed lookups
+	loop := ctx.Value(loopKey{})
+	if loop == nil {
+		ctx = context.WithValue(ctx, loopKey{}, 0)
+		return ctx, nil
+	}
+
+	iloop := loop.(int) + 1
+	if iloop > maxreentries {
+		return ctx, fmt.Errorf("too deep")
+	}
+	ctx = context.WithValue(ctx, loopKey{}, iloop)
+	return ctx, nil
+}
+
 const (
-	tcp = 0
-	udp = 1
+	tcp          = 0
+	udp          = 1
+	maxreentries = 10
 )
+
+// Key is the context key for the current server
+type Key struct{}
+
+// loopKey is the context key for counting self loops
+type loopKey struct{}
+
+// enableChaos is a map with plugin names for which we should open CH class queries as
+// we block these by default.
+var enableChaos = map[string]bool{
+	"chaos":   true,
+	"forward": true,
+	"proxy":   true,
+}
 
 // Quiet mode will not show any informative output on initialization.
 var Quiet bool
