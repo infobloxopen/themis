@@ -78,6 +78,8 @@ imports:
   - iptree
   - numtree
   - strtree
+- name: github.com/julienschmidt/httprouter
+  version: e1b9828bc9e5904baec057a154c09ca40fe7fae0
 - name: github.com/kr/logfmt
   version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
 - name: github.com/matttproud/golang_protobuf_extensions
