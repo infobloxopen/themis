@@ -5,6 +5,7 @@ package pdp
 import (
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 
 	"github.com/infobloxopen/go-trees/domaintree"
@@ -323,9 +324,9 @@ type Evaluable interface {
 }
 
 func policyNotFound(id string) error {
-	return fmt.Errorf("policy %s not found", id)
+	return fmt.Errorf("policy %s not found", strconv.Quote(id))
 }
 
 func ruleNotFound(id string) error {
-	return fmt.Errorf("rule %s not found", id)
+	return fmt.Errorf("rule %s not found", strconv.Quote(id))
 }

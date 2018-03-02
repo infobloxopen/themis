@@ -1,6 +1,7 @@
 package pdp
 
 import (
+	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -674,6 +675,162 @@ func TestPolicySetDelete(t *testing.T) {
 	} else {
 		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
 	}
+}
+
+func TestPolicySetFindPolicies(t *testing.T) {
+	// public policy test
+	hidablePolicy := makeSimplePolicy("second", makeSimpleRule("permit", EffectPermit))
+	expectPolicies := []*Policy{
+		makeSimplePolicy("first", makeSimpleRule("permit", EffectPermit)),
+		hidablePolicy,
+		makeSimplePolicy("third", makeSimpleRule("permit", EffectPermit)),
+	}
+	ps := makeSimplePolicySet("test",
+		expectPolicies[0],
+		expectPolicies[1],
+		expectPolicies[2])
+
+	foundPolicies := ps.FindPolicies()
+	if !reflect.DeepEqual(expectPolicies, foundPolicies) {
+		t.Errorf("Expecting policies %+v, but got %+v", expectPolicies, foundPolicies)
+	}
+
+	// hidden policy test
+	hidablePolicy.hidden = true
+	expectPolicies2 := []*Policy{expectPolicies[0], expectPolicies[2]}
+	foundPolicies = ps.FindPolicies()
+	if !reflect.DeepEqual(expectPolicies2, foundPolicies) {
+		t.Errorf("Expecting policies %+v, but got %+v", expectPolicies2, foundPolicies)
+	}
+
+	// hidden policy set test (hides all sub policies)
+	hidablePolicy.hidden = false
+	ps.hidden = true
+	expectEmpty := ps.FindPolicies()
+	if len(expectEmpty) > 0 {
+		t.Errorf("Expecting no policies, but got %+v", expectEmpty)
+	}
+}
+
+func TestPolicySetFindPolicy(t *testing.T) {
+	// public policy test
+	hidablePolicy := makeSimplePolicy("second", makeSimpleRule("permit", EffectPermit))
+	expectPolicies := []*Policy{
+		makeSimplePolicy("first", makeSimpleRule("permit", EffectPermit)),
+		hidablePolicy,
+		makeSimplePolicy("third", makeSimpleRule("permit", EffectPermit)),
+	}
+	ps := makeSimplePolicySet("test",
+		expectPolicies[0],
+		expectPolicies[1],
+		expectPolicies[2])
+
+	expectNil, err := ps.FindPolicy("fourth")
+	expectError(t, "policy \"fourth\" not found", expectNil, err)
+
+	gotP, err := ps.FindPolicy("first")
+	if expectPolicies[0] != gotP {
+		t.Errorf("Expecting policy %+v, got policy %+v", expectPolicies[0], gotP)
+	}
+	if err != nil {
+		t.Error("Got error", err)
+	}
+	gotP, err = ps.FindPolicy("second")
+	if expectPolicies[1] != gotP {
+		t.Errorf("Expecting policy %+v, got policy %+v", expectPolicies[1], gotP)
+	}
+	if err != nil {
+		t.Error("Got error", err)
+	}
+	gotP, err = ps.FindPolicy("third")
+	if expectPolicies[2] != gotP {
+		t.Errorf("Expecting policy %+v, got policy %+v", expectPolicies[2], gotP)
+	}
+	if err != nil {
+		t.Error("Got error", err)
+	}
+
+	// hidden policy test
+	hidablePolicy.hidden = true
+	expectNil, err = ps.FindPolicy("second")
+	expectError(t, "policy \"second\" not found", expectNil, err)
+
+	// hidden policy set test (hides all sub policies)
+	hidablePolicy.hidden = false
+	ps.hidden = true
+	expectNil, err = ps.FindPolicy("first")
+	expectError(t, "policy \"first\" not found", expectNil, err)
+	expectNil, err = ps.FindPolicy("second")
+	expectError(t, "policy \"second\" not found", expectNil, err)
+	expectNil, err = ps.FindPolicy("third")
+	expectError(t, "policy \"third\" not found", expectNil, err)
+}
+
+func TestPolicySetFindRule(t *testing.T) {
+	// public rule test
+	hidableRule := makeSimpleRule("permit2", EffectPermit)
+	hidablePolicy := makeSimplePolicy("second",
+		makeSimpleRule("permit1", EffectPermit),
+		hidableRule)
+	expectPolicies := []Evaluable{
+		makeSimplePolicy("first", makeSimpleRule("permit0", EffectPermit)),
+		hidablePolicy,
+		makeSimplePolicy("third", makeSimpleRule("permit3", EffectPermit)),
+	}
+	ps := makeSimplePolicySet("test", expectPolicies...)
+
+	expectNil, err := ps.FindRule("permit4")
+	expectError(t, "rule \"permit4\" not found", expectNil, err)
+
+	gotR, err := ps.FindRule("permit0")
+	if err != nil {
+		t.Error("Got error", err)
+	} else if 0 != strings.Compare(gotR.id, "permit0") {
+		t.Errorf("Expecting rule permit0, got rule %s", gotR.id)
+	}
+	gotR, err = ps.FindRule("permit1")
+	if err != nil {
+		t.Error("Got error", err)
+	} else if 0 != strings.Compare(gotR.id, "permit1") {
+		t.Errorf("Expecting rule permit1, got rule %s", gotR.id)
+	}
+	gotR, err = ps.FindRule("permit2")
+	if err != nil {
+		t.Error("Got error", err)
+	} else if 0 != strings.Compare(gotR.id, "permit2") {
+		t.Errorf("Expecting rule permit2, got rule %s", gotR.id)
+	}
+	gotR, err = ps.FindRule("permit3")
+	if err != nil {
+		t.Error("Got error", err)
+	} else if 0 != strings.Compare(gotR.id, "permit3") {
+		t.Errorf("Expecting rule permit3, got rule %s", gotR.id)
+	}
+
+	// hidden rule test
+	hidableRule.hidden = true
+	expectNil, err = ps.FindRule("permit2")
+	expectError(t, "rule \"permit2\" not found", expectNil, err)
+
+	// hidden policy test (subrules are not found)
+	hidableRule.hidden = false
+	hidablePolicy.hidden = true
+	expectNil, err = ps.FindRule("permit1")
+	expectError(t, "rule \"permit1\" not found", expectNil, err)
+	expectNil, err = ps.FindRule("permit2")
+	expectError(t, "rule \"permit2\" not found", expectNil, err)
+
+	// hidden policy set test (nothing can be found)
+	hidablePolicy.hidden = false
+	ps.hidden = true
+	expectNil, err = ps.FindRule("permit0")
+	expectError(t, "rule \"permit0\" not found", expectNil, err)
+	expectNil, err = ps.FindRule("permit1")
+	expectError(t, "rule \"permit1\" not found", expectNil, err)
+	expectNil, err = ps.FindRule("permit2")
+	expectError(t, "rule \"permit2\" not found", expectNil, err)
+	expectNil, err = ps.FindRule("permit3")
+	expectError(t, "rule \"permit3\" not found", expectNil, err)
 }
 
 func TestSortPoliciesByOrder(t *testing.T) {

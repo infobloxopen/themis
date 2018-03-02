@@ -1,6 +1,9 @@
 package pdp
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // RuleCombiningAlg represent abstract rule combining algorithm. The algorithm
 // defines how to evaluate policy rules and how to get paticular result.
@@ -163,16 +166,20 @@ func (p *Policy) FindPolicies() []*Policy {
 }
 
 func (p *Policy) FindPolicy(id string) (*Policy, error) {
-	if pid, ok := p.GetID(); ok && pid == id {
-		return p, nil
+	if !p.hidden {
+		if pid, ok := p.GetID(); ok && 0 == strings.Compare(pid, id) {
+			return p, nil
+		}
 	}
 	return nil, policyNotFound(id)
 }
 
 func (p *Policy) FindRule(id string) (*Rule, error) {
-	for _, rule := range p.rules {
-		if rid, ok := rule.GetID(); ok && rid == id {
-			return rule, nil
+	if !p.hidden {
+		for _, rule := range p.rules {
+			if rid, ok := rule.GetID(); ok && 0 == strings.Compare(rid, id) {
+				return rule, nil
+			}
 		}
 	}
 	return nil, ruleNotFound(id)

@@ -182,30 +182,32 @@ func (p *PolicySet) Delete(path []string) (Evaluable, error) {
 
 func (p *PolicySet) FindPolicies() []*Policy {
 	var out []*Policy
+	if p.hidden {
+		return out
+	}
 	for _, evaluable := range p.policies {
-		switch policy := evaluable.(type) {
-		case *Policy:
-			out = append(out, policy)
-		case *PolicySet:
-			out = append(out, policy.FindPolicies()...)
-		}
+		out = append(out, evaluable.FindPolicies()...)
 	}
 	return out
 }
 
 func (p *PolicySet) FindPolicy(id string) (*Policy, error) {
-	for _, subitem := range p.policies {
-		if out, err := subitem.FindPolicy(id); err == nil {
-			return out, nil
+	if !p.hidden {
+		for _, subitem := range p.policies {
+			if out, err := subitem.FindPolicy(id); err == nil {
+				return out, nil
+			}
 		}
 	}
 	return nil, policyNotFound(id)
 }
 
 func (p *PolicySet) FindRule(id string) (*Rule, error) {
-	for _, subitem := range p.policies {
-		if out, err := subitem.FindRule(id); err == nil {
-			return out, nil
+	if !p.hidden {
+		for _, subitem := range p.policies {
+			if out, err := subitem.FindRule(id); err == nil {
+				return out, nil
+			}
 		}
 	}
 	return nil, ruleNotFound(id)
