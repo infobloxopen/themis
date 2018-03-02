@@ -2,7 +2,6 @@ package: github.com/infobloxopen/themis
 import:
 - package: github.com/sirupsen/logrus
 - package: github.com/coredns/coredns
-  version: f697b33283afe695554888eb0cf9f5451c481470
   subpackages:
   - core/dnsserver
   - plugin

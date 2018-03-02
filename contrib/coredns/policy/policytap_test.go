@@ -170,7 +170,7 @@ func checkCRMessage(t *testing.T, msg *tap.Message, orgMsg *dns.Msg) {
 		return
 	}
 	d.Packed = bin
-	expMsg := d.ToClientResponse()
+	expMsg, _ := d.ToClientResponse()
 	if !dtest.MsgEqual(expMsg, msg) {
 		t.Errorf("Unexpected message: expected: %v\nactual: %v", expMsg, msg)
 	}

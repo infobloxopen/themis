@@ -34,16 +34,17 @@ func (s *policyDnstapSender) sendCRExtraMsg(w dns.ResponseWriter, msg *dns.Msg, 
 		log.Printf("[ERROR] Failed to create dnstap CR message - no DNS response message found")
 		return
 	}
+
 	now := time.Now()
-	b := tapmsg.Builder{Full: true}
-	b.TimeSec = uint64(now.Unix())
-	timeNs := uint32(now.Nanosecond())
-	err := b.AddrMsg(w.RemoteAddr(), msg)
+	b := tapmsg.New().Time(now).Addr(w.RemoteAddr())
+	b.Msg(msg)
+	crMsg, err := b.ToClientResponse()
 	if err != nil {
 		log.Printf("[ERROR] Failed to create dnstap CR message (%v)", err)
 		return
 	}
-	crMsg := b.ToClientResponse()
+
+	timeNs := uint32(now.Nanosecond())
 	crMsg.ResponseTimeNsec = &timeNs
 	t := tap.Dnstap_MESSAGE
 
