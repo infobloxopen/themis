@@ -907,7 +907,6 @@ Contents with different ids and policies can be updated independently and in par
 PDPServer provides options to query for rules and policies by id.
 
 On startup, PDPServer can optionally listen to a query endpoint (using the `-query flag`).
-By default, the query endpoint is localhost:8080.
 
 While running, the server provides the following RESTful api through the query endpoint:
 
