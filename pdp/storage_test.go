@@ -24,6 +24,75 @@ func TestStorage(t *testing.T) {
 	}
 }
 
+func TestGetAllPolicies(t *testing.T) {
+	targetPolicy := &Policy{
+		id:        "first",
+		rules:     []*Rule{{id: "permit", effect: EffectPermit}},
+		algorithm: firstApplicableEffectRCA{}}
+	root := &PolicySet{
+		id:        "test",
+		policies:  []Evaluable{targetPolicy},
+		algorithm: firstApplicableEffectPCA{}}
+
+	s := NewPolicyStorage(root, nil, nil)
+	policies := s.GetAllPolicies()
+	if len(policies) != 1 && targetPolicy != policies[0] {
+		t.Errorf("Expecting to find policy %+v, got %+v", targetPolicy, policies)
+	}
+
+	emptyS := NewPolicyStorage(nil, nil, nil)
+	emptyPolicies := emptyS.GetAllPolicies()
+	if len(emptyPolicies) > 0 {
+		t.Errorf("Expecting to find no policies, got %+v", emptyPolicies)
+	}
+}
+
+func TestGetPolicy(t *testing.T) {
+	targetPolicy := &Policy{
+		id:        "first",
+		rules:     []*Rule{{id: "permit", effect: EffectPermit}},
+		algorithm: firstApplicableEffectRCA{}}
+	root := &PolicySet{
+		id:        "test",
+		policies:  []Evaluable{targetPolicy},
+		algorithm: firstApplicableEffectPCA{}}
+
+	s := NewPolicyStorage(root, nil, nil)
+	policy, err := s.GetPolicy("first")
+	if err != nil {
+		t.Error(err)
+	} else if targetPolicy != policy {
+		t.Errorf("Expecting to find policy %+v, got %+v", targetPolicy, policy)
+	}
+
+	emptyS := NewPolicyStorage(nil, nil, nil)
+	expectNil, err := emptyS.GetPolicy("anything")
+	expectError(t, "PolicyStorage has no policies", expectNil, err)
+}
+
+func TestGetRule(t *testing.T) {
+	targetRule := &Rule{id: "permit", effect: EffectPermit}
+	root := &PolicySet{
+		id: "test",
+		policies: []Evaluable{&Policy{
+			id:        "first",
+			rules:     []*Rule{targetRule},
+			algorithm: firstApplicableEffectRCA{}}},
+		algorithm: firstApplicableEffectPCA{}}
+
+	s := NewPolicyStorage(root, nil, nil)
+	rule, err := s.GetRule("permit")
+	if err != nil {
+		t.Error(err)
+	} else if targetRule != rule {
+		t.Errorf("Expecting to find rule %+v, got %+v", targetRule, rule)
+	}
+
+	emptyS := NewPolicyStorage(nil, nil, nil)
+	expectNil, err := emptyS.GetRule("anything")
+	expectError(t, "PolicyStorage has no policies", expectNil, err)
+}
+
 func TestStorageNewTransaction(t *testing.T) {
 	initialTag := uuid.New()
 
