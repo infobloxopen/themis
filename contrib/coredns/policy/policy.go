@@ -348,8 +348,7 @@ func parseHex(data []byte, option *edns0Map) string {
 	return hex.EncodeToString(data[start:end])
 }
 
-func parseOptionGroup(ah *attrHolder, data []byte, options []*edns0Map) bool {
-	srcIPFound := false
+func parseOptionGroup(ah *attrHolder, data []byte, options []*edns0Map) {
 	for _, option := range options {
 		var value string
 		switch option.dataType {
@@ -363,13 +362,11 @@ func parseOptionGroup(ah *attrHolder, data []byte, options []*edns0Map) bool {
 		case typeEDNS0IP:
 			ip := net.IP(data)
 			value = ip.String()
-		}
-		if option.name == "source_ip" {
-			srcIPFound = true
+		default:
+			continue
 		}
 		ah.attrsReqDomain = append(ah.attrsReqDomain, &pdp.Attribute{Id: option.name, Type: option.destType, Value: value})
 	}
-	return srcIPFound
 }
 
 func (p *policyPlugin) parseDebugID(c *caddy.Controller) error {
@@ -471,14 +468,13 @@ func (p *policyPlugin) connStateCb(addr string, state int, err error) {
 	}
 }
 
-func (p *policyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) {
-	ipID := attrNameSourceIP
-
+func (p *policyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg) {
 	o := r.IsEdns0()
 	if o == nil {
-		goto Exit
+		return
 	}
 
+	start := len(ah.attrsReqDomain)
 	for _, opt := range o.Option {
 		optLocal, local := opt.(*dns.EDNS0_LOCAL)
 		if !local {
@@ -488,15 +484,10 @@ func (p *policyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg, ip string) 
 		if !ok {
 			continue
 		}
-		srcIPFound := parseOptionGroup(ah, optLocal.Data, options)
-		if srcIPFound {
-			ipID = attrNameProxySourceIP
-		}
+		parseOptionGroup(ah, optLocal.Data, options)
 	}
-
-Exit:
-	ah.attrsReqDomain = append(ah.attrsReqDomain, &pdp.Attribute{Id: ipID, Type: "address", Value: ip})
-	return
+	end := len(ah.attrsReqDomain)
+	ah.attrsEdns = ah.attrsReqDomain[start:end]
 }
 
 func resolve(status int) string {
@@ -581,10 +572,9 @@ func getNameAndClass(r *dns.Msg) (string, uint16) {
 // ServeDNS implements the Handler interface.
 func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	var (
-		status    = -1
-		respMsg   *dns.Msg
-		err       error
-		sendExtra bool
+		status  = -1
+		respMsg *dns.Msg
+		err     error
 	)
 	p.wg.Add(1)
 	defer p.wg.Done()
@@ -599,8 +589,9 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 			return plugin.NextOrFailure(p.Name(), p.next, ctx, w, r)
 		}
 	}
-	ah := newAttrHolder(qName, qType, p.transfer)
-	p.getAttrsFromEDNS0(ah, r, getRemoteIP(w))
+	ip := getRemoteIP(w)
+	ah := newAttrHolder(qName, qType, ip, p.transfer)
+	p.getAttrsFromEDNS0(ah, r)
 
 	// validate domain name (validation #1)
 	err = p.validate(ah, "")
@@ -648,17 +639,17 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	case typeAllow:
 		r = respMsg
 	case typeLog:
-		sendExtra = true
+		ah.policyHit = true
 		r = respMsg
 	case typeRedirect:
-		sendExtra = true
+		ah.policyHit = true
 		status, err = p.redirect(ctx, r, ah.redirect)
 	case typeBlock:
-		sendExtra = true
+		ah.policyHit = true
 		status = dns.RcodeNameError
 	case typeRefuse:
+		ah.policyHit = true
 		status = dns.RcodeRefused
-		sendExtra = true
 	default:
 		status = dns.RcodeServerFailure
 		err = errInvalidAction
@@ -672,14 +663,10 @@ Exit:
 		r.Question[0].Name = r.Question[0].Name + p.debugSuffix
 		r.Question[0].Qtype = dns.TypeTXT
 		r.Question[0].Qclass = dns.ClassCHAOS
-		sendExtra = false
 	}
 
 	w.WriteMsg(r)
-	if p.tapIO != nil && status != dns.RcodeServerFailure {
-		if !sendExtra {
-			ah = nil
-		}
+	if p.tapIO != nil && status != dns.RcodeServerFailure && !debugQuery {
 		p.tapIO.sendCRExtraMsg(w, r, ah)
 	}
 	return status, err
