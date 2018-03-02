@@ -180,6 +180,7 @@ func (p *PolicySet) Delete(path []string) (Evaluable, error) {
 	return r, nil
 }
 
+// FindPolicies implements Evaluable interface and get all visible policies
 func (p *PolicySet) FindPolicies() []*Policy {
 	var out []*Policy
 	if p.hidden {
@@ -191,6 +192,7 @@ func (p *PolicySet) FindPolicies() []*Policy {
 	return out
 }
 
+// FindPolicy implements Evaluable interface and finds visible policy by id
 func (p *PolicySet) FindPolicy(id string) (*Policy, error) {
 	if !p.hidden {
 		for _, subitem := range p.policies {
@@ -202,6 +204,7 @@ func (p *PolicySet) FindPolicy(id string) (*Policy, error) {
 	return nil, policyNotFound(id)
 }
 
+// FindPolicy implements Evaluable interface and finds visible rule by id
 func (p *PolicySet) FindRule(id string) (*Rule, error) {
 	if !p.hidden {
 		for _, subitem := range p.policies {

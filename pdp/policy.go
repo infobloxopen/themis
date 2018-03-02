@@ -75,6 +75,7 @@ func (p *Policy) GetID() (string, bool) {
 	return p.id, !p.hidden
 }
 
+// GetRules exposes a policy's rules to PDP server
 func (p *Policy) GetRules() ([]*Rule, bool) {
 	return p.rules, !p.hidden
 }
@@ -158,6 +159,7 @@ func (p *Policy) Delete(path []string) (Evaluable, error) {
 	return r, nil
 }
 
+// FindPolicies implements Evaluable interface and get all visible policies
 func (p *Policy) FindPolicies() []*Policy {
 	if p.hidden {
 		return []*Policy{}
@@ -165,6 +167,7 @@ func (p *Policy) FindPolicies() []*Policy {
 	return []*Policy{p}
 }
 
+// FindPolicy implements Evaluable interface and finds visible policy by id
 func (p *Policy) FindPolicy(id string) (*Policy, error) {
 	if !p.hidden {
 		if pid, ok := p.GetID(); ok && 0 == strings.Compare(pid, id) {
@@ -174,6 +177,7 @@ func (p *Policy) FindPolicy(id string) (*Policy, error) {
 	return nil, policyNotFound(id)
 }
 
+// FindPolicy implements Evaluable interface and finds visible rule by id
 func (p *Policy) FindRule(id string) (*Rule, error) {
 	if !p.hidden {
 		for _, rule := range p.rules {
