@@ -131,7 +131,7 @@ func (ah *attrHolder) addResponse(r *pdp.Response, respip bool) {
 			i++
 		}
 	default:
-		log.Printf("[ERROR] PDP Effect: %s, Reason: %s", r.Effect, r.Reason)
+		log.Printf("[ERROR] PDP Effect: %s, Reason: %s", pdp.EffectName(r.Effect), r.Reason)
 		ah.action = typeInvalid
 	}
 

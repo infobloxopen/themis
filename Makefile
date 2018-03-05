@@ -5,14 +5,14 @@ COVERTMP=/tmp/cover.out
 
 AT = cd $(SRCROOT)
 RM = rm -fv
-GOBUILD = go build -v
+GO_CACHE=$(BUILDPATH)/go-cache
+GOBUILD = go build -pkgdir $(GO_CACHE) -i -v
 GOFMTCHECK = test -z `gofmt -l -s -w *.go | tee /dev/stderr`
-GOTEST = go test -v
+GOTEST = go test -pkgdir $(GO_CACHE) -v
 COVER = $(GOTEST) -coverprofile=$(COVERTMP) -covermode=atomic
 JOINCOVER = cat $(COVERTMP) >> $(COVEROUT)
 GOTESTRACE = $(COVER) -race && $(JOINCOVER)
-GOBENCH = $(GOTEST) -run=BypassAllTestsAndRunOnlyBenchmarks -bench=
-GOBENCHALL = $(GOBENCH).
+GOBENCH = $(GOTEST) -run=BypassAllTestsAndRunOnlyBenchmarks -bench=.
 
 .PHONY: all
 all: fmt build test bench
@@ -180,8 +180,8 @@ test-plugin: cover-out
 
 .PHONY: bench-pep
 bench-pep: build-pdpserver
-	$(AT)/pep && $(GOBENCHALL)
+	$(AT)/pep && $(GOBENCH)
 
 .PHONY: bench-pdpserver-pkg
 bench-pdpserver-pkg:
-	$(AT)/pdpserver/server && $(GOBENCHALL)
+	$(AT)/pdpserver/server && $(GOBENCH)

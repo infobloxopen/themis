@@ -16,267 +16,7 @@ import (
 )
 
 const (
-	oneStageBenchmarkPolicySet = `# Policy set for benchmark
-attributes:
-  k3: domain
-  x: string
-
-policies:
-  alg:
-    id: mapper
-    map:
-      selector:
-        uri: "local:content/second"
-        path:
-        - attr: k3
-        type: list of strings
-    default: DefaultRule
-    alg: FirstApplicableEffect
-  rules:
-  - id: DefaultRule
-    effect: Deny
-    obligations:
-    - x:
-       val:
-         type: string
-         content: DefaultRule
-  - id: First
-    effect: Permit
-    obligations:
-    - x:
-       val:
-         type: string
-         content: First
-  - id: Second
-    effect: Permit
-    obligations:
-    - x:
-       val:
-         type: string
-         content: Second
-  - id: Third
-    effect: Permit
-    obligations:
-    - x:
-       val:
-         type: string
-         content: Third
-  - id: Fourth
-    effect: Permit
-    obligations:
-    - x:
-       val:
-         type: string
-         content: Fourth
-  - id: Fifth
-    effect: Permit
-    obligations:
-    - x:
-       val:
-         type: string
-         content: Fifth
-`
-
-	twoStageBenchmarkPolicySet = `# Policy set for benchmark 2-level nesting policy
-attributes:
-  k2: string
-  k3: domain
-  x: string
-
-policies:
-  alg:
-    id: mapper
-    map:
-      selector:
-        uri: "local:content/first"
-        path:
-        - attr: k2
-        type: string
-    default: DefaultPolicy
-
-  policies:
-  - id: DefaultPolicy
-    alg: FirstApplicableEffect
-    rules:
-    - effect: Deny
-      obligations:
-      - x:
-         val:
-           type: string
-           content: DefaultPolicy
-
-  - id: P1
-    alg:
-      id: mapper
-      map:
-        selector:
-          uri: "local:content/second"
-          path:
-          - attr: k3
-          type: list of strings
-      default: DefaultRule
-      alg: FirstApplicableEffect
-    rules:
-    - id: DefaultRule
-      effect: Deny
-      obligations:
-      - x:
-         val:
-           type: string
-           content: P1.DefaultRule
-    - id: First
-      effect: Permit
-      obligations:
-      - x:
-         val:
-           type: string
-           content: P1.First
-    - id: Second
-      effect: Permit
-      obligations:
-      - x:
-         val:
-           type: string
-           content: P1.Second
-
-  - id: P2
-    alg:
-      id: mapper
-      map:
-        selector:
-          uri: "local:content/second"
-          path:
-          - attr: k3
-          type: list of strings
-      default: DefaultRule
-      alg: FirstApplicableEffect
-    rules:
-    - id: DefaultRule
-      effect: Deny
-      obligations:
-      - x:
-         val:
-           type: string
-           content: P2.DefaultRule
-    - id: Second
-      effect: Permit
-      obligations:
-      - x:
-         val:
-           type: string
-           content: P2.Second
-    - id: Third
-      effect: Permit
-      obligations:
-      - x:
-         val:
-           type: string
-           content: P2.Third
-
-  - id: P3
-    alg:
-      id: mapper
-      map:
-        selector:
-          uri: "local:content/second"
-          path:
-          - attr: k3
-          type: list of strings
-      default: DefaultRule
-      alg: FirstApplicableEffect
-    rules:
-    - id: DefaultRule
-      effect: Deny
-      obligations:
-      - x:
-         val:
-           type: string
-           content: P3.DefaultRule
-    - id: Third
-      effect: Permit
-      obligations:
-      - x:
-         val:
-           type: string
-           content: P3.Third
-    - id: Fourth
-      effect: Permit
-      obligations:
-      - x:
-         val:
-           type: string
-           content: P3.Fourth
-
-  - id: P4
-    alg:
-      id: mapper
-      map:
-        selector:
-          uri: "local:content/second"
-          path:
-          - attr: k3
-          type: list of strings
-      default: DefaultRule
-      alg: FirstApplicableEffect
-    rules:
-    - id: DefaultRule
-      effect: Deny
-      obligations:
-      - x:
-         val:
-           type: string
-           content: P4.DefaultRule
-    - id: Fourth
-      effect: Permit
-      obligations:
-      - x:
-         val:
-           type: string
-           content: P4.Fourth
-    - id: Fifth
-      effect: Permit
-      obligations:
-      - x:
-         val:
-           type: string
-           content: P4.Fifth
-
-  - id: P5
-    alg:
-      id: mapper
-      map:
-        selector:
-          uri: "local:content/second"
-          path:
-          - attr: k3
-          type: list of strings
-      default: DefaultRule
-      alg: FirstApplicableEffect
-    rules:
-    - id: DefaultRule
-      effect: Deny
-      obligations:
-      - x:
-         val:
-           type: string
-           content: P5.DefaultRule
-    - id: Fifth
-      effect: Permit
-      obligations:
-      - x:
-         val:
-           type: string
-           content: P5.Fifth
-    - id: First
-      effect: Permit
-      obligations:
-      - x:
-         val:
-           type: string
-           content: P5.First
-`
-
-	threeStageBenchmarkPolicySet = `# Policy set for benchmark 3-level nesting policy
+	policySet = `# Policy set for benchmark 3-level nesting policy
 attributes:
   k1: string
   k2: string
@@ -771,20 +511,10 @@ var (
 		"third.test.com",
 	}
 
-	decisionRequests []decisionRequest
-	rawRequests      []pb.Request
+	rawRequests []pb.Request
 )
 
 func init() {
-	decisionRequests = make([]decisionRequest, 2000000)
-	for i := range decisionRequests {
-		decisionRequests[i] = decisionRequest{
-			Direction: directionOpts[rand.Intn(len(directionOpts))],
-			Policy:    policySetOpts[rand.Intn(len(policySetOpts))],
-			Domain:    domainOpts[rand.Intn(len(domainOpts))],
-		}
-	}
-
 	rawRequests = make([]pb.Request, 2000000)
 	for i := range rawRequests {
 		rawRequests[i] = pb.Request{
@@ -810,8 +540,8 @@ func init() {
 
 }
 
-func benchmarkPolicySet(name, p string, b *testing.B) {
-	pdp, _, c := startPDPServer(p, nil, b)
+func benchmarkValidate(b *testing.B) {
+	pdp, _, c := startPDPServer(policySet, []string{"127.0.0.1:5555"}, b)
 	defer func() {
 		c.Close()
 		if logs := pdp.Stop(); len(logs) > 0 {
@@ -819,48 +549,15 @@ func benchmarkPolicySet(name, p string, b *testing.B) {
 		}
 	}()
 
-	b.Run(name, func(b *testing.B) {
-		for n := 0; n < b.N; n++ {
-			in := decisionRequests[n%len(decisionRequests)]
-
-			var out decisionResponse
-			c.Validate(in, &out)
-
-			if (out.Effect != "DENY" && out.Effect != "PERMIT" && out.Effect != "NOTAPPLICABLE") ||
-				out.Reason != "Ok" {
-				b.Fatalf("unexpected response: %#v", out)
-			}
-		}
-	})
-}
-
-func BenchmarkOneStagePolicySet(b *testing.B) {
-	benchmarkPolicySet("BenchmarkOneStagePolicySet", oneStageBenchmarkPolicySet, b)
-}
-
-func BenchmarkTwoStagePolicySet(b *testing.B) {
-	benchmarkPolicySet("BenchmarkTwoStagePolicySet", twoStageBenchmarkPolicySet, b)
-}
-
-func BenchmarkThreeStagePolicySet(b *testing.B) {
-	benchmarkPolicySet("BenchmarkThreeStagePolicySet", threeStageBenchmarkPolicySet, b)
-}
-
-func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
-	pdp, _, c := startPDPServer(threeStageBenchmarkPolicySet, nil, b)
-	defer func() {
-		c.Close()
-		if logs := pdp.Stop(); len(logs) > 0 {
-			b.Logf("server logs:\n%s", logs)
-		}
-	}()
-
-	b.Run("BenchmarkThreeStagePolicySetRaw", func(b *testing.B) {
-		var out pb.Response
+	b.Run("BenchmarkValidate", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			in := rawRequests[n%len(rawRequests)]
 
-			c.Validate(in, &out)
+			out, err := c.Validate(&in)
+
+			if err != nil {
+				b.Fatalf("unexpected error: %#v", err)
+			}
 
 			if (out.Effect != pb.Response_DENY &&
 				out.Effect != pb.Response_PERMIT &&
@@ -872,17 +569,12 @@ func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
 	})
 }
 
-func benchmarkStreamingClient(name string, ports []uint16, b *testing.B, opts ...Option) {
-	if len(ports) != 0 && len(ports) != 2 {
-		b.Fatalf("only 0 for single PDP and 2 for 2 PDP ports supported but got %d", len(ports))
+func benchmarkClient(name string, addrs []string, b *testing.B) {
+	if len(addrs) != 1 && len(addrs) != 2 {
+		b.Fatalf("only 1 or 2 endpoints supported but got %d", len(addrs))
 	}
 
-	streams := 96
-
-	opts = append(opts,
-		WithStreams(streams),
-	)
-	pdp, pdpAlt, c := startPDPServer(threeStageBenchmarkPolicySet, ports, b, opts...)
+	pdp, pdpAlt, c := startPDPServer(policySet, addrs, b)
 	defer func() {
 		c.Close()
 		if logs := pdp.Stop(); len(logs) > 0 {
@@ -893,19 +585,25 @@ func benchmarkStreamingClient(name string, ports []uint16, b *testing.B, opts ..
 				b.Logf("secondary server logs:\n%s", logs)
 			}
 		}
+
 	}()
 
 	b.Run(name, func(b *testing.B) {
 		errs := make([]error, b.N)
 
-		th := make(chan int, streams)
+		th := make(chan int, 100)
 		for n := 0; n < b.N; n++ {
 			th <- 0
 			go func(i int) {
 				defer func() { <-th }()
 
-				var out pb.Response
-				c.Validate(rawRequests[i%len(rawRequests)], &out)
+				in := rawRequests[n%len(rawRequests)]
+
+				out, err := c.Validate(&in)
+
+				if err != nil {
+					b.Fatalf("unexpected error: %#v", err)
+				}
 
 				if (out.Effect != pb.Response_DENY &&
 					out.Effect != pb.Response_PERMIT &&
@@ -924,69 +622,41 @@ func benchmarkStreamingClient(name string, ports []uint16, b *testing.B, opts ..
 	})
 }
 
-func BenchmarkStreamingClient(b *testing.B) {
-	benchmarkStreamingClient("BenchmarkStreamingClient", nil, b)
-}
-
-func BenchmarkRoundRobinStreamingClient(b *testing.B) {
-	benchmarkStreamingClient("BenchmarkRoundRobinStreamingClient",
-		[]uint16{
-			5555,
-			5556,
+func Benchmark(b *testing.B) {
+	benchmarkValidate(b)
+	/*benchmarkClient("BenchmarkClient",
+		[]string{
+			"127.0.0.1:5556",
 		},
 		b,
-		WithRoundRobinBalancer("127.0.0.1:5555", "127.0.0.1:5556"),
+	)*/
+	benchmarkClient("BenchmarkTwoClients",
+		[]string{
+			"127.0.0.1:5557",
+			"127.0.0.1:5558",
+		},
+		b,
 	)
 }
 
-func BenchmarkHotSpotStreamingClient(b *testing.B) {
-	benchmarkStreamingClient("BenchmarkHotSpotStreamingClient",
-		[]uint16{
-			5555,
-			5556,
-		},
-		b,
-		WithHotSpotBalancer("127.0.0.1:5555", "127.0.0.1:5556"),
-	)
+func isOpen(address string) bool {
+	server, err := net.Listen("tcp", address)
+	if err != nil {
+		return true
+	}
+	server.Close()
+	return false
 }
 
 func waitForPortOpened(address string) error {
-	var (
-		c   net.Conn
-		err error
-	)
-
 	for i := 0; i < 20; i++ {
-		after := time.After(500 * time.Millisecond)
-		c, err = net.DialTimeout("tcp", address, 500*time.Millisecond)
-		if err == nil {
-			return c.Close()
-		}
-
-		<-after
-	}
-
-	return err
-}
-
-func waitForPortClosed(address string) error {
-	var (
-		c   net.Conn
-		err error
-	)
-
-	for i := 0; i < 20; i++ {
-		after := time.After(500 * time.Millisecond)
-		c, err = net.DialTimeout("tcp", address, 500*time.Millisecond)
-		if err != nil {
+		if isOpen(address) {
 			return nil
 		}
-
-		c.Close()
-		<-after
+		<-time.After(500 * time.Millisecond)
 	}
 
-	return fmt.Errorf("port at %s hasn't been closed yet", address)
+	return fmt.Errorf("port at %s hasn't been opened yet", address)
 }
 
 type loggedServer struct {
@@ -1015,20 +685,16 @@ func (s *loggedServer) Stop() string {
 	return s.b.String()
 }
 
-func startPDPServer(p string, ports []uint16, b *testing.B, opts ...Option) (*loggedServer, *loggedServer, Client) {
+func startPDPServer(p string, addrs []string, b *testing.B) (*loggedServer, *loggedServer, Client) {
 	var (
 		primary   *loggedServer
 		secondary *loggedServer
 	)
 
-	service := ":5555"
-	if len(ports) > 0 {
-		service = fmt.Sprintf(":%d", ports[0])
-	}
-	addr := "127.0.0.1" + service
+	addr := addrs[0]
 
 	primary = newServer(
-		server.WithServiceAt(service),
+		server.WithServiceAt(addr),
 	)
 
 	if err := primary.s.ReadPolicies(strings.NewReader(p)); err != nil {
@@ -1039,9 +705,6 @@ func startPDPServer(p string, ports []uint16, b *testing.B, opts ...Option) (*lo
 		b.Fatalf("can't read content: %s", err)
 	}
 
-	if err := waitForPortClosed(addr); err != nil {
-		b.Fatalf("port still in use: %s", err)
-	}
 	go func() {
 		if err := primary.s.Serve(); err != nil {
 			b.Fatalf("primary server failed: %s", err)
@@ -1056,12 +719,11 @@ func startPDPServer(p string, ports []uint16, b *testing.B, opts ...Option) (*lo
 		b.Fatalf("can't connect to PDP server: %s", err)
 	}
 
-	if len(ports) > 1 {
-		service := fmt.Sprintf(":%d", ports[1])
+	if len(addrs) > 1 {
+		addr := addrs[1]
 		secondary = newServer(
-			server.WithServiceAt(service),
+			server.WithServiceAt(addr),
 		)
-		addr := "127.0.0.1" + service
 
 		if err := secondary.s.ReadPolicies(strings.NewReader(p)); err != nil {
 			if logs := primary.Stop(); len(logs) > 0 {
@@ -1077,9 +739,6 @@ func startPDPServer(p string, ports []uint16, b *testing.B, opts ...Option) (*lo
 			b.Fatalf("can't read content: %s", err)
 		}
 
-		if err := waitForPortClosed(addr); err != nil {
-			b.Fatalf("port still in use: %s", err)
-		}
 		go func() {
 			if err := secondary.s.Serve(); err != nil {
 				b.Fatalf("secondary server failed: %s", err)
@@ -1098,8 +757,8 @@ func startPDPServer(p string, ports []uint16, b *testing.B, opts ...Option) (*lo
 		}
 	}
 
-	c := NewClient(opts...)
-	if err := c.Connect(addr); err != nil {
+	c := NewClient(addrs, 0, 0)
+	if err := c.Connect(); err != nil {
 		if secondary != nil {
 			if logs := secondary.Stop(); len(logs) > 0 {
 				b.Logf("secondary server logs:\n%s", logs)

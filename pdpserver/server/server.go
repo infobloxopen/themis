@@ -15,13 +15,14 @@ import (
 
 	"github.com/infobloxopen/themis/pdp"
 	pbc "github.com/infobloxopen/themis/pdp-control"
-	pbs "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pdp/ast"
 	"github.com/infobloxopen/themis/pdp/jcon"
 
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	ot "github.com/opentracing/opentracing-go"
 	log "github.com/sirupsen/logrus"
+	"github.com/valyala/fastrpc"
+	"github.com/valyala/fastrpc/tlv"
 	"google.golang.org/grpc"
 )
 
@@ -371,10 +372,16 @@ func (s *Server) serveRequests() error {
 	}
 
 	s.opts.logger.Info("Serving decision requests")
-	if err := s.requests.proto.Serve(s.requests.iface); err != nil {
-		return err
+	svc := &fastrpc.Server{
+		CompressType:     fastrpc.CompressNone,
+		PipelineRequests: true,
+		NewHandlerCtx: func() fastrpc.HandlerCtx {
+			return &tlv.RequestCtx{}
+		},
+		Handler: s.Validate,
 	}
-
+	svc.Serve(s.requests.iface)
+	s.opts.logger.Info("Serving decision requests stopped")
 	return nil
 }
 
@@ -440,11 +447,6 @@ func (s *Server) Serve() error {
 		}(s.profiler)
 	}
 
-	s.opts.logger.Info("Creating service protocol handler")
-	s.requests.proto = grpc.NewServer(s.configureRequests()...)
-	pbs.RegisterPDPServer(s.requests.proto, s)
-	defer s.requests.proto.Stop()
-
 	go s.memoryChecker()
 
 	if s.p != nil {
@@ -490,8 +492,9 @@ func (s *Server) Stop() error {
 	p := s.p
 	s.RUnlock()
 
-	if p != nil && s.requests.proto != nil {
-		s.requests.proto.Stop()
+	if p != nil && s.requests.iface != nil {
+		s.opts.logger.Info("Serving decision port closed")
+		s.requests.iface.Close()
 		return nil
 	}
 

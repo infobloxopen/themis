@@ -13,11 +13,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/coredns/coredns/plugin"
-	"github.com/coredns/coredns/plugin/pkg/trace"
 	"github.com/mholt/caddy"
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
@@ -87,8 +85,8 @@ type policyPlugin struct {
 	next            plugin.Handler
 	pdp             pep.Client
 	debugSuffix     string
-	streams         int
-	hotSpot         bool
+	delay           uint
+	pending         uint
 	ident           string
 	passthrough     []string
 	connTimeout     time.Duration
@@ -112,33 +110,9 @@ func newPolicyPlugin() *policyPlugin {
 func (p *policyPlugin) connect() error {
 	log.Printf("[DEBUG] Connecting %v", p)
 
-	for _, addr := range p.endpoints {
-		p.connAttempts[addr] = new(uint32)
-	}
+	p.pdp = pep.NewClient(p.endpoints, p.delay, p.pending)
 
-	opts := []pep.Option{
-		pep.WithConnectionTimeout(p.connTimeout),
-		pep.WithConnectionStateNotification(p.connStateCb),
-	}
-	if p.streams <= 0 || !p.hotSpot {
-		opts = append(opts, pep.WithRoundRobinBalancer(p.endpoints...))
-	}
-
-	if p.streams > 0 {
-		opts = append(opts, pep.WithStreams(p.streams))
-		if p.hotSpot {
-			opts = append(opts, pep.WithHotSpotBalancer(p.endpoints...))
-		}
-	}
-
-	if p.trace != nil {
-		if t, ok := p.trace.(trace.Trace); ok {
-			opts = append(opts, pep.WithTracer(t.Tracer()))
-		}
-	}
-
-	p.pdp = pep.NewClient(opts...)
-	return p.pdp.Connect("")
+	return p.pdp.Connect()
 }
 
 // closeConn terminates previously established connection.
@@ -162,8 +136,11 @@ func (p *policyPlugin) parseOption(c *caddy.Controller) error {
 	case "debug_query_suffix":
 		return p.parseDebugQuerySuffix(c)
 
-	case "streams":
-		return p.parseStreams(c)
+	case "delay":
+		return p.parseDelay(c)
+
+	case "pending":
+		return p.parsePending(c)
 
 	case "transfer":
 		return p.parseTransfer(c)
@@ -177,14 +154,11 @@ func (p *policyPlugin) parseOption(c *caddy.Controller) error {
 	case "passthrough":
 		return p.parsePassthrough(c)
 
-	case "connection_timeout":
-		return p.parseConnectionTimeout(c)
-
 	case "log":
 		return p.parseLog(c)
 	}
 
-	return errInvalidOption
+	return nil
 }
 
 func (p *policyPlugin) parseEndpoint(c *caddy.Controller) error {
@@ -242,37 +216,33 @@ func (p *policyPlugin) parseDebugQuerySuffix(c *caddy.Controller) error {
 	return nil
 }
 
-func (p *policyPlugin) parseStreams(c *caddy.Controller) error {
+func (p *policyPlugin) parseDelay(c *caddy.Controller) error {
 	args := c.RemainingArgs()
-	if len(args) < 1 || len(args) > 2 {
+	if len(args) != 1 {
 		return c.ArgErr()
 	}
 
-	streams, err := strconv.ParseInt(args[0], 10, 32)
+	param, err := strconv.ParseUint(args[0], 10, 32)
 	if err != nil {
-		return fmt.Errorf("Could not parse number of streams: %s", err)
-	}
-	if streams < 1 {
-		return fmt.Errorf("Expected at least one stream got %d", streams)
+		return fmt.Errorf("Could not parse delay param: %s", err)
 	}
 
-	p.streams = int(streams)
+	p.delay = uint(param)
+	return nil
+}
 
-	if len(args) > 1 {
-		switch strings.ToLower(args[1]) {
-		default:
-			return fmt.Errorf("Expected round-robin or hot-spot balancing but got %s", args[1])
-
-		case "round-robin":
-			p.hotSpot = false
-
-		case "hot-spot":
-			p.hotSpot = true
-		}
-	} else {
-		p.hotSpot = false
+func (p *policyPlugin) parsePending(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) != 1 {
+		return c.ArgErr()
 	}
 
+	param, err := strconv.ParseUint(args[0], 10, 32)
+	if err != nil {
+		return fmt.Errorf("Could not parse pending param: %s", err)
+	}
+
+	p.pending = uint(param)
 	return nil
 }
 
@@ -441,54 +411,6 @@ func (p *policyPlugin) parseLog(c *caddy.Controller) error {
 	}
 	p.log = true
 	return nil
-}
-
-func (p *policyPlugin) connStateCb(addr string, state int, err error) {
-	switch state {
-	default:
-		if err != nil {
-			log.Printf("[DEBUG] Unknown connection notification %s (%s)", addr, err)
-		} else {
-			log.Printf("[DEBUG] Unknown connection notification %s", addr)
-		}
-
-	case pep.StreamingConnectionEstablished:
-		ptr, ok := p.connAttempts[addr]
-		if !ok {
-			ptr = p.unkConnAttempts
-		}
-		atomic.StoreUint32(ptr, 0)
-
-		log.Printf("[INFO] Connected to %s", addr)
-
-	case pep.StreamingConnectionBroken:
-		log.Printf("[ERROR] Connection to %s has been broken", addr)
-
-	case pep.StreamingConnectionConnecting:
-		ptr, ok := p.connAttempts[addr]
-		if !ok {
-			ptr = p.unkConnAttempts
-		}
-		count := atomic.AddUint32(ptr, 1)
-
-		if count <= 1 {
-			log.Printf("[INFO] Connecting to %s", addr)
-		}
-
-		if count > 100 {
-			log.Printf("[ERROR] Connecting to %s", addr)
-			atomic.StoreUint32(ptr, 1)
-		}
-
-	case pep.StreamingConnectionFailure:
-		ptr, ok := p.connAttempts[addr]
-		if !ok {
-			ptr = p.unkConnAttempts
-		}
-		if atomic.LoadUint32(ptr) <= 1 {
-			log.Printf("[ERROR] Failed to connect to %s (%s)", addr, err)
-		}
-	}
 }
 
 func (p *policyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg) {
@@ -761,7 +683,7 @@ func (p *policyPlugin) redirect(ctx context.Context, r *dns.Msg, dst string) (in
 }
 
 func (p *policyPlugin) validate(ah *attrHolder, addr string) error {
-	var req pdp.Request
+	req := &pdp.Request{}
 	if len(addr) == 0 {
 		req.Attributes = ah.attrsReqDomain
 	} else {
@@ -773,8 +695,7 @@ func (p *policyPlugin) validate(ah *attrHolder, addr string) error {
 		log.Printf("[INFO] PDP request: %+v", req)
 	}
 
-	response := new(pdp.Response)
-	err := p.pdp.Validate(req, response)
+	response, err := p.pdp.Validate(req)
 	if err != nil {
 		log.Printf("[ERROR] Policy validation failed due to error %s", err)
 		return err
