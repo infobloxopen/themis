@@ -40,3 +40,10 @@ import:
   - strtree
   - iptree
 - package: github.com/dnstap/golang-dnstap
+- package: github.com/stretchr/objx
+- package: github.com/valyala/fastrpc
+  subpackages:
+  - tlv
+- package: github.com/valyala/fasthttp
+  subpackages:
+  - stackless
