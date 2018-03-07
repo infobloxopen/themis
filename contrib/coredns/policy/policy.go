@@ -715,14 +715,14 @@ func (p *policyPlugin) redirect(ctx context.Context, r *dns.Msg, dst string) (in
 		origName := r.Question[0].Name
 		r.Question[0].Name = dst
 		responseWriter := new(writer)
-		status, err := plugin.NextOrFailure(p.Name(), p.next, ctx, responseWriter, r)
-		r.Question[0].Name = origName
+		_, err := plugin.NextOrFailure(p.Name(), p.next, ctx, responseWriter, r)
 		if err != nil {
 			return dns.RcodeServerFailure, err
 		}
-		r.Answer = []dns.RR{rr}
-		r.Answer = append(r.Answer, responseWriter.Msg.Answer...)
-		r.Rcode = status
+		responseWriter.Msg.CopyTo(r)
+		r.Question[0].Name = origName
+		r.Answer = append([]dns.RR{rr}, r.Answer...)
+		r.Authoritative = true
 	} else {
 		r.Answer = []dns.RR{rr}
 		r.Rcode = dns.RcodeSuccess
