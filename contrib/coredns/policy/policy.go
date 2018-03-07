@@ -584,9 +584,11 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 
 	debugQuery := p.decodeDebugMsg(r)
 	qName, qType := getNameAndType(r)
-	for _, s := range p.passthrough {
-		if strings.HasSuffix(qName, s) {
-			return plugin.NextOrFailure(p.Name(), p.next, ctx, w, r)
+	if !debugQuery {
+		for _, s := range p.passthrough {
+			if strings.HasSuffix(qName, s) {
+				return plugin.NextOrFailure(p.Name(), p.next, ctx, w, r)
+			}
 		}
 	}
 	ip := getRemoteIP(w)
