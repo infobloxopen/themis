@@ -23,6 +23,15 @@ func main() {
 		server.WithTracingAt(conf.tracingEP),
 		server.WithMemLimits(conf.mem),
 		server.WithMaxGRPCStreams(uint32(conf.maxStreams)),
+		server.WithMemStatsLogging(
+			conf.memStatsLogPath,
+			conf.memStatsLogInterval,
+		),
+		server.WithMemProfDumping(
+			conf.memProfDumpPath,
+			uint32(conf.memProfNumGC),
+			conf.memProfDelay,
+		),
 	)
 
 	err := pdp.LoadPolicies(conf.policy)

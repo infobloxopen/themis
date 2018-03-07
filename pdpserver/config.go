@@ -4,6 +4,7 @@ import (
 	"flag"
 	"math"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -22,16 +23,21 @@ var policyParsers = map[string]ast.Parser{
 }
 
 type config struct {
-	policy       string
-	policyParser ast.Parser
-	content      stringSet
-	serviceEP    string
-	controlEP    string
-	tracingEP    string
-	healthEP     string
-	profilerEP   string
-	mem          server.MemLimits
-	maxStreams   uint
+	policy              string
+	policyParser        ast.Parser
+	content             stringSet
+	serviceEP           string
+	controlEP           string
+	tracingEP           string
+	healthEP            string
+	profilerEP          string
+	mem                 server.MemLimits
+	maxStreams          uint
+	memStatsLogPath     string
+	memStatsLogInterval time.Duration
+	memProfDumpPath     string
+	memProfNumGC        uint
+	memProfDelay        time.Duration
 }
 
 type stringSet []string
@@ -60,6 +66,17 @@ func init() {
 	limit := flag.Uint64("mem-limit", 0, "memory limit in megabytes")
 	flag.UintVar(&conf.maxStreams, "max-streams", 0, "maximum number of parallel gRPC streams (0 - use gRPC default)")
 
+	flag.StringVar(&conf.memStatsLogPath, "mem-stats-log", "mem-stats.log", "file to log memory allocator statistics")
+	flag.DurationVar(&conf.memStatsLogInterval, "mem-stats-interval", -1,
+		"interval for memory statistics logging. Zero interval logs maximum and minimum allocated values\n"+
+			"\tbetween sequential GC calls but not more than once a 100 ms. Negative interval disables logging")
+
+	flag.StringVar(&conf.memProfDumpPath, "mem-prof-path", "/tmp/mem-prof", "directory to dump memory profiles")
+	flag.UintVar(&conf.memProfNumGC, "mem-prof-gc", 0, "dump at each given GC cycle (zero - no dumping)")
+	flag.DurationVar(&conf.memProfDelay, "mem-prof-delay", 0,
+		"delay after request serving start for first memory profile dump\n"+
+			"(zero and below - dump from programm start)")
+
 	flag.Parse()
 
 	initLogging(*verbose)
@@ -72,7 +89,7 @@ func init() {
 
 	mem, err := server.MakeMemLimits(*limit*1024*1024, 90, 70, 30, 30)
 	if err != nil {
-		log.WithError(err).Panic("wrong memory limits")
+		log.WithError(err).Fatal("wrong memory limits")
 	}
 	conf.mem = mem
 
@@ -81,5 +98,12 @@ func init() {
 			"max-streams": conf.maxStreams,
 			"limit":       math.MaxUint32,
 		}).Fatal("too big maximum number of parallel gRPC streams")
+	}
+
+	if conf.memProfNumGC > math.MaxUint32 {
+		log.WithFields(log.Fields{
+			"mem-prof-gc": conf.memProfNumGC,
+			"limit":       math.MaxUint32,
+		}).Fatal("too big number of GC cycles")
 	}
 }

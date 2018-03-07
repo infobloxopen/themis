@@ -97,6 +97,25 @@ func WithMemLimits(limits MemLimits) Option {
 	}
 }
 
+// WithMemStatsLogging returns a Option which enables regular runtime.MemStats logging. Path points to file where stats are logged as sequence of JSON objects splitted by new line. Each JSON object contains timestamp and output of runtime.ReadMemStats taken with given interval. Zero interval logs MemStats with minimum and maximum Alloc value between NumGC changes but not more than once a 100 ms. Negative interval disables logging.
+func WithMemStatsLogging(path string, interval time.Duration) Option {
+	return func(o *options) {
+		o.memStatsLogPath = path
+		o.memStatsLogInterval = interval
+	}
+}
+
+// WithMemProfDumping returns a Option to enables memory profile dumps. Path points to a directory for memory profile files. File name is "mem-NNNNNNNNN.pprof" where NNNNNNNNN is value of runtime.MemStats.NumGC after which the profile is stored.Dumps are created at each numGC after first dump (negative or zero value disables dumping). If delay is above zero first dump is taken with the delay after request service port has been opened.
+func WithMemProfDumping(path string, numGC uint32, delay time.Duration) Option {
+	return func(o *options) {
+		o.memProfDumpPath = path
+		o.memProfNumGC = numGC
+		o.memProfDelay = delay
+	}
+}
+
+const memStatsCheckInterval = 100 * time.Millisecond
+
 type options struct {
 	logger    *log.Logger
 	parser    ast.Parser
@@ -107,6 +126,12 @@ type options struct {
 	tracing   string
 	memLimits *MemLimits
 	streams   uint32
+
+	memStatsLogPath     string
+	memStatsLogInterval time.Duration
+	memProfDumpPath     string
+	memProfNumGC        uint32
+	memProfDelay        time.Duration
 }
 
 // Server structure is PDP server object
@@ -133,13 +158,16 @@ type Server struct {
 	fragMemWarn *time.Time
 	gcMax       int
 	gcPercent   int
+
+	memProfBaseDumpDone chan uint32
 }
 
 // NewServer returns new Server instance
 func NewServer(opts ...Option) *Server {
 	o := options{
-		logger:  log.StandardLogger(),
-		service: ":5555",
+		logger:              log.StandardLogger(),
+		service:             ":5555",
+		memStatsLogInterval: -1 * time.Second,
 	}
 
 	for _, opt := range opts {
@@ -158,13 +186,19 @@ func NewServer(opts ...Option) *Server {
 		gcp = 50
 	}
 
+	var memProfBaseDumpDone chan uint32
+	if o.memProfNumGC > 0 && o.memProfDelay > 0 {
+		memProfBaseDumpDone = make(chan uint32)
+	}
+
 	return &Server{
-		opts:      o,
-		errCh:     make(chan error, 100),
-		q:         newQueue(),
-		c:         pdp.NewLocalContentStorage(nil),
-		gcMax:     gcp,
-		gcPercent: gcp,
+		opts:                o,
+		errCh:               make(chan error, 100),
+		q:                   newQueue(),
+		c:                   pdp.NewLocalContentStorage(nil),
+		gcMax:               gcp,
+		gcPercent:           gcp,
+		memProfBaseDumpDone: memProfBaseDumpDone,
 	}
 }
 
@@ -345,6 +379,10 @@ func (s *Server) serveRequests() error {
 		return err
 	}
 
+	if s.opts.memProfNumGC > 0 && s.opts.memProfDelay > 0 {
+		time.AfterFunc(s.opts.memProfDelay, s.memProfBaseDump)
+	}
+
 	s.opts.logger.Info("Serving decision requests")
 	if err := s.requests.proto.Serve(s.requests.iface); err != nil {
 		return err
@@ -365,6 +403,14 @@ func (s *Server) flushErrors() {
 
 // Serve starts PDP server service
 func (s *Server) Serve() error {
+	memStatsLoggingDone := make(chan struct{})
+	go s.memStatsLogging(memStatsLoggingDone)
+	defer close(memStatsLoggingDone)
+
+	memProfDumpingDone := make(chan struct{})
+	go s.memProfDumping(memProfDumpingDone)
+	defer close(memProfDumpingDone)
+
 	s.flushErrors()
 
 	if err := s.listenControl(); err != nil {
