@@ -910,13 +910,27 @@ On startup, PDPServer can optionally listen to a query endpoint (using the `-que
 
 While running, the server provides the following RESTful api through the query endpoint:
 
-- Check if a rule exists: `GET /storage/exists/<ruleId>`
+- Check the storage's root id: `GET /root`
 
-- Check the rules in a policy: `GET /storage/rules/<policyId>`
+- Check the immediate descendants of the element specified by some path: `GET /storage/<path...>?depth=<depth>`
 
-- Get at most n rules from a policy: `GET /storage/rules/<policyId>/<n>`
+  The depth query string for this command is optional. By default, the depth is 0. Depth denotes the distance from the target element. Therefore a depth of 0 will show no descendant information.
 
-- Get all policy ids: `GET /storage/policies`
+- Get the path of an element by id: `GET /find/<id>/<path...>`.
+
+Note that all path parameters must include the root id.
+
+For example:
+
+```
+policies:
+  id: "TestPolicy"
+  alg: FirstApplicableEffect
+  rules:
+  - id: "TestRule"
+    effect: Permit
+```
+The path to TestRule is `TestPolicy/TestRule`
 
 # References
 **[XACML-V3.0]** *eXtensible Access Control Markup Language (XACML) Version 3.0.* 22 January 2013. OASIS Standard. http://docs.oasis-open.org/xacml/3.0/xacml-3.0-core-spec-os-en.html.
