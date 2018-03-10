@@ -1,6 +1,9 @@
 package pdp
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 // PolicyCombiningAlg represent abstract policy combining algorithm.
 // The algorithm defines how to evaluate child policy sets and policies
@@ -180,40 +183,31 @@ func (p *PolicySet) Delete(path []string) (Evaluable, error) {
 	return r, nil
 }
 
-// FindPolicies implements Evaluable interface and get all visible policies
-func (p *PolicySet) FindPolicies() []*Policy {
-	var out []*Policy
-	if p.hidden {
-		return out
-	}
-	for _, evaluable := range p.policies {
-		out = append(out, evaluable.FindPolicies()...)
-	}
-	return out
-}
-
-// FindPolicy implements Evaluable interface and finds visible policy by id
-func (p *PolicySet) FindPolicy(id string) (*Policy, error) {
-	if !p.hidden {
-		for _, subitem := range p.policies {
-			if out, err := subitem.FindPolicy(id); err == nil {
-				return out, nil
+// FindNext implements Iterable interface and finds next child by id
+func (p *PolicySet) FindNext(id string) (Iterable, error) {
+	for _, child := range p.policies {
+		if cid, ok := child.GetID(); ok && cid == id {
+			iter, ok := child.(Iterable)
+			if !ok {
+				return nil, fmt.Errorf("Queried element %s is not a Rule, Policy, or PolicySet", id)
 			}
+			return iter, nil
 		}
 	}
-	return nil, policyNotFound(id)
+	return nil, fmt.Errorf("Queried element %s is not found", strconv.Quote(id))
 }
 
-// FindPolicy implements Evaluable interface and finds visible rule by id
-func (p *PolicySet) FindRule(id string) (*Rule, error) {
-	if !p.hidden {
-		for _, subitem := range p.policies {
-			if out, err := subitem.FindRule(id); err == nil {
-				return out, nil
-			}
-		}
+// GetNext implements Iterable interface and get child at index
+func (p *PolicySet) GetNext(index int) Iterable {
+	if index < len(p.policies) {
+		return p.policies[index].(Iterable)
 	}
-	return nil, ruleNotFound(id)
+	return nil
+}
+
+// NextSize implements Iterable interface and get the number of children
+func (p *PolicySet) NextSize() int {
+	return len(p.policies)
 }
 
 func (p *PolicySet) getOrder() int {

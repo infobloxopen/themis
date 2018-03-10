@@ -5,7 +5,6 @@ package pdp
 import (
 	"fmt"
 	"net"
-	"strconv"
 	"strings"
 
 	"github.com/infobloxopen/go-trees/domaintree"
@@ -314,19 +313,28 @@ type Evaluable interface {
 	Append(path []string, v interface{}) (Evaluable, error)
 	Delete(path []string) (Evaluable, error)
 
-	FindPolicies() []*Policy
-	FindPolicy(string) (*Policy, error)
-	FindRule(string) (*Rule, error)
-
 	getOrder() int
 	setOrder(ord int)
 	describe() string
 }
 
-func policyNotFound(id string) error {
-	return fmt.Errorf("policy %s not found", strconv.Quote(id))
+// Iterable interface defines all PDP entities having some parent-child relationship
+// Unlike Evaluable, Iterables include Rule
+type Iterable interface {
+	GetID() (string, bool)
+	FindNext(string) (Iterable, error)
+	GetNext(int) Iterable
+	NextSize() int
+
+	describe() string
 }
 
-func ruleNotFound(id string) error {
-	return fmt.Errorf("rule %s not found", strconv.Quote(id))
+var (
+	_ Iterable = &PolicySet{}
+	_ Iterable = &Policy{}
+	_ Iterable = &Rule{}
+)
+
+func Describe(iter Iterable) string {
+	return iter.describe()
 }

@@ -7,19 +7,20 @@ import (
 	"strings"
 	"time"
 
+	"github.com/infobloxopen/themis/pdp"
 	"github.com/julienschmidt/httprouter"
 )
 
 const (
-	storageQueryCommands = `PDP Storage Query API
+	storageQueryCommands = `PDP Query API
 
-GET /storage/exists/<ruleId> [string of ruleId]
-GET /storage/rules/<policyId> [string of policyId] 
-GET /storage/rules/<policyId>/<limit> [string of policyId] [0 .. n # of rules to show]
-GET /storage/policies
+GET /root
+GET /storage/<path...>?depth=<depth> [depth is any value of range 0 .. n. defaults to 0]
+GET /find/<id>/<start path...> [ensure to end with "/" if start path is root]
 `
-	maximumRetries = 100
-	maxUint32      = 2147483647
+	maximumRetries  = 100
+	maxUint32       = 2147483647
+	defaultDepthMsg = "proceeding with depth=0"
 )
 
 func queryIndexHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -32,80 +33,85 @@ func (s *Server) listenQuery() error {
 	}
 	storageQueryRouter := httprouter.New()
 	storageQueryRouter.GET("/", queryIndexHandler)
-	storageQueryRouter.GET("/storage/exists/:ruleId",
-		func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-			ruleID := ps.ByName("ruleId")
+	storageQueryRouter.GET("/root",
+		func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 			if s.p == nil {
 				fmt.Fprint(w, "policy storage doesn't exist yet")
+			} else if id, ok := s.p.Root().GetID(); ok {
+				fmt.Fprintf(w, "policy storage has root id %s", strconv.Quote(id))
 			} else {
-				_, err := s.p.GetRule(ruleID)
-				if err == nil {
-					fmt.Fprintf(w, "rule %s exists", ruleID)
-				} else {
-					fmt.Fprint(w, err)
-				}
+				fmt.Fprint(w, "policy storage root is hidden")
 			}
 		})
-	storageQueryRouter.GET("/storage/rules/:policyId",
-		func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-			policyID := ps.ByName("policyId")
-			ruleStr, err := s.getPolicyRules(policyID, maxUint32)
+	storageQueryRouter.GET("/storage/*path",
+		func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+			if s.p == nil {
+				fmt.Fprint(w, "policy storage doesn't exist yet")
+				return
+			}
+
+			depth := uint64(0)
+			path := strings.FieldsFunc(ps.ByName("path"),
+				func(r rune) bool { return r == '/' })
+			queryOpt := req.URL.Query()
+			if depthStr, ok := queryOpt["depth"]; ok && len(depthStr) > 0 {
+				parsedDepth, err := strconv.ParseUint(depthStr[0], 10, 32)
+				if err == nil {
+					depth = parsedDepth
+				}
+			}
+
+			iter, err := s.p.GetPath(path)
 			if err != nil {
 				fmt.Fprint(w, err)
 			} else {
-				fmt.Fprint(w, ruleStr)
-			}
-		})
-	storageQueryRouter.GET("/storage/rules/:policyId/:limit",
-		func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-			policyID := ps.ByName("policyId")
-			limitStr := ps.ByName("limit")
-			limit, err := strconv.ParseUint(limitStr, 10, 32)
-			if err != nil {
-				fmt.Fprintf(w, "invalid limit %s", limitStr)
-			} else {
-				ruleStr, err := s.getPolicyRules(policyID, uint(limit))
-				if err != nil {
-					fmt.Fprint(w, err)
-				} else {
-					fmt.Fprint(w, ruleStr)
+				descs := pdp.GetDesc(iter, uint(depth))
+				descStrs := make([]string, len(descs))
+				for i, desc := range descs {
+					descStrs[i] = pdp.Describe(desc)
 				}
+				fmt.Fprintf(w, "%s has descendants <%s>",
+					pdp.Describe(iter), strings.Join(descStrs, ", "))
 			}
 		})
-	storageQueryRouter.GET("/storage/policies",
-		func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	storageQueryRouter.GET("/find/:id/*path",
+		func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 			if s.p == nil {
 				fmt.Fprint(w, "policy storage doesn't exist yet")
+				return
+			}
+
+			path := strings.FieldsFunc(ps.ByName("path"),
+				func(r rune) bool { return r == '/' })
+			id := ps.ByName("id")
+			iter, err := s.p.GetPath(path)
+			if err != nil {
+				fmt.Fprint(w, err)
+				return
+			}
+
+			tPath, target, err := pdp.PathQuery(iter, id)
+			if err != nil {
+				fmt.Fprint(w, err)
 			} else {
-				policies := s.p.GetAllPolicies()
-				pubIdx := 0
-				policyIDs := make([]string, len(policies))
-				for _, policy := range policies {
-					if policyID, ok := policy.GetID(); ok {
-						policyIDs[pubIdx] = strconv.Quote(policyID)
-						pubIdx++
-					}
+				path = append(path, tPath...)
+				for i, p := range path {
+					path[i] = strconv.Quote(p)
 				}
-				fmt.Fprint(w, strings.Join(policyIDs[:pubIdx], ", "))
+				fmt.Fprintf(w, "found %s @<%s>",
+					pdp.Describe(target), strings.Join(path, "/"))
 			}
 		})
 	var err error
 	go func() {
 		err = http.ListenAndServe(s.opts.queryEP, storageQueryRouter)
 	}()
-	if err := checkEP(s.opts.queryEP, func() error { return err }); err != nil {
-		return fmt.Errorf("Serving storage query failed: %s", err)
-	}
-	return nil
-}
-
-func checkEP(endpoint string, check func() error) error {
 	for retries := 0; retries < maximumRetries; retries-- {
 		time.Sleep(100 * time.Millisecond)
-		if err := check(); err != nil {
-			return err
+		if err != nil {
+			return fmt.Errorf("Serving storage query failed: %s", err)
 		}
-		response, err := http.Get(endpoint)
+		response, err := http.Get(s.opts.queryEP)
 		if err == nil {
 			if response.StatusCode != 200 {
 				response.Body.Close()
@@ -118,49 +124,5 @@ func checkEP(endpoint string, check func() error) error {
 			response.Body.Close()
 		}
 	}
-	return fmt.Errorf("Cannot reach endpoint %s", endpoint)
-}
-
-func (s *Server) getPolicyRules(policyID string, limit uint) (string, error) {
-	if s.p == nil {
-		return "policy storage doesn't exist yet", nil
-	}
-	policy, err := s.p.GetPolicy(policyID)
-	if err != nil {
-		return "", err
-	}
-	rules, hidden := policy.GetRules()
-	if hidden {
-		return "<hidden policy>", nil
-	}
-	var (
-		iRule   int
-		ruleStr string
-		pubIdx  uint
-		nRules  = len(rules)
-		ruleIDs = make([]string, limit)
-	)
-
-	// find the first limit-1 visible rules
-	for iRule = 0; iRule < nRules && pubIdx < limit-1; iRule++ {
-		if ruleID, ok := rules[iRule].GetID(); ok {
-			ruleIDs[pubIdx] = strconv.Quote(ruleID)
-			pubIdx++
-		}
-	}
-	// look for the last visible ruleID
-	for j := nRules - 1; j > iRule && pubIdx < limit; j++ {
-		if ruleID, ok := rules[j].GetID(); ok {
-			ruleIDs[pubIdx] = strconv.Quote(ruleID)
-			pubIdx++
-		}
-	}
-	// assert pubIdx <= limit
-	if pubIdx == limit {
-		ruleStr = strings.Join(ruleIDs[:limit-1], ", ") +
-			", ..., " + ruleIDs[limit-1]
-	} else {
-		ruleStr = strings.Join(ruleIDs[:pubIdx], ", ")
-	}
-	return ruleStr, nil
+	return fmt.Errorf("Cannot reach endpoint %s", s.opts.queryEP)
 }

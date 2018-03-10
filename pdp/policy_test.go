@@ -547,96 +547,76 @@ func TestPolicyDelete(t *testing.T) {
 	}
 }
 
-func TestPolicyFindPolicies(t *testing.T) {
+func TestPolicyFindNext(t *testing.T) {
 	// public policy test
-	p := makeSimplePolicy("test")
-	expectPolicies := []*Policy{p}
-	foundPolicies := p.FindPolicies()
-	if !reflect.DeepEqual(expectPolicies, foundPolicies) {
-		t.Errorf("Expecting policies %+v, but got %+v", expectPolicies, foundPolicies)
-	}
-
-	// hidden policy test
-	p.hidden = true
-	expectEmpty := p.FindPolicies()
-	if len(expectEmpty) > 0 {
-		t.Errorf("Expecting no policies, but got %+v", expectEmpty)
-	}
-}
-
-func TestPolicyFindPolicy(t *testing.T) {
-	// public policy test
-	expectP := makeSimplePolicy("test")
-	expectNil, err := expectP.FindPolicy("not test")
-	expectErrMsg := "policy \"not test\" not found"
-	expectError(t, expectErrMsg, expectNil, err)
-
-	gotP, err := expectP.FindPolicy("test")
-	if expectP != gotP {
-		t.Errorf("Expecting policy %+v, got policy %+v", expectP, gotP)
-	}
-	if err != nil {
-		t.Error("Got error", err)
-	}
-
-	// hidden policy test
-	expectP.hidden = true
-	expectNil, err = expectP.FindPolicy("not test")
-	expectError(t, expectErrMsg, expectNil, err)
-	expectNil, err = expectP.FindPolicy("test")
-	expectError(t, "policy \"test\" not found", expectNil, err)
-}
-
-func TestPolicyFindRule(t *testing.T) {
-	// public rule test
-	hidableRule := makeSimpleRule("second", EffectPermit)
-	p := makeSimplePolicy("test",
+	hiddenRule := makeSimpleRule("second", EffectPermit)
+	hiddenRule.hidden = true
+	expectRules := []*Rule{
 		makeSimpleRule("first", EffectPermit),
-		hidableRule,
+		hiddenRule,
 		makeSimpleRule("third", EffectPermit),
-	)
-	expectNil, err := p.FindRule("fourth")
-	expectError(t, "rule \"fourth\" not found", expectNil, err)
+	}
+	p := makeSimplePolicy("test",
+		expectRules[0],
+		expectRules[1],
+		expectRules[2])
 
-	gotR, err := p.FindRule("first")
+	firstRule, err := p.FindNext("first")
 	if err != nil {
-		t.Error("Got error", err)
-	} else if 0 != strings.Compare(gotR.id, "first") {
-		t.Errorf("Expecting rule first, got rule %s", gotR.id)
+		t.Errorf("Got error %s", err.Error())
+	} else if !reflect.DeepEqual(expectRules[0], firstRule.(*Rule)) {
+		t.Errorf("Expecting rule %+v, but got %+v", expectRules[0], firstRule.(*Rule))
 	}
 
-	gotR, err = p.FindRule("second")
+	thirdRule, err := p.FindNext("third")
 	if err != nil {
-		t.Error("Got error", err)
-	} else if 0 != strings.Compare(gotR.id, "second") {
-		t.Errorf("Expecting rule second, got rule %s", gotR.id)
+		t.Errorf("Got error %s", err.Error())
+	} else if !reflect.DeepEqual(expectRules[2], thirdRule.(*Rule)) {
+		t.Errorf("Expecting rule %+v, but got %+v", expectRules[2], thirdRule.(*Rule))
 	}
 
-	gotR, err = p.FindRule("third")
-	if err != nil {
-		t.Error("Got error", err)
-	} else if 0 != strings.Compare(gotR.id, "third") {
-		t.Errorf("Expecting rule third, got rule %s", gotR.id)
+	// hidden policy test
+	expectNil, err := p.FindNext("second")
+	expectError(t, "Queried rule \"second\" is not found", expectNil, err)
+}
+
+func TestPolicyNext(t *testing.T) {
+	// public policy test
+	expectRules := []*Rule{
+		makeSimpleRule("first", EffectPermit),
+		makeSimpleRule("second", EffectPermit),
+		makeSimpleRule("third", EffectPermit),
+	}
+	p := makeSimplePolicy("test",
+		expectRules[0],
+		expectRules[1],
+		expectRules[2])
+
+	expectThree := p.NextSize()
+	if expectThree != 3 {
+		t.Errorf("Expecting 3 children of policy, but got %d", expectThree)
 	}
 
-	// hidden rule test
-	hidableRule.hidden = true
-	expectNil, err = p.FindRule("second")
-	expectError(t, "rule \"second\" not found", expectNil, err)
-
-	// hidden policy test (hides all sub rules)
-	hidableRule.hidden = false
-	p.hidden = true
-	expectNil, err = p.FindRule("first")
-	expectError(t, "rule \"first\" not found", expectNil, err)
-	expectNil, err = p.FindRule("second")
-	expectError(t, "rule \"second\" not found", expectNil, err)
-	expectNil, err = p.FindRule("third")
-	expectError(t, "rule \"third\" not found", expectNil, err)
+	expectFirst := p.GetNext(0)
+	expectSecond := p.GetNext(1)
+	expectThird := p.GetNext(2)
+	expectNil := p.GetNext(3)
+	if expectFirst != expectRules[0] {
+		t.Errorf("Expecting policy %v+, but got %v+", expectRules[0], expectFirst)
+	}
+	if expectSecond != expectRules[1] {
+		t.Errorf("Expecting policy %v+, but got %v+", expectRules[1], expectSecond)
+	}
+	if expectThird != expectRules[2] {
+		t.Errorf("Expecting policy %v+, but got %v+", expectRules[2], expectThird)
+	}
+	if expectNil != nil {
+		t.Errorf("Expecting nil policy, but got %v+", expectNil)
+	}
 }
 
 func expectError(t *testing.T, expectErrMsg string, nilPtr interface{}, gotErr error) {
-	if !reflect.ValueOf(nilPtr).IsNil() {
+	if nilPtr != nil {
 		t.Errorf("Expecting <nil>, but got %+v", nilPtr)
 	}
 	if gotErr == nil {

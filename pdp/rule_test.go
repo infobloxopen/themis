@@ -38,3 +38,26 @@ func TestSortRulesByOrder(t *testing.T) {
 		t.Errorf("Expected rules in order \"%s\" but got \"%s\"", e, s)
 	}
 }
+
+func TestRuleFindNext(t *testing.T) {
+	// public policy test
+	rule := makeSimpleRule("test", EffectPermit)
+
+	expectNil, err := rule.FindNext("anything")
+	expectError(t, "Rules are always leaves, element \"anything\" not found", expectNil, err)
+}
+
+func TestRuleNext(t *testing.T) {
+	// public policy test
+	rule := makeSimpleRule("test", EffectPermit)
+
+	expectZero := rule.NextSize()
+	if expectZero != 0 {
+		t.Errorf("Expecting 0 children of rule, but got %d", expectZero)
+	}
+
+	expectNil := rule.GetNext(0)
+	if expectNil != nil {
+		t.Errorf("Expecting nil policy, but got %v+", expectNil)
+	}
+}

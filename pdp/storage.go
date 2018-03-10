@@ -57,28 +57,89 @@ func (s *PolicyStorage) NewTransaction(tag *uuid.UUID) (*PolicyStorageTransactio
 	return &PolicyStorageTransaction{tag: *tag, attrs: s.attrs, policies: s.policies}, nil
 }
 
-// GetAllPolicies returns all policies in storage
-func (s *PolicyStorage) GetAllPolicies() []*Policy {
-	if s.policies == nil {
-		return []*Policy{}
+// GetPath returns Policy/PolicySet at path if it exists, otherwise return nil, err
+func (s *PolicyStorage) GetPath(path []string) (Iterable, error) {
+	var (
+		err error
+		// [PolicySet, Policy, Rule] should always be iterable
+		iter = s.policies.(Iterable)
+	)
+	if rootID, ok := s.policies.GetID(); len(path) == 0 || !ok || rootID != path[0] {
+		return nil, fmt.Errorf("Invalid root id or hidden root")
 	}
-	return s.policies.FindPolicies()
+	for _, id := range path[1:] {
+		iter, err = iter.FindNext(id)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return iter, nil
 }
 
-// GetPolicy returns Policy with id in storage if possible, otherwise return nil, err
-func (s *PolicyStorage) GetPolicy(id string) (*Policy, error) {
-	if s.policies == nil {
-		return nil, fmt.Errorf("PolicyStorage has no policies")
+// GetDesc obtains all descendents of iter within depth
+func GetDesc(iter Iterable, depth uint) []Iterable {
+	nexts := []Iterable{iter}
+	out := []Iterable{}
+	for i := uint(0); i < depth && len(nexts) > 0; i++ {
+		following := []Iterable{}
+		for _, next := range nexts {
+			for j := 0; j < next.NextSize(); j++ {
+				following = append(following, next.GetNext(j))
+			}
+		}
+		nexts = following
+		out = append(out, nexts...)
 	}
-	return s.policies.FindPolicy(id)
+	return out
 }
 
-// GetRule returns Rule with id in storage if possible, otherwise return nil, err
-func (s *PolicyStorage) GetRule(id string) (*Rule, error) {
-	if s.policies == nil {
-		return nil, fmt.Errorf("PolicyStorage has no policies")
+type iterStackInfo struct {
+	Iterable
+	idx int
+}
+
+func (info *iterStackInfo) next() Iterable {
+	var out Iterable
+	if info.idx < info.NextSize() {
+		out = info.GetNext(info.idx)
+		info.idx++
 	}
-	return s.policies.FindRule(id)
+	return out
+}
+
+// PathQuery df searches for evaluable with id under subtree of root iter
+func PathQuery(iter Iterable, id string) ([]string, Iterable, error) {
+	rootID, ok := iter.GetID()
+	if ok && rootID == id {
+		return []string{}, iter, nil
+	}
+	// depth first search to avoid memory overhead
+	// assumes relatively shallow tree
+	stack := []iterStackInfo{{iter, 0}}
+	for len(stack) > 0 {
+		iter = stack[len(stack)-1].next()
+		if nil == iter {
+			// pop stack
+			stack = stack[:len(stack)-1]
+		} else {
+			// found element matching id
+			iterID, ok := iter.GetID()
+			if ok && iterID == id {
+				nOut := len(stack)
+				out := make([]string, nOut)
+				for i := 1; i < nOut; i++ {
+					out[i-1], _ = stack[i].GetID()
+				}
+				out[nOut-1] = iterID
+				return out, iter, nil
+			}
+			// push stack if possible
+			if ok {
+				stack = append(stack, iterStackInfo{iter, 0})
+			}
+		}
+	}
+	return nil, nil, fmt.Errorf("Element %s not found", strconv.Quote(id))
 }
 
 // Here set of supported update operations is defined.

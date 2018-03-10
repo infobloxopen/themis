@@ -2,7 +2,7 @@ package pdp
 
 import (
 	"fmt"
-	"strings"
+	"strconv"
 )
 
 // RuleCombiningAlg represent abstract rule combining algorithm. The algorithm
@@ -159,34 +159,27 @@ func (p *Policy) Delete(path []string) (Evaluable, error) {
 	return r, nil
 }
 
-// FindPolicies implements Evaluable interface and get all visible policies
-func (p *Policy) FindPolicies() []*Policy {
-	if p.hidden {
-		return []*Policy{}
-	}
-	return []*Policy{p}
-}
-
-// FindPolicy implements Evaluable interface and finds visible policy by id
-func (p *Policy) FindPolicy(id string) (*Policy, error) {
-	if !p.hidden {
-		if pid, ok := p.GetID(); ok && 0 == strings.Compare(pid, id) {
-			return p, nil
+// FindNext implements Iterable interface and finds next rule by id
+func (p *Policy) FindNext(id string) (Iterable, error) {
+	for _, child := range p.rules {
+		if cid, ok := child.GetID(); ok && cid == id {
+			return child, nil // all rules are iterable
 		}
 	}
-	return nil, policyNotFound(id)
+	return nil, fmt.Errorf("Queried rule %s is not found", strconv.Quote(id))
 }
 
-// FindPolicy implements Evaluable interface and finds visible rule by id
-func (p *Policy) FindRule(id string) (*Rule, error) {
-	if !p.hidden {
-		for _, rule := range p.rules {
-			if rid, ok := rule.GetID(); ok && 0 == strings.Compare(rid, id) {
-				return rule, nil
-			}
-		}
+// GetNext implements Iterable interface and get child at index
+func (p *Policy) GetNext(index int) Iterable {
+	if index < len(p.rules) {
+		return p.rules[index]
 	}
-	return nil, ruleNotFound(id)
+	return nil
+}
+
+// NextSize implements Iterable interface and get the number of children
+func (p *Policy) NextSize() int {
+	return len(p.rules)
 }
 
 func (p *Policy) getOrder() int {
