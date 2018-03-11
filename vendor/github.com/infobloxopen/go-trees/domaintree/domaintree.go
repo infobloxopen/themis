@@ -124,7 +124,25 @@ func (n *Node) WireGet(d WireDomainNameLower) (interface{}, bool, error) {
 	return n.value, n.hasValue, nil
 }
 
-// Delete removes current domain and all its subdomains if any. It returns new tree and flag if deletion indeed occurs.
+// DeleteSubdomains removes current domain and all its subdomains if any. It returns new tree and flag if deletion indeed occurs.
+func (n *Node) DeleteSubdomains(d string) (*Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
+	labels := split(d)
+	if len(labels) > 0 {
+		return n.delSubdomains(split(d))
+	}
+
+	if n.hasValue || !n.branches.IsEmpty() {
+		return &Node{}, true
+	}
+
+	return n, false
+}
+
+// Delete removes current domain only. It returns new tree and flag if deletion indeed occurs.
 func (n *Node) Delete(d string) (*Node, bool) {
 	if n == nil {
 		return nil, false
@@ -164,7 +182,7 @@ func (n *Node) enumerate(s string, ch chan Pair) {
 	}
 }
 
-func (n *Node) del(labels []dltree.DomainLabel) (*Node, bool) {
+func (n *Node) delSubdomains(labels []dltree.DomainLabel) (*Node, bool) {
 	label := labels[0]
 	if len(labels) > 1 {
 		item, ok := n.branches.RawGet(label)
@@ -173,7 +191,7 @@ func (n *Node) del(labels []dltree.DomainLabel) (*Node, bool) {
 		}
 
 		next := item.(*Node)
-		next, ok = next.del(labels[1:])
+		next, ok = next.delSubdomains(labels[1:])
 		if !ok {
 			return n, false
 		}
@@ -201,4 +219,45 @@ func (n *Node) del(labels []dltree.DomainLabel) (*Node, bool) {
 	}
 
 	return n, false
+}
+
+func (n *Node) del(labels []dltree.DomainLabel) (*Node, bool) {
+	label := labels[0]
+	item, ok := n.branches.RawGet(label)
+	if !ok {
+		return n, false
+	}
+	next := item.(*Node)
+	if len(labels) > 1 {
+		next, ok = next.del(labels[1:])
+		if !ok {
+			return n, false
+		}
+
+		if next.branches.IsEmpty() && !next.hasValue {
+			branches, _ := n.branches.RawDelete(label)
+			return &Node{
+				branches: branches,
+				hasValue: n.hasValue,
+				value:    n.value}, true
+		}
+
+		return &Node{
+			branches: n.branches.RawInsert(label, next),
+			hasValue: n.hasValue,
+			value:    n.value}, true
+	}
+
+	if next.branches.IsEmpty() {
+		branches, _ := n.branches.RawDelete(label)
+		return &Node{
+			branches: branches,
+			hasValue: n.hasValue,
+			value:    n.value}, true
+	}
+
+	return &Node{
+		branches: n.branches.RawInsert(label, &Node{branches: next.branches}),
+		hasValue: n.hasValue,
+		value:    n.value}, true
 }

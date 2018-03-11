@@ -95,20 +95,43 @@ func TestSendCRExtraMsg(t *testing.T) {
 	}
 	tapRW.WriteMsg(&msg)
 
-	testAttrHolder := &attrHolder{attrsReqDomain: []*pdp.Attribute{
-		{Id: attrNameType, Value: typeValueQuery},
-		{Id: attrNameDomainName, Value: "test.com"},
-		{Id: attrNameSourceIP, Value: "10.0.0.7"},
-	}}
-
 	io := newIORoutine(5000 * time.Millisecond)
 	tapIO := newPolicyDnstapSender(io)
+
+	testAttrHolder := &attrHolder{
+		attrsReqDomain: []*pdp.Attribute{
+			{Id: attrNameType, Value: typeValueQuery},
+			{Id: attrNameDomainName, Value: "test.com"},
+			{Id: attrNameDNSQtype, Value: "1"},
+			{Id: attrNameSourceIP, Value: "10.0.0.7"},
+		},
+		attrsEdns: []*pdp.Attribute{
+			{Id: "option", Value: "option"},
+		},
+		action: 2,
+	}
+
 	tapIO.sendCRExtraMsg(tapRW, &msg, testAttrHolder)
 
 	expectedAttrs := []*pdp.Attribute{
+		{Id: "option", Value: "option"},
+	}
+	checkCRExtraResult(t, io, &msg, expectedAttrs)
+
+	if l := len(trapper.Trap); l != 0 {
+		t.Errorf("Dnstap unexpectedly sent %d messages", l)
+		return
+	}
+
+	testAttrHolder.policyHit = true
+
+	tapIO.sendCRExtraMsg(tapRW, &msg, testAttrHolder)
+
+	expectedAttrs = []*pdp.Attribute{
 		{Id: attrNameDomainName, Value: "test.com"},
+		{Id: attrNameDNSQtype, Value: "1"},
 		{Id: attrNameSourceIP, Value: "10.0.0.7"},
-		{Id: attrNamePolicyAction, Value: "0"},
+		{Id: attrNamePolicyAction, Value: "2"},
 		{Id: attrNameType, Value: typeValueQuery},
 	}
 	checkCRExtraResult(t, io, &msg, expectedAttrs)
@@ -170,7 +193,7 @@ func checkCRMessage(t *testing.T, msg *tap.Message, orgMsg *dns.Msg) {
 		return
 	}
 	d.Packed = bin
-	expMsg := d.ToClientResponse()
+	expMsg, _ := d.ToClientResponse()
 	if !dtest.MsgEqual(expMsg, msg) {
 		t.Errorf("Unexpected message: expected: %v\nactual: %v", expMsg, msg)
 	}

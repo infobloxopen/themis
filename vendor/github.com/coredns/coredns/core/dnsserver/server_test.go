@@ -20,11 +20,11 @@ func (tp testPlugin) Name() string { return "testplugin" }
 
 func testConfig(transport string, p plugin.Handler) *Config {
 	c := &Config{
-		Zone:       "example.com.",
-		Transport:  transport,
-		ListenHost: "127.0.0.1",
-		Port:       "53",
-		Debug:      false,
+		Zone:        "example.com.",
+		Transport:   transport,
+		ListenHosts: []string{"127.0.0.1"},
+		Port:        "53",
+		Debug:       false,
 	}
 
 	c.AddPlugin(func(next plugin.Handler) plugin.Handler { return p })
@@ -45,6 +45,21 @@ func TestNewServer(t *testing.T) {
 	_, err = NewServerTLS("127.0.0.1:53", []*Config{testConfig("tls", testPlugin{})})
 	if err != nil {
 		t.Errorf("Expected no error for NewServerTLS, got %s", err)
+	}
+}
+
+func TestIncrementDepthAndCheck(t *testing.T) {
+	ctx := context.Background()
+	var err error
+	for i := 0; i <= maxreentries; i++ {
+		ctx, err = incrementDepthAndCheck(ctx)
+		if err != nil {
+			t.Errorf("Expected no error for depthCheck (i=%v), got %s", i, err)
+		}
+	}
+	_, err = incrementDepthAndCheck(ctx)
+	if err == nil {
+		t.Errorf("Expected error for depthCheck (i=%v)", maxreentries+1)
 	}
 }
 

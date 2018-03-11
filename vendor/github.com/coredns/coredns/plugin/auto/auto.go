@@ -8,7 +8,7 @@ import (
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/file"
 	"github.com/coredns/coredns/plugin/metrics"
-	"github.com/coredns/coredns/plugin/proxy"
+	"github.com/coredns/coredns/plugin/pkg/upstream"
 	"github.com/coredns/coredns/request"
 
 	"github.com/miekg/dns"
@@ -33,20 +33,18 @@ type (
 		// In the future this should be something like ZoneMeta that contains all this stuff.
 		transferTo []string
 		noReload   bool
-		proxy      proxy.Proxy // Proxy for looking up names during the resolution process
+		upstream   upstream.Upstream // Upstream for looking up names during the resolution process.
 
 		duration time.Duration
 	}
 )
 
-// ServeDNS implements the plugin.Handle interface.
+// ServeDNS implements the plugin.Handler interface.
 func (a Auto) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
-	state := request.Request{W: w, Req: r}
+	state := request.Request{W: w, Req: r, Context: ctx}
 	qname := state.Name()
 
-	// TODO(miek): match the qname better in the map
-
-	// Precheck with the origins, i.e. are we allowed to looks here.
+	// Precheck with the origins, i.e. are we allowed to look here?
 	zone := plugin.Zones(a.Zones.Origins()).Matches(qname)
 	if zone == "" {
 		return plugin.NextOrFailure(a.Name(), a.Next, ctx, w, r)

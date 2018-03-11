@@ -94,6 +94,7 @@ func TestPolicy(t *testing.T) {
 			responseIP: &pdp.Response{Effect: pdp.Response_PERMIT},
 			status:     dns.RcodeSuccess,
 			err:        nil,
+			attrs:      []*pdp.Attribute{},
 		},
 		{
 			query:     "test.com.",
@@ -255,6 +256,7 @@ func TestPolicy(t *testing.T) {
 			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
 			status:    dns.RcodeSuccess,
 			err:       nil,
+			attrs:     []*pdp.Attribute{},
 		},
 		{
 			query:     "test.org.",
@@ -312,6 +314,7 @@ func TestPolicy(t *testing.T) {
 			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
 			status:    dns.RcodeNameError,
 			err:       nil,
+			attrs:     []*pdp.Attribute{},
 		},
 		{
 			query:      "google.com.",
@@ -537,7 +540,8 @@ func TestEdns(t *testing.T) {
 	if err := p.addEDNS0Map("0xfffa", AttrGroupID, "hex", "string", "32", "16", "32"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
-	if err := p.addEDNS0Map("0xfffb", attrNameSourceIP, "address", "address", "0", "0", "0"); err != nil {
+	AttrClientIP := "client_ip"
+	if err := p.addEDNS0Map("0xfffb", AttrClientIP, "address", "address", "0", "0", "0"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
 	}
 	AttrClientName := "client_name"
@@ -603,16 +607,16 @@ func TestEdns(t *testing.T) {
 			},
 		},
 		{
-			name: "Test option 'source_ip' handled as address",
+			name: "Test option handled as address",
 			code: 0xfffb,
 			data: "aca80001", // 172.168.0.1 in hex
 			ip:   "192.168.0.4",
 			attr: map[string]*pdp.Attribute{
-				attrNameType:          {Id: attrNameType, Type: "string", Value: "query"},
-				attrNameDNSQtype:      {Id: attrNameDNSQtype, Type: "string", Value: "1"},
-				attrNameDomainName:    {Id: attrNameDomainName, Type: "domain", Value: "test.com"},
-				attrNameSourceIP:      {Id: attrNameSourceIP, Type: "address", Value: "172.168.0.1"},
-				attrNameProxySourceIP: {Id: attrNameProxySourceIP, Type: attrNameAddress, Value: "192.168.0.4"},
+				attrNameType:       {Id: attrNameType, Type: "string", Value: "query"},
+				attrNameDNSQtype:   {Id: attrNameDNSQtype, Type: "string", Value: "1"},
+				attrNameDomainName: {Id: attrNameDomainName, Type: "domain", Value: "test.com"},
+				attrNameSourceIP:   {Id: attrNameSourceIP, Type: "address", Value: "192.168.0.4"},
+				AttrClientIP:       {Id: AttrClientIP, Type: "address", Value: "172.168.0.1"},
 			},
 		},
 		{
@@ -694,8 +698,8 @@ func TestEdns(t *testing.T) {
 
 	for _, test := range tests {
 		req := makeRequestWithEDNS0(test.code, test.data, test.nonlocal)
-		ah := newAttrHolder("test.com", 1, p.transfer)
-		p.getAttrsFromEDNS0(ah, req, test.ip)
+		ah := newAttrHolder("test.com", 1, test.ip, p.transfer)
+		p.getAttrsFromEDNS0(ah, req)
 		mapAttr := make(map[string]*pdp.Attribute)
 		for _, a := range ah.attrsReqDomain {
 			mapAttr[a.Id] = a

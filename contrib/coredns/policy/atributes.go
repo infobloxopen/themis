@@ -12,7 +12,6 @@ const (
 	typeValueQuery    = "query"
 	typeValueResponse = "response"
 
-	attrNameProxySourceIP = "proxy_source_ip"
-	attrNameDNSQtype      = "dns_qtype"
-	attrNamePolicyAction  = "policy_action"
+	attrNameDNSQtype     = "dns_qtype"
+	attrNamePolicyAction = "policy_action"
 )

@@ -32,7 +32,7 @@ func (s *PolicyStorage) Root() Evaluable {
 // doesn't have any tag, no tag matches the storage and vice versa nil tag
 // doesn't match any storage.
 func (s *PolicyStorage) CheckTag(tag *uuid.UUID) error {
-	if s.tag == nil {
+	if s == nil || s.tag == nil {
 		return newUntaggedPolicyModificationError()
 	}
 

@@ -1,8 +1,8 @@
 package server
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 
 	pb "github.com/infobloxopen/themis/pdp-control"
 	"github.com/infobloxopen/themis/pdp/jcon"

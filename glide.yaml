@@ -1,6 +1,6 @@
 package: github.com/infobloxopen/themis
 import:
-- package: github.com/Sirupsen/logrus
+- package: github.com/sirupsen/logrus
 - package: github.com/coredns/coredns
   subpackages:
   - core/dnsserver
@@ -17,7 +17,6 @@ import:
   subpackages:
   - go/otgrpc
 - package: github.com/mholt/caddy
-  version: e2997ac974d194c0fef32a2c98d07a84237876fd
 - package: github.com/miekg/dns
   subpackages:
   - internal/socket

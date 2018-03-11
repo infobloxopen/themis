@@ -20,9 +20,9 @@ import (
 	"github.com/infobloxopen/themis/pdp/ast"
 	"github.com/infobloxopen/themis/pdp/jcon"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	ot "github.com/opentracing/opentracing-go"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 

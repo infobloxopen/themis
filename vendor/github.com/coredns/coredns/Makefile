@@ -12,7 +12,7 @@ coredns: $(CHECKS)
 	CGO_ENABLED=0 $(SYSTEM) go build $(VERBOSE) -ldflags="-s -w -X github.com/coredns/coredns/coremain.GitCommit=$(GITCOMMIT)" -o $(BINARY)
 
 .PHONY: check
-check: linter core/zplugin.go core/dnsserver/zdirectives.go godeps
+check: linter goimports core/zplugin.go core/dnsserver/zdirectives.go godeps
 
 .PHONY: test
 test: check
@@ -35,11 +35,13 @@ godeps:
 	go get -u github.com/prometheus/client_golang/prometheus
 	go get -u golang.org/x/net/context
 	go get -u golang.org/x/text
-	(cd $(GOPATH)/src/github.com/mholt/caddy              && git checkout -q v0.10.10)
+	(cd $(GOPATH)/src/github.com/mholt/caddy              && git checkout -q v0.10.11)
 	(cd $(GOPATH)/src/github.com/miekg/dns                && git checkout -q v1.0.4)
 	(cd $(GOPATH)/src/github.com/prometheus/client_golang && git checkout -q v0.8.0)
-	(cd $(GOPATH)/src/golang.org/x/net                    && git checkout -q release-branch.go1.9)
-	(cd $(GOPATH)/src/golang.org/x/text                   && git checkout -q e19ae1496984b1c655b8044a65c0300a3c878dd3)
+	(cd $(GOPATH)/src/golang.org/x/net                    && git checkout -q release-branch.go1.10)
+	(cd $(GOPATH)/src/golang.org/x/text                   && git checkout -q v0.3.0)
+	# github.com/flynn/go-shlex is required by mholt/caddy at the moment
+	go get -u github.com/flynn/go-shlex
 
 .PHONY: travis
 travis: check
@@ -78,7 +80,11 @@ gen:
 linter:
 	go get -u github.com/alecthomas/gometalinter
 	gometalinter --install golint
-	gometalinter --deadline=1m --disable-all --enable=gofmt --enable=golint --enable=vet --exclude=^vendor/ --exclude=^pb/ ./...
+	gometalinter --deadline=2m --disable-all --enable=golint --enable=vet --vendor --exclude=^pb/ ./...
+
+.PHONY: goimports
+goimports:
+	( gometalinter --deadline=2m --disable-all --enable=goimports --vendor --exclude=^pb/ ./... || true )
 
 .PHONY: clean
 clean:

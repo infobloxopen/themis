@@ -25,7 +25,7 @@ func init() {
 func setup(c *caddy.Controller) error {
 	f, err := parseForward(c)
 	if err != nil {
-		return plugin.Error("foward", err)
+		return plugin.Error("forward", err)
 	}
 	if f.Len() > max {
 		return plugin.Error("forward", fmt.Errorf("more than %d TOs configured: %d", max, f.Len()))
@@ -62,25 +62,14 @@ func setup(c *caddy.Controller) error {
 
 // OnStartup starts a goroutines for all proxies.
 func (f *Forward) OnStartup() (err error) {
-	if f.hcInterval == 0 {
-		for _, p := range f.proxies {
-			p.host.fails = 0
-		}
-		return nil
-	}
-
 	for _, p := range f.proxies {
-		go p.healthCheck()
+		p.start(f.hcInterval)
 	}
 	return nil
 }
 
 // OnShutdown stops all configured proxies.
 func (f *Forward) OnShutdown() error {
-	if f.hcInterval == 0 {
-		return nil
-	}
-
 	for _, p := range f.proxies {
 		p.close()
 	}
@@ -88,16 +77,20 @@ func (f *Forward) OnShutdown() error {
 }
 
 // Close is a synonym for OnShutdown().
-func (f *Forward) Close() {
-	f.OnShutdown()
-}
+func (f *Forward) Close() { f.OnShutdown() }
 
 func parseForward(c *caddy.Controller) (*Forward, error) {
 	f := New()
 
 	protocols := map[int]int{}
 
+	i := 0
 	for c.Next() {
+		if i > 0 {
+			return nil, plugin.ErrOnce
+		}
+		i++
+
 		if !c.Args(&f.from) {
 			return f, c.ArgErr()
 		}
@@ -140,8 +133,8 @@ func parseForward(c *caddy.Controller) (*Forward, error) {
 			}
 
 			// We can't set tlsConfig here, because we haven't parsed it yet.
-			// We set it below at the end of parseBlock.
-			p := NewProxy(h)
+			// We set it below at the end of parseBlock, use nil now.
+			p := NewProxy(h, nil /* no TLS */)
 			f.proxies = append(f.proxies, p)
 		}
 
@@ -200,17 +193,11 @@ func parseBlock(c *caddy.Controller, f *Forward) error {
 			return fmt.Errorf("health_check can't be negative: %d", dur)
 		}
 		f.hcInterval = dur
-		for i := range f.proxies {
-			f.proxies[i].hcInterval = dur
-		}
 	case "force_tcp":
 		if c.NextArg() {
 			return c.ArgErr()
 		}
 		f.forceTCP = true
-		for i := range f.proxies {
-			f.proxies[i].forceTCP = true
-		}
 	case "tls":
 		args := c.RemainingArgs()
 		if len(args) != 3 {

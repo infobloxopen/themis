@@ -28,17 +28,20 @@ type attrHolder struct {
 	attrsRespRespip []*pdp.Attribute
 	action          byte
 	redirect        string
+	policyHit       bool
+	attrsEdns       []*pdp.Attribute
 }
 
-func newAttrHolder(qName string, qType uint16, transfer map[string]struct{}) *attrHolder {
+func newAttrHolder(qName string, qType uint16, sourceIP string, transfer map[string]struct{}) *attrHolder {
 	ret := &attrHolder{
 		transfer:       transfer,
-		attrsReqDomain: make([]*pdp.Attribute, 3, 8),
+		attrsReqDomain: make([]*pdp.Attribute, 4, 8),
 		action:         typeInvalid,
 	}
 	ret.attrsReqDomain[0] = &pdp.Attribute{Id: attrNameType, Type: "string", Value: typeValueQuery}
 	ret.attrsReqDomain[1] = &pdp.Attribute{Id: attrNameDomainName, Type: "domain", Value: strings.TrimRight(qName, ".")}
 	ret.attrsReqDomain[2] = &pdp.Attribute{Id: attrNameDNSQtype, Type: "string", Value: strconv.FormatUint(uint64(qType), 16)}
+	ret.attrsReqDomain[3] = &pdp.Attribute{Id: attrNameSourceIP, Type: "address", Value: sourceIP}
 	return ret
 }
 
@@ -96,6 +99,9 @@ func (ah *attrHolder) addResponse(r *pdp.Response, respip bool) {
 }
 
 func (ah *attrHolder) convertAttrs() []*pb.DnstapAttribute {
+	if !ah.policyHit {
+		return ah.convertAttrsReq()
+	}
 	lenAttrsReqDomain := len(ah.attrsReqDomain)
 	lenAttrsRespDomain := len(ah.attrsRespDomain)
 	lenAttrsReqRespip := len(ah.attrsReqRespip)
@@ -140,6 +146,17 @@ func (ah *attrHolder) convertAttrs() []*pb.DnstapAttribute {
 		out[i] = &pb.DnstapAttribute{Id: attrNameType, Value: typeValueResponse}
 	} else {
 		out[i] = &pb.DnstapAttribute{Id: attrNameType, Value: typeValueQuery}
+	}
+	return out
+}
+
+func (ah *attrHolder) convertAttrsReq() []*pb.DnstapAttribute {
+	out := make([]*pb.DnstapAttribute, len(ah.attrsEdns))
+	for i, item := range ah.attrsEdns {
+		out[i] = &pb.DnstapAttribute{
+			Id:    item.Id,
+			Value: item.Value,
+		}
 	}
 	return out
 }

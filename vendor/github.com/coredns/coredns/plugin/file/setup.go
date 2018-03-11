@@ -6,9 +6,8 @@ import (
 
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
-	"github.com/coredns/coredns/plugin/pkg/dnsutil"
 	"github.com/coredns/coredns/plugin/pkg/parse"
-	"github.com/coredns/coredns/plugin/proxy"
+	"github.com/coredns/coredns/plugin/pkg/upstream"
 
 	"github.com/mholt/caddy"
 )
@@ -38,6 +37,10 @@ func setup(c *caddy.Controller) error {
 			})
 			return nil
 		})
+	}
+	for _, n := range zones.Names {
+		z := zones.Z[n]
+		c.OnShutdown(z.OnShutdown)
 	}
 
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
@@ -90,7 +93,7 @@ func fileParse(c *caddy.Controller) (Zones, error) {
 		}
 
 		noReload := false
-		prxy := proxy.Proxy{}
+		upstr := upstream.Upstream{}
 		t := []string{}
 		var e error
 
@@ -107,14 +110,11 @@ func fileParse(c *caddy.Controller) (Zones, error) {
 
 			case "upstream":
 				args := c.RemainingArgs()
-				if len(args) == 0 {
-					return Zones{}, c.ArgErr()
-				}
-				ups, err := dnsutil.ParseHostPortOrFile(args...)
+				upstr, err = upstream.NewUpstream(args)
 				if err != nil {
 					return Zones{}, err
 				}
-				prxy = proxy.NewLookup(ups)
+
 			default:
 				return Zones{}, c.Errf("unknown property '%s'", c.Val())
 			}
@@ -124,7 +124,7 @@ func fileParse(c *caddy.Controller) (Zones, error) {
 					z[origin].TransferTo = append(z[origin].TransferTo, t...)
 				}
 				z[origin].NoReload = noReload
-				z[origin].Proxy = prxy
+				z[origin].Upstream = upstr
 			}
 		}
 	}

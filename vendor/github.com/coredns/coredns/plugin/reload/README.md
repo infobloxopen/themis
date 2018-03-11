@@ -26,6 +26,8 @@ reloads are graceful, and can be disabled by setting the jitter to `0s`.
 
 Jitter is re-calculated whenever the Corefile is reloaded.
 
+This plugin can only be used once per Server Block.
+
 ## Syntax
 
 ~~~ txt
@@ -42,7 +44,7 @@ reload [INTERVAL] [JITTER]
 
 Check with the default intervals:
 
-~~~ corefile
+~~~ txt
 . {
     reload
     erratic
@@ -51,7 +53,7 @@ Check with the default intervals:
 
 Check every 10 seconds (jitter is automatically set to 10 / 2 = 5 in this case):
 
-~~~ corefile
+~~~ txt
 . {
     reload 10s
     erratic
