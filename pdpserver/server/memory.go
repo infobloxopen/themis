@@ -1,9 +1,14 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
+	"math"
+	"os"
+	"path"
 	"runtime"
 	"runtime/debug"
+	"runtime/pprof"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -199,4 +204,187 @@ func fmtMemSize(size uint64) string {
 
 	s /= 1024
 	return fmt.Sprintf("%.2f TB", s)
+}
+
+type memStatsLogEntry struct {
+	Timestamp int64
+	MemStats  runtime.MemStats
+}
+
+func (s *Server) memStatsLogging(done <-chan struct{}) {
+	if s.opts.memStatsLogInterval < 0 {
+		return
+	}
+
+	f, err := os.Create(s.opts.memStatsLogPath)
+	if err != nil {
+		s.opts.logger.WithError(err).Fatal("Failed to create file for runtime.MemStats logs")
+	}
+	defer f.Close()
+
+	out := json.NewEncoder(f)
+
+	var e memStatsLogEntry
+	m := &e.MemStats
+
+	if s.opts.memStatsLogInterval > 0 {
+		ticker := time.NewTicker(s.opts.memStatsLogInterval)
+		for {
+			select {
+			case <-done:
+				ticker.Stop()
+				return
+
+			case now := <-ticker.C:
+				e.Timestamp = now.UnixNano()
+				runtime.ReadMemStats(m)
+
+				out.Encode(e)
+				f.Sync()
+			}
+		}
+	} else {
+		e.Timestamp = time.Now().UnixNano()
+		runtime.ReadMemStats(m)
+
+		minE := e
+		maxE := e
+		sameE := true
+
+		var prevNumGC uint32 = 0
+
+		ticker := time.NewTicker(memStatsCheckInterval)
+		for {
+			select {
+			case <-done:
+				ticker.Stop()
+				return
+
+			case now := <-ticker.C:
+				e.Timestamp = now.UnixNano()
+				runtime.ReadMemStats(m)
+
+				if prevNumGC != e.MemStats.NumGC {
+					if sameE {
+						out.Encode(minE)
+					} else if minE.Timestamp < maxE.Timestamp {
+						out.Encode(minE)
+						out.Encode(maxE)
+					} else {
+						out.Encode(maxE)
+						out.Encode(minE)
+					}
+
+					f.Sync()
+
+					minE = e
+					maxE = e
+					sameE = true
+				} else if e.MemStats.Alloc < minE.MemStats.Alloc && e.MemStats.Alloc >= maxE.MemStats.Alloc {
+					minE = e
+					maxE = e
+					sameE = true
+				} else if e.MemStats.Alloc < minE.MemStats.Alloc {
+					minE = e
+					sameE = false
+				} else if e.MemStats.Alloc >= maxE.MemStats.Alloc {
+					maxE = e
+					sameE = false
+				}
+
+				prevNumGC = e.MemStats.NumGC
+			}
+		}
+	}
+}
+
+func (s *Server) memProfCleanup() {
+	if err := os.RemoveAll(s.opts.memProfDumpPath); err != nil {
+		s.opts.logger.WithError(err).Warn("Failed to cleanup directory for memory profiles")
+	}
+
+	if err := os.MkdirAll(s.opts.memProfDumpPath, 0755); err != nil {
+		s.opts.logger.WithError(err).Fatal("Failed to create directory for memory profiles")
+	}
+}
+
+func (s *Server) memProfDump(numGC uint32) {
+	name := fmt.Sprintf("mem-%09d.pprof", numGC)
+	f, err := os.Create(path.Join(s.opts.memProfDumpPath, name))
+	if err != nil {
+		s.opts.logger.WithFields(log.Fields{
+			"numGC": numGC,
+			"err":   err,
+		}).Debug("Failed to create file for memory profile dump. Skipping...")
+		return
+	}
+	defer f.Close()
+
+	if err := pprof.WriteHeapProfile(f); err != nil {
+		s.opts.logger.WithFields(log.Fields{
+			"name":  name,
+			"numGC": numGC,
+			"err":   err,
+		}).Debug("Falied to dump memory profile. Skipping...")
+	}
+}
+
+func (s *Server) memProfBaseDump() {
+	if s.memProfBaseDumpDone == nil {
+		return
+	}
+
+	defer close(s.memProfBaseDumpDone)
+	s.memProfCleanup()
+
+	m := new(runtime.MemStats)
+	runtime.ReadMemStats(m)
+
+	s.memProfDump(m.NumGC)
+	s.memProfBaseDumpDone <- m.NumGC
+}
+
+func (s *Server) memProfDumping(done <-chan struct{}) {
+	if s.opts.memProfNumGC == 0 {
+		return
+	}
+
+	m := new(runtime.MemStats)
+	var (
+		startNumGC uint32
+		lastNumGC  uint32 = math.MaxUint32
+	)
+
+	if s.memProfBaseDumpDone == nil {
+		s.memProfCleanup()
+	} else {
+		select {
+		case <-done:
+			return
+
+		case n, ok := <-s.memProfBaseDumpDone:
+			if !ok {
+				return
+			}
+
+			startNumGC = n
+		}
+	}
+
+	ticker := time.NewTicker(memStatsCheckInterval)
+	for {
+		select {
+		case <-done:
+			ticker.Stop()
+			return
+
+		case <-ticker.C:
+			runtime.ReadMemStats(m)
+			if (m.NumGC-startNumGC)%s.opts.memProfNumGC == 0 && lastNumGC != m.NumGC {
+				s.memProfDump(m.NumGC)
+
+				lastNumGC = m.NumGC
+			}
+		}
+	}
 }
