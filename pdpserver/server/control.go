@@ -136,8 +136,6 @@ func (s *Server) Upload(stream pb.PDPControl_UploadServer) error {
 		}
 	}
 
-	s.checkMemory(s.opts.memLimits)
-
 	return err
 }
 
@@ -161,8 +159,6 @@ func (s *Server) Apply(ctx context.Context, in *pb.Update) (*pb.Response, error)
 	} else {
 		res, err = s.applyContent(in.Id, req)
 	}
-
-	s.checkMemory(s.opts.memLimits)
 
 	return res, err
 }

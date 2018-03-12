@@ -458,6 +458,8 @@ func (s *Server) Serve() error {
 	pbs.RegisterPDPServer(s.requests.proto, s)
 	defer s.requests.proto.Stop()
 
+	go s.memoryChecker()
+
 	if s.p != nil {
 		// We already have policy info applied; supplied from local files,
 		// pointed to by CLI options.
