@@ -76,21 +76,31 @@ func (s *PolicyStorage) GetPath(path []string) (Iterable, error) {
 	return iter, nil
 }
 
-// GetDesc obtains all descendents of iter within depth
-func GetDesc(iter Iterable, depth uint) []Iterable {
-	nexts := []Iterable{iter}
-	out := []Iterable{}
-	for i := uint(0); i < depth && len(nexts) > 0; i++ {
-		following := []Iterable{}
-		for _, next := range nexts {
-			for j := 0; j < next.NextSize(); j++ {
-				following = append(following, next.GetNext(j))
+// GetSubtree obtains subtree of iter within depth in JSON format
+func GetSubtree(iter Iterable, depth uint) string {
+	if id, ok := iter.GetID(); ok {
+		idInfo := fmt.Sprintf("\"id\":%s", strconv.Quote(id))
+		if depth > 0 {
+			nChild := iter.NextSize()
+			cIdx := 0
+			children := make([]string, nChild)
+			for i := 0; i < nChild; i++ {
+				child := GetSubtree(iter.GetNext(i), depth-1)
+				if len(child) > 0 {
+					children[cIdx] = child
+					cIdx++
+				}
 			}
+			if cIdx > 0 {
+				return fmt.Sprintf("{%s,\"elems\":[%s]}", idInfo,
+					strings.Join(children[:cIdx], ","))
+			}
+		} else if iter.NextSize() > 0 {
+			return fmt.Sprintf("{%s,\"elems\":\"...\"}", idInfo)
 		}
-		nexts = following
-		out = append(out, nexts...)
+		return fmt.Sprintf("{%s}", idInfo)
 	}
-	return out
+	return ""
 }
 
 type iterStackInfo struct {

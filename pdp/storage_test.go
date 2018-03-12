@@ -3,6 +3,7 @@ package pdp
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -79,7 +80,7 @@ func TestStorageGetPath(t *testing.T) {
 	expectError(t, "Invalid root id or hidden root", expectNil, err)
 }
 
-func TestGetDescs(t *testing.T) {
+func TestGetSubtree(t *testing.T) {
 	targetRule := &Rule{id: "permit", effect: EffectPermit}
 	targetRule2 := &Rule{id: "permit2", effect: EffectPermit}
 	targetRule3 := &Rule{id: "permit3", effect: EffectPermit}
@@ -100,42 +101,49 @@ func TestGetDescs(t *testing.T) {
 		policies:  []Evaluable{targetPolicy, targetPolicySet},
 		algorithm: firstApplicableEffectPCA{}}
 
-	expectedRes := []Iterable{}
-	expectRoot := GetDesc(root, 0)
-	if !reflect.DeepEqual(expectedRes, expectRoot) {
-		t.Errorf("Expecting descendants %v, got %v", expectedRes, expectRoot)
+	expectedRes := "{\"id\":\"test\",\"elems\":\"...\"}"
+	expectRoot := GetSubtree(root, 0)
+	if strings.Compare(expectedRes, expectRoot) != 0 {
+		t.Errorf("Expecting json %v, got %v", expectedRes, expectRoot)
 	}
 
-	expectedRes = []Iterable{}
-	expectPolicy := GetDesc(targetPolicy, 0)
-	if !reflect.DeepEqual(expectedRes, expectRoot) {
-		t.Errorf("Expecting descendants %v, got %v", expectedRes, expectPolicy)
+	expectedRes = "{\"id\":\"first\",\"elems\":\"...\"}"
+	expectPolicy := GetSubtree(targetPolicy, 0)
+	if strings.Compare(expectedRes, expectPolicy) != 0 {
+		t.Errorf("Expecting json %v, got %v", expectedRes, expectPolicy)
 	}
 
-	expectedRes = []Iterable{}
-	expectRule := GetDesc(targetRule, 0)
-	if !reflect.DeepEqual(expectedRes, expectRoot) {
-		t.Errorf("Expecting descendants %v, got %v", expectedRes, expectRule)
+	expectedRes = "{\"id\":\"permit\"}"
+	expectRule := GetSubtree(targetRule, 0)
+	if strings.Compare(expectedRes, expectRule) != 0 {
+		t.Errorf("Expecting json %v, got %v", expectedRes, expectRule)
 	}
 
-	expectedRes = []Iterable{targetPolicy, targetPolicySet}
-	expectTopTwo := GetDesc(root, 1)
-	if !reflect.DeepEqual(expectedRes, expectTopTwo) {
-		t.Errorf("Expecting descendants %v, got %v", expectedRes, expectTopTwo)
+	expectedRes = "{\"id\":\"test\",\"elems\":" +
+		"[{\"id\":\"first\",\"elems\":\"...\"},{\"id\":\"second\",\"elems\":\"...\"}]}"
+	expectTopTwo := GetSubtree(root, 1)
+	if strings.Compare(expectedRes, expectTopTwo) != 0 {
+		t.Errorf("Expecting json %v, got %v", expectedRes, expectTopTwo)
 	}
 
-	expectedRes = []Iterable{targetPolicy, targetPolicySet,
-		targetRule, targetRule2, targetPolicy2}
-	expectTopFive := GetDesc(root, 2)
-	if !reflect.DeepEqual(expectedRes, expectTopFive) {
-		t.Errorf("Expecting descendants %v+, got %v+", expectedRes, expectTopFive)
+	expectedRes = "{\"id\":\"test\",\"elems\":" +
+		"[{\"id\":\"first\",\"elems\":" +
+		"[{\"id\":\"permit\"},{\"id\":\"permit2\"}]" +
+		"},{\"id\":\"second\",\"elems\":" +
+		"[{\"id\":\"third\",\"elems\":\"...\"}]}]}"
+	expectTopFive := GetSubtree(root, 2)
+	if strings.Compare(expectedRes, expectTopFive) != 0 {
+		t.Errorf("Expecting json %v+, got %v+", expectedRes, expectTopFive)
 	}
 
-	expectedRes = []Iterable{targetPolicy, targetPolicySet,
-		targetRule, targetRule2, targetPolicy2, targetRule3}
-	expectAll := GetDesc(root, 5)
-	if !reflect.DeepEqual(expectedRes, expectAll) {
-		t.Errorf("Expecting descendants %v+, got %v+", expectedRes, expectAll)
+	expectedRes = "{\"id\":\"test\",\"elems\":" +
+		"[{\"id\":\"first\",\"elems\":" +
+		"[{\"id\":\"permit\"},{\"id\":\"permit2\"}]" +
+		"},{\"id\":\"second\",\"elems\":" +
+		"[{\"id\":\"third\",\"elems\":[{\"id\":\"permit3\"}]}]}]}"
+	expectAll := GetSubtree(root, 5)
+	if strings.Compare(expectedRes, expectAll) != 0 {
+		t.Errorf("Expecting json %v+, got %v+", expectedRes, expectAll)
 	}
 }
 

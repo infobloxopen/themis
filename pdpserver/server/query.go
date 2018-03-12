@@ -1,6 +1,8 @@
 package server
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -65,13 +67,15 @@ func (s *Server) listenQuery() error {
 			if err != nil {
 				fmt.Fprint(w, err)
 			} else {
-				descs := pdp.GetDesc(iter, uint(depth))
-				descStrs := make([]string, len(descs))
-				for i, desc := range descs {
-					descStrs[i] = pdp.Describe(desc)
+				treeJson := pdp.GetSubtree(iter, uint(depth))
+				// beautify treeJson
+				var buf bytes.Buffer
+				err := json.Indent(&buf, []byte(treeJson), "", "    ")
+				if err != nil {
+					fmt.Fprintf(w, "failed to beautify with error %s", err.Error())
+				} else {
+					fmt.Fprint(w, string(buf.Bytes()))
 				}
-				fmt.Fprintf(w, "%s has descendants <%s>",
-					pdp.Describe(iter), strings.Join(descStrs, ", "))
 			}
 		})
 	storageQueryRouter.GET("/find/:id/*path",
@@ -90,7 +94,7 @@ func (s *Server) listenQuery() error {
 				return
 			}
 
-			tPath, target, err := pdp.PathQuery(iter, id)
+			tPath, _, err := pdp.PathQuery(iter, id)
 			if err != nil {
 				fmt.Fprint(w, err)
 			} else {
@@ -98,8 +102,7 @@ func (s *Server) listenQuery() error {
 				for i, p := range path {
 					path[i] = strconv.Quote(p)
 				}
-				fmt.Fprintf(w, "found %s @<%s>",
-					pdp.Describe(target), strings.Join(path, "/"))
+				fmt.Fprintf(w, "found %s @<%s>", id, strings.Join(path, "/"))
 			}
 		})
 	var err error
