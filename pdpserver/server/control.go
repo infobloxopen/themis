@@ -2,7 +2,6 @@ package server
 
 import (
 	"io"
-	"runtime/debug"
 
 	"github.com/google/uuid"
 	"golang.org/x/net/context"
@@ -137,7 +136,6 @@ func (s *Server) Upload(stream pb.PDPControl_UploadServer) error {
 		}
 	}
 
-	debug.FreeOSMemory()
 	s.checkMemory(s.opts.memLimits)
 
 	return err
@@ -164,7 +162,6 @@ func (s *Server) Apply(ctx context.Context, in *pb.Update) (*pb.Response, error)
 		res, err = s.applyContent(in.Id, req)
 	}
 
-	debug.FreeOSMemory()
 	s.checkMemory(s.opts.memLimits)
 
 	return res, err
