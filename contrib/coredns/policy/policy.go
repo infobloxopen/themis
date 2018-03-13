@@ -582,15 +582,27 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	// turn off default Cq and Cr dnstap messages
 	resetCqCr(ctx)
 
+	var ah *attrHolder
 	debugQuery := p.decodeDebugMsg(r)
 	qName, qType := getNameAndType(r)
 	for _, s := range p.passthrough {
 		if strings.HasSuffix(qName, s) {
-			return plugin.NextOrFailure(p.Name(), p.next, ctx, w, r)
+			responseWriter := new(writer)
+			_, err = plugin.NextOrFailure(p.Name(), p.next, ctx, responseWriter, r)
+			r = responseWriter.Msg
+			status = r.Rcode
+			if debugQuery {
+				hdr := dns.RR_Header{Name: r.Question[0].Name + p.debugSuffix,
+					Rrtype: dns.TypeTXT, Class: dns.ClassCHAOS, Ttl: 0}
+				r.Answer = []dns.RR{&dns.TXT{Hdr: hdr, Txt: []string{"action:passthrough"}}}
+				r.Ns = nil
+				status = dns.RcodeSuccess
+			}
+			goto Exit
 		}
 	}
-	ip := getRemoteIP(w)
-	ah := newAttrHolder(qName, qType, ip, p.transfer)
+
+	ah = newAttrHolder(qName, qType, getRemoteIP(w), p.transfer)
 	p.getAttrsFromEDNS0(ah, r)
 
 	// validate domain name (validation #1)
