@@ -8,6 +8,7 @@ const (
 	attrNameAddress    = "address"
 	attrNameRefuse     = "refuse"
 	attrNameLog        = "log"
+	attrNameDrop       = "drop"
 
 	typeValueQuery    = "query"
 	typeValueResponse = "response"

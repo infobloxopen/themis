@@ -55,6 +55,13 @@ func TestActionFromResponse(t *testing.T) {
 			action:   typeLog,
 			redirect: "",
 		},
+		{
+			resp: &pdp.Response{Effect: pdp.Response_DENY, Obligation: []*pdp.Attribute{
+				{Id: attrNameDrop, Value: ""},
+			}},
+			action:   typeDrop,
+			redirect: "",
+		},
 	}
 
 	for i, test := range tests {
