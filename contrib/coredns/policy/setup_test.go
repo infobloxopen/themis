@@ -18,7 +18,7 @@ func TestPolicyConfigParse(t *testing.T) {
 		debugSuffix *string
 		streams     *int
 		hotSpot     *bool
-		transfer    map[string]struct{}
+		confAttrs   map[string]confAttrType
 		ident       *string
 		passthrough []string
 		connTimeout *time.Duration
@@ -88,6 +88,9 @@ func TestPolicyConfigParse(t *testing.T) {
 						end:      32},
 				},
 			},
+			confAttrs: map[string]confAttrType{
+				"uid": confAttrEdns,
+			},
 		},
 		{
 			input: `.:53 {
@@ -141,6 +144,10 @@ func TestPolicyConfigParse(t *testing.T) {
 						start:    16,
 						end:      32},
 				},
+			},
+			confAttrs: map[string]confAttrType{
+				"uid": confAttrEdns,
+				"id":  confAttrEdns,
 			},
 		},
 		{
@@ -199,114 +206,138 @@ func TestPolicyConfigParse(t *testing.T) {
 		},
 		{
 			input: `.:53 {
-                        policy {
-                            endpoint 10.2.4.1:5555
-                            streams 10
-                        }
-                    }`,
+						policy {
+							endpoint 10.2.4.1:5555
+							streams 10
+						}
+					}`,
 			streams: newIntPtr(10),
 		},
 		{
 			input: `.:53 {
-                        policy {
-                            endpoint 10.2.4.1:5555
-                            streams Ten
-                        }
-                    }`,
+						policy {
+							endpoint 10.2.4.1:5555
+							streams Ten
+						}
+					}`,
 			errContent: errors.New("Could not parse number of streams"),
 		},
 		{
 			input: `.:53 {
-                        policy {
-                            endpoint 10.2.4.1:5555
-                            streams
-                        }
-                    }`,
+						policy {
+							endpoint 10.2.4.1:5555
+							streams
+						}
+					}`,
 			errContent: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
 			input: `.:53 {
-                        policy {
-                            endpoint 10.2.4.1:5555
-                            streams -1
-                        }
-                    }`,
+						policy {
+							endpoint 10.2.4.1:5555
+							streams -1
+						}
+					}`,
 			errContent: errors.New("Expected at least one stream got -1"),
 		},
 		{
 			input: `.:53 {
-                        policy {
-                            endpoint 10.2.4.1:5555
-                            streams 10 Round-Robin
-                        }
-                    }`,
+						policy {
+							endpoint 10.2.4.1:5555
+							streams 10 Round-Robin
+						}
+					}`,
 			streams: newIntPtr(10),
 			hotSpot: newBoolPtr(false),
 		},
 		{
 			input: `.:53 {
-                        policy {
-                            endpoint 10.2.4.1:5555
-                            streams 10 Hot-Spot
-                        }
-                    }`,
+						policy {
+							endpoint 10.2.4.1:5555
+							streams 10 Hot-Spot
+						}
+					}`,
 			streams: newIntPtr(10),
 			hotSpot: newBoolPtr(true),
 		},
 		{
 			input: `.:53 {
-                        policy {
-                            endpoint 10.2.4.1:5555
-                            streams 10 Unknown-Balancer
-                        }
-                    }`,
+						policy {
+							endpoint 10.2.4.1:5555
+							streams 10 Unknown-Balancer
+						}
+					}`,
 			errContent: errors.New("Expected round-robin or hot-spot balancing but got Unknown-Balancer"),
 		},
 		{
 			input: `.:53 {
-                        policy {
+						policy {
 							endpoint 10.2.4.1:5555
-                            transfer policy_id
-                        }
-                    }`,
-			transfer: map[string]struct{}{
-				"policy_id": {},
+							transfer policy_id
+						}
+					}`,
+			confAttrs: map[string]confAttrType{
+				"policy_id": confAttrTransfer,
 			},
 		},
 		{
 			input: `.:53 {
-                        policy {
+						policy {
 							endpoint 10.2.4.1:5555
-                            transfer
-                        }
-                    }`,
+							edns0 0xfff0 uid hex string 32 0 16
+							transfer policy_id
+						}
+					}`,
+			options: map[uint16][]*edns0Map{
+				0xfff0: {
+					&edns0Map{
+						name:     "uid",
+						dataType: typeEDNS0Hex,
+						destType: "string",
+						size:     32,
+						start:    0,
+						end:      16},
+				},
+			},
+			confAttrs: map[string]confAttrType{
+				"policy_id": confAttrTransfer,
+				"uid":       confAttrEdns,
+			},
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							transfer
+						}
+					}`,
 			errContent: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
 			input: `.:53 {
-                        policy {
+						policy {
 							endpoint 10.2.4.1:5555
-                            debug_id corednsinstance
-                        }
-                    }`,
+							debug_id corednsinstance
+						}
+					}`,
 			ident: newStringPtr("corednsinstance"),
 		},
 		{
 			input: `.:53 {
-                        policy {
+						policy {
 							endpoint 10.2.4.1:5555
-                            debug_id
-                        }
-                    }`,
+							debug_id
+						}
+					}`,
 			errContent: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
 			input: `.:53 {
-                        policy {
+						policy {
 							endpoint 10.2.4.1:5555
-                            passthrough google.com. facebook.org.
-                        }
-                    }`,
+							passthrough google.com. facebook.org.
+						}
+					}`,
 			passthrough: []string{
 				"google.com.",
 				"facebook.org.",
@@ -314,55 +345,55 @@ func TestPolicyConfigParse(t *testing.T) {
 		},
 		{
 			input: `.:53 {
-                        policy {
+						policy {
 							endpoint 10.2.4.1:5555
-                            passthrough
-                        }
-                    }`,
+							passthrough
+						}
+					}`,
 			errContent: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
 			input: `.:53 {
-                        policy {
-                            endpoint 10.2.4.1:5555
-                            connection_timeout no
-                        }
-                    }`,
+						policy {
+							endpoint 10.2.4.1:5555
+							connection_timeout no
+						}
+					}`,
 			connTimeout: newDurationPtr(-1),
 		},
 		{
 			input: `.:53 {
-                        policy {
-                            endpoint 10.2.4.1:5555
-                            connection_timeout 500ms
-                        }
-                    }`,
+						policy {
+							endpoint 10.2.4.1:5555
+							connection_timeout 500ms
+						}
+					}`,
 			connTimeout: newDurationPtr(500 * time.Millisecond),
 		},
 		{
 			input: `.:53 {
-                        policy {
-                            endpoint 10.2.4.1:5555
-                            connection_timeout invalid
-                        }
-                    }`,
+						policy {
+							endpoint 10.2.4.1:5555
+							connection_timeout invalid
+						}
+					}`,
 			errContent: errors.New("Could not parse timeout: time: invalid duration invalid"),
 		},
 		{
 			input: `.:53 {
-                        policy {
+						policy {
 							endpoint 10.2.4.1:5555
-                            log
-                        }
-                    }`,
+							log
+						}
+					}`,
 		},
 		{
 			input: `.:53 {
-                        policy {
+						policy {
 							endpoint 10.2.4.1:5555
-                            log stdout
-                        }
-                    }`,
+							log stdout
+						}
+					}`,
 			errContent: errors.New("Wrong argument count or unexpected line ending"),
 		},
 	}
@@ -439,16 +470,19 @@ func TestPolicyConfigParse(t *testing.T) {
 					t.Errorf("Expected hotSpot=%v but got %v", *test.hotSpot, mw.hotSpot)
 				}
 
-				if test.transfer != nil {
-					for k := range test.transfer {
-						if _, ok := mw.transfer[k]; !ok {
-							t.Errorf("Missing transfer %q", k)
+				if test.confAttrs != nil {
+					for k, et := range test.confAttrs {
+						at, ok := mw.confAttrs[k]
+						if !ok {
+							t.Errorf("Missing conf attribute %q", k)
+						} else if et != at {
+							t.Errorf("Unexpected type of conf attribute %q; expected=%d, actual=%d", k, et, at)
 						}
 					}
 
-					for k := range mw.transfer {
-						if _, ok := test.transfer[k]; !ok {
-							t.Errorf("Unexpected transfer %q", k)
+					for k, at := range mw.confAttrs {
+						if _, ok := test.confAttrs[k]; !ok {
+							t.Errorf("Unexpected conf attribute %q=%d", k, at)
 						}
 					}
 				}

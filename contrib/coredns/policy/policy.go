@@ -44,6 +44,13 @@ const (
 	actCount
 )
 
+type confAttrType byte
+
+const (
+	confAttrEdns = iota
+	confAttrTransfer
+)
+
 var actionConv [actCount]string
 
 func init() {
@@ -81,7 +88,7 @@ type edns0Map struct {
 type policyPlugin struct {
 	endpoints       []string
 	options         map[uint16][]*edns0Map
-	transfer        map[string]struct{}
+	confAttrs       map[string]confAttrType
 	tapIO           dnstapSender
 	trace           plugin.Handler
 	next            plugin.Handler
@@ -101,7 +108,7 @@ type policyPlugin struct {
 func newPolicyPlugin() *policyPlugin {
 	return &policyPlugin{
 		options:         make(map[uint16][]*edns0Map),
-		transfer:        make(map[string]struct{}),
+		confAttrs:       make(map[string]confAttrType),
 		connTimeout:     -1,
 		connAttempts:    make(map[string]*uint32),
 		unkConnAttempts: new(uint32),
@@ -280,7 +287,7 @@ func (p *policyPlugin) parseTransfer(c *caddy.Controller) error {
 	}
 
 	for _, item := range args {
-		p.transfer[item] = struct{}{}
+		p.confAttrs[item] = confAttrTransfer
 	}
 
 	return nil
@@ -316,6 +323,7 @@ func (p *policyPlugin) addEDNS0Map(code, name, dataType, destType,
 	}
 	ecode := uint16(c)
 	p.options[ecode] = append(p.options[ecode], &edns0Map{name, ednsType, destType, uint(size), uint(start), uint(end)})
+	p.confAttrs[name] = confAttrEdns
 	return nil
 }
 
@@ -476,7 +484,7 @@ func (p *policyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg) {
 		return
 	}
 
-	start := len(ah.attrsReqDomain)
+	ah.attrsEdnsStart = len(ah.attrsReqDomain)
 	for _, opt := range o.Option {
 		optLocal, local := opt.(*dns.EDNS0_LOCAL)
 		if !local {
@@ -488,8 +496,6 @@ func (p *policyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg) {
 		}
 		parseOptionGroup(ah, optLocal.Data, options)
 	}
-	end := len(ah.attrsReqDomain)
-	ah.attrsEdns = ah.attrsReqDomain[start:end]
 }
 
 func resolve(status int) string {
@@ -603,8 +609,7 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 			goto Exit
 		}
 	}
-
-	ah = newAttrHolder(qName, qType, getRemoteIP(w), p.transfer)
+	ah = newAttrHolder(qName, qType, getRemoteIP(w), p.confAttrs)
 	p.getAttrsFromEDNS0(ah, r)
 
 	// validate domain name (validation #1)

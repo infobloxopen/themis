@@ -28,7 +28,7 @@ var (
 
 func TestPolicy(t *testing.T) {
 	p := newPolicyPlugin()
-	p.transfer[AttrNamePolicyID] = struct{}{}
+	p.confAttrs[AttrNamePolicyID] = confAttrTransfer
 	p.passthrough = []string{"google.com."}
 	p.next = handler()
 
@@ -698,7 +698,7 @@ func TestEdns(t *testing.T) {
 
 	for _, test := range tests {
 		req := makeRequestWithEDNS0(test.code, test.data, test.nonlocal)
-		ah := newAttrHolder("test.com", 1, test.ip, p.transfer)
+		ah := newAttrHolder("test.com", 1, test.ip, p.confAttrs)
 		p.getAttrsFromEDNS0(ah, req)
 		mapAttr := make(map[string]*pdp.Attribute)
 		for _, a := range ah.attrsReqDomain {
