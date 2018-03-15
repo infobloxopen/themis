@@ -39,6 +39,7 @@ const (
 	typeRedirect
 	typeBlock
 	typeLog
+	typeDrop
 
 	actCount
 )
@@ -52,6 +53,7 @@ func init() {
 	actionConv[typeRedirect] = "redirect"
 	actionConv[typeBlock] = "block"
 	actionConv[typeLog] = "log"
+	actionConv[typeDrop] = "drop"
 }
 
 var (
@@ -503,7 +505,7 @@ func resolve(status int) string {
 	}
 }
 
-func join(key, value string) string { return "," + key + ":" + value }
+func join(key, value string) string { return "," + key + ":'" + value + "'" }
 
 func (p *policyPlugin) setDebugQueryAnswer(ah *attrHolder, r *dns.Msg, status int) {
 	debugQueryInfo := resolve(status)
@@ -662,6 +664,8 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	case typeRefuse:
 		ah.policyHit = true
 		status = dns.RcodeRefused
+	case typeDrop:
+		return dns.RcodeSuccess, nil
 	default:
 		status = dns.RcodeServerFailure
 		err = errInvalidAction

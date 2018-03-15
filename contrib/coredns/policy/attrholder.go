@@ -88,6 +88,9 @@ func (ah *attrHolder) addResponse(r *pdp.Response, respip bool) {
 				ah.action = typeRedirect
 				ah.redirect = item.Value
 				return
+			case attrNameDrop:
+				ah.action = typeDrop
+				return
 			}
 		}
 		ah.action = typeBlock
