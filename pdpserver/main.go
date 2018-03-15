@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	_ "net/http/pprof"
 	"runtime"
 
@@ -10,6 +11,8 @@ import (
 )
 
 func main() {
+	flag.Parse()
+	pdpInitialize()
 	logger := log.StandardLogger()
 	logger.Info("Starting PDP server")
 

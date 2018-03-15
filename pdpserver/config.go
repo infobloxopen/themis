@@ -23,7 +23,9 @@ var policyParsers = map[string]ast.Parser{
 }
 
 type config struct {
+	logVerbosity        int
 	policy              string
+	policyFmt           string
 	policyParser        ast.Parser
 	content             stringSet
 	serviceEP           string
@@ -31,6 +33,7 @@ type config struct {
 	tracingEP           string
 	healthEP            string
 	profilerEP          string
+	memLimit            uint64
 	mem                 server.MemLimits
 	maxStreams          uint
 	memStatsLogPath     string
@@ -54,16 +57,16 @@ func (s *stringSet) Set(v string) error {
 var conf config
 
 func init() {
-	verbose := flag.Int("v", 1, "log verbosity (0 - error, 1 - warn (default), 2 - info, 3 - debug)")
+	flag.IntVar(&conf.logVerbosity, "v", 1, "log verbosity (0 - error, 1 - warn (default), 2 - info, 3 - debug)")
 	flag.StringVar(&conf.policy, "p", "", "policy file to start with")
-	policyFmt := flag.String("pfmt", policyFormatNameYAML, "policy data format \"yaml\" or \"json\"")
+	flag.StringVar(&conf.policyFmt, "pfmt", policyFormatNameYAML, "policy data format \"yaml\" or \"json\"")
 	flag.Var(&conf.content, "j", "JSON content files to start with")
 	flag.StringVar(&conf.serviceEP, "l", ":5555", "listen for decision requests on this address:port")
 	flag.StringVar(&conf.controlEP, "c", ":5554", "listen for policies on this address:port")
 	flag.StringVar(&conf.tracingEP, "t", "", "OpenZipkin tracing endpoint")
 	flag.StringVar(&conf.healthEP, "health", "", "health check endpoint")
 	flag.StringVar(&conf.profilerEP, "pprof", "", "performance profiler endpoint")
-	limit := flag.Uint64("mem-limit", 0, "memory limit in megabytes")
+	flag.Uint64Var(&conf.memLimit, "mem-limit", 0, "memory limit in megabytes")
 	flag.UintVar(&conf.maxStreams, "max-streams", 0, "maximum number of parallel gRPC streams (0 - use gRPC default)")
 
 	flag.StringVar(&conf.memStatsLogPath, "mem-stats-log", "mem-stats.log", "file to log memory allocator statistics")
@@ -76,18 +79,18 @@ func init() {
 	flag.DurationVar(&conf.memProfDelay, "mem-prof-delay", 0,
 		"delay after request serving start for first memory profile dump\n"+
 			"(zero and below - dump from programm start)")
+}
 
-	flag.Parse()
+func pdpInitialize() {
+	initLogging(conf.logVerbosity)
 
-	initLogging(*verbose)
-
-	p, ok := policyParsers[strings.ToLower(*policyFmt)]
+	p, ok := policyParsers[strings.ToLower(conf.policyFmt)]
 	if !ok {
-		log.WithField("format", *policyFmt).Fatal("unknow policy format")
+		log.WithField("format", conf.policyFmt).Fatal("unknow policy format")
 	}
 	conf.policyParser = p
 
-	mem, err := server.MakeMemLimits(*limit*1024*1024, 80, 70, 30, 30)
+	mem, err := server.MakeMemLimits(conf.memLimit*1024*1024, 80, 70, 30, 30)
 	if err != nil {
 		log.WithError(err).Fatal("wrong memory limits")
 	}
