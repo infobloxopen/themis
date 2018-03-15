@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"runtime/debug"
 	"sync"
 	"time"
 
@@ -156,8 +155,6 @@ type Server struct {
 	softMemWarn *time.Time
 	backMemWarn *time.Time
 	fragMemWarn *time.Time
-	gcMax       int
-	gcPercent   int
 
 	memProfBaseDumpDone chan uint32
 }
@@ -178,14 +175,6 @@ func NewServer(opts ...Option) *Server {
 		o.parser = ast.NewYAMLParser()
 	}
 
-	gcp := debug.SetGCPercent(-1)
-	if gcp != -1 {
-		debug.SetGCPercent(gcp)
-	}
-	if gcp > 50 {
-		gcp = 50
-	}
-
 	var memProfBaseDumpDone chan uint32
 	if o.memProfNumGC > 0 && o.memProfDelay > 0 {
 		memProfBaseDumpDone = make(chan uint32)
@@ -196,8 +185,6 @@ func NewServer(opts ...Option) *Server {
 		errCh:               make(chan error, 100),
 		q:                   newQueue(),
 		c:                   pdp.NewLocalContentStorage(nil),
-		gcMax:               gcp,
-		gcPercent:           gcp,
 		memProfBaseDumpDone: memProfBaseDumpDone,
 	}
 }
@@ -457,6 +444,8 @@ func (s *Server) Serve() error {
 	s.requests.proto = grpc.NewServer(s.configureRequests()...)
 	pbs.RegisterPDPServer(s.requests.proto, s)
 	defer s.requests.proto.Stop()
+
+	go s.memoryChecker()
 
 	if s.p != nil {
 		// We already have policy info applied; supplied from local files,

@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"runtime"
-	"runtime/debug"
 	"runtime/pprof"
 	"time"
 
@@ -70,56 +69,15 @@ func (s *Server) checkMemory(c *MemLimits) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
-	total := float64(m.Sys)
-	limit := float64(c.limit)
-	if total >= 0.85*limit && s.gcPercent > 5 {
-		s.gcPercent = 5
-		s.opts.logger.WithFields(log.Fields{
-			"allocated": fmtMemSize(m.Sys),
-			"limit":     fmtMemSize(c.limit),
-			"gc%":       s.gcPercent}).Warn("Critical memory pressure. Decreasing GC target percentage")
-		debug.SetGCPercent(s.gcPercent)
-	} else if total >= 0.8*limit && s.gcPercent > 10 {
-		s.gcPercent = 10
-		s.opts.logger.WithFields(log.Fields{
-			"allocated": fmtMemSize(m.Sys),
-			"limit":     fmtMemSize(c.limit),
-			"gc%":       s.gcPercent}).Warn("Hard memory pressure. Decreasing GC target percentage")
-		debug.SetGCPercent(s.gcPercent)
-	} else if total >= 0.7*limit && s.gcPercent > 20 {
-		s.gcPercent = 20
-		s.opts.logger.WithFields(log.Fields{
-			"allocated": fmtMemSize(m.Sys),
-			"limit":     fmtMemSize(c.limit),
-			"gc%":       s.gcPercent}).Warn("Moderate memory pressure. Decreasing GC target percentage")
-		debug.SetGCPercent(s.gcPercent)
-	} else if total >= 0.6*limit && s.gcPercent > 30 {
-		s.gcPercent = 30
-		s.opts.logger.WithFields(log.Fields{
-			"allocated": fmtMemSize(m.Sys),
-			"limit":     fmtMemSize(c.limit),
-			"gc%":       s.gcPercent}).Warn("Light memory pressure. Decreasing GC target percentage")
-		debug.SetGCPercent(s.gcPercent)
-	} else if total >= 0.5*limit && s.gcPercent > 50 {
-		s.gcPercent = 50
-		s.opts.logger.WithFields(log.Fields{
-			"allocated": fmtMemSize(m.Sys),
-			"limit":     fmtMemSize(c.limit),
-			"gc%":       s.gcPercent}).Warn("Half of memory in use. Decreasing GC target percentage")
-		debug.SetGCPercent(s.gcPercent)
-	} else if total < 0.3*limit && s.gcPercent != s.gcMax {
-		s.gcPercent = s.gcMax
-		s.opts.logger.WithFields(log.Fields{
-			"allocated": fmtMemSize(m.Sys),
-			"limit":     fmtMemSize(c.limit),
-			"gc%":       s.gcPercent}).Warn("No memory pressure. Returning GC target percentage to maximum")
-		debug.SetGCPercent(s.gcPercent)
-	}
-
+	total := float64(m.Sys - m.HeapReleased)
 	if total >= c.reset {
 		s.opts.logger.WithFields(log.Fields{
 			"allocated": fmtMemSize(m.Sys),
-			"limit":     fmtMemSize(c.limit)}).Fatal("Memory usage is too high. Exiting...")
+			"limit":     fmtMemSize(c.limit)}).Error("Memory usage is too high. Exiting...")
+
+		s.Stop()
+		c.limit = 0
+		return
 	}
 
 	if total >= c.soft {
@@ -141,7 +99,8 @@ func (s *Server) checkMemory(c *MemLimits) {
 		s.softMemWarn = nil
 	}
 
-	if float64(m.HeapInuse-m.HeapAlloc)/total >= c.frag {
+	limit := float64(c.limit)
+	if total > 0.1*limit && float64(m.HeapInuse-m.HeapAlloc)/total >= c.frag {
 		if s.fragMemWarn == nil {
 			tmp := now
 			s.fragMemWarn = &tmp
@@ -162,7 +121,7 @@ func (s *Server) checkMemory(c *MemLimits) {
 		s.fragMemWarn = nil
 	}
 
-	if (total-float64(m.HeapAlloc))/total >= c.back {
+	if total > 0.1*limit && (total-float64(m.HeapAlloc))/total >= c.back {
 		if s.backMemWarn == nil {
 			tmp := now
 			s.backMemWarn = &tmp
@@ -179,6 +138,21 @@ func (s *Server) checkMemory(c *MemLimits) {
 		}
 	} else {
 		s.backMemWarn = nil
+	}
+}
+
+func (s *Server) memoryChecker() {
+	c := s.opts.memLimits
+	if c == nil || c.limit <= 0 {
+		return
+	}
+
+	t := time.NewTicker(time.Second)
+	defer t.Stop()
+
+	for c.limit > 0 {
+		<-t.C
+		s.checkMemory(c)
 	}
 }
 
