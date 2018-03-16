@@ -104,11 +104,10 @@ func TestSendCRExtraMsg(t *testing.T) {
 			{Id: attrNameDomainName, Value: "test.com"},
 			{Id: attrNameDNSQtype, Value: "1"},
 			{Id: attrNameSourceIP, Value: "10.0.0.7"},
-		},
-		attrsEdns: []*pdp.Attribute{
 			{Id: "option", Value: "option"},
 		},
-		action: 2,
+		attrsEdnsStart: 4,
+		action:         2,
 	}
 
 	tapIO.sendCRExtraMsg(tapRW, &msg, testAttrHolder)
@@ -132,6 +131,7 @@ func TestSendCRExtraMsg(t *testing.T) {
 		{Id: attrNameDNSQtype, Value: "1"},
 		{Id: attrNameSourceIP, Value: "10.0.0.7"},
 		{Id: attrNamePolicyAction, Value: "2"},
+		{Id: "option", Value: "option"},
 		{Id: attrNameType, Value: typeValueQuery},
 	}
 	checkCRExtraResult(t, io, &msg, expectedAttrs)
@@ -162,7 +162,6 @@ func checkCRExtraResult(t *testing.T, io testIORoutine, orgMsg *dns.Msg, attrs [
 func checkExtraAttrs(t *testing.T, actual []*pb.DnstapAttribute, expected []*pdp.Attribute) {
 	if len(actual) != len(expected) {
 		t.Errorf("Expected %d attributes, found %d", len(expected), len(actual))
-		return
 	}
 
 checkAttr:

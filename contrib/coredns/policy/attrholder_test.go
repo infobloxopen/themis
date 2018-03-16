@@ -76,6 +76,209 @@ func TestActionFromResponse(t *testing.T) {
 	}
 }
 
+func TestAddResponse(t *testing.T) {
+	tests := []struct {
+		confAttrs     map[string]confAttrType
+		ednsAttrs     []*pdp.Attribute
+		resp          *pdp.Response
+		expEdnsAttrs  []*pdp.Attribute
+		expRespDomain []*pdp.Attribute
+		expRespIp     []*pdp.Attribute
+		expTransfer   []*pdp.Attribute
+	}{
+		{
+			resp:          &pdp.Response{Effect: pdp.Response_PERMIT},
+			expEdnsAttrs:  []*pdp.Attribute{},
+			expRespDomain: []*pdp.Attribute{},
+			expRespIp:     []*pdp.Attribute{},
+			expTransfer:   []*pdp.Attribute{},
+		},
+		{
+			confAttrs: map[string]confAttrType{
+				"edns1": confAttrEdns,
+			},
+			ednsAttrs: []*pdp.Attribute{
+				{Id: "edns1", Value: "ends1Val"},
+			},
+			resp: &pdp.Response{Effect: pdp.Response_PERMIT},
+			expEdnsAttrs: []*pdp.Attribute{
+				{Id: "edns1", Value: "ends1Val"},
+			},
+			expRespDomain: []*pdp.Attribute{},
+			expRespIp:     []*pdp.Attribute{},
+			expTransfer:   []*pdp.Attribute{},
+		},
+		{
+			confAttrs: map[string]confAttrType{
+				"edns1": confAttrEdns,
+			},
+			resp: &pdp.Response{Effect: pdp.Response_PERMIT, Obligation: []*pdp.Attribute{
+				{Id: "edns1", Value: "ends1Val"},
+			}},
+			expEdnsAttrs: []*pdp.Attribute{
+				{Id: "edns1", Value: "ends1Val"},
+			},
+			expRespDomain: []*pdp.Attribute{},
+			expTransfer:   []*pdp.Attribute{},
+		},
+		{
+			confAttrs: map[string]confAttrType{
+				"edns1": confAttrEdns,
+			},
+			resp: &pdp.Response{Effect: pdp.Response_PERMIT, Obligation: []*pdp.Attribute{
+				{Id: "edns1", Value: "ends1Val"},
+			}},
+			expEdnsAttrs: []*pdp.Attribute{},
+			expRespIp: []*pdp.Attribute{
+				{Id: "edns1", Value: "ends1Val"},
+			},
+			expTransfer: []*pdp.Attribute{},
+		},
+		{
+			confAttrs: map[string]confAttrType{
+				"edns1": confAttrEdns,
+			},
+			ednsAttrs: []*pdp.Attribute{
+				{Id: "edns1", Value: "ends1Val"},
+			},
+			resp: &pdp.Response{Effect: pdp.Response_PERMIT, Obligation: []*pdp.Attribute{
+				{Id: "edns1", Value: "ends1Val2"},
+			}},
+			expEdnsAttrs: []*pdp.Attribute{
+				{Id: "edns1", Value: "ends1Val"},
+			},
+			expRespDomain: []*pdp.Attribute{},
+			expTransfer:   []*pdp.Attribute{},
+		},
+		{
+			confAttrs: map[string]confAttrType{
+				"edns1": confAttrEdns,
+			},
+			resp: &pdp.Response{Effect: pdp.Response_DENY, Obligation: []*pdp.Attribute{
+				{Id: "edns1", Value: "ends1Val2"},
+			}},
+			expEdnsAttrs: []*pdp.Attribute{
+				{Id: "edns1", Value: "ends1Val2"},
+			},
+			expRespDomain: []*pdp.Attribute{},
+			expTransfer:   []*pdp.Attribute{},
+		},
+		{
+			confAttrs: map[string]confAttrType{
+				"trans1": confAttrTransfer,
+			},
+			resp: &pdp.Response{Effect: pdp.Response_PERMIT, Obligation: []*pdp.Attribute{
+				{Id: "trans1", Value: "trans1Val"},
+			}},
+			expEdnsAttrs: []*pdp.Attribute{},
+			expRespIp: []*pdp.Attribute{
+				{Id: "trans1", Value: "trans1Val"},
+			},
+			expTransfer: []*pdp.Attribute{},
+		},
+		{
+			confAttrs: map[string]confAttrType{
+				"trans1": confAttrTransfer,
+			},
+			resp: &pdp.Response{Effect: pdp.Response_PERMIT, Obligation: []*pdp.Attribute{
+				{Id: "trans1", Value: "trans1Val"},
+			}},
+			expEdnsAttrs: []*pdp.Attribute{},
+			expRespDomain: []*pdp.Attribute{
+				{Id: "trans1", Value: "trans1Val"},
+			},
+			expTransfer: []*pdp.Attribute{
+				{Id: "trans1", Value: "trans1Val"},
+			},
+		},
+		{
+			confAttrs: map[string]confAttrType{
+				"trans1": confAttrTransfer,
+			},
+			resp: &pdp.Response{Effect: pdp.Response_DENY, Obligation: []*pdp.Attribute{
+				{Id: "trans1", Value: "trans1Val"},
+			}},
+			expEdnsAttrs: []*pdp.Attribute{},
+			expRespDomain: []*pdp.Attribute{
+				{Id: "trans1", Value: "trans1Val"},
+			},
+			expTransfer: []*pdp.Attribute{},
+		},
+		{
+			confAttrs: map[string]confAttrType{
+				"edns1":  confAttrEdns,
+				"trans1": confAttrTransfer,
+			},
+			ednsAttrs: []*pdp.Attribute{},
+			resp: &pdp.Response{Effect: pdp.Response_PERMIT, Obligation: []*pdp.Attribute{
+				{Id: "edns1", Value: "ends1Val"},
+				{Id: "trans1", Value: "trans1Val"},
+				{Id: "other1", Value: "other1Val"},
+			}},
+			expEdnsAttrs: []*pdp.Attribute{
+				{Id: "edns1", Value: "ends1Val"},
+			},
+			expRespDomain: []*pdp.Attribute{
+				{Id: "trans1", Value: "trans1Val"},
+				{Id: "other1", Value: "other1Val"},
+			},
+			expTransfer: []*pdp.Attribute{
+				{Id: "trans1", Value: "trans1Val"},
+			},
+		},
+		{
+			confAttrs: map[string]confAttrType{
+				"edns1":  confAttrEdns,
+				"trans1": confAttrTransfer,
+			},
+			ednsAttrs: []*pdp.Attribute{},
+			resp: &pdp.Response{Effect: pdp.Response_PERMIT, Obligation: []*pdp.Attribute{
+				{Id: "edns1", Value: "ends1Val"},
+				{Id: "trans1", Value: "trans1Val"},
+				{Id: "other1", Value: "other1Val"},
+			}},
+			expEdnsAttrs: []*pdp.Attribute{},
+			expRespIp: []*pdp.Attribute{
+				{Id: "edns1", Value: "ends1Val"},
+				{Id: "trans1", Value: "trans1Val"},
+				{Id: "other1", Value: "other1Val"},
+			},
+			expTransfer: []*pdp.Attribute{},
+		},
+	}
+
+	for i, test := range tests {
+		if test.expRespDomain != nil {
+			ah := newAttrHolder("test.com", 1, "127.0.0.1", test.confAttrs)
+			if test.ednsAttrs != nil {
+				ah.attrsReqDomain = append(ah.attrsReqDomain, test.ednsAttrs...)
+			}
+			ah.addResponse(test.resp, false)
+			checkAttrs(t, "check respDomain attrs", i, ah.attrsRespDomain, test.expRespDomain)
+			if test.expEdnsAttrs != nil {
+				checkAttrs(t, "check edns attrs", i, ah.attrsReqDomain[ah.attrsEdnsStart:], test.expEdnsAttrs)
+			}
+			if test.expTransfer != nil {
+				checkAttrs(t, "check transfer attrs", i, ah.attrsTransfer, test.expTransfer)
+			}
+		}
+		if test.expRespIp != nil {
+			ah := newAttrHolder("test.com", 1, "127.0.0.1", test.confAttrs)
+			if test.ednsAttrs != nil {
+				ah.attrsReqDomain = append(ah.attrsReqDomain, test.ednsAttrs...)
+			}
+			ah.addResponse(test.resp, true)
+			checkAttrs(t, "check respRespip attrs", i, ah.attrsRespRespip, test.expRespIp)
+			if test.expEdnsAttrs != nil {
+				checkAttrs(t, "check edns attrs", i, ah.attrsReqDomain[ah.attrsEdnsStart:], test.expEdnsAttrs)
+			}
+			if test.expTransfer != nil {
+				checkAttrs(t, "check transfer attrs", i, ah.attrsTransfer, test.expTransfer)
+			}
+		}
+	}
+}
+
 func TestNilResponse(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
@@ -94,5 +297,25 @@ func TestAllowActionAfterLogAction(t *testing.T) {
 	ah.addResponse(&pdp.Response{Effect: pdp.Response_PERMIT}, true)
 	if ah.action != typeLog {
 		t.Errorf("Unexpected action: expected=%d, actual=%d", typeLog, ah.action)
+	}
+}
+
+func checkAttrs(t *testing.T, msg string, testNo int, actual []*pdp.Attribute, expected []*pdp.Attribute) {
+	if len(actual) != len(expected) {
+		t.Errorf("Test #%d: %s - expected %d attributes, found %d", testNo, msg, len(expected), len(actual))
+	}
+
+checkAttr:
+	for _, a := range actual {
+		for _, e := range expected {
+			if e.Id == a.Id {
+				if a.Value != e.Value {
+					t.Errorf("Test #%d: %s - attribute %q - expected=%q, actual=%q", testNo, msg, e.Id, e.Value, a.Value)
+					return
+				}
+				continue checkAttr
+			}
+		}
+		t.Errorf("Test #%d: %s - unexpected attribute found %q=%q", testNo, msg, a.Id, a.Value)
 	}
 }
