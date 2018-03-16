@@ -694,6 +694,18 @@ func TestEdns(t *testing.T) {
 				attrNameSourceIP:   {Id: attrNameSourceIP, Type: "address", Value: "192.168.0.10"},
 			},
 		},
+		{
+			name: "Test Client from DNS_Dist",
+			code: 0xfff5,
+			data: "0a0a0a0a", // address 10.10.10.10 in test
+			ip:   "192.168.0.4",
+			attr: map[string]*pdp.Attribute{
+				attrNameType:       {Id: attrNameType, Type: "string", Value: "query"},
+				attrNameDNSQtype:   {Id: attrNameDNSQtype, Type: "string", Value: "1"},
+				attrNameDomainName: {Id: attrNameDomainName, Type: "domain", Value: "test.com"},
+				attrNameSourceIP:   {Id: attrNameSourceIP, Type: "address", Value: "10.10.10.10"},
+			},
+		},
 	}
 
 	for _, test := range tests {

@@ -44,6 +44,8 @@ const (
 	actCount
 )
 
+const srcIPedns0code = 65525 // edns0 encoding of 0xfff5
+
 var actionConv [actCount]string
 
 func init() {
@@ -480,6 +482,16 @@ func (p *policyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg) {
 	for _, opt := range o.Option {
 		optLocal, local := opt.(*dns.EDNS0_LOCAL)
 		if !local {
+			continue
+		}
+		if optLocal.Code == srcIPedns0code {
+			if ip := net.IP(optLocal.Data); ip != nil {
+				newIPStr := ip.String()
+				log.Printf("Evoking EDNS0 0xfff5 option, changing source ip from %s to %s",
+					ah.attrsReqDomain[3].Value, newIPStr)
+				// change attrNameSourceIP to specified data is valid
+				ah.attrsReqDomain[3].Value = newIPStr
+			}
 			continue
 		}
 		options, ok := p.options[optLocal.Code]
