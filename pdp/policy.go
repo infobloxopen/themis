@@ -75,11 +75,6 @@ func (p *Policy) GetID() (string, bool) {
 	return p.id, !p.hidden
 }
 
-// GetRules exposes a policy's rules to PDP server
-func (p *Policy) GetRules() ([]*Rule, bool) {
-	return p.rules, !p.hidden
-}
-
 // Calculate implements Evaluable interface and evaluates policy for given
 // request contest.
 func (p *Policy) Calculate(ctx *Context) Response {

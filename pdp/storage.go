@@ -127,11 +127,8 @@ func PathQuery(iter Iterable, id string) ([]string, Iterable, error) {
 	// assumes relatively shallow tree
 	stack := []iterStackInfo{{iter, 0}}
 	for len(stack) > 0 {
-		iter = stack[len(stack)-1].next()
-		if nil == iter {
-			// pop stack
-			stack = stack[:len(stack)-1]
-		} else {
+
+		if iter = stack[len(stack)-1].next(); nil != iter {
 			// found element matching id
 			iterID, ok := iter.GetID()
 			if ok && iterID == id {
@@ -147,6 +144,9 @@ func PathQuery(iter Iterable, id string) ([]string, Iterable, error) {
 			if ok {
 				stack = append(stack, iterStackInfo{iter, 0})
 			}
+		} else {
+			// pop stack
+			stack = stack[:len(stack)-1]
 		}
 	}
 	return nil, nil, fmt.Errorf("Element %s not found", strconv.Quote(id))

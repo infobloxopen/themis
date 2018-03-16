@@ -334,7 +334,3 @@ var (
 	_ Iterable = &Policy{}
 	_ Iterable = &Rule{}
 )
-
-func Describe(iter Iterable) string {
-	return iter.describe()
-}
