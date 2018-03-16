@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"fmt"
 	"testing"
 
 	pdp "github.com/infobloxopen/themis/pdp-service"
@@ -87,8 +88,10 @@ func TestAddResponse(t *testing.T) {
 		expTransfer   []*pdp.Attribute
 	}{
 		{
-			resp:          &pdp.Response{Effect: pdp.Response_PERMIT},
-			expEdnsAttrs:  []*pdp.Attribute{},
+			resp: &pdp.Response{Effect: pdp.Response_PERMIT},
+			expEdnsAttrs: []*pdp.Attribute{
+				{Id: attrNameSourceIP, Value: "127.0.0.1"},
+			},
 			expRespDomain: []*pdp.Attribute{},
 			expRespIp:     []*pdp.Attribute{},
 			expTransfer:   []*pdp.Attribute{},
@@ -102,6 +105,7 @@ func TestAddResponse(t *testing.T) {
 			},
 			resp: &pdp.Response{Effect: pdp.Response_PERMIT},
 			expEdnsAttrs: []*pdp.Attribute{
+				{Id: attrNameSourceIP, Value: "127.0.0.2"},
 				{Id: "edns1", Value: "ends1Val"},
 			},
 			expRespDomain: []*pdp.Attribute{},
@@ -116,6 +120,7 @@ func TestAddResponse(t *testing.T) {
 				{Id: "edns1", Value: "ends1Val"},
 			}},
 			expEdnsAttrs: []*pdp.Attribute{
+				{Id: attrNameSourceIP, Value: "127.0.0.3"},
 				{Id: "edns1", Value: "ends1Val"},
 			},
 			expRespDomain: []*pdp.Attribute{},
@@ -128,7 +133,9 @@ func TestAddResponse(t *testing.T) {
 			resp: &pdp.Response{Effect: pdp.Response_PERMIT, Obligation: []*pdp.Attribute{
 				{Id: "edns1", Value: "ends1Val"},
 			}},
-			expEdnsAttrs: []*pdp.Attribute{},
+			expEdnsAttrs: []*pdp.Attribute{
+				{Id: attrNameSourceIP, Value: "127.0.0.4"},
+			},
 			expRespIp: []*pdp.Attribute{
 				{Id: "edns1", Value: "ends1Val"},
 			},
@@ -145,6 +152,7 @@ func TestAddResponse(t *testing.T) {
 				{Id: "edns1", Value: "ends1Val2"},
 			}},
 			expEdnsAttrs: []*pdp.Attribute{
+				{Id: attrNameSourceIP, Value: "127.0.0.5"},
 				{Id: "edns1", Value: "ends1Val"},
 			},
 			expRespDomain: []*pdp.Attribute{},
@@ -158,6 +166,7 @@ func TestAddResponse(t *testing.T) {
 				{Id: "edns1", Value: "ends1Val2"},
 			}},
 			expEdnsAttrs: []*pdp.Attribute{
+				{Id: attrNameSourceIP, Value: "127.0.0.6"},
 				{Id: "edns1", Value: "ends1Val2"},
 			},
 			expRespDomain: []*pdp.Attribute{},
@@ -170,7 +179,9 @@ func TestAddResponse(t *testing.T) {
 			resp: &pdp.Response{Effect: pdp.Response_PERMIT, Obligation: []*pdp.Attribute{
 				{Id: "trans1", Value: "trans1Val"},
 			}},
-			expEdnsAttrs: []*pdp.Attribute{},
+			expEdnsAttrs: []*pdp.Attribute{
+				{Id: attrNameSourceIP, Value: "127.0.0.7"},
+			},
 			expRespIp: []*pdp.Attribute{
 				{Id: "trans1", Value: "trans1Val"},
 			},
@@ -183,7 +194,9 @@ func TestAddResponse(t *testing.T) {
 			resp: &pdp.Response{Effect: pdp.Response_PERMIT, Obligation: []*pdp.Attribute{
 				{Id: "trans1", Value: "trans1Val"},
 			}},
-			expEdnsAttrs: []*pdp.Attribute{},
+			expEdnsAttrs: []*pdp.Attribute{
+				{Id: attrNameSourceIP, Value: "127.0.0.8"},
+			},
 			expRespDomain: []*pdp.Attribute{
 				{Id: "trans1", Value: "trans1Val"},
 			},
@@ -198,7 +211,9 @@ func TestAddResponse(t *testing.T) {
 			resp: &pdp.Response{Effect: pdp.Response_DENY, Obligation: []*pdp.Attribute{
 				{Id: "trans1", Value: "trans1Val"},
 			}},
-			expEdnsAttrs: []*pdp.Attribute{},
+			expEdnsAttrs: []*pdp.Attribute{
+				{Id: attrNameSourceIP, Value: "127.0.0.9"},
+			},
 			expRespDomain: []*pdp.Attribute{
 				{Id: "trans1", Value: "trans1Val"},
 			},
@@ -216,6 +231,7 @@ func TestAddResponse(t *testing.T) {
 				{Id: "other1", Value: "other1Val"},
 			}},
 			expEdnsAttrs: []*pdp.Attribute{
+				{Id: attrNameSourceIP, Value: "127.0.0.10"},
 				{Id: "edns1", Value: "ends1Val"},
 			},
 			expRespDomain: []*pdp.Attribute{
@@ -237,7 +253,9 @@ func TestAddResponse(t *testing.T) {
 				{Id: "trans1", Value: "trans1Val"},
 				{Id: "other1", Value: "other1Val"},
 			}},
-			expEdnsAttrs: []*pdp.Attribute{},
+			expEdnsAttrs: []*pdp.Attribute{
+				{Id: attrNameSourceIP, Value: "127.0.0.11"},
+			},
 			expRespIp: []*pdp.Attribute{
 				{Id: "edns1", Value: "ends1Val"},
 				{Id: "trans1", Value: "trans1Val"},
@@ -248,8 +266,9 @@ func TestAddResponse(t *testing.T) {
 	}
 
 	for i, test := range tests {
+		srcIP := fmt.Sprintf("127.0.0.%d", i+1)
 		if test.expRespDomain != nil {
-			ah := newAttrHolder("test.com", 1, "127.0.0.1", test.confAttrs)
+			ah := newAttrHolder("test.com", 1, srcIP, test.confAttrs)
 			if test.ednsAttrs != nil {
 				ah.attrsReqDomain = append(ah.attrsReqDomain, test.ednsAttrs...)
 			}
@@ -263,7 +282,7 @@ func TestAddResponse(t *testing.T) {
 			}
 		}
 		if test.expRespIp != nil {
-			ah := newAttrHolder("test.com", 1, "127.0.0.1", test.confAttrs)
+			ah := newAttrHolder("test.com", 1, srcIP, test.confAttrs)
 			if test.ednsAttrs != nil {
 				ah.attrsReqDomain = append(ah.attrsReqDomain, test.ednsAttrs...)
 			}

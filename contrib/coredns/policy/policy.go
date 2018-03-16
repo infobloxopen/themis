@@ -375,6 +375,10 @@ func parseOptionGroup(ah *attrHolder, data []byte, options []*edns0Map) {
 		default:
 			continue
 		}
+		if option.name == attrNameSourceIP {
+			ah.sourceIP.Value = value
+			continue
+		}
 		ah.attrsReqDomain = append(ah.attrsReqDomain, &pdp.Attribute{Id: option.name, Type: option.destType, Value: value})
 	}
 }
@@ -484,7 +488,6 @@ func (p *policyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg) {
 		return
 	}
 
-	ah.attrsEdnsStart = len(ah.attrsReqDomain)
 	for _, opt := range o.Option {
 		optLocal, local := opt.(*dns.EDNS0_LOCAL)
 		if !local {
