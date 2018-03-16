@@ -42,7 +42,7 @@ func newAttrHolder(qName string, qType uint16, sourceIP string, conf map[string]
 		confAttrs:      conf,
 		attrsReqDomain: make([]*pdp.Attribute, 4, 8),
 		action:         typeInvalid,
-		attrsEdnsStart: 4,
+		attrsEdnsStart: 3,
 	}
 	ret.attrsReqDomain[0] = &pdp.Attribute{Id: attrNameType, Type: "string", Value: typeValueQuery}
 	ret.attrsReqDomain[1] = &pdp.Attribute{Id: attrNameDomainName, Type: "domain", Value: strings.TrimRight(qName, ".")}

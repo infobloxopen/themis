@@ -94,7 +94,9 @@ func TestPolicy(t *testing.T) {
 			responseIP: &pdp.Response{Effect: pdp.Response_PERMIT},
 			status:     dns.RcodeSuccess,
 			err:        nil,
-			attrs:      []*pdp.Attribute{},
+			attrs: []*pdp.Attribute{
+				{Id: attrNameSourceIP, Value: "10.240.0.1"},
+			},
 		},
 		{
 			query:     "test.com.",
@@ -256,7 +258,9 @@ func TestPolicy(t *testing.T) {
 			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
 			status:    dns.RcodeSuccess,
 			err:       nil,
-			attrs:     []*pdp.Attribute{},
+			attrs: []*pdp.Attribute{
+				{Id: attrNameSourceIP, Value: "10.240.0.1"},
+			},
 		},
 		{
 			query:     "test.org.",
@@ -314,7 +318,9 @@ func TestPolicy(t *testing.T) {
 			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
 			status:    dns.RcodeNameError,
 			err:       nil,
-			attrs:     []*pdp.Attribute{},
+			attrs: []*pdp.Attribute{
+				{Id: attrNameSourceIP, Value: "10.240.0.1"},
+			},
 		},
 		{
 			query:      "google.com.",

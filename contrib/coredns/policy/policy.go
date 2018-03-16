@@ -488,7 +488,6 @@ func (p *policyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg) {
 		return
 	}
 
-	ah.attrsEdnsStart = len(ah.attrsReqDomain)
 	for _, opt := range o.Option {
 		optLocal, local := opt.(*dns.EDNS0_LOCAL)
 		if !local {
