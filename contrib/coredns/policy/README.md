@@ -71,3 +71,7 @@ Dig command example for debug query:
 ~~~ txt
 dig @127.0.0.1 msn.com.debug txt ch
 ~~~
+
+## Alternate Source IP With edns0 Option
+
+Since policies take source IP address, sometimes the true client address is lost on way to coredns (as in the case of proxies). In these cases, the plugin takes the data of builtin edns0 option with code 0xfff5 as the source ip.

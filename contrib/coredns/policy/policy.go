@@ -44,6 +44,8 @@ const (
 	actCount
 )
 
+const srcIPedns0code = 65525 // edns0 encoding of 0xfff5
+
 var actionConv [actCount]string
 
 func init() {
@@ -482,12 +484,13 @@ func (p *policyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg) {
 		if !local {
 			continue
 		}
-		// hard-coded change on change client ip (0xfff5) flag
-		distFlag, _ := strconv.ParseUint("0xfff5", 0, 16)
-		if optLocal.Code == uint16(distFlag) {
+		if optLocal.Code == srcIPedns0code {
 			if ip := net.IP(optLocal.Data); ip != nil {
+				newIPStr := ip.String()
+				log.Printf("Evoking EDNS0 0xfff5 option, changing source ip from %s to %s",
+					ah.attrsReqDomain[3].Value, newIPStr)
 				// change attrNameSourceIP to specified data is valid
-				ah.attrsReqDomain[3].Value = ip.String()
+				ah.attrsReqDomain[3].Value = newIPStr
 			}
 			continue
 		}
@@ -612,8 +615,6 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 			goto Exit
 		}
 	}
-
-	// todo: insert remote ip look up here in options (if possible)
 
 	ah = newAttrHolder(qName, qType, getRemoteIP(w), p.transfer)
 	p.getAttrsFromEDNS0(ah, r)
