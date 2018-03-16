@@ -21,6 +21,7 @@ func init() {
 }
 
 type attrHolder struct {
+	sourceIP        *pdp.Attribute
 	confAttrs       map[string]confAttrType
 	attrsReqDomain  []*pdp.Attribute
 	attrsRespDomain []*pdp.Attribute
@@ -46,7 +47,8 @@ func newAttrHolder(qName string, qType uint16, sourceIP string, conf map[string]
 	ret.attrsReqDomain[0] = &pdp.Attribute{Id: attrNameType, Type: "string", Value: typeValueQuery}
 	ret.attrsReqDomain[1] = &pdp.Attribute{Id: attrNameDomainName, Type: "domain", Value: strings.TrimRight(qName, ".")}
 	ret.attrsReqDomain[2] = &pdp.Attribute{Id: attrNameDNSQtype, Type: "string", Value: strconv.FormatUint(uint64(qType), 16)}
-	ret.attrsReqDomain[3] = &pdp.Attribute{Id: attrNameSourceIP, Type: "address", Value: sourceIP}
+	ret.sourceIP = &pdp.Attribute{Id: attrNameSourceIP, Type: "address", Value: sourceIP}
+	ret.attrsReqDomain[3] = ret.sourceIP
 	return ret
 }
 

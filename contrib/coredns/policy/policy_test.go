@@ -532,6 +532,9 @@ func TestEdns(t *testing.T) {
 	p := newPolicyPlugin()
 
 	// Add EDNS mapping
+	if err := p.addEDNS0Map("0xfff8", attrNameSourceIP, "address", "address", "0", "0", "0"); err != nil {
+		t.Errorf("Expected error 'nil' but got %v\n", err)
+	}
 	AttrClientID := "client_id"
 	if err := p.addEDNS0Map("0xfffa", AttrClientID, "hex", "string", "32", "0", "16"); err != nil {
 		t.Errorf("Expected error 'nil' but got %v\n", err)
@@ -590,6 +593,18 @@ func TestEdns(t *testing.T) {
 				attrNameDNSQtype:   {Id: attrNameDNSQtype, Type: "string", Value: "1"},
 				attrNameDomainName: {Id: attrNameDomainName, Type: "domain", Value: "test.com"},
 				attrNameSourceIP:   {Id: attrNameSourceIP, Type: "address", Value: "192.168.0.2"},
+			},
+		},
+		{
+			name: "Test option 'source_ip' handled as address",
+			code: 0xfff8,
+			data: "aca80002", // 172.168.0.2 in hex
+			ip:   "192.168.0.2",
+			attr: map[string]*pdp.Attribute{
+				attrNameType:       {Id: attrNameType, Type: "string", Value: "query"},
+				attrNameDNSQtype:   {Id: attrNameDNSQtype, Type: "string", Value: "1"},
+				attrNameDomainName: {Id: attrNameDomainName, Type: "domain", Value: "test.com"},
+				attrNameSourceIP:   {Id: attrNameSourceIP, Type: "address", Value: "172.168.0.2"},
 			},
 		},
 		{
