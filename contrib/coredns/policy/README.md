@@ -13,6 +13,7 @@ policy {
     debug_id ID
     streams COUNT
     transfer ATTR_1, ATTR_2, ... ATTR_N
+    dnstap ATTR_1, ATTR_2, ... ATTR_N
     passthrough SUFFIX_1, SUFFIX_2, ... SUFFIX_N
     log
 }
@@ -40,6 +41,8 @@ Option streams set gRPC streams count for PDP connection.
 
 Option transfer defines set of attributes (from domain validation response) that should be inserted into IP validation request.
 
+Option dnstap defines attributes to be included in extra field of DNStap message if received from PDP.
+
 Option passthrough defines set of domain name suffixes, domain that contains one of these is resolved without validation, each suffix should have dot at the end.
 
 Option connection_timeout sets timeout for query validation when no PDP server are available. Negative value or "no" keyword means wait forever. This is default behavior. With zero timeout validation fails instantly if there is no PDP servers. The option works only if gRPC streams are greater than 0.
@@ -60,6 +63,7 @@ policy {
     debug_id instance_1
     streams 100
     transfer gid uid
+    dnstap pid
     passthrough mycompanyname.com. mycompanyname.org.
     log
 }

@@ -86,6 +86,7 @@ func TestAddResponse(t *testing.T) {
 		expRespDomain []*pdp.Attribute
 		expRespIp     []*pdp.Attribute
 		expTransfer   []*pdp.Attribute
+		expDnstap     []*pdp.Attribute
 	}{
 		{
 			resp: &pdp.Response{Effect: pdp.Response_PERMIT},
@@ -95,6 +96,7 @@ func TestAddResponse(t *testing.T) {
 			expRespDomain: []*pdp.Attribute{},
 			expRespIp:     []*pdp.Attribute{},
 			expTransfer:   []*pdp.Attribute{},
+			expDnstap:     []*pdp.Attribute{},
 		},
 		{
 			confAttrs: map[string]confAttrType{
@@ -262,6 +264,82 @@ func TestAddResponse(t *testing.T) {
 				{Id: "other1", Value: "other1Val"},
 			},
 			expTransfer: []*pdp.Attribute{},
+		},
+		{
+			confAttrs: map[string]confAttrType{
+				"edns1":       confAttrEdns,
+				"trans1":      confAttrTransfer,
+				"transdnstap": confAttrDnstap | confAttrTransfer,
+			},
+			ednsAttrs: []*pdp.Attribute{},
+			resp: &pdp.Response{Effect: pdp.Response_PERMIT, Obligation: []*pdp.Attribute{
+				{Id: "edns1", Value: "ends1Val"},
+				{Id: "trans1", Value: "trans1Val"},
+				{Id: "other1", Value: "other1Val"},
+				{Id: "transdnstap", Value: "val"},
+			}},
+			expEdnsAttrs: []*pdp.Attribute{
+				{Id: attrNameSourceIP, Value: "127.0.0.12"},
+				{Id: "edns1", Value: "ends1Val"},
+			},
+			expRespDomain: []*pdp.Attribute{
+				{Id: "trans1", Value: "trans1Val"},
+				{Id: "other1", Value: "other1Val"},
+				{Id: "transdnstap", Value: "val"},
+			},
+			expTransfer: []*pdp.Attribute{
+				{Id: "trans1", Value: "trans1Val"},
+				{Id: "transdnstap", Value: "val"},
+			},
+			expDnstap: []*pdp.Attribute{
+				{Id: "transdnstap", Value: "val"},
+			},
+		},
+		{
+			confAttrs: map[string]confAttrType{
+				"edns1":       confAttrEdns,
+				"trans1":      confAttrTransfer,
+				"transdnstap": confAttrDnstap | confAttrTransfer,
+			},
+			ednsAttrs: []*pdp.Attribute{},
+			resp: &pdp.Response{Effect: pdp.Response_PERMIT, Obligation: []*pdp.Attribute{
+				{Id: "edns1", Value: "ends1Val"},
+				{Id: "trans1", Value: "trans1Val"},
+				{Id: "other1", Value: "other1Val"},
+				{Id: "transdnstap", Value: "val"},
+			}},
+			expEdnsAttrs: []*pdp.Attribute{
+				{Id: attrNameSourceIP, Value: "127.0.0.13"},
+			},
+			expRespIp: []*pdp.Attribute{
+				{Id: "edns1", Value: "ends1Val"},
+				{Id: "trans1", Value: "trans1Val"},
+				{Id: "other1", Value: "other1Val"},
+				{Id: "transdnstap", Value: "val"},
+			},
+			expTransfer: []*pdp.Attribute{},
+			expDnstap:   []*pdp.Attribute{},
+		},
+		{
+			confAttrs: map[string]confAttrType{
+				"dnstap": confAttrDnstap,
+			},
+			ednsAttrs: []*pdp.Attribute{},
+			resp: &pdp.Response{Effect: pdp.Response_PERMIT, Obligation: []*pdp.Attribute{
+				{Id: "other1", Value: "other1Val"},
+				{Id: "dnstap", Value: "val"},
+			}},
+			expEdnsAttrs: []*pdp.Attribute{
+				{Id: attrNameSourceIP, Value: "127.0.0.14"},
+			},
+			expRespDomain: []*pdp.Attribute{
+				{Id: "other1", Value: "other1Val"},
+				{Id: "dnstap", Value: "val"},
+			},
+			expTransfer: []*pdp.Attribute{},
+			expDnstap: []*pdp.Attribute{
+				{Id: "dnstap", Value: "val"},
+			},
 		},
 	}
 

@@ -106,6 +106,9 @@ func TestSendCRExtraMsg(t *testing.T) {
 			{Id: attrNameSourceIP, Value: "10.0.0.7"},
 			{Id: "option", Value: "option"},
 		},
+		attrsDnstap: []*pdp.Attribute{
+			{Id: "dnstap", Value: "val"},
+		},
 		attrsEdnsStart: 4,
 		action:         2,
 	}
@@ -114,6 +117,7 @@ func TestSendCRExtraMsg(t *testing.T) {
 
 	expectedAttrs := []*pdp.Attribute{
 		{Id: "option", Value: "option"},
+		{Id: "dnstap", Value: "val"},
 	}
 	checkCRExtraResult(t, io, &msg, expectedAttrs)
 
@@ -122,7 +126,7 @@ func TestSendCRExtraMsg(t *testing.T) {
 		return
 	}
 
-	testAttrHolder.policyHit = true
+	testAttrHolder.action = 4
 
 	tapIO.sendCRExtraMsg(tapRW, &msg, testAttrHolder)
 
@@ -130,7 +134,7 @@ func TestSendCRExtraMsg(t *testing.T) {
 		{Id: attrNameDomainName, Value: "test.com"},
 		{Id: attrNameDNSQtype, Value: "1"},
 		{Id: attrNameSourceIP, Value: "10.0.0.7"},
-		{Id: attrNamePolicyAction, Value: "2"},
+		{Id: attrNamePolicyAction, Value: "3"},
 		{Id: "option", Value: "option"},
 		{Id: attrNameType, Value: typeValueQuery},
 	}

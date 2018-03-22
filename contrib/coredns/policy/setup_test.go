@@ -285,7 +285,9 @@ func TestPolicyConfigParse(t *testing.T) {
 						policy {
 							endpoint 10.2.4.1:5555
 							edns0 0xfff0 uid hex string 32 0 16
-							transfer policy_id
+							edns0 0xfff1 id
+							transfer policy_id id
+							dnstap policy_id query_id
 						}
 					}`,
 			options: map[uint16][]*edns0Map{
@@ -298,11 +300,31 @@ func TestPolicyConfigParse(t *testing.T) {
 						start:    0,
 						end:      16},
 				},
+				0xfff1: {
+					&edns0Map{
+						name:     "id",
+						dataType: typeEDNS0Hex,
+						destType: "string",
+						size:     0,
+						start:    0,
+						end:      0},
+				},
 			},
 			confAttrs: map[string]confAttrType{
-				"policy_id": confAttrTransfer,
+				"policy_id": confAttrTransfer | confAttrDnstap,
+				"id":        confAttrEdns | confAttrTransfer,
 				"uid":       confAttrEdns,
+				"query_id":  confAttrDnstap,
 			},
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							dnstap
+						}
+					}`,
+			errContent: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
 			input: `.:53 {
