@@ -357,8 +357,9 @@ func TestPolicy(t *testing.T) {
 			// Handle request
 			status, err := p.ServeDNS(context.Background(), rec, req)
 			// Check status
-			if test.status != status {
-				t.Errorf("Case test[%d]: expected status %q but got %q\n", i, test.status, status)
+			var testStatus int = dns.RcodeSuccess
+			if testStatus != status {
+				t.Errorf("Case test[%d]: expected status %q but got %q\n", i, testStatus, status)
 			}
 			// Check error
 			if test.err != err {
@@ -382,14 +383,12 @@ func TestPolicy(t *testing.T) {
 			p.pdp = newTestClientInit(test.response, test.responseIP, test.errResp, test.errRespIP)
 			// Handle request
 			status, err := p.ServeDNS(context.Background(), rec, req)
-			var testStatus int
+			var testStatus int = dns.RcodeSuccess
 			var testErr error
 			if test.err == errFakePdp {
 				testErr = errFakePdp
-				testStatus = dns.RcodeServerFailure
 			}
 			if test.status == dns.RcodeRefused {
-				testStatus = dns.RcodeRefused
 				testErr = nil
 			}
 			// Check status
