@@ -693,7 +693,7 @@ Exit:
 	if p.tapIO != nil && status != dns.RcodeServerFailure && !debugQuery {
 		p.tapIO.sendCRExtraMsg(w, r, ah)
 	}
-	return status, err
+	return dns.RcodeSuccess, err
 }
 
 func clearEdns(r *dns.Msg) {
