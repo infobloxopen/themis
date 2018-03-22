@@ -44,13 +44,6 @@ const (
 	actCount
 )
 
-type confAttrType byte
-
-const (
-	confAttrEdns = iota
-	confAttrTransfer
-)
-
 var actionConv [actCount]string
 
 func init() {
@@ -175,6 +168,9 @@ func (p *policyPlugin) parseOption(c *caddy.Controller) error {
 	case "transfer":
 		return p.parseTransfer(c)
 
+	case "dnstap":
+		return p.parseDnstap(c)
+
 	case "debug_id":
 		return p.parseDebugID(c)
 
@@ -287,7 +283,20 @@ func (p *policyPlugin) parseTransfer(c *caddy.Controller) error {
 	}
 
 	for _, item := range args {
-		p.confAttrs[item] = confAttrTransfer
+		p.confAttrs[item] = p.confAttrs[item] | confAttrTransfer
+	}
+
+	return nil
+}
+
+func (p *policyPlugin) parseDnstap(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) <= 0 {
+		return c.ArgErr()
+	}
+
+	for _, item := range args {
+		p.confAttrs[item] = p.confAttrs[item] | confAttrDnstap
 	}
 
 	return nil
@@ -323,7 +332,7 @@ func (p *policyPlugin) addEDNS0Map(code, name, dataType, destType,
 	}
 	ecode := uint16(c)
 	p.options[ecode] = append(p.options[ecode], &edns0Map{name, ednsType, destType, uint(size), uint(start), uint(end)})
-	p.confAttrs[name] = confAttrEdns
+	p.confAttrs[name] = p.confAttrs[name] | confAttrEdns
 	return nil
 }
 
@@ -661,16 +670,12 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	case typeAllow:
 		r = respMsg
 	case typeLog:
-		ah.policyHit = true
 		r = respMsg
 	case typeRedirect:
-		ah.policyHit = true
 		status, err = p.redirect(ctx, r, ah.redirect)
 	case typeBlock:
-		ah.policyHit = true
 		status = dns.RcodeNameError
 	case typeRefuse:
-		ah.policyHit = true
 		status = dns.RcodeRefused
 	case typeDrop:
 		return dns.RcodeSuccess, nil

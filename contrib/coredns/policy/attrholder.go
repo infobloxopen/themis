@@ -29,9 +29,9 @@ type attrHolder struct {
 	attrsRespRespip []*pdp.Attribute
 	action          byte
 	redirect        string
-	policyHit       bool
 	attrsEdnsStart  int
 	attrsTransfer   []*pdp.Attribute
+	attrsDnstap     []*pdp.Attribute
 }
 
 func newAttrHolder(qName string, qType uint16, sourceIP string, conf map[string]confAttrType) *attrHolder {
@@ -62,16 +62,19 @@ func (ah *attrHolder) makeReqRespip(addr string) {
 }
 
 func (ah *attrHolder) processConfAttr(attr *pdp.Attribute, t confAttrType) {
-	switch t {
-	case confAttrEdns:
+	if t.isEnds() {
 		for _, item := range ah.attrsReqDomain[ah.attrsEdnsStart:] {
 			if item.Id == attr.Id {
 				return
 			}
 		}
 		ah.attrsReqDomain = append(ah.attrsReqDomain, attr)
-	case confAttrTransfer:
+	}
+	if t.isTransfer() {
 		ah.attrsTransfer = append(ah.attrsTransfer, attr)
+	}
+	if t.isDnstap() {
+		ah.attrsDnstap = append(ah.attrsDnstap, attr)
 	}
 }
 
@@ -91,7 +94,7 @@ func (ah *attrHolder) addResponse(r *pdp.Response, respip bool) {
 			} else if !respip {
 				if t, ok := ah.confAttrs[item.Id]; ok {
 					ah.processConfAttr(item, t)
-					if t == confAttrEdns {
+					if t.isEnds() {
 						//remove duplicate ends attr from response
 						l--
 						r.Obligation[i] = r.Obligation[l]
@@ -116,8 +119,8 @@ func (ah *attrHolder) addResponse(r *pdp.Response, respip bool) {
 				ah.action = typeDrop
 			default:
 				if !respip {
-					if t, ok := ah.confAttrs[item.Id]; ok && t == confAttrEdns {
-						ah.processConfAttr(item, t)
+					if t, ok := ah.confAttrs[item.Id]; ok && t.isEnds() {
+						ah.processConfAttr(item, confAttrEdns)
 						//remove duplicate ends attr from response
 						l--
 						r.Obligation[i] = r.Obligation[l]
@@ -140,10 +143,7 @@ func (ah *attrHolder) addResponse(r *pdp.Response, respip bool) {
 	return
 }
 
-func (ah *attrHolder) convertAttrs() []*pb.DnstapAttribute {
-	if !ah.policyHit {
-		return ah.convertAttrsEdns()
-	}
+func (ah *attrHolder) convertFullList() []*pb.DnstapAttribute {
 	lenAttrsReqDomain := len(ah.attrsReqDomain)
 	lenAttrsRespDomain := len(ah.attrsRespDomain)
 	lenAttrsReqRespip := len(ah.attrsReqRespip)
@@ -192,14 +192,31 @@ func (ah *attrHolder) convertAttrs() []*pb.DnstapAttribute {
 	return out
 }
 
-func (ah *attrHolder) convertAttrsEdns() []*pb.DnstapAttribute {
+func (ah *attrHolder) isFullList() bool {
+	return ah.action != typeAllow
+}
+
+func (ah *attrHolder) convertAttrs() []*pb.DnstapAttribute {
+	if ah.isFullList() {
+		return ah.convertFullList()
+	}
+
 	attrsEdns := ah.attrsReqDomain[ah.attrsEdnsStart:]
-	out := make([]*pb.DnstapAttribute, len(attrsEdns))
-	for i, item := range attrsEdns {
+	out := make([]*pb.DnstapAttribute, len(attrsEdns)+len(ah.attrsDnstap))
+	i := 0
+	for _, item := range attrsEdns {
 		out[i] = &pb.DnstapAttribute{
 			Id:    item.Id,
 			Value: item.Value,
 		}
+		i++
+	}
+	for _, item := range ah.attrsDnstap {
+		out[i] = &pb.DnstapAttribute{
+			Id:    item.Id,
+			Value: item.Value,
+		}
+		i++
 	}
 	return out
 }
