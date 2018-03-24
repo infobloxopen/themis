@@ -7,7 +7,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/infobloxopen/themis/pep"
 	"github.com/infobloxopen/themis/pepcli/perf"
 	"github.com/infobloxopen/themis/pepcli/test"
 )
@@ -38,7 +37,7 @@ func (s *stringSet) Set(v string) error {
 var conf = config{}
 
 type (
-	cmdExec       func(addr string, opts []pep.Option, in, out string, n int, conf interface{}) error
+	cmdExec       func(addr string, in, out string, n int, conf interface{}) error
 	cmdFlagParser func(args []string) interface{}
 
 	command struct {

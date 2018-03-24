@@ -17,7 +17,7 @@ const (
 
 // Exec runs performance test for given server with requests from input and
 // dumps timings in JSON format to given file or standard output if file name is empty.
-func Exec(addr string, opts []pep.Option, in, out string, n int, v interface{}) error {
+func Exec(addr string, in, out string, n int, v interface{}) error {
 	reqs, err := requests.Load(in)
 	if err != nil {
 		return fmt.Errorf("can't load requests from \"%s\": %s", in, err)
@@ -27,8 +27,7 @@ func Exec(addr string, opts []pep.Option, in, out string, n int, v interface{}) 
 		n = len(reqs)
 	}
 
-	c := pep.NewClient(opts...)
-	err = c.Connect(addr)
+	c := pep.NewClient([]string{addr}, 0, 0)
 	if err != nil {
 		return fmt.Errorf("can't connect to %s: %s", addr, err)
 	}

@@ -35,7 +35,6 @@ func TestPolicyConfigParse(t *testing.T) {
 							error option
 						}
 					}`,
-			errContent: errors.New("invalid policy plugin option"),
 		},
 		{
 			input: `.:53 {
@@ -208,71 +207,6 @@ func TestPolicyConfigParse(t *testing.T) {
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							streams 10
-						}
-					}`,
-			streams: newIntPtr(10),
-		},
-		{
-			input: `.:53 {
-						policy {
-							endpoint 10.2.4.1:5555
-							streams Ten
-						}
-					}`,
-			errContent: errors.New("Could not parse number of streams"),
-		},
-		{
-			input: `.:53 {
-						policy {
-							endpoint 10.2.4.1:5555
-							streams
-						}
-					}`,
-			errContent: errors.New("Wrong argument count or unexpected line ending"),
-		},
-		{
-			input: `.:53 {
-						policy {
-							endpoint 10.2.4.1:5555
-							streams -1
-						}
-					}`,
-			errContent: errors.New("Expected at least one stream got -1"),
-		},
-		{
-			input: `.:53 {
-						policy {
-							endpoint 10.2.4.1:5555
-							streams 10 Round-Robin
-						}
-					}`,
-			streams: newIntPtr(10),
-			hotSpot: newBoolPtr(false),
-		},
-		{
-			input: `.:53 {
-						policy {
-							endpoint 10.2.4.1:5555
-							streams 10 Hot-Spot
-						}
-					}`,
-			streams: newIntPtr(10),
-			hotSpot: newBoolPtr(true),
-		},
-		{
-			input: `.:53 {
-						policy {
-							endpoint 10.2.4.1:5555
-							streams 10 Unknown-Balancer
-						}
-					}`,
-			errContent: errors.New("Expected round-robin or hot-spot balancing but got Unknown-Balancer"),
-		},
-		{
-			input: `.:53 {
-						policy {
-							endpoint 10.2.4.1:5555
 							transfer policy_id
 						}
 					}`,
@@ -378,33 +312,6 @@ func TestPolicyConfigParse(t *testing.T) {
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							connection_timeout no
-						}
-					}`,
-			connTimeout: newDurationPtr(-1),
-		},
-		{
-			input: `.:53 {
-						policy {
-							endpoint 10.2.4.1:5555
-							connection_timeout 500ms
-						}
-					}`,
-			connTimeout: newDurationPtr(500 * time.Millisecond),
-		},
-		{
-			input: `.:53 {
-						policy {
-							endpoint 10.2.4.1:5555
-							connection_timeout invalid
-						}
-					}`,
-			errContent: errors.New("Could not parse timeout: time: invalid duration invalid"),
-		},
-		{
-			input: `.:53 {
-						policy {
-							endpoint 10.2.4.1:5555
 							log
 						}
 					}`,
@@ -482,14 +389,6 @@ func TestPolicyConfigParse(t *testing.T) {
 
 				if test.debugSuffix != nil && *test.debugSuffix != mw.debugSuffix {
 					t.Errorf("Expected debug suffix %q but got %q", *test.debugSuffix, mw.debugSuffix)
-				}
-
-				if test.streams != nil && *test.streams != mw.streams {
-					t.Errorf("Expected %d streams but got %d", *test.streams, mw.streams)
-				}
-
-				if test.hotSpot != nil && *test.hotSpot != mw.hotSpot {
-					t.Errorf("Expected hotSpot=%v but got %v", *test.hotSpot, mw.hotSpot)
 				}
 
 				if test.confAttrs != nil {

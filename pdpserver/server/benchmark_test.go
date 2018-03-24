@@ -12,6 +12,7 @@ import (
 	pb "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pdp/ast"
 	"github.com/infobloxopen/themis/pdp/jcon"
+	"github.com/valyala/fastrpc/tlv"
 )
 
 const (
@@ -826,14 +827,16 @@ func benchmarkPolicySet(p *pdp.PolicyStorage, b *testing.B) {
 	s.c = benchmarkContentStorage
 
 	for n := 0; n < b.N; n++ {
-		r, err := s.Validate(nil, benchmarkRequests[n%len(benchmarkRequests)])
-		if err != nil {
-			b.Fatalf("Expected no error while evaluating policies at %d iteration but got: %s", n+1, err)
-		}
+		request := benchmarkRequests[n%len(benchmarkRequests)]
+		var tr tlv.Request
+		tr.SwapValue(pb.MarshalRequest(request))
+		req := &tlv.RequestCtx{Request: tr}
+		resp := s.Validate(req)
+		r := pb.UnmarshalResponse(resp.(*tlv.RequestCtx).Response.Value())
 
 		if r.Effect >= pb.Response_INDETERMINATE {
 			b.Fatalf("Expected specific result of policy evaluation at %d iteration but got %s (%s)",
-				n+1, pb.Response_Effect_name[int32(r.Effect)], r.Reason)
+				n+1, pb.EffectName(r.Effect), r.Reason)
 		}
 	}
 }

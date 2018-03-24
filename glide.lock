@@ -1,5 +1,5 @@
-hash: b3af93bd5a24a79c3c7e1f6ef82ee5075cb5e5b5d6538233a5cd325a47432f0f
-updated: 2018-03-02T13:24:25.554948014+03:00
+hash: 32c65915caf44e5a8561e0b9ae68a323d88a657afb0b0381decebd6b2685d64e
+updated: 2018-03-05T13:07:15.337724555+03:00
 imports:
 - name: github.com/apache/thrift
   version: d907cc92db5b93e699a4282e979d097ea863215a
@@ -30,7 +30,7 @@ imports:
   - plugin/test
   - request
 - name: github.com/davecgh/go-spew
-  version: 8991bc29aa16c548c550c7ff78260e27b9ab7c73
+  version: 782f4967f2dc4564575ca782fe2d04090b5faca8
   subpackages:
   - spew
 - name: github.com/dnstap/golang-dnstap
@@ -51,7 +51,7 @@ imports:
 - name: github.com/go-logfmt/logfmt
   version: 390ab7935ee28ec6b286364bba9b4dd6410cb3d5
 - name: github.com/gogo/protobuf
-  version: d5bc08a2c4c572e9bcff820aa125fe38ac3a3a42
+  version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
   subpackages:
   - proto
 - name: github.com/golang/protobuf
@@ -65,7 +65,7 @@ imports:
 - name: github.com/golang/snappy
   version: 553a641470496b2327abcac10b36396bd98e45c9
 - name: github.com/google/uuid
-  version: dec09d789f3dba190787f8b4454c7d3c936fed9e
+  version: 7e072fc3a7be179aee6d3359e46015aa8c995314
 - name: github.com/grpc-ecosystem/grpc-opentracing
   version: 0e7658f8ee99ee5aa683e2a032b8880091b7a055
   subpackages:
@@ -78,6 +78,14 @@ imports:
   - iptree
   - numtree
   - strtree
+- name: github.com/klauspost/compress
+  version: 2c62357afe99df84d86deb8044ab5b16ac2d1712
+  subpackages:
+  - flate
+  - gzip
+  - zlib
+- name: github.com/klauspost/cpuid
+  version: ae832f27941af41db13bd6d8efd2493e3b22415a
 - name: github.com/kr/logfmt
   version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -139,6 +147,19 @@ imports:
   version: eae91468c24263f06ae73dce45eb26252c73b1d6
 - name: github.com/sirupsen/logrus
   version: f4ee69125072b22721efbe639bd0da9c9d19b8cc
+- name: github.com/stretchr/objx
+  version: 8a3f7159479fbc75b30357fbc48f380b7320f08e
+- name: github.com/valyala/bytebufferpool
+  version: e746df99fe4a3986f4d4f79e13c1e0117ce9c2f7
+- name: github.com/valyala/fasthttp
+  version: e5f51c11919d4f66400334047b897ef0a94c6f3c
+  subpackages:
+  - fasthttputil
+  - stackless
+- name: github.com/valyala/fastrpc
+  version: 0b1a558ac7260beec2d23ecf7cf7d3c1444edf5c
+  subpackages:
+  - tlv
 - name: golang.org/x/crypto
   version: 2faea1465de239e4babd8f5905cc25b781712442
   repo: https://go.googlesource.com/crypto
@@ -207,7 +228,7 @@ imports:
   - tap
   - transport
 - name: gopkg.in/yaml.v2
-  version: 7f97868eec74b32b0982dd158a51a446d1da7eb5
+  version: 25c4ec802a7d637f88d584ab26798e94ad14c13b
 testImports:
 - name: github.com/pmezard/go-difflib
   version: 792786c7400a136282c1664665ae0a8db921c6c2

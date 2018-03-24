@@ -40,13 +40,12 @@ func measurement(c pep.Client, n, routineLimit int, rateLimit int64, reqs []pb.R
 
 func sequential(c pep.Client, n int, reqs []pb.Request) ([]timing, error) {
 	out := make([]timing, n)
-	res := &pb.Response{}
 
 	for i := 0; i < n; i++ {
 		idx := i % len(reqs)
 
 		out[i].setSend()
-		err := c.Validate(reqs[idx], res)
+		_, err := c.Validate(&reqs[idx])
 		if err != nil {
 			return nil, fmt.Errorf("can't send request %d (%d): %s", idx, i, err)
 		}
@@ -58,13 +57,12 @@ func sequential(c pep.Client, n int, reqs []pb.Request) ([]timing, error) {
 
 func sequentialWithPause(c pep.Client, n int, p time.Duration, reqs []pb.Request) ([]timing, error) {
 	out := make([]timing, n)
-	res := &pb.Response{}
 
 	for i := 0; i < n; i++ {
 		idx := i % len(reqs)
 
 		out[i].setSend()
-		err := c.Validate(reqs[idx], res)
+		_, err := c.Validate(&reqs[idx])
 		if err != nil {
 			return nil, fmt.Errorf("can't send request %d (%d): %s", idx, i, err)
 		}
@@ -82,19 +80,17 @@ func parallel(c pep.Client, n int, reqs []pb.Request) ([]timing, error) {
 	var wg sync.WaitGroup
 	for i := 0; i < n; i++ {
 		wg.Add(1)
-		go func(i int, req pb.Request) {
+		go func(i int, req *pb.Request) {
 			defer wg.Done()
 
-			res := &pb.Response{}
-
 			out[i].setSend()
-			err := c.Validate(req, res)
+			_, err := c.Validate(req)
 			if err != nil {
 				out[i].setError(err)
 			} else {
 				out[i].setReceive()
 			}
-		}(i, reqs[i%len(reqs)])
+		}(i, &reqs[i%len(reqs)])
 	}
 
 	wg.Wait()
@@ -108,19 +104,17 @@ func parallelWithPause(c pep.Client, n int, p time.Duration, reqs []pb.Request) 
 	var wg sync.WaitGroup
 	for i := 0; i < n; i++ {
 		wg.Add(1)
-		go func(i int, req pb.Request) {
+		go func(i int, req *pb.Request) {
 			defer wg.Done()
 
-			res := &pb.Response{}
-
 			out[i].setSend()
-			err := c.Validate(req, res)
+			_, err := c.Validate(req)
 			if err != nil {
 				out[i].setError(err)
 			} else {
 				out[i].setReceive()
 			}
-		}(i, reqs[i%len(reqs)])
+		}(i, &reqs[i%len(reqs)])
 
 		time.Sleep(p)
 	}
@@ -140,22 +134,20 @@ func parallelWithLimit(c pep.Client, n, l int, reqs []pb.Request) ([]timing, err
 		ch <- 0
 
 		wg.Add(1)
-		go func(i int, req pb.Request) {
+		go func(i int, req *pb.Request) {
 			defer func() {
 				wg.Done()
 				<-ch
 			}()
 
-			res := &pb.Response{}
-
 			out[i].setSend()
-			err := c.Validate(req, res)
+			_, err := c.Validate(req)
 			if err != nil {
 				out[i].setError(err)
 			} else {
 				out[i].setReceive()
 			}
-		}(i, reqs[i%len(reqs)])
+		}(i, &reqs[i%len(reqs)])
 	}
 
 	wg.Wait()
@@ -173,22 +165,20 @@ func parallelWithLimitAndPause(c pep.Client, n, l int, p time.Duration, reqs []p
 		ch <- 0
 
 		wg.Add(1)
-		go func(i int, req pb.Request) {
+		go func(i int, req *pb.Request) {
 			defer func() {
 				wg.Done()
 				<-ch
 			}()
 
-			res := &pb.Response{}
-
 			out[i].setSend()
-			err := c.Validate(req, res)
+			_, err := c.Validate(req)
 			if err != nil {
 				out[i].setError(err)
 			} else {
 				out[i].setReceive()
 			}
-		}(i, reqs[i%len(reqs)])
+		}(i, &reqs[i%len(reqs)])
 
 		time.Sleep(p)
 	}

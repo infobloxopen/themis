@@ -5,13 +5,14 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 
 	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
+	"github.com/valyala/fastrpc"
+	"github.com/valyala/fastrpc/tlv"
 )
 
-func makeEffect(effect int) (pb.Response_Effect, error) {
+func makeEffect(effect int) (byte, error) {
 	switch effect {
 	case pdp.EffectDeny:
 		return pb.Response_DENY, nil
@@ -38,7 +39,7 @@ func makeEffect(effect int) (pb.Response_Effect, error) {
 	return pb.Response_INDETERMINATE, newUnknownEffectError(effect)
 }
 
-func makeFailEffect(effect pb.Response_Effect) (pb.Response_Effect, error) {
+func makeFailEffect(effect byte) (byte, error) {
 	switch effect {
 	case pb.Response_DENY:
 		return pb.Response_INDETERMINATED, nil
@@ -108,7 +109,7 @@ func (s *Server) newAttributes(obligations []pdp.AttributeAssignmentExpression, 
 	return attrs, nil
 }
 
-func (s *Server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in *pb.Request) (pb.Response_Effect, []error, []*pb.Attribute) {
+func (s *Server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in *pb.Request) (byte, []error, []*pb.Attribute) {
 	if p == nil {
 		return pb.Response_INDETERMINATE, []error{newMissingPolicyError()}, nil
 	}
@@ -150,15 +151,20 @@ func (s *Server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, i
 	return re, errs, attrs
 }
 
-// Validate is a server handler for gRPC call
+// Validate is a server handler for fastrpc call
 // It handles PDP decision requests
-func (s *Server) Validate(ctx context.Context, in *pb.Request) (*pb.Response, error) {
+func (s *Server) Validate(ctxv fastrpc.HandlerCtx) fastrpc.HandlerCtx {
 	s.RLock()
 	p := s.p
 	c := s.c
 	s.RUnlock()
 
-	effect, errs, attrs := s.rawValidate(p, c, in)
+	ctx := ctxv.(*tlv.RequestCtx)
+	data := ctx.Request.Value()
+
+	req := pb.UnmarshalRequest(data)
+
+	effect, errs, attrs := s.rawValidate(p, c, req)
 
 	status := "Ok"
 	if len(errs) > 1 {
@@ -169,14 +175,18 @@ func (s *Server) Validate(ctx context.Context, in *pb.Request) (*pb.Response, er
 
 	if s.opts.logger.Level >= log.DebugLevel {
 		s.opts.logger.WithFields(log.Fields{
-			"effect":     pb.Response_Effect_name[int32(effect)],
+			"effect":     pb.EffectName(effect),
 			"reason":     status,
 			"obligation": obligation(attrs),
 		}).Debug("Response")
 	}
 
-	return &pb.Response{
+	resp := &pb.Response{
 		Effect:     effect,
 		Reason:     status,
-		Obligation: attrs}, nil
+		Obligation: attrs,
+	}
+
+	ctx.Write(pb.MarshalResponse(resp))
+	return ctx
 }
