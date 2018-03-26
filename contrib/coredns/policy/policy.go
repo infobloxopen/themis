@@ -697,9 +697,8 @@ Exit:
 
 	if status != dns.RcodeServerFailure {
 		w.WriteMsg(r)
-	} else {
-		ah.action = typeInvalid
 	}
+
 	if p.tapIO != nil && !debugQuery {
 		p.tapIO.sendCRExtraMsg(w, r, ah)
 	}

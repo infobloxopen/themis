@@ -193,7 +193,7 @@ func (ah *attrHolder) convertFullList() []*pb.DnstapAttribute {
 }
 
 func (ah *attrHolder) isFullList() bool {
-	return ah.action != typeAllow
+	return ah.action != typeAllow && ah.action != typeInvalid
 }
 
 func (ah *attrHolder) convertAttrs() []*pb.DnstapAttribute {
