@@ -2,6 +2,8 @@ package pdp
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/pmezard/go-difflib/difflib"
@@ -542,6 +544,85 @@ func TestPolicyDelete(t *testing.T) {
 		}
 	} else {
 		t.Errorf("Expected new policy but got %T (%#v)", newE, newE)
+	}
+}
+
+func TestPolicyFindNext(t *testing.T) {
+	// public policy test
+	hiddenRule := makeSimpleRule("second", EffectPermit)
+	hiddenRule.hidden = true
+	expectRules := []*Rule{
+		makeSimpleRule("first", EffectPermit),
+		hiddenRule,
+		makeSimpleRule("third", EffectPermit),
+	}
+	p := makeSimplePolicy("test",
+		expectRules[0],
+		expectRules[1],
+		expectRules[2])
+
+	firstRule, err := p.FindNext("first")
+	if err != nil {
+		t.Errorf("Got error %s", err.Error())
+	} else if !reflect.DeepEqual(expectRules[0], firstRule.(*Rule)) {
+		t.Errorf("Expecting rule %+v, but got %+v", expectRules[0], firstRule.(*Rule))
+	}
+
+	thirdRule, err := p.FindNext("third")
+	if err != nil {
+		t.Errorf("Got error %s", err.Error())
+	} else if !reflect.DeepEqual(expectRules[2], thirdRule.(*Rule)) {
+		t.Errorf("Expecting rule %+v, but got %+v", expectRules[2], thirdRule.(*Rule))
+	}
+
+	// hidden policy test
+	expectNil, err := p.FindNext("second")
+	expectError(t, "Queried rule \"second\" is not found", expectNil, err)
+}
+
+func TestPolicyNext(t *testing.T) {
+	// public policy test
+	expectRules := []*Rule{
+		makeSimpleRule("first", EffectPermit),
+		makeSimpleRule("second", EffectPermit),
+		makeSimpleRule("third", EffectPermit),
+	}
+	p := makeSimplePolicy("test",
+		expectRules[0],
+		expectRules[1],
+		expectRules[2])
+
+	expectThree := p.NextSize()
+	if expectThree != 3 {
+		t.Errorf("Expecting 3 children of policy, but got %d", expectThree)
+	}
+
+	expectFirst := p.GetNext(0)
+	expectSecond := p.GetNext(1)
+	expectThird := p.GetNext(2)
+	expectNil := p.GetNext(3)
+	if expectFirst != expectRules[0] {
+		t.Errorf("Expecting policy %v+, but got %v+", expectRules[0], expectFirst)
+	}
+	if expectSecond != expectRules[1] {
+		t.Errorf("Expecting policy %v+, but got %v+", expectRules[1], expectSecond)
+	}
+	if expectThird != expectRules[2] {
+		t.Errorf("Expecting policy %v+, but got %v+", expectRules[2], expectThird)
+	}
+	if expectNil != nil {
+		t.Errorf("Expecting nil policy, but got %v+", expectNil)
+	}
+}
+
+func expectError(t *testing.T, expectErrMsg string, nilPtr interface{}, gotErr error) {
+	if nilPtr != nil {
+		t.Errorf("Expecting <nil>, but got %+v", nilPtr)
+	}
+	if gotErr == nil {
+		t.Errorf("Expecting error message %s, got nil error", expectErrMsg)
+	} else if 0 != strings.Compare(gotErr.Error(), expectErrMsg) {
+		t.Errorf("Expecting error message %s, got %s", expectErrMsg, gotErr.Error())
 	}
 }
 

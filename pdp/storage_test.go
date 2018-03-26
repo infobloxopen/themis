@@ -2,6 +2,8 @@ package pdp
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -22,6 +24,201 @@ func TestStorage(t *testing.T) {
 	if sr != root {
 		t.Errorf("Expected stored root policy to be exactly root policy but got different")
 	}
+}
+
+func TestStorageGetPath(t *testing.T) {
+	targetRule := &Rule{id: "permit", effect: EffectPermit}
+	targetPolicy := &Policy{
+		id:        "first",
+		rules:     []*Rule{targetRule},
+		algorithm: firstApplicableEffectRCA{}}
+	root := &PolicySet{
+		id:        "test",
+		policies:  []Evaluable{targetPolicy},
+		algorithm: firstApplicableEffectPCA{}}
+	s := NewPolicyStorage(root, nil, nil)
+
+	expectRule, err := s.GetPath([]string{"test", "first", "permit"})
+	if err != nil {
+		t.Errorf("Got error %s", err.Error())
+	} else if expectRule != targetRule {
+		t.Errorf("Expecting iterator %v+, got %v+", targetRule, expectRule)
+	}
+
+	expectPolicy, err := s.GetPath([]string{"test", "first"})
+	if err != nil {
+		t.Errorf("Got error %s", err.Error())
+	} else if expectPolicy != targetPolicy {
+		t.Errorf("Expecting iterator %v+, got %v+", targetPolicy, expectPolicy)
+	}
+
+	expectRoot, err := s.GetPath([]string{"test"})
+	if err != nil {
+		t.Errorf("Got error %s", err.Error())
+	} else if expectRoot != root {
+		t.Errorf("Expecting iterator %v+, got %v+", root, expectRoot)
+	}
+
+	// expect failures
+
+	// near miss (never match by substring)
+	expectNil, err := s.GetPath([]string{"test", "first", "permits"})
+	expectError(t, "Queried rule \"permits\" is not found", expectNil, err)
+
+	// bad root
+	expectNil, err = s.GetPath([]string{"first", "permit"})
+	expectError(t, "Invalid root id or hidden root", expectNil, err)
+
+	// hidden intermediate
+	targetPolicy.hidden = true
+	expectNil, err = s.GetPath([]string{"test", "first", "permit"})
+	expectError(t, "Queried element \"first\" is not found", expectNil, err)
+
+	// hidden root
+	root.hidden = true
+	expectNil, err = s.GetPath([]string{"test", "first", "permit"})
+	expectError(t, "Invalid root id or hidden root", expectNil, err)
+}
+
+func TestGetSubtree(t *testing.T) {
+	targetRule := &Rule{id: "permit", effect: EffectPermit}
+	targetRule2 := &Rule{id: "permit2", effect: EffectPermit}
+	targetRule3 := &Rule{id: "permit3", effect: EffectPermit}
+	targetPolicy := &Policy{
+		id:        "first",
+		rules:     []*Rule{targetRule, targetRule2},
+		algorithm: firstApplicableEffectRCA{}}
+	targetPolicy2 := &Policy{
+		id:        "third",
+		rules:     []*Rule{targetRule3},
+		algorithm: firstApplicableEffectRCA{}}
+	targetPolicySet := &PolicySet{
+		id:        "second",
+		policies:  []Evaluable{targetPolicy2},
+		algorithm: firstApplicableEffectPCA{}}
+	root := &PolicySet{
+		id:        "test",
+		policies:  []Evaluable{targetPolicy, targetPolicySet},
+		algorithm: firstApplicableEffectPCA{}}
+
+	expectedRes := "{\"id\":\"test\",\"elems\":\"...\"}"
+	expectRoot := GetSubtree(root, 0)
+	if strings.Compare(expectedRes, expectRoot) != 0 {
+		t.Errorf("Expecting json %v, got %v", expectedRes, expectRoot)
+	}
+
+	expectedRes = "{\"id\":\"first\",\"elems\":\"...\"}"
+	expectPolicy := GetSubtree(targetPolicy, 0)
+	if strings.Compare(expectedRes, expectPolicy) != 0 {
+		t.Errorf("Expecting json %v, got %v", expectedRes, expectPolicy)
+	}
+
+	expectedRes = "{\"id\":\"permit\"}"
+	expectRule := GetSubtree(targetRule, 0)
+	if strings.Compare(expectedRes, expectRule) != 0 {
+		t.Errorf("Expecting json %v, got %v", expectedRes, expectRule)
+	}
+
+	expectedRes = "{\"id\":\"test\",\"elems\":" +
+		"[{\"id\":\"first\",\"elems\":\"...\"},{\"id\":\"second\",\"elems\":\"...\"}]}"
+	expectTopTwo := GetSubtree(root, 1)
+	if strings.Compare(expectedRes, expectTopTwo) != 0 {
+		t.Errorf("Expecting json %v, got %v", expectedRes, expectTopTwo)
+	}
+
+	expectedRes = "{\"id\":\"test\",\"elems\":" +
+		"[{\"id\":\"first\",\"elems\":" +
+		"[{\"id\":\"permit\"},{\"id\":\"permit2\"}]" +
+		"},{\"id\":\"second\",\"elems\":" +
+		"[{\"id\":\"third\",\"elems\":\"...\"}]}]}"
+	expectTopFive := GetSubtree(root, 2)
+	if strings.Compare(expectedRes, expectTopFive) != 0 {
+		t.Errorf("Expecting json %v+, got %v+", expectedRes, expectTopFive)
+	}
+
+	expectedRes = "{\"id\":\"test\",\"elems\":" +
+		"[{\"id\":\"first\",\"elems\":" +
+		"[{\"id\":\"permit\"},{\"id\":\"permit2\"}]" +
+		"},{\"id\":\"second\",\"elems\":" +
+		"[{\"id\":\"third\",\"elems\":[{\"id\":\"permit3\"}]}]}]}"
+	expectAll := GetSubtree(root, 5)
+	if strings.Compare(expectedRes, expectAll) != 0 {
+		t.Errorf("Expecting json %v+, got %v+", expectedRes, expectAll)
+	}
+}
+
+func TestPathQuery(t *testing.T) {
+	targetRule := &Rule{id: "permit", effect: EffectPermit}
+	targetRule2 := &Rule{id: "permit2", effect: EffectPermit}
+	targetRule3 := &Rule{id: "permit3", effect: EffectPermit}
+	targetPolicy := &Policy{
+		id:        "first",
+		rules:     []*Rule{targetRule, targetRule2},
+		algorithm: firstApplicableEffectRCA{}}
+	targetPolicy2 := &Policy{
+		id:        "third",
+		rules:     []*Rule{targetRule3},
+		algorithm: firstApplicableEffectRCA{}}
+	targetPolicySet := &PolicySet{
+		id:        "second",
+		policies:  []Evaluable{targetPolicy2},
+		algorithm: firstApplicableEffectPCA{}}
+	root := &PolicySet{
+		id:        "test",
+		policies:  []Evaluable{targetPolicy, targetPolicySet},
+		algorithm: firstApplicableEffectPCA{}}
+
+	// search from root
+	expectPath := []string{"first", "permit2"}
+	path, expectRule2, err := PathQuery(root, "permit2")
+	if err != nil {
+		t.Errorf("Got error %s", err.Error())
+	} else if expectRule2 != targetRule2 {
+		t.Errorf("Expecting iterator %v+, got %v+", targetRule2, expectRule2)
+	} else if !reflect.DeepEqual(expectPath, path) {
+		t.Errorf("Expecting path %v, got %v", expectPath, path)
+	}
+
+	expectPath = []string{"first", "permit"}
+	path, expectRule, err := PathQuery(root, "permit")
+	if err != nil {
+		t.Errorf("Got error %s", err.Error())
+	} else if expectRule != targetRule {
+		t.Errorf("Expecting iterator %v+, got %v+", targetRule, expectRule)
+	} else if !reflect.DeepEqual(expectPath, path) {
+		t.Errorf("Expecting path %v, got %v", expectPath, path)
+	}
+
+	expectPath = []string{"second", "third"}
+	path, expectPolicy2, err := PathQuery(root, "third")
+	if err != nil {
+		t.Errorf("Got error %s", err.Error())
+	} else if expectPolicy2 != targetPolicy2 {
+		t.Errorf("Expecting iterator %v+, got %v+", targetPolicy2, expectPolicy2)
+	} else if !reflect.DeepEqual(expectPath, path) {
+		t.Errorf("Expecting path %v, got %v", expectPath, path)
+	}
+
+	// search from subtree
+	expectPath = []string{"third", "permit3"}
+	path, expectRule3, err := PathQuery(targetPolicySet, "permit3")
+	if err != nil {
+		t.Errorf("Got error %s", err.Error())
+	} else if expectRule3 != targetRule3 {
+		t.Errorf("Expecting iterator %v+, got %v+", targetRule3, expectRule3)
+	} else if !reflect.DeepEqual(expectPath, path) {
+		t.Errorf("Expecting path %v, got %v", expectPath, path)
+	}
+
+	// expect failures
+
+	// search for non-existent node
+	_, expectNil, err := PathQuery(root, "non-existent")
+	expectError(t, "Element \"non-existent\" not found", expectNil, err)
+
+	// wrong subtree
+	_, expectNil, err = PathQuery(targetPolicySet, "permit")
+	expectError(t, "Element \"permit\" not found", expectNil, err)
 }
 
 func TestStorageNewTransaction(t *testing.T) {

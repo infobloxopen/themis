@@ -57,6 +57,101 @@ func (s *PolicyStorage) NewTransaction(tag *uuid.UUID) (*PolicyStorageTransactio
 	return &PolicyStorageTransaction{tag: *tag, attrs: s.attrs, policies: s.policies}, nil
 }
 
+// GetPath returns Policy/PolicySet at path if it exists, otherwise return nil, err
+func (s *PolicyStorage) GetPath(path []string) (Iterable, error) {
+	var (
+		err error
+		// [PolicySet, Policy, Rule] should always be iterable
+		iter = s.policies.(Iterable)
+	)
+	if rootID, ok := s.policies.GetID(); len(path) == 0 || !ok || rootID != path[0] {
+		return nil, fmt.Errorf("Invalid root id or hidden root")
+	}
+	for _, id := range path[1:] {
+		iter, err = iter.FindNext(id)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return iter, nil
+}
+
+// GetSubtree obtains subtree of iter within depth in JSON format
+func GetSubtree(iter Iterable, depth uint) string {
+	if id, ok := iter.GetID(); ok {
+		idInfo := fmt.Sprintf("\"id\":%s", strconv.Quote(id))
+		if depth > 0 {
+			nChild := iter.NextSize()
+			cIdx := 0
+			children := make([]string, nChild)
+			for i := 0; i < nChild; i++ {
+				child := GetSubtree(iter.GetNext(i), depth-1)
+				if len(child) > 0 {
+					children[cIdx] = child
+					cIdx++
+				}
+			}
+			if cIdx > 0 {
+				return fmt.Sprintf("{%s,\"elems\":[%s]}", idInfo,
+					strings.Join(children[:cIdx], ","))
+			}
+		} else if iter.NextSize() > 0 {
+			return fmt.Sprintf("{%s,\"elems\":\"...\"}", idInfo)
+		}
+		return fmt.Sprintf("{%s}", idInfo)
+	}
+	return ""
+}
+
+type iterStackInfo struct {
+	Iterable
+	idx int
+}
+
+func (info *iterStackInfo) next() Iterable {
+	var out Iterable
+	if info.idx < info.NextSize() {
+		out = info.GetNext(info.idx)
+		info.idx++
+	}
+	return out
+}
+
+// PathQuery df searches for evaluable with id under subtree of root iter
+func PathQuery(iter Iterable, id string) ([]string, Iterable, error) {
+	rootID, ok := iter.GetID()
+	if ok && rootID == id {
+		return []string{}, iter, nil
+	}
+	// depth first search to avoid memory overhead
+	// assumes relatively shallow tree
+	stack := []iterStackInfo{{iter, 0}}
+	for len(stack) > 0 {
+
+		if iter = stack[len(stack)-1].next(); nil != iter {
+			// found element matching id
+			iterID, ok := iter.GetID()
+			if ok && iterID == id {
+				nOut := len(stack)
+				out := make([]string, nOut)
+				for i := 1; i < nOut; i++ {
+					out[i-1], _ = stack[i].GetID()
+				}
+				out[nOut-1] = iterID
+				return out, iter, nil
+			}
+			// push stack if possible
+			if ok {
+				stack = append(stack, iterStackInfo{iter, 0})
+			}
+		} else {
+			// pop stack
+			stack = stack[:len(stack)-1]
+		}
+	}
+	return nil, nil, fmt.Errorf("Element %s not found", strconv.Quote(id))
+}
+
 // Here set of supported update operations is defined.
 const (
 	// UOAdd stands for add operation (add or append item to a collection).

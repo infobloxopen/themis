@@ -1,6 +1,9 @@
 package pdp
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 // PolicyCombiningAlg represent abstract policy combining algorithm.
 // The algorithm defines how to evaluate child policy sets and policies
@@ -178,6 +181,33 @@ func (p *PolicySet) Delete(path []string) (Evaluable, error) {
 	}
 
 	return r, nil
+}
+
+// FindNext implements Iterable interface and finds next child by id
+func (p *PolicySet) FindNext(id string) (Iterable, error) {
+	for _, child := range p.policies {
+		if cid, ok := child.GetID(); ok && cid == id {
+			iter, ok := child.(Iterable)
+			if !ok {
+				return nil, fmt.Errorf("Queried element %s is not a Rule, Policy, or PolicySet", id)
+			}
+			return iter, nil
+		}
+	}
+	return nil, fmt.Errorf("Queried element %s is not found", strconv.Quote(id))
+}
+
+// GetNext implements Iterable interface and get child at index
+func (p *PolicySet) GetNext(index int) Iterable {
+	if index < len(p.policies) {
+		return p.policies[index].(Iterable)
+	}
+	return nil
+}
+
+// NextSize implements Iterable interface and get the number of children
+func (p *PolicySet) NextSize() int {
+	return len(p.policies)
 }
 
 func (p *PolicySet) getOrder() int {

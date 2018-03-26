@@ -790,8 +790,8 @@ INFO[0373] Got new control request
 INFO[0373] Got new data stream
 DEBU[0373] Policy update                                 update=policy update: 823f79f2-0001-4eb2-9ba0-2a8c1b284443 - 93a17ce2-788d-476f-bd11-a5580a2f35f3
 commands:
-- Add ("Root")
-- Delete ("Root"/"First Rule")
+- Add Path ("Root")
+- Delete Path ("Root"/"First Rule")
 INFO[0373] Got apply command
 INFO[0373] Policy update has been applied                curr-tag=93a17ce2-788d-476f-bd11-a5580a2f35f3 id=3 prev-tag=823f79f2-0001-4eb2-9ba0-2a8c1b284443
 ...
@@ -891,16 +891,46 @@ INFO[2190] Got new data stream
 DEBU[2190] Content update                                update=content update: 823f79f2-0001-4eb2-9ba0-2a8c1b284443 - 93a17ce2-788d-476f-bd11-a5580a2f35f3
 content: "content"
 commands:
-- Delete ("domain-addresses"/"good"/"example.com")
-- Add ("domain-addresses"/"good"/"example.com")
-- Delete ("domain-addresses"/"bad"/"example.com")
-- Add ("domain-addresses"/"bad"/"example.com")
+- Delete Path ("domain-addresses"/"good"/"example.com")
+- Add Path ("domain-addresses"/"good"/"example.com")
+- Delete Path ("domain-addresses"/"bad"/"example.com")
+- Add Path ("domain-addresses"/"bad"/"example.com")
 INFO[2190] Got apply command
 INFO[2190] Content update has been applied               cid=content curr-tag=93a17ce2-788d-476f-bd11-a5580a2f35f3 id=5 
 ...
 ```
 
-Contents with different ids and policies can be updated independently and in paralel.
+Contents with different ids and policies can be updated independently and in parallel.
+
+## Debugging Options
+
+PDPServer provides options to query for rules and policies by id.
+
+On startup, PDPServer can optionally listen to a query endpoint (using the `-query flag`).
+
+While running, the server provides the following RESTful api through the query endpoint:
+
+- Check the storage's root id: `GET /root`
+
+- Check the immediate descendants of the element specified by some path: `GET /storage/<path...>?depth=<depth>`
+
+  The depth query string for this command is optional. By default, the depth is 0. Depth denotes the distance from the target element. Therefore a depth of 0 will show no descendant information.
+
+- Get the path of an element by id: `GET /find/<id>/<path...>`.
+
+Note that all path parameters must include the root id.
+
+For example:
+
+```
+policies:
+  id: "TestPolicy"
+  alg: FirstApplicableEffect
+  rules:
+  - id: "TestRule"
+    effect: Permit
+```
+The path to TestRule is `TestPolicy/TestRule`
 
 # References
 **[XACML-V3.0]** *eXtensible Access Control Markup Language (XACML) Version 3.0.* 22 January 2013. OASIS Standard. http://docs.oasis-open.org/xacml/3.0/xacml-3.0-core-spec-os-en.html.

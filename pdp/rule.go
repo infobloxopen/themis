@@ -1,6 +1,9 @@
 package pdp
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 // Rule represents PDP rule (child or PDP policy).
 type Rule struct {
@@ -44,6 +47,21 @@ func (r Rule) describe() string {
 // GetID returns rule id if the rule isn't hidden.
 func (r Rule) GetID() (string, bool) {
 	return r.id, !r.hidden
+}
+
+// FindNext implements Iterable interface
+func (r *Rule) FindNext(id string) (Iterable, error) {
+	return nil, fmt.Errorf("Rules are always leaves, element %s not found", strconv.Quote(id))
+}
+
+// GetNext implements Iterable interface and get child at index
+func (r *Rule) GetNext(index int) Iterable {
+	return nil
+}
+
+// NextSize implements Iterable interface and get the number of children
+func (r *Rule) NextSize() int {
+	return 0
 }
 
 func (r Rule) calculate(ctx *Context) Response {

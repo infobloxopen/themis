@@ -38,6 +38,7 @@ type config struct {
 	memProfDumpPath     string
 	memProfNumGC        uint
 	memProfDelay        time.Duration
+	queryEP             string
 }
 
 type stringSet []string
@@ -63,6 +64,7 @@ func init() {
 	flag.StringVar(&conf.tracingEP, "t", "", "OpenZipkin tracing endpoint")
 	flag.StringVar(&conf.healthEP, "health", "", "health check endpoint")
 	flag.StringVar(&conf.profilerEP, "pprof", "", "performance profiler endpoint")
+	flag.StringVar(&conf.queryEP, "query", "", "policy/rule debug query endpoint")
 	limit := flag.Uint64("mem-limit", 0, "memory limit in megabytes")
 	flag.UintVar(&conf.maxStreams, "max-streams", 0, "maximum number of parallel gRPC streams (0 - use gRPC default)")
 

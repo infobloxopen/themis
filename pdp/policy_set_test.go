@@ -1,6 +1,7 @@
 package pdp
 
 import (
+	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -673,6 +674,74 @@ func TestPolicySetDelete(t *testing.T) {
 		}
 	} else {
 		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
+	}
+}
+
+func TestPolicySetFindNext(t *testing.T) {
+	// public policy test
+	hiddenPolicy := makeSimplePolicy("second", makeSimpleRule("permit", EffectPermit))
+	hiddenPolicy.hidden = true
+	expectPolicies := []*Policy{
+		makeSimplePolicy("first", makeSimpleRule("permit", EffectPermit)),
+		hiddenPolicy,
+		makeSimplePolicy("third", makeSimpleRule("permit", EffectPermit)),
+	}
+	ps := makeSimplePolicySet("test",
+		expectPolicies[0],
+		expectPolicies[1],
+		expectPolicies[2])
+
+	firstPolicy, err := ps.FindNext("first")
+	if err != nil {
+		t.Errorf("Got error %s", err.Error())
+	} else if !reflect.DeepEqual(expectPolicies[0], firstPolicy.(*Policy)) {
+		t.Errorf("Expecting policy %+v, but got %+v", expectPolicies[0], firstPolicy.(*Policy))
+	}
+
+	thirdPolicy, err := ps.FindNext("third")
+	if err != nil {
+		t.Errorf("Got error %s", err.Error())
+	} else if !reflect.DeepEqual(expectPolicies[2], thirdPolicy.(*Policy)) {
+		t.Errorf("Expecting policy %+v, but got %+v", expectPolicies[2], thirdPolicy.(*Policy))
+	}
+
+	// hidden policy test
+	expectNil, err := ps.FindNext("second")
+	expectError(t, "Queried element \"second\" is not found", expectNil, err)
+}
+
+func TestPolicySetNext(t *testing.T) {
+	// public policy test
+	expectPolicies := []*Policy{
+		makeSimplePolicy("first", makeSimpleRule("permit", EffectPermit)),
+		makeSimplePolicy("second", makeSimpleRule("permit", EffectPermit)),
+		makeSimplePolicy("third", makeSimpleRule("permit", EffectPermit)),
+	}
+	ps := makeSimplePolicySet("test",
+		expectPolicies[0],
+		expectPolicies[1],
+		expectPolicies[2])
+
+	expectThree := ps.NextSize()
+	if expectThree != 3 {
+		t.Errorf("Expecting 3 children of policyset, but got %d", expectThree)
+	}
+
+	expectFirst := ps.GetNext(0)
+	expectSecond := ps.GetNext(1)
+	expectThird := ps.GetNext(2)
+	expectNil := ps.GetNext(3)
+	if expectFirst != expectPolicies[0] {
+		t.Errorf("Expecting policy %v+, but got %v+", expectPolicies[0], expectFirst)
+	}
+	if expectSecond != expectPolicies[1] {
+		t.Errorf("Expecting policy %v+, but got %v+", expectPolicies[1], expectSecond)
+	}
+	if expectThird != expectPolicies[2] {
+		t.Errorf("Expecting policy %v+, but got %v+", expectPolicies[2], expectThird)
+	}
+	if expectNil != nil {
+		t.Errorf("Expecting nil policy, but got %v+", expectNil)
 	}
 }
 

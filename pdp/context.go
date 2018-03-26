@@ -317,3 +317,20 @@ type Evaluable interface {
 	setOrder(ord int)
 	describe() string
 }
+
+// Iterable interface defines all PDP entities having some parent-child relationship
+// Unlike Evaluable, Iterables include Rule
+type Iterable interface {
+	GetID() (string, bool)
+	FindNext(string) (Iterable, error)
+	GetNext(int) Iterable
+	NextSize() int
+
+	describe() string
+}
+
+var (
+	_ Iterable = &PolicySet{}
+	_ Iterable = &Policy{}
+	_ Iterable = &Rule{}
+)
