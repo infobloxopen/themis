@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/coredns/coredns/plugin"
+	"github.com/coredns/coredns/plugin/pkg/nonwriter"
 	"github.com/coredns/coredns/plugin/pkg/trace"
 	"github.com/mholt/caddy"
 	"github.com/miekg/dns"
@@ -607,7 +608,7 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	qName, qType := getNameAndType(r)
 	for _, s := range p.passthrough {
 		if strings.HasSuffix(qName, s) {
-			responseWriter := new(writer)
+			responseWriter := nonwriter.New(w)
 			_, err = plugin.NextOrFailure(p.Name(), p.next, ctx, responseWriter, r)
 			r = responseWriter.Msg
 			status = r.Rcode
@@ -633,7 +634,7 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 
 	if ah.action == typeAllow || ah.action == typeLog {
 		// resolve domain name to IP
-		responseWriter := new(writer)
+		responseWriter := nonwriter.New(w)
 		_, err = plugin.NextOrFailure(p.Name(), p.next, ctx, responseWriter, r)
 		if err != nil {
 			status = dns.RcodeServerFailure
@@ -672,7 +673,7 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	case typeLog:
 		r = respMsg
 	case typeRedirect:
-		status, err = p.redirect(ctx, r, ah.redirect)
+		status, err = p.redirect(ctx, w, r, ah.redirect)
 	case typeBlock:
 		status = dns.RcodeNameError
 	case typeRefuse:
@@ -694,8 +695,12 @@ Exit:
 		r.Question[0].Qclass = dns.ClassCHAOS
 	}
 
-	w.WriteMsg(r)
-	if p.tapIO != nil && status != dns.RcodeServerFailure && !debugQuery {
+	if status != dns.RcodeServerFailure {
+		w.WriteMsg(r)
+	} else {
+		ah.action = typeInvalid
+	}
+	if p.tapIO != nil && !debugQuery {
 		p.tapIO.sendCRExtraMsg(w, r, ah)
 	}
 	return dns.RcodeSuccess, err
@@ -718,7 +723,7 @@ func clearEdns(r *dns.Msg) {
 // Name implements the Handler interface
 func (p *policyPlugin) Name() string { return "policy" }
 
-func (p *policyPlugin) redirect(ctx context.Context, r *dns.Msg, dst string) (int, error) {
+func (p *policyPlugin) redirect(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, dst string) (int, error) {
 	var rr dns.RR
 	cname := false
 
@@ -743,7 +748,7 @@ func (p *policyPlugin) redirect(ctx context.Context, r *dns.Msg, dst string) (in
 	if cname {
 		origName := r.Question[0].Name
 		r.Question[0].Name = dst
-		responseWriter := new(writer)
+		responseWriter := nonwriter.New(w)
 		_, err := plugin.NextOrFailure(p.Name(), p.next, ctx, responseWriter, r)
 		if err != nil {
 			return dns.RcodeServerFailure, err
@@ -806,16 +811,3 @@ func extractRespIP(m *dns.Msg) (address string) {
 	}
 	return
 }
-
-type writer struct {
-	Msg *dns.Msg
-}
-
-func (w *writer) Close() error                  { return nil }
-func (w *writer) TsigStatus() error             { return nil }
-func (w *writer) TsigTimersOnly(b bool)         { return }
-func (w *writer) Hijack()                       { return }
-func (w *writer) LocalAddr() (la net.Addr)      { return }
-func (w *writer) RemoteAddr() (ra net.Addr)     { return }
-func (w *writer) WriteMsg(m *dns.Msg) error     { w.Msg = m; return nil }
-func (w *writer) Write(buf []byte) (int, error) { return len(buf), nil }

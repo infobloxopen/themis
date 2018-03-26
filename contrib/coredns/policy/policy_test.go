@@ -49,6 +49,13 @@ func TestPolicy(t *testing.T) {
 			errResp:   errFakePdp,
 			status:    dns.RcodeServerFailure,
 			err:       errFakePdp,
+			attrs: []*pdp.Attribute{
+				{Id: attrNameDomainName, Value: "test.com"},
+				{Id: attrNameDNSQtype, Value: "1"},
+				{Id: attrNameSourceIP, Value: "10.240.0.1"},
+				{Id: attrNamePolicyAction, Value: "0"},
+				{Id: attrNameType, Value: typeValueQuery},
+			},
 		},
 		{
 			query:     "test.com.",
@@ -56,6 +63,13 @@ func TestPolicy(t *testing.T) {
 			response:  &pdp.Response{Effect: pdp.Response_INDETERMINATE},
 			status:    dns.RcodeServerFailure,
 			err:       errInvalidAction,
+			attrs: []*pdp.Attribute{
+				{Id: attrNameDomainName, Value: "test.com"},
+				{Id: attrNameDNSQtype, Value: "1"},
+				{Id: attrNameSourceIP, Value: "10.240.0.1"},
+				{Id: attrNamePolicyAction, Value: "0"},
+				{Id: attrNameType, Value: typeValueQuery},
+			},
 		},
 		{
 			query:      "test.com.",
@@ -64,6 +78,14 @@ func TestPolicy(t *testing.T) {
 			responseIP: &pdp.Response{Effect: pdp.Response_INDETERMINATE},
 			status:     dns.RcodeServerFailure,
 			err:        errInvalidAction,
+			attrs: []*pdp.Attribute{
+				{Id: attrNameDomainName, Value: "test.com"},
+				{Id: attrNameDNSQtype, Value: "1"},
+				{Id: attrNameSourceIP, Value: "10.240.0.1"},
+				{Id: attrNameAddress, Value: "10.240.0.1"},
+				{Id: attrNamePolicyAction, Value: "0"},
+				{Id: attrNameType, Value: typeValueResponse},
+			},
 		},
 		{
 			query:     "test.com.",
@@ -72,6 +94,14 @@ func TestPolicy(t *testing.T) {
 			errRespIP: errFakePdp,
 			status:    dns.RcodeServerFailure,
 			err:       errFakePdp,
+			attrs: []*pdp.Attribute{
+				{Id: attrNameDomainName, Value: "test.com"},
+				{Id: attrNameDNSQtype, Value: "1"},
+				{Id: attrNameSourceIP, Value: "10.240.0.1"},
+				{Id: attrNameAddress, Value: "10.240.0.1"},
+				{Id: attrNamePolicyAction, Value: "0"},
+				{Id: attrNameType, Value: typeValueResponse},
+			},
 		},
 		{
 			query:     "test.com.",
@@ -230,6 +260,14 @@ func TestPolicy(t *testing.T) {
 				Obligation: []*pdp.Attribute{{Id: attrNameRedirectTo, Value: "test.net"}}},
 			status: dns.RcodeServerFailure,
 			err:    errFakeResolver,
+			attrs: []*pdp.Attribute{
+				{Id: attrNameDomainName, Value: "test.com"},
+				{Id: attrNameDNSQtype, Value: "1"},
+				{Id: attrNameSourceIP, Value: "10.240.0.1"},
+				{Id: attrNameRedirectTo, Value: "test.net"},
+				{Id: attrNamePolicyAction, Value: "0"},
+				{Id: attrNameType, Value: typeValueQuery},
+			},
 		},
 		{
 			query:     "test.net.",
@@ -237,6 +275,13 @@ func TestPolicy(t *testing.T) {
 			response:  &pdp.Response{Effect: pdp.Response_PERMIT},
 			status:    dns.RcodeServerFailure,
 			err:       errFakeResolver,
+			attrs: []*pdp.Attribute{
+				{Id: attrNameDomainName, Value: "test.net"},
+				{Id: attrNameDNSQtype, Value: "1"},
+				{Id: attrNameSourceIP, Value: "10.240.0.1"},
+				{Id: attrNamePolicyAction, Value: "0"},
+				{Id: attrNameType, Value: typeValueQuery},
+			},
 		},
 		{
 			query:     "test.org.",
