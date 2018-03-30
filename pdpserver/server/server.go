@@ -264,6 +264,11 @@ func (s *Server) LoadContent(paths []string) error {
 	return nil
 }
 
+// InitializeSelectors initialize all registered selectors that are enabled
+func (s *Server) InitializeSelectors() {
+	pdp.InitializeSelectors()
+}
+
 // ReadContent reads content with using io.Reader instances
 func (s *Server) ReadContent(readers ...io.Reader) error {
 	items := []*pdp.LocalContent{}
