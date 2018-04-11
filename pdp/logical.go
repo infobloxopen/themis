@@ -33,7 +33,7 @@ func (f functionBooleanNot) describe() string {
 func (f functionBooleanNot) Calculate(ctx *Context) (AttributeValue, error) {
 	a, err := ctx.calculateBooleanExpression(f.arg)
 	if err != nil {
-		return undefinedValue, bindError(err, f.describe())
+		return UndefinedValue, bindError(err, f.describe())
 	}
 
 	return MakeBooleanValue(!a), nil
@@ -67,7 +67,7 @@ func (f functionBooleanOr) Calculate(ctx *Context) (AttributeValue, error) {
 	for i, arg := range f.args {
 		a, err := ctx.calculateBooleanExpression(arg)
 		if err != nil {
-			return undefinedValue, bindError(bindErrorf(err, "argument %d", i), f.describe())
+			return UndefinedValue, bindError(bindErrorf(err, "argument %d", i), f.describe())
 		}
 
 		if a {
@@ -112,7 +112,7 @@ func (f functionBooleanAnd) Calculate(ctx *Context) (AttributeValue, error) {
 	for i, arg := range f.args {
 		a, err := ctx.calculateBooleanExpression(arg)
 		if err != nil {
-			return undefinedValue, bindError(bindErrorf(err, "argument %d", i), f.describe())
+			return UndefinedValue, bindError(bindErrorf(err, "argument %d", i), f.describe())
 		}
 
 		if !a {

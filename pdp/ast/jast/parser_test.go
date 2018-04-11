@@ -1145,7 +1145,7 @@ func TestUnmarshal(t *testing.T) {
 			case 0:
 				v, err := pdp.MakeValueFromString(pdp.TypeBoolean, "true")
 				if err != nil {
-					return "", pdp.AttributeValue{}, err
+					return "", pdp.UndefinedValue, err
 				}
 
 				return "boolAttr", v, nil
@@ -1153,7 +1153,7 @@ func TestUnmarshal(t *testing.T) {
 			case 1:
 				v, err := pdp.MakeValueFromString(pdp.TypeString, "string")
 				if err != nil {
-					return "", pdp.AttributeValue{}, err
+					return "", pdp.UndefinedValue, err
 				}
 
 				return "strAttr", v, nil
@@ -1161,7 +1161,7 @@ func TestUnmarshal(t *testing.T) {
 			case 2:
 				v, err := pdp.MakeValueFromString(pdp.TypeAddress, "192.0.2.1")
 				if err != nil {
-					return "", pdp.AttributeValue{}, err
+					return "", pdp.UndefinedValue, err
 				}
 
 				return "addrAttr", v, nil
@@ -1169,7 +1169,7 @@ func TestUnmarshal(t *testing.T) {
 			case 3:
 				v, err := pdp.MakeValueFromString(pdp.TypeNetwork, "192.0.2.0/24")
 				if err != nil {
-					return "", pdp.AttributeValue{}, err
+					return "", pdp.UndefinedValue, err
 				}
 
 				return "netAttr", v, nil
@@ -1177,13 +1177,13 @@ func TestUnmarshal(t *testing.T) {
 			case 4:
 				v, err := pdp.MakeValueFromString(pdp.TypeString, "example.com")
 				if err != nil {
-					return "", pdp.AttributeValue{}, err
+					return "", pdp.UndefinedValue, err
 				}
 
 				return "domAttr", v, nil
 			}
 
-			return "", pdp.AttributeValue{}, fmt.Errorf("no attribute for index %d", i)
+			return "", pdp.UndefinedValue, fmt.Errorf("no attribute for index %d", i)
 		})
 		if err != nil {
 			t.Errorf("Expected no error but got %T (%s)", err, err)
@@ -1312,12 +1312,12 @@ func newStringContext(m map[string]string) (*pdp.Context, error) {
 
 	return pdp.NewContext(nil, len(m), func(i int) (string, pdp.AttributeValue, error) {
 		if i >= len(names) {
-			return "", pdp.AttributeValue{}, fmt.Errorf("no attribute name for index %d", i)
+			return "", pdp.UndefinedValue, fmt.Errorf("no attribute name for index %d", i)
 		}
 		n := names[i]
 
 		if i >= len(values) {
-			return "", pdp.AttributeValue{}, fmt.Errorf("no attribute value for index %d", i)
+			return "", pdp.UndefinedValue, fmt.Errorf("no attribute value for index %d", i)
 		}
 		v := values[i]
 

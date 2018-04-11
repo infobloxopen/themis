@@ -72,12 +72,12 @@ func createContext(req *pb.Request) (*pdp.Context, error) {
 
 		t, ok := pdp.BuiltinTypeIDs[strings.ToLower(a.Type)]
 		if !ok {
-			return "", pdp.AttributeValue{}, fmt.Errorf("unknown Attribute Type: %s", a.Type)
+			return "", pdp.UndefinedValue, fmt.Errorf("unknown Attribute Type: %s", a.Type)
 		}
 
 		v, err := pdp.MakeValueFromString(t, a.Value)
 		if err != nil {
-			return "", pdp.AttributeValue{}, fmt.Errorf("error making value from string: %s", err)
+			return "", pdp.UndefinedValue, fmt.Errorf("error making value from string: %s", err)
 		}
 
 		return a.Id, v, nil

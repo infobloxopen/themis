@@ -36,17 +36,17 @@ func (f functionIntegerRange) describe() string {
 func (f functionIntegerRange) Calculate(ctx *Context) (AttributeValue, error) {
 	min, err := ctx.calculateIntegerExpression(f.min)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "min argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "min argument"), f.describe())
 	}
 
 	max, err := ctx.calculateIntegerExpression(f.max)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "max argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "max argument"), f.describe())
 	}
 
 	val, err := ctx.calculateIntegerExpression(f.val)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "val argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "val argument"), f.describe())
 	}
 
 	switch {

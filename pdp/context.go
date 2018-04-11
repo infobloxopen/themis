@@ -156,13 +156,13 @@ func (c *Context) String() string {
 func (c *Context) getAttribute(a Attribute) (AttributeValue, error) {
 	v, ok := c.a[a.id]
 	if !ok {
-		return AttributeValue{}, bindError(newMissingAttributeError(), a.describe())
+		return UndefinedValue, bindError(newMissingAttributeError(), a.describe())
 	}
 
 	switch v := v.(type) {
 	case AttributeValue:
 		if v.t != a.t {
-			return undefinedValue, bindError(newMissingAttributeError(), a.describe())
+			return UndefinedValue, bindError(newMissingAttributeError(), a.describe())
 		}
 
 		return v, nil
@@ -170,7 +170,7 @@ func (c *Context) getAttribute(a Attribute) (AttributeValue, error) {
 	case map[int]AttributeValue:
 		av, ok := v[a.t]
 		if !ok {
-			return AttributeValue{}, bindError(newMissingAttributeError(), a.describe())
+			return UndefinedValue, bindError(newMissingAttributeError(), a.describe())
 		}
 
 		return av, nil

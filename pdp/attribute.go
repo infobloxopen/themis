@@ -63,8 +63,6 @@ var (
 	BuiltinTypeIDs = map[string]int{}
 )
 
-var undefinedValue = AttributeValue{}
-
 func init() {
 	BuiltinTypeKeys = make([]string, typesTotal)
 	for t := 0; t < typesTotal; t++ {

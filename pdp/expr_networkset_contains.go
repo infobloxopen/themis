@@ -34,12 +34,12 @@ func (f functionSetOfNetworksContainsAddress) describe() string {
 func (f functionSetOfNetworksContainsAddress) Calculate(ctx *Context) (AttributeValue, error) {
 	set, err := ctx.calculateSetOfNetworksExpression(f.set)
 	if err != nil {
-		return undefinedValue, bindError(err, f.describe())
+		return UndefinedValue, bindError(err, f.describe())
 	}
 
 	a, err := ctx.calculateAddressExpression(f.value)
 	if err != nil {
-		return undefinedValue, bindError(err, f.describe())
+		return UndefinedValue, bindError(err, f.describe())
 	}
 
 	_, ok := set.GetByIP(a)

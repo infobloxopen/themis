@@ -16,7 +16,7 @@ import (
 func (ctx context) unmarshalStringValue(d *json.Decoder) (pdp.AttributeValue, error) {
 	s, err := jparser.GetString(d, "value of string type")
 	if err != nil {
-		return pdp.AttributeValue{}, err
+		return pdp.UndefinedValue, err
 	}
 
 	return pdp.MakeStringValue(s), nil
@@ -25,11 +25,11 @@ func (ctx context) unmarshalStringValue(d *json.Decoder) (pdp.AttributeValue, er
 func (ctx context) unmarshalIntegerValue(d *json.Decoder) (pdp.AttributeValue, error) {
 	x, err := jparser.GetNumber(d, "value of integer type")
 	if err != nil {
-		return pdp.AttributeValue{}, err
+		return pdp.UndefinedValue, err
 	}
 
 	if x < -9007199254740992 || x > 9007199254740992 {
-		return pdp.AttributeValue{}, newIntegerOverflowError(x)
+		return pdp.UndefinedValue, newIntegerOverflowError(x)
 	}
 
 	return pdp.MakeIntegerValue(int64(x)), nil
@@ -38,7 +38,7 @@ func (ctx context) unmarshalIntegerValue(d *json.Decoder) (pdp.AttributeValue, e
 func (ctx context) unmarshalFloatValue(d *json.Decoder) (pdp.AttributeValue, error) {
 	x, err := jparser.GetNumber(d, "value of float type")
 	if err != nil {
-		return pdp.AttributeValue{}, err
+		return pdp.UndefinedValue, err
 	}
 
 	return pdp.MakeFloatValue(float64(x)), nil
@@ -47,12 +47,12 @@ func (ctx context) unmarshalFloatValue(d *json.Decoder) (pdp.AttributeValue, err
 func (ctx context) unmarshalAddressValue(d *json.Decoder) (pdp.AttributeValue, error) {
 	s, err := jparser.GetString(d, "value of address type")
 	if err != nil {
-		return pdp.AttributeValue{}, err
+		return pdp.UndefinedValue, err
 	}
 
 	a := net.ParseIP(s)
 	if a == nil {
-		return pdp.AttributeValue{}, newInvalidAddressError(s)
+		return pdp.UndefinedValue, newInvalidAddressError(s)
 	}
 
 	return pdp.MakeAddressValue(a), nil
@@ -61,12 +61,12 @@ func (ctx context) unmarshalAddressValue(d *json.Decoder) (pdp.AttributeValue, e
 func (ctx context) unmarshalNetworkValue(d *json.Decoder) (pdp.AttributeValue, error) {
 	s, err := jparser.GetString(d, "value of network type")
 	if err != nil {
-		return pdp.AttributeValue{}, err
+		return pdp.UndefinedValue, err
 	}
 
 	_, n, ierr := net.ParseCIDR(s)
 	if ierr != nil {
-		return pdp.AttributeValue{}, newInvalidNetworkError(s, ierr)
+		return pdp.UndefinedValue, newInvalidNetworkError(s, ierr)
 	}
 
 	return pdp.MakeNetworkValue(n), nil
@@ -75,12 +75,12 @@ func (ctx context) unmarshalNetworkValue(d *json.Decoder) (pdp.AttributeValue, e
 func (ctx context) unmarshalDomainValue(d *json.Decoder) (pdp.AttributeValue, error) {
 	s, err := jparser.GetString(d, "value of domain type")
 	if err != nil {
-		return pdp.AttributeValue{}, err
+		return pdp.UndefinedValue, err
 	}
 
 	dom, ierr := domaintree.MakeWireDomainNameLower(s)
 	if ierr != nil {
-		return pdp.AttributeValue{}, newInvalidDomainError(s, ierr)
+		return pdp.UndefinedValue, newInvalidDomainError(s, ierr)
 	}
 
 	return pdp.MakeDomainValue(dom), nil
@@ -92,7 +92,7 @@ func (ctx context) unmarshalSetOfStringsValue(d *json.Decoder) (pdp.AttributeVal
 		set.InplaceInsert(s, idx)
 		return nil
 	}, "set of strings"); err != nil {
-		return pdp.AttributeValue{}, err
+		return pdp.UndefinedValue, err
 	}
 
 	return pdp.MakeSetOfStringsValue(set), nil
@@ -118,7 +118,7 @@ func (ctx context) unmarshalSetOfNetworksValue(d *json.Decoder) (pdp.AttributeVa
 
 		return nil
 	}, "set of networks"); err != nil {
-		return pdp.AttributeValue{}, err
+		return pdp.UndefinedValue, err
 	}
 
 	return pdp.MakeSetOfNetworksValue(set), nil
@@ -139,7 +139,7 @@ func (ctx context) unmarshalSetOfDomainsValue(d *json.Decoder) (pdp.AttributeVal
 
 		return nil
 	}, "set of domains"); err != nil {
-		return pdp.AttributeValue{}, err
+		return pdp.UndefinedValue, err
 	}
 
 	return pdp.MakeSetOfDomainsValue(set), nil
@@ -152,7 +152,7 @@ func (ctx context) unmarshalListOfStringsValue(d *json.Decoder) (pdp.AttributeVa
 
 		return nil
 	}, "list of strings"); err != nil {
-		return pdp.AttributeValue{}, err
+		return pdp.UndefinedValue, err
 	}
 
 	return pdp.MakeListOfStringsValue(list), nil
@@ -191,12 +191,12 @@ func (ctx context) unmarshalValueByType(t int, d *json.Decoder) (pdp.AttributeVa
 		return ctx.unmarshalListOfStringsValue(d)
 	}
 
-	return pdp.AttributeValue{}, newNotImplementedValueTypeError(t)
+	return pdp.UndefinedValue, newNotImplementedValueTypeError(t)
 }
 
 func (ctx context) unmarshalValue(d *json.Decoder) (pdp.AttributeValue, error) {
 	if err := jparser.CheckObjectStart(d, "value"); err != nil {
-		return pdp.AttributeValue{}, err
+		return pdp.UndefinedValue, err
 	}
 
 	var (
@@ -240,11 +240,11 @@ func (ctx context) unmarshalValue(d *json.Decoder) (pdp.AttributeValue, error) {
 
 		return newUnknownAttributeError(k)
 	}, "value"); err != nil {
-		return pdp.AttributeValue{}, err
+		return pdp.UndefinedValue, err
 	}
 
 	if !cOk {
-		return pdp.AttributeValue{}, newMissingContentError()
+		return pdp.UndefinedValue, newMissingContentError()
 	}
 
 	return a, nil

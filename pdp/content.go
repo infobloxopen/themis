@@ -667,7 +667,7 @@ func (c *ContentItem) del(ID string, path []AttributeValue) (*ContentItem, error
 func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, error) {
 	d := len(path)
 	if d != len(c.k) {
-		return undefinedValue, newInvalidSelectorPathError(c.k, path)
+		return UndefinedValue, newInvalidSelectorPathError(c.k, path)
 	}
 
 	if d > 0 {
@@ -676,31 +676,31 @@ func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, erro
 		for _, e := range path[:d-1] {
 			key, err := e.Calculate(ctx)
 			if err != nil {
-				return undefinedValue, bindError(err, strings.Join(loc, "/"))
+				return UndefinedValue, bindError(err, strings.Join(loc, "/"))
 			}
 
 			loc = append(loc, key.describe())
 
 			m, err = m.next(key)
 			if err != nil {
-				return undefinedValue, bindError(err, strings.Join(loc, "/"))
+				return UndefinedValue, bindError(err, strings.Join(loc, "/"))
 			}
 		}
 
 		key, err := path[d-1].Calculate(ctx)
 		if err != nil {
-			return undefinedValue, bindError(err, strings.Join(loc, "/"))
+			return UndefinedValue, bindError(err, strings.Join(loc, "/"))
 		}
 
 		v, err := m.getValue(key, c.t)
 		if err != nil {
-			return undefinedValue, bindError(err, strings.Join(append(loc, key.describe()), "/"))
+			return UndefinedValue, bindError(err, strings.Join(append(loc, key.describe()), "/"))
 		}
 
 		return v, nil
 	}
 
-	return c.r.getValue(undefinedValue, c.t)
+	return c.r.getValue(UndefinedValue, c.t)
 }
 
 // ContentSubItem interface abstracts all possible mapping objects and immediate
@@ -728,15 +728,15 @@ func MakeContentStringMap(tree *strtree.Tree) ContentStringMap {
 func (m ContentStringMap) getValue(key AttributeValue, t int) (AttributeValue, error) {
 	s, err := key.str()
 	if err != nil {
-		return undefinedValue, err
+		return UndefinedValue, err
 	}
 
 	v, ok := m.tree.Get(s)
 	if !ok {
-		return undefinedValue, newMissingValueError()
+		return UndefinedValue, newMissingValueError()
 	}
 
-	return MakeContentValue(v).getValue(undefinedValue, t)
+	return MakeContentValue(v).getValue(UndefinedValue, t)
 }
 
 func (m ContentStringMap) next(key AttributeValue) (ContentSubItem, error) {
@@ -804,7 +804,7 @@ func (m ContentNetworkMap) getByAttribute(key AttributeValue) (interface{}, erro
 			return v, nil
 		}
 
-		return undefinedValue, newMissingValueError()
+		return UndefinedValue, newMissingValueError()
 	}
 
 	if n, err := key.network(); err == nil {
@@ -812,19 +812,19 @@ func (m ContentNetworkMap) getByAttribute(key AttributeValue) (interface{}, erro
 			return v, nil
 		}
 
-		return undefinedValue, newMissingValueError()
+		return UndefinedValue, newMissingValueError()
 	}
 
-	return undefinedValue, newNetworkMapKeyValueTypeError(key.GetResultType())
+	return UndefinedValue, newNetworkMapKeyValueTypeError(key.GetResultType())
 }
 
 func (m ContentNetworkMap) getValue(key AttributeValue, t int) (AttributeValue, error) {
 	v, err := m.getByAttribute(key)
 	if err != nil {
-		return undefinedValue, err
+		return UndefinedValue, err
 	}
 
-	return MakeContentValue(v).getValue(undefinedValue, t)
+	return MakeContentValue(v).getValue(UndefinedValue, t)
 }
 
 func (m ContentNetworkMap) next(key AttributeValue) (ContentSubItem, error) {
@@ -897,19 +897,19 @@ func MakeContentDomainMap(tree *domaintree.Node) ContentDomainMap {
 func (m ContentDomainMap) getValue(key AttributeValue, t int) (AttributeValue, error) {
 	d, err := key.domain()
 	if err != nil {
-		return undefinedValue, err
+		return UndefinedValue, err
 	}
 
 	v, ok, err := m.tree.WireGet(d)
 	if err != nil {
-		return undefinedValue, err
+		return UndefinedValue, err
 	}
 
 	if !ok {
-		return undefinedValue, newMissingValueError()
+		return UndefinedValue, newMissingValueError()
 	}
 
-	return MakeContentValue(v).getValue(undefinedValue, t)
+	return MakeContentValue(v).getValue(UndefinedValue, t)
 }
 
 func (m ContentDomainMap) next(key AttributeValue) (ContentSubItem, error) {

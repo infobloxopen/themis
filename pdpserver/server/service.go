@@ -74,12 +74,12 @@ func (s *Server) newContext(c *pdp.LocalContentStorage, in *pb.Request) (*pdp.Co
 
 		t, ok := pdp.BuiltinTypeIDs[strings.ToLower(a.Type)]
 		if !ok {
-			return "", pdp.AttributeValue{}, bindError(newUnknownAttributeTypeError(a.Type), a.Id)
+			return "", pdp.UndefinedValue, bindError(newUnknownAttributeTypeError(a.Type), a.Id)
 		}
 
 		v, err := pdp.MakeValueFromString(t, a.Value)
 		if err != nil {
-			return "", pdp.AttributeValue{}, bindError(err, a.Id)
+			return "", pdp.UndefinedValue, bindError(err, a.Id)
 		}
 
 		return a.Id, v, nil

@@ -124,7 +124,7 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 		t.Errorf("Expected *ssignmentTypeMismatch error but got %T (%s)", err, err)
 	}
 
-	v = undefinedValue
+	v = UndefinedValue
 	a = Attribute{
 		id: "test-id",
 		t:  TypeUndefined}

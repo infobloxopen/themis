@@ -36,12 +36,12 @@ func (f functionStringContains) describe() string {
 func (f functionStringContains) Calculate(ctx *Context) (AttributeValue, error) {
 	str, err := ctx.calculateStringExpression(f.str)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "string argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "string argument"), f.describe())
 	}
 
 	substr, err := ctx.calculateStringExpression(f.substr)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "substring argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "substring argument"), f.describe())
 	}
 
 	return MakeBooleanValue(strings.Contains(str, substr)), nil

@@ -30,7 +30,7 @@ func TestAttributeValue(t *testing.T) {
 			v.t, v.v, v.v, r.t, r.v, r.v)
 	}
 
-	v = undefinedValue
+	v = UndefinedValue
 	vt := v.GetResultType()
 	if vt != TypeUndefined {
 		t.Errorf("Expected %q as value type but got %q", BuiltinTypeNames[TypeUndefined], BuiltinTypeNames[vt])
@@ -645,7 +645,7 @@ func TestAttributeValueSerialize(t *testing.T) {
 		t.Errorf("Expected *unknownTypeSerializationError but got %T (%s)", err, err)
 	}
 
-	v = undefinedValue
+	v = UndefinedValue
 	s, err = v.Serialize()
 	if err == nil {
 		t.Errorf("Expected error but got string %q", s)

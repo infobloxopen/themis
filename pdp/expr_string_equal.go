@@ -33,12 +33,12 @@ func (f functionStringEqual) describe() string {
 func (f functionStringEqual) Calculate(ctx *Context) (AttributeValue, error) {
 	first, err := ctx.calculateStringExpression(f.first)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "first argument"), f.describe())
 	}
 
 	second, err := ctx.calculateStringExpression(f.second)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 
 	return MakeBooleanValue(first == second), nil

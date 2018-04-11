@@ -19,6 +19,9 @@ type AttributeValue struct {
 	v interface{}
 }
 
+// UndefinedValue is used to represent a failure to get particular value.
+var UndefinedValue = AttributeValue{}
+
 // MakeBooleanValue creates instance of boolean attribute value.
 func MakeBooleanValue(v bool) AttributeValue {
 	return AttributeValue{
@@ -104,15 +107,15 @@ func MakeListOfStringsValue(v []string) AttributeValue {
 func MakeValueFromString(t int, s string) (AttributeValue, error) {
 	switch t {
 	case TypeUndefined:
-		return undefinedValue, newInvalidTypeStringCastError(t)
+		return UndefinedValue, newInvalidTypeStringCastError(t)
 
 	case TypeSetOfStrings, TypeSetOfNetworks, TypeSetOfDomains, TypeListOfStrings:
-		return undefinedValue, newNotImplementedStringCastError(t)
+		return UndefinedValue, newNotImplementedStringCastError(t)
 
 	case TypeBoolean:
 		b, err := strconv.ParseBool(s)
 		if err != nil {
-			return undefinedValue, newInvalidBooleanStringCastError(s, err)
+			return UndefinedValue, newInvalidBooleanStringCastError(s, err)
 		}
 
 		return MakeBooleanValue(b), nil
@@ -123,7 +126,7 @@ func MakeValueFromString(t int, s string) (AttributeValue, error) {
 	case TypeInteger:
 		n, err := strconv.ParseInt(s, 0, 64)
 		if err != nil {
-			return undefinedValue, newInvalidIntegerStringCastError(s, err)
+			return UndefinedValue, newInvalidIntegerStringCastError(s, err)
 		}
 
 		return MakeIntegerValue(n), nil
@@ -131,7 +134,7 @@ func MakeValueFromString(t int, s string) (AttributeValue, error) {
 	case TypeFloat:
 		f, err := strconv.ParseFloat(s, 64)
 		if err != nil {
-			return undefinedValue, newInvalidFloatStringCastError(s, err)
+			return UndefinedValue, newInvalidFloatStringCastError(s, err)
 		}
 
 		return MakeFloatValue(f), nil
@@ -139,7 +142,7 @@ func MakeValueFromString(t int, s string) (AttributeValue, error) {
 	case TypeAddress:
 		a := net.ParseIP(s)
 		if a == nil {
-			return undefinedValue, newInvalidAddressStringCastError(s)
+			return UndefinedValue, newInvalidAddressStringCastError(s)
 		}
 
 		return MakeAddressValue(a), nil
@@ -147,7 +150,7 @@ func MakeValueFromString(t int, s string) (AttributeValue, error) {
 	case TypeNetwork:
 		_, n, err := net.ParseCIDR(s)
 		if err != nil {
-			return undefinedValue, newInvalidNetworkStringCastError(s, err)
+			return UndefinedValue, newInvalidNetworkStringCastError(s, err)
 		}
 
 		return MakeNetworkValue(n), nil
@@ -155,13 +158,13 @@ func MakeValueFromString(t int, s string) (AttributeValue, error) {
 	case TypeDomain:
 		d, err := domaintree.MakeWireDomainNameLower(s)
 		if err != nil {
-			return undefinedValue, newInvalidDomainNameStringCastError(s, err)
+			return UndefinedValue, newInvalidDomainNameStringCastError(s, err)
 		}
 
 		return MakeDomainValue(d), nil
 	}
 
-	return undefinedValue, newUnknownTypeStringCastError(t)
+	return UndefinedValue, newUnknownTypeStringCastError(t)
 }
 
 // GetResultType returns type of attribute value (implements Expression
