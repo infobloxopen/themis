@@ -216,7 +216,7 @@ func (ctx context) unmarshalValue(d *json.Decoder) (pdp.AttributeValue, error) {
 			}
 
 			var ok bool
-			t, ok = pdp.TypeIDs[strings.ToLower(s)]
+			t, ok = pdp.BuiltinTypeIDs[strings.ToLower(s)]
 			if !ok {
 				return newUnknownTypeError(s)
 			}

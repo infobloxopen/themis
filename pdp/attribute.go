@@ -37,11 +37,11 @@ const (
 	typesTotal
 )
 
-// Type* collections bind type names and IDs.
+// BuiltinType* collections bind type names and IDs.
 var (
-	// TypeNames is list of humanreadable type names. The order must be kept
-	// in sync with Type* constants order.
-	TypeNames = []string{
+	// BuiltinTypeNames is list of humanreadable type names. The order must
+	// be kept in sync with Type* constants order.
+	BuiltinTypeNames = []string{
 		"Undefined",
 		"Boolean",
 		"String",
@@ -55,22 +55,22 @@ var (
 		"Set of Domains",
 		"List of Strings"}
 
-	// TypeKeys maps Type* constants to type IDs. Type ID is all lower case
-	// type name. The slice is filled by init function.
-	TypeKeys []string
-	// TypeIDs maps type IDs to Type* constants. The map is filled by init
-	// function.
-	TypeIDs = map[string]int{}
+	// BuiltinTypeKeys maps Type* constants to type IDs. Type ID is all lower
+	// case type name. The slice is filled by init function.
+	BuiltinTypeKeys []string
+	// BuiltinTypeIDs maps type IDs to Type* constants. The map is filled by
+	// init function.
+	BuiltinTypeIDs = map[string]int{}
 )
 
 var undefinedValue = AttributeValue{}
 
 func init() {
-	TypeKeys = make([]string, typesTotal)
+	BuiltinTypeKeys = make([]string, typesTotal)
 	for t := 0; t < typesTotal; t++ {
-		key := strings.ToLower(TypeNames[t])
-		TypeKeys[t] = key
-		TypeIDs[key] = t
+		key := strings.ToLower(BuiltinTypeNames[t])
+		BuiltinTypeKeys[t] = key
+		BuiltinTypeIDs[key] = t
 	}
 }
 
@@ -94,5 +94,5 @@ func (a Attribute) GetType() int {
 }
 
 func (a Attribute) describe() string {
-	return fmt.Sprintf("attr(%s.%s)", a.id, TypeNames[a.t])
+	return fmt.Sprintf("attr(%s.%s)", a.id, BuiltinTypeNames[a.t])
 }

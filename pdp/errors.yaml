@@ -49,7 +49,7 @@ errors:
     type: int
   msg: "Can't convert string to value of %q type"
   args:
-  - expr: TypeNames[e.t]
+  - expr: BuiltinTypeNames[e.t]
 
 - id: notImplementedStringCastError
   fields:
@@ -57,7 +57,7 @@ errors:
     type: int
   msg: "Conversion from string to value of %q type hasn't been implemented"
   args:
-  - expr: TypeNames[e.t]
+  - expr: BuiltinTypeNames[e.t]
 
 - id: invalidBooleanStringCastError
   fields:
@@ -141,8 +141,8 @@ errors:
     type: int
   msg: "Expected %s value but got %s"
   args:
-  - expr: TypeNames[e.expected]
-  - expr: TypeNames[e.actual]
+  - expr: BuiltinTypeNames[e.expected]
+  - expr: BuiltinTypeNames[e.actual]
 
 - id: duplicateAttributeValueError
   fields:
@@ -157,7 +157,7 @@ errors:
   msg: "Duplicate attribute %q of type %q in request %s - %s"
   args:
   - field: ID
-  - expr: TypeNames[e.t]
+  - expr: BuiltinTypeNames[e.t]
   - expr: e.curr.describe()
   - expr: e.prev.describe()
 
@@ -175,7 +175,7 @@ errors:
     type: int
   msg: "Can't serialize value of %q type"
   args:
-  - expr: TypeNames[e.t]
+  - expr: BuiltinTypeNames[e.t]
 
 - id: assignmentTypeMismatch
   fields:
@@ -185,9 +185,9 @@ errors:
     type: int
   msg: "Can't assign %q value to attribute %q of type %q"
   args:
-  - expr: TypeNames[e.t]
+  - expr: BuiltinTypeNames[e.t]
   - expr: e.a.id
-  - expr: TypeNames[e.a.t]
+  - expr: BuiltinTypeNames[e.a.t]
 
 - id: mapperArgumentTypeError
   fields:
@@ -195,10 +195,10 @@ errors:
     type: int
   msg: "Expected %s, %s or %s as argument but got %s"
   args:
-  - expr: TypeNames[TypeString]
-  - expr: TypeNames[TypeSetOfStrings]
-  - expr: TypeNames[TypeListOfStrings]
-  - expr: TypeNames[e.actual]
+  - expr: BuiltinTypeNames[TypeString]
+  - expr: BuiltinTypeNames[TypeSetOfStrings]
+  - expr: BuiltinTypeNames[TypeListOfStrings]
+  - expr: BuiltinTypeNames[e.actual]
 
 - id: UntaggedPolicyModificationError
   desc: "indicates attempt to modify incrementally a policy which has no tag"
@@ -376,8 +376,8 @@ errors:
     type: int
   msg: "Invalid conent item type. Expected %q but got %q"
   args:
-  - expr: TypeNames[e.expected]
-  - expr: TypeNames[e.actual]
+  - expr: BuiltinTypeNames[e.expected]
+  - expr: BuiltinTypeNames[e.actual]
 
 - id: invalidSelectorPathError
   fields:
@@ -392,7 +392,7 @@ errors:
       code: |
         expStrs := make([]string, len(e.expected))
         for i, t := range e.expected {
-        	expStrs[i] = TypeNames[t]
+        	expStrs[i] = BuiltinTypeNames[t]
         }
         expected := strings.Join(expStrs, "/")
   - snippet:
@@ -402,7 +402,7 @@ errors:
         if len(e.actual) > 0 {
         	strs := make([]string, len(e.actual))
         	for i, e := range e.actual {
-        		strs[i] = TypeNames[e.GetResultType()]
+        		strs[i] = BuiltinTypeNames[e.GetResultType()]
         	}
         	actual = strings.Join(strs, "/")
         }
@@ -413,9 +413,9 @@ errors:
     type: int
   msg: "Expected %s or %s as network map key but got %s"
   args:
-  - expr: TypeNames[TypeAddress]
-  - expr: TypeNames[TypeNetwork]
-  - expr: TypeNames[e.t]
+  - expr: BuiltinTypeNames[TypeAddress]
+  - expr: BuiltinTypeNames[TypeNetwork]
+  - expr: BuiltinTypeNames[e.t]
 
 - id: mapContentSubitemError
   msg: "Not a map of the content"
@@ -441,7 +441,7 @@ errors:
         if len(e.expected) > 0 {
         	expStrs := make([]string, len(e.expected))
         	for i, t := range e.expected {
-        		expStrs[i] = fmt.Sprintf("%q", TypeNames[t])
+        		expStrs[i] = fmt.Sprintf("%q", BuiltinTypeNames[t])
         	}
         	expected = strings.Join(expStrs, "/")
         }
@@ -450,7 +450,7 @@ errors:
       code: |
         actStrs := make([]string, len(e.actual))
         for i, e := range e.actual {
-        	actStrs[i] = fmt.Sprintf("%q", TypeNames[e.GetResultType()])
+        	actStrs[i] = fmt.Sprintf("%q", BuiltinTypeNames[e.GetResultType()])
         }
         actual := strings.Join(actStrs, "/")
 
@@ -550,7 +550,7 @@ errors:
         if len(e.expected) > 0 {
         	expStrs := make([]string, len(e.expected))
         	for i, t := range e.expected {
-        		expStrs[i] = fmt.Sprintf("%q", TypeNames[t])
+        		expStrs[i] = fmt.Sprintf("%q", BuiltinTypeNames[t])
         	}
         	expected = strings.Join(expStrs, "/")
         }
@@ -579,8 +579,8 @@ errors:
     type: int
   msg: "Expected %q as a result type but got %q"
   args:
-  - expr: TypeNames[e.expected]
-  - expr: TypeNames[e.actual]
+  - expr: BuiltinTypeNames[e.expected]
+  - expr: BuiltinTypeNames[e.actual]
 
 - id: invalidContentUpdateKeysError
   fields:
@@ -597,7 +597,7 @@ errors:
       code: |
         enames := make([]string, len(e.expected) - e.start)
         for i, t := range e.expected[e.start:] {
-        	enames[i] = fmt.Sprintf("%q", TypeNames[t])
+        	enames[i] = fmt.Sprintf("%q", BuiltinTypeNames[t])
         }
         expected := strings.Join(enames, "/")
   - field: start
@@ -608,7 +608,7 @@ errors:
         if len(e.actual) > 0 {
         	anames := make([]string, len(e.actual))
         	for i, t := range e.actual {
-        		anames[i] = fmt.Sprintf("%q", TypeNames[t])
+        		anames[i] = fmt.Sprintf("%q", BuiltinTypeNames[t])
         	}
         	actual = strings.Join(anames, "/")
         }
@@ -627,7 +627,7 @@ errors:
     type: int
   msg: "Invalid result type for content item: %s"
   args:
-  - expr: TypeNames[e.t]
+  - expr: BuiltinTypeNames[e.t]
 
 - id: invalidContentKeyTypeError
   fields:
@@ -637,14 +637,14 @@ errors:
     type: map[int]bool
   msg: "Invalid key type for content item: %s (expected %s)"
   args:
-  - expr: TypeNames[e.t]
+  - expr: BuiltinTypeNames[e.t]
   - snippet:
       result: s
       code: |
         names := make([]string, len(e.expected))
         i := 0
         for t := range e.expected {
-                names[i] = TypeNames[t]
+                names[i] = BuiltinTypeNames[t]
                 i++
         }
         s := strings.Join(names, ", ")
@@ -689,7 +689,7 @@ errors:
     type: int
   msg: "Expected value of type %s but got %T"
   args:
-  - expr: TypeNames[e.expected]
+  - expr: BuiltinTypeNames[e.expected]
   - field: value
 
 - id: integerDivideByZeroError

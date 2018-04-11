@@ -54,7 +54,7 @@ func (s LocalSelector) GetResultType() int {
 
 func typeMismatchError(expected, actual int) error {
 	return fmt.Errorf("Invalid conent item type. Expected %q but got %q",
-		pdp.TypeNames[expected], pdp.TypeNames[actual])
+		pdp.BuiltinTypeNames[expected], pdp.BuiltinTypeNames[actual])
 }
 
 // Calculate implements Expression interface and returns calculated value

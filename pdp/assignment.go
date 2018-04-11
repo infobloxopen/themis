@@ -19,7 +19,7 @@ func MakeAttributeAssignmentExpression(a Attribute, e Expression) AttributeAssig
 // can't be done.
 func (a AttributeAssignmentExpression) Serialize(ctx *Context) (string, string, string, error) {
 	ID := a.a.id
-	typeName := TypeKeys[a.a.t]
+	typeName := BuiltinTypeKeys[a.a.t]
 
 	v, err := a.e.Calculate(ctx)
 	if err != nil {

@@ -1302,7 +1302,7 @@ func TestFunctionArgumentValidators(t *testing.T) {
 					for i, argType := range tc.argTypes {
 						expr, err := MakeValueFromString(argType, "1")
 						if err != nil {
-							t.Fatalf("Unexpected error making expression of type %s", TypeNames[argType])
+							t.Fatalf("Unexpected error making expression of type %s", BuiltinTypeNames[argType])
 							return
 						}
 						args[i] = expr
@@ -1313,10 +1313,12 @@ func TestFunctionArgumentValidators(t *testing.T) {
 						if funcMaker != nil {
 							numFunc := funcMaker(args)
 							if tc.expectFunc != reflect.TypeOf(numFunc) {
-								t.Errorf("Expected numeric function is '%v' but got '%v'", tc.expectFunc, reflect.TypeOf(numFunc))
+								t.Errorf("Expected numeric function is '%v' but got '%v'",
+									tc.expectFunc, reflect.TypeOf(numFunc))
 							}
 							if tc.expectResultType != numFunc.GetResultType() {
-								t.Errorf("Expected result type is '%s' but got '%s'", TypeNames[tc.expectResultType], TypeNames[numFunc.GetResultType()])
+								t.Errorf("Expected result type is '%s' but got '%s'",
+									BuiltinTypeNames[tc.expectResultType], BuiltinTypeNames[numFunc.GetResultType()])
 							}
 							return
 						}

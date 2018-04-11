@@ -20,7 +20,7 @@ func (ctx *context) unmarshalAttributeDeclarations(d *json.Decoder) boundError {
 			return err
 		}
 
-		t, ok := pdp.TypeIDs[strings.ToLower(tstr)]
+		t, ok := pdp.BuiltinTypeIDs[strings.ToLower(tstr)]
 		if !ok {
 			return bindError(newAttributeTypeError(tstr), k)
 		}

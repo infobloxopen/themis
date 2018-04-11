@@ -138,7 +138,7 @@ errors:
     type: int
   msg: "Can't set result type to %q type"
   args:
-  - expr: pdp.TypeNames[e.t]
+  - expr: pdp.BuiltinTypeNames[e.t]
 
 - id: invalidContentKeyTypeError
   fields:
@@ -148,14 +148,14 @@ errors:
     type: map[int]bool
   msg: "Can't use %q type as a key in content item (expected %s)"
   args:
-  - expr: pdp.TypeNames[e.t]
+  - expr: pdp.BuiltinTypeNames[e.t]
   - snippet:
       result: s
       code: |
         names := make([]string, len(e.expected))
         i := 0
         for t := range e.expected {
-        	names[i] = pdp.TypeNames[t]
+        	names[i] = pdp.BuiltinTypeNames[t]
         	i++
         }
         s := strings.Join(names, ", ")

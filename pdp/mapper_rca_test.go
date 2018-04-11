@@ -50,7 +50,7 @@ func TestMapperRCAOrdering(t *testing.T) {
 		}
 
 		eID := "order"
-		eot := TypeKeys[TypeString]
+		eot := BuiltinTypeKeys[TypeString]
 		es := "first"
 		if ID != eID || ot != eot || s != es {
 			t.Errorf("Expected %q = %q.(%s) obligation but got %q = %q.(%s)", eID, es, eot, ID, s, ot)
@@ -90,7 +90,7 @@ func TestMapperRCAOrdering(t *testing.T) {
 		}
 
 		eID := "order"
-		eot := TypeKeys[TypeString]
+		eot := BuiltinTypeKeys[TypeString]
 		es := "third"
 		if ID != eID || ot != eot || s != es {
 			t.Errorf("Expected %q = %q.(%s) obligation but got %q = %q.(%s)", eID, es, eot, ID, s, ot)

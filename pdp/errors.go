@@ -178,7 +178,7 @@ func newInvalidTypeStringCastError(t int) *invalidTypeStringCastError {
 }
 
 func (e *invalidTypeStringCastError) Error() string {
-	return e.errorf("Can't convert string to value of %q type", TypeNames[e.t])
+	return e.errorf("Can't convert string to value of %q type", BuiltinTypeNames[e.t])
 }
 
 type notImplementedStringCastError struct {
@@ -193,7 +193,7 @@ func newNotImplementedStringCastError(t int) *notImplementedStringCastError {
 }
 
 func (e *notImplementedStringCastError) Error() string {
-	return e.errorf("Conversion from string to value of %q type hasn't been implemented", TypeNames[e.t])
+	return e.errorf("Conversion from string to value of %q type hasn't been implemented", BuiltinTypeNames[e.t])
 }
 
 type invalidBooleanStringCastError struct {
@@ -327,7 +327,7 @@ func newAttributeValueTypeError(expected, actual int) *attributeValueTypeError {
 }
 
 func (e *attributeValueTypeError) Error() string {
-	return e.errorf("Expected %s value but got %s", TypeNames[e.expected], TypeNames[e.actual])
+	return e.errorf("Expected %s value but got %s", BuiltinTypeNames[e.expected], BuiltinTypeNames[e.actual])
 }
 
 type duplicateAttributeValueError struct {
@@ -348,7 +348,7 @@ func newDuplicateAttributeValueError(ID string, t int, curr, prev AttributeValue
 }
 
 func (e *duplicateAttributeValueError) Error() string {
-	return e.errorf("Duplicate attribute %q of type %q in request %s - %s", e.ID, TypeNames[e.t], e.curr.describe(), e.prev.describe())
+	return e.errorf("Duplicate attribute %q of type %q in request %s - %s", e.ID, BuiltinTypeNames[e.t], e.curr.describe(), e.prev.describe())
 }
 
 type unknownTypeSerializationError struct {
@@ -378,7 +378,7 @@ func newInvalidTypeSerializationError(t int) *invalidTypeSerializationError {
 }
 
 func (e *invalidTypeSerializationError) Error() string {
-	return e.errorf("Can't serialize value of %q type", TypeNames[e.t])
+	return e.errorf("Can't serialize value of %q type", BuiltinTypeNames[e.t])
 }
 
 type assignmentTypeMismatch struct {
@@ -395,7 +395,7 @@ func newAssignmentTypeMismatch(a Attribute, t int) *assignmentTypeMismatch {
 }
 
 func (e *assignmentTypeMismatch) Error() string {
-	return e.errorf("Can't assign %q value to attribute %q of type %q", TypeNames[e.t], e.a.id, TypeNames[e.a.t])
+	return e.errorf("Can't assign %q value to attribute %q of type %q", BuiltinTypeNames[e.t], e.a.id, BuiltinTypeNames[e.a.t])
 }
 
 type mapperArgumentTypeError struct {
@@ -410,7 +410,7 @@ func newMapperArgumentTypeError(actual int) *mapperArgumentTypeError {
 }
 
 func (e *mapperArgumentTypeError) Error() string {
-	return e.errorf("Expected %s, %s or %s as argument but got %s", TypeNames[TypeString], TypeNames[TypeSetOfStrings], TypeNames[TypeListOfStrings], TypeNames[e.actual])
+	return e.errorf("Expected %s, %s or %s as argument but got %s", BuiltinTypeNames[TypeString], BuiltinTypeNames[TypeSetOfStrings], BuiltinTypeNames[TypeListOfStrings], BuiltinTypeNames[e.actual])
 }
 
 // UntaggedPolicyModificationError indicates attempt to modify incrementally a policy which has no tag.
@@ -798,7 +798,7 @@ func newInvalidContentItemTypeError(expected, actual int) *invalidContentItemTyp
 }
 
 func (e *invalidContentItemTypeError) Error() string {
-	return e.errorf("Invalid conent item type. Expected %q but got %q", TypeNames[e.expected], TypeNames[e.actual])
+	return e.errorf("Invalid conent item type. Expected %q but got %q", BuiltinTypeNames[e.expected], BuiltinTypeNames[e.actual])
 }
 
 type invalidSelectorPathError struct {
@@ -817,7 +817,7 @@ func newInvalidSelectorPathError(expected []int, actual []Expression) *invalidSe
 func (e *invalidSelectorPathError) Error() string {
 	expStrs := make([]string, len(e.expected))
 	for i, t := range e.expected {
-		expStrs[i] = TypeNames[t]
+		expStrs[i] = BuiltinTypeNames[t]
 	}
 	expected := strings.Join(expStrs, "/")
 
@@ -825,7 +825,7 @@ func (e *invalidSelectorPathError) Error() string {
 	if len(e.actual) > 0 {
 		strs := make([]string, len(e.actual))
 		for i, e := range e.actual {
-			strs[i] = TypeNames[e.GetResultType()]
+			strs[i] = BuiltinTypeNames[e.GetResultType()]
 		}
 		actual = strings.Join(strs, "/")
 	}
@@ -845,7 +845,7 @@ func newNetworkMapKeyValueTypeError(t int) *networkMapKeyValueTypeError {
 }
 
 func (e *networkMapKeyValueTypeError) Error() string {
-	return e.errorf("Expected %s or %s as network map key but got %s", TypeNames[TypeAddress], TypeNames[TypeNetwork], TypeNames[e.t])
+	return e.errorf("Expected %s or %s as network map key but got %s", BuiltinTypeNames[TypeAddress], BuiltinTypeNames[TypeNetwork], BuiltinTypeNames[e.t])
 }
 
 type mapContentSubitemError struct {
@@ -905,14 +905,14 @@ func (e *tooLongPathContentModificationError) Error() string {
 	if len(e.expected) > 0 {
 		expStrs := make([]string, len(e.expected))
 		for i, t := range e.expected {
-			expStrs[i] = fmt.Sprintf("%q", TypeNames[t])
+			expStrs[i] = fmt.Sprintf("%q", BuiltinTypeNames[t])
 		}
 		expected = strings.Join(expStrs, "/")
 	}
 
 	actStrs := make([]string, len(e.actual))
 	for i, e := range e.actual {
-		actStrs[i] = fmt.Sprintf("%q", TypeNames[e.GetResultType()])
+		actStrs[i] = fmt.Sprintf("%q", BuiltinTypeNames[e.GetResultType()])
 	}
 	actual := strings.Join(actStrs, "/")
 
@@ -1086,7 +1086,7 @@ func (e *tooLongRawPathContentModificationError) Error() string {
 	if len(e.expected) > 0 {
 		expStrs := make([]string, len(e.expected))
 		for i, t := range e.expected {
-			expStrs[i] = fmt.Sprintf("%q", TypeNames[t])
+			expStrs[i] = fmt.Sprintf("%q", BuiltinTypeNames[t])
 		}
 		expected = strings.Join(expStrs, "/")
 	}
@@ -1129,7 +1129,7 @@ func newInvalidContentUpdateResultTypeError(actual, expected int) *invalidConten
 }
 
 func (e *invalidContentUpdateResultTypeError) Error() string {
-	return e.errorf("Expected %q as a result type but got %q", TypeNames[e.expected], TypeNames[e.actual])
+	return e.errorf("Expected %q as a result type but got %q", BuiltinTypeNames[e.expected], BuiltinTypeNames[e.actual])
 }
 
 type invalidContentUpdateKeysError struct {
@@ -1150,7 +1150,7 @@ func newInvalidContentUpdateKeysError(start int, actual, expected []int) *invali
 func (e *invalidContentUpdateKeysError) Error() string {
 	enames := make([]string, len(e.expected)-e.start)
 	for i, t := range e.expected[e.start:] {
-		enames[i] = fmt.Sprintf("%q", TypeNames[t])
+		enames[i] = fmt.Sprintf("%q", BuiltinTypeNames[t])
 	}
 	expected := strings.Join(enames, "/")
 
@@ -1158,7 +1158,7 @@ func (e *invalidContentUpdateKeysError) Error() string {
 	if len(e.actual) > 0 {
 		anames := make([]string, len(e.actual))
 		for i, t := range e.actual {
-			anames[i] = fmt.Sprintf("%q", TypeNames[t])
+			anames[i] = fmt.Sprintf("%q", BuiltinTypeNames[t])
 		}
 		actual = strings.Join(anames, "/")
 	}
@@ -1193,7 +1193,7 @@ func newInvalidContentItemResultTypeError(t int) *invalidContentItemResultTypeEr
 }
 
 func (e *invalidContentItemResultTypeError) Error() string {
-	return e.errorf("Invalid result type for content item: %s", TypeNames[e.t])
+	return e.errorf("Invalid result type for content item: %s", BuiltinTypeNames[e.t])
 }
 
 type invalidContentKeyTypeError struct {
@@ -1213,12 +1213,12 @@ func (e *invalidContentKeyTypeError) Error() string {
 	names := make([]string, len(e.expected))
 	i := 0
 	for t := range e.expected {
-		names[i] = TypeNames[t]
+		names[i] = BuiltinTypeNames[t]
 		i++
 	}
 	s := strings.Join(names, ", ")
 
-	return e.errorf("Invalid key type for content item: %s (expected %s)", TypeNames[e.t], s)
+	return e.errorf("Invalid key type for content item: %s (expected %s)", BuiltinTypeNames[e.t], s)
 }
 
 type invalidContentStringMapError struct {
@@ -1295,7 +1295,7 @@ func newInvalidContentValueTypeError(value interface{}, expected int) *invalidCo
 }
 
 func (e *invalidContentValueTypeError) Error() string {
-	return e.errorf("Expected value of type %s but got %T", TypeNames[e.expected], e.value)
+	return e.errorf("Expected value of type %s but got %T", BuiltinTypeNames[e.expected], e.value)
 }
 
 type integerDivideByZeroError struct {

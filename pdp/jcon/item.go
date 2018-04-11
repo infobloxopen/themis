@@ -37,7 +37,7 @@ func (c *contentItem) unmarshalTypeField(d *json.Decoder) error {
 		return err
 	}
 
-	t, ok := pdp.TypeIDs[strings.ToLower(s)]
+	t, ok := pdp.BuiltinTypeIDs[strings.ToLower(s)]
 	if !ok {
 		return newUnknownTypeError(s)
 	}
@@ -76,7 +76,7 @@ func (c *contentItem) unmarshalKeysField(d *json.Decoder) error {
 			return newStringCastError(t, src)
 
 		case string:
-			t, ok := pdp.TypeIDs[strings.ToLower(s)]
+			t, ok := pdp.BuiltinTypeIDs[strings.ToLower(s)]
 			if !ok {
 				return bindError(newUnknownTypeError(s), src)
 			}

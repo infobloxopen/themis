@@ -240,7 +240,7 @@ func (ctx context) unmarshalValue(v interface{}) (pdp.AttributeValue, boundError
 		return pdp.AttributeValue{}, err
 	}
 
-	t, ok := pdp.TypeIDs[strings.ToLower(strT)]
+	t, ok := pdp.BuiltinTypeIDs[strings.ToLower(strT)]
 	if !ok {
 		return pdp.AttributeValue{}, newUnknownTypeError(strT)
 	}

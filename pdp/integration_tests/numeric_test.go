@@ -70,7 +70,7 @@ func createContext(req *pb.Request) (*pdp.Context, error) {
 	ctx, err := pdp.NewContext(nil, len(req.Attributes), func(i int) (string, pdp.AttributeValue, error) {
 		a := req.Attributes[i]
 
-		t, ok := pdp.TypeIDs[strings.ToLower(a.Type)]
+		t, ok := pdp.BuiltinTypeIDs[strings.ToLower(a.Type)]
 		if !ok {
 			return "", pdp.AttributeValue{}, fmt.Errorf("unknown Attribute Type: %s", a.Type)
 		}

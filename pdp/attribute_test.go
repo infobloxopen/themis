@@ -3,9 +3,9 @@ package pdp
 import "testing"
 
 func TestTypes(t *testing.T) {
-	if typesTotal != len(TypeNames) {
+	if typesTotal != len(BuiltinTypeNames) {
 		t.Errorf("Expected total number of types to be equal to number of type names "+
-			"but got typesTotal = %d and len(TypeNames) = %d", typesTotal, len(TypeNames))
+			"but got typesTotal = %d and len(BuiltinTypeNames) = %d", typesTotal, len(BuiltinTypeNames))
 	}
 }
 
@@ -17,6 +17,6 @@ func TestAttribute(t *testing.T) {
 
 	at := a.GetType()
 	if at != TypeString {
-		t.Errorf("Expected %q as attribute type but got %q", TypeNames[TypeString], TypeNames[at])
+		t.Errorf("Expected %q as attribute type but got %q", BuiltinTypeNames[TypeString], BuiltinTypeNames[at])
 	}
 }

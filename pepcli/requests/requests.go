@@ -35,7 +35,7 @@ func Load(name string) ([]pb.Request, error) {
 
 	symbols := make(map[string]int)
 	for k, v := range in.Attributes {
-		t, ok := pdp.TypeIDs[strings.ToLower(v)]
+		t, ok := pdp.BuiltinTypeIDs[strings.ToLower(v)]
 		if !ok {
 			return nil, fmt.Errorf("unknown type \"%s\" of \"%s\" attribute", v, k)
 		}
@@ -87,17 +87,17 @@ func makeAttribute(name string, value interface{}, symbols map[string]int) (*pb.
 	marshaller, ok := marshallers[t]
 	if !ok {
 		return nil, fmt.Errorf("marshaling hasn't been implemented for type \"%s\" of \"%s\" attribute",
-			pdp.TypeNames[t], name)
+			pdp.BuiltinTypeNames[t], name)
 	}
 
 	s, err := marshaller(value)
 	if err != nil {
-		return nil, fmt.Errorf("can't marshal \"%s\" attribute as \"%s\": %s", name, pdp.TypeNames[t], err)
+		return nil, fmt.Errorf("can't marshal \"%s\" attribute as \"%s\": %s", name, pdp.BuiltinTypeNames[t], err)
 	}
 
 	return &pb.Attribute{
 		Id:    name,
-		Type:  pdp.TypeKeys[t],
+		Type:  pdp.BuiltinTypeKeys[t],
 		Value: s,
 	}, nil
 }

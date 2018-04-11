@@ -140,11 +140,11 @@ func (c *Context) String() string {
 				panic(fmt.Errorf("expected AttributeValue or map[int]AttributeValue but got: %T, %#v", v, v))
 
 			case AttributeValue:
-				lines = append(lines, fmt.Sprintf("- %s.(%s): %s", name, TypeNames[v.t], v.describe()))
+				lines = append(lines, fmt.Sprintf("- %s.(%s): %s", name, BuiltinTypeNames[v.t], v.describe()))
 
 			case map[int]AttributeValue:
 				for t, av := range v {
-					lines = append(lines, fmt.Sprintf("- %s.(%s): %s", name, TypeNames[t], av.describe()))
+					lines = append(lines, fmt.Sprintf("- %s.(%s): %s", name, BuiltinTypeNames[t], av.describe()))
 				}
 			}
 		}

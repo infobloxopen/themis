@@ -22,8 +22,8 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 	id, tName, s, err := ae.Serialize(ctx)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else if id != a.id || tName != TypeKeys[a.t] || s != expect {
-		t.Errorf("Expected %q, %q, %q but got %q, %q, %q", a.id, TypeKeys[a.t], expect, id, tName, s)
+	} else if id != a.id || tName != BuiltinTypeKeys[a.t] || s != expect {
+		t.Errorf("Expected %q, %q, %q but got %q, %q, %q", a.id, BuiltinTypeKeys[a.t], expect, id, tName, s)
 	}
 
 	dv := MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03com\x00"))
@@ -108,8 +108,8 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 	id, tName, s, err = ae.Serialize(ctx)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else if id != a.id || tName != TypeKeys[a.t] || s != expect {
-		t.Errorf("Expected %q, %q, %q but got %q, %q, %q", a.id, TypeKeys[a.t], expect, id, tName, s)
+	} else if id != a.id || tName != BuiltinTypeKeys[a.t] || s != expect {
+		t.Errorf("Expected %q, %q, %q but got %q, %q, %q", a.id, BuiltinTypeKeys[a.t], expect, id, tName, s)
 	}
 
 	v = MakeIntegerValue(12345)

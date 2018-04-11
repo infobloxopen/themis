@@ -148,13 +148,13 @@ func makeFieldMap(t reflect.Type) (map[string]string, error) {
 type fieldUnmarshaller func(attr *pb.Attribute, v reflect.Value) error
 
 var unmarshallersByType = map[string]fieldUnmarshaller{
-	pdp.TypeKeys[pdp.TypeBoolean]: boolUnmarshaller,
-	pdp.TypeKeys[pdp.TypeString]:  stringUnmarshaller,
-	pdp.TypeKeys[pdp.TypeInteger]: intUnmarshaller,
-	pdp.TypeKeys[pdp.TypeFloat]:   floatUnmarshaller,
-	pdp.TypeKeys[pdp.TypeAddress]: addressUnmarshaller,
-	pdp.TypeKeys[pdp.TypeNetwork]: networkUnmarshaller,
-	pdp.TypeKeys[pdp.TypeDomain]:  domainUnmarshaller}
+	pdp.BuiltinTypeKeys[pdp.TypeBoolean]: boolUnmarshaller,
+	pdp.BuiltinTypeKeys[pdp.TypeString]:  stringUnmarshaller,
+	pdp.BuiltinTypeKeys[pdp.TypeInteger]: intUnmarshaller,
+	pdp.BuiltinTypeKeys[pdp.TypeFloat]:   floatUnmarshaller,
+	pdp.BuiltinTypeKeys[pdp.TypeAddress]: addressUnmarshaller,
+	pdp.BuiltinTypeKeys[pdp.TypeNetwork]: networkUnmarshaller,
+	pdp.BuiltinTypeKeys[pdp.TypeDomain]:  domainUnmarshaller}
 
 func unmarshalToTaggedStruct(res *pb.Response, v reflect.Value, fields map[string]string) error {
 	name, ok := fields[effectFieldName]

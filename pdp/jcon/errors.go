@@ -258,7 +258,7 @@ func newInvalidContentItemTypeError(t int) *invalidContentItemTypeError {
 }
 
 func (e *invalidContentItemTypeError) Error() string {
-	return e.errorf("Can't set result type to %q type", pdp.TypeNames[e.t])
+	return e.errorf("Can't set result type to %q type", pdp.BuiltinTypeNames[e.t])
 }
 
 type invalidContentKeyTypeError struct {
@@ -278,12 +278,12 @@ func (e *invalidContentKeyTypeError) Error() string {
 	names := make([]string, len(e.expected))
 	i := 0
 	for t := range e.expected {
-		names[i] = pdp.TypeNames[t]
+		names[i] = pdp.BuiltinTypeNames[t]
 		i++
 	}
 	s := strings.Join(names, ", ")
 
-	return e.errorf("Can't use %q type as a key in content item (expected %s)", pdp.TypeNames[e.t], s)
+	return e.errorf("Can't use %q type as a key in content item (expected %s)", pdp.BuiltinTypeNames[e.t], s)
 }
 
 type unknownDataFormatError struct {
