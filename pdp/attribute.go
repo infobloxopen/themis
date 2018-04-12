@@ -2,6 +2,7 @@ package pdp
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"strconv"
 	"strings"
@@ -41,6 +42,10 @@ const (
 	TypeListOfStrings
 
 	typesTotal
+)
+
+const (
+	attributeJSONFmt = "{\"id\": %s, \"type\": %s}"
 )
 
 // Type* collections bind type names and IDs.
@@ -101,6 +106,18 @@ func (a Attribute) GetType() int {
 
 func (a Attribute) describe() string {
 	return fmt.Sprintf("attr(%s.%s)", a.id, TypeNames[a.t])
+}
+
+// Marshal implements Marshaler interface
+func (a Attribute) Marshal(out io.Writer) error {
+	msg := fmt.Sprintf(attributeJSONFmt, strconv.Quote(a.id), strconv.Quote(TypeNames[a.t]))
+	_, err := out.Write([]byte(msg))
+	return err
+}
+
+// Size implements Marshaler interface
+func (a Attribute) Size() int {
+	return len(a.id) + len(TypeNames[a.t])
 }
 
 // AttributeValue represents attribute value which binds data type and data.
