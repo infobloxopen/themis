@@ -22,7 +22,7 @@ func makeFunctionFloatSubtractAlt(args []Expression) Expression {
 	return makeFunctionFloatSubtract(args[0], args[1])
 }
 
-func (f functionFloatSubtract) GetResultType() int {
+func (f functionFloatSubtract) GetResultType() Type {
 	return TypeFloat
 }
 

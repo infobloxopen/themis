@@ -193,7 +193,7 @@ func (ctx context) unmarshalListOfStringsValue(v interface{}) (pdp.AttributeValu
 	return pdp.MakeListOfStringsValue(list), nil
 }
 
-func (ctx context) unmarshalValueByType(t int, v interface{}) (pdp.AttributeValue, boundError) {
+func (ctx context) unmarshalValueByType(t pdp.Type, v interface{}) (pdp.AttributeValue, boundError) {
 	switch t {
 	case pdp.TypeString:
 		return ctx.unmarshalStringValue(v)
@@ -240,7 +240,7 @@ func (ctx context) unmarshalValue(v interface{}) (pdp.AttributeValue, boundError
 		return pdp.UndefinedValue, err
 	}
 
-	t, ok := pdp.BuiltinTypeIDs[strings.ToLower(strT)]
+	t, ok := pdp.BuiltinTypes[strings.ToLower(strT)]
 	if !ok {
 		return pdp.UndefinedValue, newUnknownTypeError(strT)
 	}

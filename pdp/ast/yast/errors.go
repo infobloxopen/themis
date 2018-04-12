@@ -5,6 +5,7 @@ package yast
 import (
 	"fmt"
 	"github.com/infobloxopen/themis/pdp"
+	"strconv"
 	"strings"
 )
 
@@ -551,32 +552,32 @@ func (e *notImplementedPCAError) Error() string {
 
 type mapperArgumentTypeError struct {
 	errorLink
-	actual int
+	actual pdp.Type
 }
 
-func newMapperArgumentTypeError(actual int) *mapperArgumentTypeError {
+func newMapperArgumentTypeError(actual pdp.Type) *mapperArgumentTypeError {
 	return &mapperArgumentTypeError{
 		errorLink: errorLink{id: mapperArgumentTypeErrorID},
 		actual:    actual}
 }
 
 func (e *mapperArgumentTypeError) Error() string {
-	return e.errorf("Expected %s, %s or %s as argument but got %s", pdp.BuiltinTypeNames[pdp.TypeString], pdp.BuiltinTypeNames[pdp.TypeSetOfStrings], pdp.BuiltinTypeNames[pdp.TypeListOfStrings], pdp.BuiltinTypeNames[e.actual])
+	return e.errorf("Expected %s, %s or %s as argument but got %s", pdp.TypeString, pdp.TypeSetOfStrings, pdp.TypeListOfStrings, e.actual)
 }
 
 type conditionTypeError struct {
 	errorLink
-	t int
+	t pdp.Type
 }
 
-func newConditionTypeError(t int) *conditionTypeError {
+func newConditionTypeError(t pdp.Type) *conditionTypeError {
 	return &conditionTypeError{
 		errorLink: errorLink{id: conditionTypeErrorID},
 		t:         t}
 }
 
 func (e *conditionTypeError) Error() string {
-	return e.errorf("Expected %q as condition expression result but got %q", pdp.BuiltinTypeNames[pdp.TypeBoolean], pdp.BuiltinTypeNames[e.t])
+	return e.errorf("Expected %q as condition expression result but got %q", pdp.TypeBoolean, e.t)
 }
 
 type unknownEffectError struct {
@@ -646,11 +647,11 @@ func (e *unknownMatchFunctionError) Error() string {
 type matchFunctionCastError struct {
 	errorLink
 	ID     string
-	first  int
-	second int
+	first  pdp.Type
+	second pdp.Type
 }
 
-func newMatchFunctionCastError(ID string, first, second int) *matchFunctionCastError {
+func newMatchFunctionCastError(ID string, first, second pdp.Type) *matchFunctionCastError {
 	return &matchFunctionCastError{
 		errorLink: errorLink{id: matchFunctionCastErrorID},
 		ID:        ID,
@@ -659,7 +660,7 @@ func newMatchFunctionCastError(ID string, first, second int) *matchFunctionCastE
 }
 
 func (e *matchFunctionCastError) Error() string {
-	return e.errorf("No function %s for arguments %s and %s", e.ID, pdp.BuiltinTypeNames[e.first], pdp.BuiltinTypeNames[e.second])
+	return e.errorf("No function %s for arguments %s and %s", e.ID, e.first, e.second)
 }
 
 type matchFunctionArgsNumberError struct {
@@ -751,11 +752,11 @@ func (e *functionCastError) Error() string {
 	if len(e.exprs) > 1 {
 		t := make([]string, len(e.exprs))
 		for i, e := range e.exprs {
-			t[i] = pdp.BuiltinTypeNames[e.GetResultType()]
+			t[i] = strconv.Quote(e.GetResultType().String())
 		}
-		args = fmt.Sprintf("%d arguments of following types \"%s\"", len(e.exprs), strings.Join(t, "\", \""))
+		args = fmt.Sprintf("%d arguments of following types %s", len(e.exprs), strings.Join(t, ", "))
 	} else if len(e.exprs) > 0 {
-		args = fmt.Sprintf("argument of type \"%s\"", pdp.BuiltinTypeNames[e.exprs[0].GetResultType()])
+		args = fmt.Sprintf("argument of type %q", e.exprs[0].GetResultType())
 	} else {
 		args = "no arguments"
 	}
@@ -795,17 +796,17 @@ func (e *unknownTypeError) Error() string {
 
 type invalidTypeError struct {
 	errorLink
-	t int
+	t pdp.Type
 }
 
-func newInvalidTypeError(t int) *invalidTypeError {
+func newInvalidTypeError(t pdp.Type) *invalidTypeError {
 	return &invalidTypeError{
 		errorLink: errorLink{id: invalidTypeErrorID},
 		t:         t}
 }
 
 func (e *invalidTypeError) Error() string {
-	return e.errorf("Can't make value of %q type", pdp.BuiltinTypeNames[e.t])
+	return e.errorf("Can't make value of %q type", e.t)
 }
 
 type missingContentError struct {
@@ -823,17 +824,17 @@ func (e *missingContentError) Error() string {
 
 type notImplementedValueTypeError struct {
 	errorLink
-	t int
+	t pdp.Type
 }
 
-func newNotImplementedValueTypeError(t int) *notImplementedValueTypeError {
+func newNotImplementedValueTypeError(t pdp.Type) *notImplementedValueTypeError {
 	return &notImplementedValueTypeError{
 		errorLink: errorLink{id: notImplementedValueTypeErrorID},
 		t:         t}
 }
 
 func (e *notImplementedValueTypeError) Error() string {
-	return e.errorf("Parsing for type %s hasn't been implemented yet", pdp.BuiltinTypeNames[e.t])
+	return e.errorf("Parsing for type %q hasn't been implemented yet", e.t)
 }
 
 type invalidAddressError struct {

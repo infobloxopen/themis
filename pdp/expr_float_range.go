@@ -24,7 +24,7 @@ func makeFunctionFloatRangeAlt(args []Expression) Expression {
 	return makeFunctionFloatRange(args[0], args[1], args[2])
 }
 
-func (f functionFloatRange) GetResultType() int {
+func (f functionFloatRange) GetResultType() Type {
 	return TypeString
 }
 

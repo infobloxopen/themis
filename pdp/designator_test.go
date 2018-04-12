@@ -39,7 +39,7 @@ func TestAttributeDesignator(t *testing.T) {
 
 	dat := d.GetResultType()
 	if dat != TypeString {
-		t.Errorf("Expected %q type but got %q", BuiltinTypeNames[TypeString], BuiltinTypeNames[dat])
+		t.Errorf("Expected %q type but got %q", TypeString, dat)
 	}
 
 	_, err = d.Calculate(ctx)
@@ -53,7 +53,7 @@ func TestAttributeDesignator(t *testing.T) {
 	d = MakeAttributeDesignator(i)
 	dat = d.GetResultType()
 	if dat != TypeInteger {
-		t.Errorf("Expected %q type but got %q", BuiltinTypeNames[TypeInteger], BuiltinTypeNames[dat])
+		t.Errorf("Expected %q type but got %q", TypeInteger, dat)
 	}
 
 	_, err = d.Calculate(ctx)
@@ -67,7 +67,7 @@ func TestAttributeDesignator(t *testing.T) {
 	d = MakeAttributeDesignator(f)
 	dat = d.GetResultType()
 	if dat != TypeFloat {
-		t.Errorf("Expected %q type but got %q", BuiltinTypeNames[TypeFloat], BuiltinTypeNames[dat])
+		t.Errorf("Expected %q type but got %q", TypeFloat, dat)
 	}
 
 	_, err = d.Calculate(ctx)

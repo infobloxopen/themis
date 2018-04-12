@@ -22,7 +22,7 @@ func makeFunctionIntegerGreaterAlt(args []Expression) Expression {
 	return makeFunctionIntegerGreater(args[0], args[1])
 }
 
-func (f functionIntegerGreater) GetResultType() int {
+func (f functionIntegerGreater) GetResultType() Type {
 	return TypeBoolean
 }
 

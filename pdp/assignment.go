@@ -11,7 +11,8 @@ type AttributeAssignmentExpression struct {
 func MakeAttributeAssignmentExpression(a Attribute, e Expression) AttributeAssignmentExpression {
 	return AttributeAssignmentExpression{
 		a: a,
-		e: e}
+		e: e,
+	}
 }
 
 // Serialize evaluates assignment expression and returns string representation
@@ -19,22 +20,22 @@ func MakeAttributeAssignmentExpression(a Attribute, e Expression) AttributeAssig
 // can't be done.
 func (a AttributeAssignmentExpression) Serialize(ctx *Context) (string, string, string, error) {
 	ID := a.a.id
-	typeName := BuiltinTypeKeys[a.a.t]
+	k := a.a.GetType().GetKey()
 
 	v, err := a.e.Calculate(ctx)
 	if err != nil {
-		return ID, typeName, "", bindErrorf(err, "assignment to %q", ID)
+		return ID, k, "", bindErrorf(err, "assignment to %q", ID)
 	}
 
 	t := v.GetResultType()
-	if a.a.t != t {
-		return ID, typeName, "", bindErrorf(newAssignmentTypeMismatch(a.a, t), "assignment to %q", ID)
+	if a.a.GetType() != t {
+		return ID, k, "", bindErrorf(newAssignmentTypeMismatch(a.a, t), "assignment to %q", ID)
 	}
 
 	s, err := v.Serialize()
 	if err != nil {
-		return ID, typeName, "", bindErrorf(err, "assignment to %q", ID)
+		return ID, k, "", bindErrorf(err, "assignment to %q", ID)
 	}
 
-	return ID, typeName, s, nil
+	return ID, k, s, nil
 }

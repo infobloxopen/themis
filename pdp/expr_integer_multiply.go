@@ -22,7 +22,7 @@ func makeFunctionIntegerMultiplyAlt(args []Expression) Expression {
 	return makeFunctionIntegerMultiply(args[0], args[1])
 }
 
-func (f functionIntegerMultiply) GetResultType() int {
+func (f functionIntegerMultiply) GetResultType() Type {
 	return TypeInteger
 }
 

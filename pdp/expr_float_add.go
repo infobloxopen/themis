@@ -35,7 +35,7 @@ func makeFunctionFloatAddAlt(args []Expression) Expression {
 	return makeFunctionFloatAdd(args[0], args[1])
 }
 
-func (f functionFloatAdd) GetResultType() int {
+func (f functionFloatAdd) GetResultType() Type {
 	return TypeFloat
 }
 

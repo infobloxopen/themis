@@ -22,7 +22,7 @@ func makeFunctionFloatGreaterAlt(args []Expression) Expression {
 	return makeFunctionFloatGreater(args[0], args[1])
 }
 
-func (f functionFloatGreater) GetResultType() int {
+func (f functionFloatGreater) GetResultType() Type {
 	return TypeBoolean
 }
 

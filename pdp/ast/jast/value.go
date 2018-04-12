@@ -158,7 +158,7 @@ func (ctx context) unmarshalListOfStringsValue(d *json.Decoder) (pdp.AttributeVa
 	return pdp.MakeListOfStringsValue(list), nil
 }
 
-func (ctx context) unmarshalValueByType(t int, d *json.Decoder) (pdp.AttributeValue, error) {
+func (ctx context) unmarshalValueByType(t pdp.Type, d *json.Decoder) (pdp.AttributeValue, error) {
 	switch t {
 	case pdp.TypeString:
 		return ctx.unmarshalStringValue(d)
@@ -202,7 +202,7 @@ func (ctx context) unmarshalValue(d *json.Decoder) (pdp.AttributeValue, error) {
 	var (
 		cOk bool
 		a   pdp.AttributeValue
-		t   = -1
+		t   pdp.Type
 	)
 
 	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
@@ -216,7 +216,7 @@ func (ctx context) unmarshalValue(d *json.Decoder) (pdp.AttributeValue, error) {
 			}
 
 			var ok bool
-			t, ok = pdp.BuiltinTypeIDs[strings.ToLower(s)]
+			t, ok = pdp.BuiltinTypes[strings.ToLower(s)]
 			if !ok {
 				return newUnknownTypeError(s)
 			}
@@ -228,7 +228,7 @@ func (ctx context) unmarshalValue(d *json.Decoder) (pdp.AttributeValue, error) {
 			return nil
 
 		case yastTagContent:
-			if t == -1 {
+			if t == nil {
 				return newMissingContentTypeError()
 			}
 

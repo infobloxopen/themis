@@ -24,7 +24,7 @@ func makeFunctionStringContainsAlt(args []Expression) Expression {
 	return makeFunctionStringContains(args[0], args[1])
 }
 
-func (f functionStringContains) GetResultType() int {
+func (f functionStringContains) GetResultType() Type {
 	return TypeBoolean
 }
 

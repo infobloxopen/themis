@@ -10,6 +10,6 @@ func TestAttribute(t *testing.T) {
 
 	at := a.GetType()
 	if at != TypeString {
-		t.Errorf("Expected %q as attribute type but got %q", BuiltinTypeNames[TypeString], BuiltinTypeNames[at])
+		t.Errorf("Expected %q as attribute type but got %q", TypeString, at)
 	}
 }

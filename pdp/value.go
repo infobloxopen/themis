@@ -15,12 +15,14 @@ import (
 // Value with undefined type indicates that evaluation can't get particular
 // value.
 type AttributeValue struct {
-	t int
+	t Type
 	v interface{}
 }
 
 // UndefinedValue is used to represent a failure to get particular value.
-var UndefinedValue = AttributeValue{}
+var UndefinedValue = AttributeValue{
+	t: TypeUndefined,
+}
 
 // MakeBooleanValue creates instance of boolean attribute value.
 func MakeBooleanValue(v bool) AttributeValue {
@@ -104,7 +106,7 @@ func MakeListOfStringsValue(v []string) AttributeValue {
 // MakeValueFromString creates instance of attribute value by given type and
 // string representation. The function performs necessary validation.
 // No covertion defined for undefined type and collection types.
-func MakeValueFromString(t int, s string) (AttributeValue, error) {
+func MakeValueFromString(t Type, s string) (AttributeValue, error) {
 	switch t {
 	case TypeUndefined:
 		return UndefinedValue, newInvalidTypeStringCastError(t)
@@ -169,7 +171,7 @@ func MakeValueFromString(t int, s string) (AttributeValue, error) {
 
 // GetResultType returns type of attribute value (implements Expression
 // interface).
-func (v AttributeValue) GetResultType() int {
+func (v AttributeValue) GetResultType() Type {
 	return v.t
 }
 
@@ -251,7 +253,7 @@ func (v AttributeValue) describe() string {
 	return "val(unknown type)"
 }
 
-func (v AttributeValue) typeCheck(t int) error {
+func (v AttributeValue) typeCheck(t Type) error {
 	if v.t != t {
 		return bindError(newAttributeValueTypeError(t, v.t), v.describe())
 	}

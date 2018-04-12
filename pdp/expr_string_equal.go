@@ -21,7 +21,7 @@ func makeFunctionStringEqualAlt(args []Expression) Expression {
 	return makeFunctionStringEqual(args[0], args[1])
 }
 
-func (f functionStringEqual) GetResultType() int {
+func (f functionStringEqual) GetResultType() Type {
 	return TypeBoolean
 }
 

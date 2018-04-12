@@ -22,7 +22,7 @@ func makeFunctionIntegerDivideAlt(args []Expression) Expression {
 	return makeFunctionIntegerDivide(args[0], args[1])
 }
 
-func (f functionIntegerDivide) GetResultType() int {
+func (f functionIntegerDivide) GetResultType() Type {
 	return TypeInteger
 }
 

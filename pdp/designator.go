@@ -19,7 +19,7 @@ func (d AttributeDesignator) GetID() string {
 
 // GetResultType returns type of wrapped attribute (implements Expression
 // interface).
-func (d AttributeDesignator) GetResultType() int {
+func (d AttributeDesignator) GetResultType() Type {
 	return d.a.t
 }
 

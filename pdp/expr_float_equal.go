@@ -22,7 +22,7 @@ func makeFunctionFloatEqualAlt(args []Expression) Expression {
 	return makeFunctionFloatEqual(args[0], args[1])
 }
 
-func (f functionFloatEqual) GetResultType() int {
+func (f functionFloatEqual) GetResultType() Type {
 	return TypeBoolean
 }
 

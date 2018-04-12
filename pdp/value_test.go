@@ -15,7 +15,11 @@ func TestAttributeValue(t *testing.T) {
 		t.Fatalf("Expected context but got error %s", err)
 	}
 
-	v := AttributeValue{t: -1, v: nil}
+	tt := Type(&builtinType{
+		n: "Test-Type",
+		k: "test-type",
+	})
+	v := AttributeValue{t: tt, v: nil}
 	expDesc := "val(unknown type)"
 	d := v.describe()
 	if d != expDesc {
@@ -33,7 +37,7 @@ func TestAttributeValue(t *testing.T) {
 	v = UndefinedValue
 	vt := v.GetResultType()
 	if vt != TypeUndefined {
-		t.Errorf("Expected %q as value type but got %q", BuiltinTypeNames[TypeUndefined], BuiltinTypeNames[vt])
+		t.Errorf("Expected %q as value type but got %q", TypeUndefined, vt)
 	}
 
 	expDesc = "val(undefined)"
@@ -45,7 +49,7 @@ func TestAttributeValue(t *testing.T) {
 	v = MakeBooleanValue(true)
 	vt = v.GetResultType()
 	if vt != TypeBoolean {
-		t.Errorf("Expected %q as value type but got %q", BuiltinTypeNames[TypeBoolean], BuiltinTypeNames[vt])
+		t.Errorf("Expected %q as value type but got %q", TypeBoolean, vt)
 	}
 
 	expDesc = "true"
@@ -57,7 +61,7 @@ func TestAttributeValue(t *testing.T) {
 	v = MakeStringValue("test")
 	vt = v.GetResultType()
 	if vt != TypeString {
-		t.Errorf("Expected %q as value type but got %q", BuiltinTypeNames[TypeString], BuiltinTypeNames[vt])
+		t.Errorf("Expected %q as value type but got %q", TypeString, vt)
 	}
 
 	expDesc = "\"test\""
@@ -69,7 +73,7 @@ func TestAttributeValue(t *testing.T) {
 	v = MakeIntegerValue(123)
 	vt = v.GetResultType()
 	if vt != TypeInteger {
-		t.Errorf("Expected %q as value type but got %q", BuiltinTypeNames[TypeInteger], BuiltinTypeNames[vt])
+		t.Errorf("Expected %q as value type but got %q", TypeInteger, vt)
 	}
 
 	expDesc = "123"
@@ -81,7 +85,7 @@ func TestAttributeValue(t *testing.T) {
 	v = MakeFloatValue(123.456)
 	vt = v.GetResultType()
 	if vt != TypeFloat {
-		t.Errorf("Expected %q as value type but got %q", BuiltinTypeNames[TypeFloat], BuiltinTypeNames[vt])
+		t.Errorf("Expected %q as value type but got %q", TypeFloat, vt)
 	}
 
 	expDesc = "123.456"
@@ -93,7 +97,7 @@ func TestAttributeValue(t *testing.T) {
 	v = MakeAddressValue(net.ParseIP("192.0.2.1"))
 	vt = v.GetResultType()
 	if vt != TypeAddress {
-		t.Errorf("Expected %q as value type but got %q", BuiltinTypeNames[TypeAddress], BuiltinTypeNames[vt])
+		t.Errorf("Expected %q as value type but got %q", TypeAddress, vt)
 	}
 
 	expDesc = "192.0.2.1"
@@ -109,7 +113,7 @@ func TestAttributeValue(t *testing.T) {
 	v = MakeNetworkValue(n)
 	vt = v.GetResultType()
 	if vt != TypeNetwork {
-		t.Errorf("Expected %q as value type but got %q", BuiltinTypeNames[TypeNetwork], BuiltinTypeNames[vt])
+		t.Errorf("Expected %q as value type but got %q", TypeNetwork, vt)
 	}
 
 	expDesc = "192.0.2.0/24"
@@ -121,7 +125,7 @@ func TestAttributeValue(t *testing.T) {
 	v = MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03com\x00"))
 	vt = v.GetResultType()
 	if vt != TypeDomain {
-		t.Errorf("Expected %q as value type but got %q", BuiltinTypeNames[TypeDomain], BuiltinTypeNames[vt])
+		t.Errorf("Expected %q as value type but got %q", TypeDomain, vt)
 	}
 
 	expDesc = "domain(example.com)"
@@ -138,7 +142,7 @@ func TestAttributeValue(t *testing.T) {
 	v = MakeSetOfStringsValue(sTree)
 	vt = v.GetResultType()
 	if vt != TypeSetOfStrings {
-		t.Errorf("Expected %q as value type but got %q", BuiltinTypeNames[TypeSetOfStrings], BuiltinTypeNames[vt])
+		t.Errorf("Expected %q as value type but got %q", TypeSetOfStrings, vt)
 	}
 
 	expDesc = "set(\"1 - one\", \"2 - two\", ...)"
@@ -171,7 +175,7 @@ func TestAttributeValue(t *testing.T) {
 	v = MakeSetOfNetworksValue(nTree)
 	vt = v.GetResultType()
 	if vt != TypeSetOfNetworks {
-		t.Errorf("Expected %q as value type but got %q", BuiltinTypeNames[TypeSetOfNetworks], BuiltinTypeNames[vt])
+		t.Errorf("Expected %q as value type but got %q", TypeSetOfNetworks, vt)
 	}
 
 	expDesc = "set(192.0.2.16/28, 192.0.2.32/28, ...)"
@@ -188,7 +192,7 @@ func TestAttributeValue(t *testing.T) {
 	v = MakeSetOfDomainsValue(dTree)
 	vt = v.GetResultType()
 	if vt != TypeSetOfDomains {
-		t.Errorf("Expected %q as value type but got %q", BuiltinTypeNames[TypeSetOfDomains], BuiltinTypeNames[vt])
+		t.Errorf("Expected %q as value type but got %q", TypeSetOfDomains, vt)
 	}
 
 	expDesc = "domains(\"example.com\", \"example.gov\", ...)"
@@ -200,7 +204,7 @@ func TestAttributeValue(t *testing.T) {
 	v = MakeListOfStringsValue([]string{"one", "two", "three", "four"})
 	vt = v.GetResultType()
 	if vt != TypeListOfStrings {
-		t.Errorf("Expected %q as value type but got %q", BuiltinTypeNames[TypeListOfStrings], BuiltinTypeNames[vt])
+		t.Errorf("Expected %q as value type but got %q", TypeListOfStrings, vt)
 	}
 
 	expDesc = "[\"one\", \"two\", ...]"
@@ -211,7 +215,11 @@ func TestAttributeValue(t *testing.T) {
 }
 
 func TestMakeValueFromSting(t *testing.T) {
-	v, err := MakeValueFromString(-1, "test")
+	tt := Type(&builtinType{
+		n: "Test-Type",
+		k: "test-type",
+	})
+	v, err := MakeValueFromString(tt, "test")
 	if err == nil {
 		t.Errorf("Expected error but got value: %s", v.describe())
 	} else if _, ok := err.(*unknownTypeStringCastError); !ok {
@@ -637,7 +645,11 @@ func TestAttributeValueTypeCast(t *testing.T) {
 }
 
 func TestAttributeValueSerialize(t *testing.T) {
-	v := AttributeValue{t: -1, v: nil}
+	tt := Type(&builtinType{
+		n: "Test-Type",
+		k: "test-type",
+	})
+	v := AttributeValue{t: tt, v: nil}
 	s, err := v.Serialize()
 	if err == nil {
 		t.Errorf("Expected error but got string %q", s)

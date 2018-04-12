@@ -22,7 +22,7 @@ func makeFunctionFloatDivideAlt(args []Expression) Expression {
 	return makeFunctionFloatDivide(args[0], args[1])
 }
 
-func (f functionFloatDivide) GetResultType() int {
+func (f functionFloatDivide) GetResultType() Type {
 	return TypeFloat
 }
 

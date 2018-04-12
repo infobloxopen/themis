@@ -21,7 +21,7 @@ func makeFunctionSetOfDomainsContainsAlt(args []Expression) Expression {
 	return makeFunctionSetOfDomainsContains(args[0], args[1])
 }
 
-func (f functionSetOfDomainsContains) GetResultType() int {
+func (f functionSetOfDomainsContains) GetResultType() Type {
 	return TypeBoolean
 }
 

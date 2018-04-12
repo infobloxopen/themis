@@ -1,7 +1,7 @@
 package: pdp
 
 import:
-  - fmt
+  - strconv
   - strings
   - github.com/google/uuid
 
@@ -38,26 +38,26 @@ errors:
 - id: unknownTypeStringCastError
   fields:
   - id: t
-    type: int
-  msg: "Unknown type id %d"
+    type: Type
+  msg: "Unknown type id %q"
   args:
   - field: t
 
 - id: invalidTypeStringCastError
   fields:
   - id: t
-    type: int
+    type: Type
   msg: "Can't convert string to value of %q type"
   args:
-  - expr: BuiltinTypeNames[e.t]
+  - field: t
 
 - id: notImplementedStringCastError
   fields:
   - id: t
-    type: int
+    type: Type
   msg: "Conversion from string to value of %q type hasn't been implemented"
   args:
-  - expr: BuiltinTypeNames[e.t]
+  - field: t
 
 - id: invalidBooleanStringCastError
   fields:
@@ -136,20 +136,20 @@ errors:
 - id: attributeValueTypeError
   fields:
   - id: expected
-    type: int
+    type: Type
   - id: actual
-    type: int
-  msg: "Expected %s value but got %s"
+    type: Type
+  msg: "Expected %q value but got %q"
   args:
-  - expr: BuiltinTypeNames[e.expected]
-  - expr: BuiltinTypeNames[e.actual]
+  - field: expected
+  - field: actual
 
 - id: duplicateAttributeValueError
   fields:
   - id: ID
     type: string
   - id: t
-    type: int
+    type: Type
   - id: curr
     type: AttributeValue
   - id: prev
@@ -157,48 +157,48 @@ errors:
   msg: "Duplicate attribute %q of type %q in request %s - %s"
   args:
   - field: ID
-  - expr: BuiltinTypeNames[e.t]
+  - field: t
   - expr: e.curr.describe()
   - expr: e.prev.describe()
 
 - id: unknownTypeSerializationError
   fields:
   - id: t
-    type: int
-  msg: "Unknown type id %d"
+    type: Type
+  msg: "Unknown type id %q"
   args:
   - field: t
 
 - id: invalidTypeSerializationError
   fields:
   - id: t
-    type: int
+    type: Type
   msg: "Can't serialize value of %q type"
   args:
-  - expr: BuiltinTypeNames[e.t]
+  - field: t
 
 - id: assignmentTypeMismatch
   fields:
   - id: a
     type: Attribute
   - id: t
-    type: int
+    type: Type
   msg: "Can't assign %q value to attribute %q of type %q"
   args:
-  - expr: BuiltinTypeNames[e.t]
-  - expr: e.a.id
-  - expr: BuiltinTypeNames[e.a.t]
+  - field: t
+  - field: a.id
+  - field: a.t
 
 - id: mapperArgumentTypeError
   fields:
   - id: actual
-    type: int
+    type: Type
   msg: "Expected %s, %s or %s as argument but got %s"
   args:
-  - expr: BuiltinTypeNames[TypeString]
-  - expr: BuiltinTypeNames[TypeSetOfStrings]
-  - expr: BuiltinTypeNames[TypeListOfStrings]
-  - expr: BuiltinTypeNames[e.actual]
+  - expr: TypeString
+  - expr: TypeSetOfStrings
+  - expr: TypeListOfStrings
+  - field: actual
 
 - id: UntaggedPolicyModificationError
   desc: "indicates attempt to modify incrementally a policy which has no tag"
@@ -371,30 +371,23 @@ errors:
 - id: invalidContentItemTypeError
   fields:
   - id: expected
-    type: int
+    type: Type
   - id: actual
-    type: int
+    type: Type
   msg: "Invalid conent item type. Expected %q but got %q"
   args:
-  - expr: BuiltinTypeNames[e.expected]
-  - expr: BuiltinTypeNames[e.actual]
+  - field: expected
+  - field: actual
 
 - id: invalidSelectorPathError
   fields:
   - id: expected
-    type: "[]int"
+    type: Signature
   - id: actual
     type: "[]Expression"
-  msg: "Invalid selector path. Expected %s but got %s"
+  msg: "Invalid selector path. Expected %s path but got %s"
   args:
-  - snippet:
-      result: expected
-      code: |
-        expStrs := make([]string, len(e.expected))
-        for i, t := range e.expected {
-        	expStrs[i] = BuiltinTypeNames[t]
-        }
-        expected := strings.Join(expStrs, "/")
+  - field: expected
   - snippet:
       result: actual
       code: |
@@ -402,7 +395,7 @@ errors:
         if len(e.actual) > 0 {
         	strs := make([]string, len(e.actual))
         	for i, e := range e.actual {
-        		strs[i] = BuiltinTypeNames[e.GetResultType()]
+        		strs[i] = e.GetResultType().String()
         	}
         	actual = strings.Join(strs, "/")
         }
@@ -410,12 +403,12 @@ errors:
 - id: networkMapKeyValueTypeError
   fields:
   - id: t
-    type: int
-  msg: "Expected %s or %s as network map key but got %s"
+    type: Type
+  msg: "Expected %q or %q as network map key but got %q"
   args:
-  - expr: BuiltinTypeNames[TypeAddress]
-  - expr: BuiltinTypeNames[TypeNetwork]
-  - expr: BuiltinTypeNames[e.t]
+  - expr: TypeAddress
+  - expr: TypeNetwork
+  - field: t
 
 - id: mapContentSubitemError
   msg: "Not a map of the content"
@@ -429,28 +422,18 @@ errors:
 - id: tooLongPathContentModificationError
   fields:
   - id: expected
-    type: "[]int"
+    type: Signature
   - id: actual
     type: "[]AttributeValue"
   msg: "Too long modification path. Expected %s path but got %s"
   args:
-  - snippet:
-      result: expected
-      code: |
-        expected := "no"
-        if len(e.expected) > 0 {
-        	expStrs := make([]string, len(e.expected))
-        	for i, t := range e.expected {
-        		expStrs[i] = fmt.Sprintf("%q", BuiltinTypeNames[t])
-        	}
-        	expected = strings.Join(expStrs, "/")
-        }
+  - field: expected
   - snippet:
       result: actual
       code: |
         actStrs := make([]string, len(e.actual))
         for i, e := range e.actual {
-        	actStrs[i] = fmt.Sprintf("%q", BuiltinTypeNames[e.GetResultType()])
+        	actStrs[i] = strconv.Quote(e.GetResultType().String())
         }
         actual := strings.Join(actStrs, "/")
 
@@ -538,28 +521,18 @@ errors:
 - id: tooLongRawPathContentModificationError
   fields:
   - id: expected
-    type: "[]int"
+    type: Signature
   - id: actual
     type: "[]string"
   msg: "Too long modification path. Expected %s path but got %s"
   args:
-  - snippet:
-      result: expected
-      code: |
-        expected := "no"
-        if len(e.expected) > 0 {
-        	expStrs := make([]string, len(e.expected))
-        	for i, t := range e.expected {
-        		expStrs[i] = fmt.Sprintf("%q", BuiltinTypeNames[t])
-        	}
-        	expected = strings.Join(expStrs, "/")
-        }
+  - field: expected
   - snippet:
       result: actual
       code: |
         actStrs := make([]string, len(e.actual))
         for i, s := range e.actual {
-        	actStrs[i] = fmt.Sprintf("%q", s)
+        	actStrs[i] = strconv.Quote(s)
         }
         actual := strings.Join(actStrs, "/")
 
@@ -574,77 +547,60 @@ errors:
 - id: invalidContentUpdateResultTypeError
   fields:
   - id: actual
-    type: int
+    type: Type
   - id: expected
-    type: int
+    type: Type
   msg: "Expected %q as a result type but got %q"
   args:
-  - expr: BuiltinTypeNames[e.expected]
-  - expr: BuiltinTypeNames[e.actual]
+  - field: expected
+  - field: actual
 
 - id: invalidContentUpdateKeysError
   fields:
   - id: start
     type: int
   - id: actual
-    type: "[]int"
+    type: Signature
   - id: expected
-    type: "[]int"
+    type: Signature
   msg: "Expected %s path after position %d but got %s"
   args:
-  - snippet:
-      result: expected
-      code: |
-        enames := make([]string, len(e.expected) - e.start)
-        for i, t := range e.expected[e.start:] {
-        	enames[i] = fmt.Sprintf("%q", BuiltinTypeNames[t])
-        }
-        expected := strings.Join(enames, "/")
+  - field: expected
   - field: start
-  - snippet:
-      result: actual
-      code: |
-        actual := "nothing"
-        if len(e.actual) > 0 {
-        	anames := make([]string, len(e.actual))
-        	for i, t := range e.actual {
-        		anames[i] = fmt.Sprintf("%q", BuiltinTypeNames[t])
-        	}
-        	actual = strings.Join(anames, "/")
-        }
+  - field: actual
 
 - id: unknownContentItemResultTypeError
   fields:
   - id: t
-    type: int
-  msg: "Unknown result type for content item: %d"
+    type: Type
+  msg: "Unknown result type for content item: %q"
   args:
   - field: t
 
 - id: invalidContentItemResultTypeError
   fields:
   - id: t
-    type: int
-  msg: "Invalid result type for content item: %s"
+    type: Type
+  msg: "Invalid result type for content item: %q"
   args:
-  - expr: BuiltinTypeNames[e.t]
+  - field: t
 
 - id: invalidContentKeyTypeError
   fields:
   - id: t
-    type: int
+    type: Type
   - id: expected
-    type: map[int]bool
-  msg: "Invalid key type for content item: %s (expected %s)"
+    type: TypeSet
+  msg: "Invalid key type for content item: %q (expected %s)"
   args:
-  - expr: BuiltinTypeNames[e.t]
+  - field: t
   - snippet:
       result: s
       code: |
         names := make([]string, len(e.expected))
         i := 0
         for t := range e.expected {
-                names[i] = BuiltinTypeNames[t]
+                names[i] = strconv.Quote(t.String())
                 i++
         }
         s := strings.Join(names, ", ")
@@ -686,10 +642,10 @@ errors:
   - id: value
     type: interface{}
   - id: expected
-    type: int
-  msg: "Expected value of type %s but got %T"
+    type: Type
+  msg: "Expected value of type %q but got %T"
   args:
-  - expr: BuiltinTypeNames[e.expected]
+  - field: expected
   - field: value
 
 - id: integerDivideByZeroError

@@ -100,11 +100,11 @@ func NewContext(c *LocalContentStorage, count int, f func(i int) (string, Attrib
 					return nil, newDuplicateAttributeValueError(ID, t, av, v)
 				}
 
-				m := make(map[int]AttributeValue, 2)
+				m := make(map[Type]AttributeValue, 2)
 				m[v.t] = v
 				m[t] = av
 
-			case map[int]AttributeValue:
+			case map[Type]AttributeValue:
 				if old, ok := v[t]; ok {
 					return nil, newDuplicateAttributeValueError(ID, t, av, old)
 				}
@@ -140,11 +140,11 @@ func (c *Context) String() string {
 				panic(fmt.Errorf("expected AttributeValue or map[int]AttributeValue but got: %T, %#v", v, v))
 
 			case AttributeValue:
-				lines = append(lines, fmt.Sprintf("- %s.(%s): %s", name, BuiltinTypeNames[v.t], v.describe()))
+				lines = append(lines, fmt.Sprintf("- %s.(%s): %s", name, v.t, v.describe()))
 
-			case map[int]AttributeValue:
+			case map[Type]AttributeValue:
 				for t, av := range v {
-					lines = append(lines, fmt.Sprintf("- %s.(%s): %s", name, BuiltinTypeNames[t], av.describe()))
+					lines = append(lines, fmt.Sprintf("- %s.(%s): %s", name, t, av.describe()))
 				}
 			}
 		}
@@ -167,7 +167,7 @@ func (c *Context) getAttribute(a Attribute) (AttributeValue, error) {
 
 		return v, nil
 
-	case map[int]AttributeValue:
+	case map[Type]AttributeValue:
 		av, ok := v[a.t]
 		if !ok {
 			return UndefinedValue, bindError(newMissingAttributeError(), a.describe())

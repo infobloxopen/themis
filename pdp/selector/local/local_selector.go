@@ -13,7 +13,7 @@ func (s *selector) Enabled() bool {
 	return true
 }
 
-func (s *selector) SelectorFunc(uri string, path []pdp.Expression, t int) (pdp.Expression, error) {
+func (s *selector) SelectorFunc(uri string, path []pdp.Expression, t pdp.Type) (pdp.Expression, error) {
 	return MakeLocalSelector(uri, path, t)
 }
 
@@ -26,14 +26,14 @@ type LocalSelector struct {
 	content string
 	item    string
 	path    []pdp.Expression
-	t       int
+	t       pdp.Type
 }
 
 // MakeLocalSelector creates instance of local selector. Arguments content and
 // item are id of content in storage and id of content item within content.
 // Argument path defines set of expressions to get a value of type t. Local
 // selector implements late binding and checks path and type on any evaluation.
-func MakeLocalSelector(uri string, path []pdp.Expression, t int) (pdp.Expression, error) {
+func MakeLocalSelector(uri string, path []pdp.Expression, t pdp.Type) (pdp.Expression, error) {
 	loc := strings.Split(uri, "/")
 	if len(loc) != 2 {
 		err := fmt.Errorf("Expected selector location in form of <Content-ID>/<Item-ID> got %s", uri)
@@ -48,13 +48,12 @@ func MakeLocalSelector(uri string, path []pdp.Expression, t int) (pdp.Expression
 
 // GetResultType implements Expression interface and returns type of final value
 // expected by the selector from corresponding content.
-func (s LocalSelector) GetResultType() int {
+func (s LocalSelector) GetResultType() pdp.Type {
 	return s.t
 }
 
-func typeMismatchError(expected, actual int) error {
-	return fmt.Errorf("Invalid conent item type. Expected %q but got %q",
-		pdp.BuiltinTypeNames[expected], pdp.BuiltinTypeNames[actual])
+func typeMismatchError(expected, actual pdp.Type) error {
+	return fmt.Errorf("Invalid conent item type. Expected %q but got %q", expected, actual)
 }
 
 // Calculate implements Expression interface and returns calculated value

@@ -25,7 +25,7 @@ func makeFunctionIntegerRangeAlt(args []Expression) Expression {
 	return makeFunctionIntegerRange(args[0], args[1], args[2])
 }
 
-func (f functionIntegerRange) GetResultType() int {
+func (f functionIntegerRange) GetResultType() Type {
 	return TypeString
 }
 

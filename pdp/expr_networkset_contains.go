@@ -22,7 +22,7 @@ func makeFunctionSetOfNetworksContainsAddressAlt(args []Expression) Expression {
 	return makeFunctionSetOfNetworksContainsAddress(args[0], args[1])
 }
 
-func (f functionSetOfNetworksContainsAddress) GetResultType() int {
+func (f functionSetOfNetworksContainsAddress) GetResultType() Type {
 	return TypeBoolean
 }
 

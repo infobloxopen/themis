@@ -13,12 +13,12 @@ import (
 )
 
 // ContentKeyTypes gathers all types which can be a key for content map.
-var ContentKeyTypes = map[int]bool{
-	TypeString:  true,
-	TypeAddress: true,
-	TypeNetwork: true,
-	TypeDomain:  true,
-}
+var ContentKeyTypes = makeTypeSet(
+	TypeString,
+	TypeAddress,
+	TypeNetwork,
+	TypeDomain,
+)
 
 // LocalContentStorage is a storage of all independent local contents.
 type LocalContentStorage struct {
@@ -414,13 +414,13 @@ func (c *LocalContent) String() string {
 type ContentItem struct {
 	id string
 	r  ContentSubItem
-	t  int
-	k  []int
+	t  Type
+	k  []Type
 }
 
 // MakeContentValueItem creates content item which represents immediate value
 // of given type.
-func MakeContentValueItem(id string, t int, v interface{}) *ContentItem {
+func MakeContentValueItem(id string, t Type, v interface{}) *ContentItem {
 	return &ContentItem{
 		id: id,
 		r:  MakeContentValue(v),
@@ -430,7 +430,7 @@ func MakeContentValueItem(id string, t int, v interface{}) *ContentItem {
 // MakeContentMappingItem creates mapping content item. Argument t is type
 // of final value while k list is a list of types from ContentKeyTypes and
 // defines which maps the item consists from.
-func MakeContentMappingItem(id string, t int, k []int, v ContentSubItem) *ContentItem {
+func MakeContentMappingItem(id string, t Type, k []Type, v ContentSubItem) *ContentItem {
 	return &ContentItem{
 		id: id,
 		r:  v,
@@ -439,7 +439,7 @@ func MakeContentMappingItem(id string, t int, k []int, v ContentSubItem) *Conten
 }
 
 // GetType returns content item type
-func (c *ContentItem) GetType() int {
+func (c *ContentItem) GetType() Type {
 	return c.t
 }
 
@@ -706,7 +706,7 @@ func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, erro
 // ContentSubItem interface abstracts all possible mapping objects and immediate
 // content value.
 type ContentSubItem interface {
-	getValue(key AttributeValue, t int) (AttributeValue, error)
+	getValue(key AttributeValue, t Type) (AttributeValue, error)
 	next(key AttributeValue) (ContentSubItem, error)
 	put(key AttributeValue, v ContentSubItem) (ContentSubItem, error)
 	del(key AttributeValue) (ContentSubItem, error)
@@ -725,7 +725,7 @@ func MakeContentStringMap(tree *strtree.Tree) ContentStringMap {
 	return ContentStringMap{tree: tree}
 }
 
-func (m ContentStringMap) getValue(key AttributeValue, t int) (AttributeValue, error) {
+func (m ContentStringMap) getValue(key AttributeValue, t Type) (AttributeValue, error) {
 	s, err := key.str()
 	if err != nil {
 		return UndefinedValue, err
@@ -818,7 +818,7 @@ func (m ContentNetworkMap) getByAttribute(key AttributeValue) (interface{}, erro
 	return UndefinedValue, newNetworkMapKeyValueTypeError(key.GetResultType())
 }
 
-func (m ContentNetworkMap) getValue(key AttributeValue, t int) (AttributeValue, error) {
+func (m ContentNetworkMap) getValue(key AttributeValue, t Type) (AttributeValue, error) {
 	v, err := m.getByAttribute(key)
 	if err != nil {
 		return UndefinedValue, err
@@ -894,7 +894,7 @@ func MakeContentDomainMap(tree *domaintree.Node) ContentDomainMap {
 	return ContentDomainMap{tree: tree}
 }
 
-func (m ContentDomainMap) getValue(key AttributeValue, t int) (AttributeValue, error) {
+func (m ContentDomainMap) getValue(key AttributeValue, t Type) (AttributeValue, error) {
 	d, err := key.domain()
 	if err != nil {
 		return UndefinedValue, err
@@ -974,7 +974,7 @@ func MakeContentValue(value interface{}) ContentValue {
 	return ContentValue{value: value}
 }
 
-func (v ContentValue) getValue(key AttributeValue, t int) (AttributeValue, error) {
+func (v ContentValue) getValue(key AttributeValue, t Type) (AttributeValue, error) {
 	switch t {
 	case TypeUndefined:
 		panic(fmt.Errorf("can't convert to value of undefined type"))

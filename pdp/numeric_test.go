@@ -1085,9 +1085,9 @@ func TestFloatRange(t *testing.T) {
 
 func TestFunctionArgumentValidators(t *testing.T) {
 	type testCase struct {
-		argTypes         []int
+		argTypes         Signature
 		expectFunc       reflect.Type
-		expectResultType int
+		expectResultType Type
 	}
 
 	type testSuite struct {
@@ -1100,22 +1100,22 @@ func TestFunctionArgumentValidators(t *testing.T) {
 			funcName: "add",
 			testCases: []testCase{
 				{
-					argTypes:         []int{TypeInteger, TypeInteger},
+					argTypes:         MakeSignature(TypeInteger, TypeInteger),
 					expectFunc:       reflect.TypeOf(functionIntegerAdd{}),
 					expectResultType: TypeInteger,
 				},
 				{
-					argTypes:         []int{TypeInteger, TypeFloat},
+					argTypes:         MakeSignature(TypeInteger, TypeFloat),
 					expectFunc:       reflect.TypeOf(functionFloatAdd{}),
 					expectResultType: TypeFloat,
 				},
 				{
-					argTypes:         []int{TypeFloat, TypeInteger},
+					argTypes:         MakeSignature(TypeFloat, TypeInteger),
 					expectFunc:       reflect.TypeOf(functionFloatAdd{}),
 					expectResultType: TypeFloat,
 				},
 				{
-					argTypes:         []int{TypeFloat, TypeFloat},
+					argTypes:         MakeSignature(TypeFloat, TypeFloat),
 					expectFunc:       reflect.TypeOf(functionFloatAdd{}),
 					expectResultType: TypeFloat,
 				},
@@ -1125,22 +1125,22 @@ func TestFunctionArgumentValidators(t *testing.T) {
 			funcName: "subtract",
 			testCases: []testCase{
 				{
-					argTypes:         []int{TypeInteger, TypeInteger},
+					argTypes:         MakeSignature(TypeInteger, TypeInteger),
 					expectFunc:       reflect.TypeOf(functionIntegerSubtract{}),
 					expectResultType: TypeInteger,
 				},
 				{
-					argTypes:         []int{TypeInteger, TypeFloat},
+					argTypes:         MakeSignature(TypeInteger, TypeFloat),
 					expectFunc:       reflect.TypeOf(functionFloatSubtract{}),
 					expectResultType: TypeFloat,
 				},
 				{
-					argTypes:         []int{TypeFloat, TypeInteger},
+					argTypes:         MakeSignature(TypeFloat, TypeInteger),
 					expectFunc:       reflect.TypeOf(functionFloatSubtract{}),
 					expectResultType: TypeFloat,
 				},
 				{
-					argTypes:         []int{TypeFloat, TypeFloat},
+					argTypes:         MakeSignature(TypeFloat, TypeFloat),
 					expectFunc:       reflect.TypeOf(functionFloatSubtract{}),
 					expectResultType: TypeFloat,
 				},
@@ -1150,22 +1150,22 @@ func TestFunctionArgumentValidators(t *testing.T) {
 			funcName: "multiply",
 			testCases: []testCase{
 				{
-					argTypes:         []int{TypeInteger, TypeInteger},
+					argTypes:         MakeSignature(TypeInteger, TypeInteger),
 					expectFunc:       reflect.TypeOf(functionIntegerMultiply{}),
 					expectResultType: TypeInteger,
 				},
 				{
-					argTypes:         []int{TypeInteger, TypeFloat},
+					argTypes:         MakeSignature(TypeInteger, TypeFloat),
 					expectFunc:       reflect.TypeOf(functionFloatMultiply{}),
 					expectResultType: TypeFloat,
 				},
 				{
-					argTypes:         []int{TypeFloat, TypeInteger},
+					argTypes:         MakeSignature(TypeFloat, TypeInteger),
 					expectFunc:       reflect.TypeOf(functionFloatMultiply{}),
 					expectResultType: TypeFloat,
 				},
 				{
-					argTypes:         []int{TypeFloat, TypeFloat},
+					argTypes:         MakeSignature(TypeFloat, TypeFloat),
 					expectFunc:       reflect.TypeOf(functionFloatMultiply{}),
 					expectResultType: TypeFloat,
 				},
@@ -1175,22 +1175,22 @@ func TestFunctionArgumentValidators(t *testing.T) {
 			funcName: "divide",
 			testCases: []testCase{
 				{
-					argTypes:         []int{TypeInteger, TypeInteger},
+					argTypes:         MakeSignature(TypeInteger, TypeInteger),
 					expectFunc:       reflect.TypeOf(functionIntegerDivide{}),
 					expectResultType: TypeInteger,
 				},
 				{
-					argTypes:         []int{TypeInteger, TypeFloat},
+					argTypes:         MakeSignature(TypeInteger, TypeFloat),
 					expectFunc:       reflect.TypeOf(functionFloatDivide{}),
 					expectResultType: TypeFloat,
 				},
 				{
-					argTypes:         []int{TypeFloat, TypeInteger},
+					argTypes:         MakeSignature(TypeFloat, TypeInteger),
 					expectFunc:       reflect.TypeOf(functionFloatDivide{}),
 					expectResultType: TypeFloat,
 				},
 				{
-					argTypes:         []int{TypeFloat, TypeFloat},
+					argTypes:         MakeSignature(TypeFloat, TypeFloat),
 					expectFunc:       reflect.TypeOf(functionFloatDivide{}),
 					expectResultType: TypeFloat,
 				},
@@ -1200,22 +1200,22 @@ func TestFunctionArgumentValidators(t *testing.T) {
 			funcName: "equal",
 			testCases: []testCase{
 				{
-					argTypes:         []int{TypeInteger, TypeInteger},
+					argTypes:         MakeSignature(TypeInteger, TypeInteger),
 					expectFunc:       reflect.TypeOf(functionIntegerEqual{}),
 					expectResultType: TypeBoolean,
 				},
 				{
-					argTypes:         []int{TypeInteger, TypeFloat},
+					argTypes:         MakeSignature(TypeInteger, TypeFloat),
 					expectFunc:       reflect.TypeOf(functionFloatEqual{}),
 					expectResultType: TypeBoolean,
 				},
 				{
-					argTypes:         []int{TypeFloat, TypeInteger},
+					argTypes:         MakeSignature(TypeFloat, TypeInteger),
 					expectFunc:       reflect.TypeOf(functionFloatEqual{}),
 					expectResultType: TypeBoolean,
 				},
 				{
-					argTypes:         []int{TypeFloat, TypeFloat},
+					argTypes:         MakeSignature(TypeFloat, TypeFloat),
 					expectFunc:       reflect.TypeOf(functionFloatEqual{}),
 					expectResultType: TypeBoolean,
 				},
@@ -1225,22 +1225,22 @@ func TestFunctionArgumentValidators(t *testing.T) {
 			funcName: "greater",
 			testCases: []testCase{
 				{
-					argTypes:         []int{TypeInteger, TypeInteger},
+					argTypes:         MakeSignature(TypeInteger, TypeInteger),
 					expectFunc:       reflect.TypeOf(functionIntegerGreater{}),
 					expectResultType: TypeBoolean,
 				},
 				{
-					argTypes:         []int{TypeInteger, TypeFloat},
+					argTypes:         MakeSignature(TypeInteger, TypeFloat),
 					expectFunc:       reflect.TypeOf(functionFloatGreater{}),
 					expectResultType: TypeBoolean,
 				},
 				{
-					argTypes:         []int{TypeFloat, TypeInteger},
+					argTypes:         MakeSignature(TypeFloat, TypeInteger),
 					expectFunc:       reflect.TypeOf(functionFloatGreater{}),
 					expectResultType: TypeBoolean,
 				},
 				{
-					argTypes:         []int{TypeFloat, TypeFloat},
+					argTypes:         MakeSignature(TypeFloat, TypeFloat),
 					expectFunc:       reflect.TypeOf(functionFloatGreater{}),
 					expectResultType: TypeBoolean,
 				},
@@ -1250,42 +1250,42 @@ func TestFunctionArgumentValidators(t *testing.T) {
 			funcName: "range",
 			testCases: []testCase{
 				{
-					argTypes:         []int{TypeInteger, TypeInteger, TypeInteger},
+					argTypes:         MakeSignature(TypeInteger, TypeInteger, TypeInteger),
 					expectFunc:       reflect.TypeOf(functionIntegerRange{}),
 					expectResultType: TypeString,
 				},
 				{
-					argTypes:         []int{TypeInteger, TypeInteger, TypeFloat},
+					argTypes:         MakeSignature(TypeInteger, TypeInteger, TypeFloat),
 					expectFunc:       reflect.TypeOf(functionFloatRange{}),
 					expectResultType: TypeString,
 				},
 				{
-					argTypes:         []int{TypeInteger, TypeFloat, TypeInteger},
+					argTypes:         MakeSignature(TypeInteger, TypeFloat, TypeInteger),
 					expectFunc:       reflect.TypeOf(functionFloatRange{}),
 					expectResultType: TypeString,
 				},
 				{
-					argTypes:         []int{TypeInteger, TypeFloat, TypeFloat},
+					argTypes:         MakeSignature(TypeInteger, TypeFloat, TypeFloat),
 					expectFunc:       reflect.TypeOf(functionFloatRange{}),
 					expectResultType: TypeString,
 				},
 				{
-					argTypes:         []int{TypeFloat, TypeInteger, TypeInteger},
+					argTypes:         MakeSignature(TypeFloat, TypeInteger, TypeInteger),
 					expectFunc:       reflect.TypeOf(functionFloatRange{}),
 					expectResultType: TypeString,
 				},
 				{
-					argTypes:         []int{TypeFloat, TypeInteger, TypeFloat},
+					argTypes:         MakeSignature(TypeFloat, TypeInteger, TypeFloat),
 					expectFunc:       reflect.TypeOf(functionFloatRange{}),
 					expectResultType: TypeString,
 				},
 				{
-					argTypes:         []int{TypeFloat, TypeFloat, TypeInteger},
+					argTypes:         MakeSignature(TypeFloat, TypeFloat, TypeInteger),
 					expectFunc:       reflect.TypeOf(functionFloatRange{}),
 					expectResultType: TypeString,
 				},
 				{
-					argTypes:         []int{TypeFloat, TypeFloat, TypeFloat},
+					argTypes:         MakeSignature(TypeFloat, TypeFloat, TypeFloat),
 					expectFunc:       reflect.TypeOf(functionFloatRange{}),
 					expectResultType: TypeString,
 				},
@@ -1302,7 +1302,7 @@ func TestFunctionArgumentValidators(t *testing.T) {
 					for i, argType := range tc.argTypes {
 						expr, err := MakeValueFromString(argType, "1")
 						if err != nil {
-							t.Fatalf("Unexpected error making expression of type %s", BuiltinTypeNames[argType])
+							t.Fatalf("Unexpected error making expression of type %s", argType)
 							return
 						}
 						args[i] = expr
@@ -1318,7 +1318,7 @@ func TestFunctionArgumentValidators(t *testing.T) {
 							}
 							if tc.expectResultType != numFunc.GetResultType() {
 								t.Errorf("Expected result type is '%s' but got '%s'",
-									BuiltinTypeNames[tc.expectResultType], BuiltinTypeNames[numFunc.GetResultType()])
+									tc.expectResultType, numFunc.GetResultType())
 							}
 							return
 						}

@@ -1,70 +1,128 @@
 package pdp
 
-import "strings"
+import (
+	"sort"
+	"strconv"
+	"strings"
+)
 
-// Type* constants represent all data types PDP can work with.
-const (
+// Type* values represent all built-in data types PDP can work with.
+var (
 	// TypeUndefined stands for type of undefined value. The value usually
 	// means that evaluation can't be done.
-	TypeUndefined = iota
+	TypeUndefined = newBuiltinType("Undefined")
 	// TypeBoolean is boolean data type.
-	TypeBoolean
+	TypeBoolean = newBuiltinType("Boolean")
 	// TypeString is string data type.
-	TypeString
+	TypeString = newBuiltinType("String")
 	// TypeInteger is integer data type.
-	TypeInteger
+	TypeInteger = newBuiltinType("Integer")
 	// TypeFloat is float data type.
-	TypeFloat
+	TypeFloat = newBuiltinType("Float")
 	// TypeAddress is IPv4 or IPv6 address data type.
-	TypeAddress
+	TypeAddress = newBuiltinType("Address")
 	// TypeNetwork is IPv4 or IPv6 network data type.
-	TypeNetwork
+	TypeNetwork = newBuiltinType("Network")
 	// TypeDomain is domain name data type.
-	TypeDomain
+	TypeDomain = newBuiltinType("Domain")
 	// TypeSetOfStrings is set of strings data type (internally stores order
 	// in which it was created).
-	TypeSetOfStrings
+	TypeSetOfStrings = newBuiltinType("Set of Strings")
 	// TypeSetOfNetworks is set of networks data type (unordered).
-	TypeSetOfNetworks
+	TypeSetOfNetworks = newBuiltinType("Set of Networks")
 	// TypeSetOfDomains is set of domains data type (unordered).
-	TypeSetOfDomains
+	TypeSetOfDomains = newBuiltinType("Set of Domains")
 	// TypeListOfStrings is list of strings data type.
-	TypeListOfStrings
+	TypeListOfStrings = newBuiltinType("List of Strings")
 
-	typesTotal
+	// BuiltinTypeIDs maps type keys to Type* constants.
+	BuiltinTypes = make(map[string]Type)
 )
 
-// BuiltinType* collections bind type names and IDs.
-var (
-	// BuiltinTypeNames is list of humanreadable type names. The order must
-	// be kept in sync with Type* constants order.
-	BuiltinTypeNames = []string{
-		"Undefined",
-		"Boolean",
-		"String",
-		"Integer",
-		"Float",
-		"Address",
-		"Network",
-		"Domain",
-		"Set of Strings",
-		"Set of Networks",
-		"Set of Domains",
-		"List of Strings"}
+// Type is generic data type.
+type Type interface {
+	// String returns human readable type name.
+	String() string
+	// GetKey returns case insensitive (always lowercase) type key.
+	GetKey() string
+}
 
-	// BuiltinTypeKeys maps Type* constants to type IDs. Type ID is all lower
-	// case type name. The slice is filled by init function.
-	BuiltinTypeKeys []string
-	// BuiltinTypeIDs maps type IDs to Type* constants. The map is filled by
-	// init function.
-	BuiltinTypeIDs = map[string]int{}
-)
+type builtinType struct {
+	n string
+	k string
+}
 
-func init() {
-	BuiltinTypeKeys = make([]string, typesTotal)
-	for t := 0; t < typesTotal; t++ {
-		key := strings.ToLower(BuiltinTypeNames[t])
-		BuiltinTypeKeys[t] = key
-		BuiltinTypeIDs[key] = t
+func newBuiltinType(s string) Type {
+	t := &builtinType{
+		n: s,
+		k: strings.ToLower(s),
 	}
+
+	BuiltinTypes[t.GetKey()] = t
+
+	return t
+}
+
+func (t *builtinType) String() string {
+	return t.n
+}
+
+func (t *builtinType) GetKey() string {
+	return t.k
+}
+
+// Signature is an ordered sequence of types.
+type Signature []Type
+
+// MakeSignature function creates signature from given types.
+func MakeSignature(t ...Type) Signature {
+	return t
+}
+
+// String method returns a string containing list of types separated by slash.
+func (s Signature) String() string {
+	if len(s) > 0 {
+		seq := make([]string, len(s))
+		for i, t := range s {
+			seq[i] = strconv.Quote(t.String())
+		}
+
+		return strings.Join(seq, "/")
+	}
+
+	return "empty"
+}
+
+// TypeSet represent an unordered set of types.
+type TypeSet map[Type]struct{}
+
+func makeTypeSet(t ...Type) TypeSet {
+	s := make(TypeSet, len(t))
+	for _, t := range t {
+		s[t] = struct{}{}
+	}
+	return s
+}
+
+// Contains method checks whether the set contains a type.
+func (s TypeSet) Contains(t Type) bool {
+	_, ok := s[t]
+	return ok
+}
+
+// String method returns a string containing type names separated by comma.
+func (s TypeSet) String() string {
+	if len(s) > 0 {
+		seq := make([]string, len(s))
+		i := 0
+		for t := range s {
+			seq[i] = strconv.Quote(t.String())
+			i++
+		}
+
+		sort.Strings(seq)
+		return strings.Join(seq, ", ")
+	}
+
+	return "empty"
 }

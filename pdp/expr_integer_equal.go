@@ -22,7 +22,7 @@ func makeFunctionIntegerEqualAlt(args []Expression) Expression {
 	return makeFunctionIntegerEqual(args[0], args[1])
 }
 
-func (f functionIntegerEqual) GetResultType() int {
+func (f functionIntegerEqual) GetResultType() Type {
 	return TypeBoolean
 }
 

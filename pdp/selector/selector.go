@@ -7,7 +7,7 @@ import (
 )
 
 // MakeSelector returns new selector with given parameters
-func MakeSelector(proto string, uri string, path []pdp.Expression, t int) (pdp.Expression, error) {
+func MakeSelector(proto string, uri string, path []pdp.Expression, t pdp.Type) (pdp.Expression, error) {
 	var ret pdp.Expression
 	selector, ok := pdp.SelectorMap[proto]
 	if !ok {

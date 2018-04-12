@@ -2,6 +2,7 @@ package: yast
 
 import:
 - fmt
+- strconv
 - strings
 - "github.com/infobloxopen/themis/pdp"
 
@@ -261,22 +262,22 @@ errors:
 - id: mapperArgumentTypeError
   fields:
   - id: actual
-    type: int
+    type: pdp.Type
   msg: "Expected %s, %s or %s as argument but got %s"
   args:
-  - expr: pdp.BuiltinTypeNames[pdp.TypeString]
-  - expr: pdp.BuiltinTypeNames[pdp.TypeSetOfStrings]
-  - expr: pdp.BuiltinTypeNames[pdp.TypeListOfStrings]
-  - expr: pdp.BuiltinTypeNames[e.actual]
+  - expr: pdp.TypeString
+  - expr: pdp.TypeSetOfStrings
+  - expr: pdp.TypeListOfStrings
+  - field: actual
 
 - id: conditionTypeError
   fields:
   - id: t
-    type: int
+    type: pdp.Type
   msg: "Expected %q as condition expression result but got %q"
   args:
-  - expr: pdp.BuiltinTypeNames[pdp.TypeBoolean]
-  - expr: pdp.BuiltinTypeNames[e.t]
+  - expr: pdp.TypeBoolean
+  - field: t
 
 - id: unknownEffectError
   fields:
@@ -321,14 +322,14 @@ errors:
   - id: ID
     type: string
   - id: first
-    type: int
+    type: pdp.Type
   - id: second
-    type: int
+    type: pdp.Type
   msg: "No function %s for arguments %s and %s"
   args:
   - field: ID
-  - expr: pdp.BuiltinTypeNames[e.first]
-  - expr: pdp.BuiltinTypeNames[e.second]
+  - field: first
+  - field: second
 
 - id: matchFunctionArgsNumberError
   fields:
@@ -376,11 +377,11 @@ errors:
         if len(e.exprs) > 1 {
         	t := make([]string, len(e.exprs))
         	for i, e := range e.exprs {
-        		t[i] = pdp.BuiltinTypeNames[e.GetResultType()]
+        		t[i] = strconv.Quote(e.GetResultType().String())
         	}
-        	args = fmt.Sprintf("%d arguments of following types \"%s\"", len(e.exprs), strings.Join(t, "\", \""))
+        	args = fmt.Sprintf("%d arguments of following types %s", len(e.exprs), strings.Join(t, ", "))
         } else if len(e.exprs) > 0 {
-        	args = fmt.Sprintf("argument of type \"%s\"", pdp.BuiltinTypeNames[e.exprs[0].GetResultType()])
+        	args = fmt.Sprintf("argument of type %q", e.exprs[0].GetResultType())
         } else {
                 args = "no arguments"
         }
@@ -404,10 +405,10 @@ errors:
 - id: invalidTypeError
   fields:
   - id: t
-    type: int
+    type: pdp.Type
   msg: "Can't make value of %q type"
   args:
-  - expr: pdp.BuiltinTypeNames[e.t]
+  - field: t
 
 - id: missingContentError
   msg: "Missing value content"
@@ -415,10 +416,10 @@ errors:
 - id: notImplementedValueTypeError
   fields:
   - id: t
-    type: int
-  msg: "Parsing for type %s hasn't been implemented yet"
+    type: pdp.Type
+  msg: "Parsing for type %q hasn't been implemented yet"
   args:
-  - expr: pdp.BuiltinTypeNames[e.t]
+  - field: t
 
 - id: invalidAddressError
   fields:

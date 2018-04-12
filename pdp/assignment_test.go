@@ -19,11 +19,11 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 		t:  TypeString}
 
 	ae := MakeAttributeAssignmentExpression(a, v)
-	id, tName, s, err := ae.Serialize(ctx)
+	id, tKey, s, err := ae.Serialize(ctx)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else if id != a.id || tName != BuiltinTypeKeys[a.t] || s != expect {
-		t.Errorf("Expected %q, %q, %q but got %q, %q, %q", a.id, BuiltinTypeKeys[a.t], expect, id, tName, s)
+	} else if id != a.id || tKey != a.t.GetKey() || s != expect {
+		t.Errorf("Expected %q, %q, %q but got %q, %q, %q", a.id, a.t.GetKey(), expect, id, tKey, s)
 	}
 
 	dv := MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03com\x00"))
@@ -34,9 +34,9 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 		t:  TypeBoolean}
 
 	ae = MakeAttributeAssignmentExpression(a, e)
-	id, tName, s, err = ae.Serialize(ctx)
+	id, tKey, s, err = ae.Serialize(ctx)
 	if err == nil {
-		t.Errorf("Expected error but got %q, %q, %q", id, tName, s)
+		t.Errorf("Expected error but got %q, %q, %q", id, tKey, s)
 	} else if _, ok := err.(*attributeValueTypeError); !ok {
 		t.Errorf("Expected *attributeValueTypeError error but got %T (%s)", err, err)
 	}
@@ -47,9 +47,9 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 		id: "test-id",
 		t:  TypeBoolean}
 	ae = MakeAttributeAssignmentExpression(a, v)
-	id, tName, s, err = ae.Serialize(ctx)
+	id, tKey, s, err = ae.Serialize(ctx)
 	if err == nil {
-		t.Errorf("Expected error but got %q, %q, %q", id, tName, s)
+		t.Errorf("Expected error but got %q, %q, %q", id, tKey, s)
 	} else if _, ok := err.(*assignmentTypeMismatch); !ok {
 		t.Errorf("Expected *ssignmentTypeMismatch error but got %T (%s)", err, err)
 	}
@@ -62,9 +62,9 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 		t:  TypeInteger}
 
 	ae = MakeAttributeAssignmentExpression(a, e)
-	id, tName, s, err = ae.Serialize(ctx)
+	id, tKey, s, err = ae.Serialize(ctx)
 	if err == nil {
-		t.Errorf("Expected error but got %q, %q, %q", id, tName, s)
+		t.Errorf("Expected error but got %q, %q, %q", id, tKey, s)
 	} else if _, ok := err.(*attributeValueTypeError); !ok {
 		t.Errorf("Expected *attributeValueTypeError error but got %T (%s)", err, err)
 	}
@@ -74,9 +74,9 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 		id: "test-id",
 		t:  TypeInteger}
 	ae = MakeAttributeAssignmentExpression(a, v)
-	id, tName, s, err = ae.Serialize(ctx)
+	id, tKey, s, err = ae.Serialize(ctx)
 	if err == nil {
-		t.Errorf("Expected error but got %q, %q, %q", id, tName, s)
+		t.Errorf("Expected error but got %q, %q, %q", id, tKey, s)
 	} else if _, ok := err.(*assignmentTypeMismatch); !ok {
 		t.Errorf("Expected *ssignmentTypeMismatch error but got %T (%s)", err, err)
 	}
@@ -89,9 +89,9 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 		t:  TypeFloat}
 
 	ae = MakeAttributeAssignmentExpression(a, e)
-	id, tName, s, err = ae.Serialize(ctx)
+	id, tKey, s, err = ae.Serialize(ctx)
 	if err == nil {
-		t.Errorf("Expected error but got %q, %q, %q", id, tName, s)
+		t.Errorf("Expected error but got %q, %q, %q", id, tKey, s)
 	} else if _, ok := err.(*attributeValueTypeError); !ok {
 		t.Errorf("Expected *attributeValueTypeError error but got %T (%s)", err, err)
 	}
@@ -105,11 +105,11 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 		t:  TypeFloat}
 
 	ae = MakeAttributeAssignmentExpression(a, e)
-	id, tName, s, err = ae.Serialize(ctx)
+	id, tKey, s, err = ae.Serialize(ctx)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else if id != a.id || tName != BuiltinTypeKeys[a.t] || s != expect {
-		t.Errorf("Expected %q, %q, %q but got %q, %q, %q", a.id, BuiltinTypeKeys[a.t], expect, id, tName, s)
+	} else if id != a.id || tKey != a.t.GetKey() || s != expect {
+		t.Errorf("Expected %q, %q, %q but got %q, %q, %q", a.id, a.t.GetKey(), expect, id, tKey, s)
 	}
 
 	v = MakeIntegerValue(12345)
@@ -117,9 +117,9 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 		id: "test-id",
 		t:  TypeFloat}
 	ae = MakeAttributeAssignmentExpression(a, v)
-	id, tName, s, err = ae.Serialize(ctx)
+	id, tKey, s, err = ae.Serialize(ctx)
 	if err == nil {
-		t.Errorf("Expected error but got %q, %q, %q", id, tName, s)
+		t.Errorf("Expected error but got %q, %q, %q", id, tKey, s)
 	} else if _, ok := err.(*assignmentTypeMismatch); !ok {
 		t.Errorf("Expected *ssignmentTypeMismatch error but got %T (%s)", err, err)
 	}
@@ -129,9 +129,9 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 		id: "test-id",
 		t:  TypeUndefined}
 	ae = MakeAttributeAssignmentExpression(a, v)
-	id, tName, s, err = ae.Serialize(ctx)
+	id, tKey, s, err = ae.Serialize(ctx)
 	if err == nil {
-		t.Errorf("Expected error but got %q, %q, %q", id, tName, s)
+		t.Errorf("Expected error but got %q, %q, %q", id, tKey, s)
 	} else if _, ok := err.(*invalidTypeSerializationError); !ok {
 		t.Errorf("Expected *invalidTypeSerializationError error but got %T (%s)", err, err)
 	}

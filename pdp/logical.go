@@ -22,7 +22,7 @@ func makeFunctionBooleanNot(args []Expression) Expression {
 	return functionBooleanNot{arg: args[0]}
 }
 
-func (f functionBooleanNot) GetResultType() int {
+func (f functionBooleanNot) GetResultType() Type {
 	return TypeBoolean
 }
 
@@ -55,7 +55,7 @@ func makeFunctionBooleanOr(args []Expression) Expression {
 	return functionBooleanOr{args: args}
 }
 
-func (f functionBooleanOr) GetResultType() int {
+func (f functionBooleanOr) GetResultType() Type {
 	return TypeBoolean
 }
 
@@ -100,7 +100,7 @@ func makeFunctionBooleanAnd(args []Expression) Expression {
 	return functionBooleanAnd{args: args}
 }
 
-func (f functionBooleanAnd) GetResultType() int {
+func (f functionBooleanAnd) GetResultType() Type {
 	return TypeBoolean
 }
 

@@ -22,7 +22,7 @@ func makeFunctionIntegerSubtractAlt(args []Expression) Expression {
 	return makeFunctionIntegerSubtract(args[0], args[1])
 }
 
-func (f functionIntegerSubtract) GetResultType() int {
+func (f functionIntegerSubtract) GetResultType() Type {
 	return TypeInteger
 }
 

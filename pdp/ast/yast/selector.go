@@ -46,7 +46,7 @@ func (ctx context) unmarshalSelector(v interface{}) (pdp.Expression, boundError)
 		return ret, bindErrorf(err, "selector(%s)", uri)
 	}
 
-	t, ok := pdp.BuiltinTypeIDs[strings.ToLower(st)]
+	t, ok := pdp.BuiltinTypes[strings.ToLower(st)]
 	if !ok {
 		return ret, bindErrorf(newUnknownTypeError(uri), "selector(%s)", uri)
 	}

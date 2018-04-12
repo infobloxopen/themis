@@ -21,7 +21,7 @@ func makeFunctionSetOfStringsContainsAlt(args []Expression) Expression {
 	return makeFunctionSetOfStringsContains(args[0], args[1])
 }
 
-func (f functionSetOfStringsContains) GetResultType() int {
+func (f functionSetOfStringsContains) GetResultType() Type {
 	return TypeBoolean
 }
 

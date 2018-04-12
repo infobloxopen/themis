@@ -3,7 +3,6 @@ package: jcon
 import:
 - encoding/json
 - github.com/infobloxopen/themis/pdp
-- strings
 
 errors:
 - id: externalError
@@ -135,30 +134,21 @@ errors:
 - id: invalidContentItemTypeError
   fields:
   - id: t
-    type: int
+    type: pdp.Type
   msg: "Can't set result type to %q type"
   args:
-  - expr: pdp.BuiltinTypeNames[e.t]
+  - field: t
 
 - id: invalidContentKeyTypeError
   fields:
   - id: t
-    type: int
+    type: pdp.Type
   - id: expected
-    type: map[int]bool
+    type: pdp.TypeSet
   msg: "Can't use %q type as a key in content item (expected %s)"
   args:
-  - expr: pdp.BuiltinTypeNames[e.t]
-  - snippet:
-      result: s
-      code: |
-        names := make([]string, len(e.expected))
-        i := 0
-        for t := range e.expected {
-        	names[i] = pdp.BuiltinTypeNames[t]
-        	i++
-        }
-        s := strings.Join(names, ", ")
+  - field: t
+  - field: expected
 
 - id: unknownDataFormatError
   msg: "Can't parse data without keys and result type information"

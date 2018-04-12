@@ -22,7 +22,7 @@ func makeFunctionFloatMultiplyAlt(args []Expression) Expression {
 	return makeFunctionFloatMultiply(args[0], args[1])
 }
 
-func (f functionFloatMultiply) GetResultType() int {
+func (f functionFloatMultiply) GetResultType() Type {
 	return TypeFloat
 }
 

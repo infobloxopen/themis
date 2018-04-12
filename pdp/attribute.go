@@ -6,21 +6,20 @@ import "fmt"
 // and type.
 type Attribute struct {
 	id string
-	t  int
+	t  Type
 }
 
 // MakeAttribute creates new attribute instance. It requires attribute name
-// as "ID" argument and type as "t" argument. Value of "t" should be one of
-// Type* constants.
-func MakeAttribute(ID string, t int) Attribute {
+// as "ID" argument and type as "t" argument.
+func MakeAttribute(ID string, t Type) Attribute {
 	return Attribute{id: ID, t: t}
 }
 
 // GetType returns attribute type.
-func (a Attribute) GetType() int {
+func (a Attribute) GetType() Type {
 	return a.t
 }
 
 func (a Attribute) describe() string {
-	return fmt.Sprintf("attr(%s.%s)", a.id, BuiltinTypeNames[a.t])
+	return fmt.Sprintf("attr(%s.%s)", a.id, a.t)
 }
