@@ -2,7 +2,6 @@ package pdp
 
 import (
 	"io"
-	"net/http"
 )
 
 // Marshaler is interface that wraps AST marshal methods.
@@ -11,24 +10,24 @@ type Marshaler interface {
 	Size() int // provide an estimation of bytesize of the encoded output
 }
 
-// ResponsePipe creates a limited buffer to reduce the number of dynamic
+// CappedBuffer creates a limited buffer to reduce the number of dynamic
 // resizing in ResponseWriter. We make the assumption that buffer cap is at
 // least > than the average input message len
-type ResponsePipe struct {
-	dest http.ResponseWriter
+type CappedBuffer struct {
+	dest io.Writer
 	buf  []byte
 }
 
-// NewResponsePipe creates a ResponsePipe of capacity bufcap
-func NewResponsePipe(resp http.ResponseWriter, bufcap int) *ResponsePipe {
-	return &ResponsePipe{
+// NewCappedBuffer creates a CappedBuffer of capacity bufcap
+func NewCappedBuffer(resp io.Writer, bufcap int) *CappedBuffer {
+	return &CappedBuffer{
 		dest: resp,
 		buf:  make([]byte, 0, bufcap),
 	}
 }
 
 // Write implements io.Writer interface
-func (resp *ResponsePipe) Write(input []byte) (int, error) {
+func (resp *CappedBuffer) Write(input []byte) (int, error) {
 	start := len(resp.buf)
 	limit := cap(resp.buf)
 	if start+len(input) > limit {
@@ -44,7 +43,7 @@ func (resp *ResponsePipe) Write(input []byte) (int, error) {
 		}
 		// reset
 		resp.buf = resp.buf[:0]
-	} else {
-		copy(resp.buf[start:], input)
+		return n + ninput, nil
 	}
+	return copy(resp.buf[start:], input), nil
 }
