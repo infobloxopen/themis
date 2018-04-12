@@ -596,6 +596,7 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		status  = -1
 		respMsg *dns.Msg
 		err     error
+		do      bool
 	)
 	p.wg.Add(1)
 	defer p.wg.Done()
@@ -609,6 +610,7 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	for _, s := range p.passthrough {
 		if strings.HasSuffix(qName, s) {
 			responseWriter := nonwriter.New(w)
+			do = p.clearEdnsLocal(r)
 			_, err = plugin.NextOrFailure(p.Name(), p.next, ctx, responseWriter, r)
 			r = responseWriter.Msg
 			status = r.Rcode
@@ -635,6 +637,7 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	if ah.action == typeAllow || ah.action == typeLog {
 		// resolve domain name to IP
 		responseWriter := nonwriter.New(w)
+		do = p.clearEdnsLocal(r)
 		_, err = plugin.NextOrFailure(p.Name(), p.next, ctx, responseWriter, r)
 		if err != nil {
 			status = dns.RcodeServerFailure
@@ -688,7 +691,10 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 Exit:
 	r.Rcode = status
 	r.Response = true
-	clearEdns(r)
+	r.Extra = nil
+	if do {
+		r.SetEdns0(4096, true)
+	}
 	if debugQuery {
 		r.Question[0].Name = r.Question[0].Name + p.debugSuffix
 		r.Question[0].Qtype = dns.TypeTXT
@@ -705,18 +711,28 @@ Exit:
 	return dns.RcodeSuccess, err
 }
 
-func clearEdns(r *dns.Msg) {
-	for _, rr := range r.Extra {
-		// preserve DO flag
-		if rr, ok := rr.(*dns.OPT); ok {
-			if rr.Do() {
-				r.Extra = nil
-				r.SetEdns0(4096, true)
-				return
-			}
+func (p *policyPlugin) clearEdnsLocal(r *dns.Msg) (do bool) {
+	for i := range r.Extra {
+		opt, ok := r.Extra[i].(*dns.OPT)
+		if !ok {
+			continue
 		}
+		if opt.Do() {
+			do = true
+		}
+		var option []dns.EDNS0
+		for _, o := range opt.Option {
+			if l, ok := o.(*dns.EDNS0_LOCAL); ok {
+				if _, ok := p.options[l.Code]; ok {
+					continue
+				}
+			}
+			option = append(option, o)
+		}
+		opt.Option = option
+		r.Extra[i] = opt
 	}
-	r.Extra = nil
+	return
 }
 
 // Name implements the Handler interface

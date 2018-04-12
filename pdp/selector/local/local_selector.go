@@ -7,6 +7,18 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 )
 
+type selector struct{}
+
+func (s *selector) Enabled() bool {
+	return true
+}
+
+func (s *selector) SelectorFunc(uri string, path []pdp.Expression, t int) (pdp.Expression, error) {
+	return MakeLocalSelector(uri, path, t)
+}
+
+func (s *selector) Initialize() {}
+
 // LocalSelector represent local selector expression. The expression extracts
 // value from local content storage by given path and validates that result
 // has desired type.

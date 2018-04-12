@@ -34,6 +34,8 @@ func main() {
 		),
 	)
 
+	pdp.InitializeSelectors()
+
 	err := pdp.LoadPolicies(conf.policy)
 	if err != nil {
 		logger.WithFields(
