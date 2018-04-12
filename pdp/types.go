@@ -71,6 +71,70 @@ func (t *builtinType) GetKey() string {
 	return t.k
 }
 
+type flagsType struct {
+	n string
+	k string
+	f map[string]int
+	b []string
+	c int
+}
+
+// NewFlagsType function creates new custom type with given name. A value of
+// the type can take any combination of listed flags (including empty set).
+// It supports up to 64 flags and flag names should be unique for the type.
+func NewFlagsType(name string, flags ...string) (Type, error) {
+	key := strings.ToLower(name)
+	if _, ok := BuiltinTypes[key]; ok {
+		return nil, newDuplicatesBuiltinTypeError(name)
+	}
+
+	if len(flags) <= 0 {
+		return nil, newNoFlagsDefinedError(name, len(flags))
+	}
+
+	if len(flags) > 64 {
+		return nil, newTooManyFlagsDefinedError(name, len(flags))
+	}
+
+	c := 8
+	if len(flags) > 8 {
+		c = 16
+	}
+	if len(flags) > 16 {
+		c = 32
+	}
+	if len(flags) > 32 {
+		c = 64
+	}
+
+	f := make(map[string]int, len(flags))
+	for i, s := range flags {
+		n := strings.ToLower(s)
+		flags[i] = n
+
+		if j, ok := f[n]; ok {
+			return nil, newDuplicateFlagName(name, s, i, j)
+		}
+		f[n] = i
+	}
+
+	return &flagsType{
+		n: name,
+		k: strings.ToLower(name),
+		f: f,
+		b: flags,
+		c: c,
+	}, nil
+}
+
+func (t *flagsType) String() string {
+	return t.n
+}
+
+func (t *flagsType) GetKey() string {
+	return t.k
+}
+
 // Signature is an ordered sequence of types.
 type Signature []Type
 

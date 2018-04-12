@@ -1,6 +1,7 @@
 package pdp
 
 import (
+	"fmt"
 	"net"
 	"testing"
 
@@ -212,6 +213,105 @@ func TestAttributeValue(t *testing.T) {
 	if d != expDesc {
 		t.Errorf("Expected %q as value description but got %q", expDesc, d)
 	}
+
+	ft8, err := NewFlagsType("8flags",
+		"f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+	)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		v = MakeFlagsValue8(3, ft8)
+		expDesc = "flags<\"8flags\">(\"f00\", \"f01\")"
+		d = v.describe()
+		if d != expDesc {
+			t.Errorf("Expected %q as value description but got %q", expDesc, d)
+		}
+
+		assertPanicWithError(t, func() {
+			MakeFlagsValue8(3, TypeBoolean)
+		}, "can't make flags value for type %q", TypeBoolean)
+
+		assertPanicWithError(t, func() {
+			MakeFlagsValue16(3, ft8)
+		}, "expected 8 bits value for \"8flags\" but got 16")
+	}
+
+	ft16, err := NewFlagsType("16flags",
+		"f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+		"f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+	)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		v = MakeFlagsValue16(7, ft16)
+		expDesc = "flags<\"16flags\">(\"f00\", \"f01\", ...)"
+		d = v.describe()
+		if d != expDesc {
+			t.Errorf("Expected %q as value description but got %q", expDesc, d)
+		}
+
+		assertPanicWithError(t, func() {
+			MakeFlagsValue16(3, TypeBoolean)
+		}, "can't make flags value for type %q", TypeBoolean)
+
+		assertPanicWithError(t, func() {
+			MakeFlagsValue32(3, ft16)
+		}, "expected 16 bits value for \"16flags\" but got 32")
+	}
+
+	ft32, err := NewFlagsType("32flags",
+		"f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+		"f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+		"f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+		"f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37",
+	)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		v = MakeFlagsValue32(3, ft32)
+		expDesc = "flags<\"32flags\">(\"f00\", \"f01\")"
+		d = v.describe()
+		if d != expDesc {
+			t.Errorf("Expected %q as value description but got %q", expDesc, d)
+		}
+
+		assertPanicWithError(t, func() {
+			MakeFlagsValue32(3, TypeBoolean)
+		}, "can't make flags value for type %q", TypeBoolean)
+
+		assertPanicWithError(t, func() {
+			MakeFlagsValue64(3, ft32)
+		}, "expected 32 bits value for \"32flags\" but got 64")
+	}
+
+	ft64, err := NewFlagsType("64flags",
+		"f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+		"f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+		"f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+		"f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37",
+		"f40", "f41", "f42", "f43", "f44", "f45", "f46", "f47",
+		"f50", "f51", "f52", "f53", "f54", "f55", "f56", "f57",
+		"f60", "f61", "f62", "f63", "f64", "f65", "f66", "f67",
+		"f70", "f71", "f72", "f73", "f74", "f75", "f76", "f77",
+	)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		v = MakeFlagsValue64(7, ft64)
+		expDesc = "flags<\"64flags\">(\"f00\", \"f01\", ...)"
+		d = v.describe()
+		if d != expDesc {
+			t.Errorf("Expected %q as value description but got %q", expDesc, d)
+		}
+
+		assertPanicWithError(t, func() {
+			MakeFlagsValue64(3, TypeBoolean)
+		}, "can't make flags value for type %q", TypeBoolean)
+
+		assertPanicWithError(t, func() {
+			MakeFlagsValue8(3, ft64)
+		}, "expected 64 bits value for \"64flags\" but got 8")
+	}
 }
 
 func TestMakeValueFromSting(t *testing.T) {
@@ -389,6 +489,18 @@ func TestMakeValueFromSting(t *testing.T) {
 		t.Errorf("Expected error but got value: %s", v.describe())
 	} else if _, ok := err.(*invalidDomainNameStringCastError); !ok {
 		t.Errorf("Expected *invalidDomainNameStringCastError but got %T (%s)", err, err)
+	}
+
+	ft, err := NewFlagsType("flags", "first", "second", "third")
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		v, err = MakeValueFromString(ft, "")
+		if err == nil {
+			t.Errorf("Expected error but got value: %s", v.describe())
+		} else if _, ok := err.(*notImplementedStringCastError); !ok {
+			t.Errorf("Expected *notImplementedStringCastError but got %T (%s)", err, err)
+		}
 	}
 }
 
@@ -642,6 +754,137 @@ func TestAttributeValueTypeCast(t *testing.T) {
 	} else if _, ok := err.(*attributeValueTypeError); !ok {
 		t.Errorf("Expected *attributeValueTypeError but got %T (%s)", err, err)
 	}
+
+	ft8, err := NewFlagsType("8flags",
+		"f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+	)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		v = MakeFlagsValue8(3, ft8)
+		n8, err := v.flags8()
+		if err != nil {
+			t.Errorf("Expected flags value but got error: %s", err)
+		} else if n8 != 3 {
+			t.Errorf("Expected 3 as attribute value but got %d", n8)
+		}
+
+		n16, err := v.flags16()
+		if err == nil {
+			t.Errorf("Expected error but got 16 bits flags %d from 8 bits flags %s", n16, v.describe())
+		} else if _, ok := err.(*attributeValueFlagsBitsError); !ok {
+			t.Errorf("Expected *attributeValueFlagsBitsError but got %T (%s)", err, err)
+		}
+
+		v = MakeBooleanValue(true)
+		n8, err = v.flags8()
+		if err == nil {
+			t.Errorf("Expected error but got flags %d from boolean %s", n8, v.describe())
+		} else if _, ok := err.(*attributeValueFlagsTypeError); !ok {
+			t.Errorf("Expected *attributeValueFlagsTypeError but got %T (%s)", err, err)
+		}
+	}
+
+	ft16, err := NewFlagsType("16flags",
+		"f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+		"f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+	)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		v = MakeFlagsValue16(3, ft16)
+		n16, err := v.flags16()
+		if err != nil {
+			t.Errorf("Expected flags value but got error: %s", err)
+		} else if n16 != 3 {
+			t.Errorf("Expected 3 as attribute value but got %d", n16)
+		}
+
+		n32, err := v.flags32()
+		if err == nil {
+			t.Errorf("Expected error but got 32 bits flags %d from 16 bits flags %s", n32, v.describe())
+		} else if _, ok := err.(*attributeValueFlagsBitsError); !ok {
+			t.Errorf("Expected *attributeValueFlagsBitsError but got %T (%s)", err, err)
+		}
+
+		v = MakeBooleanValue(true)
+		n16, err = v.flags16()
+		if err == nil {
+			t.Errorf("Expected error but got flags %d from boolean %s", n16, v.describe())
+		} else if _, ok := err.(*attributeValueFlagsTypeError); !ok {
+			t.Errorf("Expected *attributeValueFlagsTypeError but got %T (%s)", err, err)
+		}
+	}
+
+	ft32, err := NewFlagsType("32flags",
+		"f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+		"f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+		"f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+		"f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37",
+	)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		v = MakeFlagsValue32(3, ft32)
+		n32, err := v.flags32()
+		if err != nil {
+			t.Errorf("Expected flags value but got error: %s", err)
+		} else if n32 != 3 {
+			t.Errorf("Expected 3 as attribute value but got %d", n32)
+		}
+
+		n64, err := v.flags64()
+		if err == nil {
+			t.Errorf("Expected error but got 64 bits flags %d from 32 bits flags %s", n64, v.describe())
+		} else if _, ok := err.(*attributeValueFlagsBitsError); !ok {
+			t.Errorf("Expected *attributeValueFlagsBitsError but got %T (%s)", err, err)
+		}
+
+		v = MakeBooleanValue(true)
+		n32, err = v.flags32()
+		if err == nil {
+			t.Errorf("Expected error but got flags %d from boolean %s", n32, v.describe())
+		} else if _, ok := err.(*attributeValueFlagsTypeError); !ok {
+			t.Errorf("Expected *attributeValueFlagsTypeError but got %T (%s)", err, err)
+		}
+	}
+
+	ft64, err := NewFlagsType("64flags",
+		"f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+		"f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+		"f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+		"f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37",
+		"f40", "f41", "f42", "f43", "f44", "f45", "f46", "f47",
+		"f50", "f51", "f52", "f53", "f54", "f55", "f56", "f57",
+		"f60", "f61", "f62", "f63", "f64", "f65", "f66", "f67",
+		"f70", "f71", "f72", "f73", "f74", "f75", "f76", "f77",
+	)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		v = MakeFlagsValue64(3, ft64)
+		n64, err := v.flags64()
+		if err != nil {
+			t.Errorf("Expected flags value but got error: %s", err)
+		} else if n64 != 3 {
+			t.Errorf("Expected 3 as attribute value but got %d", n64)
+		}
+
+		n8, err := v.flags8()
+		if err == nil {
+			t.Errorf("Expected error but got 8 bits flags %d from 64 bits flags %s", n8, v.describe())
+		} else if _, ok := err.(*attributeValueFlagsBitsError); !ok {
+			t.Errorf("Expected *attributeValueFlagsBitsError but got %T (%s)", err, err)
+		}
+
+		v = MakeBooleanValue(true)
+		n64, err = v.flags64()
+		if err == nil {
+			t.Errorf("Expected error but got flags %d from boolean %s", n64, v.describe())
+		} else if _, ok := err.(*attributeValueFlagsTypeError); !ok {
+			t.Errorf("Expected *attributeValueFlagsTypeError but got %T (%s)", err, err)
+		}
+	}
 }
 
 func TestAttributeValueSerialize(t *testing.T) {
@@ -823,4 +1066,105 @@ func TestAttributeValueSerialize(t *testing.T) {
 			t.Errorf("Expected %q but got %q", e, s)
 		}
 	}
+
+	ft8, err := NewFlagsType("flags",
+		"f00", "f01", "f02", "f03",
+	)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		v = MakeFlagsValue8(7, ft8)
+		s, err = v.Serialize()
+		if err != nil {
+			t.Errorf("Expected no error but got: %s", err)
+		} else {
+			e := "\"f00\",\"f01\",\"f02\""
+			if s != e {
+				t.Errorf("Expected %q but got %q", e, s)
+			}
+		}
+	}
+
+	ft16, err := NewFlagsType("flags",
+		"f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+		"f10", "f11", "f12", "f13",
+	)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		v = MakeFlagsValue16(7, ft16)
+		s, err = v.Serialize()
+		if err != nil {
+			t.Errorf("Expected no error but got: %s", err)
+		} else {
+			e := "\"f00\",\"f01\",\"f02\""
+			if s != e {
+				t.Errorf("Expected %q but got %q", e, s)
+			}
+		}
+	}
+
+	ft32, err := NewFlagsType("flags",
+		"f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+		"f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+		"f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+		"f30", "f31", "f32", "f33",
+	)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		v = MakeFlagsValue32(7, ft32)
+		s, err = v.Serialize()
+		if err != nil {
+			t.Errorf("Expected no error but got: %s", err)
+		} else {
+			e := "\"f00\",\"f01\",\"f02\""
+			if s != e {
+				t.Errorf("Expected %q but got %q", e, s)
+			}
+		}
+	}
+
+	ft64, err := NewFlagsType("flags",
+		"f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+		"f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+		"f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+		"f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37",
+		"f40", "f41", "f42", "f43", "f44", "f45", "f46", "f47",
+		"f50", "f51", "f52", "f53", "f54", "f55", "f56", "f57",
+		"f60", "f61", "f62", "f63", "f64", "f65", "f66", "f67",
+		"f70", "f71", "f72", "f73",
+	)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		v = MakeFlagsValue64(7, ft64)
+		s, err = v.Serialize()
+		if err != nil {
+			t.Errorf("Expected no error but got: %s", err)
+		} else {
+			e := "\"f00\",\"f01\",\"f02\""
+			if s != e {
+				t.Errorf("Expected %q but got %q", e, s)
+			}
+		}
+	}
+}
+
+func assertPanicWithError(t *testing.T, f func(), format string, args ...interface{}) {
+	defer func() {
+		if r := recover(); r != nil {
+			e := fmt.Sprintf(format, args...)
+			err, ok := r.(error)
+			if !ok {
+				t.Errorf("Excpected error %q on panic but got %T (%#v)", e, r, r)
+			} else if err.Error() != e {
+				t.Errorf("Excpected error %q on panic but got %q", e, r)
+			}
+		} else {
+			t.Errorf("Expected panic %q", fmt.Sprintf(format, args...))
+		}
+	}()
+
+	f()
 }

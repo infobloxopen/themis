@@ -103,10 +103,74 @@ func MakeListOfStringsValue(v []string) AttributeValue {
 		v: v}
 }
 
+// MakeFlagsValue8 creates instance of given flags value which fits 8 bits integer.
+func MakeFlagsValue8(v uint8, t Type) AttributeValue {
+	if t, ok := t.(*flagsType); ok {
+		if t.c != 8 {
+			panic(fmt.Errorf("expected %d bits value for %q but got 8", t.c, t))
+		}
+
+		return AttributeValue{
+			t: t,
+			v: v}
+	}
+
+	panic(fmt.Errorf("can't make flags value for type %q", t))
+}
+
+// MakeFlagsValue16 creates instance of given flags value which fits 16 bits integer.
+func MakeFlagsValue16(v uint16, t Type) AttributeValue {
+	if t, ok := t.(*flagsType); ok {
+		if t.c != 16 {
+			panic(fmt.Errorf("expected %d bits value for %q but got 16", t.c, t))
+		}
+
+		return AttributeValue{
+			t: t,
+			v: v}
+	}
+
+	panic(fmt.Errorf("can't make flags value for type %q", t))
+}
+
+// MakeFlagsValue32 creates instance of given flags value which fits 32 bits integer.
+func MakeFlagsValue32(v uint32, t Type) AttributeValue {
+	if t, ok := t.(*flagsType); ok {
+		if t.c != 32 {
+			panic(fmt.Errorf("expected %d bits value for %q but got 32", t.c, t))
+		}
+
+		return AttributeValue{
+			t: t,
+			v: v}
+	}
+
+	panic(fmt.Errorf("can't make flags value for type %q", t))
+}
+
+// MakeFlagsValue64 creates instance of given flags value which fits 64 bits integer.
+func MakeFlagsValue64(v uint64, t Type) AttributeValue {
+	if t, ok := t.(*flagsType); ok {
+		if t.c != 64 {
+			panic(fmt.Errorf("expected %d bits value for %q but got 64", t.c, t))
+		}
+
+		return AttributeValue{
+			t: t,
+			v: v}
+	}
+
+	panic(fmt.Errorf("can't make flags value for type %q", t))
+}
+
 // MakeValueFromString creates instance of attribute value by given type and
 // string representation. The function performs necessary validation.
 // No covertion defined for undefined type and collection types.
 func MakeValueFromString(t Type, s string) (AttributeValue, error) {
+	if _, ok := t.(*flagsType); ok {
+		return UndefinedValue, newNotImplementedStringCastError(t)
+	}
+
 	switch t {
 	case TypeUndefined:
 		return UndefinedValue, newInvalidTypeStringCastError(t)
@@ -176,6 +240,36 @@ func (v AttributeValue) GetResultType() Type {
 }
 
 func (v AttributeValue) describe() string {
+	if t, ok := v.t.(*flagsType); ok {
+		var n uint64
+		switch t.c {
+		case 8:
+			n = uint64(v.v.(uint8))
+
+		case 16:
+			n = uint64(v.v.(uint16))
+
+		case 32:
+			n = uint64(v.v.(uint32))
+
+		case 64:
+			n = v.v.(uint64)
+		}
+
+		var s []string
+		for i := 0; i < len(t.b); i++ {
+			if n&(1<<uint(i)) != 0 {
+				s = append(s, strconv.Quote(t.b[i]))
+				if len(s) > 2 {
+					s[2] = "..."
+					break
+				}
+			}
+		}
+
+		return fmt.Sprintf("flags<%q>(%s)", t, strings.Join(s, ", "))
+	}
+
 	switch v.t {
 	case TypeUndefined:
 		return "val(undefined)"
@@ -256,6 +350,19 @@ func (v AttributeValue) describe() string {
 func (v AttributeValue) typeCheck(t Type) error {
 	if v.t != t {
 		return bindError(newAttributeValueTypeError(t, v.t), v.describe())
+	}
+
+	return nil
+}
+
+func (v AttributeValue) flagsTypeCheck(n int) error {
+	t, ok := v.t.(*flagsType)
+	if !ok {
+		return bindError(newAttributeValueFlagsTypeError(v.t, n), v.describe())
+	}
+
+	if t.c != n {
+		return bindError(newAttributeValueFlagsBitsError(v.t, n, len(t.f)), v.describe())
 	}
 
 	return nil
@@ -360,6 +467,42 @@ func (v AttributeValue) listOfStrings() ([]string, error) {
 	return v.v.([]string), nil
 }
 
+func (v AttributeValue) flags8() (uint8, error) {
+	err := v.flagsTypeCheck(8)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.v.(uint8), nil
+}
+
+func (v AttributeValue) flags16() (uint16, error) {
+	err := v.flagsTypeCheck(16)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.v.(uint16), nil
+}
+
+func (v AttributeValue) flags32() (uint32, error) {
+	err := v.flagsTypeCheck(32)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.v.(uint32), nil
+}
+
+func (v AttributeValue) flags64() (uint64, error) {
+	err := v.flagsTypeCheck(64)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.v.(uint64), nil
+}
+
 // Calculate implements Expression interface and returns calculated value
 func (v AttributeValue) Calculate(ctx *Context) (AttributeValue, error) {
 	return v, nil
@@ -368,6 +511,32 @@ func (v AttributeValue) Calculate(ctx *Context) (AttributeValue, error) {
 // Serialize converts attribute value to its string representation.
 // No conversion defined for undefined value.
 func (v AttributeValue) Serialize() (string, error) {
+	if t, ok := v.t.(*flagsType); ok {
+		var n uint64
+		switch t.c {
+		case 8:
+			n = uint64(v.v.(uint8))
+
+		case 16:
+			n = uint64(v.v.(uint16))
+
+		case 32:
+			n = uint64(v.v.(uint32))
+
+		case 64:
+			n = v.v.(uint64)
+		}
+
+		var s []string
+		for i := 0; i < len(t.b); i++ {
+			if n&(1<<uint(i)) != 0 {
+				s = append(s, strconv.Quote(t.b[i]))
+			}
+		}
+
+		return strings.Join(s, ","), nil
+	}
+
 	switch v.t {
 	case TypeUndefined:
 		return "", newInvalidTypeSerializationError(v.t)

@@ -25,68 +25,74 @@ const (
 	invalidAddressNetworkStringCastErrorID    = 12
 	invalidDomainNameStringCastErrorID        = 13
 	attributeValueTypeErrorID                 = 14
-	duplicateAttributeValueErrorID            = 15
-	unknownTypeSerializationErrorID           = 16
-	invalidTypeSerializationErrorID           = 17
-	assignmentTypeMismatchID                  = 18
-	mapperArgumentTypeErrorID                 = 19
-	UntaggedPolicyModificationErrorID         = 20
-	MissingPolicyTagErrorID                   = 21
-	PolicyTagsNotMatchErrorID                 = 22
-	emptyPathModificationErrorID              = 23
-	invalidRootPolicyItemTypeErrorID          = 24
-	hiddenRootPolicyAppendErrorID             = 25
-	invalidRootPolicyErrorID                  = 26
-	hiddenPolicySetModificationErrorID        = 27
-	invalidPolicySetItemTypeErrorID           = 28
-	tooShortPathPolicySetModificationErrorID  = 29
-	missingPolicySetChildErrorID              = 30
-	hiddenPolicyAppendErrorID                 = 31
-	policyTransactionTagsNotMatchErrorID      = 32
-	failedPolicyTransactionErrorID            = 33
-	unknownPolicyUpdateOperationErrorID       = 34
-	hiddenPolicyModificationErrorID           = 35
-	tooLongPathPolicyModificationErrorID      = 36
-	tooShortPathPolicyModificationErrorID     = 37
-	invalidPolicyItemTypeErrorID              = 38
-	hiddenRuleAppendErrorID                   = 39
-	missingPolicyChildErrorID                 = 40
-	missingContentErrorID                     = 41
-	invalidContentStorageItemID               = 42
-	missingContentItemErrorID                 = 43
-	invalidContentItemErrorID                 = 44
-	invalidContentItemTypeErrorID             = 45
-	invalidSelectorPathErrorID                = 46
-	networkMapKeyValueTypeErrorID             = 47
-	mapContentSubitemErrorID                  = 48
-	invalidContentModificationErrorID         = 49
-	missingPathContentModificationErrorID     = 50
-	tooLongPathContentModificationErrorID     = 51
-	invalidContentValueModificationErrorID    = 52
-	UntaggedContentModificationErrorID        = 53
-	MissingContentTagErrorID                  = 54
-	ContentTagsNotMatchErrorID                = 55
-	unknownContentUpdateOperationErrorID      = 56
-	failedContentTransactionErrorID           = 57
-	contentTransactionIDNotMatchErrorID       = 58
-	contentTransactionTagsNotMatchErrorID     = 59
-	tooShortRawPathContentModificationErrorID = 60
-	tooLongRawPathContentModificationErrorID  = 61
-	invalidContentUpdateDataErrorID           = 62
-	invalidContentUpdateResultTypeErrorID     = 63
-	invalidContentUpdateKeysErrorID           = 64
-	unknownContentItemResultTypeErrorID       = 65
-	invalidContentItemResultTypeErrorID       = 66
-	invalidContentKeyTypeErrorID              = 67
-	invalidContentStringMapErrorID            = 68
-	invalidContentNetworkMapErrorID           = 69
-	invalidContentDomainMapErrorID            = 70
-	invalidContentValueErrorID                = 71
-	invalidContentValueTypeErrorID            = 72
-	integerDivideByZeroErrorID                = 73
-	floatDivideByZeroErrorID                  = 74
-	floatNanErrorID                           = 75
-	floatInfErrorID                           = 76
+	attributeValueFlagsTypeErrorID            = 15
+	attributeValueFlagsBitsErrorID            = 16
+	duplicateAttributeValueErrorID            = 17
+	unknownTypeSerializationErrorID           = 18
+	invalidTypeSerializationErrorID           = 19
+	assignmentTypeMismatchID                  = 20
+	mapperArgumentTypeErrorID                 = 21
+	UntaggedPolicyModificationErrorID         = 22
+	MissingPolicyTagErrorID                   = 23
+	PolicyTagsNotMatchErrorID                 = 24
+	emptyPathModificationErrorID              = 25
+	invalidRootPolicyItemTypeErrorID          = 26
+	hiddenRootPolicyAppendErrorID             = 27
+	invalidRootPolicyErrorID                  = 28
+	hiddenPolicySetModificationErrorID        = 29
+	invalidPolicySetItemTypeErrorID           = 30
+	tooShortPathPolicySetModificationErrorID  = 31
+	missingPolicySetChildErrorID              = 32
+	hiddenPolicyAppendErrorID                 = 33
+	policyTransactionTagsNotMatchErrorID      = 34
+	failedPolicyTransactionErrorID            = 35
+	unknownPolicyUpdateOperationErrorID       = 36
+	hiddenPolicyModificationErrorID           = 37
+	tooLongPathPolicyModificationErrorID      = 38
+	tooShortPathPolicyModificationErrorID     = 39
+	invalidPolicyItemTypeErrorID              = 40
+	hiddenRuleAppendErrorID                   = 41
+	missingPolicyChildErrorID                 = 42
+	missingContentErrorID                     = 43
+	invalidContentStorageItemID               = 44
+	missingContentItemErrorID                 = 45
+	invalidContentItemErrorID                 = 46
+	invalidContentItemTypeErrorID             = 47
+	invalidSelectorPathErrorID                = 48
+	networkMapKeyValueTypeErrorID             = 49
+	mapContentSubitemErrorID                  = 50
+	invalidContentModificationErrorID         = 51
+	missingPathContentModificationErrorID     = 52
+	tooLongPathContentModificationErrorID     = 53
+	invalidContentValueModificationErrorID    = 54
+	UntaggedContentModificationErrorID        = 55
+	MissingContentTagErrorID                  = 56
+	ContentTagsNotMatchErrorID                = 57
+	unknownContentUpdateOperationErrorID      = 58
+	failedContentTransactionErrorID           = 59
+	contentTransactionIDNotMatchErrorID       = 60
+	contentTransactionTagsNotMatchErrorID     = 61
+	tooShortRawPathContentModificationErrorID = 62
+	tooLongRawPathContentModificationErrorID  = 63
+	invalidContentUpdateDataErrorID           = 64
+	invalidContentUpdateResultTypeErrorID     = 65
+	invalidContentUpdateKeysErrorID           = 66
+	unknownContentItemResultTypeErrorID       = 67
+	invalidContentItemResultTypeErrorID       = 68
+	invalidContentKeyTypeErrorID              = 69
+	invalidContentStringMapErrorID            = 70
+	invalidContentNetworkMapErrorID           = 71
+	invalidContentDomainMapErrorID            = 72
+	invalidContentValueErrorID                = 73
+	invalidContentValueTypeErrorID            = 74
+	integerDivideByZeroErrorID                = 75
+	floatDivideByZeroErrorID                  = 76
+	floatNanErrorID                           = 77
+	floatInfErrorID                           = 78
+	duplicatesBuiltinTypeErrorID              = 79
+	duplicateFlagNameID                       = 80
+	noFlagsDefinedErrorID                     = 81
+	tooManyFlagsDefinedErrorID                = 82
 )
 
 type externalError struct {
@@ -328,6 +334,42 @@ func newAttributeValueTypeError(expected, actual Type) *attributeValueTypeError 
 
 func (e *attributeValueTypeError) Error() string {
 	return e.errorf("Expected %q value but got %q", e.expected, e.actual)
+}
+
+type attributeValueFlagsTypeError struct {
+	errorLink
+	t Type
+	n int
+}
+
+func newAttributeValueFlagsTypeError(t Type, n int) *attributeValueFlagsTypeError {
+	return &attributeValueFlagsTypeError{
+		errorLink: errorLink{id: attributeValueFlagsTypeErrorID},
+		t:         t,
+		n:         n}
+}
+
+func (e *attributeValueFlagsTypeError) Error() string {
+	return e.errorf("Expected %d bits flags value but got %q", e.n, e.t)
+}
+
+type attributeValueFlagsBitsError struct {
+	errorLink
+	t        Type
+	expected int
+	actual   int
+}
+
+func newAttributeValueFlagsBitsError(t Type, expected, actual int) *attributeValueFlagsBitsError {
+	return &attributeValueFlagsBitsError{
+		errorLink: errorLink{id: attributeValueFlagsBitsErrorID},
+		t:         t,
+		expected:  expected,
+		actual:    actual}
+}
+
+func (e *attributeValueFlagsBitsError) Error() string {
+	return e.errorf("Expected %d bits flags value but got %q value with %d positions", e.expected, e.t, e.actual)
 }
 
 type duplicateAttributeValueError struct {
@@ -1309,4 +1351,74 @@ func newFloatInfError() *floatInfError {
 
 func (e *floatInfError) Error() string {
 	return e.errorf("Float result has a value of Inf")
+}
+
+type duplicatesBuiltinTypeError struct {
+	errorLink
+	name string
+}
+
+func newDuplicatesBuiltinTypeError(name string) *duplicatesBuiltinTypeError {
+	return &duplicatesBuiltinTypeError{
+		errorLink: errorLink{id: duplicatesBuiltinTypeErrorID},
+		name:      name}
+}
+
+func (e *duplicatesBuiltinTypeError) Error() string {
+	return e.errorf("Can't create flags type %q. The name is taken by a built-in types", e.name)
+}
+
+type duplicateFlagName struct {
+	errorLink
+	name string
+	flag string
+	i    int
+	j    int
+}
+
+func newDuplicateFlagName(name, flag string, i, j int) *duplicateFlagName {
+	return &duplicateFlagName{
+		errorLink: errorLink{id: duplicateFlagNameID},
+		name:      name,
+		flag:      flag,
+		i:         i,
+		j:         j}
+}
+
+func (e *duplicateFlagName) Error() string {
+	return e.errorf("Can't create flags type %q. Flag %q at %d position duplicates flag at %d", e.name, e.flag, e.i, e.j)
+}
+
+type noFlagsDefinedError struct {
+	errorLink
+	name string
+	n    int
+}
+
+func newNoFlagsDefinedError(name string, n int) *noFlagsDefinedError {
+	return &noFlagsDefinedError{
+		errorLink: errorLink{id: noFlagsDefinedErrorID},
+		name:      name,
+		n:         n}
+}
+
+func (e *noFlagsDefinedError) Error() string {
+	return e.errorf("Required at least one flag to define flags type %q got %d", e.name, e.n)
+}
+
+type tooManyFlagsDefinedError struct {
+	errorLink
+	name string
+	n    int
+}
+
+func newTooManyFlagsDefinedError(name string, n int) *tooManyFlagsDefinedError {
+	return &tooManyFlagsDefinedError{
+		errorLink: errorLink{id: tooManyFlagsDefinedErrorID},
+		name:      name,
+		n:         n}
+}
+
+func (e *tooManyFlagsDefinedError) Error() string {
+	return e.errorf("Required no more than 64 flags to define flags type %q got %d", e.name, e.n)
 }

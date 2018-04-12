@@ -144,6 +144,31 @@ errors:
   - field: expected
   - field: actual
 
+- id: attributeValueFlagsTypeError
+  fields:
+  - id: t
+    type: Type
+  - id: n
+    type: int
+  msg: "Expected %d bits flags value but got %q"
+  args:
+  - field: n
+  - field: t
+
+- id: attributeValueFlagsBitsError
+  fields:
+  - id: t
+    type: Type
+  - id: expected
+    type: int
+  - id: actual
+    type: int
+  msg: "Expected %d bits flags value but got %q value with %d positions"
+  args:
+  - field: expected
+  - field: t
+  - field: actual
+
 - id: duplicateAttributeValueError
   fields:
   - id: ID
@@ -649,21 +674,60 @@ errors:
   - field: value
 
 - id: integerDivideByZeroError
-  fields:
   msg: "Integer divisor has a value of 0"
-  args:
 
 - id: floatDivideByZeroError
-  fields:
   msg: "Float divisor has a value of 0"
-  args:
 
 - id: floatNanError
-  fields:
   msg: "Float result has a value of NaN"
-  args:
 
 - id: floatInfError
-  fields:
   msg: "Float result has a value of Inf"
+
+- id: duplicatesBuiltinTypeError
+  fields:
+  - id: name
+    type: string
+  msg: "Can't create flags type %q. The name is taken by a built-in types"
   args:
+  - field: name
+
+- id: duplicateFlagName
+  fields:
+  - id: name
+    type: string
+  - id: flag
+    type: string
+  - id: i
+    type: int
+  - id: j
+    type: int
+  msg: "Can't create flags type %q. Flag %q at %d position duplicates flag at %d"
+  args:
+  - field: name
+  - field: flag
+  - field: i
+  - field: j
+
+- id: noFlagsDefinedError
+  fields:
+  - id: name
+    type: string
+  - id: n
+    type: int
+  msg: "Required at least one flag to define flags type %q got %d"
+  args:
+  - field: name
+  - field: n
+
+- id: tooManyFlagsDefinedError
+  fields:
+  - id: name
+    type: string
+  - id: n
+    type: int
+  msg: "Required no more than 64 flags to define flags type %q got %d"
+  args:
+  - field: name
+  - field: n
