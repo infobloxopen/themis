@@ -77,8 +77,8 @@ func (r Rule) calculate(ctx *Context) Response {
 	return Response{r.effect, nil, r.obligations}
 }
 
-// MarshalDump implements StorageMarshal
-func (r Rule) MarshalDump(out io.Writer, depth int) error {
+// DepthMarshal implements StorageMarshal
+func (r Rule) DepthMarshal(out io.Writer, depth int) error {
 	if depth < 0 {
 		return nil
 	}

@@ -278,8 +278,8 @@ func (p *PolicySet) delChild(ID string) (Evaluable, error) {
 	return p.updatedCopy(policies, algorithm), nil
 }
 
-// MarshalDump implements StorageMarshal
-func (p PolicySet) MarshalDump(out io.Writer, depth int) error {
+// DepthMarshal implements StorageMarshal
+func (p PolicySet) DepthMarshal(out io.Writer, depth int) error {
 	if depth < 0 {
 		return nil
 	}
@@ -290,7 +290,7 @@ func (p PolicySet) MarshalDump(out io.Writer, depth int) error {
 	for _, p := range p.policies {
 		if _, ok := p.GetID(); ok {
 			if marshP, ok := p.(StorageMarshal); ok {
-				marshP.MarshalDump(out, depth-1)
+				marshP.DepthMarshal(out, depth-1)
 			}
 		}
 	}

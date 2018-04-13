@@ -248,8 +248,8 @@ func (p *Policy) delChild(ID string) (*Policy, error) {
 	return p.updatedCopy(rules, algorithm), nil
 }
 
-// MarshalDump implements StorageMarshal
-func (p Policy) MarshalDump(out io.Writer, depth int) error {
+// DepthMarshal implements StorageMarshal
+func (p Policy) DepthMarshal(out io.Writer, depth int) error {
 	if depth < 0 {
 		return nil
 	}
@@ -259,7 +259,7 @@ func (p Policy) MarshalDump(out io.Writer, depth int) error {
 	}
 	for _, r := range p.rules {
 		if _, ok := r.GetID(); ok {
-			if err = r.MarshalDump(out, depth-1); err != nil {
+			if err = r.DepthMarshal(out, depth-1); err != nil {
 				return err
 			}
 			out.Write([]byte{','})
