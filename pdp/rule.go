@@ -3,6 +3,7 @@ package pdp
 import (
 	"fmt"
 	"io"
+	"strconv"
 )
 
 const ruleFmt = `{"ord": %d, "id": "%s"}`
@@ -84,6 +85,17 @@ func (r Rule) DepthMarshal(out io.Writer, depth int) error {
 	}
 	_, err := out.Write([]byte(fmt.Sprintf(ruleFmt, r.ord, r.id)))
 	return err
+}
+
+// PathMarshal implements StorageMarshal
+func (r Rule) PathMarshal(ID string) (func(io.Writer) error, bool) {
+	if rID, ok := r.GetID(); ok && ID == rID {
+		return func(out io.Writer) error {
+			_, err := out.Write([]byte(strconv.Quote(rID)))
+			return err
+		}, true
+	}
+	return nil, false
 }
 
 type byRuleOrder []*Rule

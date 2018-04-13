@@ -3,6 +3,7 @@ package pdp
 import (
 	"fmt"
 	"io"
+	"strconv"
 )
 
 // PolicyCombiningAlg represent abstract policy combining algorithm.
@@ -288,14 +289,41 @@ func (p PolicySet) DepthMarshal(out io.Writer, depth int) error {
 		return err
 	}
 	for _, p := range p.policies {
-		if _, ok := p.GetID(); ok {
-			if marshP, ok := p.(StorageMarshal); ok {
-				marshP.DepthMarshal(out, depth-1)
-			}
+		_, ok := p.GetID()
+		if !ok {
+			continue
+		}
+		if marshP, ok := p.(StorageMarshal); ok {
+			marshP.DepthMarshal(out, depth-1)
 		}
 	}
 	_, err = out.Write([]byte("]}"))
 	return err
+}
+
+// PathMarshal implements StorageMarshal
+func (p PolicySet) PathMarshal(ID string) (func(io.Writer) error, bool) {
+	if pID, ok := p.GetID(); ok {
+		if ID == pID {
+			return func(out io.Writer) error {
+				_, err := out.Write([]byte(strconv.Quote(pID)))
+				return err
+			}, true
+		}
+		for _, p := range p.policies {
+			marshP, ok := p.(StorageMarshal)
+			if !ok {
+				continue
+			}
+			if cb, ok := marshP.PathMarshal(ID); ok {
+				return func(out io.Writer) error {
+					out.Write([]byte(strconv.Quote(pID) + "/"))
+					return cb(out)
+				}, true
+			}
+		}
+	}
+	return nil, false
 }
 
 type firstApplicableEffectPCA struct {
