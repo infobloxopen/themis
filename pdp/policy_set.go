@@ -1,6 +1,9 @@
 package pdp
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+)
 
 // PolicyCombiningAlg represent abstract policy combining algorithm.
 // The algorithm defines how to evaluate child policy sets and policies
@@ -30,6 +33,8 @@ var (
 	PolicyCombiningParamAlgs = map[string]PolicyCombiningAlgMaker{
 		"mapper": makeMapperPCA}
 )
+
+const policySetFmt = `{"ord": %d, "id": "%s", "policies": [`
 
 // PolicySet represens PDP policy set (the set groups other policy sets and policies).
 type PolicySet struct {
@@ -271,6 +276,26 @@ func (p *PolicySet) delChild(ID string) (Evaluable, error) {
 	}
 
 	return p.updatedCopy(policies, algorithm), nil
+}
+
+// MarshalDump implements StorageMarshal
+func (p PolicySet) MarshalDump(out io.Writer, depth int) error {
+	if depth < 0 {
+		return nil
+	}
+	_, err := out.Write([]byte(fmt.Sprintf(policySetFmt, p.ord, p.id)))
+	if err != nil {
+		return err
+	}
+	for _, p := range p.policies {
+		if _, ok := p.GetID(); ok {
+			if marshP, ok := p.(StorageMarshal); ok {
+				marshP.MarshalDump(out, depth-1)
+			}
+		}
+	}
+	_, err = out.Write([]byte("]}"))
+	return err
 }
 
 type firstApplicableEffectPCA struct {

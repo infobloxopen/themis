@@ -1,6 +1,9 @@
 package pdp
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+)
 
 // RuleCombiningAlg represent abstract rule combining algorithm. The algorithm
 // defines how to evaluate policy rules and how to get paticular result.
@@ -28,6 +31,8 @@ var (
 	RuleCombiningParamAlgs = map[string]RuleCombiningAlgMaker{
 		"mapper": makeMapperRCA}
 )
+
+const policyFmt = `{"ord": %d, "id": "%s", "rules": [`
 
 // Policy represent PDP policy (minimal evaluable entity).
 type Policy struct {
@@ -241,6 +246,27 @@ func (p *Policy) delChild(ID string) (*Policy, error) {
 	}
 
 	return p.updatedCopy(rules, algorithm), nil
+}
+
+// MarshalDump implements StorageMarshal
+func (p Policy) MarshalDump(out io.Writer, depth int) error {
+	if depth < 0 {
+		return nil
+	}
+	_, err := out.Write([]byte(fmt.Sprintf(policyFmt, p.ord, p.id)))
+	if err != nil {
+		return err
+	}
+	for _, r := range p.rules {
+		if _, ok := r.GetID(); ok {
+			if err = r.MarshalDump(out, depth-1); err != nil {
+				return err
+			}
+			out.Write([]byte{','})
+		}
+	}
+	_, err = out.Write([]byte("]}"))
+	return err
 }
 
 type firstApplicableEffectRCA struct {

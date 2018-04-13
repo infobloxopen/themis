@@ -1,6 +1,11 @@
 package pdp
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+)
+
+const ruleFmt = `{"ord": %d, "id": "%s"}`
 
 // Rule represents PDP rule (child or PDP policy).
 type Rule struct {
@@ -70,6 +75,15 @@ func (r Rule) calculate(ctx *Context) Response {
 	}
 
 	return Response{r.effect, nil, r.obligations}
+}
+
+// MarshalDump implements StorageMarshal
+func (r Rule) MarshalDump(out io.Writer, depth int) error {
+	if depth < 0 {
+		return nil
+	}
+	_, err := out.Write([]byte(fmt.Sprintf(ruleFmt, r.ord, r.id)))
+	return err
 }
 
 type byRuleOrder []*Rule
