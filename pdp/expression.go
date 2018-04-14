@@ -54,4 +54,7 @@ var FunctionArgumentValidators = map[string][]functionArgumentValidator{
 		functionIntegerRangeValidator,
 		functionFloatRangeValidator,
 	},
+	"list of strings": {
+		functionListOfStringsValidator,
+	},
 }

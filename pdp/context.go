@@ -291,6 +291,42 @@ func (c *Context) calculateSetOfDomainsExpression(e Expression) (*domaintree.Nod
 	return v.setOfDomains()
 }
 
+func (c *Context) calculateFlags8Expression(e Expression) (uint8, error) {
+	v, err := e.Calculate(c)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.flags8()
+}
+
+func (c *Context) calculateFlags16Expression(e Expression) (uint16, error) {
+	v, err := e.Calculate(c)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.flags16()
+}
+
+func (c *Context) calculateFlags32Expression(e Expression) (uint32, error) {
+	v, err := e.Calculate(c)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.flags32()
+}
+
+func (c *Context) calculateFlags64Expression(e Expression) (uint64, error) {
+	v, err := e.Calculate(c)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.flags64()
+}
+
 // Response represent result of policies evaluation.
 type Response struct {
 	// Effect is resulting effect.

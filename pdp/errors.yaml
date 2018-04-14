@@ -787,3 +787,12 @@ errors:
   args:
   - field: name
   - field: n
+
+- id: listOfStringsTypeError
+  fields:
+  - id: t
+    type: Type
+  msg: "Can't convert %q to %q"
+  args:
+  - field: t
+  - expr: TypeListOfStrings

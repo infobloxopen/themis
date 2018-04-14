@@ -100,6 +100,7 @@ const (
 	duplicateAttributeErrorID                 = 87
 	noFlagsDefinedErrorID                     = 88
 	tooManyFlagsDefinedErrorID                = 89
+	listOfStringsTypeErrorID                  = 90
 )
 
 type externalError struct {
@@ -1533,4 +1534,19 @@ func newTooManyFlagsDefinedError(name string, n int) *tooManyFlagsDefinedError {
 
 func (e *tooManyFlagsDefinedError) Error() string {
 	return e.errorf("Required no more than 64 flags to define flags type %q got %d", e.name, e.n)
+}
+
+type listOfStringsTypeError struct {
+	errorLink
+	t Type
+}
+
+func newListOfStringsTypeError(t Type) *listOfStringsTypeError {
+	return &listOfStringsTypeError{
+		errorLink: errorLink{id: listOfStringsTypeErrorID},
+		t:         t}
+}
+
+func (e *listOfStringsTypeError) Error() string {
+	return e.errorf("Can't convert %q to %q", e.t, TypeListOfStrings)
 }
