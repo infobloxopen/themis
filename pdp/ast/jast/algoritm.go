@@ -307,7 +307,7 @@ func (ctx context) unmarshalCombiningAlgObj(d *json.Decoder) (*caParams, error) 
 			return nil
 		}
 
-		return newUnknownAttributeError(k)
+		return newUnknownFieldError(k)
 	}, "algorithm"); err != nil {
 		return nil, err
 	}

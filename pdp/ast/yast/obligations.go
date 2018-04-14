@@ -18,7 +18,7 @@ func (ctx context) unmarshalObligationItem(v interface{}) (pdp.AttributeAssignme
 		return pdp.AttributeAssignmentExpression{}, err
 	}
 
-	a, ok := ctx.attrs[ID]
+	a, ok := ctx.symbols.GetAttribute(ID)
 	if !ok {
 		return pdp.AttributeAssignmentExpression{}, newUnknownAttributeError(ID)
 	}

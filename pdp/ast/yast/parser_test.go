@@ -24,12 +24,6 @@ attributes:
 
 invalid:
 - first
-
-policies:
-  id: Default
-  alg: FirstApplicableEffect
-  rules:
-  - effect: Permit
 `
 
 	simpleAllPermitPolicy = `# Simple All Permit Policy
@@ -148,6 +142,14 @@ policies:
 `
 
 	allFeaturePolicies = `# Policies YAML with all features
+types:
+  flags:
+    meta: flags
+    flags:
+    - first
+    - second
+    - third
+
 attributes:
   boolAttr: boolean
   strAttr: string
@@ -466,7 +468,7 @@ policies:
          val:
            type: string
            content: Below
-  
+
     - id: Above
       effect: Permit
       obligations:
@@ -474,7 +476,7 @@ policies:
          val:
            type: string
            content: Above
-  
+
     - id: Within
       effect: Permit
       obligations:
@@ -690,7 +692,7 @@ func TestUnmarshalUpdate(t *testing.T) {
 		return
 	}
 
-	u, err := p.UnmarshalUpdate(strings.NewReader(simpleUpdate), tr.Attributes(), tag, uuid.New())
+	u, err := p.UnmarshalUpdate(strings.NewReader(simpleUpdate), tr.Symbols(), tag, uuid.New())
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 		return

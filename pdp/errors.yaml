@@ -685,6 +685,28 @@ errors:
 - id: floatInfError
   msg: "Float result has a value of Inf"
 
+- id: nilTypeError
+  msg: "Can't put nil type into custom types symbol table"
+
+- id: builtinCustomTypeError
+  fields:
+  - id: t
+    type: Type
+  msg: "Can't put built-in type %q into custom types symbol table"
+  args:
+  - field: t
+
+- id: duplicateCustomTypeError
+  fields:
+  - id: n
+    type: Type
+  - id: p
+    type: Type
+  msg: "Can't put type %q into symbol table as it already contains %q"
+  args:
+  - field: n
+  - field: p
+
 - id: duplicatesBuiltinTypeError
   fields:
   - id: name
@@ -709,6 +731,40 @@ errors:
   - field: flag
   - field: i
   - field: j
+
+- id: noTypedAttributeError
+  fields:
+  - id: a
+    type: Attribute
+  msg: "Attribute %q has no type"
+  args:
+  - field: a.id
+
+- id: undefinedAttributeTypeError
+  fields:
+  - id: a
+    type: Attribute
+  msg: "Attribute %q has type %q"
+  args:
+  - field: a.id
+  - expr: TypeUndefined
+
+- id: unknownAttributeTypeError
+  fields:
+  - id: a
+    type: Attribute
+  msg: "Attribute %q has unknown type %q"
+  args:
+  - field: a.id
+  - field: a.t
+
+- id: duplicateAttributeError
+  fields:
+  - id: a
+    type: Attribute
+  msg: "Can't put attribute %q into symbol table as it already contains one with the same id"
+  args:
+  - field: a.id
 
 - id: noFlagsDefinedError
   fields:

@@ -2,7 +2,6 @@ package jast
 
 import (
 	"encoding/json"
-	"strings"
 
 	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
@@ -20,12 +19,14 @@ func (ctx *context) unmarshalAttributeDeclarations(d *json.Decoder) boundError {
 			return err
 		}
 
-		t, ok := pdp.BuiltinTypes[strings.ToLower(tstr)]
-		if !ok {
-			return bindError(newAttributeTypeError(tstr), k)
+		t := ctx.symbols.GetType(tstr)
+		if t == nil {
+			return bindError(newUnknownTypeError(tstr), k)
 		}
 
-		ctx.attrs[k] = pdp.MakeAttribute(k, t)
+		if err := ctx.symbols.PutAttribute(pdp.MakeAttribute(k, t)); err != nil {
+			return bindError(err, k)
+		}
 
 		return nil
 	}, "attribute declarations"); err != nil {

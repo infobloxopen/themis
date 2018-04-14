@@ -2,7 +2,6 @@ package yast
 
 import (
 	"net"
-	"strings"
 
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
@@ -240,8 +239,8 @@ func (ctx context) unmarshalValue(v interface{}) (pdp.AttributeValue, boundError
 		return pdp.UndefinedValue, err
 	}
 
-	t, ok := pdp.BuiltinTypes[strings.ToLower(strT)]
-	if !ok {
+	t := ctx.symbols.GetType(strT)
+	if t == nil {
 		return pdp.UndefinedValue, newUnknownTypeError(strT)
 	}
 

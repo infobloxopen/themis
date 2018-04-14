@@ -238,7 +238,7 @@ func (ctx context) unmarshalValue(d *json.Decoder) (pdp.AttributeValue, error) {
 			return err
 		}
 
-		return newUnknownAttributeError(k)
+		return newUnknownFieldError(k)
 	}, "value"); err != nil {
 		return pdp.UndefinedValue, err
 	}

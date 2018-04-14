@@ -89,10 +89,17 @@ const (
 	floatDivideByZeroErrorID                  = 76
 	floatNanErrorID                           = 77
 	floatInfErrorID                           = 78
-	duplicatesBuiltinTypeErrorID              = 79
-	duplicateFlagNameID                       = 80
-	noFlagsDefinedErrorID                     = 81
-	tooManyFlagsDefinedErrorID                = 82
+	nilTypeErrorID                            = 79
+	builtinCustomTypeErrorID                  = 80
+	duplicateCustomTypeErrorID                = 81
+	duplicatesBuiltinTypeErrorID              = 82
+	duplicateFlagNameID                       = 83
+	noTypedAttributeErrorID                   = 84
+	undefinedAttributeTypeErrorID             = 85
+	unknownAttributeTypeErrorID               = 86
+	duplicateAttributeErrorID                 = 87
+	noFlagsDefinedErrorID                     = 88
+	tooManyFlagsDefinedErrorID                = 89
 )
 
 type externalError struct {
@@ -1353,6 +1360,51 @@ func (e *floatInfError) Error() string {
 	return e.errorf("Float result has a value of Inf")
 }
 
+type nilTypeError struct {
+	errorLink
+}
+
+func newNilTypeError() *nilTypeError {
+	return &nilTypeError{
+		errorLink: errorLink{id: nilTypeErrorID}}
+}
+
+func (e *nilTypeError) Error() string {
+	return e.errorf("Can't put nil type into custom types symbol table")
+}
+
+type builtinCustomTypeError struct {
+	errorLink
+	t Type
+}
+
+func newBuiltinCustomTypeError(t Type) *builtinCustomTypeError {
+	return &builtinCustomTypeError{
+		errorLink: errorLink{id: builtinCustomTypeErrorID},
+		t:         t}
+}
+
+func (e *builtinCustomTypeError) Error() string {
+	return e.errorf("Can't put built-in type %q into custom types symbol table", e.t)
+}
+
+type duplicateCustomTypeError struct {
+	errorLink
+	n Type
+	p Type
+}
+
+func newDuplicateCustomTypeError(n, p Type) *duplicateCustomTypeError {
+	return &duplicateCustomTypeError{
+		errorLink: errorLink{id: duplicateCustomTypeErrorID},
+		n:         n,
+		p:         p}
+}
+
+func (e *duplicateCustomTypeError) Error() string {
+	return e.errorf("Can't put type %q into symbol table as it already contains %q", e.n, e.p)
+}
+
 type duplicatesBuiltinTypeError struct {
 	errorLink
 	name string
@@ -1387,6 +1439,66 @@ func newDuplicateFlagName(name, flag string, i, j int) *duplicateFlagName {
 
 func (e *duplicateFlagName) Error() string {
 	return e.errorf("Can't create flags type %q. Flag %q at %d position duplicates flag at %d", e.name, e.flag, e.i, e.j)
+}
+
+type noTypedAttributeError struct {
+	errorLink
+	a Attribute
+}
+
+func newNoTypedAttributeError(a Attribute) *noTypedAttributeError {
+	return &noTypedAttributeError{
+		errorLink: errorLink{id: noTypedAttributeErrorID},
+		a:         a}
+}
+
+func (e *noTypedAttributeError) Error() string {
+	return e.errorf("Attribute %q has no type", e.a.id)
+}
+
+type undefinedAttributeTypeError struct {
+	errorLink
+	a Attribute
+}
+
+func newUndefinedAttributeTypeError(a Attribute) *undefinedAttributeTypeError {
+	return &undefinedAttributeTypeError{
+		errorLink: errorLink{id: undefinedAttributeTypeErrorID},
+		a:         a}
+}
+
+func (e *undefinedAttributeTypeError) Error() string {
+	return e.errorf("Attribute %q has type %q", e.a.id, TypeUndefined)
+}
+
+type unknownAttributeTypeError struct {
+	errorLink
+	a Attribute
+}
+
+func newUnknownAttributeTypeError(a Attribute) *unknownAttributeTypeError {
+	return &unknownAttributeTypeError{
+		errorLink: errorLink{id: unknownAttributeTypeErrorID},
+		a:         a}
+}
+
+func (e *unknownAttributeTypeError) Error() string {
+	return e.errorf("Attribute %q has unknown type %q", e.a.id, e.a.t)
+}
+
+type duplicateAttributeError struct {
+	errorLink
+	a Attribute
+}
+
+func newDuplicateAttributeError(a Attribute) *duplicateAttributeError {
+	return &duplicateAttributeError{
+		errorLink: errorLink{id: duplicateAttributeErrorID},
+		a:         a}
+}
+
+func (e *duplicateAttributeError) Error() string {
+	return e.errorf("Can't put attribute %q into symbol table as it already contains one with the same id", e.a.id)
 }
 
 type noFlagsDefinedError struct {

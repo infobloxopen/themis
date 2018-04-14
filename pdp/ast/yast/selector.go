@@ -9,33 +9,31 @@ import (
 )
 
 func (ctx context) unmarshalSelector(v interface{}) (pdp.Expression, boundError) {
-	var ret pdp.Expression
-
 	m, err := ctx.validateMap(v, "selector attributes")
 	if err != nil {
-		return ret, err
+		return nil, err
 	}
 
 	uri, err := ctx.extractString(m, yastTagURI, "selector URI")
 	if err != nil {
-		return ret, err
+		return nil, err
 	}
 
 	id, ierr := url.Parse(uri)
 	if ierr != nil {
-		return ret, newSelectorURIError(uri, ierr)
+		return nil, newSelectorURIError(uri, ierr)
 	}
 
 	items, err := ctx.extractList(m, yastTagPath, "path")
 	if err != nil {
-		return ret, bindErrorf(err, "selector(%s)", uri)
+		return nil, bindErrorf(err, "selector(%s)", uri)
 	}
 
 	path := make([]pdp.Expression, len(items))
 	for i, item := range items {
 		e, err := ctx.unmarshalExpression(item)
 		if err != nil {
-			return ret, bindErrorf(bindErrorf(err, "%d", i), "selector(%s)", uri)
+			return nil, bindErrorf(bindErrorf(err, "%d", i), "selector(%s)", uri)
 		}
 
 		path[i] = e
@@ -43,22 +41,21 @@ func (ctx context) unmarshalSelector(v interface{}) (pdp.Expression, boundError)
 
 	st, err := ctx.extractString(m, yastTagType, "type")
 	if err != nil {
-		return ret, bindErrorf(err, "selector(%s)", uri)
+		return nil, bindErrorf(err, "selector(%s)", uri)
 	}
 
-	t, ok := pdp.BuiltinTypes[strings.ToLower(st)]
-	if !ok {
-		return ret, bindErrorf(newUnknownTypeError(uri), "selector(%s)", uri)
+	t := ctx.symbols.GetType(st)
+	if t == nil {
+		return nil, bindErrorf(newUnknownTypeError(st), "selector(%s)", uri)
 	}
 
 	if t == pdp.TypeUndefined {
-		return ret, bindErrorf(newInvalidTypeError(t), "selector(%s)", uri)
+		return nil, bindErrorf(newInvalidTypeError(t), "selector(%s)", uri)
 	}
 
-	var e error
-	ret, e = selector.MakeSelector(strings.ToLower(id.Scheme), id.Opaque, path, t)
-	if e != nil {
-		return ret, bindErrorf(e, "selector(%s)", uri)
+	e, eErr := selector.MakeSelector(strings.ToLower(id.Scheme), id.Opaque, path, t)
+	if eErr != nil {
+		return nil, bindErrorf(eErr, "selector(%s)", uri)
 	}
-	return ret, nil
+	return e, nil
 }

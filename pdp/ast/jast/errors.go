@@ -12,51 +12,52 @@ import (
 
 const (
 	externalErrorID                     = 0
-	attributeTypeErrorID                = 1
-	policyAmbiguityErrorID              = 2
-	policyMissingKeyErrorID             = 3
-	unknownRCAErrorID                   = 4
-	missingRCAErrorID                   = 5
-	parseCAErrorID                      = 6
-	invalidRCAErrorID                   = 7
-	missingDefaultRuleRCAErrorID        = 8
-	missingErrorRuleRCAErrorID          = 9
-	notImplementedRCAErrorID            = 10
-	unknownPCAErrorID                   = 11
-	missingPCAErrorID                   = 12
-	invalidPCAErrorID                   = 13
-	missingDefaultPolicyPCAErrorID      = 14
-	missingErrorPolicyPCAErrorID        = 15
-	notImplementedPCAErrorID            = 16
-	mapperArgumentTypeErrorID           = 17
-	conditionTypeErrorID                = 18
-	unknownEffectErrorID                = 19
-	unknownMatchFunctionErrorID         = 20
-	matchFunctionCastErrorID            = 21
-	matchFunctionArgsNumberErrorID      = 22
-	invalidMatchFunctionArgErrorID      = 23
-	matchFunctionBothValuesErrorID      = 24
-	matchFunctionBothAttrsErrorID       = 25
-	unknownFunctionErrorID              = 26
-	functionCastErrorID                 = 27
-	unknownAttributeErrorID             = 28
-	missingAttributeErrorID             = 29
-	unknownMapperCAOrderID              = 30
-	unknownTypeErrorID                  = 31
-	invalidTypeErrorID                  = 32
-	missingContentErrorID               = 33
-	notImplementedValueTypeErrorID      = 34
-	invalidAddressErrorID               = 35
-	integerOverflowErrorID              = 36
-	invalidNetworkErrorID               = 37
-	invalidDomainErrorID                = 38
-	selectorURIErrorID                  = 39
-	selectorLocationErrorID             = 40
-	unsupportedSelectorSchemeErrorID    = 41
-	entityAmbiguityErrorID              = 42
-	entityMissingKeyErrorID             = 43
-	unknownPolicyUpdateOperationErrorID = 44
-	missingContentTypeErrorID           = 45
+	policyAmbiguityErrorID              = 1
+	policyMissingKeyErrorID             = 2
+	unknownRCAErrorID                   = 3
+	missingRCAErrorID                   = 4
+	parseCAErrorID                      = 5
+	invalidRCAErrorID                   = 6
+	missingDefaultRuleRCAErrorID        = 7
+	missingErrorRuleRCAErrorID          = 8
+	notImplementedRCAErrorID            = 9
+	unknownPCAErrorID                   = 10
+	missingPCAErrorID                   = 11
+	invalidPCAErrorID                   = 12
+	missingDefaultPolicyPCAErrorID      = 13
+	missingErrorPolicyPCAErrorID        = 14
+	notImplementedPCAErrorID            = 15
+	mapperArgumentTypeErrorID           = 16
+	conditionTypeErrorID                = 17
+	unknownEffectErrorID                = 18
+	unknownMatchFunctionErrorID         = 19
+	matchFunctionCastErrorID            = 20
+	matchFunctionArgsNumberErrorID      = 21
+	invalidMatchFunctionArgErrorID      = 22
+	matchFunctionBothValuesErrorID      = 23
+	matchFunctionBothAttrsErrorID       = 24
+	unknownFunctionErrorID              = 25
+	functionCastErrorID                 = 26
+	unknownAttributeErrorID             = 27
+	missingAttributeErrorID             = 28
+	unknownMapperCAOrderID              = 29
+	unknownTypeErrorID                  = 30
+	invalidTypeErrorID                  = 31
+	missingContentErrorID               = 32
+	notImplementedValueTypeErrorID      = 33
+	invalidAddressErrorID               = 34
+	integerOverflowErrorID              = 35
+	invalidNetworkErrorID               = 36
+	invalidDomainErrorID                = 37
+	selectorURIErrorID                  = 38
+	entityAmbiguityErrorID              = 39
+	entityMissingKeyErrorID             = 40
+	unknownPolicyUpdateOperationErrorID = 41
+	missingContentTypeErrorID           = 42
+	unknownFieldErrorID                 = 43
+	missingMetaTypeNameErrorID          = 44
+	unknownMetaTypeErrorID              = 45
+	missingFlagNameListErrorID          = 46
 )
 
 type externalError struct {
@@ -72,21 +73,6 @@ func newExternalError(err error) *externalError {
 
 func (e *externalError) Error() string {
 	return e.errorf("%s", e.err)
-}
-
-type attributeTypeError struct {
-	errorLink
-	t string
-}
-
-func newAttributeTypeError(t string) *attributeTypeError {
-	return &attributeTypeError{
-		errorLink: errorLink{id: attributeTypeErrorID},
-		t:         t}
-}
-
-func (e *attributeTypeError) Error() string {
-	return e.errorf("Expected attribute data type but got \"%s\"", e.t)
 }
 
 type policyAmbiguityError struct {
@@ -672,40 +658,6 @@ func (e *selectorURIError) Error() string {
 	return e.errorf("Expected seletor URI but got %q (%s)", e.uri, e.err)
 }
 
-type selectorLocationError struct {
-	errorLink
-	loc string
-	uri string
-}
-
-func newSelectorLocationError(loc, uri string) *selectorLocationError {
-	return &selectorLocationError{
-		errorLink: errorLink{id: selectorLocationErrorID},
-		loc:       loc,
-		uri:       uri}
-}
-
-func (e *selectorLocationError) Error() string {
-	return e.errorf("Expected selector location in form of <Content-ID>/<Item-ID> got %q (%s)", e.loc, e.uri)
-}
-
-type unsupportedSelectorSchemeError struct {
-	errorLink
-	scheme string
-	uri    string
-}
-
-func newUnsupportedSelectorSchemeError(scheme, uri string) *unsupportedSelectorSchemeError {
-	return &unsupportedSelectorSchemeError{
-		errorLink: errorLink{id: unsupportedSelectorSchemeErrorID},
-		scheme:    scheme,
-		uri:       uri}
-}
-
-func (e *unsupportedSelectorSchemeError) Error() string {
-	return e.errorf("Unsupported selector scheme %q (%s)", e.scheme, e.uri)
-}
-
 type entityAmbiguityError struct {
 	errorLink
 	fields []string
@@ -760,4 +712,60 @@ func newMissingContentTypeError() *missingContentTypeError {
 
 func (e *missingContentTypeError) Error() string {
 	return e.errorf("Value 'type' attribute is missing or placed after 'content' attribute")
+}
+
+type unknownFieldError struct {
+	errorLink
+	name string
+}
+
+func newUnknownFieldError(name string) *unknownFieldError {
+	return &unknownFieldError{
+		errorLink: errorLink{id: unknownFieldErrorID},
+		name:      name}
+}
+
+func (e *unknownFieldError) Error() string {
+	return e.errorf("Unknown field %q", e.name)
+}
+
+type missingMetaTypeNameError struct {
+	errorLink
+}
+
+func newMissingMetaTypeNameError() *missingMetaTypeNameError {
+	return &missingMetaTypeNameError{
+		errorLink: errorLink{id: missingMetaTypeNameErrorID}}
+}
+
+func (e *missingMetaTypeNameError) Error() string {
+	return e.errorf("Missing meta type name")
+}
+
+type unknownMetaTypeError struct {
+	errorLink
+	meta string
+}
+
+func newUnknownMetaTypeError(meta string) *unknownMetaTypeError {
+	return &unknownMetaTypeError{
+		errorLink: errorLink{id: unknownMetaTypeErrorID},
+		meta:      meta}
+}
+
+func (e *unknownMetaTypeError) Error() string {
+	return e.errorf("Unknown meta type %q", e.meta)
+}
+
+type missingFlagNameListError struct {
+	errorLink
+}
+
+func newMissingFlagNameListError() *missingFlagNameListError {
+	return &missingFlagNameListError{
+		errorLink: errorLink{id: missingFlagNameListErrorID}}
+}
+
+func (e *missingFlagNameListError) Error() string {
+	return e.errorf("Missing list of flag names")
 }

@@ -61,7 +61,7 @@ func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.Expression, error) {
 			return nil
 		}
 
-		return newUnknownAttributeError(k)
+		return newUnknownFieldError(k)
 	}, "selector"); err != nil {
 		return ret, err
 	}

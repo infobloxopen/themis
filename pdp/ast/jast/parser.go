@@ -11,6 +11,9 @@ import (
 )
 
 const (
+	yastTagTypes      = "types"
+	yastTagMeta       = "meta"
+	yastTagFlags      = "flags"
 	yastTagAttributes = "attributes"
 	yastTagID         = "id"
 	yastTagTarget     = "target"
@@ -47,12 +50,12 @@ func (p Parser) Unmarshal(in io.Reader, tag *uuid.UUID) (*pdp.PolicyStorage, err
 		return nil, err
 	}
 
-	return pdp.NewPolicyStorage(ctx.rootPolicy, ctx.attrs, tag), nil
+	return pdp.NewPolicyStorage(ctx.rootPolicy, ctx.symbols, tag), nil
 }
 
 // UnmarshalUpdate parses policies update JSON representation to PDP's internal representation.
-func (p Parser) UnmarshalUpdate(in io.Reader, attrs map[string]pdp.Attribute, oldTag, newTag uuid.UUID) (*pdp.PolicyUpdate, error) {
-	ctx := newContextWithAttributes(attrs)
+func (p Parser) UnmarshalUpdate(in io.Reader, s pdp.Symbols, oldTag, newTag uuid.UUID) (*pdp.PolicyUpdate, error) {
+	ctx := newContextWithSymbols(s)
 	u := pdp.NewPolicyUpdate(oldTag, newTag)
 	if err := ctx.unmarshalCommands(json.NewDecoder(in), u); err != nil {
 		return nil, err

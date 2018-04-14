@@ -87,7 +87,7 @@ func (ctx *context) unmarshalEntity(d *json.Decoder) (interface{}, error) {
 			return err
 		}
 
-		return newUnknownAttributeError(k)
+		return newUnknownFieldError(k)
 	}, "entity"); err != nil {
 		return nil, err
 	}
@@ -193,7 +193,7 @@ func (ctx *context) unmarshalCommand(d *json.Decoder, u *pdp.PolicyUpdate) error
 			return err
 		}
 
-		return newUnknownAttributeError(k)
+		return newUnknownFieldError(k)
 	}, "command"); err != nil {
 		return err
 	}

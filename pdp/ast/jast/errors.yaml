@@ -16,14 +16,6 @@ errors:
   args:
   - field: err
 
-- id: attributeTypeError
-  fields:
-  - id: t
-    type: string
-  msg: "Expected attribute data type but got \"%s\""
-  args:
-  - field: t
-
 - id: policyAmbiguityError
   msg: "Expected rules (for policy) or policies (for policy set) but got both"
 
@@ -333,28 +325,6 @@ errors:
   - field: uri
   - field: err
 
-- id: selectorLocationError
-  fields:
-  - id: loc
-    type: string
-  - id: uri
-    type: string
-  msg: "Expected selector location in form of <Content-ID>/<Item-ID> got %q (%s)"
-  args:
-  - field: loc
-  - field: uri
-
-- id: unsupportedSelectorSchemeError
-  fields:
-  - id: scheme
-    type: string
-  - id: uri
-    type: string
-  msg: "Unsupported selector scheme %q (%s)"
-  args:
-  - field: scheme
-  - field: uri
-
 - id: entityAmbiguityError
   fields:
   - id: fields
@@ -376,3 +346,25 @@ errors:
 
 - id: missingContentTypeError
   msg: "Value 'type' attribute is missing or placed after 'content' attribute"
+
+- id: unknownFieldError
+  fields:
+  - id: name
+    type: string
+  msg: "Unknown field %q"
+  args:
+  - field: name
+
+- id: missingMetaTypeNameError
+  msg: "Missing meta type name"
+
+- id: unknownMetaTypeError
+  fields:
+  - id: meta
+    type: string
+  msg: "Unknown meta type %q"
+  args:
+  - field: meta
+
+- id: missingFlagNameListError
+  msg: "Missing list of flag names"

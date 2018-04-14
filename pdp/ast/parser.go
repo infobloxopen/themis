@@ -24,7 +24,7 @@ type Parser interface {
 	// attribute name to its specification. Argument oldTag should match current
 	// policies tag to make update applicable. Value of newTag is set to policies
 	// when update is applied.
-	UnmarshalUpdate(in io.Reader, attrs map[string]pdp.Attribute, oldTag, newTag uuid.UUID) (*pdp.PolicyUpdate, error)
+	UnmarshalUpdate(in io.Reader, s pdp.Symbols, oldTag, newTag uuid.UUID) (*pdp.PolicyUpdate, error)
 }
 
 // NewJSONParser is a JSON AST parser constructor.

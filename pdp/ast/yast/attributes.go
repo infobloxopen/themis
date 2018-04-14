@@ -1,10 +1,6 @@
 package yast
 
-import (
-	"strings"
-
-	"github.com/infobloxopen/themis/pdp"
-)
+import "github.com/infobloxopen/themis/pdp"
 
 func (ctx *context) unmarshalAttributeDeclaration(k, v interface{}) boundError {
 	ID, err := ctx.validateString(k, "attribute id")
@@ -14,15 +10,18 @@ func (ctx *context) unmarshalAttributeDeclaration(k, v interface{}) boundError {
 
 	strT, err := ctx.validateString(v, "attribute data type")
 	if err != nil {
-		return err
+		return bindError(err, ID)
 	}
 
-	t, ok := pdp.BuiltinTypes[strings.ToLower(strT)]
-	if !ok {
-		return bindError(newAttributeTypeError(strT), ID)
+	t := ctx.symbols.GetType(strT)
+	if t == nil {
+		return bindError(newUnknownTypeError(strT), ID)
 	}
 
-	ctx.attrs[ID] = pdp.MakeAttribute(ID, t)
+	if err := ctx.symbols.PutAttribute(pdp.MakeAttribute(ID, t)); err != nil {
+		return bindError(err, ID)
+	}
+
 	return nil
 }
 

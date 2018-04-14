@@ -27,13 +27,6 @@ const (
 	"invalid": [
 		"first"
 	],
-	"policies": {
-		"id": "Default",
-		"alg": "FirstApplicableEffect",
-		"rules": [{
-			"effect": "Permit"
-		}]
-	}
 }
 `
 
@@ -51,6 +44,12 @@ const (
 `
 
 	policyToUpdate = `{
+  "types": {
+    "flags": {
+      "meta": "flags",
+      "flags": ["first", "second", "third"]
+    }
+  },
   "attributes": {
     "a": "string",
     "b": "string",
@@ -1108,9 +1107,9 @@ func TestUnmarshal(t *testing.T) {
 	if err == nil {
 		t.Errorf("Expected error for policy with invalid keys but got nothing")
 	} else {
-		_, ok := err.(*unknownAttributeError)
+		_, ok := err.(*unknownFieldError)
 		if !ok {
-			t.Errorf("Expected *unknownAttributeError for policy with invalid keys but got %T (%s)", err, err)
+			t.Errorf("Expected *unknownFieldError for policy with invalid keys but got %T (%s)", err, err)
 		}
 	}
 
@@ -1238,7 +1237,7 @@ func TestUnmarshalUpdate(t *testing.T) {
 		return
 	}
 
-	u, err := p.UnmarshalUpdate(strings.NewReader(simpleUpdate), tr.Attributes(), tag, uuid.New())
+	u, err := p.UnmarshalUpdate(strings.NewReader(simpleUpdate), tr.Symbols(), tag, uuid.New())
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 		return

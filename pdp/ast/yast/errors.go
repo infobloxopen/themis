@@ -22,39 +22,39 @@ const (
 	missingMapErrorID                     = 9
 	listErrorID                           = 10
 	missingListErrorID                    = 11
-	attributeTypeErrorID                  = 12
-	policyAmbiguityErrorID                = 13
-	policyMissingKeyErrorID               = 14
-	unknownRCAErrorID                     = 15
-	missingRCAErrorID                     = 16
-	invalidRCAErrorID                     = 17
-	missingMapRCAParamErrorID             = 18
-	missingDefaultRuleRCAErrorID          = 19
-	missingErrorRuleRCAErrorID            = 20
-	unknownMapperPCAOrderID               = 21
-	unknownMapperRCAOrderID               = 22
-	notImplementedRCAErrorID              = 23
-	unknownPCAErrorID                     = 24
-	missingPCAErrorID                     = 25
-	invalidPCAErrorID                     = 26
-	missingMapPCAParamErrorID             = 27
-	missingDefaultPolicyPCAErrorID        = 28
-	missingErrorPolicyPCAErrorID          = 29
-	notImplementedPCAErrorID              = 30
-	mapperArgumentTypeErrorID             = 31
-	conditionTypeErrorID                  = 32
-	unknownEffectErrorID                  = 33
-	noSMPItemsErrorID                     = 34
-	tooManySMPItemsErrorID                = 35
-	unknownMatchFunctionErrorID           = 36
-	matchFunctionCastErrorID              = 37
-	matchFunctionArgsNumberErrorID        = 38
-	invalidMatchFunctionArgErrorID        = 39
-	matchFunctionBothValuesErrorID        = 40
-	matchFunctionBothAttrsErrorID         = 41
-	unknownFunctionErrorID                = 42
-	functionCastErrorID                   = 43
-	unknownAttributeErrorID               = 44
+	policyAmbiguityErrorID                = 12
+	policyMissingKeyErrorID               = 13
+	unknownRCAErrorID                     = 14
+	missingRCAErrorID                     = 15
+	invalidRCAErrorID                     = 16
+	missingMapRCAParamErrorID             = 17
+	missingDefaultRuleRCAErrorID          = 18
+	missingErrorRuleRCAErrorID            = 19
+	unknownMapperPCAOrderID               = 20
+	unknownMapperRCAOrderID               = 21
+	notImplementedRCAErrorID              = 22
+	unknownPCAErrorID                     = 23
+	missingPCAErrorID                     = 24
+	invalidPCAErrorID                     = 25
+	missingMapPCAParamErrorID             = 26
+	missingDefaultPolicyPCAErrorID        = 27
+	missingErrorPolicyPCAErrorID          = 28
+	notImplementedPCAErrorID              = 29
+	mapperArgumentTypeErrorID             = 30
+	conditionTypeErrorID                  = 31
+	unknownEffectErrorID                  = 32
+	noSMPItemsErrorID                     = 33
+	tooManySMPItemsErrorID                = 34
+	unknownMatchFunctionErrorID           = 35
+	matchFunctionCastErrorID              = 36
+	matchFunctionArgsNumberErrorID        = 37
+	invalidMatchFunctionArgErrorID        = 38
+	matchFunctionBothValuesErrorID        = 39
+	matchFunctionBothAttrsErrorID         = 40
+	unknownFunctionErrorID                = 41
+	functionCastErrorID                   = 42
+	unknownAttributeErrorID               = 43
+	unknownMetaTypeErrorID                = 44
 	unknownTypeErrorID                    = 45
 	invalidTypeErrorID                    = 46
 	missingContentErrorID                 = 47
@@ -63,12 +63,10 @@ const (
 	invalidNetworkErrorID                 = 50
 	invalidDomainErrorID                  = 51
 	selectorURIErrorID                    = 52
-	selectorLocationErrorID               = 53
-	unsupportedSelectorSchemeErrorID      = 54
-	entityAmbiguityErrorID                = 55
-	entityMissingKeyErrorID               = 56
-	unknownPolicyUpdateOperationErrorID   = 57
-	invalidPolicyUpdatePathElementErrorID = 58
+	entityAmbiguityErrorID                = 53
+	entityMissingKeyErrorID               = 54
+	unknownPolicyUpdateOperationErrorID   = 55
+	invalidPolicyUpdatePathElementErrorID = 56
 )
 
 type externalError struct {
@@ -110,7 +108,7 @@ func (e *rootKeysError) Error() string {
 	}
 	s := strings.Join(keys, ", ")
 
-	return e.errorf("Expected attribute definitions and policies but got: %s", s)
+	return e.errorf("Expected type, attribute definitions and policies but got: %s", s)
 }
 
 type stringError struct {
@@ -275,21 +273,6 @@ func newMissingListError(desc string) *missingListError {
 
 func (e *missingListError) Error() string {
 	return e.errorf("Missing %s", e.desc)
-}
-
-type attributeTypeError struct {
-	errorLink
-	t string
-}
-
-func newAttributeTypeError(t string) *attributeTypeError {
-	return &attributeTypeError{
-		errorLink: errorLink{id: attributeTypeErrorID},
-		t:         t}
-}
-
-func (e *attributeTypeError) Error() string {
-	return e.errorf("Expected attribute data type but got \"%s\"", e.t)
 }
 
 type policyAmbiguityError struct {
@@ -779,6 +762,21 @@ func (e *unknownAttributeError) Error() string {
 	return e.errorf("Unknown attribute %q", e.ID)
 }
 
+type unknownMetaTypeError struct {
+	errorLink
+	meta string
+}
+
+func newUnknownMetaTypeError(meta string) *unknownMetaTypeError {
+	return &unknownMetaTypeError{
+		errorLink: errorLink{id: unknownMetaTypeErrorID},
+		meta:      meta}
+}
+
+func (e *unknownMetaTypeError) Error() string {
+	return e.errorf("Unknown meta type %q", e.meta)
+}
+
 type unknownTypeError struct {
 	errorLink
 	t string
@@ -791,7 +789,7 @@ func newUnknownTypeError(t string) *unknownTypeError {
 }
 
 func (e *unknownTypeError) Error() string {
-	return e.errorf("Unknown value type %q", e.t)
+	return e.errorf("Unknown type %q", e.t)
 }
 
 type invalidTypeError struct {
@@ -901,40 +899,6 @@ func newSelectorURIError(uri string, err error) *selectorURIError {
 
 func (e *selectorURIError) Error() string {
 	return e.errorf("Expected seletor URI but got %q (%s)", e.uri, e.err)
-}
-
-type selectorLocationError struct {
-	errorLink
-	loc string
-	uri string
-}
-
-func newSelectorLocationError(loc, uri string) *selectorLocationError {
-	return &selectorLocationError{
-		errorLink: errorLink{id: selectorLocationErrorID},
-		loc:       loc,
-		uri:       uri}
-}
-
-func (e *selectorLocationError) Error() string {
-	return e.errorf("Expected selector location in form of <Content-ID>/<Item-ID> got %q (%s)", e.loc, e.uri)
-}
-
-type unsupportedSelectorSchemeError struct {
-	errorLink
-	scheme string
-	uri    string
-}
-
-func newUnsupportedSelectorSchemeError(scheme, uri string) *unsupportedSelectorSchemeError {
-	return &unsupportedSelectorSchemeError{
-		errorLink: errorLink{id: unsupportedSelectorSchemeErrorID},
-		scheme:    scheme,
-		uri:       uri}
-}
-
-func (e *unsupportedSelectorSchemeError) Error() string {
-	return e.errorf("Unsupported selector scheme %q (%s)", e.scheme, e.uri)
 }
 
 type entityAmbiguityError struct {
