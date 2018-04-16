@@ -263,19 +263,22 @@ func (p Policy) DepthMarshal(out io.Writer, depth int) error {
 		return err
 	}
 	if depth > 0 {
-		visRules := make([]*Rule, 0, len(p.rules))
-		for _, r := range p.rules {
+		var firstRule int
+		for i, r := range p.rules {
 			if _, ok := r.GetID(); ok {
-				visRules = append(visRules, r)
+				if err = r.DepthMarshal(out, depth-1); err != nil {
+					return err
+				}
+				firstRule = i
+				break
 			}
 		}
-		if err = visRules[0].DepthMarshal(out, depth-1); err != nil {
-			return err
-		}
-		for _, r := range visRules[1:] {
-			out.Write([]byte{','})
-			if err = r.DepthMarshal(out, depth-1); err != nil {
-				return err
+		for _, r := range p.rules[firstRule+1:] {
+			if _, ok := r.GetID(); ok {
+				out.Write([]byte{','})
+				if err = r.DepthMarshal(out, depth-1); err != nil {
+					return err
+				}
 			}
 		}
 	}

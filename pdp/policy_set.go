@@ -293,21 +293,31 @@ func (p PolicySet) DepthMarshal(out io.Writer, depth int) error {
 		return err
 	}
 	if depth > 0 {
-		visPolicies := make([]StorageMarshal, 0, len(p.policies))
-		for _, policy := range p.policies {
+		var firstPolicy int
+		for i, policy := range p.policies {
 			if _, ok := policy.GetID(); !ok {
 				continue
 			}
-			if marshP, ok := policy.(StorageMarshal); ok {
-				visPolicies = append(visPolicies, marshP)
+			marshP, ok := policy.(StorageMarshal)
+			if !ok {
+				continue
 			}
+			if err = marshP.DepthMarshal(out, depth-1); err != nil {
+				return err
+			}
+			firstPolicy = i
+			break
 		}
-		if err = visPolicies[0].DepthMarshal(out, depth-1); err != nil {
-			return err
-		}
-		for _, policy := range visPolicies[1:] {
+		for _, policy := range p.policies[firstPolicy+1:] {
+			if _, ok := policy.GetID(); !ok {
+				continue
+			}
+			marshP, ok := policy.(StorageMarshal)
+			if !ok {
+				continue
+			}
 			out.Write([]byte{','})
-			if err := policy.DepthMarshal(out, depth-1); err != nil {
+			if err := marshP.DepthMarshal(out, depth-1); err != nil {
 				return err
 			}
 		}
