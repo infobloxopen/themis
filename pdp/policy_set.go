@@ -32,6 +32,8 @@ var (
 	// of the algorithm. Contains only algorithms which require parameters.
 	PolicyCombiningParamAlgs = map[string]PolicyCombiningAlgMaker{
 		"mapper": makeMapperPCA}
+
+	errHiddenPolicySet = fmt.Errorf("Attempting to marshal hidden policy set")
 )
 
 const policySetFmt = `{"ord": %d, "id": "%s", "policies": [`
@@ -281,16 +283,32 @@ func (p *PolicySet) delChild(ID string) (Evaluable, error) {
 // DepthMarshal implements StorageMarshal
 func (p PolicySet) DepthMarshal(out io.Writer, depth int) error {
 	if depth < 0 {
-		return nil
+		return fmt.Errorf("depth must be >= 0, got %d", depth)
+	}
+	if p.hidden {
+		return errHiddenPolicySet
 	}
 	_, err := out.Write([]byte(fmt.Sprintf(policySetFmt, p.ord, p.id)))
 	if err != nil {
 		return err
 	}
-	for _, p := range p.policies {
-		if _, ok := p.GetID(); ok {
-			if marshP, ok := p.(StorageMarshal); ok {
-				marshP.DepthMarshal(out, depth-1)
+	if depth > 0 {
+		visPolicies := make([]StorageMarshal, 0, len(p.policies))
+		for _, policy := range p.policies {
+			if _, ok := policy.GetID(); !ok {
+				continue
+			}
+			if marshP, ok := policy.(StorageMarshal); ok {
+				visPolicies = append(visPolicies, marshP)
+			}
+		}
+		if err = visPolicies[0].DepthMarshal(out, depth-1); err != nil {
+			return err
+		}
+		for _, policy := range visPolicies[1:] {
+			out.Write([]byte{','})
+			if err := policy.DepthMarshal(out, depth-1); err != nil {
+				return err
 			}
 		}
 	}

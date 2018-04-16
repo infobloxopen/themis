@@ -5,6 +5,8 @@ import (
 	"io"
 )
 
+var errHiddenRule = fmt.Errorf("Attempting to marshal hidden rule")
+
 const ruleFmt = `{"ord": %d, "id": "%s"}`
 
 // Rule represents PDP rule (child or PDP policy).
@@ -80,7 +82,10 @@ func (r Rule) calculate(ctx *Context) Response {
 // DepthMarshal implements StorageMarshal
 func (r Rule) DepthMarshal(out io.Writer, depth int) error {
 	if depth < 0 {
-		return nil
+		return fmt.Errorf("depth must be >= 0, got %d", depth)
+	}
+	if r.hidden {
+		return errHiddenRule
 	}
 	_, err := out.Write([]byte(fmt.Sprintf(ruleFmt, r.ord, r.id)))
 	return err

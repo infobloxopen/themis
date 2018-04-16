@@ -1,6 +1,7 @@
 package pdp
 
 import (
+	"bytes"
 	"sort"
 	"strings"
 	"testing"
@@ -711,6 +712,78 @@ func TestSortPoliciesByOrder(t *testing.T) {
 	e := "first, second, third, fourth"
 	if s != e {
 		t.Errorf("Expected policies in order \"%s\" but got \"%s\"", e, s)
+	}
+}
+
+func TestPolicySetDepthMarshal(t *testing.T) {
+	var (
+		buf  bytes.Buffer
+		buf2 bytes.Buffer
+		buf3 bytes.Buffer
+		p    = makeSimplePolicySet("test",
+			makeSimplePolicy("first", makeSimpleRule("permit", EffectPermit)),
+			makeSimplePolicy("second", makeSimpleRule("permit", EffectPermit)),
+			makeSimplePolicy("third", makeSimpleRule("permit", EffectPermit)),
+		)
+		hiddenP = makeSimpleHiddenPolicySet(
+			makeSimplePolicy("first", makeSimpleRule("permit", EffectPermit)),
+			makeSimplePolicy("second", makeSimpleRule("permit", EffectPermit)),
+			makeSimplePolicy("third", makeSimpleRule("permit", EffectPermit)),
+		)
+	)
+
+	// bad depth
+	err := p.DepthMarshal(&buf, -1)
+	expectErrMsg := "depth must be >= 0, got -1"
+	if err == nil {
+		t.Errorf("Expecting error message %s, got nil error", expectErrMsg)
+	} else if 0 != strings.Compare(err.Error(), expectErrMsg) {
+		t.Errorf("Expecting error message %s, got %s", expectErrMsg, err.Error())
+	}
+
+	// depth = 0, visible policy
+	expectMarshal := `{"ord": 0, "id": "test", "policies": []}`
+	err = p.DepthMarshal(&buf, 0)
+	if err != nil {
+		t.Errorf("Expecting no error, got %v", err)
+	} else {
+		gotMarshal := buf.String()
+		if 0 != strings.Compare(gotMarshal, expectMarshal) {
+			t.Errorf("Expecting marshal output %s, got %s", expectMarshal, gotMarshal)
+		}
+	}
+
+	// show children, visible policy
+	cRule := `, "rules": [{"ord": 0, "id": "permit"}]}`
+	expectChildren := `{"ord": 0, "id": "first"` + cRule + `,{"ord": 1, "id": "second"` + cRule + `,{"ord": 2, "id": "third"` + cRule
+	expectWithC := `{"ord": 0, "id": "test", "policies": [` + expectChildren + `]}`
+	err = p.DepthMarshal(&buf2, 2)
+	if err != nil {
+		t.Errorf("Expecting no error, got %v", err)
+	} else {
+		gotMarshal := buf2.String()
+		if 0 != strings.Compare(gotMarshal, expectWithC) {
+			t.Errorf("Expecting marshal output %s, got %s",
+				expectWithC, gotMarshal)
+		}
+	}
+
+	// depth beyond maximum, visible policy
+	err = p.DepthMarshal(&buf3, 100)
+	if err != nil {
+		t.Errorf("Expecting no error, got %v", err)
+	} else {
+		gotMarshal := buf3.String()
+		if 0 != strings.Compare(gotMarshal, expectWithC) {
+			t.Errorf("Expecting marshal output %s, got %s",
+				expectWithC, gotMarshal)
+		}
+	}
+
+	// good depth, hidden policy
+	err = hiddenP.DepthMarshal(&buf, 0)
+	if err != errHiddenPolicySet {
+		t.Errorf("Expecting error %v, got %v", errHiddenPolicySet, err)
 	}
 }
 
