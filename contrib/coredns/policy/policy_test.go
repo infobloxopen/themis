@@ -371,6 +371,9 @@ func TestPolicy(t *testing.T) {
 			response:   &pdp.Response{Effect: pdp.Response_PERMIT},
 			responseIP: &pdp.Response{Effect: pdp.Response_PERMIT},
 			err:        nil,
+			attrs: []*pdp.Attribute{
+				{Id: attrNameSourceIP, Value: "10.240.0.1"},
+			},
 		},
 	}
 
