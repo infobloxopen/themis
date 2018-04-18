@@ -547,7 +547,7 @@ func TestPolicyDelete(t *testing.T) {
 	}
 }
 
-func TestPolicyDepthMarshal(t *testing.T) {
+func TestPolicyMarshalJSON(t *testing.T) {
 	var (
 		buf  bytes.Buffer
 		buf2 bytes.Buffer
@@ -557,25 +557,20 @@ func TestPolicyDepthMarshal(t *testing.T) {
 			makeSimpleRule("second", EffectPermit),
 			makeSimpleRule("third", EffectPermit),
 		)
-		hiddenP = makeSimpleHiddenPolicy(
-			makeSimpleRule("first", EffectPermit),
-			makeSimpleRule("second", EffectPermit),
-			makeSimpleRule("third", EffectPermit),
-		)
 	)
 
 	// bad depth
-	err := p.DepthMarshal(&buf, -1)
-	expectErrMsg := "depth must be >= 0, got -1"
+	err := p.MarshalJSON(&buf, -1)
+	expectErr := newMarshalInvalidDepthError(-1)
 	if err == nil {
-		t.Errorf("Expecting error message %s, got nil error", expectErrMsg)
-	} else if 0 != strings.Compare(err.Error(), expectErrMsg) {
-		t.Errorf("Expecting error message %s, got %s", expectErrMsg, err.Error())
+		t.Errorf("Expecting error %v, got nil error", expectErr)
+	} else if err.Error() != expectErr.Error() {
+		t.Errorf("Expecting error %v, got %v", expectErr, err)
 	}
 
 	// depth = 0, visible policy
-	expectMarshal := `{"ord": 0, "id": "test", "rules": []}`
-	err = p.DepthMarshal(&buf, 0)
+	expectMarshal := `{"ord":0,"id":"test","rules":[]}`
+	err = p.MarshalJSON(&buf, 0)
 	if err != nil {
 		t.Errorf("Expecting no error, got %v", err)
 	} else {
@@ -586,9 +581,9 @@ func TestPolicyDepthMarshal(t *testing.T) {
 	}
 
 	// show children, visible policy
-	expectChildren := `{"ord": 0, "id": "first"},{"ord": 1, "id": "second"},{"ord": 2, "id": "third"}`
-	expectWithC := `{"ord": 0, "id": "test", "rules": [` + expectChildren + `]}`
-	err = p.DepthMarshal(&buf2, 1)
+	expectChildren := `{"ord":0,"id":"first"},{"ord":1,"id":"second"},{"ord":2,"id":"third"}`
+	expectWithC := `{"ord":0,"id":"test","rules":[` + expectChildren + `]}`
+	err = p.MarshalJSON(&buf2, 1)
 	if err != nil {
 		t.Errorf("Expecting no error, got %v", err)
 	} else {
@@ -600,7 +595,7 @@ func TestPolicyDepthMarshal(t *testing.T) {
 	}
 
 	// depth beyond maximum, visible policy
-	err = p.DepthMarshal(&buf3, 100)
+	err = p.MarshalJSON(&buf3, 100)
 	if err != nil {
 		t.Errorf("Expecting no error, got %v", err)
 	} else {
@@ -609,12 +604,6 @@ func TestPolicyDepthMarshal(t *testing.T) {
 			t.Errorf("Expecting marshal output %s, got %s",
 				expectWithC, gotMarshal)
 		}
-	}
-
-	// good depth, hidden policy
-	err = hiddenP.DepthMarshal(&buf, 0)
-	if err != errHiddenPolicy {
-		t.Errorf("Expecting error %v, got %v", errHiddenPolicy, err)
 	}
 }
 

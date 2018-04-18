@@ -1,6 +1,7 @@
 package pdp
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 )
@@ -32,11 +33,7 @@ var (
 	// of the algorithm. Contains only algorithms which require parameters.
 	PolicyCombiningParamAlgs = map[string]PolicyCombiningAlgMaker{
 		"mapper": makeMapperPCA}
-
-	errHiddenPolicySet = fmt.Errorf("Attempting to marshal hidden policy set")
 )
-
-const policySetFmt = `{"ord": %d, "id": "%s", "policies": [`
 
 // PolicySet represens PDP policy set (the set groups other policy sets and policies).
 type PolicySet struct {
@@ -280,17 +277,22 @@ func (p *PolicySet) delChild(ID string) (Evaluable, error) {
 	return p.updatedCopy(policies, algorithm), nil
 }
 
-// DepthMarshal implements StorageMarshal
-func (p PolicySet) DepthMarshal(out io.Writer, depth int) error {
+// MarshalJSON implements StorageMarshal
+func (p PolicySet) MarshalJSON(out io.Writer, depth int) error {
 	if depth < 0 {
-		return fmt.Errorf("depth must be >= 0, got %d", depth)
+		return newMarshalInvalidDepthError(depth)
 	}
-	if p.hidden {
-		return errHiddenPolicySet
-	}
-	_, err := out.Write([]byte(fmt.Sprintf(policySetFmt, p.ord, p.id)))
+	pjson, err := json.Marshal(storageNodeFmt{
+		Ord: p.ord,
+		ID:  p.id,
+	})
 	if err != nil {
-		return err
+		return bindErrorf(err, "psid=\"%s\"", p.id)
+	}
+	_, err = out.Write(append(pjson[:len(pjson)-1],
+		[]byte(",\"policies\":[")...))
+	if err != nil {
+		return bindErrorf(err, "psid=\"%s\"", p.id)
 	}
 	if depth > 0 {
 		var firstPolicy int
@@ -302,13 +304,13 @@ func (p PolicySet) DepthMarshal(out io.Writer, depth int) error {
 			if !ok {
 				continue
 			}
-			if err = marshP.DepthMarshal(out, depth-1); err != nil {
-				return err
+			if err = marshP.MarshalJSON(out, depth-1); err != nil {
+				return bindErrorf(err, "psid=\"%s\",i=%d", p.id, i)
 			}
 			firstPolicy = i
 			break
 		}
-		for _, policy := range p.policies[firstPolicy+1:] {
+		for i, policy := range p.policies[firstPolicy+1:] {
 			if _, ok := policy.GetID(); !ok {
 				continue
 			}
@@ -316,14 +318,19 @@ func (p PolicySet) DepthMarshal(out io.Writer, depth int) error {
 			if !ok {
 				continue
 			}
-			out.Write([]byte{','})
-			if err := marshP.DepthMarshal(out, depth-1); err != nil {
-				return err
+			if _, err := out.Write([]byte{','}); err != nil {
+				return bindErrorf(err, "psid=\"%s\",i=%d", p.id, i)
+			}
+			if err := marshP.MarshalJSON(out, depth-1); err != nil {
+				return bindErrorf(err, "psid=\"%s\",i=%d", p.id, i)
 			}
 		}
 	}
 	_, err = out.Write([]byte("]}"))
-	return err
+	if err != nil {
+		return bindErrorf(err, "psid=\"%s\"", p.id)
+	}
+	return nil
 }
 
 type firstApplicableEffectPCA struct {

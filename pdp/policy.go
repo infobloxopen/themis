@@ -1,6 +1,7 @@
 package pdp
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 )
@@ -30,11 +31,7 @@ var (
 	// of the algorithm. Contains only algorithms which require parameters.
 	RuleCombiningParamAlgs = map[string]RuleCombiningAlgMaker{
 		"mapper": makeMapperRCA}
-
-	errHiddenPolicy = fmt.Errorf("Attempting to marshal hidden policy")
 )
-
-const policyFmt = `{"ord": %d, "id": "%s", "rules": [`
 
 // Policy represent PDP policy (minimal evaluable entity).
 type Policy struct {
@@ -250,40 +247,50 @@ func (p *Policy) delChild(ID string) (*Policy, error) {
 	return p.updatedCopy(rules, algorithm), nil
 }
 
-// DepthMarshal implements StorageMarshal
-func (p Policy) DepthMarshal(out io.Writer, depth int) error {
+// MarshalJSON implements StorageMarshal
+func (p Policy) MarshalJSON(out io.Writer, depth int) error {
 	if depth < 0 {
-		return fmt.Errorf("depth must be >= 0, got %d", depth)
+		return newMarshalInvalidDepthError(depth)
 	}
-	if p.hidden {
-		return errHiddenPolicy
-	}
-	_, err := out.Write([]byte(fmt.Sprintf(policyFmt, p.ord, p.id)))
+	pjson, err := json.Marshal(storageNodeFmt{
+		Ord: p.ord,
+		ID:  p.id,
+	})
 	if err != nil {
-		return err
+		return bindErrorf(err, "pid=\"%s\"", p.id)
+	}
+	_, err = out.Write(append(pjson[:len(pjson)-1],
+		[]byte(",\"rules\":[")...))
+	if err != nil {
+		return bindErrorf(err, "pid=\"%s\"", p.id)
 	}
 	if depth > 0 {
 		var firstRule int
 		for i, r := range p.rules {
 			if _, ok := r.GetID(); ok {
-				if err = r.DepthMarshal(out, depth-1); err != nil {
-					return err
+				if err = r.MarshalJSON(out, depth-1); err != nil {
+					return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
 				}
 				firstRule = i
 				break
 			}
 		}
-		for _, r := range p.rules[firstRule+1:] {
+		for i, r := range p.rules[firstRule+1:] {
 			if _, ok := r.GetID(); ok {
-				out.Write([]byte{','})
-				if err = r.DepthMarshal(out, depth-1); err != nil {
-					return err
+				if _, err := out.Write([]byte{','}); err != nil {
+					return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
+				}
+				if err = r.MarshalJSON(out, depth-1); err != nil {
+					return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
 				}
 			}
 		}
 	}
 	_, err = out.Write([]byte("]}"))
-	return err
+	if err != nil {
+		return bindErrorf(err, "pid=\"%s\"", p.id)
+	}
+	return nil
 }
 
 type firstApplicableEffectRCA struct {

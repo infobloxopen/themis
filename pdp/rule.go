@@ -1,13 +1,10 @@
 package pdp
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 )
-
-var errHiddenRule = fmt.Errorf("Attempting to marshal hidden rule")
-
-const ruleFmt = `{"ord": %d, "id": "%s"}`
 
 // Rule represents PDP rule (child or PDP policy).
 type Rule struct {
@@ -79,16 +76,23 @@ func (r Rule) calculate(ctx *Context) Response {
 	return Response{r.effect, nil, r.obligations}
 }
 
-// DepthMarshal implements StorageMarshal
-func (r Rule) DepthMarshal(out io.Writer, depth int) error {
+// MarshalJSON implements StorageMarshal
+func (r Rule) MarshalJSON(out io.Writer, depth int) error {
 	if depth < 0 {
-		return fmt.Errorf("depth must be >= 0, got %d", depth)
+		return newMarshalInvalidDepthError(depth)
 	}
-	if r.hidden {
-		return errHiddenRule
+	rjson, err := json.Marshal(storageNodeFmt{
+		Ord: r.ord,
+		ID:  r.id,
+	})
+	if err != nil {
+		return bindErrorf(err, "rid=\"%s\"", r.id)
 	}
-	_, err := out.Write([]byte(fmt.Sprintf(ruleFmt, r.ord, r.id)))
-	return err
+	_, err = out.Write(rjson)
+	if err != nil {
+		return bindErrorf(err, "rid=\"%s\"", r.id)
+	}
+	return nil
 }
 
 type byRuleOrder []*Rule
