@@ -498,17 +498,22 @@ func (p *policyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg) {
 		return
 	}
 
+	var option []dns.EDNS0
 	for _, opt := range o.Option {
 		optLocal, local := opt.(*dns.EDNS0_LOCAL)
 		if !local {
+			option = append(option, opt)
 			continue
 		}
 		options, ok := p.options[optLocal.Code]
 		if !ok {
+			option = append(option, opt)
 			continue
 		}
 		parseOptionGroup(ah, optLocal.Data, options)
 	}
+	o.Option = option
+	return
 }
 
 func resolve(status int) string {
@@ -603,9 +608,11 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	// turn off default Cq and Cr dnstap messages
 	resetCqCr(ctx)
 
-	var ah *attrHolder
 	debugQuery := p.decodeDebugMsg(r)
 	qName, qType := getNameAndType(r)
+	ah := newAttrHolder(qName, qType, getRemoteIP(w), p.confAttrs)
+	p.getAttrsFromEDNS0(ah, r)
+
 	for _, s := range p.passthrough {
 		if strings.HasSuffix(qName, s) {
 			responseWriter := nonwriter.New(w)
@@ -622,8 +629,6 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 			goto Exit
 		}
 	}
-	ah = newAttrHolder(qName, qType, getRemoteIP(w), p.confAttrs)
-	p.getAttrsFromEDNS0(ah, r)
 
 	// validate domain name (validation #1)
 	err = p.validate(ah, "")
@@ -688,7 +693,7 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 Exit:
 	r.Rcode = status
 	r.Response = true
-	clearEdns(r)
+	clearECS(r)
 	if debugQuery {
 		r.Question[0].Name = r.Question[0].Name + p.debugSuffix
 		r.Question[0].Qtype = dns.TypeTXT
@@ -705,18 +710,21 @@ Exit:
 	return dns.RcodeSuccess, err
 }
 
-func clearEdns(r *dns.Msg) {
-	for _, rr := range r.Extra {
-		// preserve DO flag
-		if rr, ok := rr.(*dns.OPT); ok {
-			if rr.Do() {
-				r.Extra = nil
-				r.SetEdns0(4096, true)
-				return
-			}
-		}
+func clearECS(r *dns.Msg) {
+	o := r.IsEdns0()
+	if o == nil {
+		return
 	}
-	r.Extra = nil
+
+	var option []dns.EDNS0
+	for _, opt := range o.Option {
+		if _, ok := opt.(*dns.EDNS0_SUBNET); ok {
+			continue
+		}
+		option = append(option, opt)
+	}
+	o.Option = option
+	return
 }
 
 // Name implements the Handler interface
