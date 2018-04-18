@@ -25,7 +25,7 @@ To make a decision PDP evaluates policies it has on request **context**. A reque
 - **IndeterminateDP** - PDP can't evaluate effect but if it could it would be only **Deny** or **Permit**;
 In case of any **Indeterminate** effect **status** contains textual representation of an issue.
 
-Some application may require more details for particular decision. For example if application can write log it may need a flag attached to decision which says when to do it. These details can be delivered as **obligations**. The **obligations** are set of attributes like in request context. Each attribute has name, type and value. Attribute name is arbitrary string (request context requires pair of attribute name and type to be unique). Following types are defined:
+Some application may require more details for particular decision. For example if application can write log it may need a flag attached to decision which says when to do it. These details can be delivered as **obligations**. The **obligations** are set of attributes like in request context. Each attribute has name, type and value. Attribute name is arbitrary string (request context requires pair of attribute name and type to be unique). Following built-in types are defined:
 - **boolean**;
 - **string**;
 - **integer** - signed 64-bit integer;
@@ -38,13 +38,40 @@ Some application may require more details for particular decision. For example i
 - **set of networks** - set of IPv4 or IPv6 network addresses (unordered);
 - **list of strings**. 
 
-**Boolean** value is accepted as "1", "t", "T", "TRUE", "true", "True", "0", "f", "F", "FALSE", "false", "False" and serialized to "true" and "false". **Float** value can be specified using decimal format (e.g. 3.1416) or scientific notation (e.g. 6.022E+23). **Address** accepted in dotted decimal ("192.0.2.1") form or in IPv6 ("2001:db8::68") form and serialized respectively. **Network** is accepted as a CIDR notation IP address and prefix (for example "192.0.2.0/24" or "2001:db8::/32"). **Domain** name is accepted as string of labels separated by dots (string is converted from punycode to ASCII and validated with regualar expression "^[-.\_A-Za-z0-9]+$" (**TODO**: need to rework according to RFC1035, 2181 and 4343). **Set of strings**, **set of domains**, **set of networks** and **list of strings** aren't accepted in request context but can appear in response's obligations as comma separated list of values.
+**Boolean** value is accepted as "1", "t", "T", "TRUE", "true", "True", "0", "f", "F", "FALSE", "false", "False" and serialized to "true" and "false". **Integer** value is a decimal number in range [-9223372036854775808, 9223372036854775807]. **Float** value can be specified using decimal format (e.g. 3.1416) or scientific notation (e.g. 6.022E+23). **Address** accepted in dotted decimal ("192.0.2.1") form or in IPv6 ("2001:db8::68") form and serialized respectively. **Network** is accepted as a CIDR notation IP address and prefix (for example "192.0.2.0/24" or "2001:db8::/32"). **Domain** name is accepted as string of labels separated by dots which satisfies to RFC1035, 2181 and 4343 requirements. **Set of strings**, **set of domains**, **set of networks** and **list of strings** aren't accepted in request context but can appear in response's obligations as comma separated list of values.
+
+User can define her custom type based on **flags** metatype. A value of the type can be any combination of listed flags. PDP allows to define up to 64 flags for a type. Values can't appear in request or returned as obligations.
 
 ## Policies
 PDP uses YAML based language (YAML Abstract Syntax Tree or YAST) or JSON based language (JSON Abstract Syntax Tree or JAST) to define **policies** and specifically constructed JSON to define local **content**  (JSON Content or JCON). YAST can be converted to JAST (and vise versa) with any YAML to JSON convertor.
 
 ### Root
-Any **policies** definition consists of attributes (optional) and policies (required) sections. Attributes section contains set of pairs attribute name and type. For example:
+Any **policies** definition consists of policies (required), attributes (optional) and types (optional) sections. Policies section contains root **policy** or **policy set**. **Policy** holds rules under its "rules" field while **policy set** is able to contain both inner policies or policy sets under its "policies" field. For example:
+
+**YAST**
+```yaml
+# All permit policy (without "attributes" section)
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - effect: Permit
+```
+
+**JAST**
+```json
+{
+  "policies": {
+    "alg": "FirstApplicableEffect",
+    "rules": [
+      {
+        "effect": "Permit"
+      }
+    ]
+  }
+}
+```
+
+Attributes section contains set of pairs attribute name and type:
 
 **YAST**
 ```yaml
@@ -60,15 +87,6 @@ policies:
     - val:
         type: string
         content: "test"
-  rules:
-  - effect: Permit
-```
-
-**YAST**
-```yaml
-# All permit policy (without "attributes" section)
-policies:
-  alg: FirstApplicableEffect
   rules:
   - effect: Permit
 ```
@@ -105,20 +123,71 @@ policies:
 }
 ```
 
+Types section is designed for custom type definitions which now are limited to only **flags** metatype:
+
+**YAST**
+```yaml
+types:
+  colors:
+    meta: flags
+    flags:
+    - red
+    - green
+    - blue
+
+attributes:
+  c: list of strings
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - effect: Permit
+    obligations:
+    - c:
+        list of strings:
+        - val:
+            type: colors
+            content:
+            - red
+            - blue
+```
+
 **JAST**
 ```json
 {
+  "types": {
+    "colors": {
+      "meta": "flags",
+      "flags": ["red", "green", "blue"]
+    }
+  },
+  "attributes": {
+    "c": "list of strings"
+  },
   "policies": {
     "alg": "FirstApplicableEffect",
     "rules": [
       {
-        "effect": "Permit"
+        "effect": "Permit",
+        "obligations": [
+          {
+            "c": {
+              "list of strings": [
+                {
+                  "val": {
+                    "type": "colors",
+                    "content": ["red", "blue"]
+                  }
+                }
+              ]
+            }
+          }
+        ]
       }
     ]
   }
 }
 ```
-Policies section contains root **policy** or **policy set**. **Policy** holds rules under its "rules" field while **policy set** is able to contain both inner policies or policy sets under its "policies" field.
 
 ### Policy Set
 Policy Set holds set of **policies** or inner **policy sets** and defines how to combine them. It has following fields:
@@ -452,6 +521,17 @@ obligations:
       content:
       - first
       - second
+...
+# Custom Flags
+types:
+  colors:
+    meta: flags
+    flags: [red, green, blue]
+
+...
+val:
+  type: colors
+  content: [blue, green]
 ```
 
 ### Selector
