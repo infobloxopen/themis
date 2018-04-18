@@ -67,6 +67,8 @@ const (
 	entityMissingKeyErrorID               = 54
 	unknownPolicyUpdateOperationErrorID   = 55
 	invalidPolicyUpdatePathElementErrorID = 56
+	invalidFlagsCapacityErrorID           = 57
+	unknownFlagNameErrorID                = 58
 )
 
 type externalError struct {
@@ -959,4 +961,36 @@ func newInvalidPolicyUpdatePathElementError(v interface{}, idx int) *invalidPoli
 
 func (e *invalidPolicyUpdatePathElementError) Error() string {
 	return e.errorf("Expected string as %d path element but got %T", e.idx, e.v)
+}
+
+type invalidFlagsCapacityError struct {
+	errorLink
+	t *pdp.FlagsType
+}
+
+func newInvalidFlagsCapacityError(t *pdp.FlagsType) *invalidFlagsCapacityError {
+	return &invalidFlagsCapacityError{
+		errorLink: errorLink{id: invalidFlagsCapacityErrorID},
+		t:         t}
+}
+
+func (e *invalidFlagsCapacityError) Error() string {
+	return e.errorf("Type %q has invalid capacity %d", e.t, e.t.Capacity())
+}
+
+type unknownFlagNameError struct {
+	errorLink
+	name string
+	t    *pdp.FlagsType
+}
+
+func newUnknownFlagNameError(name string, t *pdp.FlagsType) *unknownFlagNameError {
+	return &unknownFlagNameError{
+		errorLink: errorLink{id: unknownFlagNameErrorID},
+		name:      name,
+		t:         t}
+}
+
+func (e *unknownFlagNameError) Error() string {
+	return e.errorf("Type %q doesn't have flag %q", e.t, e.name)
 }

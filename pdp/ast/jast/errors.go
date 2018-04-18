@@ -58,6 +58,8 @@ const (
 	missingMetaTypeNameErrorID          = 44
 	unknownMetaTypeErrorID              = 45
 	missingFlagNameListErrorID          = 46
+	invalidFlagsCapacityErrorID         = 47
+	unknownFlagNameErrorID              = 48
 )
 
 type externalError struct {
@@ -768,4 +770,36 @@ func newMissingFlagNameListError() *missingFlagNameListError {
 
 func (e *missingFlagNameListError) Error() string {
 	return e.errorf("Missing list of flag names")
+}
+
+type invalidFlagsCapacityError struct {
+	errorLink
+	t *pdp.FlagsType
+}
+
+func newInvalidFlagsCapacityError(t *pdp.FlagsType) *invalidFlagsCapacityError {
+	return &invalidFlagsCapacityError{
+		errorLink: errorLink{id: invalidFlagsCapacityErrorID},
+		t:         t}
+}
+
+func (e *invalidFlagsCapacityError) Error() string {
+	return e.errorf("Type %q has invalid capacity %d", e.t, e.t.Capacity())
+}
+
+type unknownFlagNameError struct {
+	errorLink
+	name string
+	t    *pdp.FlagsType
+}
+
+func newUnknownFlagNameError(name string, t *pdp.FlagsType) *unknownFlagNameError {
+	return &unknownFlagNameError{
+		errorLink: errorLink{id: unknownFlagNameErrorID},
+		name:      name,
+		t:         t}
+}
+
+func (e *unknownFlagNameError) Error() string {
+	return e.errorf("Type %q doesn't have flag %q", e.t, e.name)
 }

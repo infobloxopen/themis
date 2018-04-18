@@ -71,7 +71,8 @@ func (t *builtinType) GetKey() string {
 	return t.k
 }
 
-type flagsType struct {
+// FlagsType instance represents cutom flags type.
+type FlagsType struct {
 	n string
 	k string
 	f map[string]int
@@ -118,7 +119,7 @@ func NewFlagsType(name string, flags ...string) (Type, error) {
 		f[n] = i
 	}
 
-	return &flagsType{
+	return &FlagsType{
 		n: name,
 		k: strings.ToLower(name),
 		f: f,
@@ -127,12 +128,29 @@ func NewFlagsType(name string, flags ...string) (Type, error) {
 	}, nil
 }
 
-func (t *flagsType) String() string {
+// String method returns human readable type name.
+func (t *FlagsType) String() string {
 	return t.n
 }
 
-func (t *flagsType) GetKey() string {
+// GetKey method returns case insensitive (always lowercase) type key.
+func (t *FlagsType) GetKey() string {
 	return t.k
+}
+
+// Capacity gets number of bits required to represent any flags combination.
+func (t *FlagsType) Capacity() int {
+	return t.c
+}
+
+// GetFlagBit method returns bit number for given flag name. If there is no flag
+// with the name it returns -1.
+func (t *FlagsType) GetFlagBit(f string) int {
+	if n, ok := t.f[f]; ok {
+		return n
+	}
+
+	return -1
 }
 
 // Signature is an ordered sequence of types.

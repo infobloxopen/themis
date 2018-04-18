@@ -192,7 +192,114 @@ func (ctx context) unmarshalListOfStringsValue(v interface{}) (pdp.AttributeValu
 	return pdp.MakeListOfStringsValue(list), nil
 }
 
+func (ctx context) unmarshalFlagsValue(v interface{}, t *pdp.FlagsType) (pdp.AttributeValue, boundError) {
+	f, err := ctx.validateList(v, "flag names")
+	if err != nil {
+		return pdp.UndefinedValue, err
+	}
+
+	switch t.Capacity() {
+	case 8:
+		return ctx.unmarshalFlags8Value(f, t)
+
+	case 16:
+		return ctx.unmarshalFlags16Value(f, t)
+
+	case 32:
+		return ctx.unmarshalFlags32Value(f, t)
+
+	case 64:
+		return ctx.unmarshalFlags64Value(f, t)
+	}
+
+	return pdp.UndefinedValue, newInvalidFlagsCapacityError(t)
+}
+
+func (ctx context) unmarshalFlags8Value(v []interface{}, t *pdp.FlagsType) (pdp.AttributeValue, boundError) {
+	var n uint8
+
+	for i, v := range v {
+		f, err := ctx.validateString(v, "flag name")
+		if err != nil {
+			return pdp.UndefinedValue, bindError(bindErrorf(err, "%d", i), "flag names")
+		}
+
+		b := t.GetFlagBit(f)
+		if b < 0 {
+			return pdp.UndefinedValue, bindError(bindErrorf(newUnknownFlagNameError(f, t), "%d", i), "flag names")
+		}
+
+		n |= 1 << uint(b)
+	}
+
+	return pdp.MakeFlagsValue8(n, t), nil
+}
+
+func (ctx context) unmarshalFlags16Value(v []interface{}, t *pdp.FlagsType) (pdp.AttributeValue, boundError) {
+	var n uint16
+
+	for i, v := range v {
+		f, err := ctx.validateString(v, "flag name")
+		if err != nil {
+			return pdp.UndefinedValue, bindError(bindErrorf(err, "%d", i), "flag names")
+		}
+
+		b := t.GetFlagBit(f)
+		if b < 0 {
+			return pdp.UndefinedValue, bindError(bindErrorf(newUnknownFlagNameError(f, t), "%d", i), "flag names")
+		}
+
+		n |= 1 << uint(b)
+	}
+
+	return pdp.MakeFlagsValue16(n, t), nil
+}
+
+func (ctx context) unmarshalFlags32Value(v []interface{}, t *pdp.FlagsType) (pdp.AttributeValue, boundError) {
+	var n uint32
+
+	for i, v := range v {
+		f, err := ctx.validateString(v, "flag name")
+		if err != nil {
+			return pdp.UndefinedValue, bindError(bindErrorf(err, "%d", i), "flag names")
+		}
+
+		b := t.GetFlagBit(f)
+		if b < 0 {
+			return pdp.UndefinedValue, bindError(bindErrorf(newUnknownFlagNameError(f, t), "%d", i), "flag names")
+		}
+
+		n |= 1 << uint(b)
+	}
+
+	return pdp.MakeFlagsValue32(n, t), nil
+}
+
+func (ctx context) unmarshalFlags64Value(v []interface{}, t *pdp.FlagsType) (pdp.AttributeValue, boundError) {
+	var n uint64
+
+	for i, v := range v {
+		f, err := ctx.validateString(v, "flag name")
+		if err != nil {
+			return pdp.UndefinedValue, bindError(bindErrorf(err, "%d", i), "flag names")
+		}
+
+		b := t.GetFlagBit(f)
+		if b < 0 {
+			return pdp.UndefinedValue, bindError(bindErrorf(newUnknownFlagNameError(f, t), "%d", i), "flag names")
+		}
+
+		n |= 1 << uint(b)
+	}
+
+	return pdp.MakeFlagsValue64(n, t), nil
+}
+
 func (ctx context) unmarshalValueByType(t pdp.Type, v interface{}) (pdp.AttributeValue, boundError) {
+	if t, ok := t.(*pdp.FlagsType); ok {
+		return ctx.unmarshalFlagsValue(v, t)
+	}
+
 	switch t {
 	case pdp.TypeString:
 		return ctx.unmarshalStringValue(v)

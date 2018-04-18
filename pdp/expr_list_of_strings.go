@@ -50,7 +50,7 @@ func (f functionListOfStrings) Calculate(ctx *Context) (AttributeValue, error) {
 		return v, nil
 	}
 
-	if t, ok := t.(*flagsType); ok {
+	if t, ok := t.(*FlagsType); ok {
 		var n uint64
 		switch t.c {
 		case 8:
@@ -107,7 +107,7 @@ func functionListOfStringsValidator(args []Expression) functionMaker {
 			return makeFunctionListOfStringsAlt
 		}
 
-		if _, ok := t.(*flagsType); ok {
+		if _, ok := t.(*FlagsType); ok {
 			return makeFunctionListOfStringsAlt
 		}
 	}

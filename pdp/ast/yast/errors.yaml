@@ -491,3 +491,23 @@ errors:
   args:
   - field: idx
   - field: v
+
+- id: invalidFlagsCapacityError
+  fields:
+  - id: t
+    type: "*pdp.FlagsType"
+  msg: "Type %q has invalid capacity %d"
+  args:
+  - field: t
+  - field: t.Capacity()
+
+- id: unknownFlagNameError
+  fields:
+  - id: name
+    type: string
+  - id: t
+    type: "*pdp.FlagsType"
+  msg: "Type %q doesn't have flag %q"
+  args:
+  - field: t
+  - field: name

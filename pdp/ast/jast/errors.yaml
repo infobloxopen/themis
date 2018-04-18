@@ -368,3 +368,23 @@ errors:
 
 - id: missingFlagNameListError
   msg: "Missing list of flag names"
+
+- id: invalidFlagsCapacityError
+  fields:
+  - id: t
+    type: "*pdp.FlagsType"
+  msg: "Type %q has invalid capacity %d"
+  args:
+  - field: t
+  - field: t.Capacity()
+
+- id: unknownFlagNameError
+  fields:
+  - id: name
+    type: string
+  - id: t
+    type: "*pdp.FlagsType"
+  msg: "Type %q doesn't have flag %q"
+  args:
+  - field: t
+  - field: name

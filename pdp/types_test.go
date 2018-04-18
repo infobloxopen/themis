@@ -29,7 +29,7 @@ func TestFlagsType(t *testing.T) {
 	ft8, err := NewFlagsType(flags8Name, flags8...)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else if ft8, ok := ft8.(*flagsType); ok {
+	} else if ft8, ok := ft8.(*FlagsType); ok {
 		n := ft8.String()
 		if n != flags8Name {
 			t.Errorf("Expected %q as type name but got %q", flags8Name, n)
@@ -40,14 +40,26 @@ func TestFlagsType(t *testing.T) {
 			t.Errorf("Expected %q as type key but got %q", strings.ToLower(flags8Name), k)
 		}
 
-		if ft8.c != 8 {
-			t.Errorf("Expected 8 bit as type capacity but got %d", ft8.c)
+		c := ft8.Capacity()
+		if c != 8 {
+			t.Errorf("Expected 8 bit as type capacity but got %d", c)
+		}
+
+		// Flags names use octal system
+		b := ft8.GetFlagBit("f06")
+		if b != 06 {
+			t.Errorf("Expected 006 as bit number for %q but got %03o", "f06", b)
+		}
+
+		b = ft8.GetFlagBit("f07")
+		if b != -1 {
+			t.Errorf("Expected no flag %q (-1) but got %03o", "f07", b)
 		}
 
 		assertMapStringIntKeys(ft8.f, flags8, "flags8 index", t)
 		assertStrings(ft8.b, flags8, "flags8 names", t)
 	} else {
-		t.Errorf("Expected *flagsType but got %T", ft8)
+		t.Errorf("Expected *FlagsType but got %T", ft8)
 	}
 
 	flags16Name := "16Flags"
@@ -58,7 +70,7 @@ func TestFlagsType(t *testing.T) {
 	ft16, err := NewFlagsType(flags16Name, flags16...)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else if ft16, ok := ft16.(*flagsType); ok {
+	} else if ft16, ok := ft16.(*FlagsType); ok {
 		n := ft16.String()
 		if n != flags16Name {
 			t.Errorf("Expected %q as type name but got %q", flags16Name, n)
@@ -69,14 +81,26 @@ func TestFlagsType(t *testing.T) {
 			t.Errorf("Expected %q as type key but got %q", strings.ToLower(flags16Name), k)
 		}
 
-		if ft16.c != 16 {
-			t.Errorf("Expected 16 bit as type capacity but got %d", ft16.c)
+		c := ft16.Capacity()
+		if c != 16 {
+			t.Errorf("Expected 16 bit as type capacity but got %d", c)
+		}
+
+		// Flags names use octal system
+		b := ft16.GetFlagBit("f16")
+		if b != 016 {
+			t.Errorf("Expected 016 as bit number for %q but got %03o", "f16", b)
+		}
+
+		b = ft16.GetFlagBit("f17")
+		if b != -1 {
+			t.Errorf("Expected no flag %q (-1) but got %03o", "f17", b)
 		}
 
 		assertMapStringIntKeys(ft16.f, flags16, "flags16 index", t)
 		assertStrings(ft16.b, flags16, "flags16 names", t)
 	} else {
-		t.Errorf("Expected *flagsType but got %T", ft16)
+		t.Errorf("Expected *FlagsType but got %T", ft16)
 	}
 
 	flags32Name := "32Flags"
@@ -89,7 +113,7 @@ func TestFlagsType(t *testing.T) {
 	ft32, err := NewFlagsType(flags32Name, flags32...)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else if ft32, ok := ft32.(*flagsType); ok {
+	} else if ft32, ok := ft32.(*FlagsType); ok {
 		n := ft32.String()
 		if n != flags32Name {
 			t.Errorf("Expected %q as type name but got %q", flags32Name, n)
@@ -100,14 +124,26 @@ func TestFlagsType(t *testing.T) {
 			t.Errorf("Expected %q as type key but got %q", strings.ToLower(flags32Name), k)
 		}
 
-		if ft32.c != 32 {
-			t.Errorf("Expected 32 bit as type capacity but got %d", ft32.c)
+		c := ft32.Capacity()
+		if c != 32 {
+			t.Errorf("Expected 32 bit as type capacity but got %d", c)
+		}
+
+		// Flags names use octal system
+		b := ft32.GetFlagBit("f36")
+		if b != 036 {
+			t.Errorf("Expected 036 as bit number for %q but got %03o", "f36", b)
+		}
+
+		b = ft32.GetFlagBit("f37")
+		if b != -1 {
+			t.Errorf("Expected no flag %q (-1) but got %03o", "f37", b)
 		}
 
 		assertMapStringIntKeys(ft32.f, flags32, "flags32 index", t)
 		assertStrings(ft32.b, flags32, "flags32 names", t)
 	} else {
-		t.Errorf("Expected *flagsType but got %T", ft32)
+		t.Errorf("Expected *FlagsType but got %T", ft32)
 	}
 
 	flags64Name := "64Flags"
@@ -124,7 +160,7 @@ func TestFlagsType(t *testing.T) {
 	ft64, err := NewFlagsType(flags64Name, flags64...)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else if ft64, ok := ft64.(*flagsType); ok {
+	} else if ft64, ok := ft64.(*FlagsType); ok {
 		n := ft64.String()
 		if n != flags64Name {
 			t.Errorf("Expected %q as type name but got %q", flags64Name, n)
@@ -135,14 +171,26 @@ func TestFlagsType(t *testing.T) {
 			t.Errorf("Expected %q as type key but got %q", strings.ToLower(flags64Name), k)
 		}
 
-		if ft64.c != 64 {
-			t.Errorf("Expected 64 bit as type capacity but got %d", ft64.c)
+		c := ft64.Capacity()
+		if c != 64 {
+			t.Errorf("Expected 64 bit as type capacity but got %d", c)
+		}
+
+		// Flags names use octal system
+		b := ft64.GetFlagBit("f76")
+		if b != 076 {
+			t.Errorf("Expected 076 as bit number for %q but got %03o", "f76", b)
+		}
+
+		b = ft64.GetFlagBit("f77")
+		if b != -1 {
+			t.Errorf("Expected no flag %q (-1) but got %03o", "f77", b)
 		}
 
 		assertMapStringIntKeys(ft64.f, flags64, "flags64 index", t)
 		assertStrings(ft64.b, flags64, "flags64 names", t)
 	} else {
-		t.Errorf("Expected *flagsType but got %T", ft64)
+		t.Errorf("Expected *FlagsType but got %T", ft64)
 	}
 
 	ftBool, err := NewFlagsType("Boolean", "false", "true")

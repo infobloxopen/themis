@@ -158,7 +158,102 @@ func (ctx context) unmarshalListOfStringsValue(d *json.Decoder) (pdp.AttributeVa
 	return pdp.MakeListOfStringsValue(list), nil
 }
 
+func (ctx context) unmarshalFlagsValue(d *json.Decoder, t *pdp.FlagsType) (pdp.AttributeValue, error) {
+	switch t.Capacity() {
+	case 8:
+		return ctx.unmarshalFlags8Value(d, t)
+
+	case 16:
+		return ctx.unmarshalFlags16Value(d, t)
+
+	case 32:
+		return ctx.unmarshalFlags32Value(d, t)
+
+	case 64:
+		return ctx.unmarshalFlags64Value(d, t)
+
+	}
+
+	return pdp.UndefinedValue, newInvalidFlagsCapacityError(t)
+}
+
+func (ctx context) unmarshalFlags8Value(d *json.Decoder, t *pdp.FlagsType) (pdp.AttributeValue, error) {
+	var n uint8
+
+	if err := jparser.GetStringSequence(d, func(idx int, s string) error {
+		b := t.GetFlagBit(s)
+		if b < 0 {
+			return bindError(bindErrorf(newUnknownFlagNameError(s, t), "%d", idx), "flag names")
+		}
+
+		n |= 1 << uint(b)
+		return nil
+	}, "flag names"); err != nil {
+		return pdp.UndefinedValue, err
+	}
+
+	return pdp.MakeFlagsValue8(n, t), nil
+}
+
+func (ctx context) unmarshalFlags16Value(d *json.Decoder, t *pdp.FlagsType) (pdp.AttributeValue, error) {
+	var n uint16
+
+	if err := jparser.GetStringSequence(d, func(idx int, s string) error {
+		b := t.GetFlagBit(s)
+		if b < 0 {
+			return bindError(bindErrorf(newUnknownFlagNameError(s, t), "%d", idx), "flag names")
+		}
+
+		n |= 1 << uint(b)
+		return nil
+	}, "flag names"); err != nil {
+		return pdp.UndefinedValue, err
+	}
+
+	return pdp.MakeFlagsValue16(n, t), nil
+}
+
+func (ctx context) unmarshalFlags32Value(d *json.Decoder, t *pdp.FlagsType) (pdp.AttributeValue, error) {
+	var n uint32
+
+	if err := jparser.GetStringSequence(d, func(idx int, s string) error {
+		b := t.GetFlagBit(s)
+		if b < 0 {
+			return bindError(bindErrorf(newUnknownFlagNameError(s, t), "%d", idx), "flag names")
+		}
+
+		n |= 1 << uint(b)
+		return nil
+	}, "flag names"); err != nil {
+		return pdp.UndefinedValue, err
+	}
+
+	return pdp.MakeFlagsValue32(n, t), nil
+}
+
+func (ctx context) unmarshalFlags64Value(d *json.Decoder, t *pdp.FlagsType) (pdp.AttributeValue, error) {
+	var n uint64
+
+	if err := jparser.GetStringSequence(d, func(idx int, s string) error {
+		b := t.GetFlagBit(s)
+		if b < 0 {
+			return bindError(bindErrorf(newUnknownFlagNameError(s, t), "%d", idx), "flag names")
+		}
+
+		n |= 1 << uint(b)
+		return nil
+	}, "flag names"); err != nil {
+		return pdp.UndefinedValue, err
+	}
+
+	return pdp.MakeFlagsValue64(n, t), nil
+}
+
 func (ctx context) unmarshalValueByType(t pdp.Type, d *json.Decoder) (pdp.AttributeValue, error) {
+	if t, ok := t.(*pdp.FlagsType); ok {
+		return ctx.unmarshalFlagsValue(d, t)
+	}
+
 	switch t {
 	case pdp.TypeString:
 		return ctx.unmarshalStringValue(d)
@@ -215,9 +310,8 @@ func (ctx context) unmarshalValue(d *json.Decoder) (pdp.AttributeValue, error) {
 				return err
 			}
 
-			var ok bool
-			t, ok = pdp.BuiltinTypes[strings.ToLower(s)]
-			if !ok {
+			t = ctx.symbols.GetType(s)
+			if t == nil {
 				return newUnknownTypeError(s)
 			}
 
