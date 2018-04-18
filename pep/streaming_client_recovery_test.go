@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	fakeServerAddress    = ":5555"
-	fakeServerAltAddress = ":5556"
+	fakeServerAddress    = "127.0.0.1:5555"
+	fakeServerAltAddress = "127.0.0.1:5556"
 )
 
 func TestStreamClientRecovery(t *testing.T) {
