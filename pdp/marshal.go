@@ -5,7 +5,7 @@ import "io"
 // StorageMarshal interface defines functions
 // to capturing storage state information
 type StorageMarshal interface {
-	MarshalJSON(out io.Writer, depth int) error
+	MarshalWithDepth(out io.Writer, depth int) error
 }
 
 // PolicySet/Policy/Rule representation for marshaling

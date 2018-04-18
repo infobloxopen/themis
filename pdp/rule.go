@@ -76,8 +76,8 @@ func (r Rule) calculate(ctx *Context) Response {
 	return Response{r.effect, nil, r.obligations}
 }
 
-// MarshalJSON implements StorageMarshal
-func (r Rule) MarshalJSON(out io.Writer, depth int) error {
+// MarshalWithDepth implements StorageMarshal
+func (r Rule) MarshalWithDepth(out io.Writer, depth int) error {
 	if depth < 0 {
 		return newMarshalInvalidDepthError(depth)
 	}

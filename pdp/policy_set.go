@@ -277,8 +277,8 @@ func (p *PolicySet) delChild(ID string) (Evaluable, error) {
 	return p.updatedCopy(policies, algorithm), nil
 }
 
-// MarshalJSON implements StorageMarshal
-func (p PolicySet) MarshalJSON(out io.Writer, depth int) error {
+// MarshalWithDepth implements StorageMarshal
+func (p PolicySet) MarshalWithDepth(out io.Writer, depth int) error {
 	if depth < 0 {
 		return newMarshalInvalidDepthError(depth)
 	}
@@ -304,7 +304,7 @@ func (p PolicySet) MarshalJSON(out io.Writer, depth int) error {
 			if !ok {
 				continue
 			}
-			if err = marshP.MarshalJSON(out, depth-1); err != nil {
+			if err = marshP.MarshalWithDepth(out, depth-1); err != nil {
 				return bindErrorf(err, "psid=\"%s\",i=%d", p.id, i)
 			}
 			firstPolicy = i
@@ -321,7 +321,7 @@ func (p PolicySet) MarshalJSON(out io.Writer, depth int) error {
 			if _, err := out.Write([]byte{','}); err != nil {
 				return bindErrorf(err, "psid=\"%s\",i=%d", p.id, i)
 			}
-			if err := marshP.MarshalJSON(out, depth-1); err != nil {
+			if err := marshP.MarshalWithDepth(out, depth-1); err != nil {
 				return bindErrorf(err, "psid=\"%s\",i=%d", p.id, i)
 			}
 		}

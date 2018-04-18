@@ -715,7 +715,7 @@ func TestSortPoliciesByOrder(t *testing.T) {
 	}
 }
 
-func TestPolicySetMarshalJSON(t *testing.T) {
+func TestPolicySetMarshalWithDepth(t *testing.T) {
 	var (
 		buf  bytes.Buffer
 		buf2 bytes.Buffer
@@ -728,7 +728,7 @@ func TestPolicySetMarshalJSON(t *testing.T) {
 	)
 
 	// bad depth
-	err := p.MarshalJSON(&buf, -1)
+	err := p.MarshalWithDepth(&buf, -1)
 	expectErr := newMarshalInvalidDepthError(-1)
 	if err == nil {
 		t.Errorf("Expecting error %v, got nil error", expectErr)
@@ -738,7 +738,7 @@ func TestPolicySetMarshalJSON(t *testing.T) {
 
 	// depth = 0, visible policy
 	expectMarshal := `{"ord":0,"id":"test","policies":[]}`
-	err = p.MarshalJSON(&buf, 0)
+	err = p.MarshalWithDepth(&buf, 0)
 	if err != nil {
 		t.Errorf("Expecting no error, got %v", err)
 	} else {
@@ -752,7 +752,7 @@ func TestPolicySetMarshalJSON(t *testing.T) {
 	cRule := `,"rules":[{"ord":0,"id":"permit"}]}`
 	expectChildren := `{"ord":0,"id":"first"` + cRule + `,{"ord":1,"id":"second"` + cRule + `,{"ord":2,"id":"third"` + cRule
 	expectWithC := `{"ord":0,"id":"test","policies":[` + expectChildren + `]}`
-	err = p.MarshalJSON(&buf2, 2)
+	err = p.MarshalWithDepth(&buf2, 2)
 	if err != nil {
 		t.Errorf("Expecting no error, got %v", err)
 	} else {
@@ -764,7 +764,7 @@ func TestPolicySetMarshalJSON(t *testing.T) {
 	}
 
 	// depth beyond maximum, visible policy
-	err = p.MarshalJSON(&buf3, 100)
+	err = p.MarshalWithDepth(&buf3, 100)
 	if err != nil {
 		t.Errorf("Expecting no error, got %v", err)
 	} else {

@@ -40,7 +40,7 @@ func TestSortRulesByOrder(t *testing.T) {
 	}
 }
 
-func TestRuleMarshalJSON(t *testing.T) {
+func TestRuleMarshalWithDepth(t *testing.T) {
 	var (
 		buf  bytes.Buffer
 		rule = Rule{
@@ -50,7 +50,7 @@ func TestRuleMarshalJSON(t *testing.T) {
 	)
 
 	// bad depth
-	err := rule.MarshalJSON(&buf, -1)
+	err := rule.MarshalWithDepth(&buf, -1)
 	expectErr := newMarshalInvalidDepthError(-1)
 	if err == nil {
 		t.Errorf("Expecting error %v, got nil error", expectErr)
@@ -60,7 +60,7 @@ func TestRuleMarshalJSON(t *testing.T) {
 
 	// good depth, visible rule
 	expectMarshal := `{"ord":32,"id":"one"}`
-	err = rule.MarshalJSON(&buf, 0)
+	err = rule.MarshalWithDepth(&buf, 0)
 	if err != nil {
 		t.Errorf("Expecting no error, got %v", err)
 	} else {

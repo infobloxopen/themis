@@ -247,8 +247,8 @@ func (p *Policy) delChild(ID string) (*Policy, error) {
 	return p.updatedCopy(rules, algorithm), nil
 }
 
-// MarshalJSON implements StorageMarshal
-func (p Policy) MarshalJSON(out io.Writer, depth int) error {
+// MarshalWithDepth implements StorageMarshal
+func (p Policy) MarshalWithDepth(out io.Writer, depth int) error {
 	if depth < 0 {
 		return newMarshalInvalidDepthError(depth)
 	}
@@ -268,7 +268,7 @@ func (p Policy) MarshalJSON(out io.Writer, depth int) error {
 		var firstRule int
 		for i, r := range p.rules {
 			if _, ok := r.GetID(); ok {
-				if err = r.MarshalJSON(out, depth-1); err != nil {
+				if err = r.MarshalWithDepth(out, depth-1); err != nil {
 					return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
 				}
 				firstRule = i
@@ -280,7 +280,7 @@ func (p Policy) MarshalJSON(out io.Writer, depth int) error {
 				if _, err := out.Write([]byte{','}); err != nil {
 					return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
 				}
-				if err = r.MarshalJSON(out, depth-1); err != nil {
+				if err = r.MarshalWithDepth(out, depth-1); err != nil {
 					return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
 				}
 			}
