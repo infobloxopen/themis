@@ -598,9 +598,10 @@ func getNameAndClass(r *dns.Msg) (string, uint16) {
 // ServeDNS implements the Handler interface.
 func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	var (
-		status  = -1
-		respMsg *dns.Msg
-		err     error
+		status        = -1
+		respMsg       *dns.Msg
+		err           error
+		resolveFailed bool
 	)
 	p.wg.Add(1)
 	defer p.wg.Done()
@@ -642,6 +643,7 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		responseWriter := nonwriter.New(w)
 		_, err = plugin.NextOrFailure(p.Name(), p.next, ctx, responseWriter, r)
 		if err != nil {
+			resolveFailed = true
 			status = dns.RcodeServerFailure
 		} else {
 			respMsg = responseWriter.Msg
@@ -700,7 +702,7 @@ Exit:
 		r.Question[0].Qclass = dns.ClassCHAOS
 	}
 
-	if status != dns.RcodeServerFailure {
+	if status != dns.RcodeServerFailure || resolveFailed {
 		w.WriteMsg(r)
 	}
 
