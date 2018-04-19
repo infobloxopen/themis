@@ -3,6 +3,7 @@ package pdp
 import (
 	"fmt"
 	"io"
+	"strconv"
 )
 
 // RuleCombiningAlg represent abstract rule combining algorithm. The algorithm
@@ -291,6 +292,27 @@ func (p Policy) MarshalWithDepth(out io.Writer, depth int) error {
 		return bindErrorf(err, "pid=\"%s\"", p.id)
 	}
 	return nil
+}
+
+// PathMarshal implements StorageMarshal
+func (p Policy) PathMarshal(ID string) (func(io.Writer) error, bool) {
+	if pID, ok := p.GetID(); ok {
+		if ID == pID {
+			return func(out io.Writer) error {
+				_, err := out.Write([]byte(strconv.Quote(pID)))
+				return err
+			}, true
+		}
+		for _, r := range p.rules {
+			if cb, ok := r.PathMarshal(ID); ok {
+				return func(out io.Writer) error {
+					out.Write([]byte(strconv.Quote(pID) + "/"))
+					return cb(out)
+				}, true
+			}
+		}
+	}
+	return nil, false
 }
 
 type firstApplicableEffectRCA struct {
