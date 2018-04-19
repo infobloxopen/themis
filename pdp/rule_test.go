@@ -89,10 +89,11 @@ func TestRuleMarshalPath(t *testing.T) {
 		t.Errorf("Failed to find path to rule one")
 	} else if err := pathfinder(&buf); err != nil {
 		t.Errorf("Expecting no errors when writing path, got %v", err)
-	}
-	expectPath := "\"one\""
-	if 0 != strings.Compare(buf.String(), expectPath) {
-		t.Errorf("Expecting path %s, got %s", buf.String(), expectPath)
+	} else {
+		expectPath := "\"one\""
+		if 0 != strings.Compare(buf.String(), expectPath) {
+			t.Errorf("Expecting path %s, got %s", buf.String(), expectPath)
+		}
 	}
 
 	expectNil := rule.MarshalPath("two")
