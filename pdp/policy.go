@@ -268,22 +268,24 @@ func (p Policy) MarshalWithDepth(out io.Writer, depth int) error {
 	if depth > 0 {
 		var firstRule int
 		for i, r := range p.rules {
-			if _, ok := r.GetID(); ok {
-				if err = r.MarshalWithDepth(out, depth-1); err != nil {
-					return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
-				}
-				firstRule = i
-				break
+			if _, ok := r.GetID(); !ok {
+				continue
 			}
+			if err = r.MarshalWithDepth(out, depth-1); err != nil {
+				return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
+			}
+			firstRule = i
+			break
 		}
 		for i, r := range p.rules[firstRule+1:] {
-			if _, ok := r.GetID(); ok {
-				if _, err := out.Write([]byte{','}); err != nil {
-					return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
-				}
-				if err = r.MarshalWithDepth(out, depth-1); err != nil {
-					return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
-				}
+			if _, ok := r.GetID(); !ok {
+				continue
+			}
+			if _, err := out.Write([]byte{','}); err != nil {
+				return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
+			}
+			if err = r.MarshalWithDepth(out, depth-1); err != nil {
+				return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
 			}
 		}
 	}
