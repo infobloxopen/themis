@@ -1,7 +1,6 @@
 package pdp
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 )
@@ -31,6 +30,8 @@ var (
 	// of the algorithm. Contains only algorithms which require parameters.
 	RuleCombiningParamAlgs = map[string]RuleCombiningAlgMaker{
 		"mapper": makeMapperRCA}
+
+	ruleArrPrefix = []byte(",\"rules\":[")
 )
 
 // Policy represent PDP policy (minimal evaluable entity).
@@ -252,15 +253,14 @@ func (p Policy) MarshalWithDepth(out io.Writer, depth int) error {
 	if depth < 0 {
 		return newMarshalInvalidDepthError(depth)
 	}
-	pjson, err := json.Marshal(storageNodeFmt{
+	err := marshalHeader(storageNodeFmt{
 		Ord: p.ord,
 		ID:  p.id,
-	})
+	}, out)
 	if err != nil {
 		return bindErrorf(err, "pid=\"%s\"", p.id)
 	}
-	_, err = out.Write(append(pjson[:len(pjson)-1],
-		[]byte(",\"rules\":[")...))
+	_, err = out.Write(ruleArrPrefix)
 	if err != nil {
 		return bindErrorf(err, "pid=\"%s\"", p.id)
 	}
