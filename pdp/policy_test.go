@@ -1,7 +1,9 @@
 package pdp
 
 import (
+	"bytes"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/pmezard/go-difflib/difflib"
@@ -542,6 +544,78 @@ func TestPolicyDelete(t *testing.T) {
 		}
 	} else {
 		t.Errorf("Expected new policy but got %T (%#v)", newE, newE)
+	}
+}
+
+func TestPolicyPathMarshal(t *testing.T) {
+	var (
+		buf  bytes.Buffer
+		buf2 bytes.Buffer
+		buf3 bytes.Buffer
+		buf4 bytes.Buffer
+		p    = makeSimplePolicy("test",
+			makeSimpleRule("first", EffectPermit),
+			makeSimpleRule("second", EffectPermit),
+			makeSimpleRule("third", EffectPermit),
+		)
+		hiddenP = makeSimpleHiddenPolicy(
+			makeSimpleRule("first", EffectPermit),
+			makeSimpleRule("second", EffectPermit),
+			makeSimpleRule("third", EffectPermit),
+		)
+	)
+	pathfinder, found := p.PathMarshal("first")
+	if !found {
+		t.Errorf("Failed to find path to rule first")
+	} else if err := pathfinder(&buf); err != nil {
+		t.Errorf("Expecting no errors when writing path, got %v", err)
+	}
+	expectPath := "\"test\"/\"first\""
+	if 0 != strings.Compare(buf.String(), expectPath) {
+		t.Errorf("Expecting path %s, got %s", buf.String(), expectPath)
+	}
+	pathfinder, found = p.PathMarshal("second")
+	if !found {
+		t.Errorf("Failed to find path to rule second")
+	} else if err := pathfinder(&buf2); err != nil {
+		t.Errorf("Expecting no errors when writing path, got %v", err)
+	}
+	expectPath = "\"test\"/\"second\""
+	if 0 != strings.Compare(buf2.String(), expectPath) {
+		t.Errorf("Expecting path %s, got %s", buf2.String(), expectPath)
+	}
+	pathfinder, found = p.PathMarshal("third")
+	if !found {
+		t.Errorf("Failed to find path to rule third")
+	} else if err := pathfinder(&buf3); err != nil {
+		t.Errorf("Expecting no errors when writing path, got %v", err)
+	}
+	expectPath = "\"test\"/\"third\""
+	if 0 != strings.Compare(buf3.String(), expectPath) {
+		t.Errorf("Expecting path %s, got %s", buf3.String(), expectPath)
+	}
+	pathfinder, found = p.PathMarshal("test")
+	if !found {
+		t.Errorf("Failed to find path to policy test")
+	} else if err := pathfinder(&buf4); err != nil {
+		t.Errorf("Expecting no errors when writing path, got %v", err)
+	}
+	expectPath = "\"test\""
+	if 0 != strings.Compare(buf4.String(), expectPath) {
+		t.Errorf("Expecting path %s, got %s", buf4.String(), expectPath)
+	}
+
+	expectNil, found := p.PathMarshal("nothing")
+	if found {
+		t.Errorf("Expecting not to find ID nothing in policy tree")
+	} else if expectNil != nil {
+		t.Errorf("Expecting nil path callback, got non-nil")
+	}
+	expectNil, found = hiddenP.PathMarshal("first")
+	if found {
+		t.Errorf("Expecting not to find any rule under hidden policy")
+	} else if expectNil != nil {
+		t.Errorf("Expecting nil path callback, got non-nil")
 	}
 }
 
