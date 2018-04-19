@@ -288,11 +288,11 @@ func (p PolicySet) MarshalWithDepth(out io.Writer, depth int) error {
 		ID:  p.id,
 	}, out)
 	if err != nil {
-		return bindErrorf(err, "pid=\"%s\"", p.id)
+		return bindErrorf(err, "psid=\"%s\"", p.id)
 	}
 	_, err = out.Write(policyArrPrefix)
 	if err != nil {
-		return bindErrorf(err, "pid=\"%s\"", p.id)
+		return bindErrorf(err, "psid=\"%s\"", p.id)
 	}
 	if depth > 0 {
 		var firstPolicy int
