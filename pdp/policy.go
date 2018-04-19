@@ -294,8 +294,8 @@ func (p Policy) MarshalWithDepth(out io.Writer, depth int) error {
 	return nil
 }
 
-// PathMarshal implements StorageMarshal
-func (p Policy) PathMarshal(ID string) (func(io.Writer) error, bool) {
+// MarshalPath implements StorageMarshal
+func (p Policy) MarshalPath(ID string) (func(io.Writer) error, bool) {
 	if pID, ok := p.GetID(); ok {
 		if ID == pID {
 			return func(out io.Writer) error {
@@ -304,7 +304,7 @@ func (p Policy) PathMarshal(ID string) (func(io.Writer) error, bool) {
 			}, true
 		}
 		for _, r := range p.rules {
-			if cb, ok := r.PathMarshal(ID); ok {
+			if cb, ok := r.MarshalPath(ID); ok {
 				return func(out io.Writer) error {
 					out.Write([]byte(strconv.Quote(pID) + "/"))
 					return cb(out)

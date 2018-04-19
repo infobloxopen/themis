@@ -607,7 +607,7 @@ func TestPolicyMarshalWithDepth(t *testing.T) {
 	}
 }
 
-func TestPolicyPathMarshal(t *testing.T) {
+func TestPolicyMarshalPath(t *testing.T) {
 	var (
 		buf  bytes.Buffer
 		buf2 bytes.Buffer
@@ -624,7 +624,7 @@ func TestPolicyPathMarshal(t *testing.T) {
 			makeSimpleRule("third", EffectPermit),
 		)
 	)
-	pathfinder, found := p.PathMarshal("first")
+	pathfinder, found := p.MarshalPath("first")
 	if !found {
 		t.Errorf("Failed to find path to rule first")
 	} else if err := pathfinder(&buf); err != nil {
@@ -634,7 +634,7 @@ func TestPolicyPathMarshal(t *testing.T) {
 	if 0 != strings.Compare(buf.String(), expectPath) {
 		t.Errorf("Expecting path %s, got %s", buf.String(), expectPath)
 	}
-	pathfinder, found = p.PathMarshal("second")
+	pathfinder, found = p.MarshalPath("second")
 	if !found {
 		t.Errorf("Failed to find path to rule second")
 	} else if err := pathfinder(&buf2); err != nil {
@@ -644,7 +644,7 @@ func TestPolicyPathMarshal(t *testing.T) {
 	if 0 != strings.Compare(buf2.String(), expectPath) {
 		t.Errorf("Expecting path %s, got %s", buf2.String(), expectPath)
 	}
-	pathfinder, found = p.PathMarshal("third")
+	pathfinder, found = p.MarshalPath("third")
 	if !found {
 		t.Errorf("Failed to find path to rule third")
 	} else if err := pathfinder(&buf3); err != nil {
@@ -654,7 +654,7 @@ func TestPolicyPathMarshal(t *testing.T) {
 	if 0 != strings.Compare(buf3.String(), expectPath) {
 		t.Errorf("Expecting path %s, got %s", buf3.String(), expectPath)
 	}
-	pathfinder, found = p.PathMarshal("test")
+	pathfinder, found = p.MarshalPath("test")
 	if !found {
 		t.Errorf("Failed to find path to policy test")
 	} else if err := pathfinder(&buf4); err != nil {
@@ -665,13 +665,13 @@ func TestPolicyPathMarshal(t *testing.T) {
 		t.Errorf("Expecting path %s, got %s", buf4.String(), expectPath)
 	}
 
-	expectNil, found := p.PathMarshal("nothing")
+	expectNil, found := p.MarshalPath("nothing")
 	if found {
 		t.Errorf("Expecting not to find ID nothing in policy tree")
 	} else if expectNil != nil {
 		t.Errorf("Expecting nil path callback, got non-nil")
 	}
-	expectNil, found = hiddenP.PathMarshal("first")
+	expectNil, found = hiddenP.MarshalPath("first")
 	if found {
 		t.Errorf("Expecting not to find any rule under hidden policy")
 	} else if expectNil != nil {

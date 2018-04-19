@@ -9,7 +9,7 @@ import (
 // to capturing storage state information
 type StorageMarshal interface {
 	MarshalWithDepth(out io.Writer, depth int) error
-	PathMarshal(ID string) (func(io.Writer) error, bool)
+	MarshalPath(ID string) (func(io.Writer) error, bool)
 }
 
 // PolicySet/Policy/Rule representation for marshaling

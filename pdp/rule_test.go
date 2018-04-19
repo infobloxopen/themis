@@ -71,7 +71,7 @@ func TestRuleMarshalWithDepth(t *testing.T) {
 	}
 }
 
-func TestRulePathMarshal(t *testing.T) {
+func TestRuleMarshalPath(t *testing.T) {
 	var (
 		buf  bytes.Buffer
 		rule = Rule{
@@ -84,7 +84,7 @@ func TestRulePathMarshal(t *testing.T) {
 			hidden: true,
 		}
 	)
-	pathfinder, found := rule.PathMarshal("one")
+	pathfinder, found := rule.MarshalPath("one")
 	if !found {
 		t.Errorf("Failed to find path to rule one")
 	} else if err := pathfinder(&buf); err != nil {
@@ -95,13 +95,13 @@ func TestRulePathMarshal(t *testing.T) {
 		t.Errorf("Expecting path %s, got %s", buf.String(), expectPath)
 	}
 
-	expectNil, found := rule.PathMarshal("two")
+	expectNil, found := rule.MarshalPath("two")
 	if found {
 		t.Errorf("Expecting not to find rule two in rule one")
 	} else if expectNil != nil {
 		t.Errorf("Expecting nil path callback, got non-nil")
 	}
-	expectNil, found = hiddenRule.PathMarshal("one")
+	expectNil, found = hiddenRule.MarshalPath("one")
 	if found {
 		t.Errorf("Expecting not to find rule one in hidden rule")
 	} else if expectNil != nil {
