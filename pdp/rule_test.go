@@ -84,8 +84,8 @@ func TestRuleMarshalPath(t *testing.T) {
 			hidden: true,
 		}
 	)
-	pathfinder, found := rule.MarshalPath("one")
-	if !found {
+	pathfinder := rule.MarshalPath("one")
+	if pathfinder == nil {
 		t.Errorf("Failed to find path to rule one")
 	} else if err := pathfinder(&buf); err != nil {
 		t.Errorf("Expecting no errors when writing path, got %v", err)
@@ -95,16 +95,12 @@ func TestRuleMarshalPath(t *testing.T) {
 		t.Errorf("Expecting path %s, got %s", buf.String(), expectPath)
 	}
 
-	expectNil, found := rule.MarshalPath("two")
-	if found {
-		t.Errorf("Expecting not to find rule two in rule one")
-	} else if expectNil != nil {
+	expectNil := rule.MarshalPath("two")
+	if expectNil != nil {
 		t.Errorf("Expecting nil path callback, got non-nil")
 	}
-	expectNil, found = hiddenRule.MarshalPath("one")
-	if found {
-		t.Errorf("Expecting not to find rule one in hidden rule")
-	} else if expectNil != nil {
+	expectNil = hiddenRule.MarshalPath("one")
+	if expectNil != nil {
 		t.Errorf("Expecting nil path callback, got non-nil")
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"strconv"
 )
 
 // Rule represents PDP rule (child or PDP policy).
@@ -96,15 +95,14 @@ func (r Rule) MarshalWithDepth(out io.Writer, depth int) error {
 	return nil
 }
 
-// MarshalPath implements StorageMarshal
-func (r Rule) MarshalPath(ID string) (func(io.Writer) error, bool) {
+// MarshalPath implements StorageMarshal, recursively search for ID
+func (r Rule) MarshalPath(ID string) func(io.Writer) error {
 	if rID, ok := r.GetID(); ok && ID == rID {
 		return func(out io.Writer) error {
-			_, err := out.Write([]byte(strconv.Quote(rID)))
-			return err
-		}, true
+			return writeID(rID, out)
+		}
 	}
-	return nil, false
+	return nil
 }
 
 type byRuleOrder []*Rule

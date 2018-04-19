@@ -3,7 +3,6 @@ package pdp
 import (
 	"fmt"
 	"io"
-	"strconv"
 )
 
 // RuleCombiningAlg represent abstract rule combining algorithm. The algorithm
@@ -296,25 +295,34 @@ func (p Policy) MarshalWithDepth(out io.Writer, depth int) error {
 	return nil
 }
 
-// MarshalPath implements StorageMarshal
-func (p Policy) MarshalPath(ID string) (func(io.Writer) error, bool) {
+// MarshalPath implements StorageMarshal, recursively search for ID
+func (p Policy) MarshalPath(ID string) func(io.Writer) error {
 	if pID, ok := p.GetID(); ok {
 		if ID == pID {
 			return func(out io.Writer) error {
-				_, err := out.Write([]byte(strconv.Quote(pID)))
-				return err
-			}, true
+				return writeID(pID, out)
+			}
 		}
 		for _, r := range p.rules {
-			if cb, ok := r.MarshalPath(ID); ok {
+			if cb := r.MarshalPath(ID); cb != nil {
 				return func(out io.Writer) error {
-					out.Write([]byte(strconv.Quote(pID) + "/"))
-					return cb(out)
-				}, true
+					if err := writeID(pID, out); err != nil {
+						return err
+					}
+					_, err := out.Write([]byte{'/'})
+					if err != nil {
+						return bindErrorf(err, "id=\"%s\"", pID)
+					}
+					err = cb(out)
+					if err != nil {
+						return bindErrorf(err, "id=\"%s\"", pID)
+					}
+					return nil
+				}
 			}
 		}
 	}
-	return nil, false
+	return nil
 }
 
 type firstApplicableEffectRCA struct {
