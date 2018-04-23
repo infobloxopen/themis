@@ -78,10 +78,16 @@ type edns0Map struct {
 	metrics  bool
 }
 
+type pdpServer struct {
+	policyFile    string
+	contentFiles  []string
+}
+
 // policyPlugin represents a plugin instance that can validate DNS
 // requests and replies using PDP server.
 type policyPlugin struct {
 	endpoints       []string
+	pdpSvr          pdpServer
 	options         map[uint16][]*edns0Map
 	confAttrs       map[string]confAttrType
 	tapIO           dnstapSender
@@ -115,6 +121,9 @@ func newPolicyPlugin() *policyPlugin {
 func (p *policyPlugin) connect() error {
 	log.Printf("[DEBUG] Connecting %v", p)
 
+	if p.pdpSvr.policyFile != "" {
+		p.pdp = pep.NewIntegratedClient(p.pdpSvr.policyFile, p.pdpSvr.contentFiles)
+	}
 	for _, addr := range p.endpoints {
 		p.connAttempts[addr] = new(uint32)
 	}
@@ -156,6 +165,9 @@ func (p *policyPlugin) closeConn() {
 
 func (p *policyPlugin) parseOption(c *caddy.Controller) error {
 	switch c.Val() {
+	case "pdp":
+		return p.parsePDP(c)
+
 	case "endpoint":
 		return p.parseEndpoint(c)
 
@@ -191,6 +203,18 @@ func (p *policyPlugin) parseOption(c *caddy.Controller) error {
 	}
 
 	return errInvalidOption
+}
+
+// Usage: pdp policy.[yaml|json] content1 content2...
+func (p *policyPlugin) parsePDP(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) <= 1 {
+		return c.ArgErr()
+	}
+
+	p.pdpSvr.policyFile = args[0]
+	p.pdpSvr.contentFiles = args[1:]
+	return nil
 }
 
 func (p *policyPlugin) parseEndpoint(c *caddy.Controller) error {
