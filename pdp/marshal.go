@@ -31,6 +31,7 @@ func marshalHeader(v interface{}, out io.Writer) error {
 	return err
 }
 
+// common utility function for writing ID (marshalled in json)
 func writeID(ID string, out io.Writer) error {
 	b, err := json.Marshal(ID)
 	if err != nil {

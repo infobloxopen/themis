@@ -304,21 +304,23 @@ func (p Policy) MarshalPath(ID string) func(io.Writer) error {
 			}
 		}
 		for _, r := range p.rules {
-			if cb := r.MarshalPath(ID); cb != nil {
-				return func(out io.Writer) error {
-					if err := writeID(pID, out); err != nil {
-						return err
-					}
-					_, err := out.Write([]byte{'/'})
-					if err != nil {
-						return bindErrorf(err, "id=\"%s\"", pID)
-					}
-					err = cb(out)
-					if err != nil {
-						return bindErrorf(err, "id=\"%s\"", pID)
-					}
-					return nil
+			cb := r.MarshalPath(ID)
+			if cb == nil {
+				continue
+			}
+			return func(out io.Writer) error {
+				if err := writeID(pID, out); err != nil {
+					return err
 				}
+				_, err := out.Write([]byte{'/'})
+				if err != nil {
+					return bindErrorf(err, "id=\"%s\"", pID)
+				}
+				err = cb(out)
+				if err != nil {
+					return bindErrorf(err, "id=\"%s\"", pID)
+				}
+				return nil
 			}
 		}
 	}

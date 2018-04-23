@@ -346,21 +346,23 @@ func (p PolicySet) MarshalPath(ID string) func(io.Writer) error {
 			if !ok {
 				continue
 			}
-			if cb := marshP.MarshalPath(ID); cb != nil {
-				return func(out io.Writer) error {
-					if err := writeID(pID, out); err != nil {
-						return err
-					}
-					_, err := out.Write([]byte{'/'})
-					if err != nil {
-						return bindErrorf(err, "id=\"%s\"", pID)
-					}
-					err = cb(out)
-					if err != nil {
-						return bindErrorf(err, "id=\"%s\"", pID)
-					}
-					return nil
+			cb := marshP.MarshalPath(ID)
+			if cb == nil {
+				continue
+			}
+			return func(out io.Writer) error {
+				if err := writeID(pID, out); err != nil {
+					return err
 				}
+				_, err := out.Write([]byte{'/'})
+				if err != nil {
+					return bindErrorf(err, "id=\"%s\"", pID)
+				}
+				err = cb(out)
+				if err != nil {
+					return bindErrorf(err, "id=\"%s\"", pID)
+				}
+				return nil
 			}
 		}
 	}

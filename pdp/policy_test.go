@@ -630,7 +630,7 @@ func TestPolicyMarshalPath(t *testing.T) {
 	} else if err := pathfinder(&buf); err != nil {
 		t.Errorf("Expecting no errors when writing path, got %v", err)
 	} else {
-		expectPath := "\"test\"/\"first\""
+		expectPath := `"test"/"first"`
 		if 0 != strings.Compare(buf.String(), expectPath) {
 			t.Errorf("Expecting path %s, got %s", buf.String(), expectPath)
 		}
@@ -641,7 +641,7 @@ func TestPolicyMarshalPath(t *testing.T) {
 	} else if err := pathfinder(&buf2); err != nil {
 		t.Errorf("Expecting no errors when writing path, got %v", err)
 	} else {
-		expectPath := "\"test\"/\"second\""
+		expectPath := `"test"/"second"`
 		if 0 != strings.Compare(buf2.String(), expectPath) {
 			t.Errorf("Expecting path %s, got %s", buf2.String(), expectPath)
 		}
@@ -652,7 +652,7 @@ func TestPolicyMarshalPath(t *testing.T) {
 	} else if err := pathfinder(&buf3); err != nil {
 		t.Errorf("Expecting no errors when writing path, got %v", err)
 	} else {
-		expectPath := "\"test\"/\"third\""
+		expectPath := `"test"/"third"`
 		if 0 != strings.Compare(buf3.String(), expectPath) {
 			t.Errorf("Expecting path %s, got %s", buf3.String(), expectPath)
 		}
@@ -663,7 +663,7 @@ func TestPolicyMarshalPath(t *testing.T) {
 	} else if err := pathfinder(&buf4); err != nil {
 		t.Errorf("Expecting no errors when writing path, got %v", err)
 	} else {
-		expectPath := "\"test\""
+		expectPath := `"test"`
 		if 0 != strings.Compare(buf4.String(), expectPath) {
 			t.Errorf("Expecting path %s, got %s", buf4.String(), expectPath)
 		}
