@@ -95,6 +95,16 @@ func (r Rule) MarshalWithDepth(out io.Writer, depth int) error {
 	return nil
 }
 
+// MarshalPath implements StorageMarshal, recursively search for ID
+func (r Rule) MarshalPath(ID string) func(io.Writer) error {
+	if rID, ok := r.GetID(); ok && ID == rID {
+		return func(out io.Writer) error {
+			return writeID(rID, out)
+		}
+	}
+	return nil
+}
+
 type byRuleOrder []*Rule
 
 func (r byRuleOrder) Len() int           { return len(r) }

@@ -70,3 +70,38 @@ func TestRuleMarshalWithDepth(t *testing.T) {
 		}
 	}
 }
+
+func TestRuleMarshalPath(t *testing.T) {
+	var (
+		buf  bytes.Buffer
+		rule = Rule{
+			ord: 32,
+			id:  "one",
+		}
+		hiddenRule = Rule{
+			ord:    32,
+			id:     "",
+			hidden: true,
+		}
+	)
+	pathfinder := rule.MarshalPath("one")
+	if pathfinder == nil {
+		t.Errorf("Failed to find path to rule one")
+	} else if err := pathfinder(&buf); err != nil {
+		t.Errorf("Expecting no errors when writing path, got %v", err)
+	} else {
+		expectPath := `"one"`
+		if 0 != strings.Compare(buf.String(), expectPath) {
+			t.Errorf("Expecting path %s, got %s", buf.String(), expectPath)
+		}
+	}
+
+	expectNil := rule.MarshalPath("two")
+	if expectNil != nil {
+		t.Errorf("Expecting nil path callback, got non-nil")
+	}
+	expectNil = hiddenRule.MarshalPath("one")
+	if expectNil != nil {
+		t.Errorf("Expecting nil path callback, got non-nil")
+	}
+}

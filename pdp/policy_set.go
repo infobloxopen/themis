@@ -333,6 +333,42 @@ func (p PolicySet) MarshalWithDepth(out io.Writer, depth int) error {
 	return nil
 }
 
+// MarshalPath implements StorageMarshal, recursively search for ID
+func (p PolicySet) MarshalPath(ID string) func(io.Writer) error {
+	if pID, ok := p.GetID(); ok {
+		if ID == pID {
+			return func(out io.Writer) error {
+				return writeID(pID, out)
+			}
+		}
+		for _, p := range p.policies {
+			marshP, ok := p.(StorageMarshal)
+			if !ok {
+				continue
+			}
+			cb := marshP.MarshalPath(ID)
+			if cb == nil {
+				continue
+			}
+			return func(out io.Writer) error {
+				if err := writeID(pID, out); err != nil {
+					return err
+				}
+				_, err := out.Write([]byte{'/'})
+				if err != nil {
+					return bindErrorf(err, "id=\"%s\"", pID)
+				}
+				err = cb(out)
+				if err != nil {
+					return bindErrorf(err, "id=\"%s\"", pID)
+				}
+				return nil
+			}
+		}
+	}
+	return nil
+}
+
 type firstApplicableEffectPCA struct {
 }
 

@@ -267,28 +267,62 @@ func (p Policy) MarshalWithDepth(out io.Writer, depth int) error {
 	if depth > 0 {
 		var firstRule int
 		for i, r := range p.rules {
-			if _, ok := r.GetID(); ok {
-				if err = r.MarshalWithDepth(out, depth-1); err != nil {
-					return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
-				}
-				firstRule = i
-				break
+			if _, ok := r.GetID(); !ok {
+				continue
 			}
+			if err = r.MarshalWithDepth(out, depth-1); err != nil {
+				return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
+			}
+			firstRule = i
+			break
 		}
 		for i, r := range p.rules[firstRule+1:] {
-			if _, ok := r.GetID(); ok {
-				if _, err := out.Write([]byte{','}); err != nil {
-					return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
-				}
-				if err = r.MarshalWithDepth(out, depth-1); err != nil {
-					return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
-				}
+			if _, ok := r.GetID(); !ok {
+				continue
+			}
+			if _, err := out.Write([]byte{','}); err != nil {
+				return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
+			}
+			if err = r.MarshalWithDepth(out, depth-1); err != nil {
+				return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
 			}
 		}
 	}
 	_, err = out.Write([]byte("]}"))
 	if err != nil {
 		return bindErrorf(err, "pid=\"%s\"", p.id)
+	}
+	return nil
+}
+
+// MarshalPath implements StorageMarshal, recursively search for ID
+func (p Policy) MarshalPath(ID string) func(io.Writer) error {
+	if pID, ok := p.GetID(); ok {
+		if ID == pID {
+			return func(out io.Writer) error {
+				return writeID(pID, out)
+			}
+		}
+		for _, r := range p.rules {
+			cb := r.MarshalPath(ID)
+			if cb == nil {
+				continue
+			}
+			return func(out io.Writer) error {
+				if err := writeID(pID, out); err != nil {
+					return err
+				}
+				_, err := out.Write([]byte{'/'})
+				if err != nil {
+					return bindErrorf(err, "id=\"%s\"", pID)
+				}
+				err = cb(out)
+				if err != nil {
+					return bindErrorf(err, "id=\"%s\"", pID)
+				}
+				return nil
+			}
+		}
 	}
 	return nil
 }
