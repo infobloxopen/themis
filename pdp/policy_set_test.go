@@ -1,6 +1,7 @@
 package pdp
 
 import (
+	"bytes"
 	"sort"
 	"strings"
 	"testing"
@@ -914,6 +915,67 @@ func TestSortPoliciesByOrder(t *testing.T) {
 	e := "first, second, third, fourth"
 	if s != e {
 		t.Errorf("Expected policies in order \"%s\" but got \"%s\"", e, s)
+	}
+}
+
+func TestPolicySetMarshalWithDepth(t *testing.T) {
+	var (
+		buf  bytes.Buffer
+		buf2 bytes.Buffer
+		buf3 bytes.Buffer
+		p    = makeSimplePolicySet("test",
+			makeSimplePolicy("first", makeSimpleRule("permit", EffectPermit)),
+			makeSimplePolicy("second", makeSimpleRule("permit", EffectPermit)),
+			makeSimplePolicy("third", makeSimpleRule("permit", EffectPermit)),
+		)
+	)
+
+	// bad depth
+	err := p.MarshalWithDepth(&buf, -1)
+	expectErr := newMarshalInvalidDepthError(-1)
+	if err == nil {
+		t.Errorf("Expecting error %v, got nil error", expectErr)
+	} else if err.Error() != expectErr.Error() {
+		t.Errorf("Expecting error %v, got %v", expectErr, err)
+	}
+
+	// depth = 0, visible policy
+	expectMarshal := `{"ord":0,"id":"test","policies":[]}`
+	err = p.MarshalWithDepth(&buf, 0)
+	if err != nil {
+		t.Errorf("Expecting no error, got %v", err)
+	} else {
+		gotMarshal := buf.String()
+		if 0 != strings.Compare(gotMarshal, expectMarshal) {
+			t.Errorf("Expecting marshal output %s, got %s", expectMarshal, gotMarshal)
+		}
+	}
+
+	// show children, visible policy
+	cRule := `,"rules":[{"ord":0,"id":"permit"}]}`
+	expectChildren := `{"ord":0,"id":"first"` + cRule + `,{"ord":1,"id":"second"` + cRule + `,{"ord":2,"id":"third"` + cRule
+	expectWithC := `{"ord":0,"id":"test","policies":[` + expectChildren + `]}`
+	err = p.MarshalWithDepth(&buf2, 2)
+	if err != nil {
+		t.Errorf("Expecting no error, got %v", err)
+	} else {
+		gotMarshal := buf2.String()
+		if 0 != strings.Compare(gotMarshal, expectWithC) {
+			t.Errorf("Expecting marshal output %s, got %s",
+				expectWithC, gotMarshal)
+		}
+	}
+
+	// depth beyond maximum, visible policy
+	err = p.MarshalWithDepth(&buf3, 100)
+	if err != nil {
+		t.Errorf("Expecting no error, got %v", err)
+	} else {
+		gotMarshal := buf3.String()
+		if 0 != strings.Compare(gotMarshal, expectWithC) {
+			t.Errorf("Expecting marshal output %s, got %s",
+				expectWithC, gotMarshal)
+		}
 	}
 }
 

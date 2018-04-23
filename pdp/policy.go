@@ -1,6 +1,9 @@
 package pdp
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+)
 
 // RuleCombiningAlg represent abstract rule combining algorithm. The algorithm
 // defines how to evaluate policy rules and how to get paticular result.
@@ -27,6 +30,8 @@ var (
 	// of the algorithm. Contains only algorithms which require parameters.
 	RuleCombiningParamAlgs = map[string]RuleCombiningAlgMaker{
 		"mapper": makeMapperRCA}
+
+	ruleArrPrefix = []byte(",\"rules\":[")
 )
 
 // Policy represent PDP policy (minimal evaluable entity).
@@ -249,6 +254,51 @@ func (p *Policy) delChild(ID string) (*Policy, error) {
 	}
 
 	return p.updatedCopy(rules, algorithm), nil
+}
+
+// MarshalWithDepth implements StorageMarshal
+func (p Policy) MarshalWithDepth(out io.Writer, depth int) error {
+	if depth < 0 {
+		return newMarshalInvalidDepthError(depth)
+	}
+	err := marshalHeader(storageNodeFmt{
+		Ord: p.ord,
+		ID:  p.id,
+	}, out)
+	if err != nil {
+		return bindErrorf(err, "pid=\"%s\"", p.id)
+	}
+	_, err = out.Write(ruleArrPrefix)
+	if err != nil {
+		return bindErrorf(err, "pid=\"%s\"", p.id)
+	}
+	if depth > 0 {
+		var firstRule int
+		for i, r := range p.rules {
+			if _, ok := r.GetID(); ok {
+				if err = r.MarshalWithDepth(out, depth-1); err != nil {
+					return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
+				}
+				firstRule = i
+				break
+			}
+		}
+		for i, r := range p.rules[firstRule+1:] {
+			if _, ok := r.GetID(); ok {
+				if _, err := out.Write([]byte{','}); err != nil {
+					return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
+				}
+				if err = r.MarshalWithDepth(out, depth-1); err != nil {
+					return bindErrorf(err, "pid=\"%s\",i=%d", p.id, i)
+				}
+			}
+		}
+	}
+	_, err = out.Write([]byte("]}"))
+	if err != nil {
+		return bindErrorf(err, "pid=\"%s\"", p.id)
+	}
+	return nil
 }
 
 type firstApplicableEffectRCA struct {

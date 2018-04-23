@@ -1,7 +1,9 @@
 package pdp
 
 import (
+	"bytes"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/pmezard/go-difflib/difflib"
@@ -736,6 +738,66 @@ func TestPolicyDelete(t *testing.T) {
 		}
 	} else {
 		t.Errorf("Expected new policy but got %T (%#v)", newE, newE)
+	}
+}
+
+func TestPolicyMarshalWithDepth(t *testing.T) {
+	var (
+		buf  bytes.Buffer
+		buf2 bytes.Buffer
+		buf3 bytes.Buffer
+		p    = makeSimplePolicy("test",
+			makeSimpleRule("first", EffectPermit),
+			makeSimpleRule("second", EffectPermit),
+			makeSimpleRule("third", EffectPermit),
+		)
+	)
+
+	// bad depth
+	err := p.MarshalWithDepth(&buf, -1)
+	expectErr := newMarshalInvalidDepthError(-1)
+	if err == nil {
+		t.Errorf("Expecting error %v, got nil error", expectErr)
+	} else if err.Error() != expectErr.Error() {
+		t.Errorf("Expecting error %v, got %v", expectErr, err)
+	}
+
+	// depth = 0, visible policy
+	expectMarshal := `{"ord":0,"id":"test","rules":[]}`
+	err = p.MarshalWithDepth(&buf, 0)
+	if err != nil {
+		t.Errorf("Expecting no error, got %v", err)
+	} else {
+		gotMarshal := buf.String()
+		if 0 != strings.Compare(gotMarshal, expectMarshal) {
+			t.Errorf("Expecting marshal output %s, got %s", expectMarshal, gotMarshal)
+		}
+	}
+
+	// show children, visible policy
+	expectChildren := `{"ord":0,"id":"first"},{"ord":1,"id":"second"},{"ord":2,"id":"third"}`
+	expectWithC := `{"ord":0,"id":"test","rules":[` + expectChildren + `]}`
+	err = p.MarshalWithDepth(&buf2, 1)
+	if err != nil {
+		t.Errorf("Expecting no error, got %v", err)
+	} else {
+		gotMarshal := buf2.String()
+		if 0 != strings.Compare(gotMarshal, expectWithC) {
+			t.Errorf("Expecting marshal output %s, got %s",
+				expectWithC, gotMarshal)
+		}
+	}
+
+	// depth beyond maximum, visible policy
+	err = p.MarshalWithDepth(&buf3, 100)
+	if err != nil {
+		t.Errorf("Expecting no error, got %v", err)
+	} else {
+		gotMarshal := buf3.String()
+		if 0 != strings.Compare(gotMarshal, expectWithC) {
+			t.Errorf("Expecting marshal output %s, got %s",
+				expectWithC, gotMarshal)
+		}
 	}
 }
 
