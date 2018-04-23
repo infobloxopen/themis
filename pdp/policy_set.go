@@ -1,6 +1,9 @@
 package pdp
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+)
 
 // PolicyCombiningAlg represent abstract policy combining algorithm.
 // The algorithm defines how to evaluate child policy sets and policies
@@ -29,6 +32,8 @@ var (
 	// of the algorithm. Contains only algorithms which require parameters.
 	PolicyCombiningParamAlgs = map[string]PolicyCombiningAlgMaker{
 		"mapper": makeMapperPCA}
+
+	policyArrPrefix = []byte(",\"policies\":[")
 )
 
 // PolicySet represens PDP policy set (the set groups other policy sets and policies).
@@ -271,6 +276,61 @@ func (p *PolicySet) delChild(ID string) (Evaluable, error) {
 	}
 
 	return p.updatedCopy(policies, algorithm), nil
+}
+
+// MarshalWithDepth implements StorageMarshal
+func (p PolicySet) MarshalWithDepth(out io.Writer, depth int) error {
+	if depth < 0 {
+		return newMarshalInvalidDepthError(depth)
+	}
+	err := marshalHeader(storageNodeFmt{
+		Ord: p.ord,
+		ID:  p.id,
+	}, out)
+	if err != nil {
+		return bindErrorf(err, "psid=\"%s\"", p.id)
+	}
+	_, err = out.Write(policyArrPrefix)
+	if err != nil {
+		return bindErrorf(err, "psid=\"%s\"", p.id)
+	}
+	if depth > 0 {
+		var firstPolicy int
+		for i, policy := range p.policies {
+			if _, ok := policy.GetID(); !ok {
+				continue
+			}
+			marshP, ok := policy.(StorageMarshal)
+			if !ok {
+				continue
+			}
+			if err = marshP.MarshalWithDepth(out, depth-1); err != nil {
+				return bindErrorf(err, "psid=\"%s\",i=%d", p.id, i)
+			}
+			firstPolicy = i
+			break
+		}
+		for i, policy := range p.policies[firstPolicy+1:] {
+			if _, ok := policy.GetID(); !ok {
+				continue
+			}
+			marshP, ok := policy.(StorageMarshal)
+			if !ok {
+				continue
+			}
+			if _, err := out.Write([]byte{','}); err != nil {
+				return bindErrorf(err, "psid=\"%s\",i=%d", p.id, i)
+			}
+			if err := marshP.MarshalWithDepth(out, depth-1); err != nil {
+				return bindErrorf(err, "psid=\"%s\",i=%d", p.id, i)
+			}
+		}
+	}
+	_, err = out.Write([]byte("]}"))
+	if err != nil {
+		return bindErrorf(err, "psid=\"%s\"", p.id)
+	}
+	return nil
 }
 
 type firstApplicableEffectPCA struct {

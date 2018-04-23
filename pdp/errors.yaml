@@ -711,3 +711,19 @@ errors:
   fields:
   msg: "Float result has a value of Inf"
   args:
+
+- id: marshalInvalidDepthError
+  fields:
+  - id: t
+    type: int
+  msg: "Expecting depth >= 0, got %d"
+  args:
+  - field: t
+
+- id: invalidHeaderError
+  fields:
+  - id: head
+    type: interface{}
+  msg: "Invalid marshaled format for head interface %v+"
+  args:
+    - field: head

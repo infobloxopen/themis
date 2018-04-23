@@ -87,6 +87,8 @@ const (
 	floatDivideByZeroErrorID                  = 74
 	floatNanErrorID                           = 75
 	floatInfErrorID                           = 76
+	marshalInvalidDepthErrorID                = 77
+	invalidHeaderErrorID                      = 78
 )
 
 type externalError struct {
@@ -1348,4 +1350,34 @@ func newFloatInfError() *floatInfError {
 
 func (e *floatInfError) Error() string {
 	return e.errorf("Float result has a value of Inf")
+}
+
+type marshalInvalidDepthError struct {
+	errorLink
+	t int
+}
+
+func newMarshalInvalidDepthError(t int) *marshalInvalidDepthError {
+	return &marshalInvalidDepthError{
+		errorLink: errorLink{id: marshalInvalidDepthErrorID},
+		t:         t}
+}
+
+func (e *marshalInvalidDepthError) Error() string {
+	return e.errorf("Expecting depth >= 0, got %d", e.t)
+}
+
+type invalidHeaderError struct {
+	errorLink
+	head interface{}
+}
+
+func newInvalidHeaderError(head interface{}) *invalidHeaderError {
+	return &invalidHeaderError{
+		errorLink: errorLink{id: invalidHeaderErrorID},
+		head:      head}
+}
+
+func (e *invalidHeaderError) Error() string {
+	return e.errorf("Invalid marshaled format for head interface %v+", e.head)
 }

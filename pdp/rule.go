@@ -1,6 +1,10 @@
 package pdp
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+)
 
 // Rule represents PDP rule (child or PDP policy).
 type Rule struct {
@@ -70,6 +74,25 @@ func (r Rule) calculate(ctx *Context) Response {
 	}
 
 	return Response{r.effect, nil, r.obligations}
+}
+
+// MarshalWithDepth implements StorageMarshal
+func (r Rule) MarshalWithDepth(out io.Writer, depth int) error {
+	if depth < 0 {
+		return newMarshalInvalidDepthError(depth)
+	}
+	rjson, err := json.Marshal(storageNodeFmt{
+		Ord: r.ord,
+		ID:  r.id,
+	})
+	if err != nil {
+		return bindErrorf(err, "rid=\"%s\"", r.id)
+	}
+	_, err = out.Write(rjson)
+	if err != nil {
+		return bindErrorf(err, "rid=\"%s\"", r.id)
+	}
+	return nil
 }
 
 type byRuleOrder []*Rule
