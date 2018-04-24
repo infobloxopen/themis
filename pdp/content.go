@@ -9,6 +9,10 @@ import (
 
 	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
+	"github.com/infobloxopen/go-trees/domaintree16"
+	"github.com/infobloxopen/go-trees/domaintree32"
+	"github.com/infobloxopen/go-trees/domaintree64"
+	"github.com/infobloxopen/go-trees/domaintree8"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
 )
@@ -493,66 +497,93 @@ func (c *ContentItem) typeCheck(path []AttributeValue, v interface{}) (ContentSu
 		return nil, newInvalidContentValueError(v)
 	}
 
-	switch c.t {
-	default:
-		return nil, newUnknownContentItemResultTypeError(c.t)
+	if t, ok := c.t.(*FlagsType); ok {
+		switch t.Capacity() {
+		default:
+			return nil, newInvalidFlagsTypeCapacityError(t)
 
-	case TypeUndefined:
-		return nil, newInvalidContentItemResultTypeError(c.t)
+		case 8:
+			if _, ok := subItem.value.(uint8); !ok {
+				return nil, newInvalidContentValueTypeError(subItem.value, c.t)
+			}
 
-	case TypeBoolean:
-		if _, ok := subItem.value.(bool); !ok {
-			return nil, newInvalidContentValueTypeError(subItem.value, TypeBoolean)
+		case 16:
+			if _, ok := subItem.value.(uint16); !ok {
+				return nil, newInvalidContentValueTypeError(subItem.value, c.t)
+			}
+
+		case 32:
+			if _, ok := subItem.value.(uint32); !ok {
+				return nil, newInvalidContentValueTypeError(subItem.value, c.t)
+			}
+
+		case 64:
+			if _, ok := subItem.value.(uint64); !ok {
+				return nil, newInvalidContentValueTypeError(subItem.value, c.t)
+			}
 		}
+	} else {
+		switch c.t {
+		default:
+			return nil, newUnknownContentItemResultTypeError(c.t)
 
-	case TypeInteger:
-		if _, ok := subItem.value.(int64); !ok {
-			return nil, newInvalidContentValueTypeError(subItem.value, TypeInteger)
-		}
+		case TypeUndefined:
+			return nil, newInvalidContentItemResultTypeError(c.t)
 
-	case TypeFloat:
-		if _, ok := subItem.value.(float64); !ok {
-			return nil, newInvalidContentValueTypeError(subItem.value, TypeFloat)
-		}
+		case TypeBoolean:
+			if _, ok := subItem.value.(bool); !ok {
+				return nil, newInvalidContentValueTypeError(subItem.value, c.t)
+			}
 
-	case TypeString:
-		if _, ok := subItem.value.(string); !ok {
-			return nil, newInvalidContentValueTypeError(subItem.value, TypeString)
-		}
+		case TypeInteger:
+			if _, ok := subItem.value.(int64); !ok {
+				return nil, newInvalidContentValueTypeError(subItem.value, c.t)
+			}
 
-	case TypeAddress:
-		if _, ok := subItem.value.(net.IP); !ok {
-			return nil, newInvalidContentValueTypeError(subItem.value, TypeAddress)
-		}
+		case TypeFloat:
+			if _, ok := subItem.value.(float64); !ok {
+				return nil, newInvalidContentValueTypeError(subItem.value, c.t)
+			}
 
-	case TypeNetwork:
-		if _, ok := subItem.value.(*net.IPNet); !ok {
-			return nil, newInvalidContentValueTypeError(subItem.value, TypeNetwork)
-		}
+		case TypeString:
+			if _, ok := subItem.value.(string); !ok {
+				return nil, newInvalidContentValueTypeError(subItem.value, c.t)
+			}
 
-	case TypeDomain:
-		if _, ok := subItem.value.(string); !ok {
-			return nil, newInvalidContentValueTypeError(subItem.value, TypeDomain)
-		}
+		case TypeAddress:
+			if _, ok := subItem.value.(net.IP); !ok {
+				return nil, newInvalidContentValueTypeError(subItem.value, c.t)
+			}
 
-	case TypeSetOfStrings:
-		if _, ok := subItem.value.(*strtree.Tree); !ok {
-			return nil, newInvalidContentValueTypeError(subItem.value, TypeSetOfStrings)
-		}
+		case TypeNetwork:
+			if _, ok := subItem.value.(*net.IPNet); !ok {
+				return nil, newInvalidContentValueTypeError(subItem.value, c.t)
+			}
 
-	case TypeSetOfNetworks:
-		if _, ok := subItem.value.(*iptree.Tree); !ok {
-			return nil, newInvalidContentValueTypeError(subItem.value, TypeSetOfNetworks)
-		}
+		case TypeDomain:
+			if _, ok := subItem.value.(string); !ok {
+				return nil, newInvalidContentValueTypeError(subItem.value, c.t)
+			}
 
-	case TypeSetOfDomains:
-		if _, ok := subItem.value.(*domaintree.Node); !ok {
-			return nil, newInvalidContentValueTypeError(subItem.value, TypeSetOfDomains)
-		}
+		case TypeSetOfStrings:
+			if _, ok := subItem.value.(*strtree.Tree); !ok {
+				return nil, newInvalidContentValueTypeError(subItem.value, c.t)
+			}
 
-	case TypeListOfStrings:
-		if _, ok := subItem.value.([]string); !ok {
-			return nil, newInvalidContentValueTypeError(subItem.value, TypeListOfStrings)
+		case TypeSetOfNetworks:
+			if _, ok := subItem.value.(*iptree.Tree); !ok {
+				return nil, newInvalidContentValueTypeError(subItem.value, c.t)
+			}
+
+		case TypeSetOfDomains:
+			if _, ok := subItem.value.(*domaintree.Node); !ok {
+				return nil, newInvalidContentValueTypeError(subItem.value, c.t)
+			}
+
+		case TypeListOfStrings:
+			if _, ok := subItem.value.([]string); !ok {
+				return nil, newInvalidContentValueTypeError(subItem.value, c.t)
+			}
 		}
 	}
 
@@ -961,6 +992,274 @@ func (m ContentDomainMap) del(key AttributeValue) (ContentSubItem, error) {
 	}
 
 	return MakeContentDomainMap(t), nil
+}
+
+// ContentDomainFlags8Map implements ContentSubItem as map of domain name
+// to ContentSubItem. In the case resulting ContentSubItem can be only
+// a ContentValue instance which holds 8 bits flags.
+type ContentDomainFlags8Map struct {
+	tree *domaintree8.Node
+}
+
+// MakeContentDomainFlags8Map creates instance of ContentDomainFlags8Map
+// based on domaintree8 from github.com/infobloxopen/go-trees. Nodes should be
+// of the same ContentSubItem compatible type wrapping 8 bits flags.
+func MakeContentDomainFlags8Map(tree *domaintree8.Node) ContentDomainFlags8Map {
+	return ContentDomainFlags8Map{tree: tree}
+}
+
+func (m ContentDomainFlags8Map) getValue(key AttributeValue, t Type) (AttributeValue, error) {
+	d, err := key.domain()
+	if err != nil {
+		return UndefinedValue, err
+	}
+
+	v, ok, err := m.tree.WireGet(d)
+	if err != nil {
+		return UndefinedValue, err
+	}
+
+	if !ok {
+		return UndefinedValue, newMissingValueError()
+	}
+
+	return MakeFlagsValue8(v, t), nil
+}
+
+func (m ContentDomainFlags8Map) next(key AttributeValue) (ContentSubItem, error) {
+	return nil, newMapContentSubitemError()
+}
+
+func (m ContentDomainFlags8Map) put(key AttributeValue, value ContentSubItem) (ContentSubItem, error) {
+	d, err := key.domain()
+	if err != nil {
+		return m, err
+	}
+
+	if v, ok := value.(ContentValue); ok {
+		if n, ok := v.value.(uint8); ok {
+			return MakeContentDomainFlags8Map(m.tree.Insert(d.String(), n)), nil
+		}
+
+		return nil, newInvalidContentDomainFlags8MapValueError(v)
+	}
+
+	return nil, newInvalidContentValueError(value)
+}
+
+func (m ContentDomainFlags8Map) del(key AttributeValue) (ContentSubItem, error) {
+	d, err := key.domain()
+	if err != nil {
+		return m, err
+	}
+
+	t, ok := m.tree.Delete(d.String())
+	if !ok {
+		return m, newMissingValueError()
+	}
+
+	return MakeContentDomainFlags8Map(t), nil
+}
+
+// ContentDomainFlags16Map implements ContentSubItem as map of domain name
+// to ContentSubItem. In the case resulting ContentSubItem can be only
+// a ContentValue instance which holds 16 bits flags.
+type ContentDomainFlags16Map struct {
+	tree *domaintree16.Node
+}
+
+// MakeContentDomainFlags16Map creates instance of ContentDomainFlags16Map
+// based on domaintree16 from github.com/infobloxopen/go-trees. Nodes should be
+// of the same ContentSubItem compatible type wrapping 16 bits flags.
+func MakeContentDomainFlags16Map(tree *domaintree16.Node) ContentDomainFlags16Map {
+	return ContentDomainFlags16Map{tree: tree}
+}
+
+func (m ContentDomainFlags16Map) getValue(key AttributeValue, t Type) (AttributeValue, error) {
+	d, err := key.domain()
+	if err != nil {
+		return UndefinedValue, err
+	}
+
+	v, ok, err := m.tree.WireGet(d)
+	if err != nil {
+		return UndefinedValue, err
+	}
+
+	if !ok {
+		return UndefinedValue, newMissingValueError()
+	}
+
+	return MakeFlagsValue16(v, t), nil
+}
+
+func (m ContentDomainFlags16Map) next(key AttributeValue) (ContentSubItem, error) {
+	return nil, newMapContentSubitemError()
+}
+
+func (m ContentDomainFlags16Map) put(key AttributeValue, value ContentSubItem) (ContentSubItem, error) {
+	d, err := key.domain()
+	if err != nil {
+		return m, err
+	}
+
+	if v, ok := value.(ContentValue); ok {
+		if n, ok := v.value.(uint16); ok {
+			return MakeContentDomainFlags16Map(m.tree.Insert(d.String(), n)), nil
+		}
+
+		return nil, newInvalidContentDomainFlags16MapValueError(v)
+	}
+
+	return nil, newInvalidContentValueError(value)
+}
+
+func (m ContentDomainFlags16Map) del(key AttributeValue) (ContentSubItem, error) {
+	d, err := key.domain()
+	if err != nil {
+		return m, err
+	}
+
+	t, ok := m.tree.Delete(d.String())
+	if !ok {
+		return m, newMissingValueError()
+	}
+
+	return MakeContentDomainFlags16Map(t), nil
+}
+
+// ContentDomainFlags32Map implements ContentSubItem as map of domain name
+// to ContentSubItem. In the case resulting ContentSubItem can be only
+// a ContentValue instance which holds 32 bits flags.
+type ContentDomainFlags32Map struct {
+	tree *domaintree32.Node
+}
+
+// MakeContentDomainFlags32Map creates instance of ContentDomainFlags32Map
+// based on domaintree32 from github.com/infobloxopen/go-trees. Nodes should be
+// of the same ContentSubItem compatible type wrapping 32 bits flags.
+func MakeContentDomainFlags32Map(tree *domaintree32.Node) ContentDomainFlags32Map {
+	return ContentDomainFlags32Map{tree: tree}
+}
+
+func (m ContentDomainFlags32Map) getValue(key AttributeValue, t Type) (AttributeValue, error) {
+	d, err := key.domain()
+	if err != nil {
+		return UndefinedValue, err
+	}
+
+	v, ok, err := m.tree.WireGet(d)
+	if err != nil {
+		return UndefinedValue, err
+	}
+
+	if !ok {
+		return UndefinedValue, newMissingValueError()
+	}
+
+	return MakeFlagsValue32(v, t), nil
+}
+
+func (m ContentDomainFlags32Map) next(key AttributeValue) (ContentSubItem, error) {
+	return nil, newMapContentSubitemError()
+}
+
+func (m ContentDomainFlags32Map) put(key AttributeValue, value ContentSubItem) (ContentSubItem, error) {
+	d, err := key.domain()
+	if err != nil {
+		return m, err
+	}
+
+	if v, ok := value.(ContentValue); ok {
+		if n, ok := v.value.(uint32); ok {
+			return MakeContentDomainFlags32Map(m.tree.Insert(d.String(), n)), nil
+		}
+
+		return nil, newInvalidContentDomainFlags32MapValueError(v)
+	}
+
+	return nil, newInvalidContentValueError(value)
+}
+
+func (m ContentDomainFlags32Map) del(key AttributeValue) (ContentSubItem, error) {
+	d, err := key.domain()
+	if err != nil {
+		return m, err
+	}
+
+	t, ok := m.tree.Delete(d.String())
+	if !ok {
+		return m, newMissingValueError()
+	}
+
+	return MakeContentDomainFlags32Map(t), nil
+}
+
+// ContentDomainFlags64Map implements ContentSubItem as map of domain name
+// to ContentSubItem. In the case resulting ContentSubItem can be only
+// a ContentValue instance which holds 64 bits flags.
+type ContentDomainFlags64Map struct {
+	tree *domaintree64.Node
+}
+
+// MakeContentDomainFlags64Map creates instance of ContentDomainFlags64Map
+// based on domaintree64 from github.com/infobloxopen/go-trees. Nodes should be
+// of the same ContentSubItem compatible type wrapping 64 bits flags.
+func MakeContentDomainFlags64Map(tree *domaintree64.Node) ContentDomainFlags64Map {
+	return ContentDomainFlags64Map{tree: tree}
+}
+
+func (m ContentDomainFlags64Map) getValue(key AttributeValue, t Type) (AttributeValue, error) {
+	d, err := key.domain()
+	if err != nil {
+		return UndefinedValue, err
+	}
+
+	v, ok, err := m.tree.WireGet(d)
+	if err != nil {
+		return UndefinedValue, err
+	}
+
+	if !ok {
+		return UndefinedValue, newMissingValueError()
+	}
+
+	return MakeFlagsValue64(v, t), nil
+}
+
+func (m ContentDomainFlags64Map) next(key AttributeValue) (ContentSubItem, error) {
+	return nil, newMapContentSubitemError()
+}
+
+func (m ContentDomainFlags64Map) put(key AttributeValue, value ContentSubItem) (ContentSubItem, error) {
+	d, err := key.domain()
+	if err != nil {
+		return m, err
+	}
+
+	if v, ok := value.(ContentValue); ok {
+		if n, ok := v.value.(uint64); ok {
+			return MakeContentDomainFlags64Map(m.tree.Insert(d.String(), n)), nil
+		}
+
+		return nil, newInvalidContentDomainFlags64MapValueError(v)
+	}
+
+	return nil, newInvalidContentValueError(value)
+}
+
+func (m ContentDomainFlags64Map) del(key AttributeValue) (ContentSubItem, error) {
+	d, err := key.domain()
+	if err != nil {
+		return m, err
+	}
+
+	t, ok := m.tree.Delete(d.String())
+	if !ok {
+		return m, newMissingValueError()
+	}
+
+	return MakeContentDomainFlags64Map(t), nil
 }
 
 // ContentValue implements ContentSubItem as immediate value.

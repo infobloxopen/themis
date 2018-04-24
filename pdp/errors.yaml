@@ -673,6 +673,46 @@ errors:
   - field: expected
   - field: value
 
+- id: invalidFlagsTypeCapacityError
+  fields:
+  - id: t
+    type: "*FlagsType"
+  msg: "Expected flags capacity 8, 16, 32 or 64 but got %d"
+  args:
+  - field: t.c
+
+- id: invalidContentDomainFlags8MapValueError
+  fields:
+  - id: value
+    type: ContentValue
+  msg: "Expected uint8 value but got %T"
+  args:
+  - field: value.value
+
+- id: invalidContentDomainFlags16MapValueError
+  fields:
+  - id: value
+    type: ContentValue
+  msg: "Expected uint16 value but got %T"
+  args:
+  - field: value.value
+
+- id: invalidContentDomainFlags32MapValueError
+  fields:
+  - id: value
+    type: ContentValue
+  msg: "Expected uint32 value but got %T"
+  args:
+  - field: value.value
+
+- id: invalidContentDomainFlags64MapValueError
+  fields:
+  - id: value
+    type: ContentValue
+  msg: "Expected uint64 value but got %T"
+  args:
+  - field: value.value
+
 - id: integerDivideByZeroError
   msg: "Integer divisor has a value of 0"
 
