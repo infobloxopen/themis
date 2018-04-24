@@ -20,6 +20,7 @@ func main() {
 		server.WithControlAt(conf.controlEP),
 		server.WithHealthAt(conf.healthEP),
 		server.WithProfilerAt(conf.profilerEP),
+		server.WithStorageAt(conf.storageEP),
 		server.WithTracingAt(conf.tracingEP),
 		server.WithMemLimits(conf.mem),
 		server.WithMaxGRPCStreams(uint32(conf.maxStreams)),

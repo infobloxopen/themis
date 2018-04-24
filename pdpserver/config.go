@@ -31,6 +31,7 @@ type config struct {
 	tracingEP           string
 	healthEP            string
 	profilerEP          string
+	storageEP           string
 	mem                 server.MemLimits
 	maxStreams          uint
 	memStatsLogPath     string
@@ -63,6 +64,7 @@ func init() {
 	flag.StringVar(&conf.tracingEP, "t", "", "OpenZipkin tracing endpoint")
 	flag.StringVar(&conf.healthEP, "health", "", "health check endpoint")
 	flag.StringVar(&conf.profilerEP, "pprof", "", "performance profiler endpoint")
+	flag.StringVar(&conf.storageEP, "storage", ":5552", "storage control endpoint")
 	limit := flag.Uint64("mem-limit", 0, "memory limit in megabytes")
 	flag.UintVar(&conf.maxStreams, "max-streams", 0, "maximum number of parallel gRPC streams (0 - use gRPC default)")
 
