@@ -45,6 +45,9 @@ type Type interface {
 	String() string
 	// GetKey returns case insensitive (always lowercase) type key.
 	GetKey() string
+	// Match checks if type matches to other type. Built-in types match
+	// iff they are equal.
+	Match(t Type) bool
 }
 
 type builtinType struct {
@@ -69,6 +72,10 @@ func (t *builtinType) String() string {
 
 func (t *builtinType) GetKey() string {
 	return t.k
+}
+
+func (t *builtinType) Match(ot Type) bool {
+	return t == ot
 }
 
 // FlagsType instance represents cutom flags type.
@@ -136,6 +143,21 @@ func (t *FlagsType) String() string {
 // GetKey method returns case insensitive (always lowercase) type key.
 func (t *FlagsType) GetKey() string {
 	return t.k
+}
+
+// Match checks equivalence of different flags types. Flags types match iff
+// they are defined for the same number of flags.
+func (t *FlagsType) Match(ot Type) bool {
+	fot, ok := ot.(*FlagsType)
+	if !ok {
+		return false
+	}
+
+	if t == fot {
+		return true
+	}
+
+	return len(t.b) == len(fot.b)
 }
 
 // Capacity gets number of bits required to represent any flags combination.

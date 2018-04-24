@@ -121,6 +121,65 @@ const (
 				"example.net": "value-2",
 				"example.org": "value-3"
 			}
+		},
+		"dom8-map": {
+			"type": {
+				"meta": "flags",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07"]
+			},
+			"keys": ["domain"],
+			"data": {
+				"example.com": ["f01"],
+				"example.net": ["f02", "f04"],
+				"example.org": ["f01", "f02"]
+			}
+		},
+		"dom16-map": {
+			"type": {
+				"meta": "flags",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17"]
+			},
+			"keys": ["domain"],
+			"data": {
+				"example.com": ["f01"],
+				"example.net": ["f02", "f04"],
+				"example.org": ["f01", "f02"]
+			}
+		},
+		"dom32-map": {
+			"type": {
+				"meta": "flags",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37"]
+			},
+			"keys": ["domain"],
+			"data": {
+				"example.com": ["f01"],
+				"example.net": ["f02", "f04"],
+				"example.org": ["f01", "f02"]
+			}
+		},
+		"dom64-map": {
+			"type": {
+				"meta": "flags",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37",
+				          "f40", "f41", "f42", "f43", "f44", "f45", "f46", "f47",
+				          "f50", "f51", "f52", "f53", "f54", "f55", "f56", "f57",
+				          "f60", "f61", "f62", "f63", "f64", "f65", "f66", "f67",
+				          "f70", "f71", "f72", "f73", "f74", "f75", "f76", "f77"]
+			},
+			"keys": ["domain"],
+			"data": {
+				"example.com": ["f01"],
+				"example.net": ["f02", "f04"],
+				"example.org": ["f01", "f02"]
+			}
 		}
 	}
 }`
@@ -153,6 +212,65 @@ const (
 				"example.org": "value-3"
 			},
 			"type": "string",
+			"keys": ["domain"]
+		},
+		"dom8-map": {
+			"data": {
+				"example.com": ["f01"],
+				"example.net": ["f02", "f04"],
+				"example.org": ["f01", "f02"]
+			},
+			"type": {
+				"meta": "flags",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07"]
+			},
+			"keys": ["domain"]
+		},
+		"dom16-map": {
+			"data": {
+				"example.com": ["f01"],
+				"example.net": ["f02", "f04"],
+				"example.org": ["f01", "f02"]
+			},
+			"type": {
+				"meta": "flags",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17"]
+			},
+			"keys": ["domain"]
+		},
+		"dom32-map": {
+			"data": {
+				"example.com": ["f01"],
+				"example.net": ["f02", "f04"],
+				"example.org": ["f01", "f02"]
+			},
+			"type": {
+				"meta": "flags",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37"]
+			},
+			"keys": ["domain"]
+		},
+		"dom64-map": {
+			"data": {
+				"example.com": ["f01"],
+				"example.net": ["f02", "f04"],
+				"example.org": ["f01", "f02"]
+			},
+			"type": {
+				"meta": "flags",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37",
+				          "f40", "f41", "f42", "f43", "f44", "f45", "f46", "f47",
+				          "f50", "f51", "f52", "f53", "f54", "f55", "f56", "f57",
+				          "f60", "f61", "f62", "f63", "f64", "f65", "f66", "f67",
+				          "f70", "f71", "f72", "f73", "f74", "f75", "f76", "f77"]
+			},
 			"keys": ["domain"]
 		}
 	}
@@ -257,6 +375,57 @@ const (
 					"3-third"
 				]
 			}
+		},
+		"flags8": {
+			"type": {
+				"meta": "flags",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07"]
+			},
+			"keys": ["domain"],
+			"data": {
+				"key": ["f00", "f02", "f04", "f06"]
+			}
+		},
+		"flags16": {
+			"type": {
+				"meta": "flags",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17"]
+			},
+			"keys": ["domain"],
+			"data": {
+				"key": ["f00", "f02", "f04", "f06"]
+			}
+		},
+		"flags32": {
+			"type": {
+				"meta": "flags",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37"]
+			},
+			"keys": ["domain"],
+			"data": {
+				"key": ["f00", "f02", "f04", "f06"]
+			}
+		},
+		"flags64": {
+			"type": {
+				"meta": "flags",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37",
+				          "f40", "f41", "f42", "f43", "f44", "f45", "f46", "f47",
+				          "f50", "f51", "f52", "f53", "f54", "f55", "f56", "f57",
+				          "f60", "f61", "f62", "f63", "f64", "f65", "f66", "f67",
+				          "f70", "f71", "f72", "f73", "f74", "f75", "f76", "f77"]
+			},
+			"keys": ["domain"],
+			"data": {
+				"key": ["f00", "f02", "f04", "f06"]
+			}
 		}
 	}
 }`
@@ -360,6 +529,57 @@ const (
 			},
 			"type": "list of strings",
 			"keys": ["string"]
+		},
+		"flags8": {
+			"data": {
+				"key": ["f00", "f02", "f04", "f06"]
+			},
+			"type": {
+				"meta": "flags",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07"]
+			},
+			"keys": ["domain"]
+		},
+		"flags16": {
+			"data": {
+				"key": ["f00", "f02", "f04", "f06"]
+			},
+			"type": {
+				"meta": "flags",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17"]
+			},
+			"keys": ["domain"]
+		},
+		"flags32": {
+			"data": {
+				"key": ["f00", "f02", "f04", "f06"]
+			},
+			"type": {
+				"meta": "flags",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37"]
+			},
+			"keys": ["domain"]
+		},
+		"flags64": {
+			"data": {
+				"key": ["f00", "f02", "f04", "f06"]
+			},
+			"type": {
+				"meta": "flags",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37",
+				          "f40", "f41", "f42", "f43", "f44", "f45", "f46", "f47",
+				          "f50", "f51", "f52", "f53", "f54", "f55", "f56", "f57",
+				          "f60", "f61", "f62", "f63", "f64", "f65", "f66", "f67",
+				          "f70", "f71", "f72", "f73", "f74", "f75", "f76", "f77"]
+			},
+			"keys": ["domain"]
 		}
 	}
 }`
@@ -552,9 +772,93 @@ func TestUnmarshal(t *testing.T) {
 				}
 			}
 		}
+
+		lc, err = c.Get("dom8-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{
+				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+			}
+			r, err := lc.Get(path, nil)
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"f02\",\"f04\""
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected %q but got %q", e, s)
+				}
+			}
+		}
+
+		lc, err = c.Get("dom16-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{
+				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+			}
+			r, err := lc.Get(path, nil)
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"f02\",\"f04\""
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected %q but got %q", e, s)
+				}
+			}
+		}
+
+		lc, err = c.Get("dom32-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{
+				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+			}
+			r, err := lc.Get(path, nil)
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"f02\",\"f04\""
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected %q but got %q", e, s)
+				}
+			}
+		}
+
+		lc, err = c.Get("dom64-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{
+				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+			}
+			r, err := lc.Get(path, nil)
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"f02\",\"f04\""
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected %q but got %q", e, s)
+				}
+			}
+		}
 	}
 
-	c, err = Unmarshal(strings.NewReader(jsonAllMapsStream), nil)
+	c, err = Unmarshal(strings.NewReader(jsonPostprocessAllMapsStream), nil)
 	if err != nil {
 		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 	} else {
@@ -613,6 +917,90 @@ func TestUnmarshal(t *testing.T) {
 				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 			} else {
 				e := "value-2"
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected %q but got %q", e, s)
+				}
+			}
+		}
+
+		lc, err = c.Get("dom8-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{
+				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+			}
+			r, err := lc.Get(path, nil)
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"f02\",\"f04\""
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected %q but got %q", e, s)
+				}
+			}
+		}
+
+		lc, err = c.Get("dom16-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{
+				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+			}
+			r, err := lc.Get(path, nil)
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"f02\",\"f04\""
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected %q but got %q", e, s)
+				}
+			}
+		}
+
+		lc, err = c.Get("dom32-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{
+				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+			}
+			r, err := lc.Get(path, nil)
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"f02\",\"f04\""
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected %q but got %q", e, s)
+				}
+			}
+		}
+
+		lc, err = c.Get("dom64-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{
+				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+			}
+			r, err := lc.Get(path, nil)
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"f02\",\"f04\""
 				s, err := r.Serialize()
 				if err != nil {
 					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)

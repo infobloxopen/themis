@@ -33,22 +33,98 @@ func (c *contentItem) unmarshalTypeField(d *json.Decoder) error {
 		return newDuplicateContentItemFieldError("type")
 	}
 
-	s, err := jparser.GetString(d, "content item type")
+	token, err := d.Token()
 	if err != nil {
 		return err
 	}
 
-	t, ok := pdp.BuiltinTypes[strings.ToLower(s)]
-	if !ok {
-		return newUnknownTypeError(s)
+	switch v := token.(type) {
+	default:
+		return newInvalidTypeFormatError(token)
+
+	case string:
+		t, ok := pdp.BuiltinTypes[strings.ToLower(v)]
+		if !ok {
+			return newUnknownTypeError(v)
+		}
+
+		if t == pdp.TypeUndefined {
+			return newInvalidContentItemTypeError(t)
+		}
+
+		c.t = t
+		c.tOk = true
+
+	case json.Delim:
+		if v.String() != jparser.DelimObjectStart {
+			return newInvalidTypeFormatError(token)
+		}
+
+		if err := c.unmarshalTypeDeclaration(d); err != nil {
+			return err
+		}
 	}
 
-	if t == pdp.TypeUndefined {
-		return newInvalidContentItemTypeError(t)
+	return nil
+}
+
+func (c *contentItem) unmarshalTypeDeclaration(d *json.Decoder) error {
+	var (
+		metaOk bool
+		meta   string
+		flags  []string
+	)
+
+	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+		switch k {
+		default:
+			return newUnknownTypeFieldError(k)
+
+		case "meta":
+			s, err := jparser.GetString(d, "meta type name")
+			if err != nil {
+				return err
+			}
+
+			meta = s
+			metaOk = true
+
+		case "flags":
+			flags = []string{}
+			if err := jparser.GetStringSequence(d, func(i int, s string) error {
+				flags = append(flags, s)
+				return nil
+			}, "list of flag names"); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}, "type declarations"); err != nil {
+		return err
 	}
 
-	c.t = t
-	c.tOk = true
+	if !metaOk {
+		return newMissingMetaTypeNameError()
+	}
+
+	switch strings.ToLower(meta) {
+	default:
+		return newUnknownMetaTypeError(meta)
+
+	case "flags":
+		if flags == nil {
+			return newMissingFlagNameListError()
+		}
+
+		t, err := pdp.NewFlagsType("<flags>", flags...)
+		if err != nil {
+			return err
+		}
+
+		c.t = t
+		c.tOk = true
+	}
 
 	return nil
 }
@@ -255,6 +331,102 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 	}
 
 	return nil, newInvalidContentItemTypeError(c.t)
+}
+
+func (c *contentItem) unmarshalFlags8Value(d *json.Decoder) (uint8, error) {
+	t, ok := c.t.(*pdp.FlagsType)
+	if !ok {
+		return 0, newInvalidContentItemTypeError(c.t)
+	}
+
+	var n uint8
+	err := jparser.GetStringSequence(d, func(idx int, s string) error {
+		i := t.GetFlagBit(s)
+		if i < 0 {
+			return newUnknownFlagNameError(s)
+		}
+
+		n |= 1 << uint(i)
+
+		return nil
+	}, "flag names")
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
+}
+
+func (c *contentItem) unmarshalFlags16Value(d *json.Decoder) (uint16, error) {
+	t, ok := c.t.(*pdp.FlagsType)
+	if !ok {
+		return 0, newInvalidContentItemTypeError(c.t)
+	}
+
+	var n uint16
+	err := jparser.GetStringSequence(d, func(idx int, s string) error {
+		i := t.GetFlagBit(s)
+		if i < 0 {
+			return newUnknownFlagNameError(s)
+		}
+
+		n |= 1 << uint(i)
+
+		return nil
+	}, "flag names")
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
+}
+
+func (c *contentItem) unmarshalFlags32Value(d *json.Decoder) (uint32, error) {
+	t, ok := c.t.(*pdp.FlagsType)
+	if !ok {
+		return 0, newInvalidContentItemTypeError(c.t)
+	}
+
+	var n uint32
+	err := jparser.GetStringSequence(d, func(idx int, s string) error {
+		i := t.GetFlagBit(s)
+		if i < 0 {
+			return newUnknownFlagNameError(s)
+		}
+
+		n |= 1 << uint(i)
+
+		return nil
+	}, "flag names")
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
+}
+
+func (c *contentItem) unmarshalFlags64Value(d *json.Decoder) (uint64, error) {
+	t, ok := c.t.(*pdp.FlagsType)
+	if !ok {
+		return 0, newInvalidContentItemTypeError(c.t)
+	}
+
+	var n uint64
+	err := jparser.GetStringSequence(d, func(idx int, s string) error {
+		i := t.GetFlagBit(s)
+		if i < 0 {
+			return newUnknownFlagNameError(s)
+		}
+
+		n |= 1 << uint(i)
+
+		return nil
+	}, "flag names")
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
 }
 
 func (c *contentItem) unmarshalTypedData(d *json.Decoder, keyIdx int) (interface{}, error) {

@@ -224,3 +224,99 @@ func (c *contentItem) postProcess(v interface{}, keyIdx int) (interface{}, error
 
 	return c.ppValue(v)
 }
+
+func (c *contentItem) postProcessFlags8Value(v interface{}) (uint8, error) {
+	t, ok := c.t.(*pdp.FlagsType)
+	if !ok {
+		return 0, newInvalidContentItemTypeError(c.t)
+	}
+
+	var n uint8
+	err := ppStringSequence(v, "flag names", func(s string) error {
+		i := t.GetFlagBit(s)
+		if i < 0 {
+			return newUnknownFlagNameError(s)
+		}
+
+		n |= 1 << uint(i)
+
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
+}
+
+func (c *contentItem) postProcessFlags16Value(v interface{}) (uint16, error) {
+	t, ok := c.t.(*pdp.FlagsType)
+	if !ok {
+		return 0, newInvalidContentItemTypeError(c.t)
+	}
+
+	var n uint16
+	err := ppStringSequence(v, "flag names", func(s string) error {
+		i := t.GetFlagBit(s)
+		if i < 0 {
+			return newUnknownFlagNameError(s)
+		}
+
+		n |= 1 << uint(i)
+
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
+}
+
+func (c *contentItem) postProcessFlags32Value(v interface{}) (uint32, error) {
+	t, ok := c.t.(*pdp.FlagsType)
+	if !ok {
+		return 0, newInvalidContentItemTypeError(c.t)
+	}
+
+	var n uint32
+	err := ppStringSequence(v, "flag names", func(s string) error {
+		i := t.GetFlagBit(s)
+		if i < 0 {
+			return newUnknownFlagNameError(s)
+		}
+
+		n |= 1 << uint(i)
+
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
+}
+
+func (c *contentItem) postProcessFlags64Value(v interface{}) (uint64, error) {
+	t, ok := c.t.(*pdp.FlagsType)
+	if !ok {
+		return 0, newInvalidContentItemTypeError(c.t)
+	}
+
+	var n uint64
+	err := ppStringSequence(v, "flag names", func(s string) error {
+		i := t.GetFlagBit(s)
+		if i < 0 {
+			return newUnknownFlagNameError(s)
+		}
+
+		n |= 1 << uint(i)
+
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
+}

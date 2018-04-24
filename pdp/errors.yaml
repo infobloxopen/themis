@@ -202,6 +202,26 @@ errors:
   args:
   - field: t
 
+- id: notMatchingTypeRebindError
+  fields:
+  - id: actual
+    type: Type
+  - id: expected
+    type: Type
+  msg: "Can't rebind value to type %q as it doesn't match original type %q"
+  args:
+  - field: expected
+  - field: actual
+
+- id: unknownMetaType
+  fields:
+  - id: t
+    type: Type
+  msg: "Unknown metatype %T of type %q"
+  args:
+  - field: t
+  - field: t
+
 - id: assignmentTypeMismatch
   fields:
   - id: a

@@ -30,82 +30,84 @@ const (
 	duplicateAttributeValueErrorID             = 17
 	unknownTypeSerializationErrorID            = 18
 	invalidTypeSerializationErrorID            = 19
-	assignmentTypeMismatchID                   = 20
-	mapperArgumentTypeErrorID                  = 21
-	UntaggedPolicyModificationErrorID          = 22
-	MissingPolicyTagErrorID                    = 23
-	PolicyTagsNotMatchErrorID                  = 24
-	emptyPathModificationErrorID               = 25
-	invalidRootPolicyItemTypeErrorID           = 26
-	hiddenRootPolicyAppendErrorID              = 27
-	invalidRootPolicyErrorID                   = 28
-	hiddenPolicySetModificationErrorID         = 29
-	invalidPolicySetItemTypeErrorID            = 30
-	tooShortPathPolicySetModificationErrorID   = 31
-	missingPolicySetChildErrorID               = 32
-	hiddenPolicyAppendErrorID                  = 33
-	policyTransactionTagsNotMatchErrorID       = 34
-	failedPolicyTransactionErrorID             = 35
-	unknownPolicyUpdateOperationErrorID        = 36
-	hiddenPolicyModificationErrorID            = 37
-	tooLongPathPolicyModificationErrorID       = 38
-	tooShortPathPolicyModificationErrorID      = 39
-	invalidPolicyItemTypeErrorID               = 40
-	hiddenRuleAppendErrorID                    = 41
-	missingPolicyChildErrorID                  = 42
-	missingContentErrorID                      = 43
-	invalidContentStorageItemID                = 44
-	missingContentItemErrorID                  = 45
-	invalidContentItemErrorID                  = 46
-	invalidContentItemTypeErrorID              = 47
-	invalidSelectorPathErrorID                 = 48
-	networkMapKeyValueTypeErrorID              = 49
-	mapContentSubitemErrorID                   = 50
-	invalidContentModificationErrorID          = 51
-	missingPathContentModificationErrorID      = 52
-	tooLongPathContentModificationErrorID      = 53
-	invalidContentValueModificationErrorID     = 54
-	UntaggedContentModificationErrorID         = 55
-	MissingContentTagErrorID                   = 56
-	ContentTagsNotMatchErrorID                 = 57
-	unknownContentUpdateOperationErrorID       = 58
-	failedContentTransactionErrorID            = 59
-	contentTransactionIDNotMatchErrorID        = 60
-	contentTransactionTagsNotMatchErrorID      = 61
-	tooShortRawPathContentModificationErrorID  = 62
-	tooLongRawPathContentModificationErrorID   = 63
-	invalidContentUpdateDataErrorID            = 64
-	invalidContentUpdateResultTypeErrorID      = 65
-	invalidContentUpdateKeysErrorID            = 66
-	unknownContentItemResultTypeErrorID        = 67
-	invalidContentItemResultTypeErrorID        = 68
-	invalidContentKeyTypeErrorID               = 69
-	invalidContentStringMapErrorID             = 70
-	invalidContentNetworkMapErrorID            = 71
-	invalidContentDomainMapErrorID             = 72
-	invalidContentValueErrorID                 = 73
-	invalidContentValueTypeErrorID             = 74
-	invalidFlagsTypeCapacityErrorID            = 75
-	invalidContentDomainFlags8MapValueErrorID  = 76
-	invalidContentDomainFlags16MapValueErrorID = 77
-	invalidContentDomainFlags32MapValueErrorID = 78
-	invalidContentDomainFlags64MapValueErrorID = 79
-	integerDivideByZeroErrorID                 = 80
-	floatDivideByZeroErrorID                   = 81
-	floatNanErrorID                            = 82
-	floatInfErrorID                            = 83
-	nilTypeErrorID                             = 84
-	builtinCustomTypeErrorID                   = 85
-	duplicateCustomTypeErrorID                 = 86
-	duplicatesBuiltinTypeErrorID               = 87
-	duplicateFlagNameID                        = 88
-	noTypedAttributeErrorID                    = 89
-	undefinedAttributeTypeErrorID              = 90
-	unknownAttributeTypeErrorID                = 91
-	duplicateAttributeErrorID                  = 92
-	noFlagsDefinedErrorID                      = 93
-	tooManyFlagsDefinedErrorID                 = 94
-	listOfStringsTypeErrorID                   = 95
+	notMatchingTypeRebindErrorID               = 20
+	unknownMetaTypeID                          = 21
+	assignmentTypeMismatchID                   = 22
+	mapperArgumentTypeErrorID                  = 23
+	UntaggedPolicyModificationErrorID          = 24
+	MissingPolicyTagErrorID                    = 25
+	PolicyTagsNotMatchErrorID                  = 26
+	emptyPathModificationErrorID               = 27
+	invalidRootPolicyItemTypeErrorID           = 28
+	hiddenRootPolicyAppendErrorID              = 29
+	invalidRootPolicyErrorID                   = 30
+	hiddenPolicySetModificationErrorID         = 31
+	invalidPolicySetItemTypeErrorID            = 32
+	tooShortPathPolicySetModificationErrorID   = 33
+	missingPolicySetChildErrorID               = 34
+	hiddenPolicyAppendErrorID                  = 35
+	policyTransactionTagsNotMatchErrorID       = 36
+	failedPolicyTransactionErrorID             = 37
+	unknownPolicyUpdateOperationErrorID        = 38
+	hiddenPolicyModificationErrorID            = 39
+	tooLongPathPolicyModificationErrorID       = 40
+	tooShortPathPolicyModificationErrorID      = 41
+	invalidPolicyItemTypeErrorID               = 42
+	hiddenRuleAppendErrorID                    = 43
+	missingPolicyChildErrorID                  = 44
+	missingContentErrorID                      = 45
+	invalidContentStorageItemID                = 46
+	missingContentItemErrorID                  = 47
+	invalidContentItemErrorID                  = 48
+	invalidContentItemTypeErrorID              = 49
+	invalidSelectorPathErrorID                 = 50
+	networkMapKeyValueTypeErrorID              = 51
+	mapContentSubitemErrorID                   = 52
+	invalidContentModificationErrorID          = 53
+	missingPathContentModificationErrorID      = 54
+	tooLongPathContentModificationErrorID      = 55
+	invalidContentValueModificationErrorID     = 56
+	UntaggedContentModificationErrorID         = 57
+	MissingContentTagErrorID                   = 58
+	ContentTagsNotMatchErrorID                 = 59
+	unknownContentUpdateOperationErrorID       = 60
+	failedContentTransactionErrorID            = 61
+	contentTransactionIDNotMatchErrorID        = 62
+	contentTransactionTagsNotMatchErrorID      = 63
+	tooShortRawPathContentModificationErrorID  = 64
+	tooLongRawPathContentModificationErrorID   = 65
+	invalidContentUpdateDataErrorID            = 66
+	invalidContentUpdateResultTypeErrorID      = 67
+	invalidContentUpdateKeysErrorID            = 68
+	unknownContentItemResultTypeErrorID        = 69
+	invalidContentItemResultTypeErrorID        = 70
+	invalidContentKeyTypeErrorID               = 71
+	invalidContentStringMapErrorID             = 72
+	invalidContentNetworkMapErrorID            = 73
+	invalidContentDomainMapErrorID             = 74
+	invalidContentValueErrorID                 = 75
+	invalidContentValueTypeErrorID             = 76
+	invalidFlagsTypeCapacityErrorID            = 77
+	invalidContentDomainFlags8MapValueErrorID  = 78
+	invalidContentDomainFlags16MapValueErrorID = 79
+	invalidContentDomainFlags32MapValueErrorID = 80
+	invalidContentDomainFlags64MapValueErrorID = 81
+	integerDivideByZeroErrorID                 = 82
+	floatDivideByZeroErrorID                   = 83
+	floatNanErrorID                            = 84
+	floatInfErrorID                            = 85
+	nilTypeErrorID                             = 86
+	builtinCustomTypeErrorID                   = 87
+	duplicateCustomTypeErrorID                 = 88
+	duplicatesBuiltinTypeErrorID               = 89
+	duplicateFlagNameID                        = 90
+	noTypedAttributeErrorID                    = 91
+	undefinedAttributeTypeErrorID              = 92
+	unknownAttributeTypeErrorID                = 93
+	duplicateAttributeErrorID                  = 94
+	noFlagsDefinedErrorID                      = 95
+	tooManyFlagsDefinedErrorID                 = 96
+	listOfStringsTypeErrorID                   = 97
 )
 
 type externalError struct {
@@ -434,6 +436,38 @@ func newInvalidTypeSerializationError(t Type) *invalidTypeSerializationError {
 
 func (e *invalidTypeSerializationError) Error() string {
 	return e.errorf("Can't serialize value of %q type", e.t)
+}
+
+type notMatchingTypeRebindError struct {
+	errorLink
+	actual   Type
+	expected Type
+}
+
+func newNotMatchingTypeRebindError(actual, expected Type) *notMatchingTypeRebindError {
+	return &notMatchingTypeRebindError{
+		errorLink: errorLink{id: notMatchingTypeRebindErrorID},
+		actual:    actual,
+		expected:  expected}
+}
+
+func (e *notMatchingTypeRebindError) Error() string {
+	return e.errorf("Can't rebind value to type %q as it doesn't match original type %q", e.expected, e.actual)
+}
+
+type unknownMetaType struct {
+	errorLink
+	t Type
+}
+
+func newUnknownMetaType(t Type) *unknownMetaType {
+	return &unknownMetaType{
+		errorLink: errorLink{id: unknownMetaTypeID},
+		t:         t}
+}
+
+func (e *unknownMetaType) Error() string {
+	return e.errorf("Unknown metatype %T of type %q", e.t, e.t)
 }
 
 type assignmentTypeMismatch struct {

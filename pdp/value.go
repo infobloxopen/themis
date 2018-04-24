@@ -598,3 +598,24 @@ func (v AttributeValue) Serialize() (string, error) {
 
 	return "", newUnknownTypeSerializationError(v.t)
 }
+
+// Rebind produces copy of the value with given type if the type matches original value type.
+func (v AttributeValue) Rebind(t Type) (AttributeValue, error) {
+	if v.t == t {
+		return v, nil
+	}
+
+	if !v.t.Match(t) {
+		return v, newNotMatchingTypeRebindError(t, v.t)
+	}
+
+	switch t.(type) {
+	case *FlagsType:
+		return AttributeValue{
+			t: t,
+			v: v.v,
+		}, nil
+	}
+
+	return v, newUnknownMetaType(t)
+}

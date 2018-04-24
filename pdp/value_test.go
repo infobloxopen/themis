@@ -1152,6 +1152,101 @@ func TestAttributeValueSerialize(t *testing.T) {
 	}
 }
 
+type testMetaType struct{}
+
+func (t *testMetaType) String() string     { return "Test" }
+func (t *testMetaType) GetKey() string     { return "test" }
+func (t *testMetaType) Match(ot Type) bool { return true }
+
+func TestAttributeValueRebind(t *testing.T) {
+	s := MakeStringValue("test")
+	v, err := s.Rebind(TypeString)
+	if err != nil {
+		t.Errorf("Expected no error but got: %s", err)
+	} else {
+		vt := v.GetResultType()
+		if vt != TypeString {
+			t.Errorf("Expected %q as value type but got %q", TypeString, vt)
+		}
+
+		if s, ok := v.v.(string); ok {
+			e := "test"
+			if s != e {
+				t.Errorf("Expected string value %q but got %q", e, s)
+			}
+		} else {
+			t.Errorf("Expected string value but got %T (%#v)", v.v, v.v)
+		}
+	}
+
+	v, err = s.Rebind(TypeBoolean)
+	if err == nil {
+		t.Errorf("Expected error but got value %s", v.describe())
+	} else if _, ok := err.(*notMatchingTypeRebindError); !ok {
+		t.Errorf("Expected *notMatchingTypeRebindError but got %T (%s)", err, err)
+	}
+
+	ft8, err := NewFlagsType("F8flags",
+		"f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+	)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		gt8, err := NewFlagsType("G8flags",
+			"g00", "g01", "g02", "g03", "g04", "g05", "g06", "g07",
+		)
+		if err != nil {
+			t.Errorf("Expected no error but got %s", err)
+		} else {
+			f := MakeFlagsValue8(7, ft8)
+			v, err := f.Rebind(gt8)
+			if err != nil {
+				t.Errorf("Expected no error but got: %s", err)
+			} else {
+				vt := v.GetResultType()
+				if vt != gt8 {
+					t.Errorf("Expected %q as value type but got %q", gt8, vt)
+				}
+
+				if n, ok := v.v.(uint8); ok {
+					if n != 7 {
+						t.Errorf("Expected 8 bits flags value %d but got %d", 7, n)
+					}
+				} else {
+					t.Errorf("Expected 8 bits flags value but got %T (%#v)", v.v, v.v)
+				}
+			}
+		}
+	}
+
+	ft8, err = NewFlagsType("F8flags",
+		"f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+	)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else {
+		gt8, err := NewFlagsType("G8flags",
+			"g00", "g01", "g02", "g03",
+		)
+		f := MakeFlagsValue8(7, ft8)
+		v, err := f.Rebind(gt8)
+		if err == nil {
+			t.Errorf("Expected error but got value %s", v.describe())
+		} else if _, ok := err.(*notMatchingTypeRebindError); !ok {
+			t.Errorf("Expected *notMatchingTypeRebindError but got %T (%s)", err, err)
+		}
+	}
+
+	testType := new(testMetaType)
+	mv := AttributeValue{t: testType}
+	v, err = mv.Rebind(TypeBoolean)
+	if err == nil {
+		t.Errorf("Expected error but got value %s", v.describe())
+	} else if _, ok := err.(*unknownMetaType); !ok {
+		t.Errorf("Expected *unknownMetaType but got %T (%s)", err, err)
+	}
+}
+
 func assertPanicWithError(t *testing.T, f func(), format string, args ...interface{}) {
 	defer func() {
 		if r := recover(); r != nil {

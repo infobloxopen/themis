@@ -64,7 +64,7 @@ func (s LocalSelector) Calculate(ctx *pdp.Context) (pdp.AttributeValue, error) {
 	}
 
 	t := item.GetType()
-	if s.t != t {
+	if !t.Match(s.t) {
 		return pdp.UndefinedValue, typeMismatchError(s.t, t)
 	}
 
@@ -73,8 +73,8 @@ func (s LocalSelector) Calculate(ctx *pdp.Context) (pdp.AttributeValue, error) {
 		return pdp.UndefinedValue, err
 	}
 
-	t = r.GetResultType()
-	if s.t != t {
+	r, err = r.Rebind(s.t)
+	if err != nil {
 		return pdp.UndefinedValue, typeMismatchError(s.t, t)
 	}
 

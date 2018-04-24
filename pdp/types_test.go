@@ -18,6 +18,14 @@ func TestBuiltinTypes(t *testing.T) {
 		if len(bt.String()) <= 0 {
 			t.Errorf("exepcted some human readable name for type %q but got empty string", k)
 		}
+
+		if !bt.Match(bt) {
+			t.Errorf("expected that %q matches itself", bt)
+		}
+	}
+
+	if TypeBoolean.Match(TypeString) {
+		t.Errorf("expected that %q doesn't match %q", TypeBoolean, TypeString)
 	}
 }
 
@@ -29,37 +37,63 @@ func TestFlagsType(t *testing.T) {
 	ft8, err := NewFlagsType(flags8Name, flags8...)
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
-	} else if ft8, ok := ft8.(*FlagsType); ok {
-		n := ft8.String()
-		if n != flags8Name {
-			t.Errorf("Expected %q as type name but got %q", flags8Name, n)
-		}
-
-		k := ft8.GetKey()
-		if k != strings.ToLower(flags8Name) {
-			t.Errorf("Expected %q as type key but got %q", strings.ToLower(flags8Name), k)
-		}
-
-		c := ft8.Capacity()
-		if c != 8 {
-			t.Errorf("Expected 8 bit as type capacity but got %d", c)
-		}
-
-		// Flags names use octal system
-		b := ft8.GetFlagBit("f06")
-		if b != 06 {
-			t.Errorf("Expected 006 as bit number for %q but got %03o", "f06", b)
-		}
-
-		b = ft8.GetFlagBit("f07")
-		if b != -1 {
-			t.Errorf("Expected no flag %q (-1) but got %03o", "f07", b)
-		}
-
-		assertMapStringIntKeys(ft8.f, flags8, "flags8 index", t)
-		assertStrings(ft8.b, flags8, "flags8 names", t)
 	} else {
-		t.Errorf("Expected *FlagsType but got %T", ft8)
+		if ft8, ok := ft8.(*FlagsType); ok {
+			n := ft8.String()
+			if n != flags8Name {
+				t.Errorf("Expected %q as type name but got %q", flags8Name, n)
+			}
+
+			k := ft8.GetKey()
+			if k != strings.ToLower(flags8Name) {
+				t.Errorf("Expected %q as type key but got %q", strings.ToLower(flags8Name), k)
+			}
+
+			c := ft8.Capacity()
+			if c != 8 {
+				t.Errorf("Expected 8 bit as type capacity but got %d", c)
+			}
+
+			// Flags names use octal system
+			b := ft8.GetFlagBit("f06")
+			if b != 06 {
+				t.Errorf("Expected 006 as bit number for %q but got %03o", "f06", b)
+			}
+
+			b = ft8.GetFlagBit("f07")
+			if b != -1 {
+				t.Errorf("Expected no flag %q (-1) but got %03o", "f07", b)
+			}
+
+			assertMapStringIntKeys(ft8.f, flags8, "flags8 index", t)
+			assertStrings(ft8.b, flags8, "flags8 names", t)
+		} else {
+			t.Errorf("Expected *FlagsType but got %T", ft8)
+		}
+
+		if !ft8.Match(ft8) {
+			t.Errorf("expected that %q matches itself", ft8)
+		}
+
+		if ft8.Match(TypeBoolean) {
+			t.Errorf("expected that %q doesn't match %q", ft8, TypeBoolean)
+		}
+	}
+
+	oft86, err := NewFlagsType("Other86Flags", flags8...)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if !oft86.Match(ft8) {
+		t.Errorf("expected that %q matches %q", oft86, ft8)
+	}
+
+	oft87, err := NewFlagsType("Other87Flags",
+		"f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+	)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if oft87.Match(ft8) {
+		t.Errorf("expected that %q doesn't match %q", oft87, ft8)
 	}
 
 	flags16Name := "16Flags"
