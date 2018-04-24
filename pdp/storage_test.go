@@ -2,6 +2,7 @@ package pdp
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/google/uuid"
@@ -308,5 +309,97 @@ func TestStorageTransactionalUpdate(t *testing.T) {
 		if effect != EffectNotApplicable {
 			t.Errorf("Expected \"not applicable\" effect but got %d", effect)
 		}
+	}
+}
+
+func TestStorageGetAtPath(t *testing.T) {
+	tag := uuid.New()
+
+	r1 := &Rule{
+		id:          "permit",
+		effect:      EffectPermit,
+		obligations: makeSingleStringObligation("s", "permit")}
+	r2 := &Rule{
+		id:          "permit2",
+		effect:      EffectPermit,
+		obligations: makeSingleStringObligation("s", "del-permit")}
+	p1 := &Policy{
+		id:        "first",
+		target:    makeSimpleStringTarget("s", "test"),
+		rules:     []*Rule{r1},
+		algorithm: denyOverridesRCA{}}
+	p2 := &Policy{
+		id:        "del",
+		rules:     []*Rule{r2},
+		algorithm: firstApplicableEffectRCA{}}
+	root := &PolicySet{
+		id:        "test",
+		policies:  []Evaluable{p1, p2},
+		algorithm: firstApplicableEffectPCA{}}
+
+	s := NewPolicyStorage(root, map[string]Attribute{"s": MakeAttribute("s", TypeString)}, &tag)
+
+	expectRoot, expectNil := s.GetAtPath([]string{"test"})
+	if expectNil != nil {
+		t.Errorf("expected nil error, got %v", expectNil)
+	} else if expectRoot != root {
+		id, _ := expectRoot.GetID()
+		t.Errorf("expected to find root \"test\", got %s", id)
+	}
+
+	expectFirst, expectNil := s.GetAtPath([]string{"test", "first"})
+	if expectNil != nil {
+		t.Errorf("expected nil error, got %v", expectNil)
+	} else if expectFirst != p1 {
+		id, _ := expectFirst.GetID()
+		t.Errorf("expected to find policy \"first\", got %s", id)
+	}
+
+	expectDel, expectNil := s.GetAtPath([]string{"test", "del"})
+	if expectNil != nil {
+		t.Errorf("expected nil error, got %v", expectNil)
+	} else if expectDel != p2 {
+		id, _ := expectDel.GetID()
+		t.Errorf("expected to find policy \"del\", got %s", id)
+	}
+
+	expectPermit, expectNil := s.GetAtPath([]string{"test", "first", "permit"})
+	if expectNil != nil {
+		t.Errorf("expected nil error, got %v", expectNil)
+	} else if expectPermit != r1 {
+		id, _ := expectPermit.GetID()
+		t.Errorf("expected to find rule \"permit\", got %s", id)
+	}
+
+	expectPermit2, expectNil := s.GetAtPath([]string{"test", "del", "permit2"})
+	if expectNil != nil {
+		t.Errorf("expected nil error, got %v", expectNil)
+	} else if expectPermit2 != r2 {
+		id, _ := expectPermit2.GetID()
+		t.Errorf("expected to find rule \"permit2\", got %s", id)
+	}
+
+	// error condition 1: path longer than max depth
+	badPath := []string{"test", "del", "permit2", "nonexist"}
+	expectErr := newPathNotFoundError(badPath)
+	expectNilM, expectPathNFE := s.GetAtPath(badPath)
+	if !reflect.DeepEqual(expectPathNFE, expectErr) {
+		t.Errorf("expected %v, got %v", expectErr, expectPathNFE)
+	}
+	if expectNilM != nil {
+		id, _ := expectNilM.GetID()
+		t.Errorf("expected to find nil, got rule/policy with id %s", id)
+	}
+
+	// error condition 2: path includes invalid id
+	badPath2 := []string{"test", "del2", "permit2"}
+	expectErr2 := newPathNotFoundError(badPath2)
+	expectNilM, expectPathNFE2 := s.GetAtPath(badPath2)
+	if !reflect.DeepEqual(expectPathNFE2, expectErr2) {
+		t.Errorf("expected %v, got %v", expectErr2, expectPathNFE2)
+	}
+	if expectNilM != nil {
+		id, _ := expectNilM.GetID()
+		t.Errorf("expected to find nil, got rule/policy with id %s", id)
 	}
 }

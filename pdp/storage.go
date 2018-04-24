@@ -57,6 +57,48 @@ func (s *PolicyStorage) NewTransaction(tag *uuid.UUID) (*PolicyStorageTransactio
 	return &PolicyStorageTransaction{tag: *tag, attrs: s.attrs, policies: s.policies}, nil
 }
 
+// GetAtPath obtains a marshalable node found at path specified
+func (s PolicyStorage) GetAtPath(path []string) (StorageMarshal, error) {
+	var err error
+	if s.policies == nil {
+		return nil, newNilRootError()
+	}
+	out, ok := s.policies.(StorageMarshal)
+	if !ok {
+		id, _ := s.policies.GetID()
+		return nil, newNonMarshableError(id)
+	}
+	if len(path) == 0 {
+		return out, nil
+	}
+	if ID, ok := out.GetID(); ok && ID == path[0] {
+		for _, ID := range path[1:] {
+			switch cur := out.(type) {
+			case *PolicySet:
+				_, curr, err := cur.getChild(ID)
+				if err != nil {
+					goto PathNotFound
+				}
+				out, ok = curr.(StorageMarshal)
+				if !ok {
+					id, _ := curr.GetID()
+					return nil, newNonMarshableError(id)
+				}
+			case *Policy:
+				_, out, err = cur.getChild(ID)
+				if err != nil {
+					goto PathNotFound
+				}
+			case *Rule:
+				goto PathNotFound
+			}
+		}
+		return out, nil
+	}
+PathNotFound:
+	return nil, newPathNotFoundError(path)
+}
+
 // Here set of supported update operations is defined.
 const (
 	// UOAdd stands for add operation (add or append item to a collection).

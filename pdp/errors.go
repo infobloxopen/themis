@@ -89,6 +89,9 @@ const (
 	floatInfErrorID                           = 76
 	marshalInvalidDepthErrorID                = 77
 	invalidHeaderErrorID                      = 78
+	nonMarshableErrorID                       = 79
+	nilRootErrorID                            = 80
+	pathNotFoundErrorID                       = 81
 )
 
 type externalError struct {
@@ -1380,4 +1383,47 @@ func newInvalidHeaderError(head interface{}) *invalidHeaderError {
 
 func (e *invalidHeaderError) Error() string {
 	return e.errorf("Invalid marshaled format for head interface %v+", e.head)
+}
+
+type nonMarshableError struct {
+	errorLink
+	s string
+}
+
+func newNonMarshableError(s string) *nonMarshableError {
+	return &nonMarshableError{
+		errorLink: errorLink{id: nonMarshableErrorID},
+		s:         s}
+}
+
+func (e *nonMarshableError) Error() string {
+	return e.errorf("Ecountered non-marshalable node \"%s\"", e.s)
+}
+
+type nilRootError struct {
+	errorLink
+}
+
+func newNilRootError() *nilRootError {
+	return &nilRootError{
+		errorLink: errorLink{id: nilRootErrorID}}
+}
+
+func (e *nilRootError) Error() string {
+	return e.errorf("Storage root is nil")
+}
+
+type pathNotFoundError struct {
+	errorLink
+	path []string
+}
+
+func newPathNotFoundError(path []string) *pathNotFoundError {
+	return &pathNotFoundError{
+		errorLink: errorLink{id: pathNotFoundErrorID},
+		path:      path}
+}
+
+func (e *pathNotFoundError) Error() string {
+	return e.errorf("Path %v not found", e.path)
 }
