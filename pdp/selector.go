@@ -1,24 +1,24 @@
 package pdp
 
-import (
-	log "github.com/sirupsen/logrus"
-)
-
 type Selector interface {
 	Enabled() bool
 	Initialize()
 	SelectorFunc(string, []Expression, Type) (Expression, error)
 }
 
-var SelectorMap = make(map[string]Selector)
+var selectorMap = make(map[string]Selector)
 
 func RegisterSelector(name string, s Selector) {
-	log.Debugf("Register %s selector", name)
-	SelectorMap[name] = s
+	selectorMap[name] = s
+}
+
+func GetSelector(name string) (Selector, bool) {
+	s, ok := selectorMap[name]
+	return s, ok
 }
 
 func InitializeSelectors() {
-	for _, e := range SelectorMap {
+	for _, e := range selectorMap {
 		if e.Enabled() {
 			e.Initialize()
 		}

@@ -9,7 +9,7 @@ import (
 // MakeSelector returns new selector with given parameters
 func MakeSelector(proto string, uri string, path []pdp.Expression, t pdp.Type) (pdp.Expression, error) {
 	var ret pdp.Expression
-	selector, ok := pdp.SelectorMap[proto]
+	selector, ok := pdp.GetSelector(proto)
 	if !ok {
 		return ret, fmt.Errorf("unsupported selector scheme %s", proto)
 	}

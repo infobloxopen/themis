@@ -58,26 +58,24 @@ func typeMismatchError(expected, actual pdp.Type) error {
 
 // Calculate implements Expression interface and returns calculated value
 func (s LocalSelector) Calculate(ctx *pdp.Context) (pdp.AttributeValue, error) {
-	var r pdp.AttributeValue
-
 	item, err := ctx.GetContentItem(s.content, s.item)
 	if err != nil {
-		return r, err
+		return pdp.UndefinedValue, err
 	}
 
 	t := item.GetType()
 	if s.t != t {
-		return r, typeMismatchError(s.t, t)
+		return pdp.UndefinedValue, typeMismatchError(s.t, t)
 	}
 
-	r, err = item.Get(s.path, ctx)
+	r, err := item.Get(s.path, ctx)
 	if err != nil {
-		return r, err
+		return pdp.UndefinedValue, err
 	}
 
 	t = r.GetResultType()
 	if s.t != t {
-		return r, typeMismatchError(s.t, t)
+		return pdp.UndefinedValue, typeMismatchError(s.t, t)
 	}
 
 	return r, nil
