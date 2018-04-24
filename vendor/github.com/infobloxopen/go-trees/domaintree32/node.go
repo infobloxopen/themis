@@ -1,4 +1,6 @@
-package dltree
+package domaintree32
+
+// !!!DON'T EDIT!!! Generated with infobloxopen/go-trees/etc from domaintree{{.bits}} with etc -s uint32 -d dtuintX.yaml -t ./domaintree\{\{.bits\}\}
 
 import (
 	"fmt"
@@ -13,7 +15,7 @@ const (
 
 type node struct {
 	key   domain.Label
-	value interface{}
+	value *Node
 
 	chld [2]*node
 	red  bool
@@ -49,8 +51,7 @@ func (n *node) dotString() string {
 
 	k := fmt.Sprintf("%q", n.key)
 	if n.value != nil {
-		v := fmt.Sprintf("%q", fmt.Sprintf("%#v", n.value))
-		k = fmt.Sprintf("\"k: \\\"%s\\\" v: \\\"%s\\\"\"", k[1:len(k)-1], v[1:len(v)-1])
+		k = fmt.Sprintf("\"k: \\\"%s\\\" v: %p\"", k[1:len(k)-1], n.value)
 	}
 
 	color := "fontcolor=white fillcolor=black"
@@ -61,7 +62,7 @@ func (n *node) dotString() string {
 	return fmt.Sprintf("[label=%s style=filled %s]", k, color)
 }
 
-func (n *node) insert(key domain.Label, value interface{}) *node {
+func (n *node) insert(key domain.Label, value *Node) *node {
 	if n == nil {
 		return &node{key: key, value: value}
 	}
@@ -176,7 +177,7 @@ func (n *node) insert(key domain.Label, value interface{}) *node {
 	return n
 }
 
-func (n *node) inplaceInsert(key domain.Label, value interface{}) *node {
+func (n *node) inplaceInsert(key domain.Label, value *Node) *node {
 	if n == nil {
 		return &node{key: key, value: value}
 	}
@@ -277,7 +278,7 @@ func (n *node) double(dir int) *node {
 	return n.single(dir)
 }
 
-func (n *node) get(key domain.Label) (interface{}, bool) {
+func (n *node) get(key domain.Label) (*Node, bool) {
 	for n != nil {
 		r := domain.Compare(n.key, key)
 
@@ -296,19 +297,19 @@ func (n *node) get(key domain.Label) (interface{}, bool) {
 	return nil, false
 }
 
-func (n *node) enumerate(ch chan Pair) {
+func (n *node) enumerate(ch chan labelPair) {
 	if n == nil {
 		return
 	}
 
 	n.chld[dirLeft].enumerate(ch)
 
-	ch <- Pair{Key: n.key.String(), Value: n.value}
+	ch <- labelPair{Key: n.key.String(), Value: n.value}
 
 	n.chld[dirRight].enumerate(ch)
 }
 
-func (n *node) rawEnumerate(ch chan RawPair) {
+func (n *node) rawEnumerate(ch chan labelRawPair) {
 	if n == nil {
 		return
 	}
@@ -317,7 +318,7 @@ func (n *node) rawEnumerate(ch chan RawPair) {
 
 	key := make([]byte, len(n.key))
 	copy(key, n.key)
-	ch <- RawPair{Key: key, Value: n.value}
+	ch <- labelRawPair{Key: key, Value: n.value}
 
 	n.chld[dirRight].rawEnumerate(ch)
 }

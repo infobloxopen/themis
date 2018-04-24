@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
@@ -306,7 +307,7 @@ func TestLocalContentStorage(t *testing.T) {
 	} else {
 		path := []Expression{
 			MakeStringValue("key"),
-			MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03gov\x00"))}
+			MakeDomainValue(domain.WireNameLower("\x07example\x03gov\x00"))}
 		v, err := c.Get(path, nil)
 		if err != nil {
 			t.Errorf("Expected no error but got %T (%s)", err, err)

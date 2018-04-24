@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/infobloxopen/go-trees/domaintree"
+	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/themis/pdp"
 )
 
@@ -425,7 +425,7 @@ func TestUnmarshal(t *testing.T) {
 				path := []pdp.Expression{
 					pdp.MakeStringValue("first"),
 					n,
-					pdp.MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03com\x00")),
+					pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03com\x00")),
 				}
 				r, err := lc.Get(path, nil)
 				if err != nil {
@@ -448,7 +448,7 @@ func TestUnmarshal(t *testing.T) {
 				path := []pdp.Expression{
 					pdp.MakeStringValue("second"),
 					n,
-					pdp.MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03net\x00")),
+					pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
 				}
 				r, err := lc.Get(path, nil)
 				if err != nil {
@@ -471,7 +471,7 @@ func TestUnmarshal(t *testing.T) {
 				path := []pdp.Expression{
 					pdp.MakeStringValue("second"),
 					n,
-					pdp.MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03net\x00")),
+					pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
 				}
 				r, err := lc.Get(path, nil)
 				if err == nil {
@@ -537,7 +537,7 @@ func TestUnmarshal(t *testing.T) {
 			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		} else {
 			path := []pdp.Expression{
-				pdp.MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03net\x00")),
+				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
 			}
 			r, err := lc.Get(path, nil)
 			if err != nil {
@@ -606,7 +606,7 @@ func TestUnmarshal(t *testing.T) {
 			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		} else {
 			path := []pdp.Expression{
-				pdp.MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03net\x00")),
+				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
 			}
 			r, err := lc.Get(path, nil)
 			if err != nil {
@@ -1066,7 +1066,7 @@ func TestUnmarshalUpdate(t *testing.T) {
 			path := []pdp.Expression{
 				pdp.MakeStringValue("second"),
 				n,
-				pdp.MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03com\x00")),
+				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03com\x00")),
 			}
 			r, err := lc.Get(path, nil)
 			if err == nil {

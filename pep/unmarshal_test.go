@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/infobloxopen/go-trees/domaintree"
+	"github.com/infobloxopen/go-trees/domain"
 
 	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
@@ -181,7 +181,7 @@ func TestUnmarshalTaggedStruct(t *testing.T) {
 	nv := pdp.MakeNetworkValue(n)
 
 	da := pdp.MakeAttribute("da", pdp.TypeDomain)
-	dv := pdp.MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03com\x00"))
+	dv := pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03com\x00"))
 
 	assignments := []pdp.AttributeAssignmentExpression{
 		pdp.MakeAttributeAssignmentExpression(ba, bv),

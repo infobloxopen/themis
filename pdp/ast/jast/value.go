@@ -8,6 +8,7 @@ import (
 	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
 
+	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
@@ -78,7 +79,7 @@ func (ctx context) unmarshalDomainValue(d *json.Decoder) (pdp.AttributeValue, er
 		return pdp.UndefinedValue, err
 	}
 
-	dom, ierr := domaintree.MakeWireDomainNameLower(s)
+	dom, ierr := domain.MakeWireDomainNameLower(s)
 	if ierr != nil {
 		return pdp.UndefinedValue, newInvalidDomainError(s, ierr)
 	}

@@ -7,6 +7,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
@@ -246,7 +247,7 @@ func (c *Context) calculateAddressExpression(e Expression) (net.IP, error) {
 	return v.address()
 }
 
-func (c *Context) calculateDomainExpression(e Expression) (domaintree.WireDomainNameLower, error) {
+func (c *Context) calculateDomainExpression(e Expression) (domain.WireNameLower, error) {
 	v, err := e.Calculate(c)
 	if err != nil {
 		return nil, err

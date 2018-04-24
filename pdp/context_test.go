@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
@@ -48,7 +49,7 @@ func TestContext(t *testing.T) {
 			return "n", MakeNetworkValue(n), nil
 
 		case 4:
-			return "d", MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03com\x00")), nil
+			return "d", MakeDomainValue(domain.WireNameLower("\x07example\x03com\x00")), nil
 
 		case 5:
 			st := strtree.NewTree()

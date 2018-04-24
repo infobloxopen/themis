@@ -3,6 +3,7 @@ package yast
 import (
 	"net"
 
+	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
@@ -70,7 +71,7 @@ func (ctx context) unmarshalDomainValue(v interface{}) (pdp.AttributeValue, boun
 		return pdp.UndefinedValue, err
 	}
 
-	d, ierr := domaintree.MakeWireDomainNameLower(s)
+	d, ierr := domain.MakeWireDomainNameLower(s)
 	if ierr != nil {
 		return pdp.UndefinedValue, newInvalidDomainError(s, ierr)
 	}

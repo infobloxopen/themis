@@ -1,0 +1,19 @@
+uint8:
+  bits: 8
+  ext: go
+  warning: "!!!DON'T EDIT!!! Generated with infobloxopen/go-trees/etc from domaintree{{.bits}} with etc -s uint8 -d dtuintX.yaml -t ./domaintree\\{\\{.bits\\}\\}"
+
+uint16:
+  bits: 16
+  ext: go
+  warning: "!!!DON'T EDIT!!! Generated with infobloxopen/go-trees/etc from domaintree{{.bits}} with etc -s uint16 -d dtuintX.yaml -t ./domaintree\\{\\{.bits\\}\\}"
+
+uint32:
+  bits: 32
+  ext: go
+  warning: "!!!DON'T EDIT!!! Generated with infobloxopen/go-trees/etc from domaintree{{.bits}} with etc -s uint32 -d dtuintX.yaml -t ./domaintree\\{\\{.bits\\}\\}"
+
+uint64:
+  bits: 64
+  ext: go
+  warning: "!!!DON'T EDIT!!! Generated with infobloxopen/go-trees/etc from domaintree{{.bits}} with etc -s uint64 -d dtuintX.yaml -t ./domaintree\\{\\{.bits\\}\\}"

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
@@ -141,7 +142,7 @@ func (c *contentItem) ppValue(v interface{}) (interface{}, error) {
 			return nil, newStringCastError(v, "domain value")
 		}
 
-		d, err := domaintree.MakeWireDomainNameLower(s)
+		d, err := domain.MakeWireDomainNameLower(s)
 		if err != nil {
 			return nil, newDomainCastError(s, err)
 		}

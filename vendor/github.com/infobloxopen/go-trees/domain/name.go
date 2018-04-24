@@ -1,14 +1,11 @@
-package domaintree
+// Package domain provide functions to parse and handle domain names and labels.
+package domain
 
-import (
-	"errors"
-
-	"github.com/infobloxopen/go-trees/dltree"
-)
+import "errors"
 
 var (
-	// ErrCompressedDN is the error returned by WireGet when domain label exceeds 63 bytes.
-	ErrCompressedDN = errors.New("can't handle compressed domain name")
+	// ErrCompressedName is the error returned by WireGet when domain label exceeds 63 bytes.
+	ErrCompressedName = errors.New("can't handle compressed domain name")
 	// ErrLabelTooLong is the error returned by WireGet when last domain label length doesn't
 	// fit whole domain name length.
 	ErrLabelTooLong = errors.New("label too long")
@@ -18,13 +15,14 @@ var (
 	ErrNameTooLong = errors.New("domain name too long")
 )
 
-func split(s string) []dltree.DomainLabel {
-	dn := make([]dltree.DomainLabel, getLabelsCount(s))
+// Split slices its argument into labels. It assumes s is a name in human readable format.
+func Split(s string) []Label {
+	dn := make([]Label, getLabelsCount(s))
 	if len(dn) > 0 {
 		end := len(dn) - 1
 		start := 0
 		for i := range dn {
-			label, p := dltree.MakeDomainLabel(s[start:])
+			label, p := MakeLabel(s[start:])
 			start += p + 1
 			dn[end-i] = label
 		}
@@ -37,7 +35,7 @@ func getLabelsCount(s string) int {
 	labels := 0
 	start := 0
 	for {
-		size, p := dltree.GetFirstLabelSize(s[start:])
+		size, p := GetFirstLabelSize(s[start:])
 		start += p + 1
 		if start >= len(s) {
 			if size > 0 {
@@ -53,15 +51,15 @@ func getLabelsCount(s string) int {
 	return labels
 }
 
-// WireDomainNameLower is a type to store domain name in "wire" format as described in RFC-1035 section "3.1. Name space definitions" with all lowercase ASCII letters.
-type WireDomainNameLower []byte
+// WireNameLower is a type to store domain name in "wire" format as described in RFC-1035 section "3.1. Name space definitions" with all lowercase ASCII letters.
+type WireNameLower []byte
 
 // MakeWireDomainNameLower creates lowercase "wire" representation of given domain name.
-func MakeWireDomainNameLower(s string) (WireDomainNameLower, error) {
-	out := WireDomainNameLower{}
+func MakeWireDomainNameLower(s string) (WireNameLower, error) {
+	out := WireNameLower{}
 	start := 0
 	for {
-		label, p := dltree.MakeDomainLabel(s[start:])
+		label, p := MakeLabel(s[start:])
 		if len(label) > 63 {
 			return nil, ErrLabelTooLong
 		}
@@ -94,12 +92,12 @@ func MakeWireDomainNameLower(s string) (WireDomainNameLower, error) {
 }
 
 // ToLowerWireDomainName converts "wire" domain name to lowercase.
-func ToLowerWireDomainName(d []byte) (WireDomainNameLower, error) {
+func ToLowerWireDomainName(d []byte) (WireNameLower, error) {
 	if len(d) > 256 {
 		return nil, ErrNameTooLong
 	}
 
-	out := make(WireDomainNameLower, len(d))
+	out := make(WireNameLower, len(d))
 	ll := 0
 	for i, c := range d {
 		if ll > 0 {
@@ -115,7 +113,7 @@ func ToLowerWireDomainName(d []byte) (WireDomainNameLower, error) {
 			}
 
 			if ll > 63 {
-				return nil, ErrCompressedDN
+				return nil, ErrCompressedName
 			}
 		}
 
@@ -130,7 +128,7 @@ func ToLowerWireDomainName(d []byte) (WireDomainNameLower, error) {
 }
 
 // String returns domain name in human readable format.
-func (d WireDomainNameLower) String() string {
+func (d WireNameLower) String() string {
 	out := ""
 	start := 0
 	for start < len(d) {
@@ -146,7 +144,7 @@ func (d WireDomainNameLower) String() string {
 		}
 
 		if ll > 0 {
-			label := dltree.DomainLabel(d[start : start+ll]).String()
+			label := Label(d[start : start+ll]).String()
 			if len(out) > 0 {
 				out += "." + label
 			} else {
@@ -160,20 +158,21 @@ func (d WireDomainNameLower) String() string {
 	return out
 }
 
-func wireSplitCallback(dn WireDomainNameLower, f func(label []byte) bool) error {
-	if len(dn) > 256 {
+// WireSplitCallback function splits given name into labels and calls function for each label.
+func WireSplitCallback(name WireNameLower, f func(label []byte) bool) error {
+	if len(name) > 256 {
 		return ErrNameTooLong
 	}
 
-	if len(dn) > 0 {
+	if len(name) > 0 {
 		var lPos [256]int
 		labels := 0
 		idx := 0
 		max := 0
 		for {
-			ll := int(dn[idx])
+			ll := int(name[idx])
 			if ll <= 0 {
-				if idx != len(dn)-1 {
+				if idx != len(name)-1 {
 					return ErrEmptyLabel
 				}
 
@@ -181,10 +180,10 @@ func wireSplitCallback(dn WireDomainNameLower, f func(label []byte) bool) error 
 			}
 
 			if ll > 63 {
-				return ErrCompressedDN
+				return ErrCompressedName
 			}
 
-			if idx+ll+1 > len(dn) {
+			if idx+ll+1 > len(name) {
 				return ErrLabelTooLong
 			}
 
@@ -200,10 +199,10 @@ func wireSplitCallback(dn WireDomainNameLower, f func(label []byte) bool) error 
 		for labels > 0 {
 			labels--
 			idx := lPos[labels]
-			ll := int(dn[idx])
+			ll := int(name[idx])
 			start := idx + 1
 			end := start + ll
-			if !f(dn[start:end]) {
+			if !f(name[start:end]) {
 				break
 			}
 		}

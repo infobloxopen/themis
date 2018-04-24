@@ -1,4 +1,4 @@
-package dltree
+package domain
 
 import (
 	"bytes"
@@ -181,161 +181,161 @@ func TestGetFirstLabelSize(t *testing.T) {
 func TestMakeDomainLabel(t *testing.T) {
 	name := "example"
 	data := []byte("example")
-	dl, _ := MakeDomainLabel(name)
+	dl, _ := MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "eXaMpLe"
 	data = []byte("example")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "example.com"
 	data = []byte("example")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "example\\.dot.com"
 	data = []byte("example.dot")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "example\\\\slash"
 	data = []byte("example\\slash")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "example\\aletter"
 	data = []byte("examplealetter")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "example\\Aletter"
 	data = []byte("examplealetter")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "example\\065letter"
 	data = []byte("examplealetter")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "example\\065Letter"
 	data = []byte("examplealetter")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "exampleletter\\065"
 	data = []byte("examplelettera")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "exampleletter\\065."
 	data = []byte("examplelettera")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "exampleletter\\065\\."
 	data = []byte("examplelettera.")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "exampleletter\\065\\\\"
 	data = []byte("examplelettera\\")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "example\\0invalid"
 	data = []byte("example\\0invalid")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "example\\0Invalid"
 	data = []byte("example\\0invalid")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "example\\06invalid"
 	data = []byte("example\\06invalid")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "exampleinvalid\\0."
 	data = []byte("exampleinvalid\\0")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "exampleinvalid\\0\\."
 	data = []byte("exampleinvalid\\0.")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "example\\999invalid"
 	data = []byte("example\\999invalid")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "exampleinvalid\\"
 	data = []byte("exampleinvalid\\")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "exampleinvalid\\9"
 	data = []byte("exampleinvalid\\9")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "exampleinvalid\\99"
 	data = []byte("exampleinvalid\\99")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
 
 	name = "exampleinvalid\\999"
 	data = []byte("exampleinvalid\\999")
-	dl, _ = MakeDomainLabel(name)
+	dl, _ = MakeLabel(name)
 	if bytes.Compare(dl, data) != 0 {
 		t.Errorf("got %d (% x) bytes for %q", len(dl), dl, name)
 	}
@@ -343,7 +343,7 @@ func TestMakeDomainLabel(t *testing.T) {
 
 func TestString(t *testing.T) {
 	in := "example\\009\\.\\128\\013\\\\"
-	dl, _ := MakeDomainLabel(in)
+	dl, _ := MakeLabel(in)
 	out := dl.String()
 	if out != in {
 		t.Errorf("expected %q for domanin label (% x) but got %q", in, dl, out)
@@ -353,45 +353,45 @@ func TestString(t *testing.T) {
 func TestCompare(t *testing.T) {
 	aName := "short"
 	bName := "muchlonger"
-	a, _ := MakeDomainLabel(aName)
-	b, _ := MakeDomainLabel(bName)
+	a, _ := MakeLabel(aName)
+	b, _ := MakeLabel(bName)
 
-	d := compare(a, b)
+	d := Compare(a, b)
 	if d >= 0 {
 		t.Errorf("expected less than zero result but got %d", d)
 	}
 
-	d = compare(b, a)
+	d = Compare(b, a)
 	if d <= 0 {
 		t.Errorf("expected greater than zero result but got %d", d)
 	}
 
 	aName = "aaa"
 	bName = "bbb"
-	a, _ = MakeDomainLabel(aName)
-	b, _ = MakeDomainLabel(bName)
+	a, _ = MakeLabel(aName)
+	b, _ = MakeLabel(bName)
 
-	d = compare(a, b)
+	d = Compare(a, b)
 	if d >= 0 {
 		t.Errorf("expected less than zero result but got %d", d)
 	}
 
-	d = compare(b, a)
+	d = Compare(b, a)
 	if d <= 0 {
 		t.Errorf("expected less than zero result but got %d", d)
 	}
 
 	aName = "equal"
 	bName = "equal"
-	a, _ = MakeDomainLabel(aName)
-	b, _ = MakeDomainLabel(bName)
+	a, _ = MakeLabel(aName)
+	b, _ = MakeLabel(bName)
 
-	d = compare(a, b)
+	d = Compare(a, b)
 	if d != 0 {
 		t.Errorf("expected zero but got %d", d)
 	}
 
-	d = compare(b, a)
+	d = Compare(b, a)
 	if d != 0 {
 		t.Errorf("expected zero but got %d", d)
 	}

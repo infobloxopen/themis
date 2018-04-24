@@ -5,6 +5,7 @@ import (
 	"net"
 	"testing"
 
+	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
@@ -123,7 +124,7 @@ func TestAttributeValue(t *testing.T) {
 		t.Errorf("Expected %q as value description but got %q", expDesc, d)
 	}
 
-	v = MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03com\x00"))
+	v = MakeDomainValue(domain.WireNameLower("\x07example\x03com\x00"))
 	vt = v.GetResultType()
 	if vt != TypeDomain {
 		t.Errorf("Expected %q as value type but got %q", TypeDomain, vt)

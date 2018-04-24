@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
@@ -998,7 +999,7 @@ func (v ContentValue) getValue(key AttributeValue, t Type) (AttributeValue, erro
 		return MakeNetworkValue(v.value.(*net.IPNet)), nil
 
 	case TypeDomain:
-		return MakeDomainValue(v.value.(domaintree.WireDomainNameLower)), nil
+		return MakeDomainValue(v.value.(domain.WireNameLower)), nil
 
 	case TypeSetOfStrings:
 		return MakeSetOfStringsValue(v.value.(*strtree.Tree)), nil

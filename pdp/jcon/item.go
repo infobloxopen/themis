@@ -6,6 +6,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
@@ -181,7 +182,7 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 			return nil, err
 		}
 
-		d, err := domaintree.MakeWireDomainNameLower(s)
+		d, err := domain.MakeWireDomainNameLower(s)
 		if err != nil {
 			return nil, newDomainCastError(s, err)
 		}

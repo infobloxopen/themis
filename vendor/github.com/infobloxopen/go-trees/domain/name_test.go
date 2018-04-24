@@ -1,36 +1,35 @@
-package domaintree
+package domain
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/pmezard/go-difflib/difflib"
-
-	"github.com/infobloxopen/go-trees/dltree"
 )
 
 func TestSplit(t *testing.T) {
 	dn := ""
-	labels := split(dn)
+	labels := Split(dn)
 	if len(labels) != 0 {
 		t.Errorf("Expected zero labels for empty domain name %q but got %d", dn, len(labels))
 	}
 
 	dn = "."
-	labels = split(dn)
+	labels = Split(dn)
 	if len(labels) != 0 {
 		t.Errorf("Expected zero labels for root fqdn %q but got %d", dn, len(labels))
 	}
 
 	dn = "www\\.test.com"
-	labels = split(dn)
+	labels = Split(dn)
 	assertDomainName(labels, []string{
 		"com",
 		"www\\.test",
 	}, dn, t)
 
 	dn = "www.test.com."
-	labels = split(dn)
+	labels = Split(dn)
 	assertDomainName(labels, []string{
 		"com",
 		"test",
@@ -127,21 +126,21 @@ func TestMakeWireDomainNameLower(t *testing.T) {
 
 func TestWireDomainNameLowerString(t *testing.T) {
 	dn := "example.com"
-	wdn := WireDomainNameLower("\x07example\x03com\x00")
+	wdn := WireNameLower("\x07example\x03com\x00")
 	sdn := wdn.String()
 	if sdn != dn {
 		t.Errorf("Expected %q for %q but got %q", dn, wdn, sdn)
 	}
 
 	dn = "example.com."
-	wdn = WireDomainNameLower("\x07example\x03com\x05")
+	wdn = WireNameLower("\x07example\x03com\x05")
 	sdn = wdn.String()
 	if sdn != dn {
 		t.Errorf("Expected %q for %q but got %q", dn, wdn, sdn)
 	}
 
 	dn = "example.com"
-	wdn = WireDomainNameLower("\x07example\x03com")
+	wdn = WireNameLower("\x07example\x03com")
 	sdn = wdn.String()
 	if sdn != dn {
 		t.Errorf("Expected %q for %q but got %q", dn, wdn, sdn)
@@ -149,7 +148,7 @@ func TestWireDomainNameLowerString(t *testing.T) {
 }
 
 func TestToLowerWireDomainName(t *testing.T) {
-	wdn := WireDomainNameLower("\x07ExAmPlE\x03CoM\x00")
+	wdn := WireNameLower("\x07ExAmPlE\x03CoM\x00")
 	ewdn := "\x07example\x03com\x00"
 	wldn, err := ToLowerWireDomainName(wdn)
 	if err != nil {
@@ -158,7 +157,7 @@ func TestToLowerWireDomainName(t *testing.T) {
 		t.Errorf("Expected %q for %q but got %q", ewdn, string(wdn), string(wldn))
 	}
 
-	wdn = WireDomainNameLower(
+	wdn = WireNameLower(
 		"\x3fTOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO" +
 			"\x3fLOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOONG" +
 			"\x3fDOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOMAI" +
@@ -176,7 +175,7 @@ func TestToLowerWireDomainName(t *testing.T) {
 		t.Errorf("Expected error for %q but got result %q", string(wdn), string(wldn))
 	}
 
-	wdn = WireDomainNameLower("\x05EMPTY\x00\x06DOMAIN\x05LABEL\x00")
+	wdn = WireNameLower("\x05EMPTY\x00\x06DOMAIN\x05LABEL\x00")
 	wldn, err = ToLowerWireDomainName(wdn)
 	if err != nil {
 		if err != ErrEmptyLabel {
@@ -186,17 +185,17 @@ func TestToLowerWireDomainName(t *testing.T) {
 		t.Errorf("Expected error for %q but got result %q", string(wdn), string(wldn))
 	}
 
-	wdn = WireDomainNameLower("\x0aCOMPRESSED\xff\xff")
+	wdn = WireNameLower("\x0aCOMPRESSED\xff\xff")
 	wldn, err = ToLowerWireDomainName(wdn)
 	if err != nil {
-		if err != ErrCompressedDN {
-			t.Errorf("Expected error \"%s\" for %q but got \"%s\"", ErrCompressedDN, string(wdn), err)
+		if err != ErrCompressedName {
+			t.Errorf("Expected error \"%s\" for %q but got \"%s\"", ErrCompressedName, string(wdn), err)
 		}
 	} else {
 		t.Errorf("Expected error for %q but got result %q", string(wdn), string(wldn))
 	}
 
-	wdn = WireDomainNameLower("\x05LABEL")
+	wdn = WireNameLower("\x05LABEL")
 	wldn, err = ToLowerWireDomainName(wdn)
 	if err != nil {
 		if err != ErrLabelTooLong {
@@ -207,7 +206,66 @@ func TestToLowerWireDomainName(t *testing.T) {
 	}
 }
 
-func assertDomainName(labels []dltree.DomainLabel, elabels []string, dn string, t *testing.T) {
+func TestWireSplitCallback(t *testing.T) {
+	labels := []Label{}
+	in := "\x04test\x03com\x00"
+	err := WireSplitCallback(WireNameLower(in), func(label []byte) bool {
+		labels = append(labels, Label(label))
+		return true
+	})
+	if err != nil {
+		t.Errorf("Expected no error for %q but got: %s", in, err)
+	} else {
+		assertDomainName(labels, []string{"com", "test"}, strconv.Quote(in), t)
+	}
+
+	labels = []Label{}
+	err = WireSplitCallback(WireNameLower(in), func(label []byte) bool {
+		labels = append(labels, Label(label))
+		return false
+	})
+	if err != nil {
+		t.Errorf("Expected no error for %q but got: %s", in, err)
+	} else {
+		assertDomainName(labels, []string{"com"}, fmt.Sprintf("terminated %q", in), t)
+	}
+
+	err = WireSplitCallback(WireNameLower("\xC0\x2F"), func(label []byte) bool {
+		return true
+	})
+	if err != ErrCompressedName {
+		t.Errorf("Expected %q error but got %q", ErrCompressedName, err)
+	}
+
+	err = WireSplitCallback(WireNameLower("\x04test\x20com\x00"), func(label []byte) bool {
+		return true
+	})
+	if err != ErrLabelTooLong {
+		t.Errorf("Expected %q error but got %q", ErrLabelTooLong, err)
+	}
+
+	err = WireSplitCallback(WireNameLower("\x04test\x00\x03com\x00"), func(label []byte) bool {
+		return true
+	})
+	if err != ErrEmptyLabel {
+		t.Errorf("Expected %q error but got %q", ErrEmptyLabel, err)
+	}
+
+	err = WireSplitCallback(WireNameLower(
+		"\x3ftoooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"+
+			"\x3floooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong"+
+			"\x3fdoooooooooooooooooooooooooooooooooooooooooooooooooooooooooomain"+
+			"\x3fnaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaame"+
+			"\x00",
+	), func(label []byte) bool {
+		return true
+	})
+	if err != ErrNameTooLong {
+		t.Errorf("Expected %q error but got %q", ErrNameTooLong, err)
+	}
+}
+
+func assertDomainName(labels []Label, elabels []string, dn string, t *testing.T) {
 	for i := range elabels {
 		elabels[i] += "\n"
 	}

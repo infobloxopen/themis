@@ -3,7 +3,7 @@ package pdp
 import (
 	"testing"
 
-	"github.com/infobloxopen/go-trees/domaintree"
+	"github.com/infobloxopen/go-trees/domain"
 )
 
 func TestAttributeAssignmentExpression(t *testing.T) {
@@ -26,7 +26,7 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 		t.Errorf("Expected %q, %q, %q but got %q, %q, %q", a.id, a.t.GetKey(), expect, id, tKey, s)
 	}
 
-	dv := MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03com\x00"))
+	dv := MakeDomainValue(domain.WireNameLower("\x07example\x03com\x00"))
 	v = MakeStringValue(expect)
 	e := makeFunctionStringEqual(v, dv)
 	a = Attribute{
