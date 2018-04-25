@@ -160,6 +160,8 @@ func TestLocalContentStorage(t *testing.T) {
 		MakeContentDomainMap(dTree),
 	)
 
+	st := MakeSymbols()
+
 	dTree8 := &domaintree8.Node{}
 	dTree8.InplaceInsert("example.com", 1)
 	dTree8.InplaceInsert("example.net", 3)
@@ -169,6 +171,10 @@ func TestLocalContentStorage(t *testing.T) {
 		"f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
 	)
 	if err != nil {
+		t.Fatalf("Expected no error but got %s", err)
+	}
+
+	if err := st.PutType(ft8); err != nil {
 		t.Fatalf("Expected no error but got %s", err)
 	}
 
@@ -192,6 +198,10 @@ func TestLocalContentStorage(t *testing.T) {
 		t.Fatalf("Expected no error but got %s", err)
 	}
 
+	if err := st.PutType(ft16); err != nil {
+		t.Fatalf("Expected no error but got %s", err)
+	}
+
 	dm16c := MakeContentMappingItem(
 		"dom16-map",
 		ft16,
@@ -211,6 +221,10 @@ func TestLocalContentStorage(t *testing.T) {
 		"f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37",
 	)
 	if err != nil {
+		t.Fatalf("Expected no error but got %s", err)
+	}
+
+	if err := st.PutType(ft32); err != nil {
 		t.Fatalf("Expected no error but got %s", err)
 	}
 
@@ -240,6 +254,10 @@ func TestLocalContentStorage(t *testing.T) {
 		t.Fatalf("Expected no error but got %s", err)
 	}
 
+	if err := st.PutType(ft64); err != nil {
+		t.Fatalf("Expected no error but got %s", err)
+	}
+
 	dm64c := MakeContentMappingItem(
 		"dom64-map",
 		ft64,
@@ -248,7 +266,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	items := []*ContentItem{ssmc, snmc, sdmc, smc, nmc, dmc, dmcDel, dm8c, dm16c, dm32c, dm64c}
-	s := NewLocalContentStorage([]*LocalContent{NewLocalContent("first", &tag, items)})
+	s := NewLocalContentStorage([]*LocalContent{NewLocalContent("first", &tag, st, items)})
+
+	st = MakeSymbols()
 
 	dTree = &domaintree.Node{}
 	dTree.InplaceInsert("example.com", "first")
@@ -261,7 +281,7 @@ func TestLocalContentStorage(t *testing.T) {
 		MakeSignature(TypeDomain),
 		MakeContentDomainMap(dTree),
 	)
-	s = s.Add(NewLocalContent("second", &tag, []*ContentItem{dmc}))
+	s = s.Add(NewLocalContent("second", &tag, st, []*ContentItem{dmc}))
 
 	newTag := uuid.New()
 	u := NewContentUpdate("first", tag, newTag)

@@ -60,7 +60,7 @@ func (s *PolicyStorage) NewTransaction(tag *uuid.UUID) (*PolicyStorageTransactio
 
 	return &PolicyStorageTransaction{
 		tag:      *tag,
-		symbols:  s.symbols,
+		symbols:  s.symbols.makeROCopy(),
 		policies: s.policies,
 	}, nil
 }

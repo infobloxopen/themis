@@ -103,7 +103,12 @@ func (s *LocalContentStorage) NewTransaction(cID string, tag *uuid.UUID) (*Local
 		return nil, err
 	}
 
-	return &LocalContentStorageTransaction{tag: *tag, ID: cID, items: c.items}, nil
+	return &LocalContentStorageTransaction{
+		tag:     *tag,
+		ID:      cID,
+		items:   c.items,
+		symbols: c.symbols.makeROCopy(),
+	}, nil
 }
 
 // String implements Stringer interface.
@@ -178,10 +183,17 @@ func (u *ContentUpdate) String() string {
 // Transaction aggregates updates and then can be committed
 // to LocalContentStorage to make all the updates visible at once.
 type LocalContentStorageTransaction struct {
-	tag   uuid.UUID
-	ID    string
-	items *strtree.Tree
-	err   error
+	tag     uuid.UUID
+	ID      string
+	items   *strtree.Tree
+	symbols Symbols
+	err     error
+}
+
+// Symbols returns symbol tables captured from content storage on transaction
+// creation.
+func (t *LocalContentStorageTransaction) Symbols() Symbols {
+	return t.symbols
 }
 
 func (t *LocalContentStorageTransaction) applyCmd(cmd *command) error {
@@ -367,16 +379,22 @@ func (t *LocalContentStorageTransaction) del(rawPath []string) error {
 // independently taged and updated. It holds content items which represent
 // mapping objects (or immediate values) of different type.
 type LocalContent struct {
-	id    string
-	tag   *uuid.UUID
-	items *strtree.Tree
+	id      string
+	tag     *uuid.UUID
+	items   *strtree.Tree
+	symbols Symbols
 }
 
 // NewLocalContent creates content of given id with given tag and set of content
 // items. Nil tag makes the content untagged. Such content can't be
 // incrementally updated.
-func NewLocalContent(id string, tag *uuid.UUID, items []*ContentItem) *LocalContent {
-	c := &LocalContent{id: id, tag: tag, items: strtree.NewTree()}
+func NewLocalContent(id string, tag *uuid.UUID, symbols Symbols, items []*ContentItem) *LocalContent {
+	c := &LocalContent{
+		id:      id,
+		tag:     tag,
+		items:   strtree.NewTree(),
+		symbols: symbols,
+	}
 
 	for _, item := range items {
 		c.items.InplaceInsert(item.id, item)

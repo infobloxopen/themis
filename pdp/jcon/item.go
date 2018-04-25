@@ -16,6 +16,7 @@ import (
 
 type contentItem struct {
 	id string
+	s  pdp.Symbols
 
 	k      pdp.Signature
 	keysOk bool
@@ -43,16 +44,15 @@ func (c *contentItem) unmarshalTypeField(d *json.Decoder) error {
 		return newInvalidTypeFormatError(token)
 
 	case string:
-		t, ok := pdp.BuiltinTypes[strings.ToLower(v)]
-		if !ok {
+		c.t = c.s.GetType(v)
+		if c.t == nil {
 			return newUnknownTypeError(v)
 		}
 
-		if t == pdp.TypeUndefined {
-			return newInvalidContentItemTypeError(t)
+		if c.t == pdp.TypeUndefined {
+			return newInvalidContentItemTypeError(c.t)
 		}
 
-		c.t = t
 		c.tOk = true
 
 	case json.Delim:
@@ -72,7 +72,11 @@ func (c *contentItem) unmarshalTypeDeclaration(d *json.Decoder) error {
 	var (
 		metaOk bool
 		meta   string
-		flags  []string
+
+		nameOk bool
+		name   string
+
+		flags []string
 	)
 
 	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
@@ -88,6 +92,15 @@ func (c *contentItem) unmarshalTypeDeclaration(d *json.Decoder) error {
 
 			meta = s
 			metaOk = true
+
+		case "name":
+			s, err := jparser.GetString(d, "type name")
+			if err != nil {
+				return err
+			}
+
+			name = s
+			nameOk = true
 
 		case "flags":
 			flags = []string{}
@@ -117,9 +130,19 @@ func (c *contentItem) unmarshalTypeDeclaration(d *json.Decoder) error {
 			return newMissingFlagNameListError()
 		}
 
-		t, err := pdp.NewFlagsType("<flags>", flags...)
+		t, err := pdp.NewFlagsType(name, flags...)
 		if err != nil {
 			return err
+		}
+
+		if nameOk {
+			if err := c.s.PutType(t); err != nil {
+				if _, ok := err.(*pdp.ReadOnlySymbolsChangeError); ok {
+					return newNewTypeOnUpdateError()
+				}
+
+				return err
+			}
 		}
 
 		c.t = t
@@ -199,6 +222,39 @@ func (c *contentItem) unmarshalMap(d *json.Decoder, keyIdx int) (interface{}, er
 }
 
 func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
+	if t, ok := c.t.(*pdp.FlagsType); ok {
+		var n uint64
+		err := jparser.GetStringSequence(d, func(idx int, s string) error {
+			i := t.GetFlagBit(s)
+			if i < 0 {
+				return newUnknownFlagNameError(s)
+			}
+
+			n |= 1 << uint(i)
+
+			return nil
+		}, "flag names")
+		if err != nil {
+			return 0, err
+		}
+
+		switch t.Capacity() {
+		case 8:
+			return uint8(n), nil
+
+		case 16:
+			return uint16(n), nil
+
+		case 32:
+			return uint32(n), nil
+
+		case 64:
+			return n, nil
+		}
+
+		return nil, newInvalidFlagsCapacityError(t)
+	}
+
 	switch c.t {
 	case pdp.TypeBoolean:
 		return jparser.GetBoolean(d, "value")
@@ -516,13 +572,16 @@ func (c *contentItem) get() (*pdp.ContentItem, error) {
 	return pdp.MakeContentMappingItem(c.id, c.t, c.k, c.adjustValue(v)), nil
 }
 
-func unmarshalContentItem(id string, d *json.Decoder) (*pdp.ContentItem, error) {
+func unmarshalContentItem(id string, s pdp.Symbols, d *json.Decoder) (*pdp.ContentItem, error) {
 	err := jparser.CheckObjectStart(d, "content item")
 	if err != nil {
 		return nil, err
 	}
 
-	item := &contentItem{id: id}
+	item := &contentItem{
+		id: id,
+		s:  s,
+	}
 	err = jparser.UnmarshalObject(d, item.unmarshal, "content item")
 	if err != nil {
 		return nil, err

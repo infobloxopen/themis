@@ -61,6 +61,69 @@ const (
 			},
 			"type": "set of networks",
 			"keys": ["string", "network", "domain"]
+		},
+		"third": {
+			"type": {
+				"meta": "flags",
+				"name": "ft8",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07"]
+			},
+			"keys": ["domain"],
+			"data": {
+				"example.com": ["f00", "f02", "f04"],
+				"example.net": ["f01", "f03", "f05"],
+				"example.org": ["f02", "f04", "f06"]
+			}
+		},
+		"fourth": {
+			"type": {
+				"meta": "flags",
+				"name": "ft16",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17"]
+			},
+			"keys": ["domain"],
+			"data": {
+				"example.com": ["f00", "f02", "f04"],
+				"example.net": ["f01", "f03", "f05"],
+				"example.org": ["f02", "f04", "f06"]
+			}
+		},
+		"fifth": {
+			"type": {
+				"meta": "flags",
+				"name": "ft32",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37"]
+			},
+			"keys": ["domain"],
+			"data": {
+				"example.com": ["f00", "f02", "f04"],
+				"example.net": ["f01", "f03", "f05"],
+				"example.org": ["f02", "f04", "f06"]
+			}
+		},
+		"sixth": {
+			"type": {
+				"meta": "flags",
+				"name": "ft64",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37",
+				          "f40", "f41", "f42", "f43", "f44", "f45", "f46", "f47",
+				          "f50", "f51", "f52", "f53", "f54", "f55", "f56", "f57",
+				          "f60", "f61", "f62", "f63", "f64", "f65", "f66", "f67",
+				          "f70", "f71", "f72", "f73", "f74", "f75", "f76", "f77"]
+			},
+			"keys": ["domain"],
+			"data": {
+				"example.com": ["f00", "f02", "f04"],
+				"example.net": ["f01", "f03", "f05"],
+				"example.org": ["f02", "f04", "f06"]
+			}
 		}
 	}
 }`
@@ -89,6 +152,54 @@ const (
   {
     "op": "Delete",
     "path": ["second", "second", "2001:db8:1000::/36"]
+  },
+  {
+    "op": "Delete",
+    "path": ["third", "example.org"]
+  },
+  {
+    "op": "Add",
+    "path": ["third", "example.gov"],
+    "entity": {
+      "type": "ft8",
+      "data": ["f03", "f05", "f07"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["fourth", "example.org"]
+  },
+  {
+    "op": "Add",
+    "path": ["fourth", "example.gov"],
+    "entity": {
+      "type": "ft16",
+      "data": ["f03", "f05", "f07"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["fifth", "example.org"]
+  },
+  {
+    "op": "Add",
+    "path": ["fifth", "example.gov"],
+    "entity": {
+      "type": "ft32",
+      "data": ["f03", "f05", "f07"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["sixth", "example.org"]
+  },
+  {
+    "op": "Add",
+    "path": ["sixth", "example.gov"],
+    "entity": {
+      "type": "ft64",
+      "data": ["f03", "f05", "f07"]
+    }
   }
 ]`
 
@@ -125,6 +236,7 @@ const (
 		"dom8-map": {
 			"type": {
 				"meta": "flags",
+				"name": "ft8",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07"]
 			},
 			"keys": ["domain"],
@@ -137,6 +249,7 @@ const (
 		"dom16-map": {
 			"type": {
 				"meta": "flags",
+				"name": "ft16",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
 				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17"]
 			},
@@ -150,6 +263,7 @@ const (
 		"dom32-map": {
 			"type": {
 				"meta": "flags",
+				"name": "ft32",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
 				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
 				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
@@ -165,6 +279,7 @@ const (
 		"dom64-map": {
 			"type": {
 				"meta": "flags",
+				"name": "ft64",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
 				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
 				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
@@ -222,6 +337,7 @@ const (
 			},
 			"type": {
 				"meta": "flags",
+				"name": "ft8",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07"]
 			},
 			"keys": ["domain"]
@@ -234,6 +350,7 @@ const (
 			},
 			"type": {
 				"meta": "flags",
+				"name": "ft16",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
 				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17"]
 			},
@@ -247,6 +364,7 @@ const (
 			},
 			"type": {
 				"meta": "flags",
+				"name": "ft32",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
 				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
 				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
@@ -262,6 +380,7 @@ const (
 			},
 			"type": {
 				"meta": "flags",
+				"name": "ft64",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
 				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
 				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
@@ -379,6 +498,7 @@ const (
 		"flags8": {
 			"type": {
 				"meta": "flags",
+				"name": "ft8",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07"]
 			},
 			"keys": ["domain"],
@@ -389,6 +509,7 @@ const (
 		"flags16": {
 			"type": {
 				"meta": "flags",
+				"name": "ft16",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
 				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17"]
 			},
@@ -400,6 +521,7 @@ const (
 		"flags32": {
 			"type": {
 				"meta": "flags",
+				"name": "ft32",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
 				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
 				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
@@ -413,6 +535,7 @@ const (
 		"flags64": {
 			"type": {
 				"meta": "flags",
+				"name": "ft64",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
 				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
 				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
@@ -536,6 +659,7 @@ const (
 			},
 			"type": {
 				"meta": "flags",
+				"name": "ft8",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07"]
 			},
 			"keys": ["domain"]
@@ -546,6 +670,7 @@ const (
 			},
 			"type": {
 				"meta": "flags",
+				"name": "ft16",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
 				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17"]
 			},
@@ -557,6 +682,7 @@ const (
 			},
 			"type": {
 				"meta": "flags",
+				"name": "ft32",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
 				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
 				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
@@ -570,6 +696,7 @@ const (
 			},
 			"type": {
 				"meta": "flags",
+				"name": "ft64",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
 				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
 				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
@@ -1387,6 +1514,8 @@ func TestUnmarshal(t *testing.T) {
 }
 
 func TestUnmarshalUpdate(t *testing.T) {
+	s := pdp.NewLocalContentStorage(nil)
+
 	tag := uuid.New()
 	c, err := Unmarshal(strings.NewReader(jsonStream), &tag)
 	if err != nil {
@@ -1394,14 +1523,14 @@ func TestUnmarshalUpdate(t *testing.T) {
 		return
 	}
 
-	u, err := UnmarshalUpdate(strings.NewReader(jsonUpdateStream), "Test", tag, uuid.New())
+	s = s.Add(c)
+	tr, err := s.NewTransaction("Test", &tag)
 	if err != nil {
 		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		return
 	}
 
-	s := pdp.NewLocalContentStorage([]*pdp.LocalContent{c})
-	tr, err := s.NewTransaction("Test", &tag)
+	u, err := UnmarshalUpdate(strings.NewReader(jsonUpdateStream), "Test", tag, uuid.New(), tr.Symbols())
 	if err != nil {
 		t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		return

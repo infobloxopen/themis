@@ -96,18 +96,19 @@ const (
 	floatDivideByZeroErrorID                   = 83
 	floatNanErrorID                            = 84
 	floatInfErrorID                            = 85
-	nilTypeErrorID                             = 86
-	builtinCustomTypeErrorID                   = 87
-	duplicateCustomTypeErrorID                 = 88
-	duplicatesBuiltinTypeErrorID               = 89
-	duplicateFlagNameID                        = 90
-	noTypedAttributeErrorID                    = 91
-	undefinedAttributeTypeErrorID              = 92
-	unknownAttributeTypeErrorID                = 93
-	duplicateAttributeErrorID                  = 94
-	noFlagsDefinedErrorID                      = 95
-	tooManyFlagsDefinedErrorID                 = 96
-	listOfStringsTypeErrorID                   = 97
+	ReadOnlySymbolsChangeErrorID               = 86
+	nilTypeErrorID                             = 87
+	builtinCustomTypeErrorID                   = 88
+	duplicateCustomTypeErrorID                 = 89
+	duplicatesBuiltinTypeErrorID               = 90
+	duplicateFlagNameID                        = 91
+	noTypedAttributeErrorID                    = 92
+	undefinedAttributeTypeErrorID              = 93
+	unknownAttributeTypeErrorID                = 94
+	duplicateAttributeErrorID                  = 95
+	noFlagsDefinedErrorID                      = 96
+	tooManyFlagsDefinedErrorID                 = 97
+	listOfStringsTypeErrorID                   = 98
 )
 
 type externalError struct {
@@ -1473,6 +1474,21 @@ func newFloatInfError() *floatInfError {
 
 func (e *floatInfError) Error() string {
 	return e.errorf("Float result has a value of Inf")
+}
+
+// ReadOnlySymbolsChangeError indicates attempt to modify read-only symbol table.
+type ReadOnlySymbolsChangeError struct {
+	errorLink
+}
+
+func newReadOnlySymbolsChangeError() *ReadOnlySymbolsChangeError {
+	return &ReadOnlySymbolsChangeError{
+		errorLink: errorLink{id: ReadOnlySymbolsChangeErrorID}}
+}
+
+// Error implements error interface.
+func (e *ReadOnlySymbolsChangeError) Error() string {
+	return e.errorf("Can't put symbol to read-only table")
 }
 
 type nilTypeError struct {

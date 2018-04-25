@@ -745,6 +745,10 @@ errors:
 - id: floatInfError
   msg: "Float result has a value of Inf"
 
+- id: ReadOnlySymbolsChangeError
+  desc: "indicates attempt to modify read-only symbol table"
+  msg: "Can't put symbol to read-only table"
+
 - id: nilTypeError
   msg: "Can't put nil type into custom types symbol table"
 

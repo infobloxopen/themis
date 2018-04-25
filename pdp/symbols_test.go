@@ -61,6 +61,19 @@ func TestSymbolsType(t *testing.T) {
 	} else if _, ok := err.(*builtinCustomTypeError); !ok {
 		t.Errorf("Expected *builtinCustomTypeError but got %T (%s)", err, err)
 	}
+
+	ros := s.makeROCopy()
+	ft1, err := NewFlagsType("OtherFlags", "first", "second", "third", "fourth")
+	if err != nil {
+		t.Errorf("Expected no error but got: %s", err)
+	} else {
+		err = ros.PutType(ft1)
+		if err == nil {
+			t.Error("Expected *ReadOnlySymbolsChangeError but got nothing")
+		} else if _, ok := err.(*ReadOnlySymbolsChangeError); !ok {
+			t.Errorf("Expected *builtinCustomTypeError but got %T (%s)", err, err)
+		}
+	}
 }
 
 func TestSymbolsAttribute(t *testing.T) {
@@ -124,5 +137,13 @@ func TestSymbolsAttribute(t *testing.T) {
 		} else if _, ok := err.(*unknownAttributeTypeError); !ok {
 			t.Errorf("Expected *unknownAttributeTypeError but got %T (%s)", err, err)
 		}
+	}
+
+	ros := s.makeROCopy()
+	err = ros.PutAttribute(MakeAttribute("x", TypeBoolean))
+	if err == nil {
+		t.Error("Expected *ReadOnlySymbolsChangeError but got nothing")
+	} else if _, ok := err.(*ReadOnlySymbolsChangeError); !ok {
+		t.Errorf("Expected *builtinCustomTypeError but got %T (%s)", err, err)
 	}
 }

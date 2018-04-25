@@ -73,6 +73,39 @@ func ppStringSequence(v interface{}, desc string, f func(s string) error) error 
 }
 
 func (c *contentItem) ppValue(v interface{}) (interface{}, error) {
+	if t, ok := c.t.(*pdp.FlagsType); ok {
+		var n uint64
+		err := ppStringSequence(v, "flag names", func(s string) error {
+			i := t.GetFlagBit(s)
+			if i < 0 {
+				return newUnknownFlagNameError(s)
+			}
+
+			n |= 1 << uint(i)
+
+			return nil
+		})
+		if err != nil {
+			return 0, err
+		}
+
+		switch t.Capacity() {
+		case 8:
+			return uint8(n), nil
+
+		case 16:
+			return uint16(n), nil
+
+		case 32:
+			return uint32(n), nil
+
+		case 64:
+			return n, nil
+		}
+
+		return nil, newInvalidFlagsCapacityError(t)
+	}
+
 	switch c.t {
 	case pdp.TypeBoolean:
 		b, ok := v.(bool)

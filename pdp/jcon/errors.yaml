@@ -188,6 +188,9 @@ errors:
 - id: missingFlagNameListError
   msg: "Missing list of flag names"
 
+- id: newTypeOnUpdateError
+  msg: "New type declaration isn't allowed on update"
+
 - id: invalidTypeFormatError
   fields:
   - id: t

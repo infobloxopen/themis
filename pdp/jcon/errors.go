@@ -29,19 +29,20 @@ const (
 	missingMetaTypeNameErrorID            = 18
 	unknownMetaTypeErrorID                = 19
 	missingFlagNameListErrorID            = 20
-	invalidTypeFormatErrorID              = 21
-	unknownTypeFieldErrorID               = 22
-	missingContentDataErrorID             = 23
-	missingContentTypeErrorID             = 24
-	invalidSequenceContentItemNodeErrorID = 25
-	invalidMapContentItemNodeErrorID      = 26
-	unknownCommadFieldErrorID             = 27
-	duplicateCommandFieldErrorID          = 28
-	missingCommandOpErrorID               = 29
-	missingCommandPathErrorID             = 30
-	missingCommandEntityErrorID           = 31
-	unknownContentUpdateOperationErrorID  = 32
-	arrayEndDelimiterErrorID              = 33
+	newTypeOnUpdateErrorID                = 21
+	invalidTypeFormatErrorID              = 22
+	unknownTypeFieldErrorID               = 23
+	missingContentDataErrorID             = 24
+	missingContentTypeErrorID             = 25
+	invalidSequenceContentItemNodeErrorID = 26
+	invalidMapContentItemNodeErrorID      = 27
+	unknownCommadFieldErrorID             = 28
+	duplicateCommandFieldErrorID          = 29
+	missingCommandOpErrorID               = 30
+	missingCommandPathErrorID             = 31
+	missingCommandEntityErrorID           = 32
+	unknownContentUpdateOperationErrorID  = 33
+	arrayEndDelimiterErrorID              = 34
 )
 
 type externalError struct {
@@ -367,6 +368,19 @@ func newMissingFlagNameListError() *missingFlagNameListError {
 
 func (e *missingFlagNameListError) Error() string {
 	return e.errorf("Missing list of flag names")
+}
+
+type newTypeOnUpdateError struct {
+	errorLink
+}
+
+func newNewTypeOnUpdateError() *newTypeOnUpdateError {
+	return &newTypeOnUpdateError{
+		errorLink: errorLink{id: newTypeOnUpdateErrorID}}
+}
+
+func (e *newTypeOnUpdateError) Error() string {
+	return e.errorf("New type declaration isn't allowed on update")
 }
 
 type invalidTypeFormatError struct {

@@ -6,6 +6,7 @@ import "strings"
 type Symbols struct {
 	types map[string]Type
 	attrs map[string]Attribute
+	ro    bool
 }
 
 // MakeSymbols create symbol tables without any types and attributes.
@@ -18,6 +19,10 @@ func MakeSymbols() Symbols {
 
 // PutType stores given type in the symbol table.
 func (s Symbols) PutType(t Type) error {
+	if s.ro {
+		return newReadOnlySymbolsChangeError()
+	}
+
 	if t == nil {
 		return newNilTypeError()
 	}
@@ -53,6 +58,10 @@ func (s Symbols) GetType(ID string) Type {
 
 // PutAttribute stores given attribute in the symbol table.
 func (s Symbols) PutAttribute(a Attribute) error {
+	if s.ro {
+		return newReadOnlySymbolsChangeError()
+	}
+
 	if a.t == nil {
 		return newNoTypedAttributeError(a)
 	}
@@ -81,4 +90,12 @@ func (s Symbols) GetAttribute(ID string) (Attribute, bool) {
 	}
 
 	return Attribute{}, false
+}
+
+func (s Symbols) makeROCopy() Symbols {
+	return Symbols{
+		types: s.types,
+		attrs: s.attrs,
+		ro:    true,
+	}
 }

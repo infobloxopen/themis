@@ -8,7 +8,7 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 )
 
-func unmarshalCommand(d *json.Decoder, u *pdp.ContentUpdate) error {
+func unmarshalCommand(d *json.Decoder, s pdp.Symbols, u *pdp.ContentUpdate) error {
 	var op int
 	opOk := false
 
@@ -59,7 +59,7 @@ func unmarshalCommand(d *json.Decoder, u *pdp.ContentUpdate) error {
 			}
 
 			var err error
-			entity, err = unmarshalContentItem("", d)
+			entity, err = unmarshalContentItem("", s, d)
 			if err != nil {
 				return err
 			}
@@ -90,7 +90,7 @@ func unmarshalCommand(d *json.Decoder, u *pdp.ContentUpdate) error {
 	return nil
 }
 
-func unmarshalCommands(d *json.Decoder, u *pdp.ContentUpdate) error {
+func unmarshalCommands(d *json.Decoder, s pdp.Symbols, u *pdp.ContentUpdate) error {
 	ok, err := jparser.CheckRootArrayStart(d)
 	if err != nil {
 		return err
@@ -101,7 +101,7 @@ func unmarshalCommands(d *json.Decoder, u *pdp.ContentUpdate) error {
 	}
 
 	err = jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
-		if err := unmarshalCommand(d, u); err != nil {
+		if err := unmarshalCommand(d, s, u); err != nil {
 			return bindErrorf(err, "%d", idx)
 		}
 		return nil
