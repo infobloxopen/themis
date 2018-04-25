@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -15,7 +16,7 @@ func (handler *storageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	// sanity check
 	root := handler.s.p
 	if root == nil {
-		io.WriteString(w, "Server missing policy storage")
+		io.WriteString(w, `{"error": "Server missing policy storage"}`)
 		return
 	}
 
@@ -23,13 +24,13 @@ func (handler *storageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	queryOpt := r.URL.Query()
 	depthOpt, ok := queryOpt["depth"]
 	if !ok {
-		io.WriteString(w, "depth option not specified")
+		io.WriteString(w, `{"error": "depth option not specified"}`)
 		return
 	}
 	depthStr := depthOpt[0]
 	depth, err := strconv.ParseInt(depthStr, 10, 64)
 	if err != nil {
-		io.WriteString(w, err.Error())
+		fmt.Fprintf(w, `{"error": "%v+"}`, err)
 		return
 	}
 
@@ -37,13 +38,13 @@ func (handler *storageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	path := strings.FieldsFunc(r.URL.Path, func(c rune) bool { return c == '/' })[1:]
 	target, err := root.GetAtPath(path)
 	if err != nil {
-		io.WriteString(w, err.Error())
+		fmt.Fprintf(w, `{"error": "%v+"}`, err)
 		return
 	}
 
 	// dump
 	if err = target.MarshalWithDepth(w, int(depth)); err != nil {
-		io.WriteString(w, err.Error())
+		fmt.Fprintf(w, `{"error": "%v+"}`, err)
 		return
 	}
 }
