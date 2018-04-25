@@ -98,12 +98,9 @@ func (c *contentItem) ppValue(v interface{}) (interface{}, error) {
 
 		case 32:
 			return uint32(n), nil
-
-		case 64:
-			return n, nil
 		}
 
-		return nil, newInvalidFlagsCapacityError(t)
+		return n, nil
 	}
 
 	switch c.t {

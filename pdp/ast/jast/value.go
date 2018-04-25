@@ -169,13 +169,9 @@ func (ctx context) unmarshalFlagsValue(d *json.Decoder, t *pdp.FlagsType) (pdp.A
 
 	case 32:
 		return ctx.unmarshalFlags32Value(d, t)
-
-	case 64:
-		return ctx.unmarshalFlags64Value(d, t)
-
 	}
 
-	return pdp.UndefinedValue, newInvalidFlagsCapacityError(t)
+	return ctx.unmarshalFlags64Value(d, t)
 }
 
 func (ctx context) unmarshalFlags8Value(d *json.Decoder, t *pdp.FlagsType) (pdp.AttributeValue, error) {

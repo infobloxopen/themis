@@ -58,14 +58,11 @@ func newTypedMap(c *contentItem, keyIdx int) (mapUnmarshaller, error) {
 				return &domain32Map{
 					contentItemLink: contentItemLink{c: c, i: keyIdx},
 					m:               &domaintree32.Node{}}, nil
-
-			case 64:
-				return &domain64Map{
-					contentItemLink: contentItemLink{c: c, i: keyIdx},
-					m:               &domaintree64.Node{}}, nil
 			}
 
-			return nil, newInvalidFlagsCapacityError(t)
+			return &domain64Map{
+				contentItemLink: contentItemLink{c: c, i: keyIdx},
+				m:               &domaintree64.Node{}}, nil
 		}
 
 		return &domainMap{

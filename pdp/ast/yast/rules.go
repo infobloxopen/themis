@@ -26,12 +26,12 @@ func (ctx context) unmarshalCondition(m map[interface{}]interface{}) (pdp.Expres
 }
 
 func (ctx context) unmarshalRule(m map[interface{}]interface{}, i int) (*pdp.Rule, boundError) {
-	ID, ok, err := ctx.extractStringOpt(m, yastTagID, "id")
+	ID, okID, err := ctx.extractStringOpt(m, yastTagID, "id")
 	if err != nil {
 		return nil, bindErrorf(err, "%d", i)
 	}
 
-	src := makeSource("rule", ID, !ok, i)
+	src := makeSource("rule", ID, !okID, i)
 
 	target, err := ctx.unmarshalTarget(m)
 	if err != nil {
@@ -58,7 +58,7 @@ func (ctx context) unmarshalRule(m map[interface{}]interface{}, i int) (*pdp.Rul
 		return nil, bindError(err, src)
 	}
 
-	return pdp.NewRule(ID, !ok, target, cond, effect, obls), nil
+	return pdp.NewRule(ID, !okID, target, cond, effect, obls), nil
 }
 
 func (ctx context) unmarshalRuleEntity(m map[interface{}]interface{}, ID string, hidden bool, effect interface{}) (*pdp.Rule, boundError) {
@@ -89,7 +89,7 @@ func (ctx context) unmarshalRuleEntity(m map[interface{}]interface{}, ID string,
 		return nil, bindError(err, src)
 	}
 
-	return pdp.NewRule(ID, !ok, target, cond, eff, obls), nil
+	return pdp.NewRule(ID, hidden, target, cond, eff, obls), nil
 }
 
 func (ctx context) unmarshalRulesItem(v interface{}, i int) (*pdp.Rule, boundError) {

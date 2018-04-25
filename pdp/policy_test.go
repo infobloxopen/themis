@@ -381,6 +381,108 @@ func TestPolicyAppend(t *testing.T) {
 	} else {
 		t.Errorf("Expected new policy but got %T (%#v)", newE, newE)
 	}
+
+	ft, err := NewFlagsType("flags", "first", "second", "third", "fourth")
+	if err != nil {
+		t.Fatalf("Expected no error but got: %s", err)
+	}
+
+	p = NewPolicy("test", false, Target{},
+		[]*Rule{
+			makeSimpleRule("first", EffectPermit),
+			makeSimpleRule("second", EffectPermit),
+			makeSimpleRule("third", EffectPermit),
+		},
+		makeMapperRCA, MapperRCAParams{
+			Argument: AttributeDesignator{a: Attribute{id: "f", t: ft}},
+			DefOk:    true,
+			Def:      "first",
+			ErrOk:    true,
+			Err:      "second"},
+		nil)
+	if len(p.rules) == 3 {
+		for i, r := range p.rules {
+			if r.ord != i {
+				t.Errorf("Expected %q rule to get %d order but got %d", r.id, i, r.ord)
+			}
+		}
+	} else {
+		t.Errorf("Expected 3 rules in the policy but got %d", len(p.rules))
+	}
+
+	newE, err = p.Append([]string{}, makeSimpleRule("fourth", EffectDeny))
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if newP, ok := newE.(*Policy); ok {
+		if len(newP.rules) == 4 {
+			r := newP.rules[3]
+			if r.id != "fourth" {
+				t.Errorf("Expected \"fourth\" rule placed at the end but got %q", r.id)
+			}
+
+			if r.ord != 3 {
+				t.Errorf("Expected fourth rule to get order 3 but got %d", r.ord)
+			}
+		} else {
+			t.Errorf("Expected four rules after append but got %d", len(newP.rules))
+		}
+
+		assertFlagsMapperRCAMapKeys(newP.algorithm, "after insert \"fourth\"", t, "first", "second", "third", "fourth")
+	} else {
+		t.Errorf("Expected new policy but got %T (%#v)", newE, newE)
+	}
+
+	newE, err = newE.Append([]string{}, makeSimpleRule("fifth", EffectDeny))
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if newP, ok := newE.(*Policy); ok {
+		if len(newP.rules) == 5 {
+			r := newP.rules[4]
+			if r.id != "fifth" {
+				t.Errorf("Expected \"fifth\" rule placed at the end but got %q", r.id)
+			}
+
+			if r.ord != 4 {
+				t.Errorf("Expected fifth rule to get order 4 but got %d", r.ord)
+			}
+		} else {
+			t.Errorf("Expected five rules after append but got %d", len(newP.rules))
+		}
+
+		assertFlagsMapperRCAMapKeys(newP.algorithm, "after insert \"fifth\"", t, "first", "second", "third", "fourth")
+	} else {
+		t.Errorf("Expected new policy but got %T (%#v)", newE, newE)
+	}
+
+	newE, err = newE.Append([]string{}, newFirstRule)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if newP, ok := newE.(*Policy); ok {
+		if len(newP.rules) == 5 {
+			r := newP.rules[0]
+			if r.id != "first" {
+				t.Errorf("Expected \"first\" rule replaced at the begining but got %q", r.id)
+			} else if r.effect != EffectDeny {
+				t.Errorf("Expected \"first\" rule became deny but it's still %s", effectNames[r.effect])
+			}
+
+			if r.ord != 0 {
+				t.Errorf("Expected first rule to keep order 0 but got %d", r.ord)
+			}
+		} else {
+			t.Errorf("Expected four rules after append but got %d", len(newP.rules))
+		}
+
+		assertFlagsMapperRCAMapKeys(newP.algorithm, "after insert \"first\"", t, "first", "second", "third", "fourth")
+
+		if m, ok := newP.algorithm.(flagsMapperRCA); ok {
+			if m.def != newFirstRule {
+				t.Errorf("Expected default rule to be new \"first\" rule %p but got %p", newFirstRule, m.def)
+			}
+		}
+	} else {
+		t.Errorf("Expected new policy but got %T (%#v)", newE, newE)
+	}
 }
 
 func TestPolicyDelete(t *testing.T) {
@@ -543,6 +645,98 @@ func TestPolicyDelete(t *testing.T) {
 	} else {
 		t.Errorf("Expected new policy but got %T (%#v)", newE, newE)
 	}
+
+	ft, err := NewFlagsType("flags", "first", "second", "third", "fourth")
+	if err != nil {
+		t.Fatalf("Expected no error but got: %s", err)
+	}
+
+	p = NewPolicy("test", false, Target{},
+		[]*Rule{
+			makeSimpleRule("first", EffectPermit),
+			makeSimpleRule("second", EffectPermit),
+			makeSimpleRule("third", EffectPermit),
+			makeSimpleRule("fifth", EffectPermit),
+		},
+		makeMapperRCA, MapperRCAParams{
+			Argument: AttributeDesignator{a: Attribute{id: "f", t: ft}},
+			DefOk:    true,
+			Def:      "first",
+			ErrOk:    true,
+			Err:      "second"},
+		nil)
+	if len(p.rules) == 4 {
+		for i, r := range p.rules {
+			if r.ord != i {
+				t.Errorf("Expected %q rule to get %d order but got %d", r.id, i, r.ord)
+			}
+		}
+	} else {
+		t.Errorf("Expected 4 rules in the policy but got %d", len(p.rules))
+	}
+
+	newE, err = p.Delete([]string{"second"})
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if newP, ok := newE.(*Policy); ok {
+		if len(newP.rules) == 3 {
+			r1 := newP.rules[0]
+			r3 := newP.rules[1]
+			r5 := newP.rules[2]
+			if r1.id != "first" || r3.id != "third" || r5.id != "fifth" {
+				t.Errorf("Expected \"first\", \"third\" and \"fifth\" rules remaining but got %q, %q and %q",
+					r1.id, r3.id, r5.id,
+				)
+			}
+
+			if r1.ord != 0 || r3.ord != 2 || r5.ord != 3 {
+				t.Errorf("Expected remaining rules to keep their orders but got %d, %d and %d",
+					r1.ord, r3.ord, r5.ord,
+				)
+			}
+		} else {
+			t.Errorf("Expected three rules after delete but got %d", len(newP.rules))
+		}
+
+		assertFlagsMapperRCAMapKeys(newP.algorithm, "after \"second\" deletion", t, "first", "third")
+
+		if m, ok := newP.algorithm.(flagsMapperRCA); ok {
+			if m.err != nil {
+				t.Errorf("Expected error rule to be nil but got %p", m.err)
+			}
+		}
+	} else {
+		t.Errorf("Expected new policy but got %T (%#v)", newE, newE)
+	}
+
+	newE, err = newE.Delete([]string{"fifth"})
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if newP, ok := newE.(*Policy); ok {
+		if len(newP.rules) == 2 {
+			r1 := newP.rules[0]
+			r3 := newP.rules[1]
+			if r1.id != "first" || r3.id != "third" {
+				t.Errorf("Expected \"first\" and \"third\" rules remaining but got %q and %q", r1.id, r3.id)
+			}
+
+			if r1.ord != 0 || r3.ord != 2 {
+				t.Errorf("Expected remaining rules to keep their orders but got %d and %d", r1.ord, r3.ord)
+			}
+		} else {
+			t.Errorf("Expected two rules after delete but got %d", len(newP.rules))
+		}
+
+		assertFlagsMapperRCAMapKeys(newP.algorithm, "after \"fifth\" deletion", t, "first", "third")
+
+		if m, ok := newP.algorithm.(flagsMapperRCA); ok {
+			if m.err != nil {
+				t.Errorf("Expected error rule to be nil but got %p", m.err)
+			}
+		}
+	} else {
+		t.Errorf("Expected new policy but got %T (%#v)", newE, newE)
+	}
 }
 
 func makeSimplePolicy(ID string, rules ...*Rule) *Policy {
@@ -632,6 +826,21 @@ func assertMapperRCAMapKeys(a RuleCombiningAlg, desc string, t *testing.T, expec
 		assertStrings(keys, expected, desc, t)
 	} else {
 		t.Errorf("Expected mapper as rule combining algorithm but got %T for %s", a, desc)
+	}
+}
+
+func assertFlagsMapperRCAMapKeys(a RuleCombiningAlg, desc string, t *testing.T, expected ...string) {
+	if m, ok := a.(flagsMapperRCA); ok {
+		keys := []string{}
+		for _, r := range m.rules {
+			if r != nil {
+				keys = append(keys, r.id)
+			}
+		}
+
+		assertStrings(keys, expected, desc, t)
+	} else {
+		t.Errorf("Expected flags mapper as rule combining algorithm but got %T for %s", a, desc)
 	}
 }
 

@@ -770,6 +770,13 @@ func TestAttributeValueTypeCast(t *testing.T) {
 			t.Errorf("Expected 3 as attribute value but got %d", n8)
 		}
 
+		n864, err := v.flags()
+		if err != nil {
+			t.Errorf("Expected flags value but got error: %s", err)
+		} else if n864 != uint64(n8) {
+			t.Errorf("Expected %d as attribute value but got %d", n8, n864)
+		}
+
 		n16, err := v.flags16()
 		if err == nil {
 			t.Errorf("Expected error but got 16 bits flags %d from 8 bits flags %s", n16, v.describe())
@@ -781,6 +788,13 @@ func TestAttributeValueTypeCast(t *testing.T) {
 		n8, err = v.flags8()
 		if err == nil {
 			t.Errorf("Expected error but got flags %d from boolean %s", n8, v.describe())
+		} else if _, ok := err.(*attributeValueFlagsTypeError); !ok {
+			t.Errorf("Expected *attributeValueFlagsTypeError but got %T (%s)", err, err)
+		}
+
+		n64, err := v.flags()
+		if err == nil {
+			t.Errorf("Expected error but got flags %d from boolean %s", n64, v.describe())
 		} else if _, ok := err.(*attributeValueFlagsTypeError); !ok {
 			t.Errorf("Expected *attributeValueFlagsTypeError but got %T (%s)", err, err)
 		}
@@ -799,6 +813,13 @@ func TestAttributeValueTypeCast(t *testing.T) {
 			t.Errorf("Expected flags value but got error: %s", err)
 		} else if n16 != 3 {
 			t.Errorf("Expected 3 as attribute value but got %d", n16)
+		}
+
+		n1664, err := v.flags()
+		if err != nil {
+			t.Errorf("Expected flags value but got error: %s", err)
+		} else if n1664 != uint64(n16) {
+			t.Errorf("Expected %d as attribute value but got %d", n16, n1664)
 		}
 
 		n32, err := v.flags32()
@@ -832,6 +853,13 @@ func TestAttributeValueTypeCast(t *testing.T) {
 			t.Errorf("Expected flags value but got error: %s", err)
 		} else if n32 != 3 {
 			t.Errorf("Expected 3 as attribute value but got %d", n32)
+		}
+
+		n3264, err := v.flags()
+		if err != nil {
+			t.Errorf("Expected flags value but got error: %s", err)
+		} else if n3264 != uint64(n32) {
+			t.Errorf("Expected %d as attribute value but got %d", n32, n3264)
 		}
 
 		n64, err := v.flags64()
@@ -869,6 +897,13 @@ func TestAttributeValueTypeCast(t *testing.T) {
 			t.Errorf("Expected flags value but got error: %s", err)
 		} else if n64 != 3 {
 			t.Errorf("Expected 3 as attribute value but got %d", n64)
+		}
+
+		n6464, err := v.flags()
+		if err != nil {
+			t.Errorf("Expected flags value but got error: %s", err)
+		} else if n6464 != n64 {
+			t.Errorf("Expected %d as attribute value but got %d", n64, n6464)
 		}
 
 		n8, err := v.flags8()

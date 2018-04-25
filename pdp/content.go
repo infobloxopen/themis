@@ -517,9 +517,6 @@ func (c *ContentItem) typeCheck(path []AttributeValue, v interface{}) (ContentSu
 
 	if t, ok := c.t.(*FlagsType); ok {
 		switch t.Capacity() {
-		default:
-			return nil, newInvalidFlagsTypeCapacityError(t)
-
 		case 8:
 			if _, ok := subItem.value.(uint8); !ok {
 				return nil, newInvalidContentValueTypeError(subItem.value, c.t)

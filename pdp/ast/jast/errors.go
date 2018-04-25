@@ -58,8 +58,7 @@ const (
 	missingMetaTypeNameErrorID          = 44
 	unknownMetaTypeErrorID              = 45
 	missingFlagNameListErrorID          = 46
-	invalidFlagsCapacityErrorID         = 47
-	unknownFlagNameErrorID              = 48
+	unknownFlagNameErrorID              = 47
 )
 
 type externalError struct {
@@ -306,7 +305,7 @@ func newMapperArgumentTypeError(actual pdp.Type) *mapperArgumentTypeError {
 }
 
 func (e *mapperArgumentTypeError) Error() string {
-	return e.errorf("Expected %q, %q or %q as argument but got %q", pdp.TypeString, pdp.TypeSetOfStrings, pdp.TypeListOfStrings, e.actual)
+	return e.errorf("Expected %q, %q, %q or flags as argument but got %q", pdp.TypeString, pdp.TypeSetOfStrings, pdp.TypeListOfStrings, e.actual)
 }
 
 type conditionTypeError struct {
@@ -770,21 +769,6 @@ func newMissingFlagNameListError() *missingFlagNameListError {
 
 func (e *missingFlagNameListError) Error() string {
 	return e.errorf("Missing list of flag names")
-}
-
-type invalidFlagsCapacityError struct {
-	errorLink
-	t *pdp.FlagsType
-}
-
-func newInvalidFlagsCapacityError(t *pdp.FlagsType) *invalidFlagsCapacityError {
-	return &invalidFlagsCapacityError{
-		errorLink: errorLink{id: invalidFlagsCapacityErrorID},
-		t:         t}
-}
-
-func (e *invalidFlagsCapacityError) Error() string {
-	return e.errorf("Type %q has invalid capacity %d", e.t, e.t.Capacity())
 }
 
 type unknownFlagNameError struct {

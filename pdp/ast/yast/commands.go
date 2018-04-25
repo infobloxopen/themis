@@ -12,12 +12,12 @@ func (ctx *context) unmarshalEntity(m map[interface{}]interface{}) (interface{},
 		return nil, err
 	}
 
-	ID, ok, err := ctx.extractStringOpt(m, yastTagID, "policy or set or rule id")
+	ID, okID, err := ctx.extractStringOpt(m, yastTagID, "policy or set or rule id")
 	if err != nil {
 		return nil, err
 	}
 
-	src := makeSource("policy or set or rule", ID, !ok, 0)
+	src := makeSource("policy or set or rule", ID, !okID, 0)
 
 	rules, rOk := m[yastTagRules]
 	policies, pOk := m[yastTagPolicies]
@@ -40,15 +40,15 @@ func (ctx *context) unmarshalEntity(m map[interface{}]interface{}) (interface{},
 	}
 
 	if rOk {
-		return ctx.unmarshalPolicy(m, 0, ID, !ok, rules)
+		return ctx.unmarshalPolicy(m, 0, ID, !okID, rules)
 	}
 
 	if pOk {
-		return ctx.unmarshalPolicySet(m, 0, ID, !ok, policies)
+		return ctx.unmarshalPolicySet(m, 0, ID, !okID, policies)
 	}
 
 	if eOk {
-		return ctx.unmarshalRuleEntity(m, ID, !ok, effect)
+		return ctx.unmarshalRuleEntity(m, ID, !okID, effect)
 	}
 
 	return nil, bindError(newEntityMissingKeyError(), src)

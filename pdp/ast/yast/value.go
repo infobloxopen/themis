@@ -208,12 +208,9 @@ func (ctx context) unmarshalFlagsValue(v interface{}, t *pdp.FlagsType) (pdp.Att
 
 	case 32:
 		return ctx.unmarshalFlags32Value(f, t)
-
-	case 64:
-		return ctx.unmarshalFlags64Value(f, t)
 	}
 
-	return pdp.UndefinedValue, newInvalidFlagsCapacityError(t)
+	return ctx.unmarshalFlags64Value(f, t)
 }
 
 func (ctx context) unmarshalFlags8Value(v []interface{}, t *pdp.FlagsType) (pdp.AttributeValue, boundError) {

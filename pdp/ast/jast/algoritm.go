@@ -234,7 +234,7 @@ func (ctx context) unmarshalCombiningAlgObj(d *json.Decoder) (*caParams, error) 
 			}
 
 			t := params.arg.GetResultType()
-			if t != pdp.TypeString && t != pdp.TypeSetOfStrings && t != pdp.TypeListOfStrings {
+			if _, ok := t.(*pdp.FlagsType); !ok && t != pdp.TypeString && t != pdp.TypeSetOfStrings && t != pdp.TypeListOfStrings {
 				err = newMapperArgumentTypeError(t)
 				if idOk {
 					err = bindErrorf(err, "%q", params.id)

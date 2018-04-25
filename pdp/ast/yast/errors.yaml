@@ -255,7 +255,7 @@ errors:
   fields:
   - id: actual
     type: pdp.Type
-  msg: "Expected %s, %s or %s as argument but got %s"
+  msg: "Expected %s, %s, %s or flags as argument but got %s"
   args:
   - expr: pdp.TypeString
   - expr: pdp.TypeSetOfStrings
@@ -491,15 +491,6 @@ errors:
   args:
   - field: idx
   - field: v
-
-- id: invalidFlagsCapacityError
-  fields:
-  - id: t
-    type: "*pdp.FlagsType"
-  msg: "Type %q has invalid capacity %d"
-  args:
-  - field: t
-  - field: t.Capacity()
 
 - id: unknownFlagNameError
   fields:

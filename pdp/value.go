@@ -356,10 +356,18 @@ func (v AttributeValue) typeCheck(t Type) error {
 	return nil
 }
 
-func (v AttributeValue) flagsTypeCheck(n int) error {
-	t, ok := v.t.(*FlagsType)
-	if !ok {
-		return bindError(newAttributeValueFlagsTypeError(v.t, n), v.describe())
+func (v AttributeValue) flagsTypeCheck() (*FlagsType, error) {
+	if t, ok := v.t.(*FlagsType); ok {
+		return t, nil
+	}
+
+	return nil, bindError(newAttributeValueFlagsTypeError(v.t), v.describe())
+}
+
+func (v AttributeValue) flagsTypeCheckN(n int) error {
+	t, err := v.flagsTypeCheck()
+	if err != nil {
+		return err
 	}
 
 	if t.c != n {
@@ -469,7 +477,7 @@ func (v AttributeValue) listOfStrings() ([]string, error) {
 }
 
 func (v AttributeValue) flags8() (uint8, error) {
-	err := v.flagsTypeCheck(8)
+	err := v.flagsTypeCheckN(8)
 	if err != nil {
 		return 0, err
 	}
@@ -478,7 +486,7 @@ func (v AttributeValue) flags8() (uint8, error) {
 }
 
 func (v AttributeValue) flags16() (uint16, error) {
-	err := v.flagsTypeCheck(16)
+	err := v.flagsTypeCheckN(16)
 	if err != nil {
 		return 0, err
 	}
@@ -487,7 +495,7 @@ func (v AttributeValue) flags16() (uint16, error) {
 }
 
 func (v AttributeValue) flags32() (uint32, error) {
-	err := v.flagsTypeCheck(32)
+	err := v.flagsTypeCheckN(32)
 	if err != nil {
 		return 0, err
 	}
@@ -496,9 +504,29 @@ func (v AttributeValue) flags32() (uint32, error) {
 }
 
 func (v AttributeValue) flags64() (uint64, error) {
-	err := v.flagsTypeCheck(64)
+	err := v.flagsTypeCheckN(64)
 	if err != nil {
 		return 0, err
+	}
+
+	return v.v.(uint64), nil
+}
+
+func (v AttributeValue) flags() (uint64, error) {
+	t, err := v.flagsTypeCheck()
+	if err != nil {
+		return 0, err
+	}
+
+	switch t.Capacity() {
+	case 8:
+		return uint64(v.v.(uint8)), nil
+
+	case 16:
+		return uint64(v.v.(uint16)), nil
+
+	case 32:
+		return uint64(v.v.(uint32)), nil
 	}
 
 	return v.v.(uint64), nil

@@ -1190,6 +1190,122 @@ const (
             ]
           }
         ]
+      },
+      {
+        "id": "Flags8Mapper",
+        "alg": {
+          "id": "Mapper",
+          "map": {
+            "selector": {
+              "uri": "local:content/content-item-dom8-map",
+              "type": "flags8",
+              "path": [
+                {
+                  "attr": "domAttr"
+                }
+              ]
+            }
+          },
+          "order": "Internal",
+          "alg": "FirstApplicableEffect"
+        },
+        "rules": [
+          {
+            "id": "f00",
+            "effect": "Permit"
+          },
+          {
+            "id": "f02",
+            "effect": "Deny"
+          }
+        ]
+      },
+      {
+        "id": "Flags16Mapper",
+        "alg": {
+          "id": "Mapper",
+          "map": {
+            "selector": {
+              "uri": "local:content/content-item-dom16-map",
+              "type": "flags16",
+              "path": [
+                {
+                  "attr": "domAttr"
+                }
+              ]
+            }
+          },
+          "order": "Internal",
+          "alg": "FirstApplicableEffect"
+        },
+        "rules": [
+          {
+            "id": "f00",
+            "effect": "Permit"
+          },
+          {
+            "id": "f02",
+            "effect": "Deny"
+          }
+        ]
+      },
+      {
+        "id": "Flags32Mapper",
+        "alg": {
+          "id": "Mapper",
+          "map": {
+            "selector": {
+              "uri": "local:content/content-item-dom32-map",
+              "type": "flags32",
+              "path": [
+                {
+                  "attr": "domAttr"
+                }
+              ]
+            }
+          },
+          "order": "Internal",
+          "alg": "FirstApplicableEffect"
+        },
+        "rules": [
+          {
+            "id": "f00",
+            "effect": "Permit"
+          },
+          {
+            "id": "f02",
+            "effect": "Deny"
+          }
+        ]
+      },
+      {
+        "id": "Flags64Mapper",
+        "alg": {
+          "id": "Mapper",
+          "map": {
+            "selector": {
+              "uri": "local:content/content-item-dom64-map",
+              "type": "flags64",
+              "path": [
+                {
+                  "attr": "domAttr"
+                }
+              ]
+            }
+          },
+          "order": "Internal",
+          "alg": "FirstApplicableEffect"
+        },
+        "rules": [
+          {
+            "id": "f00",
+            "effect": "Permit"
+          },
+          {
+            "id": "f02",
+            "effect": "Deny"
+          }
+        ]
       }
     ]
   }

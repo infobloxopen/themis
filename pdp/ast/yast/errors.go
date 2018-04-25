@@ -67,8 +67,7 @@ const (
 	entityMissingKeyErrorID               = 54
 	unknownPolicyUpdateOperationErrorID   = 55
 	invalidPolicyUpdatePathElementErrorID = 56
-	invalidFlagsCapacityErrorID           = 57
-	unknownFlagNameErrorID                = 58
+	unknownFlagNameErrorID                = 57
 )
 
 type externalError struct {
@@ -547,7 +546,7 @@ func newMapperArgumentTypeError(actual pdp.Type) *mapperArgumentTypeError {
 }
 
 func (e *mapperArgumentTypeError) Error() string {
-	return e.errorf("Expected %s, %s or %s as argument but got %s", pdp.TypeString, pdp.TypeSetOfStrings, pdp.TypeListOfStrings, e.actual)
+	return e.errorf("Expected %s, %s, %s or flags as argument but got %s", pdp.TypeString, pdp.TypeSetOfStrings, pdp.TypeListOfStrings, e.actual)
 }
 
 type conditionTypeError struct {
@@ -961,21 +960,6 @@ func newInvalidPolicyUpdatePathElementError(v interface{}, idx int) *invalidPoli
 
 func (e *invalidPolicyUpdatePathElementError) Error() string {
 	return e.errorf("Expected string as %d path element but got %T", e.idx, e.v)
-}
-
-type invalidFlagsCapacityError struct {
-	errorLink
-	t *pdp.FlagsType
-}
-
-func newInvalidFlagsCapacityError(t *pdp.FlagsType) *invalidFlagsCapacityError {
-	return &invalidFlagsCapacityError{
-		errorLink: errorLink{id: invalidFlagsCapacityErrorID},
-		t:         t}
-}
-
-func (e *invalidFlagsCapacityError) Error() string {
-	return e.errorf("Type %q has invalid capacity %d", e.t, e.t.Capacity())
 }
 
 type unknownFlagNameError struct {

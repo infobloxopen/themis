@@ -71,9 +71,9 @@ func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.Expression, error) {
 		return ret, newSelectorURIError(uri, err)
 	}
 
-	t, ok := pdp.BuiltinTypes[strings.ToLower(st)]
-	if !ok {
-		return ret, bindErrorf(newUnknownTypeError(uri), "selector(%s)", uri)
+	t := ctx.symbols.GetType(st)
+	if t == nil {
+		return ret, bindErrorf(newUnknownTypeError(st), "selector(%s)", uri)
 	}
 
 	if t == pdp.TypeUndefined {

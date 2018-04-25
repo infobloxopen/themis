@@ -148,11 +148,8 @@ errors:
   fields:
   - id: t
     type: Type
-  - id: n
-    type: int
-  msg: "Expected %d bits flags value but got %q"
+  msg: "Expected flags value but got %q"
   args:
-  - field: n
   - field: t
 
 - id: attributeValueFlagsBitsError
@@ -244,6 +241,14 @@ errors:
   - expr: TypeSetOfStrings
   - expr: TypeListOfStrings
   - field: actual
+
+- id: flagsMapperRCAArgumentTypeError
+  fields:
+  - id: t
+    type: Type
+  msg: "Expected flags type for the mapper algorithm but got %q"
+  args:
+  - field: t
 
 - id: UntaggedPolicyModificationError
   desc: "indicates attempt to modify incrementally a policy which has no tag"
@@ -692,14 +697,6 @@ errors:
   args:
   - field: expected
   - field: value
-
-- id: invalidFlagsTypeCapacityError
-  fields:
-  - id: t
-    type: "*FlagsType"
-  msg: "Expected flags capacity 8, 16, 32 or 64 but got %d"
-  args:
-  - field: t.c
 
 - id: invalidContentDomainFlags8MapValueError
   fields:

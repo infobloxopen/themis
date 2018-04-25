@@ -34,60 +34,60 @@ const (
 	unknownMetaTypeID                          = 21
 	assignmentTypeMismatchID                   = 22
 	mapperArgumentTypeErrorID                  = 23
-	UntaggedPolicyModificationErrorID          = 24
-	MissingPolicyTagErrorID                    = 25
-	PolicyTagsNotMatchErrorID                  = 26
-	emptyPathModificationErrorID               = 27
-	invalidRootPolicyItemTypeErrorID           = 28
-	hiddenRootPolicyAppendErrorID              = 29
-	invalidRootPolicyErrorID                   = 30
-	hiddenPolicySetModificationErrorID         = 31
-	invalidPolicySetItemTypeErrorID            = 32
-	tooShortPathPolicySetModificationErrorID   = 33
-	missingPolicySetChildErrorID               = 34
-	hiddenPolicyAppendErrorID                  = 35
-	policyTransactionTagsNotMatchErrorID       = 36
-	failedPolicyTransactionErrorID             = 37
-	unknownPolicyUpdateOperationErrorID        = 38
-	hiddenPolicyModificationErrorID            = 39
-	tooLongPathPolicyModificationErrorID       = 40
-	tooShortPathPolicyModificationErrorID      = 41
-	invalidPolicyItemTypeErrorID               = 42
-	hiddenRuleAppendErrorID                    = 43
-	missingPolicyChildErrorID                  = 44
-	missingContentErrorID                      = 45
-	invalidContentStorageItemID                = 46
-	missingContentItemErrorID                  = 47
-	invalidContentItemErrorID                  = 48
-	invalidContentItemTypeErrorID              = 49
-	invalidSelectorPathErrorID                 = 50
-	networkMapKeyValueTypeErrorID              = 51
-	mapContentSubitemErrorID                   = 52
-	invalidContentModificationErrorID          = 53
-	missingPathContentModificationErrorID      = 54
-	tooLongPathContentModificationErrorID      = 55
-	invalidContentValueModificationErrorID     = 56
-	UntaggedContentModificationErrorID         = 57
-	MissingContentTagErrorID                   = 58
-	ContentTagsNotMatchErrorID                 = 59
-	unknownContentUpdateOperationErrorID       = 60
-	failedContentTransactionErrorID            = 61
-	contentTransactionIDNotMatchErrorID        = 62
-	contentTransactionTagsNotMatchErrorID      = 63
-	tooShortRawPathContentModificationErrorID  = 64
-	tooLongRawPathContentModificationErrorID   = 65
-	invalidContentUpdateDataErrorID            = 66
-	invalidContentUpdateResultTypeErrorID      = 67
-	invalidContentUpdateKeysErrorID            = 68
-	unknownContentItemResultTypeErrorID        = 69
-	invalidContentItemResultTypeErrorID        = 70
-	invalidContentKeyTypeErrorID               = 71
-	invalidContentStringMapErrorID             = 72
-	invalidContentNetworkMapErrorID            = 73
-	invalidContentDomainMapErrorID             = 74
-	invalidContentValueErrorID                 = 75
-	invalidContentValueTypeErrorID             = 76
-	invalidFlagsTypeCapacityErrorID            = 77
+	flagsMapperRCAArgumentTypeErrorID          = 24
+	UntaggedPolicyModificationErrorID          = 25
+	MissingPolicyTagErrorID                    = 26
+	PolicyTagsNotMatchErrorID                  = 27
+	emptyPathModificationErrorID               = 28
+	invalidRootPolicyItemTypeErrorID           = 29
+	hiddenRootPolicyAppendErrorID              = 30
+	invalidRootPolicyErrorID                   = 31
+	hiddenPolicySetModificationErrorID         = 32
+	invalidPolicySetItemTypeErrorID            = 33
+	tooShortPathPolicySetModificationErrorID   = 34
+	missingPolicySetChildErrorID               = 35
+	hiddenPolicyAppendErrorID                  = 36
+	policyTransactionTagsNotMatchErrorID       = 37
+	failedPolicyTransactionErrorID             = 38
+	unknownPolicyUpdateOperationErrorID        = 39
+	hiddenPolicyModificationErrorID            = 40
+	tooLongPathPolicyModificationErrorID       = 41
+	tooShortPathPolicyModificationErrorID      = 42
+	invalidPolicyItemTypeErrorID               = 43
+	hiddenRuleAppendErrorID                    = 44
+	missingPolicyChildErrorID                  = 45
+	missingContentErrorID                      = 46
+	invalidContentStorageItemID                = 47
+	missingContentItemErrorID                  = 48
+	invalidContentItemErrorID                  = 49
+	invalidContentItemTypeErrorID              = 50
+	invalidSelectorPathErrorID                 = 51
+	networkMapKeyValueTypeErrorID              = 52
+	mapContentSubitemErrorID                   = 53
+	invalidContentModificationErrorID          = 54
+	missingPathContentModificationErrorID      = 55
+	tooLongPathContentModificationErrorID      = 56
+	invalidContentValueModificationErrorID     = 57
+	UntaggedContentModificationErrorID         = 58
+	MissingContentTagErrorID                   = 59
+	ContentTagsNotMatchErrorID                 = 60
+	unknownContentUpdateOperationErrorID       = 61
+	failedContentTransactionErrorID            = 62
+	contentTransactionIDNotMatchErrorID        = 63
+	contentTransactionTagsNotMatchErrorID      = 64
+	tooShortRawPathContentModificationErrorID  = 65
+	tooLongRawPathContentModificationErrorID   = 66
+	invalidContentUpdateDataErrorID            = 67
+	invalidContentUpdateResultTypeErrorID      = 68
+	invalidContentUpdateKeysErrorID            = 69
+	unknownContentItemResultTypeErrorID        = 70
+	invalidContentItemResultTypeErrorID        = 71
+	invalidContentKeyTypeErrorID               = 72
+	invalidContentStringMapErrorID             = 73
+	invalidContentNetworkMapErrorID            = 74
+	invalidContentDomainMapErrorID             = 75
+	invalidContentValueErrorID                 = 76
+	invalidContentValueTypeErrorID             = 77
 	invalidContentDomainFlags8MapValueErrorID  = 78
 	invalidContentDomainFlags16MapValueErrorID = 79
 	invalidContentDomainFlags32MapValueErrorID = 80
@@ -355,18 +355,16 @@ func (e *attributeValueTypeError) Error() string {
 type attributeValueFlagsTypeError struct {
 	errorLink
 	t Type
-	n int
 }
 
-func newAttributeValueFlagsTypeError(t Type, n int) *attributeValueFlagsTypeError {
+func newAttributeValueFlagsTypeError(t Type) *attributeValueFlagsTypeError {
 	return &attributeValueFlagsTypeError{
 		errorLink: errorLink{id: attributeValueFlagsTypeErrorID},
-		t:         t,
-		n:         n}
+		t:         t}
 }
 
 func (e *attributeValueFlagsTypeError) Error() string {
-	return e.errorf("Expected %d bits flags value but got %q", e.n, e.t)
+	return e.errorf("Expected flags value but got %q", e.t)
 }
 
 type attributeValueFlagsBitsError struct {
@@ -501,6 +499,21 @@ func newMapperArgumentTypeError(actual Type) *mapperArgumentTypeError {
 
 func (e *mapperArgumentTypeError) Error() string {
 	return e.errorf("Expected %s, %s or %s as argument but got %s", TypeString, TypeSetOfStrings, TypeListOfStrings, e.actual)
+}
+
+type flagsMapperRCAArgumentTypeError struct {
+	errorLink
+	t Type
+}
+
+func newFlagsMapperRCAArgumentTypeError(t Type) *flagsMapperRCAArgumentTypeError {
+	return &flagsMapperRCAArgumentTypeError{
+		errorLink: errorLink{id: flagsMapperRCAArgumentTypeErrorID},
+		t:         t}
+}
+
+func (e *flagsMapperRCAArgumentTypeError) Error() string {
+	return e.errorf("Expected flags type for the mapper algorithm but got %q", e.t)
 }
 
 // UntaggedPolicyModificationError indicates attempt to modify incrementally a policy which has no tag.
@@ -1347,21 +1360,6 @@ func newInvalidContentValueTypeError(value interface{}, expected Type) *invalidC
 
 func (e *invalidContentValueTypeError) Error() string {
 	return e.errorf("Expected value of type %q but got %T", e.expected, e.value)
-}
-
-type invalidFlagsTypeCapacityError struct {
-	errorLink
-	t *FlagsType
-}
-
-func newInvalidFlagsTypeCapacityError(t *FlagsType) *invalidFlagsTypeCapacityError {
-	return &invalidFlagsTypeCapacityError{
-		errorLink: errorLink{id: invalidFlagsTypeCapacityErrorID},
-		t:         t}
-}
-
-func (e *invalidFlagsTypeCapacityError) Error() string {
-	return e.errorf("Expected flags capacity 8, 16, 32 or 64 but got %d", e.t.c)
 }
 
 type invalidContentDomainFlags8MapValueError struct {
