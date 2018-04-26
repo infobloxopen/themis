@@ -91,7 +91,7 @@ const (
 	invalidHeaderErrorID                      = 78
 	nonMarshableErrorID                       = 79
 	nilRootErrorID                            = 80
-	pathNotFoundErrorID                       = 81
+	PathNotFoundErrorID                       = 81
 )
 
 type externalError struct {
@@ -1413,17 +1413,19 @@ func (e *nilRootError) Error() string {
 	return e.errorf("Storage root is nil")
 }
 
-type pathNotFoundError struct {
+// PathNotFoundError indicates a non-existent path when traversing path.
+type PathNotFoundError struct {
 	errorLink
 	path []string
 }
 
-func newPathNotFoundError(path []string) *pathNotFoundError {
-	return &pathNotFoundError{
-		errorLink: errorLink{id: pathNotFoundErrorID},
+func newPathNotFoundError(path []string) *PathNotFoundError {
+	return &PathNotFoundError{
+		errorLink: errorLink{id: PathNotFoundErrorID},
 		path:      path}
 }
 
-func (e *pathNotFoundError) Error() string {
+// Error implements error interface.
+func (e *PathNotFoundError) Error() string {
 	return e.errorf("Path %v not found", e.path)
 }

@@ -741,7 +741,8 @@ errors:
   msg: "Storage root is nil"
   args:
 
-- id: pathNotFoundError
+- id: PathNotFoundError
+  desc: "indicates a non-existent path when traversing path"
   fields:
   - id: path
     type: "[]string"
