@@ -4,6 +4,7 @@ package pdp
 
 import (
 	"github.com/google/uuid"
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -13,7 +14,7 @@ const (
 	externalErrorID                            = 0
 	multiErrorID                               = 1
 	missingAttributeErrorID                    = 2
-	missingValueErrorID                        = 3
+	MissingValueErrorID                        = 3
 	unknownTypeStringCastErrorID               = 4
 	invalidTypeStringCastErrorID               = 5
 	notImplementedStringCastErrorID            = 6
@@ -56,9 +57,9 @@ const (
 	invalidPolicyItemTypeErrorID               = 43
 	hiddenRuleAppendErrorID                    = 44
 	missingPolicyChildErrorID                  = 45
-	missingContentErrorID                      = 46
+	MissingContentErrorID                      = 46
 	invalidContentStorageItemID                = 47
-	missingContentItemErrorID                  = 48
+	MissingContentItemErrorID                  = 48
 	invalidContentItemErrorID                  = 49
 	invalidContentItemTypeErrorID              = 50
 	invalidSelectorPathErrorID                 = 51
@@ -109,6 +110,8 @@ const (
 	noFlagsDefinedErrorID                      = 96
 	tooManyFlagsDefinedErrorID                 = 97
 	listOfStringsTypeErrorID                   = 98
+	unsupportedSelectorSchemeErrorID           = 99
+	disabledSelectorErrorID                    = 100
 )
 
 type externalError struct {
@@ -160,16 +163,18 @@ func (e *missingAttributeError) Error() string {
 	return e.errorf("Missing attribute")
 }
 
-type missingValueError struct {
+// MissingValueError indicates that content doesn't have desired value.
+type MissingValueError struct {
 	errorLink
 }
 
-func newMissingValueError() *missingValueError {
-	return &missingValueError{
-		errorLink: errorLink{id: missingValueErrorID}}
+func newMissingValueError() *MissingValueError {
+	return &MissingValueError{
+		errorLink: errorLink{id: MissingValueErrorID}}
 }
 
-func (e *missingValueError) Error() string {
+// Error implements error interface.
+func (e *MissingValueError) Error() string {
 	return e.errorf("Missing value")
 }
 
@@ -825,18 +830,20 @@ func (e *missingPolicyChildError) Error() string {
 	return e.errorf("Policy has no rule with id %q", e.ID)
 }
 
-type missingContentError struct {
+// MissingContentError indicates that there is no desired content.
+type MissingContentError struct {
 	errorLink
 	ID string
 }
 
-func newMissingContentError(ID string) *missingContentError {
-	return &missingContentError{
-		errorLink: errorLink{id: missingContentErrorID},
+func newMissingContentError(ID string) *MissingContentError {
+	return &MissingContentError{
+		errorLink: errorLink{id: MissingContentErrorID},
 		ID:        ID}
 }
 
-func (e *missingContentError) Error() string {
+// Error implements error interface.
+func (e *MissingContentError) Error() string {
 	return e.errorf("Missing content %s", e.ID)
 }
 
@@ -857,18 +864,20 @@ func (e *invalidContentStorageItem) Error() string {
 	return e.errorf("Invalid value at %s (expected *LocalContent but got %T)", e.ID, e.v)
 }
 
-type missingContentItemError struct {
+// MissingContentItemError indicates that content doesn't have desired item.
+type MissingContentItemError struct {
 	errorLink
 	ID string
 }
 
-func newMissingContentItemError(ID string) *missingContentItemError {
-	return &missingContentItemError{
-		errorLink: errorLink{id: missingContentItemErrorID},
+func newMissingContentItemError(ID string) *MissingContentItemError {
+	return &MissingContentItemError{
+		errorLink: errorLink{id: MissingContentItemErrorID},
 		ID:        ID}
 }
 
-func (e *missingContentItemError) Error() string {
+// Error implements error interface.
+func (e *MissingContentItemError) Error() string {
 	return e.errorf("Missing content item %q", e.ID)
 }
 
@@ -1677,4 +1686,34 @@ func newListOfStringsTypeError(t Type) *listOfStringsTypeError {
 
 func (e *listOfStringsTypeError) Error() string {
 	return e.errorf("Can't convert %q to %q", e.t, TypeListOfStrings)
+}
+
+type unsupportedSelectorSchemeError struct {
+	errorLink
+	uri *url.URL
+}
+
+func newUnsupportedSelectorSchemeError(uri *url.URL) *unsupportedSelectorSchemeError {
+	return &unsupportedSelectorSchemeError{
+		errorLink: errorLink{id: unsupportedSelectorSchemeErrorID},
+		uri:       uri}
+}
+
+func (e *unsupportedSelectorSchemeError) Error() string {
+	return e.errorf("Unsupported selector scheme %q", e.uri.Scheme)
+}
+
+type disabledSelectorError struct {
+	errorLink
+	s Selector
+}
+
+func newDisabledSelectorError(s Selector) *disabledSelectorError {
+	return &disabledSelectorError{
+		errorLink: errorLink{id: disabledSelectorErrorID},
+		s:         s}
+}
+
+func (e *disabledSelectorError) Error() string {
+	return e.errorf("Selector for %q is disabled", e.s.Scheme())
 }

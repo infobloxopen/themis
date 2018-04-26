@@ -31,13 +31,13 @@ clean:
 	@$(RM) $(BUILDPATH)
 
 .PHONY: fmt
-fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-plugin fmt-egen
+fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-local-selector fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-plugin fmt-egen
 
 .PHONY: build
 build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-egen
 
 .PHONY: test
-test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-pep test-plugin
+test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-local-selector test-pep test-plugin
 
 .PHONY: bench
 bench: bench-pep bench-pdpserver-pkg
@@ -66,6 +66,11 @@ fmt-pdp-jast:
 fmt-pdp-jcon:
 	@echo "Checking PDP JCon format..."
 	@$(AT)/pdp/jcon && $(GOFMTCHECK)
+
+.PHONY: fmt-local-selector
+fmt-local-selector:
+	@echo "Checking PDP local selector format..."
+	@$(AT)/pdp/selector/local && $(GOFMTCHECK)
 
 .PHONY: fmt-pdpctrl-client
 fmt-pdpctrl-client:
@@ -169,6 +174,10 @@ test-pdp-jast: cover-out
 .PHONY: test-pdp-jcon
 test-pdp-jcon: cover-out
 	$(AT)/pdp/jcon && $(GOTESTRACE)
+
+.PHONY: test-local-selector
+test-local-selector: cover-out
+	$(AT)/pdp/selector/local && $(GOTESTRACE)
 
 .PHONY: test-pep
 test-pep: build-pdpserver cover-out

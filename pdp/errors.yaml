@@ -1,6 +1,7 @@
 package: pdp
 
 import:
+  - net/url
   - strconv
   - strings
   - github.com/google/uuid
@@ -32,7 +33,8 @@ errors:
 - id: missingAttributeError
   msg: "Missing attribute"
 
-- id: missingValueError
+- id: MissingValueError
+  desc: "indicates that content doesn't have desired value"
   msg: "Missing value"
 
 - id: unknownTypeStringCastError
@@ -383,7 +385,8 @@ errors:
   args:
   - field: ID
 
-- id: missingContentError
+- id: MissingContentError
+  desc: "indicates that there is no desired content"
   fields:
   - id: ID
     type: string
@@ -402,7 +405,8 @@ errors:
   - field: ID
   - field: v
 
-- id: missingContentItemError
+- id: MissingContentItemError
+  desc: "indicates that content doesn't have desired item"
   fields:
   - id: ID
     type: string
@@ -857,3 +861,19 @@ errors:
   args:
   - field: t
   - expr: TypeListOfStrings
+
+- id: unsupportedSelectorSchemeError
+  fields:
+  - id: uri
+    type: "*url.URL"
+  msg: "Unsupported selector scheme %q"
+  args:
+  - field: uri.Scheme
+
+- id: disabledSelectorError
+  fields:
+  - id: s
+    type: Selector
+  msg: "Selector for %q is disabled"
+  args:
+  - field: s.Scheme()

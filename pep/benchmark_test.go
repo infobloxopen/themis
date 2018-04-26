@@ -12,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	pb "github.com/infobloxopen/themis/pdp-service"
+	_ "github.com/infobloxopen/themis/pdp/selector"
 	"github.com/infobloxopen/themis/pdpserver/server"
 )
 

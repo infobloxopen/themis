@@ -5,5 +5,5 @@ import (
 )
 
 func init() {
-	pdp.RegisterSelector("local", &selector{})
+	pdp.RegisterSelector(new(selector))
 }

@@ -2,10 +2,8 @@ package yast
 
 import (
 	"net/url"
-	"strings"
 
 	"github.com/infobloxopen/themis/pdp"
-	"github.com/infobloxopen/themis/pdp/selector"
 )
 
 func (ctx context) unmarshalSelector(v interface{}) (pdp.Expression, boundError) {
@@ -53,7 +51,7 @@ func (ctx context) unmarshalSelector(v interface{}) (pdp.Expression, boundError)
 		return nil, bindErrorf(newInvalidTypeError(t), "selector(%s)", uri)
 	}
 
-	e, eErr := selector.MakeSelector(strings.ToLower(id.Scheme), id.Opaque, path, t)
+	e, eErr := pdp.MakeSelector(id, path, t)
 	if eErr != nil {
 		return nil, bindErrorf(eErr, "selector(%s)", uri)
 	}

@@ -7,7 +7,6 @@ import (
 
 	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
-	"github.com/infobloxopen/themis/pdp/selector"
 )
 
 func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.Expression, error) {
@@ -81,7 +80,7 @@ func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.Expression, error) {
 	}
 
 	var e error
-	ret, e = selector.MakeSelector(strings.ToLower(id.Scheme), id.Opaque, path, t)
+	ret, e = pdp.MakeSelector(id, path, t)
 	if e != nil {
 		return ret, bindErrorf(e, "selector(%s)", uri)
 	}

@@ -262,7 +262,7 @@ func (a mapperPCA) execute(policies []Evaluable, ctx *Context) Response {
 	v, err := a.argument.Calculate(ctx)
 	if err != nil {
 		switch err.(type) {
-		case *missingValueError:
+		case *MissingValueError:
 			if a.def != nil {
 				return a.def.Calculate(ctx)
 			}

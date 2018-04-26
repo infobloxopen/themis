@@ -293,7 +293,7 @@ func (a mapperRCA) execute(rules []*Rule, ctx *Context) Response {
 	v, err := a.argument.Calculate(ctx)
 	if err != nil {
 		switch err.(type) {
-		case *missingValueError:
+		case *MissingValueError:
 			if a.def != nil {
 				return a.def.calculate(ctx)
 			}

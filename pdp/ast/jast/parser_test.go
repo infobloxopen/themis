@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/infobloxopen/themis/pdp"
+	_ "github.com/infobloxopen/themis/pdp/selector"
 )
 
 const (
