@@ -648,6 +648,9 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		} else {
 			respMsg = responseWriter.Msg
 			status = respMsg.Rcode
+			if status == dns.RcodeServerFailure {
+				resolveFailed = true
+			}
 			address := extractRespIP(respMsg)
 			// if external resolver ret code is not RcodeSuccess
 			// address is not filled from the answer
