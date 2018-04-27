@@ -1021,11 +1021,10 @@ func startPDPServer(p string, ports []uint16, b *testing.B, opts ...Option) (*lo
 		secondary *loggedServer
 	)
 
-	service := ":5555"
+	service := "127.0.0.1:5555"
 	if len(ports) > 0 {
-		service = fmt.Sprintf(":%d", ports[0])
+		service = fmt.Sprintf("127.0.0.1:%d", ports[0])
 	}
-	addr := "127.0.0.1" + service
 
 	primary = newServer(
 		server.WithServiceAt(service),
@@ -1039,7 +1038,7 @@ func startPDPServer(p string, ports []uint16, b *testing.B, opts ...Option) (*lo
 		b.Fatalf("can't read content: %s", err)
 	}
 
-	if err := waitForPortClosed(addr); err != nil {
+	if err := waitForPortClosed(service); err != nil {
 		b.Fatalf("port still in use: %s", err)
 	}
 	go func() {
@@ -1048,7 +1047,7 @@ func startPDPServer(p string, ports []uint16, b *testing.B, opts ...Option) (*lo
 		}
 	}()
 
-	if err := waitForPortOpened(addr); err != nil {
+	if err := waitForPortOpened(service); err != nil {
 		if logs := primary.Stop(); len(logs) > 0 {
 			b.Logf("primary server logs:\n%s", logs)
 		}
@@ -1057,11 +1056,10 @@ func startPDPServer(p string, ports []uint16, b *testing.B, opts ...Option) (*lo
 	}
 
 	if len(ports) > 1 {
-		service := fmt.Sprintf(":%d", ports[1])
+		service := fmt.Sprintf("127.0.0.1:%d", ports[1])
 		secondary = newServer(
 			server.WithServiceAt(service),
 		)
-		addr := "127.0.0.1" + service
 
 		if err := secondary.s.ReadPolicies(strings.NewReader(p)); err != nil {
 			if logs := primary.Stop(); len(logs) > 0 {
@@ -1077,7 +1075,7 @@ func startPDPServer(p string, ports []uint16, b *testing.B, opts ...Option) (*lo
 			b.Fatalf("can't read content: %s", err)
 		}
 
-		if err := waitForPortClosed(addr); err != nil {
+		if err := waitForPortClosed(service); err != nil {
 			b.Fatalf("port still in use: %s", err)
 		}
 		go func() {
@@ -1086,7 +1084,7 @@ func startPDPServer(p string, ports []uint16, b *testing.B, opts ...Option) (*lo
 			}
 		}()
 
-		if err := waitForPortOpened(addr); err != nil {
+		if err := waitForPortOpened(service); err != nil {
 			if logs := secondary.Stop(); len(logs) > 0 {
 				b.Logf("secondary server logs:\n%s", logs)
 			}
@@ -1099,7 +1097,7 @@ func startPDPServer(p string, ports []uint16, b *testing.B, opts ...Option) (*lo
 	}
 
 	c := NewClient(opts...)
-	if err := c.Connect(addr); err != nil {
+	if err := c.Connect(service); err != nil {
 		if secondary != nil {
 			if logs := secondary.Stop(); len(logs) > 0 {
 				b.Logf("secondary server logs:\n%s", logs)

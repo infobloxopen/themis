@@ -26,7 +26,7 @@ var testCases = []map[string]string{
   }
 }
 `,
-		"err": fmt.Sprintf("%T", &attributeTypeError{}),
+		"err": fmt.Sprintf("%T", &unknownTypeError{}),
 	},
 
 	{
@@ -658,7 +658,7 @@ func TestUnmarshalUpdateErrors(t *testing.T) {
 			return
 		}
 
-		_, err = p.UnmarshalUpdate(strings.NewReader(tc["update"]), tr.Attributes(), tag, uuid.New())
+		_, err = p.UnmarshalUpdate(strings.NewReader(tc["update"]), tr.Symbols(), tag, uuid.New())
 		if err == nil {
 			t.Errorf("Expected %s error but got nothing", tc["err"])
 			return

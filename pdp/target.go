@@ -189,7 +189,7 @@ type twoArgumentsFunctionType func(first, second Expression) Expression
 
 // TargetCompatibleExpressions maps name of expression and types of its
 // arguments to particular expression maker.
-var TargetCompatibleExpressions = map[string]map[int]map[int]twoArgumentsFunctionType{
+var TargetCompatibleExpressions = map[string]map[Type]map[Type]twoArgumentsFunctionType{
 	"equal": {
 		TypeString: {
 			TypeString: makeFunctionStringEqual},

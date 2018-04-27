@@ -16,10 +16,10 @@ import (
 type contentItem struct {
 	id string
 
-	k      []int
+	k      pdp.Signature
 	keysOk bool
 
-	t   int
+	t   pdp.Type
 	tOk bool
 
 	v      interface{}
@@ -37,7 +37,7 @@ func (c *contentItem) unmarshalTypeField(d *json.Decoder) error {
 		return err
 	}
 
-	t, ok := pdp.TypeIDs[strings.ToLower(s)]
+	t, ok := pdp.BuiltinTypes[strings.ToLower(s)]
 	if !ok {
 		return newUnknownTypeError(s)
 	}
@@ -62,7 +62,7 @@ func (c *contentItem) unmarshalKeysField(d *json.Decoder) error {
 		return err
 	}
 
-	k := []int{}
+	k := pdp.MakeSignature()
 	i := 1
 	for {
 		src := fmt.Sprintf("key %d", i)
@@ -76,12 +76,12 @@ func (c *contentItem) unmarshalKeysField(d *json.Decoder) error {
 			return newStringCastError(t, src)
 
 		case string:
-			t, ok := pdp.TypeIDs[strings.ToLower(s)]
+			t, ok := pdp.BuiltinTypes[strings.ToLower(s)]
 			if !ok {
 				return bindError(newUnknownTypeError(s), src)
 			}
 
-			if _, ok := pdp.ContentKeyTypes[t]; !ok {
+			if !pdp.ContentKeyTypes.Contains(t) {
 				return bindError(newInvalidContentKeyTypeError(t, pdp.ContentKeyTypes), src)
 			}
 

@@ -24,7 +24,7 @@ func makeFunctionFloatRangeAlt(args []Expression) Expression {
 	return makeFunctionFloatRange(args[0], args[1], args[2])
 }
 
-func (f functionFloatRange) GetResultType() int {
+func (f functionFloatRange) GetResultType() Type {
 	return TypeString
 }
 
@@ -35,17 +35,17 @@ func (f functionFloatRange) describe() string {
 func (f functionFloatRange) Calculate(ctx *Context) (AttributeValue, error) {
 	min, err := ctx.calculateFloatOrIntegerExpression(f.min)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "min argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "min argument"), f.describe())
 	}
 
 	max, err := ctx.calculateFloatOrIntegerExpression(f.max)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "max argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "max argument"), f.describe())
 	}
 
 	val, err := ctx.calculateFloatOrIntegerExpression(f.val)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "val argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "val argument"), f.describe())
 	}
 
 	switch {

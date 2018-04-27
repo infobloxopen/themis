@@ -4,7 +4,7 @@ package pdp
 // The GetResultType method returns type of particular expression.
 // The Calculate method returns calculated value for particular expression.
 type Expression interface {
-	GetResultType() int
+	GetResultType() Type
 	Calculate(ctx *Context) (AttributeValue, error)
 }
 
@@ -53,5 +53,8 @@ var FunctionArgumentValidators = map[string][]functionArgumentValidator{
 	"range": {
 		functionIntegerRangeValidator,
 		functionFloatRangeValidator,
+	},
+	"list of strings": {
+		functionListOfStringsValidator,
 	},
 }

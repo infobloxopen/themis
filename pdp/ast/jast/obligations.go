@@ -19,7 +19,7 @@ func (ctx context) unmarshalObligationItem(d *json.Decoder) (pdp.AttributeAssign
 			err error
 		)
 
-		a, ok = ctx.attrs[k]
+		a, ok = ctx.symbols.GetAttribute(k)
 		if !ok {
 			return newUnknownAttributeError(k)
 		}

@@ -5,7 +5,6 @@ package jcon
 import (
 	"encoding/json"
 	"github.com/infobloxopen/themis/pdp"
-	"strings"
 )
 
 const (
@@ -248,26 +247,26 @@ func (e *unknownTypeError) Error() string {
 
 type invalidContentItemTypeError struct {
 	errorLink
-	t int
+	t pdp.Type
 }
 
-func newInvalidContentItemTypeError(t int) *invalidContentItemTypeError {
+func newInvalidContentItemTypeError(t pdp.Type) *invalidContentItemTypeError {
 	return &invalidContentItemTypeError{
 		errorLink: errorLink{id: invalidContentItemTypeErrorID},
 		t:         t}
 }
 
 func (e *invalidContentItemTypeError) Error() string {
-	return e.errorf("Can't set result type to %q type", pdp.TypeNames[e.t])
+	return e.errorf("Can't set result type to %q type", e.t)
 }
 
 type invalidContentKeyTypeError struct {
 	errorLink
-	t        int
-	expected map[int]bool
+	t        pdp.Type
+	expected pdp.TypeSet
 }
 
-func newInvalidContentKeyTypeError(t int, expected map[int]bool) *invalidContentKeyTypeError {
+func newInvalidContentKeyTypeError(t pdp.Type, expected pdp.TypeSet) *invalidContentKeyTypeError {
 	return &invalidContentKeyTypeError{
 		errorLink: errorLink{id: invalidContentKeyTypeErrorID},
 		t:         t,
@@ -275,15 +274,7 @@ func newInvalidContentKeyTypeError(t int, expected map[int]bool) *invalidContent
 }
 
 func (e *invalidContentKeyTypeError) Error() string {
-	names := make([]string, len(e.expected))
-	i := 0
-	for t := range e.expected {
-		names[i] = pdp.TypeNames[t]
-		i++
-	}
-	s := strings.Join(names, ", ")
-
-	return e.errorf("Can't use %q type as a key in content item (expected %s)", pdp.TypeNames[e.t], s)
+	return e.errorf("Can't use %q type as a key in content item (expected %s)", e.t, e.expected)
 }
 
 type unknownDataFormatError struct {

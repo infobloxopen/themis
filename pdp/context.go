@@ -100,11 +100,11 @@ func NewContext(c *LocalContentStorage, count int, f func(i int) (string, Attrib
 					return nil, newDuplicateAttributeValueError(ID, t, av, v)
 				}
 
-				m := make(map[int]AttributeValue, 2)
+				m := make(map[Type]AttributeValue, 2)
 				m[v.t] = v
 				m[t] = av
 
-			case map[int]AttributeValue:
+			case map[Type]AttributeValue:
 				if old, ok := v[t]; ok {
 					return nil, newDuplicateAttributeValueError(ID, t, av, old)
 				}
@@ -140,11 +140,11 @@ func (c *Context) String() string {
 				panic(fmt.Errorf("expected AttributeValue or map[int]AttributeValue but got: %T, %#v", v, v))
 
 			case AttributeValue:
-				lines = append(lines, fmt.Sprintf("- %s.(%s): %s", name, TypeNames[v.t], v.describe()))
+				lines = append(lines, fmt.Sprintf("- %s.(%s): %s", name, v.t, v.describe()))
 
-			case map[int]AttributeValue:
+			case map[Type]AttributeValue:
 				for t, av := range v {
-					lines = append(lines, fmt.Sprintf("- %s.(%s): %s", name, TypeNames[t], av.describe()))
+					lines = append(lines, fmt.Sprintf("- %s.(%s): %s", name, t, av.describe()))
 				}
 			}
 		}
@@ -156,21 +156,21 @@ func (c *Context) String() string {
 func (c *Context) getAttribute(a Attribute) (AttributeValue, error) {
 	v, ok := c.a[a.id]
 	if !ok {
-		return AttributeValue{}, bindError(newMissingAttributeError(), a.describe())
+		return UndefinedValue, bindError(newMissingAttributeError(), a.describe())
 	}
 
 	switch v := v.(type) {
 	case AttributeValue:
 		if v.t != a.t {
-			return undefinedValue, bindError(newMissingAttributeError(), a.describe())
+			return UndefinedValue, bindError(newMissingAttributeError(), a.describe())
 		}
 
 		return v, nil
 
-	case map[int]AttributeValue:
+	case map[Type]AttributeValue:
 		av, ok := v[a.t]
 		if !ok {
-			return AttributeValue{}, bindError(newMissingAttributeError(), a.describe())
+			return UndefinedValue, bindError(newMissingAttributeError(), a.describe())
 		}
 
 		return av, nil
@@ -289,6 +289,42 @@ func (c *Context) calculateSetOfDomainsExpression(e Expression) (*domaintree.Nod
 	}
 
 	return v.setOfDomains()
+}
+
+func (c *Context) calculateFlags8Expression(e Expression) (uint8, error) {
+	v, err := e.Calculate(c)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.flags8()
+}
+
+func (c *Context) calculateFlags16Expression(e Expression) (uint16, error) {
+	v, err := e.Calculate(c)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.flags16()
+}
+
+func (c *Context) calculateFlags32Expression(e Expression) (uint32, error) {
+	v, err := e.Calculate(c)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.flags32()
+}
+
+func (c *Context) calculateFlags64Expression(e Expression) (uint64, error) {
+	v, err := e.Calculate(c)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.flags64()
 }
 
 // Response represent result of policies evaluation.

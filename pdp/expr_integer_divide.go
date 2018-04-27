@@ -22,7 +22,7 @@ func makeFunctionIntegerDivideAlt(args []Expression) Expression {
 	return makeFunctionIntegerDivide(args[0], args[1])
 }
 
-func (f functionIntegerDivide) GetResultType() int {
+func (f functionIntegerDivide) GetResultType() Type {
 	return TypeInteger
 }
 
@@ -33,16 +33,16 @@ func (f functionIntegerDivide) describe() string {
 func (f functionIntegerDivide) Calculate(ctx *Context) (AttributeValue, error) {
 	first, err := ctx.calculateIntegerExpression(f.first)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "first argument"), f.describe())
 	}
 
 	second, err := ctx.calculateIntegerExpression(f.second)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 
 	if second == 0 {
-		return undefinedValue, bindError(bindError(newIntegerDivideByZeroError(), "second argument"), f.describe())
+		return UndefinedValue, bindError(bindError(newIntegerDivideByZeroError(), "second argument"), f.describe())
 	}
 
 	return MakeIntegerValue(first / second), nil

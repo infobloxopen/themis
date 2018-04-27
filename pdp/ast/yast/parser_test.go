@@ -24,12 +24,6 @@ attributes:
 
 invalid:
 - first
-
-policies:
-  id: Default
-  alg: FirstApplicableEffect
-  rules:
-  - effect: Permit
 `
 
 	simpleAllPermitPolicy = `# Simple All Permit Policy
@@ -148,6 +142,31 @@ policies:
 `
 
 	allFeaturePolicies = `# Policies YAML with all features
+types:
+  flags8:
+    meta: flags
+    flags: [f00, f01, f02, f03, f04, f05, f06]
+  flags16:
+    meta: flags
+    flags: [f00, f01, f02, f03, f04, f05, f06, f07,
+            f10, f11, f12, f13, f14, f15, f16]
+  flags32:
+    meta: flags
+    flags: [f00, f01, f02, f03, f04, f05, f06, f07,
+            f10, f11, f12, f13, f14, f15, f16, f17,
+            f20, f21, f22, f23, f24, f25, f26, f27,
+            f30, f31, f32, f33, f34, f35, f36]
+  flags64:
+    meta: flags
+    flags: [f00, f01, f02, f03, f04, f05, f06, f07,
+            f10, f11, f12, f13, f14, f15, f16, f17,
+            f20, f21, f22, f23, f24, f25, f26, f27,
+            f30, f31, f32, f33, f34, f35, f36, f37,
+            f40, f41, f42, f43, f44, f45, f46, f47,
+            f50, f51, f52, f53, f54, f55, f56, f57,
+            f60, f61, f62, f63, f64, f65, f66, f67,
+            f70, f71, f72, f73, f74, f75, f76]
+
 attributes:
   boolAttr: boolean
   strAttr: string
@@ -466,7 +485,7 @@ policies:
          val:
            type: string
            content: Below
-  
+
     - id: Above
       effect: Permit
       obligations:
@@ -474,7 +493,7 @@ policies:
          val:
            type: string
            content: Above
-  
+
     - id: Within
       effect: Permit
       obligations:
@@ -546,6 +565,44 @@ policies:
          val:
            type: string
            content: "Third Rule"
+  - id: Flags
+    alg: FirstApplicableEffect
+    rules:
+    - id: Flags8
+      effect: Permit
+      obligations:
+      - lsAttr:
+          list of strings:
+          - val:
+              type: flags8
+              content: [f00, f06]
+
+    - id: Flags16
+      effect: Permit
+      obligations:
+      - lsAttr:
+          list of strings:
+          - val:
+              type: flags16
+              content: [f00, f16]
+
+    - id: Flags32
+      effect: Permit
+      obligations:
+      - lsAttr:
+          list of strings:
+          - val:
+              type: flags32
+              content: [f00, f36]
+
+    - id: Flags64
+      effect: Permit
+      obligations:
+      - lsAttr:
+          list of strings:
+          - val:
+              type: flags64
+              content: [f00, f76]
 `
 )
 
@@ -597,7 +654,7 @@ func TestUnmarshal(t *testing.T) {
 			case 0:
 				v, err := pdp.MakeValueFromString(pdp.TypeBoolean, "true")
 				if err != nil {
-					return "", pdp.AttributeValue{}, err
+					return "", pdp.UndefinedValue, err
 				}
 
 				return "boolAttr", v, nil
@@ -605,7 +662,7 @@ func TestUnmarshal(t *testing.T) {
 			case 1:
 				v, err := pdp.MakeValueFromString(pdp.TypeString, "string")
 				if err != nil {
-					return "", pdp.AttributeValue{}, err
+					return "", pdp.UndefinedValue, err
 				}
 
 				return "strAttr", v, nil
@@ -613,7 +670,7 @@ func TestUnmarshal(t *testing.T) {
 			case 2:
 				v, err := pdp.MakeValueFromString(pdp.TypeAddress, "192.0.2.1")
 				if err != nil {
-					return "", pdp.AttributeValue{}, err
+					return "", pdp.UndefinedValue, err
 				}
 
 				return "addrAttr", v, nil
@@ -621,7 +678,7 @@ func TestUnmarshal(t *testing.T) {
 			case 3:
 				v, err := pdp.MakeValueFromString(pdp.TypeNetwork, "192.0.2.0/24")
 				if err != nil {
-					return "", pdp.AttributeValue{}, err
+					return "", pdp.UndefinedValue, err
 				}
 
 				return "netAttr", v, nil
@@ -629,13 +686,13 @@ func TestUnmarshal(t *testing.T) {
 			case 4:
 				v, err := pdp.MakeValueFromString(pdp.TypeString, "example.com")
 				if err != nil {
-					return "", pdp.AttributeValue{}, err
+					return "", pdp.UndefinedValue, err
 				}
 
 				return "domAttr", v, nil
 			}
 
-			return "", pdp.AttributeValue{}, fmt.Errorf("no attribute for index %d", i)
+			return "", pdp.UndefinedValue, fmt.Errorf("no attribute for index %d", i)
 		})
 		if err != nil {
 			t.Errorf("Expected no error but got %T (%s)", err, err)
@@ -690,7 +747,7 @@ func TestUnmarshalUpdate(t *testing.T) {
 		return
 	}
 
-	u, err := p.UnmarshalUpdate(strings.NewReader(simpleUpdate), tr.Attributes(), tag, uuid.New())
+	u, err := p.UnmarshalUpdate(strings.NewReader(simpleUpdate), tr.Symbols(), tag, uuid.New())
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 		return
@@ -764,12 +821,12 @@ func newStringContext(m map[string]string) (*pdp.Context, error) {
 
 	return pdp.NewContext(nil, len(m), func(i int) (string, pdp.AttributeValue, error) {
 		if i >= len(names) {
-			return "", pdp.AttributeValue{}, fmt.Errorf("no attribute name for index %d", i)
+			return "", pdp.UndefinedValue, fmt.Errorf("no attribute name for index %d", i)
 		}
 		n := names[i]
 
 		if i >= len(values) {
-			return "", pdp.AttributeValue{}, fmt.Errorf("no attribute value for index %d", i)
+			return "", pdp.UndefinedValue, fmt.Errorf("no attribute value for index %d", i)
 		}
 		v := values[i]
 

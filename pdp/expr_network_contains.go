@@ -23,7 +23,7 @@ func makeFunctionNetworkContainsAddressAlt(args []Expression) Expression {
 	return makeFunctionNetworkContainsAddress(args[0], args[1])
 }
 
-func (f functionNetworkContainsAddress) GetResultType() int {
+func (f functionNetworkContainsAddress) GetResultType() Type {
 	return TypeBoolean
 }
 
@@ -35,12 +35,12 @@ func (f functionNetworkContainsAddress) describe() string {
 func (f functionNetworkContainsAddress) Calculate(ctx *Context) (AttributeValue, error) {
 	n, err := ctx.calculateNetworkExpression(f.network)
 	if err != nil {
-		return undefinedValue, bindError(err, f.describe())
+		return UndefinedValue, bindError(err, f.describe())
 	}
 
 	a, err := ctx.calculateAddressExpression(f.address)
 	if err != nil {
-		return undefinedValue, bindError(err, f.describe())
+		return UndefinedValue, bindError(err, f.describe())
 	}
 
 	return MakeBooleanValue(n.Contains(a)), nil

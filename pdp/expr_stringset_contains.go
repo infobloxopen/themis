@@ -21,7 +21,7 @@ func makeFunctionSetOfStringsContainsAlt(args []Expression) Expression {
 	return makeFunctionSetOfStringsContains(args[0], args[1])
 }
 
-func (f functionSetOfStringsContains) GetResultType() int {
+func (f functionSetOfStringsContains) GetResultType() Type {
 	return TypeBoolean
 }
 
@@ -33,12 +33,12 @@ func (f functionSetOfStringsContains) describe() string {
 func (f functionSetOfStringsContains) Calculate(ctx *Context) (AttributeValue, error) {
 	set, err := ctx.calculateSetOfStringsExpression(f.set)
 	if err != nil {
-		return undefinedValue, bindError(err, f.describe())
+		return UndefinedValue, bindError(err, f.describe())
 	}
 
 	s, err := ctx.calculateStringExpression(f.value)
 	if err != nil {
-		return undefinedValue, bindError(err, f.describe())
+		return UndefinedValue, bindError(err, f.describe())
 	}
 
 	_, ok := set.Get(s)

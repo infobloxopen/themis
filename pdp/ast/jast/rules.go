@@ -73,7 +73,7 @@ func (ctx context) unmarshalRule(d *json.Decoder) (*pdp.Rule, error) {
 			return err
 		}
 
-		return newUnknownAttributeError(k)
+		return newUnknownFieldError(k)
 	}, "rule"); err != nil {
 		return nil, err
 	}

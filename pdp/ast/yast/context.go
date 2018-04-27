@@ -7,16 +7,19 @@ import (
 )
 
 type context struct {
-	attrs map[string]pdp.Attribute
+	symbols pdp.Symbols
 }
 
 func newContext() *context {
 	return &context{
-		attrs: make(map[string]pdp.Attribute)}
+		symbols: pdp.MakeSymbols(),
+	}
 }
 
-func newContextWithAttributes(attrs map[string]pdp.Attribute) *context {
-	return &context{attrs: attrs}
+func newContextWithSymbols(symbols pdp.Symbols) *context {
+	return &context{
+		symbols: symbols,
+	}
 }
 
 func (ctx context) validateString(v interface{}, desc string) (string, boundError) {

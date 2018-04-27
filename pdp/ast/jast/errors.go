@@ -6,56 +6,60 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/infobloxopen/themis/pdp"
+	"strconv"
 	"strings"
 )
 
 const (
 	externalErrorID                     = 0
-	attributeTypeErrorID                = 1
-	policyAmbiguityErrorID              = 2
-	policyMissingKeyErrorID             = 3
-	unknownRCAErrorID                   = 4
-	missingRCAErrorID                   = 5
-	parseCAErrorID                      = 6
-	invalidRCAErrorID                   = 7
-	missingDefaultRuleRCAErrorID        = 8
-	missingErrorRuleRCAErrorID          = 9
-	notImplementedRCAErrorID            = 10
-	unknownPCAErrorID                   = 11
-	missingPCAErrorID                   = 12
-	invalidPCAErrorID                   = 13
-	missingDefaultPolicyPCAErrorID      = 14
-	missingErrorPolicyPCAErrorID        = 15
-	notImplementedPCAErrorID            = 16
-	mapperArgumentTypeErrorID           = 17
-	conditionTypeErrorID                = 18
-	unknownEffectErrorID                = 19
-	unknownMatchFunctionErrorID         = 20
-	matchFunctionCastErrorID            = 21
-	matchFunctionArgsNumberErrorID      = 22
-	invalidMatchFunctionArgErrorID      = 23
-	matchFunctionBothValuesErrorID      = 24
-	matchFunctionBothAttrsErrorID       = 25
-	unknownFunctionErrorID              = 26
-	functionCastErrorID                 = 27
-	unknownAttributeErrorID             = 28
-	missingAttributeErrorID             = 29
-	unknownMapperCAOrderID              = 30
-	unknownTypeErrorID                  = 31
-	invalidTypeErrorID                  = 32
-	missingContentErrorID               = 33
-	notImplementedValueTypeErrorID      = 34
-	invalidAddressErrorID               = 35
-	integerOverflowErrorID              = 36
-	invalidNetworkErrorID               = 37
-	invalidDomainErrorID                = 38
-	selectorURIErrorID                  = 39
-	selectorLocationErrorID             = 40
-	unsupportedSelectorSchemeErrorID    = 41
-	entityAmbiguityErrorID              = 42
-	entityMissingKeyErrorID             = 43
-	unknownPolicyUpdateOperationErrorID = 44
-	missingContentTypeErrorID           = 45
+	policyAmbiguityErrorID              = 1
+	policyMissingKeyErrorID             = 2
+	unknownRCAErrorID                   = 3
+	missingRCAErrorID                   = 4
+	parseCAErrorID                      = 5
+	invalidRCAErrorID                   = 6
+	missingDefaultRuleRCAErrorID        = 7
+	missingErrorRuleRCAErrorID          = 8
+	notImplementedRCAErrorID            = 9
+	unknownPCAErrorID                   = 10
+	missingPCAErrorID                   = 11
+	invalidPCAErrorID                   = 12
+	missingDefaultPolicyPCAErrorID      = 13
+	missingErrorPolicyPCAErrorID        = 14
+	notImplementedPCAErrorID            = 15
+	mapperArgumentTypeErrorID           = 16
+	conditionTypeErrorID                = 17
+	unknownEffectErrorID                = 18
+	unknownMatchFunctionErrorID         = 19
+	matchFunctionCastErrorID            = 20
+	matchFunctionArgsNumberErrorID      = 21
+	invalidMatchFunctionArgErrorID      = 22
+	matchFunctionBothValuesErrorID      = 23
+	matchFunctionBothAttrsErrorID       = 24
+	unknownFunctionErrorID              = 25
+	functionCastErrorID                 = 26
+	unknownAttributeErrorID             = 27
+	missingAttributeErrorID             = 28
+	unknownMapperCAOrderID              = 29
+	unknownTypeErrorID                  = 30
+	invalidTypeErrorID                  = 31
+	missingContentErrorID               = 32
+	notImplementedValueTypeErrorID      = 33
+	invalidAddressErrorID               = 34
+	integerOverflowErrorID              = 35
+	invalidNetworkErrorID               = 36
+	invalidDomainErrorID                = 37
+	selectorURIErrorID                  = 38
+	entityAmbiguityErrorID              = 39
+	entityMissingKeyErrorID             = 40
+	unknownPolicyUpdateOperationErrorID = 41
+	missingContentTypeErrorID           = 42
+	unknownFieldErrorID                 = 43
+	missingMetaTypeNameErrorID          = 44
+	unknownMetaTypeErrorID              = 45
+	missingFlagNameListErrorID          = 46
+	invalidFlagsCapacityErrorID         = 47
+	unknownFlagNameErrorID              = 48
 )
 
 type externalError struct {
@@ -71,21 +75,6 @@ func newExternalError(err error) *externalError {
 
 func (e *externalError) Error() string {
 	return e.errorf("%s", e.err)
-}
-
-type attributeTypeError struct {
-	errorLink
-	t string
-}
-
-func newAttributeTypeError(t string) *attributeTypeError {
-	return &attributeTypeError{
-		errorLink: errorLink{id: attributeTypeErrorID},
-		t:         t}
-}
-
-func (e *attributeTypeError) Error() string {
-	return e.errorf("Expected attribute data type but got \"%s\"", e.t)
 }
 
 type policyAmbiguityError struct {
@@ -307,32 +296,32 @@ func (e *notImplementedPCAError) Error() string {
 
 type mapperArgumentTypeError struct {
 	errorLink
-	actual int
+	actual pdp.Type
 }
 
-func newMapperArgumentTypeError(actual int) *mapperArgumentTypeError {
+func newMapperArgumentTypeError(actual pdp.Type) *mapperArgumentTypeError {
 	return &mapperArgumentTypeError{
 		errorLink: errorLink{id: mapperArgumentTypeErrorID},
 		actual:    actual}
 }
 
 func (e *mapperArgumentTypeError) Error() string {
-	return e.errorf("Expected %s, %s or %s as argument but got %s", pdp.TypeNames[pdp.TypeString], pdp.TypeNames[pdp.TypeSetOfStrings], pdp.TypeNames[pdp.TypeListOfStrings], pdp.TypeNames[e.actual])
+	return e.errorf("Expected %q, %q or %q as argument but got %q", pdp.TypeString, pdp.TypeSetOfStrings, pdp.TypeListOfStrings, e.actual)
 }
 
 type conditionTypeError struct {
 	errorLink
-	t int
+	t pdp.Type
 }
 
-func newConditionTypeError(t int) *conditionTypeError {
+func newConditionTypeError(t pdp.Type) *conditionTypeError {
 	return &conditionTypeError{
 		errorLink: errorLink{id: conditionTypeErrorID},
 		t:         t}
 }
 
 func (e *conditionTypeError) Error() string {
-	return e.errorf("Expected %q as condition expression result but got %q", pdp.TypeNames[pdp.TypeBoolean], pdp.TypeNames[e.t])
+	return e.errorf("Expected %q as condition expression result but got %q", pdp.TypeBoolean, e.t)
 }
 
 type unknownEffectError struct {
@@ -368,11 +357,11 @@ func (e *unknownMatchFunctionError) Error() string {
 type matchFunctionCastError struct {
 	errorLink
 	ID     string
-	first  int
-	second int
+	first  pdp.Type
+	second pdp.Type
 }
 
-func newMatchFunctionCastError(ID string, first, second int) *matchFunctionCastError {
+func newMatchFunctionCastError(ID string, first, second pdp.Type) *matchFunctionCastError {
 	return &matchFunctionCastError{
 		errorLink: errorLink{id: matchFunctionCastErrorID},
 		ID:        ID,
@@ -381,7 +370,7 @@ func newMatchFunctionCastError(ID string, first, second int) *matchFunctionCastE
 }
 
 func (e *matchFunctionCastError) Error() string {
-	return e.errorf("No function %s for arguments %s and %s", e.ID, pdp.TypeNames[e.first], pdp.TypeNames[e.second])
+	return e.errorf("No function %q for arguments %q and %q", e.ID, e.first, e.second)
 }
 
 type matchFunctionArgsNumberError struct {
@@ -473,11 +462,11 @@ func (e *functionCastError) Error() string {
 	if len(e.exprs) > 1 {
 		t := make([]string, len(e.exprs))
 		for i, e := range e.exprs {
-			t[i] = pdp.TypeNames[e.GetResultType()]
+			t[i] = strconv.Quote(e.GetResultType().String())
 		}
-		args = fmt.Sprintf("%d arguments of following types \"%s\"", len(e.exprs), strings.Join(t, "\", \""))
+		args = fmt.Sprintf("%d arguments of following types %q", len(e.exprs), strings.Join(t, ", "))
 	} else if len(e.exprs) > 0 {
-		args = fmt.Sprintf("argument of type \"%s\"", pdp.TypeNames[e.exprs[0].GetResultType()])
+		args = fmt.Sprintf("argument of type %q", e.exprs[0].GetResultType())
 	} else {
 		args = "no arguments"
 	}
@@ -549,17 +538,17 @@ func (e *unknownTypeError) Error() string {
 
 type invalidTypeError struct {
 	errorLink
-	t int
+	t pdp.Type
 }
 
-func newInvalidTypeError(t int) *invalidTypeError {
+func newInvalidTypeError(t pdp.Type) *invalidTypeError {
 	return &invalidTypeError{
 		errorLink: errorLink{id: invalidTypeErrorID},
 		t:         t}
 }
 
 func (e *invalidTypeError) Error() string {
-	return e.errorf("Can't make value of %q type", pdp.TypeNames[e.t])
+	return e.errorf("Can't make value of %q type", e.t)
 }
 
 type missingContentError struct {
@@ -577,17 +566,17 @@ func (e *missingContentError) Error() string {
 
 type notImplementedValueTypeError struct {
 	errorLink
-	t int
+	t pdp.Type
 }
 
-func newNotImplementedValueTypeError(t int) *notImplementedValueTypeError {
+func newNotImplementedValueTypeError(t pdp.Type) *notImplementedValueTypeError {
 	return &notImplementedValueTypeError{
 		errorLink: errorLink{id: notImplementedValueTypeErrorID},
 		t:         t}
 }
 
 func (e *notImplementedValueTypeError) Error() string {
-	return e.errorf("Parsing for type %s hasn't been implemented yet", pdp.TypeNames[e.t])
+	return e.errorf("Parsing for type %s hasn't been implemented yet", e.t)
 }
 
 type invalidAddressError struct {
@@ -671,40 +660,6 @@ func (e *selectorURIError) Error() string {
 	return e.errorf("Expected seletor URI but got %q (%s)", e.uri, e.err)
 }
 
-type selectorLocationError struct {
-	errorLink
-	loc string
-	uri string
-}
-
-func newSelectorLocationError(loc, uri string) *selectorLocationError {
-	return &selectorLocationError{
-		errorLink: errorLink{id: selectorLocationErrorID},
-		loc:       loc,
-		uri:       uri}
-}
-
-func (e *selectorLocationError) Error() string {
-	return e.errorf("Expected selector location in form of <Content-ID>/<Item-ID> got %q (%s)", e.loc, e.uri)
-}
-
-type unsupportedSelectorSchemeError struct {
-	errorLink
-	scheme string
-	uri    string
-}
-
-func newUnsupportedSelectorSchemeError(scheme, uri string) *unsupportedSelectorSchemeError {
-	return &unsupportedSelectorSchemeError{
-		errorLink: errorLink{id: unsupportedSelectorSchemeErrorID},
-		scheme:    scheme,
-		uri:       uri}
-}
-
-func (e *unsupportedSelectorSchemeError) Error() string {
-	return e.errorf("Unsupported selector scheme %q (%s)", e.scheme, e.uri)
-}
-
 type entityAmbiguityError struct {
 	errorLink
 	fields []string
@@ -759,4 +714,92 @@ func newMissingContentTypeError() *missingContentTypeError {
 
 func (e *missingContentTypeError) Error() string {
 	return e.errorf("Value 'type' attribute is missing or placed after 'content' attribute")
+}
+
+type unknownFieldError struct {
+	errorLink
+	name string
+}
+
+func newUnknownFieldError(name string) *unknownFieldError {
+	return &unknownFieldError{
+		errorLink: errorLink{id: unknownFieldErrorID},
+		name:      name}
+}
+
+func (e *unknownFieldError) Error() string {
+	return e.errorf("Unknown field %q", e.name)
+}
+
+type missingMetaTypeNameError struct {
+	errorLink
+}
+
+func newMissingMetaTypeNameError() *missingMetaTypeNameError {
+	return &missingMetaTypeNameError{
+		errorLink: errorLink{id: missingMetaTypeNameErrorID}}
+}
+
+func (e *missingMetaTypeNameError) Error() string {
+	return e.errorf("Missing meta type name")
+}
+
+type unknownMetaTypeError struct {
+	errorLink
+	meta string
+}
+
+func newUnknownMetaTypeError(meta string) *unknownMetaTypeError {
+	return &unknownMetaTypeError{
+		errorLink: errorLink{id: unknownMetaTypeErrorID},
+		meta:      meta}
+}
+
+func (e *unknownMetaTypeError) Error() string {
+	return e.errorf("Unknown meta type %q", e.meta)
+}
+
+type missingFlagNameListError struct {
+	errorLink
+}
+
+func newMissingFlagNameListError() *missingFlagNameListError {
+	return &missingFlagNameListError{
+		errorLink: errorLink{id: missingFlagNameListErrorID}}
+}
+
+func (e *missingFlagNameListError) Error() string {
+	return e.errorf("Missing list of flag names")
+}
+
+type invalidFlagsCapacityError struct {
+	errorLink
+	t *pdp.FlagsType
+}
+
+func newInvalidFlagsCapacityError(t *pdp.FlagsType) *invalidFlagsCapacityError {
+	return &invalidFlagsCapacityError{
+		errorLink: errorLink{id: invalidFlagsCapacityErrorID},
+		t:         t}
+}
+
+func (e *invalidFlagsCapacityError) Error() string {
+	return e.errorf("Type %q has invalid capacity %d", e.t, e.t.Capacity())
+}
+
+type unknownFlagNameError struct {
+	errorLink
+	name string
+	t    *pdp.FlagsType
+}
+
+func newUnknownFlagNameError(name string, t *pdp.FlagsType) *unknownFlagNameError {
+	return &unknownFlagNameError{
+		errorLink: errorLink{id: unknownFlagNameErrorID},
+		name:      name,
+		t:         t}
+}
+
+func (e *unknownFlagNameError) Error() string {
+	return e.errorf("Type %q doesn't have flag %q", e.t, e.name)
 }

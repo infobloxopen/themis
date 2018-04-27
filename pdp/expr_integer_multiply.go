@@ -22,7 +22,7 @@ func makeFunctionIntegerMultiplyAlt(args []Expression) Expression {
 	return makeFunctionIntegerMultiply(args[0], args[1])
 }
 
-func (f functionIntegerMultiply) GetResultType() int {
+func (f functionIntegerMultiply) GetResultType() Type {
 	return TypeInteger
 }
 
@@ -33,12 +33,12 @@ func (f functionIntegerMultiply) describe() string {
 func (f functionIntegerMultiply) Calculate(ctx *Context) (AttributeValue, error) {
 	first, err := ctx.calculateIntegerExpression(f.first)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "first argument"), f.describe())
 	}
 
 	second, err := ctx.calculateIntegerExpression(f.second)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 
 	return MakeIntegerValue(first * second), nil

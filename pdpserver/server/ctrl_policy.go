@@ -53,7 +53,7 @@ func (s *Server) uploadPolicyUpdate(id int32, r *streamReader, req *item, stream
 	}
 	s.RUnlock()
 
-	u, err := s.opts.parser.UnmarshalUpdate(r, t.Attributes(), *req.fromTag, *req.toTag)
+	u, err := s.opts.parser.UnmarshalUpdate(r, t.Symbols(), *req.fromTag, *req.toTag)
 	if err != nil {
 		return stream.SendAndClose(controlFail(newPolicyUpdateParseError(id, req, err)))
 	}

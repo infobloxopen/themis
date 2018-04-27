@@ -7,7 +7,7 @@ import (
 type Selector interface {
 	Enabled() bool
 	Initialize()
-	SelectorFunc(string, []Expression, int) (Expression, error)
+	SelectorFunc(string, []Expression, Type) (Expression, error)
 }
 
 var SelectorMap = make(map[string]Selector)

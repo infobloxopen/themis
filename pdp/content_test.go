@@ -14,21 +14,31 @@ import (
 func TestLocalContentStorage(t *testing.T) {
 	tag := uuid.New()
 
-	sTree := strtree.NewTree()
-	sm := MakeContentStringMap(sTree)
-	ssmc := MakeContentMappingItem("str-str-map", TypeString, []int{TypeString, TypeString}, sm)
+	ssmc := MakeContentMappingItem(
+		"str-str-map",
+		TypeString,
+		MakeSignature(TypeString, TypeString),
+		MakeContentStringMap(strtree.NewTree()),
+	)
 
-	sTree = strtree.NewTree()
+	sTree := strtree.NewTree()
 	sTree.InplaceInsert("1-first", "first")
 	sTree.InplaceInsert("2-second", "second")
 	sTree.InplaceInsert("3-third", "third")
 
-	sm = MakeContentStringMap(sTree)
-	ksm := MakeContentMappingItem("key-str-map", TypeString, []int{TypeString}, sm)
+	ksm := MakeContentMappingItem(
+		"key-str-map",
+		TypeString,
+		MakeSignature(TypeString),
+		MakeContentStringMap(sTree),
+	)
 
-	sTree = strtree.NewTree()
-	sm = MakeContentStringMap(sTree)
-	snmc := MakeContentMappingItem("str-net-map", TypeString, []int{TypeString, TypeNetwork}, sm)
+	snmc := MakeContentMappingItem(
+		"str-net-map",
+		TypeString,
+		MakeSignature(TypeString, TypeNetwork),
+		MakeContentStringMap(strtree.NewTree()),
+	)
 
 	nTree := iptree.NewTree()
 	_, n, err := net.ParseCIDR("192.0.2.16/28")
@@ -47,28 +57,43 @@ func TestLocalContentStorage(t *testing.T) {
 	}
 	nTree.InplaceInsertNet(n, "third")
 
-	nm := MakeContentNetworkMap(nTree)
-	knm := MakeContentMappingItem("key-net-map", TypeString, []int{TypeNetwork}, nm)
+	knm := MakeContentMappingItem(
+		"key-net-map",
+		TypeString,
+		MakeSignature(TypeNetwork),
+		MakeContentNetworkMap(nTree),
+	)
 
-	sTree = strtree.NewTree()
-	sm = MakeContentStringMap(sTree)
-	sdmc := MakeContentMappingItem("str-dom-map", TypeString, []int{TypeString, TypeDomain}, sm)
+	sdmc := MakeContentMappingItem(
+		"str-dom-map",
+		TypeString,
+		MakeSignature(TypeString, TypeDomain),
+		MakeContentStringMap(strtree.NewTree()),
+	)
 
-	dTree := &domaintree.Node{}
+	dTree := new(domaintree.Node)
 	dTree.InplaceInsert("example.com", "first")
 	dTree.InplaceInsert("example.net", "second")
 	dTree.InplaceInsert("example.org", "third")
 
-	dm := MakeContentDomainMap(dTree)
-	kdm := MakeContentMappingItem("key-dom-map", TypeString, []int{TypeDomain}, dm)
+	kdm := MakeContentMappingItem(
+		"key-dom-map",
+		TypeString,
+		MakeSignature(TypeDomain),
+		MakeContentDomainMap(dTree),
+	)
 
 	sTree = strtree.NewTree()
 	sTree.InplaceInsert("1-first", "first")
 	sTree.InplaceInsert("2-second", "second")
 	sTree.InplaceInsert("3-third", "third")
 
-	sm = MakeContentStringMap(sTree)
-	smc := MakeContentMappingItem("str-map", TypeString, []int{TypeString}, sm)
+	smc := MakeContentMappingItem(
+		"str-map",
+		TypeString,
+		MakeSignature(TypeString),
+		MakeContentStringMap(sTree),
+	)
 
 	nTree = iptree.NewTree()
 	_, n, err = net.ParseCIDR("192.0.2.16/28")
@@ -87,32 +112,48 @@ func TestLocalContentStorage(t *testing.T) {
 	}
 	nTree.InplaceInsertNet(n, "third")
 
-	nm = MakeContentNetworkMap(nTree)
-	nmc := MakeContentMappingItem("net-map", TypeString, []int{TypeNetwork}, nm)
+	nmc := MakeContentMappingItem(
+		"net-map",
+		TypeString,
+		MakeSignature(TypeNetwork),
+		MakeContentNetworkMap(nTree),
+	)
+
+	dTree = new(domaintree.Node)
+	dTree.InplaceInsert("example.com", "first")
+	dTree.InplaceInsert("example.net", "second")
+	dTree.InplaceInsert("example.org", "third")
+
+	dmc := MakeContentMappingItem(
+		"dom-map",
+		TypeString,
+		MakeSignature(TypeDomain),
+		MakeContentDomainMap(dTree),
+	)
 
 	dTree = &domaintree.Node{}
 	dTree.InplaceInsert("example.com", "first")
 	dTree.InplaceInsert("example.net", "second")
 	dTree.InplaceInsert("example.org", "third")
 
-	dm = MakeContentDomainMap(dTree)
-	dmc := MakeContentMappingItem("dom-map", TypeString, []int{TypeDomain}, dm)
+	dmcAdd := MakeContentMappingItem(
+		"dom-map-add",
+		TypeString,
+		MakeSignature(TypeDomain),
+		MakeContentDomainMap(dTree),
+	)
 
-	dTree = &domaintree.Node{}
+	dTree = new(domaintree.Node)
 	dTree.InplaceInsert("example.com", "first")
 	dTree.InplaceInsert("example.net", "second")
 	dTree.InplaceInsert("example.org", "third")
 
-	dm = MakeContentDomainMap(dTree)
-	dmcAdd := MakeContentMappingItem("dom-map-add", TypeString, []int{TypeDomain}, dm)
-
-	dTree = &domaintree.Node{}
-	dTree.InplaceInsert("example.com", "first")
-	dTree.InplaceInsert("example.net", "second")
-	dTree.InplaceInsert("example.org", "third")
-
-	dm = MakeContentDomainMap(dTree)
-	dmcDel := MakeContentMappingItem("dom-map-del", TypeString, []int{TypeDomain}, dm)
+	dmcDel := MakeContentMappingItem(
+		"dom-map-del",
+		TypeString,
+		MakeSignature(TypeDomain),
+		MakeContentDomainMap(dTree),
+	)
 
 	items := []*ContentItem{ssmc, snmc, sdmc, smc, nmc, dmc, dmcDel}
 	s := NewLocalContentStorage([]*LocalContent{NewLocalContent("first", &tag, items)})
@@ -122,8 +163,12 @@ func TestLocalContentStorage(t *testing.T) {
 	dTree.InplaceInsert("example.net", "second")
 	dTree.InplaceInsert("example.org", "third")
 
-	dm = MakeContentDomainMap(dTree)
-	dmc = MakeContentMappingItem("dom-map", TypeString, []int{TypeDomain}, dm)
+	dmc = MakeContentMappingItem(
+		"dom-map",
+		TypeString,
+		MakeSignature(TypeDomain),
+		MakeContentDomainMap(dTree),
+	)
 	s = s.Add(NewLocalContent("second", &tag, []*ContentItem{dmc}))
 
 	newTag := uuid.New()

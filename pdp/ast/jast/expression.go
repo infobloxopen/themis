@@ -14,7 +14,7 @@ func (ctx context) unmarshalAttributeDesignator(d *json.Decoder) (pdp.AttributeD
 		return pdp.AttributeDesignator{}, err
 	}
 
-	a, ok := ctx.attrs[id]
+	a, ok := ctx.symbols.GetAttribute(id)
 	if !ok {
 		return pdp.AttributeDesignator{}, newUnknownAttributeError(id)
 	}

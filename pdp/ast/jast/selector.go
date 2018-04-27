@@ -61,7 +61,7 @@ func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.Expression, error) {
 			return nil
 		}
 
-		return newUnknownAttributeError(k)
+		return newUnknownFieldError(k)
 	}, "selector"); err != nil {
 		return ret, err
 	}
@@ -71,7 +71,7 @@ func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.Expression, error) {
 		return ret, newSelectorURIError(uri, err)
 	}
 
-	t, ok := pdp.TypeIDs[strings.ToLower(st)]
+	t, ok := pdp.BuiltinTypes[strings.ToLower(st)]
 	if !ok {
 		return ret, bindErrorf(newUnknownTypeError(uri), "selector(%s)", uri)
 	}

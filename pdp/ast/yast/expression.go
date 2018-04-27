@@ -8,7 +8,7 @@ func (ctx context) unmarshalAttributeDesignator(v interface{}) (pdp.AttributeDes
 		return pdp.AttributeDesignator{}, err
 	}
 
-	a, ok := ctx.attrs[ID]
+	a, ok := ctx.symbols.GetAttribute(ID)
 	if !ok {
 		return pdp.AttributeDesignator{}, newUnknownAttributeError(ID)
 	}

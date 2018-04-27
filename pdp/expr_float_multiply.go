@@ -22,7 +22,7 @@ func makeFunctionFloatMultiplyAlt(args []Expression) Expression {
 	return makeFunctionFloatMultiply(args[0], args[1])
 }
 
-func (f functionFloatMultiply) GetResultType() int {
+func (f functionFloatMultiply) GetResultType() Type {
 	return TypeFloat
 }
 
@@ -33,17 +33,17 @@ func (f functionFloatMultiply) describe() string {
 func (f functionFloatMultiply) Calculate(ctx *Context) (AttributeValue, error) {
 	first, err := ctx.calculateFloatOrIntegerExpression(f.first)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "first argument"), f.describe())
 	}
 
 	second, err := ctx.calculateFloatOrIntegerExpression(f.second)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 
 	res := first * second
 	if err = floatErrorCheck(res); err != nil {
-		return undefinedValue, bindError(err, f.describe())
+		return UndefinedValue, bindError(err, f.describe())
 	}
 
 	return MakeFloatValue(res), nil
