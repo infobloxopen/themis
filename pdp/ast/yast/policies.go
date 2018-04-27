@@ -198,7 +198,8 @@ func unmarshalMapperPolicyCombiningAlgParams(ctx context, m map[interface{}]inte
 	}
 
 	t := arg.GetResultType()
-	if t != pdp.TypeString && t != pdp.TypeSetOfStrings && t != pdp.TypeListOfStrings {
+	_, flagsOk := t.(*pdp.FlagsType)
+	if !flagsOk && t != pdp.TypeString && t != pdp.TypeSetOfStrings && t != pdp.TypeListOfStrings {
 		return nil, newMapperArgumentTypeError(t)
 	}
 
@@ -226,7 +227,7 @@ func unmarshalMapperPolicyCombiningAlgParams(ctx context, m map[interface{}]inte
 
 	var subAlg pdp.PolicyCombiningAlg
 	order := pdp.MapperPCAExternalOrder
-	if t == pdp.TypeSetOfStrings || t == pdp.TypeListOfStrings {
+	if flagsOk || t == pdp.TypeSetOfStrings || t == pdp.TypeListOfStrings {
 		s, ok, err := ctx.extractStringOpt(m, yastTagOrder, "ordering option")
 		if err != nil {
 			return nil, err

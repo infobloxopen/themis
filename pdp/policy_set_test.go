@@ -443,7 +443,119 @@ func TestPolicySetAppend(t *testing.T) {
 			t.Errorf("Expected four policies after append but got %d", len(newP.policies))
 		}
 
-		assertMapperPCAMapKeys(newP.algorithm, "after insert \"fourth\"", t, "first", "fourth", "second", "third")
+		assertMapperPCAMapKeys(newP.algorithm, "after insert another \"first\"", t,
+			"first", "fourth", "second", "third")
+
+		if m, ok := newP.algorithm.(mapperPCA); ok {
+			if m.def != testFirstPol {
+				t.Errorf("Expected default policy to be new \"first\" policy %p but got %p", testFirstPol, m.def)
+			}
+		}
+	} else {
+		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
+	}
+
+	ft, err := NewFlagsType("flags", "first", "second", "third", "fourth")
+	if err != nil {
+		t.Fatalf("Expected no error but got: %s", err)
+	}
+
+	p = NewPolicySet("test", false, Target{},
+		[]Evaluable{
+			makeSimplePolicy("first", makeSimpleRule("permit", EffectPermit)),
+			makeSimplePolicy("second", makeSimpleRule("permit", EffectPermit)),
+			makeSimplePolicy("third", makeSimpleRule("permit", EffectPermit)),
+		},
+		makeMapperPCA, MapperPCAParams{
+			Argument: AttributeDesignator{a: Attribute{id: "f", t: ft}},
+			DefOk:    true,
+			Def:      "first",
+			ErrOk:    true,
+			Err:      "second"},
+		nil)
+	newE, err = p.Append([]string{}, testFourthPol)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if newP, ok := newE.(*PolicySet); ok {
+		if len(newP.policies) == 4 {
+			e := newP.policies[3]
+			if p, ok := e.(*Policy); ok {
+				if p.id != "fourth" {
+					t.Errorf("Expected \"fourth\" policy added to the end but got %q", p.id)
+				}
+
+				if p.ord != 3 {
+					t.Errorf("Expected fourth policy to get order 3 but got %d", p.ord)
+				}
+			} else {
+				t.Errorf("Expected policy as fourth item of policy set but got %T (%#v)", e, e)
+			}
+		} else {
+			t.Errorf("Expected four policies after append but got %d", len(newP.policies))
+		}
+
+		assertFlagsMapperPCAMapKeys(newP.algorithm, "after insert \"fourth\"", t, "first", "second", "third", "fourth")
+	} else {
+		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
+	}
+
+	testFifthPol := makeSimplePolicy("fifth", makeSimpleRule("permit", EffectPermit))
+	newE, err = newE.Append([]string{}, testFifthPol)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if newP, ok := newE.(*PolicySet); ok {
+		if len(newP.policies) == 5 {
+			e := newP.policies[4]
+			if p, ok := e.(*Policy); ok {
+				if p.id != "fifth" {
+					t.Errorf("Expected \"fifth\" policy added to the end but got %q", p.id)
+				}
+
+				if p.ord != 4 {
+					t.Errorf("Expected fourth policy to get order 4 but got %d", p.ord)
+				}
+			} else {
+				t.Errorf("Expected policy as fifth item of policy set but got %T (%#v)", e, e)
+			}
+		} else {
+			t.Errorf("Expected five policies after append but got %d", len(newP.policies))
+		}
+
+		assertFlagsMapperPCAMapKeys(newP.algorithm, "after insert \"fifth\"", t, "first", "second", "third", "fourth")
+	} else {
+		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
+	}
+
+	newE, err = newE.Append([]string{}, testFirstPol)
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if newP, ok := newE.(*PolicySet); ok {
+		if len(newP.policies) == 5 {
+			e := newP.policies[0]
+			if p, ok := e.(*Policy); ok {
+				if p.id != "first" {
+					t.Errorf("Expected \"first\" policy replaced at the begining but got %q", p.id)
+				} else if len(p.rules) == 1 {
+					r := p.rules[0]
+					if r.effect != EffectDeny {
+						t.Errorf("Expected \"first\" policy became deny but it's still %s", effectNames[r.effect])
+					}
+				} else {
+					t.Errorf("Expected \"first\" policy to have the only rule but got %d", len(p.rules))
+				}
+
+				if p.ord != 0 {
+					t.Errorf("Expected the first policy to keep order 0 but got %d", p.ord)
+				}
+			} else {
+				t.Errorf("Expected policy as first item of policy set but got %T (%#v)", e, e)
+			}
+		} else {
+			t.Errorf("Expected four policies after append but got %d", len(newP.policies))
+		}
+
+		assertFlagsMapperPCAMapKeys(newP.algorithm, "after insert other \"first\"", t,
+			"first", "second", "third", "fourth")
 
 		if m, ok := newP.algorithm.(mapperPCA); ok {
 			if m.def != testFirstPol {
@@ -674,6 +786,97 @@ func TestPolicySetDelete(t *testing.T) {
 	} else {
 		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
 	}
+
+	ft, err := NewFlagsType("flags", "first", "second", "third", "fourth")
+	if err != nil {
+		t.Fatalf("Expected no error but got: %s", err)
+	}
+
+	p = NewPolicySet("test", false, Target{},
+		[]Evaluable{
+			makeSimplePolicy("first", makeSimpleRule("permit", EffectPermit)),
+			makeSimplePolicy("second", makeSimpleRule("permit", EffectPermit)),
+			makeSimplePolicy("third", makeSimpleRule("permit", EffectPermit)),
+			makeSimplePolicy("fifth", makeSimpleRule("permit", EffectPermit)),
+		},
+		makeMapperPCA, MapperPCAParams{
+			Argument: AttributeDesignator{a: Attribute{id: "f", t: ft}},
+			DefOk:    true,
+			Def:      "first",
+			ErrOk:    true,
+			Err:      "second"},
+		nil)
+	newE, err = p.Delete([]string{"second"})
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if newP, ok := newE.(*PolicySet); ok {
+		if len(newP.policies) == 3 {
+			e1 := newP.policies[0]
+			e3 := newP.policies[1]
+			e5 := newP.policies[2]
+
+			p1, ok1 := e1.(*Policy)
+			p3, ok3 := e3.(*Policy)
+			p5, ok5 := e5.(*Policy)
+			if ok1 && ok3 && ok5 {
+				if p1.id != "first" || p3.id != "third" || p5.id != "fifth" {
+					t.Errorf("Expected \"first\", \"third\" and \"fifth\" policies remaining but got %q, %q and %q",
+						p1.id, p3.id, p5.id)
+				}
+
+				if p1.ord != 0 || p3.ord != 2 || p5.ord != 3 {
+					t.Errorf("Expected remaining policies to keep their orders but got %d, %d and %d",
+						p1.ord, p3.ord, p5.ord)
+				}
+			} else {
+				t.Errorf("Expected three policies after delete but got %T, %T and %T", e1, e3, e5)
+			}
+		} else {
+			t.Errorf("Expected three policies after delete but got %d", len(newP.policies))
+		}
+
+		assertFlagsMapperPCAMapKeys(newP.algorithm, "after \"second\" deletion from flags policy set", t,
+			"first", "third")
+
+		if m, ok := newP.algorithm.(flagsMapperPCA); ok {
+			if m.err != nil {
+				t.Errorf("Expected error policy to be nil but got %p", m.err)
+			}
+		}
+	} else {
+		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
+	}
+
+	newE, err = newE.Delete([]string{"fifth"})
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if newP, ok := newE.(*PolicySet); ok {
+		if len(newP.policies) == 2 {
+			e1 := newP.policies[0]
+			e3 := newP.policies[1]
+
+			p1, ok1 := e1.(*Policy)
+			p3, ok3 := e3.(*Policy)
+			if ok1 && ok3 {
+				if p1.id != "first" || p3.id != "third" {
+					t.Errorf("Expected \"first\" and \"third\" policies remaining but got %q and %q", p1.id, p3.id)
+				}
+
+				if p1.ord != 0 || p3.ord != 2 {
+					t.Errorf("Expected remaining policies to keep their orders but got %d and %d", p1.ord, p3.ord)
+				}
+			} else {
+				t.Errorf("Expected two policies after delete but got %T and %T", e1, e3)
+			}
+		} else {
+			t.Errorf("Expected two policies after delete but got %d", len(newP.policies))
+		}
+
+		assertFlagsMapperPCAMapKeys(newP.algorithm, "after \"fifth\" deletion from flags policy set", t,
+			"first", "third")
+	} else {
+		t.Errorf("Expected new policy set but got %T (%#v)", newE, newE)
+	}
 }
 
 func TestSortPoliciesByOrder(t *testing.T) {
@@ -746,5 +949,22 @@ func assertMapperPCAMapKeys(a PolicyCombiningAlg, desc string, t *testing.T, exp
 		assertStrings(keys, expected, desc, t)
 	} else {
 		t.Errorf("Expected mapper as policy combining algorithm but got %T for %s", a, desc)
+	}
+}
+
+func assertFlagsMapperPCAMapKeys(a PolicyCombiningAlg, desc string, t *testing.T, expected ...string) {
+	if m, ok := a.(flagsMapperPCA); ok {
+		keys := []string{}
+		for _, p := range m.policies {
+			if p != nil {
+				if id, ok := p.GetID(); ok {
+					keys = append(keys, id)
+				}
+			}
+		}
+
+		assertStrings(keys, expected, desc, t)
+	} else {
+		t.Errorf("Expected flags mapper as policy combining algorithm but got %T for %s", a, desc)
 	}
 }

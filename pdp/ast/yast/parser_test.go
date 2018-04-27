@@ -604,7 +604,7 @@ policies:
               type: flags64
               content: [f00, f76]
 
-  - id: Flags8Mapper
+  - id: Flags8MapperRCA
     alg:
       id: Mapper
       map:
@@ -621,7 +621,7 @@ policies:
     - id: f02
       effect: Deny
 
-  - id: Flags16Mapper
+  - id: Flags16MapperRCA
     alg:
       id: Mapper
       map:
@@ -638,7 +638,7 @@ policies:
     - id: f02
       effect: Deny
 
-  - id: Flags32Mapper
+  - id: Flags32MapperRCA
     alg:
       id: Mapper
       map:
@@ -655,7 +655,7 @@ policies:
     - id: f02
       effect: Deny
 
-  - id: Flags64Mapper
+  - id: Flags64MapperRCA
     alg:
       id: Mapper
       map:
@@ -671,6 +671,90 @@ policies:
       effect: Permit
     - id: f02
       effect: Deny
+
+  - id: Flags8MapperPCA
+    alg:
+      id: Mapper
+      map:
+        selector:
+          uri: "local:content/content-item-dom8-map"
+          type: "flags8"
+          path:
+          - attr: domAttr
+      order: Internal
+      alg: FirstApplicableEffect
+    policies:
+    - id: f00
+      alg: FirstApplicableEffect
+      rules:
+      - effect: Permit
+    - id: f02
+      alg: FirstApplicableEffect
+      rules:
+      - effect: Deny
+
+  - id: Flags16MapperPCA
+    alg:
+      id: Mapper
+      map:
+        selector:
+          uri: "local:content/content-item-dom16-map"
+          type: "flags16"
+          path:
+          - attr: domAttr
+      order: Internal
+      alg: FirstApplicableEffect
+    policies:
+    - id: f00
+      alg: FirstApplicableEffect
+      rules:
+      - effect: Permit
+    - id: f02
+      alg: FirstApplicableEffect
+      rules:
+      - effect: Deny
+
+  - id: Flags32MapperPCA
+    alg:
+      id: Mapper
+      map:
+        selector:
+          uri: "local:content/content-item-dom32-map"
+          type: "flags32"
+          path:
+          - attr: domAttr
+      order: Internal
+      alg: FirstApplicableEffect
+    policies:
+    - id: f00
+      alg: FirstApplicableEffect
+      rules:
+      - effect: Permit
+    - id: f02
+      alg: FirstApplicableEffect
+      rules:
+      - effect: Deny
+
+  - id: Flags64MapperPCA
+    alg:
+      id: Mapper
+      map:
+        selector:
+          uri: "local:content/content-item-dom64-map"
+          type: "flags64"
+          path:
+          - attr: domAttr
+      order: Internal
+      alg: FirstApplicableEffect
+    policies:
+    - id: f00
+      alg: FirstApplicableEffect
+      rules:
+      - effect: Permit
+    - id: f02
+      alg: FirstApplicableEffect
+      rules:
+      - effect: Deny
 `
 )
 

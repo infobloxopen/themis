@@ -240,7 +240,11 @@ func (p *PolicySet) putChild(child Evaluable) Evaluable {
 	}
 
 	algorithm := p.algorithm
-	if m, ok := algorithm.(mapperPCA); ok {
+	switch m := algorithm.(type) {
+	case mapperPCA:
+		algorithm = m.add(ID, child, old)
+
+	case flagsMapperPCA:
 		algorithm = m.add(ID, child, old)
 	}
 
@@ -266,7 +270,11 @@ func (p *PolicySet) delChild(ID string) (Evaluable, error) {
 	}
 
 	algorithm := p.algorithm
-	if m, ok := algorithm.(mapperPCA); ok {
+	switch m := algorithm.(type) {
+	case mapperPCA:
+		algorithm = m.del(ID, old)
+
+	case flagsMapperPCA:
 		algorithm = m.del(ID, old)
 	}
 
