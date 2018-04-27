@@ -42,7 +42,10 @@ policies:
         - attr: a
     effect: Permit
     obligations:
-    - r: first
+    - r:
+        val:
+          type: string
+          content: first
 
   # (x == test or x == example) and (network(192.0.2.0/28) contains a or network(192.0.2.16/28) contains a)
   - target:
@@ -70,7 +73,10 @@ policies:
         - attr: a
     effect: Permit
     obligations:
-    - r: second
+    - r:
+        val:
+          type: string
+          content: second
 
   # x == test and network(192.0.2.0/24) contains a
   - target:
@@ -86,7 +92,10 @@ policies:
       - attr: a
     effect: Permit
     obligations:
-    - r: third
+    - r:
+        val:
+          type: string
+          content: third
 
   # x == test
   - target:
@@ -97,4 +106,7 @@ policies:
           content: "test"
     effect: Permit
     obligations:
-    - r: fourth
+    - r:
+        val:
+          type: string
+          content: fourth

@@ -5,17 +5,17 @@ The example shows policies file with mapper combining algorithm and local conten
 Run pdpserver using policy file:
 ```
 $ pdpserver -v 3 -p mapper.yaml -j content.json
-INFO[0000] Starting PDP server.
+INFO[0000] Starting PDP server                          
 INFO[0000] Loading policy                                policy=mapper.yaml
 INFO[0000] Parsing policy                                policy=mapper.yaml
 INFO[0000] Opening content                               content=content.json
 INFO[0000] Parsing content                               content=content.json
 INFO[0000] Opening control port                          address=":5554"
-INFO[0000] Creating service protocol handler
-INFO[0000] Creating control protocol handler
-INFO[0000] Serving control requests
+INFO[0000] Creating service protocol handler            
+INFO[0000] Creating control protocol handler            
+INFO[0000] Serving control requests                     
 INFO[0000] Opening service port                          address=":5555"
-INFO[0000] Serving decision requests
+INFO[0000] Serving decision requests                    
 ```
 
 In other terminal run pepcli:
@@ -80,7 +80,7 @@ DEBU[0033] Request context                               context="content:
 - content: no tag
 
 attributes:
-- p.(String): "Unknown""
+- p.(String): \"Unknown\""
 DEBU[0033] Response                                      effect=DENY obligation="no attributes" reason=Ok
 DEBU[0033] Request context                               context="content:
 - content: no tag
@@ -88,51 +88,51 @@ DEBU[0033] Request context                               context="content:
 attributes:
 - d.(Domain): domain(example.com)"
 DEBU[0033] Response                                      effect=DENY obligation="attributes:
-- err.(string): "Can't calculate policy id"" reason=Ok
+- err.(string): \"Can't calculate policy id\"" reason=Ok
 DEBU[0033] Request context                               context="content:
 - content: no tag
 
 attributes:
-- p.(String): "First"
+- p.(String): \"First\"
 - d.(Domain): domain(example.net)"
 DEBU[0033] Response                                      effect=PERMIT obligation="attributes:
-- p.(string): "First PermitNet"" reason=Ok
+- p.(string): \"First PermitNet\"" reason=Ok
 DEBU[0033] Request context                               context="content:
 - content: no tag
 
 attributes:
-- p.(String): "First"
+- p.(String): \"First\"
 - d.(Domain): domain(example.com)"
 DEBU[0033] Response                                      effect=DENY obligation="attributes:
-- p.(string): "First DenyCom"" reason=Ok
+- p.(string): \"First DenyCom\"" reason=Ok
 DEBU[0033] Request context                               context="content:
 - content: no tag
 
 attributes:
-- p.(String): "Second"
+- p.(String): \"Second\"
 - d.(Domain): domain(example.com)"
 DEBU[0033] Response                                      effect=PERMIT obligation="attributes:
-- p.(string): "Second PermitCom"" reason=Ok
+- p.(string): \"Second PermitCom\"" reason=Ok
 DEBU[0033] Request context                               context="content:
 - content: no tag
 
 attributes:
-- p.(String): "Second"
+- p.(String): \"Second\"
 - d.(Domain): domain(example.net)"
 DEBU[0033] Response                                      effect=DENY obligation="attributes:
-- p.(string): "Second DenyNet"" reason=Ok
+- p.(string): \"Second DenyNet\"" reason=Ok
 DEBU[0033] Request context                               context="content:
 - content: no tag
 
 attributes:
-- p.(String): "External""
+- p.(String): \"External\""
 DEBU[0033] Response                                      effect=PERMIT obligation="attributes:
-- p.(string): "External Second"" reason=Ok
+- p.(string): \"External Second\"" reason=Ok
 DEBU[0033] Request context                               context="content:
 - content: no tag
 
 attributes:
-- p.(String): "Internal""
+- p.(String): \"Internal\""
 DEBU[0033] Response                                      effect=PERMIT obligation="attributes:
-- p.(string): "Internal First"" reason=Ok
+- p.(string): \"Internal First\"" reason=Ok
 ```

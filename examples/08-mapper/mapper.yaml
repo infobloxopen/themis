@@ -21,7 +21,10 @@ policies:
     rules:
     - effect: Deny
     obligations:
-    - err: Can't calculate policy id
+    - err:
+        val:
+          type: string
+          content: Can't calculate policy id
   - id: First
     alg:
       id: Mapper
@@ -37,15 +40,24 @@ policies:
     - id: DenyRule
       effect: Deny
       obligations:
-      - p: First Default Deny
+      - p:
+          val:
+            type: string
+            content: First Default Deny
     - id: PermitNet
       effect: Permit
       obligations:
-      - p: First PermitNet
+      - p:
+          val:
+            type: string
+            content: First PermitNet
     - id: DenyCom
       effect: Deny
       obligations:
-      - p: First DenyCom
+      - p:
+          val:
+            type: string
+            content: First DenyCom
   - id: Second
     alg:
       id: Mapper
@@ -61,15 +73,24 @@ policies:
     - id: DenyRule
       effect: Deny
       obligations:
-      - p: Second Default Deny
+      - p:
+          val:
+            type: string
+            content: Second Default Deny
     - id: DenyNet
       effect: Deny
       obligations:
-      - p: Second DenyNet
+      - p:
+          val:
+            type: string
+            content: Second DenyNet
     - id: PermitCom
       effect: Permit
       obligations:
-      - p: Second PermitCom
+      - p:
+          val:
+            type: string
+            content: Second PermitCom
   - id: External
     alg:
       id: Mapper
@@ -85,11 +106,17 @@ policies:
     - id: First
       effect: Permit
       obligations:
-      - p: External First
+      - p:
+          val:
+            type: string
+            content: External First
     - id: Second
       effect: Permit
       obligations:
-      - p: External Second
+      - p:
+          val:
+            type: string
+            content: External Second
   - id: Internal
     alg:
       id: Mapper
@@ -105,8 +132,14 @@ policies:
     - id: First
       effect: Permit
       obligations:
-      - p: Internal First
+      - p:
+          val:
+            type: string
+            content: Internal First
     - id: Second
       effect: Permit
       obligations:
-      - p: Internal Second
+      - p:
+          val:
+            type: string
+            content: Internal Second
