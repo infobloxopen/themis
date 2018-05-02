@@ -6,6 +6,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
@@ -15,11 +16,12 @@ import (
 
 type contentItem struct {
 	id string
+	s  pdp.Symbols
 
-	k      []int
+	k      pdp.Signature
 	keysOk bool
 
-	t   int
+	t   pdp.Type
 	tOk bool
 
 	v      interface{}
@@ -32,22 +34,120 @@ func (c *contentItem) unmarshalTypeField(d *json.Decoder) error {
 		return newDuplicateContentItemFieldError("type")
 	}
 
-	s, err := jparser.GetString(d, "content item type")
+	token, err := d.Token()
 	if err != nil {
 		return err
 	}
 
-	t, ok := pdp.TypeIDs[strings.ToLower(s)]
-	if !ok {
-		return newUnknownTypeError(s)
+	switch v := token.(type) {
+	default:
+		return newInvalidTypeFormatError(token)
+
+	case string:
+		c.t = c.s.GetType(v)
+		if c.t == nil {
+			return newUnknownTypeError(v)
+		}
+
+		if c.t == pdp.TypeUndefined {
+			return newInvalidContentItemTypeError(c.t)
+		}
+
+		c.tOk = true
+
+	case json.Delim:
+		if v.String() != jparser.DelimObjectStart {
+			return newInvalidTypeFormatError(token)
+		}
+
+		if err := c.unmarshalTypeDeclaration(d); err != nil {
+			return err
+		}
 	}
 
-	if t == pdp.TypeUndefined {
-		return newInvalidContentItemTypeError(t)
+	return nil
+}
+
+func (c *contentItem) unmarshalTypeDeclaration(d *json.Decoder) error {
+	var (
+		metaOk bool
+		meta   string
+
+		nameOk bool
+		name   string
+
+		flags []string
+	)
+
+	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+		switch k {
+		default:
+			return newUnknownTypeFieldError(k)
+
+		case "meta":
+			s, err := jparser.GetString(d, "meta type name")
+			if err != nil {
+				return err
+			}
+
+			meta = s
+			metaOk = true
+
+		case "name":
+			s, err := jparser.GetString(d, "type name")
+			if err != nil {
+				return err
+			}
+
+			name = s
+			nameOk = true
+
+		case "flags":
+			flags = []string{}
+			if err := jparser.GetStringSequence(d, func(i int, s string) error {
+				flags = append(flags, s)
+				return nil
+			}, "list of flag names"); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}, "type declarations"); err != nil {
+		return err
 	}
 
-	c.t = t
-	c.tOk = true
+	if !metaOk {
+		return newMissingMetaTypeNameError()
+	}
+
+	switch strings.ToLower(meta) {
+	default:
+		return newUnknownMetaTypeError(meta)
+
+	case "flags":
+		if flags == nil {
+			return newMissingFlagNameListError()
+		}
+
+		t, err := pdp.NewFlagsType(name, flags...)
+		if err != nil {
+			return err
+		}
+
+		if nameOk {
+			if err := c.s.PutType(t); err != nil {
+				if _, ok := err.(*pdp.ReadOnlySymbolsChangeError); ok {
+					return newNewTypeOnUpdateError()
+				}
+
+				return err
+			}
+		}
+
+		c.t = t
+		c.tOk = true
+	}
 
 	return nil
 }
@@ -62,7 +162,7 @@ func (c *contentItem) unmarshalKeysField(d *json.Decoder) error {
 		return err
 	}
 
-	k := []int{}
+	k := pdp.MakeSignature()
 	i := 1
 	for {
 		src := fmt.Sprintf("key %d", i)
@@ -76,12 +176,12 @@ func (c *contentItem) unmarshalKeysField(d *json.Decoder) error {
 			return newStringCastError(t, src)
 
 		case string:
-			t, ok := pdp.TypeIDs[strings.ToLower(s)]
+			t, ok := pdp.BuiltinTypes[strings.ToLower(s)]
 			if !ok {
 				return bindError(newUnknownTypeError(s), src)
 			}
 
-			if _, ok := pdp.ContentKeyTypes[t]; !ok {
+			if !pdp.ContentKeyTypes.Contains(t) {
 				return bindError(newInvalidContentKeyTypeError(t, pdp.ContentKeyTypes), src)
 			}
 
@@ -122,6 +222,36 @@ func (c *contentItem) unmarshalMap(d *json.Decoder, keyIdx int) (interface{}, er
 }
 
 func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
+	if t, ok := c.t.(*pdp.FlagsType); ok {
+		var n uint64
+		err := jparser.GetStringSequence(d, func(idx int, s string) error {
+			i := t.GetFlagBit(s)
+			if i < 0 {
+				return newUnknownFlagNameError(s)
+			}
+
+			n |= 1 << uint(i)
+
+			return nil
+		}, "flag names")
+		if err != nil {
+			return 0, err
+		}
+
+		switch t.Capacity() {
+		case 8:
+			return uint8(n), nil
+
+		case 16:
+			return uint16(n), nil
+
+		case 32:
+			return uint32(n), nil
+		}
+
+		return n, nil
+	}
+
 	switch c.t {
 	case pdp.TypeBoolean:
 		return jparser.GetBoolean(d, "value")
@@ -181,7 +311,7 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 			return nil, err
 		}
 
-		d, err := domaintree.MakeWireDomainNameLower(s)
+		d, err := domain.MakeWireDomainNameLower(s)
 		if err != nil {
 			return nil, newDomainCastError(s, err)
 		}
@@ -254,6 +384,102 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 	}
 
 	return nil, newInvalidContentItemTypeError(c.t)
+}
+
+func (c *contentItem) unmarshalFlags8Value(d *json.Decoder) (uint8, error) {
+	t, ok := c.t.(*pdp.FlagsType)
+	if !ok {
+		return 0, newInvalidContentItemTypeError(c.t)
+	}
+
+	var n uint8
+	err := jparser.GetStringSequence(d, func(idx int, s string) error {
+		i := t.GetFlagBit(s)
+		if i < 0 {
+			return newUnknownFlagNameError(s)
+		}
+
+		n |= 1 << uint(i)
+
+		return nil
+	}, "flag names")
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
+}
+
+func (c *contentItem) unmarshalFlags16Value(d *json.Decoder) (uint16, error) {
+	t, ok := c.t.(*pdp.FlagsType)
+	if !ok {
+		return 0, newInvalidContentItemTypeError(c.t)
+	}
+
+	var n uint16
+	err := jparser.GetStringSequence(d, func(idx int, s string) error {
+		i := t.GetFlagBit(s)
+		if i < 0 {
+			return newUnknownFlagNameError(s)
+		}
+
+		n |= 1 << uint(i)
+
+		return nil
+	}, "flag names")
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
+}
+
+func (c *contentItem) unmarshalFlags32Value(d *json.Decoder) (uint32, error) {
+	t, ok := c.t.(*pdp.FlagsType)
+	if !ok {
+		return 0, newInvalidContentItemTypeError(c.t)
+	}
+
+	var n uint32
+	err := jparser.GetStringSequence(d, func(idx int, s string) error {
+		i := t.GetFlagBit(s)
+		if i < 0 {
+			return newUnknownFlagNameError(s)
+		}
+
+		n |= 1 << uint(i)
+
+		return nil
+	}, "flag names")
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
+}
+
+func (c *contentItem) unmarshalFlags64Value(d *json.Decoder) (uint64, error) {
+	t, ok := c.t.(*pdp.FlagsType)
+	if !ok {
+		return 0, newInvalidContentItemTypeError(c.t)
+	}
+
+	var n uint64
+	err := jparser.GetStringSequence(d, func(idx int, s string) error {
+		i := t.GetFlagBit(s)
+		if i < 0 {
+			return newUnknownFlagNameError(s)
+		}
+
+		n |= 1 << uint(i)
+
+		return nil
+	}, "flag names")
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
 }
 
 func (c *contentItem) unmarshalTypedData(d *json.Decoder, keyIdx int) (interface{}, error) {
@@ -343,13 +569,16 @@ func (c *contentItem) get() (*pdp.ContentItem, error) {
 	return pdp.MakeContentMappingItem(c.id, c.t, c.k, c.adjustValue(v)), nil
 }
 
-func unmarshalContentItem(id string, d *json.Decoder) (*pdp.ContentItem, error) {
+func unmarshalContentItem(id string, s pdp.Symbols, d *json.Decoder) (*pdp.ContentItem, error) {
 	err := jparser.CheckObjectStart(d, "content item")
 	if err != nil {
 		return nil, err
 	}
 
-	item := &contentItem{id: id}
+	item := &contentItem{
+		id: id,
+		s:  s,
+	}
 	err = jparser.UnmarshalObject(d, item.unmarshal, "content item")
 	if err != nil {
 		return nil, err

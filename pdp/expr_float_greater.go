@@ -22,7 +22,7 @@ func makeFunctionFloatGreaterAlt(args []Expression) Expression {
 	return makeFunctionFloatGreater(args[0], args[1])
 }
 
-func (f functionFloatGreater) GetResultType() int {
+func (f functionFloatGreater) GetResultType() Type {
 	return TypeBoolean
 }
 
@@ -33,12 +33,12 @@ func (f functionFloatGreater) describe() string {
 func (f functionFloatGreater) Calculate(ctx *Context) (AttributeValue, error) {
 	first, err := ctx.calculateFloatOrIntegerExpression(f.first)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "first argument"), f.describe())
 	}
 
 	second, err := ctx.calculateFloatOrIntegerExpression(f.second)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 
 	return MakeBooleanValue(first > second), nil

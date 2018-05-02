@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	fakeServerAddress    = ":5555"
-	fakeServerAltAddress = ":5556"
+	fakeServerAddress    = "127.0.0.1:5555"
+	fakeServerAltAddress = "127.0.0.1:5556"
 )
 
 func TestStreamClientRecovery(t *testing.T) {
@@ -106,6 +106,8 @@ func hotSotBalancedClientRecovery(streams int, t *testing.T) {
 
 	defer s2.Stop()
 
+	msgs := make(chan string, 1)
+
 	c := NewClient(
 		WithStreams(streams),
 		WithHotSpotBalancer(
@@ -114,8 +116,12 @@ func hotSotBalancedClientRecovery(streams int, t *testing.T) {
 		),
 		WithConnectionStateNotification(func(addr string, state int, err error) {
 			if streams > 1 && state == StreamingConnectionBroken {
-				t.Errorf("unexpected connection failure when number of streams set to %d "+
+				msg := fmt.Sprintf("unexpected connection failure when number of streams set to %d "+
 					"(expected only stream failure)", streams)
+				select {
+				default:
+				case msgs <- msg:
+				}
 			}
 		}),
 	)
@@ -142,6 +148,15 @@ func hotSotBalancedClientRecovery(streams int, t *testing.T) {
 	err = c.Validate(in, &out)
 	if err != nil {
 		t.Fatalf("can't send first request: %s", err)
+	}
+
+	for len(msgs) > 0 {
+		msg, ok := <-msgs
+		if !ok {
+			break
+		}
+
+		t.Error(msg)
 	}
 
 	var attempts uint64 = 2

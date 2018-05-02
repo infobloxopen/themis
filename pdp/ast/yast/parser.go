@@ -12,6 +12,9 @@ import (
 )
 
 const (
+	yastTagTypes      = "types"
+	yastTagMeta       = "meta"
+	yastTagFlags      = "flags"
 	yastTagAttributes = "attributes"
 	yastTagID         = "id"
 	yastTagTarget     = "target"
@@ -54,11 +57,13 @@ func (p Parser) Unmarshal(in io.Reader, tag *uuid.UUID) (*pdp.PolicyStorage, err
 		return nil, err
 	}
 
-	if len(m) > 2 {
-		return nil, newRootKeysError(m)
+	ctx := newContext()
+
+	err = ctx.unmarshalTypeDeclarations(m)
+	if err != nil {
+		return nil, err
 	}
 
-	ctx := newContext()
 	err = ctx.unmarshalAttributeDeclarations(m)
 	if err != nil {
 		return nil, err
@@ -70,14 +75,14 @@ func (p Parser) Unmarshal(in io.Reader, tag *uuid.UUID) (*pdp.PolicyStorage, err
 	}
 
 	if rp != nil {
-		return pdp.NewPolicyStorage(rp, ctx.attrs, tag), nil
+		return pdp.NewPolicyStorage(rp, ctx.symbols, tag), nil
 	}
 
 	return nil, newRootKeysError(m)
 }
 
 // UnmarshalUpdate parses policies update YAML representation to PDP's internal representation.
-func (p Parser) UnmarshalUpdate(in io.Reader, attrs map[string]pdp.Attribute, oldTag, newTag uuid.UUID) (*pdp.PolicyUpdate, error) {
+func (p Parser) UnmarshalUpdate(in io.Reader, s pdp.Symbols, oldTag, newTag uuid.UUID) (*pdp.PolicyUpdate, error) {
 	b, err := ioutil.ReadAll(in)
 	if err != nil {
 		return nil, err
@@ -89,7 +94,7 @@ func (p Parser) UnmarshalUpdate(in io.Reader, attrs map[string]pdp.Attribute, ol
 		return nil, err
 	}
 
-	ctx := newContextWithAttributes(attrs)
+	ctx := newContextWithSymbols(s)
 
 	u := pdp.NewPolicyUpdate(oldTag, newTag)
 	for i, item := range a {

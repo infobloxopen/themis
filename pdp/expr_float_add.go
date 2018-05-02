@@ -35,7 +35,7 @@ func makeFunctionFloatAddAlt(args []Expression) Expression {
 	return makeFunctionFloatAdd(args[0], args[1])
 }
 
-func (f functionFloatAdd) GetResultType() int {
+func (f functionFloatAdd) GetResultType() Type {
 	return TypeFloat
 }
 
@@ -46,17 +46,17 @@ func (f functionFloatAdd) describe() string {
 func (f functionFloatAdd) Calculate(ctx *Context) (AttributeValue, error) {
 	first, err := ctx.calculateFloatOrIntegerExpression(f.first)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "first argument"), f.describe())
 	}
 
 	second, err := ctx.calculateFloatOrIntegerExpression(f.second)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 
 	res := first + second
 	if err = floatErrorCheck(res); err != nil {
-		return undefinedValue, bindError(err, f.describe())
+		return UndefinedValue, bindError(err, f.describe())
 	}
 
 	return MakeFloatValue(res), nil

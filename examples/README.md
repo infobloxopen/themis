@@ -11,4 +11,5 @@ Here gathered set of examples which can help to understand, investigate and debu
 - **06-values** - example of different values representation;
 - **07-selector** - example of selector and local content;
 - **08-mapper** - example of mapper combining algorithm;
-- **09-numerical** - example use of numerical functions.
+- **09-numerical** - example use of numerical functions;
+- **10-flags** - example use of custom flags type.

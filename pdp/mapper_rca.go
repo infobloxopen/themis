@@ -137,11 +137,40 @@ func makeMapperRCA(rules []*Rule, params interface{}) RuleCombiningAlg {
 	}
 
 	var (
-		m   *strtree.Tree
 		def *Rule
 		err *Rule
 	)
 
+	if t, ok := mapperParams.Argument.GetResultType().(*FlagsType); ok {
+		m := make([]*Rule, len(t.b))
+		for _, r := range rules {
+			if !r.hidden {
+				if mapperParams.DefOk && r.id == mapperParams.Def {
+					def = r
+				}
+
+				if mapperParams.ErrOk && r.id == mapperParams.Err {
+					err = r
+				}
+
+				i := t.GetFlagBit(r.id)
+				if i >= 0 {
+					m[i] = r
+				}
+			}
+		}
+
+		return flagsMapperRCA{
+			argument:  mapperParams.Argument,
+			rules:     m,
+			def:       def,
+			err:       err,
+			order:     mapperParams.Order,
+			algorithm: mapperParams.Algorithm,
+		}
+	}
+
+	var m *strtree.Tree
 	if rules != nil {
 		m = strtree.NewTree()
 		count := 0
@@ -175,7 +204,8 @@ func makeMapperRCA(rules []*Rule, params interface{}) RuleCombiningAlg {
 		def:       def,
 		err:       err,
 		order:     mapperParams.Order,
-		algorithm: mapperParams.Algorithm}
+		algorithm: mapperParams.Algorithm,
+	}
 }
 
 func (a mapperRCA) describe() string {
@@ -263,7 +293,7 @@ func (a mapperRCA) execute(rules []*Rule, ctx *Context) Response {
 	v, err := a.argument.Calculate(ctx)
 	if err != nil {
 		switch err.(type) {
-		case *missingValueError:
+		case *MissingValueError:
 			if a.def != nil {
 				return a.def.calculate(ctx)
 			}

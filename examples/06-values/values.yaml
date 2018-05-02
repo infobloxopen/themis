@@ -22,7 +22,10 @@ policies:
             content: test
       effect: Permit
       obligations:
-      - s: example
+      - s:
+          val:
+            type: string
+            content: example
     - target: # address
       - contains:
         - attr: c
@@ -31,7 +34,10 @@ policies:
             content: 192.0.2.1
       effect: Permit
       obligations:
-      - a: 192.0.2.1
+      - a:
+          val:
+            type: address
+            content: 192.0.2.1
     - target: # network
       - contains:
         - attr: a
@@ -40,7 +46,10 @@ policies:
             content: 192.0.2.0/28
       effect: Permit
       obligations:
-      - c: 192.0.2.0/28
+      - c:
+          val:
+            type: network
+            content: 192.0.2.0/28
     - condition: # domain and set of domains
         and:
         - contains:
@@ -61,10 +70,16 @@ policies:
               content: test.com
       effect: Permit
       obligations:
-      - d: example.net
+      - d:
+          val:
+            type: domain
+            content: example.net
       - sd:
-        - test.com
-        - example.com
+          val:
+            type: set of domains
+            content:
+            - test.com
+            - example.com
     - target: # set of strings
       - contains:
         - val:
@@ -76,8 +91,11 @@ policies:
       effect: Permit
       obligations:
       - ss:
-        - first
-        - second
+          val:
+            type: set of strings
+            content:
+            - first
+            - second
     - target: # set of networks
       - contains:
         - val:
@@ -89,8 +107,11 @@ policies:
       effect: Permit
       obligations:
       - sn:
-        - 192.0.2.0/28
-        - 192.0.2.16/28
+          val:
+            type: set of networks
+            content:
+            - 192.0.2.0/28
+            - 192.0.2.16/28
   - alg: # list of strings
       id: Mapper
       alg: FirstApplicableEffect
@@ -110,7 +131,10 @@ policies:
             content: first-rule
       effect: Permit
       obligations:
-      - s: first-rule
+      - s:
+          val:
+            type: string
+            content: first-rule
     - id: second
       target:
       - equal:
@@ -120,4 +144,7 @@ policies:
             content: second-rule
       effect: Permit
       obligations:
-      - s: second-rule
+      - s:
+          val:
+            type: string
+            content: second-rule

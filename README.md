@@ -25,7 +25,7 @@ To make a decision PDP evaluates policies it has on request **context**. A reque
 - **IndeterminateDP** - PDP can't evaluate effect but if it could it would be only **Deny** or **Permit**;
 In case of any **Indeterminate** effect **status** contains textual representation of an issue.
 
-Some application may require more details for particular decision. For example if application can write log it may need a flag attached to decision which says when to do it. These details can be delivered as **obligations**. The **obligations** are set of attributes like in request context. Each attribute has name, type and value. Attribute name is arbitrary string (request context requires pair of attribute name and type to be unique). Following types are defined:
+Some application may require more details for particular decision. For example if application can write log it may need a flag attached to decision which says when to do it. These details can be delivered as **obligations**. The **obligations** are set of attributes like in request context. Each attribute has name, type and value. Attribute name is arbitrary string (request context requires pair of attribute name and type to be unique). Following built-in types are defined:
 - **boolean**;
 - **string**;
 - **integer** - signed 64-bit integer;
@@ -36,15 +36,42 @@ Some application may require more details for particular decision. For example i
 - **set of strings** - ordered set of strings;
 - **set of domains** - set of domains (unordered);
 - **set of networks** - set of IPv4 or IPv6 network addresses (unordered);
-- **list of strings**. 
+- **list of strings**.
 
-**Boolean** value is accepted as "1", "t", "T", "TRUE", "true", "True", "0", "f", "F", "FALSE", "false", "False" and serialized to "true" and "false". **Float** value can be specified using decimal format (e.g. 3.1416) or scientific notation (e.g. 6.022E+23). **Address** accepted in dotted decimal ("192.0.2.1") form or in IPv6 ("2001:db8::68") form and serialized respectively. **Network** is accepted as a CIDR notation IP address and prefix (for example "192.0.2.0/24" or "2001:db8::/32"). **Domain** name is accepted as string of labels separated by dots (string is converted from punycode to ASCII and validated with regualar expression "^[-.\_A-Za-z0-9]+$" (**TODO**: need to rework according to RFC1035, 2181 and 4343). **Set of strings**, **set of domains**, **set of networks** and **list of strings** aren't accepted in request context but can appear in response's obligations as comma separated list of values.
+**Boolean** value is accepted as "1", "t", "T", "TRUE", "true", "True", "0", "f", "F", "FALSE", "false", "False" and serialized to "true" and "false". **Integer** value is a decimal number in range [-9223372036854775808, 9223372036854775807]. **Float** value can be specified using decimal format (e.g. 3.1416) or scientific notation (e.g. 6.022E+23). **Address** accepted in dotted decimal ("192.0.2.1") form or in IPv6 ("2001:db8::68") form and serialized respectively. **Network** is accepted as a CIDR notation IP address and prefix (for example "192.0.2.0/24" or "2001:db8::/32"). **Domain** name is accepted as string of labels separated by dots which satisfies to RFC1035, 2181 and 4343 requirements. **Set of strings**, **set of domains**, **set of networks** and **list of strings** aren't accepted in request context but can appear in response's obligations as comma separated list of values.
+
+User can define her custom type based on **flags** metatype. A value of the type can be any combination of listed flags. PDP allows to define up to 64 flags for a type. Values can't appear in request or returned as obligations.
 
 ## Policies
 PDP uses YAML based language (YAML Abstract Syntax Tree or YAST) or JSON based language (JSON Abstract Syntax Tree or JAST) to define **policies** and specifically constructed JSON to define local **content**  (JSON Content or JCON). YAST can be converted to JAST (and vise versa) with any YAML to JSON convertor.
 
 ### Root
-Any **policies** definition consists of attributes (optional) and policies (required) sections. Attributes section contains set of pairs attribute name and type. For example:
+Any **policies** definition consists of policies (required), attributes (optional) and types (optional) sections. Policies section contains root **policy** or **policy set**. **Policy** holds rules under its "rules" field while **policy set** is able to contain both inner policies or policy sets under its "policies" field. For example:
+
+**YAST**
+```yaml
+# All permit policy (without "attributes" section)
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - effect: Permit
+```
+
+**JAST**
+```json
+{
+  "policies": {
+    "alg": "FirstApplicableEffect",
+    "rules": [
+      {
+        "effect": "Permit"
+      }
+    ]
+  }
+}
+```
+
+Attributes section contains set of pairs attribute name and type:
 
 **YAST**
 ```yaml
@@ -60,15 +87,6 @@ policies:
     - val:
         type: string
         content: "test"
-  rules:
-  - effect: Permit
-```
-
-**YAST**
-```yaml
-# All permit policy (without "attributes" section)
-policies:
-  alg: FirstApplicableEffect
   rules:
   - effect: Permit
 ```
@@ -105,20 +123,71 @@ policies:
 }
 ```
 
+Types section is designed for custom type definitions which now are limited to only **flags** metatype:
+
+**YAST**
+```yaml
+types:
+  colors:
+    meta: flags
+    flags:
+    - red
+    - green
+    - blue
+
+attributes:
+  c: list of strings
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - effect: Permit
+    obligations:
+    - c:
+        list of strings:
+        - val:
+            type: colors
+            content:
+            - red
+            - blue
+```
+
 **JAST**
 ```json
 {
+  "types": {
+    "colors": {
+      "meta": "flags",
+      "flags": ["red", "green", "blue"]
+    }
+  },
+  "attributes": {
+    "c": "list of strings"
+  },
   "policies": {
     "alg": "FirstApplicableEffect",
     "rules": [
       {
-        "effect": "Permit"
+        "effect": "Permit",
+        "obligations": [
+          {
+            "c": {
+              "list of strings": [
+                {
+                  "val": {
+                    "type": "colors",
+                    "content": ["red", "blue"]
+                  }
+                }
+              ]
+            }
+          }
+        ]
       }
     ]
   }
 }
 ```
-Policies section contains root **policy** or **policy set**. **Policy** holds rules under its "rules" field while **policy set** is able to contain both inner policies or policy sets under its "policies" field.
 
 ### Policy Set
 Policy Set holds set of **policies** or inner **policy sets** and defines how to combine them. It has following fields:
@@ -452,6 +521,17 @@ obligations:
       content:
       - first
       - second
+...
+# Custom Flags
+types:
+  colors:
+    meta: flags
+    flags: [red, green, blue]
+
+...
+val:
+  type: colors
+  content: [blue, green]
 ```
 
 ### Selector
@@ -499,6 +579,8 @@ Content for the example:
 }
 ```
 
+For domain to flags map selector matches flag names by order of definition. Flags defined in policies YAST or JSON must have the same number of names as content have. For example if policy defines names "one", "two", "three" for some flags type and content defines names "red", "green" and "blue" for a map referred by selector URI, selector returns "one" for "red", "two" for "green" and "three" for "blue".
+
 ### Numerical Expression
 A numerical expression is constructed using the following numerical functions:
 - **add** - accepts two arguments, where the result is the sum of the arguments
@@ -523,10 +605,46 @@ Each of the above numerical functions performs the respective numerical operatio
 ### Local Content
 Local content is a set of content **items** (see example above). It's identified by **id** field which can be any string with no slash character (`/`). Each content item also has id (key of "items" JSON object) and following fields:
 - **keys** - list of types of nested maps (optional, if not present data should contain immediate value of type);
-- **type** - any possible type;
+- **type** - any built-in type (or flags type defintion or name for domain map);
 - **data** - list of nested maps with keys of mentioned types or immediate value of given type.
 
-Local content supports string map (key type "string"), domain map (key type "domain") and network map (key type "network" or "address"). Selector expectes string expression as path item for string map, domain - for domain map and address or network - for network map ("address" expression is allowed even if content key is "network" and vice verse). 
+Local content supports string map (key type "string"), domain map (key type "domain") and network map (key type "network" or "address"). Selector expectes string expression as path item for string map, domain - for domain map and address or network - for network map ("address" expression is allowed even if content key is "network" and vice verse).
+
+Domain map supports also mapping to flags type. To create such map user needs to define flags in type field. Being defined a flags type can be used by name within the content and its updates. Type definition goes to **type** field of content item but it's represented by JSON object instead of string. The object should have following fields:
+- **meta** - string "flags" (the only supported metatype for now);
+- **name** - type name (can be used late instead of the definition);
+- **flags** - list of flag names (up to 64).
+
+For example:
+```json
+{
+  "id": "content",
+  "items": {
+    "example-domains": {
+      "keys": ["domain"],
+      "type": {
+        "meta": "flags",
+        "name": "tags",
+        "flags": ["red", "green", "blue"]
+      },
+      "data": {
+        "example.com": ["red", "green"],
+        "example.net": ["red", "blue"],
+        "example.org": ["blue", "green"]
+      }
+    },
+    "test-domains": {
+      "keys": ["domain"],
+      "type": "tags",
+      "data": {
+        "test.com": ["red", "green"],
+        "test.net": ["red", "blue"],
+        "test.org": ["blue", "green"]
+      }
+    }
+  }
+}
+```
 
 ### Policy and Rule Combining Algorithms
 Policy and rule combinig algorithms define how to use child policies or rules of given policy set or policy and how to combine their effects, statuses and obligations. Themis supports following algorithms:
@@ -603,6 +721,8 @@ and content for them:
   }
 }
 ```
+
+If result type of **map** is a flags type its flag names treated as id of policy to run. If flags value has several flags set they are ordered according of order in type definiton and passed to nested combining algorithm.
 
 # PDPServer
 PDP server allows to run and control PDP. Additionally the server provides endpoint for healthcheck and supports OpenZipkin tracing. Started with no options pdpservers gets no initial policies and content. Policies and content in the case should be provided by control interface. Option `-p` provides initial policy for the server from given YAML file. Option `-j` provides content (it can be specified several times). For example (`-v 3` sets maximal log level):
@@ -780,7 +900,7 @@ Then policy can be updated (with following update which removes "First Rule" and
 Run PAPCLI with the update (you need to specify previous tag with option `-vf` and new tag with option `-vt`, when both options present PDP server considers data as update and checks if `-vf` tag matches to tag current tag of updated to maintain update consistency):
 ```
 $ papcli -s 127.0.0.1:5554 -p permit-test-x-policy-update.yaml -vf 823f79f2-0001-4eb2-9ba0-2a8c1b284443 -vt 93a17ce2-788d-476f-bd11-a5580a2f35f3
-INFO[0000] Requesting data upload to PDP servers...     
+INFO[0000] Requesting data upload to PDP servers...
 INFO[0000] Uploading data to PDP servers...
 ```
 PDP accepts the update:
@@ -798,33 +918,33 @@ INFO[0373] Policy update has been applied                curr-tag=93a17ce2-788d-
 ```
 Consider content update. For example use "Selector example" policy. Start PDP with the policy:
 ```
-$ pdpserver -v 3 -p selector-examle.yaml 
-INFO[0000] Starting PDP server                          
+$ pdpserver -v 3 -p selector-examle.yaml
+INFO[0000] Starting PDP server
 INFO[0000] Loading policy                                policy=selector-examle.yaml
 INFO[0000] Parsing policy                                policy=selector-examle.yaml
 INFO[0000] Opening service port                          address="0.0.0.0:5555"
 INFO[0000] Opening control port                          address="0.0.0.0:5554"
-INFO[0000] Creating service protocol handler            
-INFO[0000] Serving decision requests                    
-INFO[0000] Creating control protocol handler            
-INFO[0000] Serving control requests                     
+INFO[0000] Creating service protocol handler
+INFO[0000] Serving decision requests
+INFO[0000] Creating control protocol handler
+INFO[0000] Serving control requests
 ```
 Then upload content with some tag (to be able to update it):
 ```
 $ papcli -s 127.0.0.1:5554 -j selector-examle.json -vt 823f79f2-0001-4eb2-9ba0-2a8c1b284443
-INFO[0000] Requesting data upload to PDP servers...     
-INFO[0000] Uploading data to PDP servers...             
+INFO[0000] Requesting data upload to PDP servers...
+INFO[0000] Uploading data to PDP servers...
 ```
 PDP server accepts upload:
 ```
 ...
-INFO[0265] Got new control request                      
-INFO[0265] Got new data stream                          
-INFO[0265] Got apply command                            
+INFO[0265] Got new control request
+INFO[0265] Got new data stream
+INFO[0265] Got apply command
 INFO[0265] New content has been applied                  id=1 tag=823f79f2-0001-4eb2-9ba0-2a8c1b284443
 ...
 ```
-Now lets move IPv4 addresses from "good" to "bad" map and IPv6 from 
+Now lets move IPv4 addresses from "good" to "bad" map and IPv6 from
 "bad" to "good" for "example.com":
 ```json
 [
@@ -896,7 +1016,7 @@ commands:
 - Delete Path ("domain-addresses"/"bad"/"example.com")
 - Add Path ("domain-addresses"/"bad"/"example.com")
 INFO[2190] Got apply command
-INFO[2190] Content update has been applied               cid=content curr-tag=93a17ce2-788d-476f-bd11-a5580a2f35f3 id=5 
+INFO[2190] Content update has been applied               cid=content curr-tag=93a17ce2-788d-476f-bd11-a5580a2f35f3 id=5
 ...
 ```
 

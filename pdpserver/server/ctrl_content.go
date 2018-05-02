@@ -49,7 +49,7 @@ func (s *Server) uploadContentUpdate(id int32, r *streamReader, req *item, strea
 	}
 	s.RUnlock()
 
-	u, err := jcon.UnmarshalUpdate(r, req.id, *req.fromTag, *req.toTag)
+	u, err := jcon.UnmarshalUpdate(r, req.id, *req.fromTag, *req.toTag, t.Symbols())
 	if err != nil {
 		r.skip()
 		return stream.SendAndClose(controlFail(newContentUpdateParseError(id, req, err)))

@@ -99,7 +99,7 @@ func (ctx *context) unmarshalEvaluable(d *json.Decoder) (pdp.Evaluable, error) {
 			return nil
 		}
 
-		return newUnknownAttributeError(k)
+		return newUnknownFieldError(k)
 	}, "policy or policy set"); err != nil {
 		return nil, err
 	}

@@ -1,7 +1,10 @@
 // Package domaintree implements radix tree data structure for domain names.
 package domaintree
 
-import "github.com/infobloxopen/go-trees/dltree"
+import (
+	"github.com/infobloxopen/go-trees/dltree"
+	"github.com/infobloxopen/go-trees/domain"
+)
 
 // Node is a radix tree for domain names.
 type Node struct {
@@ -29,7 +32,7 @@ func (n *Node) Insert(d string, v interface{}) *Node {
 	}
 	r := n
 
-	for _, label := range split(d) {
+	for _, label := range domain.Split(d) {
 		item, ok := n.branches.RawGet(label)
 		var next *Node
 		if ok {
@@ -58,7 +61,7 @@ func (n *Node) InplaceInsert(d string, v interface{}) {
 		n.branches = dltree.NewTree()
 	}
 
-	for _, label := range split(d) {
+	for _, label := range domain.Split(d) {
 		item, ok := n.branches.RawGet(label)
 		if ok {
 			n = item.(*Node)
@@ -91,7 +94,7 @@ func (n *Node) Get(d string) (interface{}, bool) {
 		return nil, false
 	}
 
-	for _, label := range split(d) {
+	for _, label := range domain.Split(d) {
 		item, ok := n.branches.RawGet(label)
 		if !ok {
 			break
@@ -104,12 +107,12 @@ func (n *Node) Get(d string) (interface{}, bool) {
 }
 
 // WireGet gets value for domain which is equal to domain in the tree or is a subdomain of existing domain. The method accepts domain name in "wire" format described by RFC-1035 section "3.1. Name space definitions". Additionally it requires all ASCII letters (A-Z) to be converted to their lowercase counterparts (a-z). Returns error in case of compressed names (label length > 63 octets), malformed domain names (last label length too big) and too long domain names (more than 255 bytes).
-func (n *Node) WireGet(d WireDomainNameLower) (interface{}, bool, error) {
+func (n *Node) WireGet(d domain.WireNameLower) (interface{}, bool, error) {
 	if n == nil {
 		return nil, false, nil
 	}
 
-	err := wireSplitCallback(d, func(label []byte) bool {
+	err := domain.WireSplitCallback(d, func(label []byte) bool {
 		if item, ok := n.branches.RawGet(label); ok {
 			n = item.(*Node)
 			return true
@@ -130,9 +133,9 @@ func (n *Node) DeleteSubdomains(d string) (*Node, bool) {
 		return nil, false
 	}
 
-	labels := split(d)
+	labels := domain.Split(d)
 	if len(labels) > 0 {
-		return n.delSubdomains(split(d))
+		return n.delSubdomains(domain.Split(d))
 	}
 
 	if n.hasValue || !n.branches.IsEmpty() {
@@ -148,9 +151,9 @@ func (n *Node) Delete(d string) (*Node, bool) {
 		return nil, false
 	}
 
-	labels := split(d)
+	labels := domain.Split(d)
 	if len(labels) > 0 {
-		return n.del(split(d))
+		return n.del(domain.Split(d))
 	}
 
 	if n.hasValue || !n.branches.IsEmpty() {
@@ -182,7 +185,7 @@ func (n *Node) enumerate(s string, ch chan Pair) {
 	}
 }
 
-func (n *Node) delSubdomains(labels []dltree.DomainLabel) (*Node, bool) {
+func (n *Node) delSubdomains(labels []domain.Label) (*Node, bool) {
 	label := labels[0]
 	if len(labels) > 1 {
 		item, ok := n.branches.RawGet(label)
@@ -221,7 +224,7 @@ func (n *Node) delSubdomains(labels []dltree.DomainLabel) (*Node, bool) {
 	return n, false
 }
 
-func (n *Node) del(labels []dltree.DomainLabel) (*Node, bool) {
+func (n *Node) del(labels []domain.Label) (*Node, bool) {
 	label := labels[0]
 	item, ok := n.branches.RawGet(label)
 	if !ok {

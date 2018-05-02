@@ -20,7 +20,10 @@ policies:
       - attr: a
     effect: Permit
     obligations:
-    - s: Good
+    - s:
+        val:
+          type: string
+          content: Good
   - condition:
       contains:
       - selector:
@@ -34,4 +37,7 @@ policies:
       - attr: a
     effect: Deny
     obligations:
-    - s: Bad
+    - s:
+        val:
+          type: string
+          content: Bad

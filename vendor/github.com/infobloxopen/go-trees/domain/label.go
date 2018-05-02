@@ -1,4 +1,4 @@
-package dltree
+package domain
 
 import (
 	"bytes"
@@ -6,8 +6,8 @@ import (
 	"strconv"
 )
 
-// A DomainLabel represents content of a label.
-type DomainLabel []byte
+// A Label represents content of a label.
+type Label []byte
 
 // GetFirstLabelSize returns size in bytes needed to store first label of given domain name as a DomainLabel. Additionally the function returns position right after the label in given string (or length of the string if the first label also is the last).
 func GetFirstLabelSize(s string) (int, int) {
@@ -90,10 +90,10 @@ func GetFirstLabelSize(s string) (int, int) {
 	return size, len(s)
 }
 
-// MakeDomainLabel returns first domain label found in given string as DomainLabel and position in the string right after the label.
-func MakeDomainLabel(s string) (DomainLabel, int) {
+// MakeLabel returns first domain label found in given string as DomainLabel and position in the string right after the label.
+func MakeLabel(s string) (Label, int) {
 	size, end := GetFirstLabelSize(s)
-	out := make(DomainLabel, size)
+	out := make(Label, size)
 
 	escaped := 0
 	var code [3]byte
@@ -225,7 +225,7 @@ func MakeDomainLabel(s string) (DomainLabel, int) {
 }
 
 // String returns domain label in human readable format.
-func (l DomainLabel) String() string {
+func (l Label) String() string {
 	size := 0
 	for _, c := range l {
 		size++
@@ -270,7 +270,8 @@ func (l DomainLabel) String() string {
 	return string(out)
 }
 
-func compare(a, b DomainLabel) int {
+// Compare function compares a couple of given Label values. First it compares sizes of its arguments and returns it difference. If the sizes are equal it uses bytes.Compare to compare labels content.
+func Compare(a, b Label) int {
 	d := len(a) - len(b)
 	if d != 0 {
 		return d

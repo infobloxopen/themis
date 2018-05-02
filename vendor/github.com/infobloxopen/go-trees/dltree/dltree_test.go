@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/pmezard/go-difflib/difflib"
+
+	"github.com/infobloxopen/go-trees/domain"
 )
 
 func TestNewTree(t *testing.T) {
@@ -986,9 +988,9 @@ func assertRawEnumerate(ch chan RawPair, desc string, t *testing.T, e ...string)
 	for p := range ch {
 		s, ok := p.Value.(string)
 		if ok {
-			pairs = append(pairs, fmt.Sprintf("%q: %q\n", DomainLabel(p.Key), s))
+			pairs = append(pairs, fmt.Sprintf("%q: %q\n", domain.Label(p.Key), s))
 		} else {
-			pairs = append(pairs, fmt.Sprintf("%q: %T (%#v)\n", DomainLabel(p.Key), p.Value, p.Value))
+			pairs = append(pairs, fmt.Sprintf("%q: %T (%#v)\n", domain.Label(p.Key), p.Value, p.Value))
 		}
 	}
 

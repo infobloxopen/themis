@@ -9,8 +9,9 @@ import (
 )
 
 type content struct {
-	id    string
-	items []*pdp.ContentItem
+	id      string
+	symbols pdp.Symbols
+	items   []*pdp.ContentItem
 }
 
 func (c *content) bindError(err error) error {
@@ -72,7 +73,7 @@ func (c *content) unmarshalItemsField(d *json.Decoder) error {
 
 	items := []*pdp.ContentItem{}
 	err = jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
-		v, err := unmarshalContentItem(k, d)
+		v, err := unmarshalContentItem(k, c.symbols, d)
 		if err != nil {
 			return bindError(err, k)
 		}

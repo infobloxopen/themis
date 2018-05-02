@@ -3,7 +3,6 @@ package: jcon
 import:
 - encoding/json
 - github.com/infobloxopen/themis/pdp
-- strings
 
 errors:
 - id: externalError
@@ -13,15 +12,6 @@ errors:
   msg: "%s"
   args:
   - field: err
-
-- id: objectKeyError
-  fields:
-  - id: token
-    type: json.Token
-  msg: "Expected string as JSON object key but got %T (%#v)"
-  args:
-  - field: token
-  - field: token
 
 - id: booleanCastError
   fields:
@@ -135,33 +125,46 @@ errors:
 - id: invalidContentItemTypeError
   fields:
   - id: t
-    type: int
+    type: pdp.Type
   msg: "Can't set result type to %q type"
   args:
-  - expr: pdp.TypeNames[e.t]
+  - field: t
 
 - id: invalidContentKeyTypeError
   fields:
   - id: t
-    type: int
+    type: pdp.Type
   - id: expected
-    type: map[int]bool
+    type: pdp.TypeSet
   msg: "Can't use %q type as a key in content item (expected %s)"
   args:
-  - expr: pdp.TypeNames[e.t]
-  - snippet:
-      result: s
-      code: |
-        names := make([]string, len(e.expected))
-        i := 0
-        for t := range e.expected {
-        	names[i] = pdp.TypeNames[t]
-        	i++
-        }
-        s := strings.Join(names, ", ")
+  - field: t
+  - field: expected
 
-- id: unknownDataFormatError
-  msg: "Can't parse data without keys and result type information"
+- id: invalidContentValueTypeError
+  fields:
+  - id: t
+    type: pdp.Type
+  msg: "Can't use %q type as a value in content item (only domain map supports flags type)"
+  args:
+  - field: t
+
+- id: invalidFlagsCapacityError
+  fields: 
+  - id: t 
+    type: "*pdp.FlagsType" 
+  msg: "Type %q has invalid capacity %d" 
+  args:
+  - field: t
+  - field: t.Capacity()
+
+- id: unknownFlagNameError
+  fields:
+  - id: name
+    type: string
+  msg: "Unknown flag name %q"
+  args:
+  - field: name
 
 - id: duplicateContentItemFieldError
   fields:
@@ -170,6 +173,39 @@ errors:
   msg: "Duplicate content field %s"
   args:
   - field: field
+
+- id: missingMetaTypeNameError
+  msg: "Missing meta type name"
+
+- id: unknownMetaTypeError
+  fields:
+  - id: meta
+    type: string
+  msg: "Unknown meta type %q"
+  args:
+  - field: meta
+
+- id: missingFlagNameListError
+  msg: "Missing list of flag names"
+
+- id: newTypeOnUpdateError
+  msg: "New type declaration isn't allowed on update"
+
+- id: invalidTypeFormatError
+  fields:
+  - id: t
+    type: json.Token
+  msg: "Expected type name of flags type definition but got token %#v"
+  args:
+  - field: t
+
+- id: unknownTypeFieldError
+  fields:
+  - id: name
+    type: string
+  msg: "Unknown field %q in type definition"
+  args:
+  - field: name
 
 - id: missingContentDataError
   msg: "Missing data"

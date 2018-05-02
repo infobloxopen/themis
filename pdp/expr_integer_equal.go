@@ -22,7 +22,7 @@ func makeFunctionIntegerEqualAlt(args []Expression) Expression {
 	return makeFunctionIntegerEqual(args[0], args[1])
 }
 
-func (f functionIntegerEqual) GetResultType() int {
+func (f functionIntegerEqual) GetResultType() Type {
 	return TypeBoolean
 }
 
@@ -33,12 +33,12 @@ func (f functionIntegerEqual) describe() string {
 func (f functionIntegerEqual) Calculate(ctx *Context) (AttributeValue, error) {
 	first, err := ctx.calculateIntegerExpression(f.first)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "first argument"), f.describe())
 	}
 
 	second, err := ctx.calculateIntegerExpression(f.second)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 
 	return MakeBooleanValue(first == second), nil

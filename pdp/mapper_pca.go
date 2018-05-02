@@ -107,11 +107,40 @@ func makeMapperPCA(policies []Evaluable, params interface{}) PolicyCombiningAlg 
 	}
 
 	var (
-		m   *strtree.Tree
 		def Evaluable
 		err Evaluable
 	)
 
+	if t, ok := mapperParams.Argument.GetResultType().(*FlagsType); ok {
+		m := make([]Evaluable, len(t.b))
+		for _, p := range policies {
+			if id, ok := p.GetID(); ok {
+				if mapperParams.DefOk && id == mapperParams.Def {
+					def = p
+				}
+
+				if mapperParams.ErrOk && id == mapperParams.Err {
+					err = p
+				}
+
+				i := t.GetFlagBit(id)
+				if i >= 0 {
+					m[i] = p
+				}
+			}
+		}
+
+		return flagsMapperPCA{
+			argument:  mapperParams.Argument,
+			policies:  m,
+			def:       def,
+			err:       err,
+			order:     mapperParams.Order,
+			algorithm: mapperParams.Algorithm,
+		}
+	}
+
+	var m *strtree.Tree
 	if policies != nil {
 		m = strtree.NewTree()
 		count := 0
@@ -233,7 +262,7 @@ func (a mapperPCA) execute(policies []Evaluable, ctx *Context) Response {
 	v, err := a.argument.Calculate(ctx)
 	if err != nil {
 		switch err.(type) {
-		case *missingValueError:
+		case *MissingValueError:
 			if a.def != nil {
 				return a.def.Calculate(ctx)
 			}

@@ -21,7 +21,7 @@ func makeFunctionSetOfDomainsContainsAlt(args []Expression) Expression {
 	return makeFunctionSetOfDomainsContains(args[0], args[1])
 }
 
-func (f functionSetOfDomainsContains) GetResultType() int {
+func (f functionSetOfDomainsContains) GetResultType() Type {
 	return TypeBoolean
 }
 
@@ -32,17 +32,17 @@ func (f functionSetOfDomainsContains) describe() string {
 func (f functionSetOfDomainsContains) Calculate(ctx *Context) (AttributeValue, error) {
 	set, err := ctx.calculateSetOfDomainsExpression(f.set)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "first argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "first argument"), f.describe())
 	}
 
 	value, err := ctx.calculateDomainExpression(f.value)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 
 	_, ok, err := set.WireGet(value)
 	if err != nil {
-		return undefinedValue, bindError(bindError(err, "second argument"), f.describe())
+		return UndefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 	return MakeBooleanValue(ok), nil
 }

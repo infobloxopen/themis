@@ -29,4 +29,7 @@ policies:
     rules:
     - effect: Deny
   obligations:
-  - a: "192.0.2.1"
+  - a:
+      val:
+        type: "address"
+        content: "192.0.2.1"

@@ -14,7 +14,7 @@ func TestBooleanNot(t *testing.T) {
 
 	rt := e.GetResultType()
 	if rt != TypeBoolean {
-		t.Errorf("Expected %q type but got %q", TypeNames[TypeBoolean], TypeNames[rt])
+		t.Errorf("Expected %q type but got %q", TypeBoolean, rt)
 	}
 
 	v, err := e.Calculate(nil)
@@ -43,7 +43,7 @@ func TestBooleanOr(t *testing.T) {
 
 	rt := e.GetResultType()
 	if rt != TypeBoolean {
-		t.Errorf("Expected %q type but got %q", TypeNames[TypeBoolean], TypeNames[rt])
+		t.Errorf("Expected %q type but got %q", TypeBoolean, rt)
 	}
 
 	v, err := e.Calculate(nil)
@@ -87,7 +87,7 @@ func TestBooleanAnd(t *testing.T) {
 
 	rt := e.GetResultType()
 	if rt != TypeBoolean {
-		t.Errorf("Expected %q type but got %q", TypeNames[TypeBoolean], TypeNames[rt])
+		t.Errorf("Expected %q type but got %q", TypeBoolean, rt)
 	}
 
 	v, err := e.Calculate(nil)

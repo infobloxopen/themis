@@ -1,6 +1,8 @@
 // Package dltree implements red-black tree for key value pairs with domain label keys.
 package dltree
 
+import "github.com/infobloxopen/go-trees/domain"
+
 // Tree is a red-black tree for key-value pairs where key is domain label.
 type Tree struct {
 	root *node
@@ -14,7 +16,7 @@ type Pair struct {
 
 // RawPair is a key-value pair representing tree node content. Exposes binary representation of domain label.
 type RawPair struct {
-	Key   DomainLabel
+	Key   domain.Label
 	Value interface{}
 }
 
@@ -33,7 +35,7 @@ func (t *Tree) Insert(key string, value interface{}) *Tree {
 		n = t.root
 	}
 
-	dl, _ := MakeDomainLabel(key)
+	dl, _ := domain.MakeLabel(key)
 	return &Tree{root: n.insert(dl, value)}
 }
 
@@ -47,18 +49,18 @@ func (t *Tree) RawInsert(key []byte, value interface{}) *Tree {
 		n = t.root
 	}
 
-	return &Tree{root: n.insert(DomainLabel(key), value)}
+	return &Tree{root: n.insert(domain.Label(key), value)}
 }
 
 // InplaceInsert inserts or replaces given key-value pair in the tree. The method inserts data directly to current tree so make sure you have exclusive access to it.
 func (t *Tree) InplaceInsert(key string, value interface{}) {
-	dl, _ := MakeDomainLabel(key)
+	dl, _ := domain.MakeLabel(key)
 	t.root = t.root.inplaceInsert(dl, value)
 }
 
 // RawInplaceInsert inserts or replaces given key-value pair in the tree. The method inserts data directly to current tree so make sure you have exclusive access to it. Expects bindary domain label on input.
 func (t *Tree) RawInplaceInsert(key []byte, value interface{}) {
-	t.root = t.root.inplaceInsert(DomainLabel(key), value)
+	t.root = t.root.inplaceInsert(domain.Label(key), value)
 }
 
 // Get returns value by given key.
@@ -67,7 +69,7 @@ func (t *Tree) Get(key string) (interface{}, bool) {
 		return nil, false
 	}
 
-	dl, _ := MakeDomainLabel(key)
+	dl, _ := domain.MakeLabel(key)
 	return t.root.get(dl)
 }
 
@@ -77,7 +79,7 @@ func (t *Tree) RawGet(key []byte) (interface{}, bool) {
 		return nil, false
 	}
 
-	return t.root.get(DomainLabel(key))
+	return t.root.get(domain.Label(key))
 }
 
 // Enumerate returns channel which is populated by key pair values in order of keys.
@@ -120,7 +122,7 @@ func (t *Tree) Delete(key string) (*Tree, bool) {
 		return nil, false
 	}
 
-	dl, _ := MakeDomainLabel(key)
+	dl, _ := domain.MakeLabel(key)
 	root, ok := t.root.del(dl)
 	return &Tree{root: root}, ok
 }
@@ -131,7 +133,7 @@ func (t *Tree) RawDelete(key []byte) (*Tree, bool) {
 		return nil, false
 	}
 
-	root, ok := t.root.del(DomainLabel(key))
+	root, ok := t.root.del(domain.Label(key))
 	return &Tree{root: root}, ok
 }
 

@@ -55,17 +55,16 @@ func TestUnaryClientValidation(t *testing.T) {
 }
 
 func startTestPDPServer(p string, s uint16, t *testing.T) *loggedServer {
-	service := fmt.Sprintf(":%d", s)
+	service := fmt.Sprintf("127.0.0.1:%d", s)
 	primary := newServer(
 		server.WithServiceAt(service),
 	)
-	addr := "127.0.0.1" + service
 
 	if err := primary.s.ReadPolicies(strings.NewReader(p)); err != nil {
 		t.Fatalf("can't read policies: %s", err)
 	}
 
-	if err := waitForPortClosed(addr); err != nil {
+	if err := waitForPortClosed(service); err != nil {
 		t.Fatalf("port still in use: %s", err)
 	}
 	go func() {
@@ -74,7 +73,7 @@ func startTestPDPServer(p string, s uint16, t *testing.T) *loggedServer {
 		}
 	}()
 
-	if err := waitForPortOpened(addr); err != nil {
+	if err := waitForPortOpened(service); err != nil {
 		if logs := primary.Stop(); len(logs) > 0 {
 			t.Logf("server logs:\n%s", logs)
 		}

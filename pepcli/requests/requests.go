@@ -33,11 +33,11 @@ func Load(name string) ([]pb.Request, error) {
 		return nil, err
 	}
 
-	symbols := make(map[string]int)
+	symbols := make(map[string]pdp.Type)
 	for k, v := range in.Attributes {
-		t, ok := pdp.TypeIDs[strings.ToLower(v)]
+		t, ok := pdp.BuiltinTypes[strings.ToLower(v)]
 		if !ok {
-			return nil, fmt.Errorf("unknown type \"%s\" of \"%s\" attribute", v, k)
+			return nil, fmt.Errorf("unknown type %q of %q attribute", v, k)
 		}
 
 		symbols[k] = t
@@ -65,7 +65,7 @@ func Load(name string) ([]pb.Request, error) {
 
 type attributeMarshaller func(value interface{}) (string, error)
 
-var marshallers = map[int]attributeMarshaller{
+var marshallers = map[pdp.Type]attributeMarshaller{
 	pdp.TypeBoolean: booleanMarshaller,
 	pdp.TypeString:  stringMarshaller,
 	pdp.TypeInteger: integerMarshaller,
@@ -74,35 +74,34 @@ var marshallers = map[int]attributeMarshaller{
 	pdp.TypeNetwork: networkMarshaller,
 	pdp.TypeDomain:  domainMarshaller}
 
-func makeAttribute(name string, value interface{}, symbols map[string]int) (*pb.Attribute, error) {
+func makeAttribute(name string, value interface{}, symbols map[string]pdp.Type) (*pb.Attribute, error) {
 	t, ok := symbols[name]
 	var err error
 	if !ok {
 		t, err = guessType(value)
 		if err != nil {
-			return nil, fmt.Errorf("type of \"%s\" attribute isn't defined and can't be derived: %s", name, err)
+			return nil, fmt.Errorf("type of %q attribute isn't defined and can't be derived: %s", name, err)
 		}
 	}
 
 	marshaller, ok := marshallers[t]
 	if !ok {
-		return nil, fmt.Errorf("marshaling hasn't been implemented for type \"%s\" of \"%s\" attribute",
-			pdp.TypeNames[t], name)
+		return nil, fmt.Errorf("marshaling hasn't been implemented for type %q of %q attribute", t, name)
 	}
 
 	s, err := marshaller(value)
 	if err != nil {
-		return nil, fmt.Errorf("can't marshal \"%s\" attribute as \"%s\": %s", name, pdp.TypeNames[t], err)
+		return nil, fmt.Errorf("can't marshal %q attribute as %q: %s", name, t, err)
 	}
 
 	return &pb.Attribute{
 		Id:    name,
-		Type:  pdp.TypeKeys[t],
+		Type:  t.GetKey(),
 		Value: s,
 	}, nil
 }
 
-func guessType(value interface{}) (int, error) {
+func guessType(value interface{}) (pdp.Type, error) {
 	switch value.(type) {
 	case bool:
 		return pdp.TypeBoolean, nil
@@ -116,7 +115,7 @@ func guessType(value interface{}) (int, error) {
 		return pdp.TypeNetwork, nil
 	}
 
-	return 0, fmt.Errorf("marshaling hasn't been implemented for %T", value)
+	return pdp.TypeUndefined, fmt.Errorf("marshaling hasn't been implemented for %T", value)
 }
 
 func booleanMarshaller(value interface{}) (string, error) {

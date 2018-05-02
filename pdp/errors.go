@@ -3,90 +3,115 @@ package pdp
 /* AUTOMATICALLY GENERATED FROM errors.yaml - DO NOT EDIT */
 
 import (
-	"fmt"
 	"github.com/google/uuid"
+	"net/url"
+	"strconv"
 	"strings"
 )
 
 // Numeric identifiers of errors.
 const (
-	externalErrorID                           = 0
-	multiErrorID                              = 1
-	missingAttributeErrorID                   = 2
-	missingValueErrorID                       = 3
-	unknownTypeStringCastErrorID              = 4
-	invalidTypeStringCastErrorID              = 5
-	notImplementedStringCastErrorID           = 6
-	invalidBooleanStringCastErrorID           = 7
-	invalidIntegerStringCastErrorID           = 8
-	invalidFloatStringCastErrorID             = 9
-	invalidAddressStringCastErrorID           = 10
-	invalidNetworkStringCastErrorID           = 11
-	invalidAddressNetworkStringCastErrorID    = 12
-	invalidDomainNameStringCastErrorID        = 13
-	attributeValueTypeErrorID                 = 14
-	duplicateAttributeValueErrorID            = 15
-	unknownTypeSerializationErrorID           = 16
-	invalidTypeSerializationErrorID           = 17
-	assignmentTypeMismatchID                  = 18
-	mapperArgumentTypeErrorID                 = 19
-	UntaggedPolicyModificationErrorID         = 20
-	MissingPolicyTagErrorID                   = 21
-	PolicyTagsNotMatchErrorID                 = 22
-	emptyPathModificationErrorID              = 23
-	invalidRootPolicyItemTypeErrorID          = 24
-	hiddenRootPolicyAppendErrorID             = 25
-	invalidRootPolicyErrorID                  = 26
-	hiddenPolicySetModificationErrorID        = 27
-	invalidPolicySetItemTypeErrorID           = 28
-	tooShortPathPolicySetModificationErrorID  = 29
-	missingPolicySetChildErrorID              = 30
-	hiddenPolicyAppendErrorID                 = 31
-	policyTransactionTagsNotMatchErrorID      = 32
-	failedPolicyTransactionErrorID            = 33
-	unknownPolicyUpdateOperationErrorID       = 34
-	hiddenPolicyModificationErrorID           = 35
-	tooLongPathPolicyModificationErrorID      = 36
-	tooShortPathPolicyModificationErrorID     = 37
-	invalidPolicyItemTypeErrorID              = 38
-	hiddenRuleAppendErrorID                   = 39
-	missingPolicyChildErrorID                 = 40
-	missingContentErrorID                     = 41
-	invalidContentStorageItemID               = 42
-	missingContentItemErrorID                 = 43
-	invalidContentItemErrorID                 = 44
-	invalidContentItemTypeErrorID             = 45
-	invalidSelectorPathErrorID                = 46
-	networkMapKeyValueTypeErrorID             = 47
-	mapContentSubitemErrorID                  = 48
-	invalidContentModificationErrorID         = 49
-	missingPathContentModificationErrorID     = 50
-	tooLongPathContentModificationErrorID     = 51
-	invalidContentValueModificationErrorID    = 52
-	UntaggedContentModificationErrorID        = 53
-	MissingContentTagErrorID                  = 54
-	ContentTagsNotMatchErrorID                = 55
-	unknownContentUpdateOperationErrorID      = 56
-	failedContentTransactionErrorID           = 57
-	contentTransactionIDNotMatchErrorID       = 58
-	contentTransactionTagsNotMatchErrorID     = 59
-	tooShortRawPathContentModificationErrorID = 60
-	tooLongRawPathContentModificationErrorID  = 61
-	invalidContentUpdateDataErrorID           = 62
-	invalidContentUpdateResultTypeErrorID     = 63
-	invalidContentUpdateKeysErrorID           = 64
-	unknownContentItemResultTypeErrorID       = 65
-	invalidContentItemResultTypeErrorID       = 66
-	invalidContentKeyTypeErrorID              = 67
-	invalidContentStringMapErrorID            = 68
-	invalidContentNetworkMapErrorID           = 69
-	invalidContentDomainMapErrorID            = 70
-	invalidContentValueErrorID                = 71
-	invalidContentValueTypeErrorID            = 72
-	integerDivideByZeroErrorID                = 73
-	floatDivideByZeroErrorID                  = 74
-	floatNanErrorID                           = 75
-	floatInfErrorID                           = 76
+	externalErrorID                            = 0
+	multiErrorID                               = 1
+	missingAttributeErrorID                    = 2
+	MissingValueErrorID                        = 3
+	unknownTypeStringCastErrorID               = 4
+	invalidTypeStringCastErrorID               = 5
+	notImplementedStringCastErrorID            = 6
+	invalidBooleanStringCastErrorID            = 7
+	invalidIntegerStringCastErrorID            = 8
+	invalidFloatStringCastErrorID              = 9
+	invalidAddressStringCastErrorID            = 10
+	invalidNetworkStringCastErrorID            = 11
+	invalidAddressNetworkStringCastErrorID     = 12
+	invalidDomainNameStringCastErrorID         = 13
+	attributeValueTypeErrorID                  = 14
+	attributeValueFlagsTypeErrorID             = 15
+	attributeValueFlagsBitsErrorID             = 16
+	duplicateAttributeValueErrorID             = 17
+	unknownTypeSerializationErrorID            = 18
+	invalidTypeSerializationErrorID            = 19
+	notMatchingTypeRebindErrorID               = 20
+	unknownMetaTypeID                          = 21
+	assignmentTypeMismatchID                   = 22
+	mapperArgumentTypeErrorID                  = 23
+	flagsMapperRCAArgumentTypeErrorID          = 24
+	UntaggedPolicyModificationErrorID          = 25
+	MissingPolicyTagErrorID                    = 26
+	PolicyTagsNotMatchErrorID                  = 27
+	emptyPathModificationErrorID               = 28
+	invalidRootPolicyItemTypeErrorID           = 29
+	hiddenRootPolicyAppendErrorID              = 30
+	invalidRootPolicyErrorID                   = 31
+	hiddenPolicySetModificationErrorID         = 32
+	invalidPolicySetItemTypeErrorID            = 33
+	tooShortPathPolicySetModificationErrorID   = 34
+	missingPolicySetChildErrorID               = 35
+	hiddenPolicyAppendErrorID                  = 36
+	policyTransactionTagsNotMatchErrorID       = 37
+	failedPolicyTransactionErrorID             = 38
+	unknownPolicyUpdateOperationErrorID        = 39
+	hiddenPolicyModificationErrorID            = 40
+	tooLongPathPolicyModificationErrorID       = 41
+	tooShortPathPolicyModificationErrorID      = 42
+	invalidPolicyItemTypeErrorID               = 43
+	hiddenRuleAppendErrorID                    = 44
+	missingPolicyChildErrorID                  = 45
+	MissingContentErrorID                      = 46
+	invalidContentStorageItemID                = 47
+	MissingContentItemErrorID                  = 48
+	invalidContentItemErrorID                  = 49
+	invalidContentItemTypeErrorID              = 50
+	invalidSelectorPathErrorID                 = 51
+	networkMapKeyValueTypeErrorID              = 52
+	mapContentSubitemErrorID                   = 53
+	invalidContentModificationErrorID          = 54
+	missingPathContentModificationErrorID      = 55
+	tooLongPathContentModificationErrorID      = 56
+	invalidContentValueModificationErrorID     = 57
+	UntaggedContentModificationErrorID         = 58
+	MissingContentTagErrorID                   = 59
+	ContentTagsNotMatchErrorID                 = 60
+	unknownContentUpdateOperationErrorID       = 61
+	failedContentTransactionErrorID            = 62
+	contentTransactionIDNotMatchErrorID        = 63
+	contentTransactionTagsNotMatchErrorID      = 64
+	tooShortRawPathContentModificationErrorID  = 65
+	tooLongRawPathContentModificationErrorID   = 66
+	invalidContentUpdateDataErrorID            = 67
+	invalidContentUpdateResultTypeErrorID      = 68
+	invalidContentUpdateKeysErrorID            = 69
+	unknownContentItemResultTypeErrorID        = 70
+	invalidContentItemResultTypeErrorID        = 71
+	invalidContentKeyTypeErrorID               = 72
+	invalidContentStringMapErrorID             = 73
+	invalidContentNetworkMapErrorID            = 74
+	invalidContentDomainMapErrorID             = 75
+	invalidContentValueErrorID                 = 76
+	invalidContentValueTypeErrorID             = 77
+	invalidContentDomainFlags8MapValueErrorID  = 78
+	invalidContentDomainFlags16MapValueErrorID = 79
+	invalidContentDomainFlags32MapValueErrorID = 80
+	invalidContentDomainFlags64MapValueErrorID = 81
+	integerDivideByZeroErrorID                 = 82
+	floatDivideByZeroErrorID                   = 83
+	floatNanErrorID                            = 84
+	floatInfErrorID                            = 85
+	ReadOnlySymbolsChangeErrorID               = 86
+	nilTypeErrorID                             = 87
+	builtinCustomTypeErrorID                   = 88
+	duplicateCustomTypeErrorID                 = 89
+	duplicatesBuiltinTypeErrorID               = 90
+	duplicateFlagNameID                        = 91
+	noTypedAttributeErrorID                    = 92
+	undefinedAttributeTypeErrorID              = 93
+	unknownAttributeTypeErrorID                = 94
+	duplicateAttributeErrorID                  = 95
+	noFlagsDefinedErrorID                      = 96
+	tooManyFlagsDefinedErrorID                 = 97
+	listOfStringsTypeErrorID                   = 98
+	unsupportedSelectorSchemeErrorID           = 99
+	disabledSelectorErrorID                    = 100
 )
 
 type externalError struct {
@@ -138,62 +163,64 @@ func (e *missingAttributeError) Error() string {
 	return e.errorf("Missing attribute")
 }
 
-type missingValueError struct {
+// MissingValueError indicates that content doesn't have desired value.
+type MissingValueError struct {
 	errorLink
 }
 
-func newMissingValueError() *missingValueError {
-	return &missingValueError{
-		errorLink: errorLink{id: missingValueErrorID}}
+func newMissingValueError() *MissingValueError {
+	return &MissingValueError{
+		errorLink: errorLink{id: MissingValueErrorID}}
 }
 
-func (e *missingValueError) Error() string {
+// Error implements error interface.
+func (e *MissingValueError) Error() string {
 	return e.errorf("Missing value")
 }
 
 type unknownTypeStringCastError struct {
 	errorLink
-	t int
+	t Type
 }
 
-func newUnknownTypeStringCastError(t int) *unknownTypeStringCastError {
+func newUnknownTypeStringCastError(t Type) *unknownTypeStringCastError {
 	return &unknownTypeStringCastError{
 		errorLink: errorLink{id: unknownTypeStringCastErrorID},
 		t:         t}
 }
 
 func (e *unknownTypeStringCastError) Error() string {
-	return e.errorf("Unknown type id %d", e.t)
+	return e.errorf("Unknown type id %q", e.t)
 }
 
 type invalidTypeStringCastError struct {
 	errorLink
-	t int
+	t Type
 }
 
-func newInvalidTypeStringCastError(t int) *invalidTypeStringCastError {
+func newInvalidTypeStringCastError(t Type) *invalidTypeStringCastError {
 	return &invalidTypeStringCastError{
 		errorLink: errorLink{id: invalidTypeStringCastErrorID},
 		t:         t}
 }
 
 func (e *invalidTypeStringCastError) Error() string {
-	return e.errorf("Can't convert string to value of %q type", TypeNames[e.t])
+	return e.errorf("Can't convert string to value of %q type", e.t)
 }
 
 type notImplementedStringCastError struct {
 	errorLink
-	t int
+	t Type
 }
 
-func newNotImplementedStringCastError(t int) *notImplementedStringCastError {
+func newNotImplementedStringCastError(t Type) *notImplementedStringCastError {
 	return &notImplementedStringCastError{
 		errorLink: errorLink{id: notImplementedStringCastErrorID},
 		t:         t}
 }
 
 func (e *notImplementedStringCastError) Error() string {
-	return e.errorf("Conversion from string to value of %q type hasn't been implemented", TypeNames[e.t])
+	return e.errorf("Conversion from string to value of %q type hasn't been implemented", e.t)
 }
 
 type invalidBooleanStringCastError struct {
@@ -315,11 +342,11 @@ func (e *invalidDomainNameStringCastError) Error() string {
 
 type attributeValueTypeError struct {
 	errorLink
-	expected int
-	actual   int
+	expected Type
+	actual   Type
 }
 
-func newAttributeValueTypeError(expected, actual int) *attributeValueTypeError {
+func newAttributeValueTypeError(expected, actual Type) *attributeValueTypeError {
 	return &attributeValueTypeError{
 		errorLink: errorLink{id: attributeValueTypeErrorID},
 		expected:  expected,
@@ -327,18 +354,52 @@ func newAttributeValueTypeError(expected, actual int) *attributeValueTypeError {
 }
 
 func (e *attributeValueTypeError) Error() string {
-	return e.errorf("Expected %s value but got %s", TypeNames[e.expected], TypeNames[e.actual])
+	return e.errorf("Expected %q value but got %q", e.expected, e.actual)
+}
+
+type attributeValueFlagsTypeError struct {
+	errorLink
+	t Type
+}
+
+func newAttributeValueFlagsTypeError(t Type) *attributeValueFlagsTypeError {
+	return &attributeValueFlagsTypeError{
+		errorLink: errorLink{id: attributeValueFlagsTypeErrorID},
+		t:         t}
+}
+
+func (e *attributeValueFlagsTypeError) Error() string {
+	return e.errorf("Expected flags value but got %q", e.t)
+}
+
+type attributeValueFlagsBitsError struct {
+	errorLink
+	t        Type
+	expected int
+	actual   int
+}
+
+func newAttributeValueFlagsBitsError(t Type, expected, actual int) *attributeValueFlagsBitsError {
+	return &attributeValueFlagsBitsError{
+		errorLink: errorLink{id: attributeValueFlagsBitsErrorID},
+		t:         t,
+		expected:  expected,
+		actual:    actual}
+}
+
+func (e *attributeValueFlagsBitsError) Error() string {
+	return e.errorf("Expected %d bits flags value but got %q value with %d positions", e.expected, e.t, e.actual)
 }
 
 type duplicateAttributeValueError struct {
 	errorLink
 	ID   string
-	t    int
+	t    Type
 	curr AttributeValue
 	prev AttributeValue
 }
 
-func newDuplicateAttributeValueError(ID string, t int, curr, prev AttributeValue) *duplicateAttributeValueError {
+func newDuplicateAttributeValueError(ID string, t Type, curr, prev AttributeValue) *duplicateAttributeValueError {
 	return &duplicateAttributeValueError{
 		errorLink: errorLink{id: duplicateAttributeValueErrorID},
 		ID:        ID,
@@ -348,46 +409,78 @@ func newDuplicateAttributeValueError(ID string, t int, curr, prev AttributeValue
 }
 
 func (e *duplicateAttributeValueError) Error() string {
-	return e.errorf("Duplicate attribute %q of type %q in request %s - %s", e.ID, TypeNames[e.t], e.curr.describe(), e.prev.describe())
+	return e.errorf("Duplicate attribute %q of type %q in request %s - %s", e.ID, e.t, e.curr.describe(), e.prev.describe())
 }
 
 type unknownTypeSerializationError struct {
 	errorLink
-	t int
+	t Type
 }
 
-func newUnknownTypeSerializationError(t int) *unknownTypeSerializationError {
+func newUnknownTypeSerializationError(t Type) *unknownTypeSerializationError {
 	return &unknownTypeSerializationError{
 		errorLink: errorLink{id: unknownTypeSerializationErrorID},
 		t:         t}
 }
 
 func (e *unknownTypeSerializationError) Error() string {
-	return e.errorf("Unknown type id %d", e.t)
+	return e.errorf("Unknown type id %q", e.t)
 }
 
 type invalidTypeSerializationError struct {
 	errorLink
-	t int
+	t Type
 }
 
-func newInvalidTypeSerializationError(t int) *invalidTypeSerializationError {
+func newInvalidTypeSerializationError(t Type) *invalidTypeSerializationError {
 	return &invalidTypeSerializationError{
 		errorLink: errorLink{id: invalidTypeSerializationErrorID},
 		t:         t}
 }
 
 func (e *invalidTypeSerializationError) Error() string {
-	return e.errorf("Can't serialize value of %q type", TypeNames[e.t])
+	return e.errorf("Can't serialize value of %q type", e.t)
+}
+
+type notMatchingTypeRebindError struct {
+	errorLink
+	actual   Type
+	expected Type
+}
+
+func newNotMatchingTypeRebindError(actual, expected Type) *notMatchingTypeRebindError {
+	return &notMatchingTypeRebindError{
+		errorLink: errorLink{id: notMatchingTypeRebindErrorID},
+		actual:    actual,
+		expected:  expected}
+}
+
+func (e *notMatchingTypeRebindError) Error() string {
+	return e.errorf("Can't rebind value to type %q as it doesn't match original type %q", e.expected, e.actual)
+}
+
+type unknownMetaType struct {
+	errorLink
+	t Type
+}
+
+func newUnknownMetaType(t Type) *unknownMetaType {
+	return &unknownMetaType{
+		errorLink: errorLink{id: unknownMetaTypeID},
+		t:         t}
+}
+
+func (e *unknownMetaType) Error() string {
+	return e.errorf("Unknown metatype %T of type %q", e.t, e.t)
 }
 
 type assignmentTypeMismatch struct {
 	errorLink
 	a Attribute
-	t int
+	t Type
 }
 
-func newAssignmentTypeMismatch(a Attribute, t int) *assignmentTypeMismatch {
+func newAssignmentTypeMismatch(a Attribute, t Type) *assignmentTypeMismatch {
 	return &assignmentTypeMismatch{
 		errorLink: errorLink{id: assignmentTypeMismatchID},
 		a:         a,
@@ -395,22 +488,37 @@ func newAssignmentTypeMismatch(a Attribute, t int) *assignmentTypeMismatch {
 }
 
 func (e *assignmentTypeMismatch) Error() string {
-	return e.errorf("Can't assign %q value to attribute %q of type %q", TypeNames[e.t], e.a.id, TypeNames[e.a.t])
+	return e.errorf("Can't assign %q value to attribute %q of type %q", e.t, e.a.id, e.a.t)
 }
 
 type mapperArgumentTypeError struct {
 	errorLink
-	actual int
+	actual Type
 }
 
-func newMapperArgumentTypeError(actual int) *mapperArgumentTypeError {
+func newMapperArgumentTypeError(actual Type) *mapperArgumentTypeError {
 	return &mapperArgumentTypeError{
 		errorLink: errorLink{id: mapperArgumentTypeErrorID},
 		actual:    actual}
 }
 
 func (e *mapperArgumentTypeError) Error() string {
-	return e.errorf("Expected %s, %s or %s as argument but got %s", TypeNames[TypeString], TypeNames[TypeSetOfStrings], TypeNames[TypeListOfStrings], TypeNames[e.actual])
+	return e.errorf("Expected %s, %s or %s as argument but got %s", TypeString, TypeSetOfStrings, TypeListOfStrings, e.actual)
+}
+
+type flagsMapperRCAArgumentTypeError struct {
+	errorLink
+	t Type
+}
+
+func newFlagsMapperRCAArgumentTypeError(t Type) *flagsMapperRCAArgumentTypeError {
+	return &flagsMapperRCAArgumentTypeError{
+		errorLink: errorLink{id: flagsMapperRCAArgumentTypeErrorID},
+		t:         t}
+}
+
+func (e *flagsMapperRCAArgumentTypeError) Error() string {
+	return e.errorf("Expected flags type for the mapper algorithm but got %q", e.t)
 }
 
 // UntaggedPolicyModificationError indicates attempt to modify incrementally a policy which has no tag.
@@ -722,18 +830,20 @@ func (e *missingPolicyChildError) Error() string {
 	return e.errorf("Policy has no rule with id %q", e.ID)
 }
 
-type missingContentError struct {
+// MissingContentError indicates that there is no desired content.
+type MissingContentError struct {
 	errorLink
 	ID string
 }
 
-func newMissingContentError(ID string) *missingContentError {
-	return &missingContentError{
-		errorLink: errorLink{id: missingContentErrorID},
+func newMissingContentError(ID string) *MissingContentError {
+	return &MissingContentError{
+		errorLink: errorLink{id: MissingContentErrorID},
 		ID:        ID}
 }
 
-func (e *missingContentError) Error() string {
+// Error implements error interface.
+func (e *MissingContentError) Error() string {
 	return e.errorf("Missing content %s", e.ID)
 }
 
@@ -754,18 +864,20 @@ func (e *invalidContentStorageItem) Error() string {
 	return e.errorf("Invalid value at %s (expected *LocalContent but got %T)", e.ID, e.v)
 }
 
-type missingContentItemError struct {
+// MissingContentItemError indicates that content doesn't have desired item.
+type MissingContentItemError struct {
 	errorLink
 	ID string
 }
 
-func newMissingContentItemError(ID string) *missingContentItemError {
-	return &missingContentItemError{
-		errorLink: errorLink{id: missingContentItemErrorID},
+func newMissingContentItemError(ID string) *MissingContentItemError {
+	return &MissingContentItemError{
+		errorLink: errorLink{id: MissingContentItemErrorID},
 		ID:        ID}
 }
 
-func (e *missingContentItemError) Error() string {
+// Error implements error interface.
+func (e *MissingContentItemError) Error() string {
 	return e.errorf("Missing content item %q", e.ID)
 }
 
@@ -786,11 +898,11 @@ func (e *invalidContentItemError) Error() string {
 
 type invalidContentItemTypeError struct {
 	errorLink
-	expected int
-	actual   int
+	expected Type
+	actual   Type
 }
 
-func newInvalidContentItemTypeError(expected, actual int) *invalidContentItemTypeError {
+func newInvalidContentItemTypeError(expected, actual Type) *invalidContentItemTypeError {
 	return &invalidContentItemTypeError{
 		errorLink: errorLink{id: invalidContentItemTypeErrorID},
 		expected:  expected,
@@ -798,16 +910,16 @@ func newInvalidContentItemTypeError(expected, actual int) *invalidContentItemTyp
 }
 
 func (e *invalidContentItemTypeError) Error() string {
-	return e.errorf("Invalid conent item type. Expected %q but got %q", TypeNames[e.expected], TypeNames[e.actual])
+	return e.errorf("Invalid conent item type. Expected %q but got %q", e.expected, e.actual)
 }
 
 type invalidSelectorPathError struct {
 	errorLink
-	expected []int
+	expected Signature
 	actual   []Expression
 }
 
-func newInvalidSelectorPathError(expected []int, actual []Expression) *invalidSelectorPathError {
+func newInvalidSelectorPathError(expected Signature, actual []Expression) *invalidSelectorPathError {
 	return &invalidSelectorPathError{
 		errorLink: errorLink{id: invalidSelectorPathErrorID},
 		expected:  expected,
@@ -815,37 +927,31 @@ func newInvalidSelectorPathError(expected []int, actual []Expression) *invalidSe
 }
 
 func (e *invalidSelectorPathError) Error() string {
-	expStrs := make([]string, len(e.expected))
-	for i, t := range e.expected {
-		expStrs[i] = TypeNames[t]
-	}
-	expected := strings.Join(expStrs, "/")
-
 	actual := "nothing"
 	if len(e.actual) > 0 {
 		strs := make([]string, len(e.actual))
 		for i, e := range e.actual {
-			strs[i] = TypeNames[e.GetResultType()]
+			strs[i] = e.GetResultType().String()
 		}
 		actual = strings.Join(strs, "/")
 	}
 
-	return e.errorf("Invalid selector path. Expected %s but got %s", expected, actual)
+	return e.errorf("Invalid selector path. Expected %s path but got %s", e.expected, actual)
 }
 
 type networkMapKeyValueTypeError struct {
 	errorLink
-	t int
+	t Type
 }
 
-func newNetworkMapKeyValueTypeError(t int) *networkMapKeyValueTypeError {
+func newNetworkMapKeyValueTypeError(t Type) *networkMapKeyValueTypeError {
 	return &networkMapKeyValueTypeError{
 		errorLink: errorLink{id: networkMapKeyValueTypeErrorID},
 		t:         t}
 }
 
 func (e *networkMapKeyValueTypeError) Error() string {
-	return e.errorf("Expected %s or %s as network map key but got %s", TypeNames[TypeAddress], TypeNames[TypeNetwork], TypeNames[e.t])
+	return e.errorf("Expected %q or %q as network map key but got %q", TypeAddress, TypeNetwork, e.t)
 }
 
 type mapContentSubitemError struct {
@@ -889,11 +995,11 @@ func (e *missingPathContentModificationError) Error() string {
 
 type tooLongPathContentModificationError struct {
 	errorLink
-	expected []int
+	expected Signature
 	actual   []AttributeValue
 }
 
-func newTooLongPathContentModificationError(expected []int, actual []AttributeValue) *tooLongPathContentModificationError {
+func newTooLongPathContentModificationError(expected Signature, actual []AttributeValue) *tooLongPathContentModificationError {
 	return &tooLongPathContentModificationError{
 		errorLink: errorLink{id: tooLongPathContentModificationErrorID},
 		expected:  expected,
@@ -901,22 +1007,13 @@ func newTooLongPathContentModificationError(expected []int, actual []AttributeVa
 }
 
 func (e *tooLongPathContentModificationError) Error() string {
-	expected := "no"
-	if len(e.expected) > 0 {
-		expStrs := make([]string, len(e.expected))
-		for i, t := range e.expected {
-			expStrs[i] = fmt.Sprintf("%q", TypeNames[t])
-		}
-		expected = strings.Join(expStrs, "/")
-	}
-
 	actStrs := make([]string, len(e.actual))
 	for i, e := range e.actual {
-		actStrs[i] = fmt.Sprintf("%q", TypeNames[e.GetResultType()])
+		actStrs[i] = strconv.Quote(e.GetResultType().String())
 	}
 	actual := strings.Join(actStrs, "/")
 
-	return e.errorf("Too long modification path. Expected %s path but got %s", expected, actual)
+	return e.errorf("Too long modification path. Expected %s path but got %s", e.expected, actual)
 }
 
 type invalidContentValueModificationError struct {
@@ -1070,11 +1167,11 @@ func (e *tooShortRawPathContentModificationError) Error() string {
 
 type tooLongRawPathContentModificationError struct {
 	errorLink
-	expected []int
+	expected Signature
 	actual   []string
 }
 
-func newTooLongRawPathContentModificationError(expected []int, actual []string) *tooLongRawPathContentModificationError {
+func newTooLongRawPathContentModificationError(expected Signature, actual []string) *tooLongRawPathContentModificationError {
 	return &tooLongRawPathContentModificationError{
 		errorLink: errorLink{id: tooLongRawPathContentModificationErrorID},
 		expected:  expected,
@@ -1082,22 +1179,13 @@ func newTooLongRawPathContentModificationError(expected []int, actual []string) 
 }
 
 func (e *tooLongRawPathContentModificationError) Error() string {
-	expected := "no"
-	if len(e.expected) > 0 {
-		expStrs := make([]string, len(e.expected))
-		for i, t := range e.expected {
-			expStrs[i] = fmt.Sprintf("%q", TypeNames[t])
-		}
-		expected = strings.Join(expStrs, "/")
-	}
-
 	actStrs := make([]string, len(e.actual))
 	for i, s := range e.actual {
-		actStrs[i] = fmt.Sprintf("%q", s)
+		actStrs[i] = strconv.Quote(s)
 	}
 	actual := strings.Join(actStrs, "/")
 
-	return e.errorf("Too long modification path. Expected %s path but got %s", expected, actual)
+	return e.errorf("Too long modification path. Expected %s path but got %s", e.expected, actual)
 }
 
 type invalidContentUpdateDataError struct {
@@ -1117,11 +1205,11 @@ func (e *invalidContentUpdateDataError) Error() string {
 
 type invalidContentUpdateResultTypeError struct {
 	errorLink
-	actual   int
-	expected int
+	actual   Type
+	expected Type
 }
 
-func newInvalidContentUpdateResultTypeError(actual, expected int) *invalidContentUpdateResultTypeError {
+func newInvalidContentUpdateResultTypeError(actual, expected Type) *invalidContentUpdateResultTypeError {
 	return &invalidContentUpdateResultTypeError{
 		errorLink: errorLink{id: invalidContentUpdateResultTypeErrorID},
 		actual:    actual,
@@ -1129,17 +1217,17 @@ func newInvalidContentUpdateResultTypeError(actual, expected int) *invalidConten
 }
 
 func (e *invalidContentUpdateResultTypeError) Error() string {
-	return e.errorf("Expected %q as a result type but got %q", TypeNames[e.expected], TypeNames[e.actual])
+	return e.errorf("Expected %q as a result type but got %q", e.expected, e.actual)
 }
 
 type invalidContentUpdateKeysError struct {
 	errorLink
 	start    int
-	actual   []int
-	expected []int
+	actual   Signature
+	expected Signature
 }
 
-func newInvalidContentUpdateKeysError(start int, actual, expected []int) *invalidContentUpdateKeysError {
+func newInvalidContentUpdateKeysError(start int, actual, expected Signature) *invalidContentUpdateKeysError {
 	return &invalidContentUpdateKeysError{
 		errorLink: errorLink{id: invalidContentUpdateKeysErrorID},
 		start:     start,
@@ -1148,61 +1236,46 @@ func newInvalidContentUpdateKeysError(start int, actual, expected []int) *invali
 }
 
 func (e *invalidContentUpdateKeysError) Error() string {
-	enames := make([]string, len(e.expected)-e.start)
-	for i, t := range e.expected[e.start:] {
-		enames[i] = fmt.Sprintf("%q", TypeNames[t])
-	}
-	expected := strings.Join(enames, "/")
-
-	actual := "nothing"
-	if len(e.actual) > 0 {
-		anames := make([]string, len(e.actual))
-		for i, t := range e.actual {
-			anames[i] = fmt.Sprintf("%q", TypeNames[t])
-		}
-		actual = strings.Join(anames, "/")
-	}
-
-	return e.errorf("Expected %s path after position %d but got %s", expected, e.start, actual)
+	return e.errorf("Expected %s path after position %d but got %s", e.expected, e.start, e.actual)
 }
 
 type unknownContentItemResultTypeError struct {
 	errorLink
-	t int
+	t Type
 }
 
-func newUnknownContentItemResultTypeError(t int) *unknownContentItemResultTypeError {
+func newUnknownContentItemResultTypeError(t Type) *unknownContentItemResultTypeError {
 	return &unknownContentItemResultTypeError{
 		errorLink: errorLink{id: unknownContentItemResultTypeErrorID},
 		t:         t}
 }
 
 func (e *unknownContentItemResultTypeError) Error() string {
-	return e.errorf("Unknown result type for content item: %d", e.t)
+	return e.errorf("Unknown result type for content item: %q", e.t)
 }
 
 type invalidContentItemResultTypeError struct {
 	errorLink
-	t int
+	t Type
 }
 
-func newInvalidContentItemResultTypeError(t int) *invalidContentItemResultTypeError {
+func newInvalidContentItemResultTypeError(t Type) *invalidContentItemResultTypeError {
 	return &invalidContentItemResultTypeError{
 		errorLink: errorLink{id: invalidContentItemResultTypeErrorID},
 		t:         t}
 }
 
 func (e *invalidContentItemResultTypeError) Error() string {
-	return e.errorf("Invalid result type for content item: %s", TypeNames[e.t])
+	return e.errorf("Invalid result type for content item: %q", e.t)
 }
 
 type invalidContentKeyTypeError struct {
 	errorLink
-	t        int
-	expected map[int]bool
+	t        Type
+	expected TypeSet
 }
 
-func newInvalidContentKeyTypeError(t int, expected map[int]bool) *invalidContentKeyTypeError {
+func newInvalidContentKeyTypeError(t Type, expected TypeSet) *invalidContentKeyTypeError {
 	return &invalidContentKeyTypeError{
 		errorLink: errorLink{id: invalidContentKeyTypeErrorID},
 		t:         t,
@@ -1213,12 +1286,12 @@ func (e *invalidContentKeyTypeError) Error() string {
 	names := make([]string, len(e.expected))
 	i := 0
 	for t := range e.expected {
-		names[i] = TypeNames[t]
+		names[i] = strconv.Quote(t.String())
 		i++
 	}
 	s := strings.Join(names, ", ")
 
-	return e.errorf("Invalid key type for content item: %s (expected %s)", TypeNames[e.t], s)
+	return e.errorf("Invalid key type for content item: %q (expected %s)", e.t, s)
 }
 
 type invalidContentStringMapError struct {
@@ -1284,10 +1357,10 @@ func (e *invalidContentValueError) Error() string {
 type invalidContentValueTypeError struct {
 	errorLink
 	value    interface{}
-	expected int
+	expected Type
 }
 
-func newInvalidContentValueTypeError(value interface{}, expected int) *invalidContentValueTypeError {
+func newInvalidContentValueTypeError(value interface{}, expected Type) *invalidContentValueTypeError {
 	return &invalidContentValueTypeError{
 		errorLink: errorLink{id: invalidContentValueTypeErrorID},
 		value:     value,
@@ -1295,7 +1368,67 @@ func newInvalidContentValueTypeError(value interface{}, expected int) *invalidCo
 }
 
 func (e *invalidContentValueTypeError) Error() string {
-	return e.errorf("Expected value of type %s but got %T", TypeNames[e.expected], e.value)
+	return e.errorf("Expected value of type %q but got %T", e.expected, e.value)
+}
+
+type invalidContentDomainFlags8MapValueError struct {
+	errorLink
+	value ContentValue
+}
+
+func newInvalidContentDomainFlags8MapValueError(value ContentValue) *invalidContentDomainFlags8MapValueError {
+	return &invalidContentDomainFlags8MapValueError{
+		errorLink: errorLink{id: invalidContentDomainFlags8MapValueErrorID},
+		value:     value}
+}
+
+func (e *invalidContentDomainFlags8MapValueError) Error() string {
+	return e.errorf("Expected uint8 value but got %T", e.value.value)
+}
+
+type invalidContentDomainFlags16MapValueError struct {
+	errorLink
+	value ContentValue
+}
+
+func newInvalidContentDomainFlags16MapValueError(value ContentValue) *invalidContentDomainFlags16MapValueError {
+	return &invalidContentDomainFlags16MapValueError{
+		errorLink: errorLink{id: invalidContentDomainFlags16MapValueErrorID},
+		value:     value}
+}
+
+func (e *invalidContentDomainFlags16MapValueError) Error() string {
+	return e.errorf("Expected uint16 value but got %T", e.value.value)
+}
+
+type invalidContentDomainFlags32MapValueError struct {
+	errorLink
+	value ContentValue
+}
+
+func newInvalidContentDomainFlags32MapValueError(value ContentValue) *invalidContentDomainFlags32MapValueError {
+	return &invalidContentDomainFlags32MapValueError{
+		errorLink: errorLink{id: invalidContentDomainFlags32MapValueErrorID},
+		value:     value}
+}
+
+func (e *invalidContentDomainFlags32MapValueError) Error() string {
+	return e.errorf("Expected uint32 value but got %T", e.value.value)
+}
+
+type invalidContentDomainFlags64MapValueError struct {
+	errorLink
+	value ContentValue
+}
+
+func newInvalidContentDomainFlags64MapValueError(value ContentValue) *invalidContentDomainFlags64MapValueError {
+	return &invalidContentDomainFlags64MapValueError{
+		errorLink: errorLink{id: invalidContentDomainFlags64MapValueErrorID},
+		value:     value}
+}
+
+func (e *invalidContentDomainFlags64MapValueError) Error() string {
+	return e.errorf("Expected uint64 value but got %T", e.value.value)
 }
 
 type integerDivideByZeroError struct {
@@ -1348,4 +1481,239 @@ func newFloatInfError() *floatInfError {
 
 func (e *floatInfError) Error() string {
 	return e.errorf("Float result has a value of Inf")
+}
+
+// ReadOnlySymbolsChangeError indicates attempt to modify read-only symbol table.
+type ReadOnlySymbolsChangeError struct {
+	errorLink
+}
+
+func newReadOnlySymbolsChangeError() *ReadOnlySymbolsChangeError {
+	return &ReadOnlySymbolsChangeError{
+		errorLink: errorLink{id: ReadOnlySymbolsChangeErrorID}}
+}
+
+// Error implements error interface.
+func (e *ReadOnlySymbolsChangeError) Error() string {
+	return e.errorf("Can't put symbol to read-only table")
+}
+
+type nilTypeError struct {
+	errorLink
+}
+
+func newNilTypeError() *nilTypeError {
+	return &nilTypeError{
+		errorLink: errorLink{id: nilTypeErrorID}}
+}
+
+func (e *nilTypeError) Error() string {
+	return e.errorf("Can't put nil type into custom types symbol table")
+}
+
+type builtinCustomTypeError struct {
+	errorLink
+	t Type
+}
+
+func newBuiltinCustomTypeError(t Type) *builtinCustomTypeError {
+	return &builtinCustomTypeError{
+		errorLink: errorLink{id: builtinCustomTypeErrorID},
+		t:         t}
+}
+
+func (e *builtinCustomTypeError) Error() string {
+	return e.errorf("Can't put built-in type %q into custom types symbol table", e.t)
+}
+
+type duplicateCustomTypeError struct {
+	errorLink
+	n Type
+	p Type
+}
+
+func newDuplicateCustomTypeError(n, p Type) *duplicateCustomTypeError {
+	return &duplicateCustomTypeError{
+		errorLink: errorLink{id: duplicateCustomTypeErrorID},
+		n:         n,
+		p:         p}
+}
+
+func (e *duplicateCustomTypeError) Error() string {
+	return e.errorf("Can't put type %q into symbol table as it already contains %q", e.n, e.p)
+}
+
+type duplicatesBuiltinTypeError struct {
+	errorLink
+	name string
+}
+
+func newDuplicatesBuiltinTypeError(name string) *duplicatesBuiltinTypeError {
+	return &duplicatesBuiltinTypeError{
+		errorLink: errorLink{id: duplicatesBuiltinTypeErrorID},
+		name:      name}
+}
+
+func (e *duplicatesBuiltinTypeError) Error() string {
+	return e.errorf("Can't create flags type %q. The name is taken by a built-in types", e.name)
+}
+
+type duplicateFlagName struct {
+	errorLink
+	name string
+	flag string
+	i    int
+	j    int
+}
+
+func newDuplicateFlagName(name, flag string, i, j int) *duplicateFlagName {
+	return &duplicateFlagName{
+		errorLink: errorLink{id: duplicateFlagNameID},
+		name:      name,
+		flag:      flag,
+		i:         i,
+		j:         j}
+}
+
+func (e *duplicateFlagName) Error() string {
+	return e.errorf("Can't create flags type %q. Flag %q at %d position duplicates flag at %d", e.name, e.flag, e.i, e.j)
+}
+
+type noTypedAttributeError struct {
+	errorLink
+	a Attribute
+}
+
+func newNoTypedAttributeError(a Attribute) *noTypedAttributeError {
+	return &noTypedAttributeError{
+		errorLink: errorLink{id: noTypedAttributeErrorID},
+		a:         a}
+}
+
+func (e *noTypedAttributeError) Error() string {
+	return e.errorf("Attribute %q has no type", e.a.id)
+}
+
+type undefinedAttributeTypeError struct {
+	errorLink
+	a Attribute
+}
+
+func newUndefinedAttributeTypeError(a Attribute) *undefinedAttributeTypeError {
+	return &undefinedAttributeTypeError{
+		errorLink: errorLink{id: undefinedAttributeTypeErrorID},
+		a:         a}
+}
+
+func (e *undefinedAttributeTypeError) Error() string {
+	return e.errorf("Attribute %q has type %q", e.a.id, TypeUndefined)
+}
+
+type unknownAttributeTypeError struct {
+	errorLink
+	a Attribute
+}
+
+func newUnknownAttributeTypeError(a Attribute) *unknownAttributeTypeError {
+	return &unknownAttributeTypeError{
+		errorLink: errorLink{id: unknownAttributeTypeErrorID},
+		a:         a}
+}
+
+func (e *unknownAttributeTypeError) Error() string {
+	return e.errorf("Attribute %q has unknown type %q", e.a.id, e.a.t)
+}
+
+type duplicateAttributeError struct {
+	errorLink
+	a Attribute
+}
+
+func newDuplicateAttributeError(a Attribute) *duplicateAttributeError {
+	return &duplicateAttributeError{
+		errorLink: errorLink{id: duplicateAttributeErrorID},
+		a:         a}
+}
+
+func (e *duplicateAttributeError) Error() string {
+	return e.errorf("Can't put attribute %q into symbol table as it already contains one with the same id", e.a.id)
+}
+
+type noFlagsDefinedError struct {
+	errorLink
+	name string
+	n    int
+}
+
+func newNoFlagsDefinedError(name string, n int) *noFlagsDefinedError {
+	return &noFlagsDefinedError{
+		errorLink: errorLink{id: noFlagsDefinedErrorID},
+		name:      name,
+		n:         n}
+}
+
+func (e *noFlagsDefinedError) Error() string {
+	return e.errorf("Required at least one flag to define flags type %q got %d", e.name, e.n)
+}
+
+type tooManyFlagsDefinedError struct {
+	errorLink
+	name string
+	n    int
+}
+
+func newTooManyFlagsDefinedError(name string, n int) *tooManyFlagsDefinedError {
+	return &tooManyFlagsDefinedError{
+		errorLink: errorLink{id: tooManyFlagsDefinedErrorID},
+		name:      name,
+		n:         n}
+}
+
+func (e *tooManyFlagsDefinedError) Error() string {
+	return e.errorf("Required no more than 64 flags to define flags type %q got %d", e.name, e.n)
+}
+
+type listOfStringsTypeError struct {
+	errorLink
+	t Type
+}
+
+func newListOfStringsTypeError(t Type) *listOfStringsTypeError {
+	return &listOfStringsTypeError{
+		errorLink: errorLink{id: listOfStringsTypeErrorID},
+		t:         t}
+}
+
+func (e *listOfStringsTypeError) Error() string {
+	return e.errorf("Can't convert %q to %q", e.t, TypeListOfStrings)
+}
+
+type unsupportedSelectorSchemeError struct {
+	errorLink
+	uri *url.URL
+}
+
+func newUnsupportedSelectorSchemeError(uri *url.URL) *unsupportedSelectorSchemeError {
+	return &unsupportedSelectorSchemeError{
+		errorLink: errorLink{id: unsupportedSelectorSchemeErrorID},
+		uri:       uri}
+}
+
+func (e *unsupportedSelectorSchemeError) Error() string {
+	return e.errorf("Unsupported selector scheme %q", e.uri.Scheme)
+}
+
+type disabledSelectorError struct {
+	errorLink
+	s Selector
+}
+
+func newDisabledSelectorError(s Selector) *disabledSelectorError {
+	return &disabledSelectorError{
+		errorLink: errorLink{id: disabledSelectorErrorID},
+		s:         s}
+}
+
+func (e *disabledSelectorError) Error() string {
+	return e.errorf("Selector for %q is disabled", e.s.Scheme())
 }

@@ -9,16 +9,20 @@ import (
 )
 
 type context struct {
-	attrs      map[string]pdp.Attribute
+	symbols    pdp.Symbols
 	rootPolicy pdp.Evaluable
 }
 
 func newContext() *context {
-	return &context{attrs: make(map[string]pdp.Attribute)}
+	return &context{
+		symbols: pdp.MakeSymbols(),
+	}
 }
 
-func newContextWithAttributes(attrs map[string]pdp.Attribute) *context {
-	return &context{attrs: attrs}
+func newContextWithSymbols(s pdp.Symbols) *context {
+	return &context{
+		symbols: s,
+	}
 }
 
 func (ctx *context) unmarshal(d *json.Decoder) error {
@@ -33,6 +37,9 @@ func (ctx *context) unmarshal(d *json.Decoder) error {
 
 	if err = jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
 		switch strings.ToLower(k) {
+		case yastTagTypes:
+			return ctx.unmarshalTypeDeclarations(d)
+
 		case yastTagAttributes:
 			return ctx.unmarshalAttributeDeclarations(d)
 
@@ -40,7 +47,7 @@ func (ctx *context) unmarshal(d *json.Decoder) error {
 			return ctx.unmarshalRootPolicy(d)
 		}
 
-		return newUnknownAttributeError(k)
+		return newUnknownFieldError(k)
 	}, "root"); err != nil {
 		return err
 	}

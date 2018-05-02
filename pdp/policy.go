@@ -210,7 +210,11 @@ func (p *Policy) putChild(child *Rule) *Policy {
 	}
 
 	algorithm := p.algorithm
-	if m, ok := algorithm.(mapperRCA); ok {
+	switch m := algorithm.(type) {
+	case mapperRCA:
+		algorithm = m.add(ID, child, old)
+
+	case flagsMapperRCA:
 		algorithm = m.add(ID, child, old)
 	}
 
@@ -236,7 +240,11 @@ func (p *Policy) delChild(ID string) (*Policy, error) {
 	}
 
 	algorithm := p.algorithm
-	if m, ok := algorithm.(mapperRCA); ok {
+	switch m := algorithm.(type) {
+	case mapperRCA:
+		algorithm = m.del(ID, old)
+
+	case flagsMapperRCA:
 		algorithm = m.del(ID, old)
 	}
 

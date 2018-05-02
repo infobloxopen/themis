@@ -3,6 +3,7 @@ package: jast
 import:
 - encoding/json
 - fmt
+- strconv
 - strings
 - "github.com/infobloxopen/themis/pdp"
 
@@ -14,14 +15,6 @@ errors:
   msg: "%s"
   args:
   - field: err
-
-- id: attributeTypeError
-  fields:
-  - id: t
-    type: string
-  msg: "Expected attribute data type but got \"%s\""
-  args:
-  - field: t
 
 - id: policyAmbiguityError
   msg: "Expected rules (for policy) or policies (for policy set) but got both"
@@ -127,22 +120,22 @@ errors:
 - id: mapperArgumentTypeError
   fields:
   - id: actual
-    type: int
-  msg: "Expected %s, %s or %s as argument but got %s"
+    type: pdp.Type
+  msg: "Expected %q, %q, %q or flags as argument but got %q"
   args:
-  - expr: pdp.TypeNames[pdp.TypeString]
-  - expr: pdp.TypeNames[pdp.TypeSetOfStrings]
-  - expr: pdp.TypeNames[pdp.TypeListOfStrings]
-  - expr: pdp.TypeNames[e.actual]
+  - expr: pdp.TypeString
+  - expr: pdp.TypeSetOfStrings
+  - expr: pdp.TypeListOfStrings
+  - field: actual
 
 - id: conditionTypeError
   fields:
   - id: t
-    type: int
+    type: pdp.Type
   msg: "Expected %q as condition expression result but got %q"
   args:
-  - expr: pdp.TypeNames[pdp.TypeBoolean]
-  - expr: pdp.TypeNames[e.t]
+  - expr: pdp.TypeBoolean
+  - field: t
 
 - id: unknownEffectError
   fields:
@@ -165,14 +158,14 @@ errors:
   - id: ID
     type: string
   - id: first
-    type: int
+    type: pdp.Type
   - id: second
-    type: int
-  msg: "No function %s for arguments %s and %s"
+    type: pdp.Type
+  msg: "No function %q for arguments %q and %q"
   args:
   - field: ID
-  - expr: pdp.TypeNames[e.first]
-  - expr: pdp.TypeNames[e.second]
+  - field: first
+  - field: second
 
 - id: matchFunctionArgsNumberError
   fields:
@@ -220,11 +213,11 @@ errors:
         if len(e.exprs) > 1 {
           t := make([]string, len(e.exprs))
           for i, e := range e.exprs {
-            t[i] = pdp.TypeNames[e.GetResultType()]
+            t[i] = strconv.Quote(e.GetResultType().String())
           }
-          args = fmt.Sprintf("%d arguments of following types \"%s\"", len(e.exprs), strings.Join(t, "\", \""))
+          args = fmt.Sprintf("%d arguments of following types %q", len(e.exprs), strings.Join(t, ", "))
         } else if len(e.exprs) > 0 {
-          args = fmt.Sprintf("argument of type \"%s\"", pdp.TypeNames[e.exprs[0].GetResultType()])
+          args = fmt.Sprintf("argument of type %q", e.exprs[0].GetResultType())
         } else {
                 args = "no arguments"
         }
@@ -267,10 +260,10 @@ errors:
 - id: invalidTypeError
   fields:
   - id: t
-    type: int
+    type: pdp.Type
   msg: "Can't make value of %q type"
   args:
-  - expr: pdp.TypeNames[e.t]
+  - field: t
 
 - id: missingContentError
   msg: "Missing value content"
@@ -278,10 +271,10 @@ errors:
 - id: notImplementedValueTypeError
   fields:
   - id: t
-    type: int
+    type: pdp.Type
   msg: "Parsing for type %s hasn't been implemented yet"
   args:
-  - expr: pdp.TypeNames[e.t]
+  - field: t
 
 - id: invalidAddressError
   fields:
@@ -332,28 +325,6 @@ errors:
   - field: uri
   - field: err
 
-- id: selectorLocationError
-  fields:
-  - id: loc
-    type: string
-  - id: uri
-    type: string
-  msg: "Expected selector location in form of <Content-ID>/<Item-ID> got %q (%s)"
-  args:
-  - field: loc
-  - field: uri
-
-- id: unsupportedSelectorSchemeError
-  fields:
-  - id: scheme
-    type: string
-  - id: uri
-    type: string
-  msg: "Unsupported selector scheme %q (%s)"
-  args:
-  - field: scheme
-  - field: uri
-
 - id: entityAmbiguityError
   fields:
   - id: fields
@@ -375,3 +346,36 @@ errors:
 
 - id: missingContentTypeError
   msg: "Value 'type' attribute is missing or placed after 'content' attribute"
+
+- id: unknownFieldError
+  fields:
+  - id: name
+    type: string
+  msg: "Unknown field %q"
+  args:
+  - field: name
+
+- id: missingMetaTypeNameError
+  msg: "Missing meta type name"
+
+- id: unknownMetaTypeError
+  fields:
+  - id: meta
+    type: string
+  msg: "Unknown meta type %q"
+  args:
+  - field: meta
+
+- id: missingFlagNameListError
+  msg: "Missing list of flag names"
+
+- id: unknownFlagNameError
+  fields:
+  - id: name
+    type: string
+  - id: t
+    type: "*pdp.FlagsType"
+  msg: "Type %q doesn't have flag %q"
+  args:
+  - field: t
+  - field: name

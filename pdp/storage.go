@@ -11,7 +11,7 @@ import (
 // PolicyStorage is a storage for policies.
 type PolicyStorage struct {
 	tag      *uuid.UUID
-	attrs    map[string]Attribute
+	symbols  Symbols
 	policies Evaluable
 }
 
@@ -19,8 +19,12 @@ type PolicyStorage struct {
 // or policy, symbol table (which maps attribute names to its definitions)
 // and tag. Tag can be nil in which case policies can't be updated
 // incrementally.
-func NewPolicyStorage(p Evaluable, a map[string]Attribute, t *uuid.UUID) *PolicyStorage {
-	return &PolicyStorage{tag: t, attrs: a, policies: p}
+func NewPolicyStorage(p Evaluable, s Symbols, t *uuid.UUID) *PolicyStorage {
+	return &PolicyStorage{
+		tag:      t,
+		symbols:  s,
+		policies: p,
+	}
 }
 
 // Root returns root policy from the storage.
@@ -54,7 +58,11 @@ func (s *PolicyStorage) NewTransaction(tag *uuid.UUID) (*PolicyStorageTransactio
 		return nil, err
 	}
 
-	return &PolicyStorageTransaction{tag: *tag, attrs: s.attrs, policies: s.policies}, nil
+	return &PolicyStorageTransaction{
+		tag:      *tag,
+		symbols:  s.symbols.makeROCopy(),
+		policies: s.policies,
+	}, nil
 }
 
 // Here set of supported update operations is defined.
@@ -161,15 +169,15 @@ func (c *command) describe() string {
 // to make all the updates visible at once.
 type PolicyStorageTransaction struct {
 	tag      uuid.UUID
-	attrs    map[string]Attribute
+	symbols  Symbols
 	policies Evaluable
 	err      error
 }
 
-// Attributes returns symbol tables captured from policy storage on transaction
+// Symbols returns symbol tables captured from policy storage on transaction
 // creation.
-func (t *PolicyStorageTransaction) Attributes() map[string]Attribute {
-	return t.attrs
+func (t *PolicyStorageTransaction) Symbols() Symbols {
+	return t.symbols
 }
 
 func (t *PolicyStorageTransaction) applyCmd(cmd *command) error {
@@ -215,7 +223,11 @@ func (t *PolicyStorageTransaction) Commit() (*PolicyStorage, error) {
 		return nil, newFailedPolicyTransactionError(t.tag, t.err)
 	}
 
-	return &PolicyStorage{tag: &t.tag, attrs: t.attrs, policies: t.policies}, nil
+	return &PolicyStorage{
+		tag:      &t.tag,
+		symbols:  t.symbols,
+		policies: t.policies,
+	}, nil
 }
 
 func (t *PolicyStorageTransaction) appendItem(path []string, v interface{}) error {

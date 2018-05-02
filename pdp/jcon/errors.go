@@ -5,38 +5,44 @@ package jcon
 import (
 	"encoding/json"
 	"github.com/infobloxopen/themis/pdp"
-	"strings"
 )
 
 const (
 	externalErrorID                       = 0
-	objectKeyErrorID                      = 1
-	booleanCastErrorID                    = 2
-	numberCastErrorID                     = 3
-	integerOverflowErrorID                = 4
-	stringCastErrorID                     = 5
-	addressCastErrorID                    = 6
-	networkCastErrorID                    = 7
-	domainCastErrorID                     = 8
-	addressNetworkCastErrorID             = 9
-	unknownContentFieldErrorID            = 10
-	unknownContentItemFieldErrorID        = 11
-	unknownTypeErrorID                    = 12
-	invalidContentItemTypeErrorID         = 13
-	invalidContentKeyTypeErrorID          = 14
-	unknownDataFormatErrorID              = 15
-	duplicateContentItemFieldErrorID      = 16
-	missingContentDataErrorID             = 17
-	missingContentTypeErrorID             = 18
-	invalidSequenceContentItemNodeErrorID = 19
-	invalidMapContentItemNodeErrorID      = 20
-	unknownCommadFieldErrorID             = 21
-	duplicateCommandFieldErrorID          = 22
-	missingCommandOpErrorID               = 23
-	missingCommandPathErrorID             = 24
-	missingCommandEntityErrorID           = 25
-	unknownContentUpdateOperationErrorID  = 26
-	arrayEndDelimiterErrorID              = 27
+	booleanCastErrorID                    = 1
+	numberCastErrorID                     = 2
+	integerOverflowErrorID                = 3
+	stringCastErrorID                     = 4
+	addressCastErrorID                    = 5
+	networkCastErrorID                    = 6
+	domainCastErrorID                     = 7
+	addressNetworkCastErrorID             = 8
+	unknownContentFieldErrorID            = 9
+	unknownContentItemFieldErrorID        = 10
+	unknownTypeErrorID                    = 11
+	invalidContentItemTypeErrorID         = 12
+	invalidContentKeyTypeErrorID          = 13
+	invalidContentValueTypeErrorID        = 14
+	invalidFlagsCapacityErrorID           = 15
+	unknownFlagNameErrorID                = 16
+	duplicateContentItemFieldErrorID      = 17
+	missingMetaTypeNameErrorID            = 18
+	unknownMetaTypeErrorID                = 19
+	missingFlagNameListErrorID            = 20
+	newTypeOnUpdateErrorID                = 21
+	invalidTypeFormatErrorID              = 22
+	unknownTypeFieldErrorID               = 23
+	missingContentDataErrorID             = 24
+	missingContentTypeErrorID             = 25
+	invalidSequenceContentItemNodeErrorID = 26
+	invalidMapContentItemNodeErrorID      = 27
+	unknownCommadFieldErrorID             = 28
+	duplicateCommandFieldErrorID          = 29
+	missingCommandOpErrorID               = 30
+	missingCommandPathErrorID             = 31
+	missingCommandEntityErrorID           = 32
+	unknownContentUpdateOperationErrorID  = 33
+	arrayEndDelimiterErrorID              = 34
 )
 
 type externalError struct {
@@ -52,21 +58,6 @@ func newExternalError(err error) *externalError {
 
 func (e *externalError) Error() string {
 	return e.errorf("%s", e.err)
-}
-
-type objectKeyError struct {
-	errorLink
-	token json.Token
-}
-
-func newObjectKeyError(token json.Token) *objectKeyError {
-	return &objectKeyError{
-		errorLink: errorLink{id: objectKeyErrorID},
-		token:     token}
-}
-
-func (e *objectKeyError) Error() string {
-	return e.errorf("Expected string as JSON object key but got %T (%#v)", e.token, e.token)
 }
 
 type booleanCastError struct {
@@ -248,26 +239,26 @@ func (e *unknownTypeError) Error() string {
 
 type invalidContentItemTypeError struct {
 	errorLink
-	t int
+	t pdp.Type
 }
 
-func newInvalidContentItemTypeError(t int) *invalidContentItemTypeError {
+func newInvalidContentItemTypeError(t pdp.Type) *invalidContentItemTypeError {
 	return &invalidContentItemTypeError{
 		errorLink: errorLink{id: invalidContentItemTypeErrorID},
 		t:         t}
 }
 
 func (e *invalidContentItemTypeError) Error() string {
-	return e.errorf("Can't set result type to %q type", pdp.TypeNames[e.t])
+	return e.errorf("Can't set result type to %q type", e.t)
 }
 
 type invalidContentKeyTypeError struct {
 	errorLink
-	t        int
-	expected map[int]bool
+	t        pdp.Type
+	expected pdp.TypeSet
 }
 
-func newInvalidContentKeyTypeError(t int, expected map[int]bool) *invalidContentKeyTypeError {
+func newInvalidContentKeyTypeError(t pdp.Type, expected pdp.TypeSet) *invalidContentKeyTypeError {
 	return &invalidContentKeyTypeError{
 		errorLink: errorLink{id: invalidContentKeyTypeErrorID},
 		t:         t,
@@ -275,28 +266,52 @@ func newInvalidContentKeyTypeError(t int, expected map[int]bool) *invalidContent
 }
 
 func (e *invalidContentKeyTypeError) Error() string {
-	names := make([]string, len(e.expected))
-	i := 0
-	for t := range e.expected {
-		names[i] = pdp.TypeNames[t]
-		i++
-	}
-	s := strings.Join(names, ", ")
-
-	return e.errorf("Can't use %q type as a key in content item (expected %s)", pdp.TypeNames[e.t], s)
+	return e.errorf("Can't use %q type as a key in content item (expected %s)", e.t, e.expected)
 }
 
-type unknownDataFormatError struct {
+type invalidContentValueTypeError struct {
 	errorLink
+	t pdp.Type
 }
 
-func newUnknownDataFormatError() *unknownDataFormatError {
-	return &unknownDataFormatError{
-		errorLink: errorLink{id: unknownDataFormatErrorID}}
+func newInvalidContentValueTypeError(t pdp.Type) *invalidContentValueTypeError {
+	return &invalidContentValueTypeError{
+		errorLink: errorLink{id: invalidContentValueTypeErrorID},
+		t:         t}
 }
 
-func (e *unknownDataFormatError) Error() string {
-	return e.errorf("Can't parse data without keys and result type information")
+func (e *invalidContentValueTypeError) Error() string {
+	return e.errorf("Can't use %q type as a value in content item (only domain map supports flags type)", e.t)
+}
+
+type invalidFlagsCapacityError struct {
+	errorLink
+	t *pdp.FlagsType
+}
+
+func newInvalidFlagsCapacityError(t *pdp.FlagsType) *invalidFlagsCapacityError {
+	return &invalidFlagsCapacityError{
+		errorLink: errorLink{id: invalidFlagsCapacityErrorID},
+		t:         t}
+}
+
+func (e *invalidFlagsCapacityError) Error() string {
+	return e.errorf("Type %q has invalid capacity %d", e.t, e.t.Capacity())
+}
+
+type unknownFlagNameError struct {
+	errorLink
+	name string
+}
+
+func newUnknownFlagNameError(name string) *unknownFlagNameError {
+	return &unknownFlagNameError{
+		errorLink: errorLink{id: unknownFlagNameErrorID},
+		name:      name}
+}
+
+func (e *unknownFlagNameError) Error() string {
+	return e.errorf("Unknown flag name %q", e.name)
 }
 
 type duplicateContentItemFieldError struct {
@@ -312,6 +327,90 @@ func newDuplicateContentItemFieldError(field string) *duplicateContentItemFieldE
 
 func (e *duplicateContentItemFieldError) Error() string {
 	return e.errorf("Duplicate content field %s", e.field)
+}
+
+type missingMetaTypeNameError struct {
+	errorLink
+}
+
+func newMissingMetaTypeNameError() *missingMetaTypeNameError {
+	return &missingMetaTypeNameError{
+		errorLink: errorLink{id: missingMetaTypeNameErrorID}}
+}
+
+func (e *missingMetaTypeNameError) Error() string {
+	return e.errorf("Missing meta type name")
+}
+
+type unknownMetaTypeError struct {
+	errorLink
+	meta string
+}
+
+func newUnknownMetaTypeError(meta string) *unknownMetaTypeError {
+	return &unknownMetaTypeError{
+		errorLink: errorLink{id: unknownMetaTypeErrorID},
+		meta:      meta}
+}
+
+func (e *unknownMetaTypeError) Error() string {
+	return e.errorf("Unknown meta type %q", e.meta)
+}
+
+type missingFlagNameListError struct {
+	errorLink
+}
+
+func newMissingFlagNameListError() *missingFlagNameListError {
+	return &missingFlagNameListError{
+		errorLink: errorLink{id: missingFlagNameListErrorID}}
+}
+
+func (e *missingFlagNameListError) Error() string {
+	return e.errorf("Missing list of flag names")
+}
+
+type newTypeOnUpdateError struct {
+	errorLink
+}
+
+func newNewTypeOnUpdateError() *newTypeOnUpdateError {
+	return &newTypeOnUpdateError{
+		errorLink: errorLink{id: newTypeOnUpdateErrorID}}
+}
+
+func (e *newTypeOnUpdateError) Error() string {
+	return e.errorf("New type declaration isn't allowed on update")
+}
+
+type invalidTypeFormatError struct {
+	errorLink
+	t json.Token
+}
+
+func newInvalidTypeFormatError(t json.Token) *invalidTypeFormatError {
+	return &invalidTypeFormatError{
+		errorLink: errorLink{id: invalidTypeFormatErrorID},
+		t:         t}
+}
+
+func (e *invalidTypeFormatError) Error() string {
+	return e.errorf("Expected type name of flags type definition but got token %#v", e.t)
+}
+
+type unknownTypeFieldError struct {
+	errorLink
+	name string
+}
+
+func newUnknownTypeFieldError(name string) *unknownTypeFieldError {
+	return &unknownTypeFieldError{
+		errorLink: errorLink{id: unknownTypeFieldErrorID},
+		name:      name}
+}
+
+func (e *unknownTypeFieldError) Error() string {
+	return e.errorf("Unknown field %q in type definition", e.name)
 }
 
 type missingContentDataError struct {

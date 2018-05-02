@@ -7,7 +7,6 @@ import (
 
 	"github.com/infobloxopen/themis/jparser"
 	"github.com/infobloxopen/themis/pdp"
-	"github.com/infobloxopen/themis/pdp/selector"
 )
 
 func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.Expression, error) {
@@ -61,7 +60,7 @@ func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.Expression, error) {
 			return nil
 		}
 
-		return newUnknownAttributeError(k)
+		return newUnknownFieldError(k)
 	}, "selector"); err != nil {
 		return ret, err
 	}
@@ -71,9 +70,9 @@ func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.Expression, error) {
 		return ret, newSelectorURIError(uri, err)
 	}
 
-	t, ok := pdp.TypeIDs[strings.ToLower(st)]
-	if !ok {
-		return ret, bindErrorf(newUnknownTypeError(uri), "selector(%s)", uri)
+	t := ctx.symbols.GetType(st)
+	if t == nil {
+		return ret, bindErrorf(newUnknownTypeError(st), "selector(%s)", uri)
 	}
 
 	if t == pdp.TypeUndefined {
@@ -81,7 +80,7 @@ func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.Expression, error) {
 	}
 
 	var e error
-	ret, e = selector.MakeSelector(strings.ToLower(id.Scheme), id.Opaque, path, t)
+	ret, e = pdp.MakeSelector(id, path, t)
 	if e != nil {
 		return ret, bindErrorf(e, "selector(%s)", uri)
 	}

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
@@ -23,7 +24,7 @@ func TestContext(t *testing.T) {
 	ctx, err := NewContext(lcs, 9, func(i int) (string, AttributeValue, error) {
 		switch i {
 		default:
-			return "", undefinedValue, fmt.Errorf("no attribute for index: %d", i)
+			return "", UndefinedValue, fmt.Errorf("no attribute for index: %d", i)
 
 		case 0:
 			return "b", MakeBooleanValue(true), nil
@@ -34,7 +35,7 @@ func TestContext(t *testing.T) {
 		case 2:
 			a := net.ParseIP("192.0.2.1")
 			if a == nil {
-				return "", undefinedValue, fmt.Errorf("can't make IP address")
+				return "", UndefinedValue, fmt.Errorf("can't make IP address")
 			}
 
 			return "a", MakeAddressValue(a), nil
@@ -42,13 +43,13 @@ func TestContext(t *testing.T) {
 		case 3:
 			_, n, err := net.ParseCIDR("192.0.2.0/24")
 			if err != nil {
-				return "", undefinedValue, fmt.Errorf("can't make IP network: %s", err)
+				return "", UndefinedValue, fmt.Errorf("can't make IP network: %s", err)
 			}
 
 			return "n", MakeNetworkValue(n), nil
 
 		case 4:
-			return "d", MakeDomainValue(domaintree.WireDomainNameLower("\x07example\x03com\x00")), nil
+			return "d", MakeDomainValue(domain.WireNameLower("\x07example\x03com\x00")), nil
 
 		case 5:
 			st := strtree.NewTree()
@@ -61,17 +62,17 @@ func TestContext(t *testing.T) {
 			nt := iptree.NewTree()
 			_, n, err := net.ParseCIDR("192.0.2.0/28")
 			if err != nil {
-				return "", undefinedValue, fmt.Errorf("can't make IP network: %s", err)
+				return "", UndefinedValue, fmt.Errorf("can't make IP network: %s", err)
 			}
 			nt.InplaceInsertNet(n, 1)
 			_, n, err = net.ParseCIDR("192.0.2.16/28")
 			if err != nil {
-				return "", undefinedValue, fmt.Errorf("can't make IP network: %s", err)
+				return "", UndefinedValue, fmt.Errorf("can't make IP network: %s", err)
 			}
 			nt.InplaceInsertNet(n, 2)
 			_, n, err = net.ParseCIDR("192.0.2.32/28")
 			if err != nil {
-				return "", undefinedValue, fmt.Errorf("can't make IP network: %s", err)
+				return "", UndefinedValue, fmt.Errorf("can't make IP network: %s", err)
 			}
 			nt.InplaceInsertNet(n, 3)
 			return "sn", MakeSetOfNetworksValue(nt), nil

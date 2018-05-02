@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
@@ -72,6 +73,36 @@ func ppStringSequence(v interface{}, desc string, f func(s string) error) error 
 }
 
 func (c *contentItem) ppValue(v interface{}) (interface{}, error) {
+	if t, ok := c.t.(*pdp.FlagsType); ok {
+		var n uint64
+		err := ppStringSequence(v, "flag names", func(s string) error {
+			i := t.GetFlagBit(s)
+			if i < 0 {
+				return newUnknownFlagNameError(s)
+			}
+
+			n |= 1 << uint(i)
+
+			return nil
+		})
+		if err != nil {
+			return 0, err
+		}
+
+		switch t.Capacity() {
+		case 8:
+			return uint8(n), nil
+
+		case 16:
+			return uint16(n), nil
+
+		case 32:
+			return uint32(n), nil
+		}
+
+		return n, nil
+	}
+
 	switch c.t {
 	case pdp.TypeBoolean:
 		b, ok := v.(bool)
@@ -141,7 +172,7 @@ func (c *contentItem) ppValue(v interface{}) (interface{}, error) {
 			return nil, newStringCastError(v, "domain value")
 		}
 
-		d, err := domaintree.MakeWireDomainNameLower(s)
+		d, err := domain.MakeWireDomainNameLower(s)
 		if err != nil {
 			return nil, newDomainCastError(s, err)
 		}
@@ -222,4 +253,100 @@ func (c *contentItem) postProcess(v interface{}, keyIdx int) (interface{}, error
 	}
 
 	return c.ppValue(v)
+}
+
+func (c *contentItem) postProcessFlags8Value(v interface{}) (uint8, error) {
+	t, ok := c.t.(*pdp.FlagsType)
+	if !ok {
+		return 0, newInvalidContentItemTypeError(c.t)
+	}
+
+	var n uint8
+	err := ppStringSequence(v, "flag names", func(s string) error {
+		i := t.GetFlagBit(s)
+		if i < 0 {
+			return newUnknownFlagNameError(s)
+		}
+
+		n |= 1 << uint(i)
+
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
+}
+
+func (c *contentItem) postProcessFlags16Value(v interface{}) (uint16, error) {
+	t, ok := c.t.(*pdp.FlagsType)
+	if !ok {
+		return 0, newInvalidContentItemTypeError(c.t)
+	}
+
+	var n uint16
+	err := ppStringSequence(v, "flag names", func(s string) error {
+		i := t.GetFlagBit(s)
+		if i < 0 {
+			return newUnknownFlagNameError(s)
+		}
+
+		n |= 1 << uint(i)
+
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
+}
+
+func (c *contentItem) postProcessFlags32Value(v interface{}) (uint32, error) {
+	t, ok := c.t.(*pdp.FlagsType)
+	if !ok {
+		return 0, newInvalidContentItemTypeError(c.t)
+	}
+
+	var n uint32
+	err := ppStringSequence(v, "flag names", func(s string) error {
+		i := t.GetFlagBit(s)
+		if i < 0 {
+			return newUnknownFlagNameError(s)
+		}
+
+		n |= 1 << uint(i)
+
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
+}
+
+func (c *contentItem) postProcessFlags64Value(v interface{}) (uint64, error) {
+	t, ok := c.t.(*pdp.FlagsType)
+	if !ok {
+		return 0, newInvalidContentItemTypeError(c.t)
+	}
+
+	var n uint64
+	err := ppStringSequence(v, "flag names", func(s string) error {
+		i := t.GetFlagBit(s)
+		if i < 0 {
+			return newUnknownFlagNameError(s)
+		}
+
+		n |= 1 << uint(i)
+
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
 }

@@ -1,5 +1,5 @@
-hash: b3af93bd5a24a79c3c7e1f6ef82ee5075cb5e5b5d6538233a5cd325a47432f0f
-updated: 2018-03-02T13:24:25.554948014+03:00
+hash: 056c31bf9cf046c65519e6923e114431e01e8e73c9e13424cdfa0e5bdaeee8d5
+updated: 2018-04-24T12:36:48.504536+03:00
 imports:
 - name: github.com/apache/thrift
   version: d907cc92db5b93e699a4282e979d097ea863215a
@@ -25,6 +25,7 @@ imports:
   - plugin/pkg/dnstest
   - plugin/pkg/dnsutil
   - plugin/pkg/edns
+  - plugin/pkg/nonwriter
   - plugin/pkg/rcode
   - plugin/pkg/trace
   - plugin/test
@@ -71,9 +72,10 @@ imports:
   subpackages:
   - go/otgrpc
 - name: github.com/infobloxopen/go-trees
-  version: ba3cf0abf6c4176275bfdabf40f4da38da29becb
+  version: 5e11a56432a0acca1ebc7e3611aa5dc13e76c3a3
   subpackages:
   - dltree
+  - domain
   - domaintree
   - iptree
   - numtree

@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/pmezard/go-difflib/difflib"
+
+	"github.com/infobloxopen/go-trees/domain"
 )
 
 func TestInsert(t *testing.T) {
@@ -136,7 +138,7 @@ func TestGet(t *testing.T) {
 func TestWireGet(t *testing.T) {
 	var r *Node
 
-	v, ok, err := r.WireGet(WireDomainNameLower("\x04test\x03com\x00"))
+	v, ok, err := r.WireGet(domain.WireNameLower("\x04test\x03com\x00"))
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
 	} else {
@@ -149,53 +151,53 @@ func TestWireGet(t *testing.T) {
 	r = r.Insert("example.com", "4")
 	r = r.Insert("www.test.com", "5")
 
-	_, _, err = r.WireGet(WireDomainNameLower("\xC0\x2F"))
-	if err != ErrCompressedDN {
-		t.Errorf("Expected %q error but got %q", ErrCompressedDN, err)
+	_, _, err = r.WireGet(domain.WireNameLower("\xC0\x2F"))
+	if err != domain.ErrCompressedName {
+		t.Errorf("Expected %q error but got %q", domain.ErrCompressedName, err)
 	}
 
-	_, _, err = r.WireGet(WireDomainNameLower("\x04test\x20com\x00"))
-	if err != ErrLabelTooLong {
-		t.Errorf("Expected %q error but got %q", ErrLabelTooLong, err)
+	_, _, err = r.WireGet(domain.WireNameLower("\x04test\x20com\x00"))
+	if err != domain.ErrLabelTooLong {
+		t.Errorf("Expected %q error but got %q", domain.ErrLabelTooLong, err)
 	}
 
-	_, _, err = r.WireGet(WireDomainNameLower("\x04test\x00\x03com\x00"))
-	if err != ErrEmptyLabel {
-		t.Errorf("Expected %q error but got %q", ErrEmptyLabel, err)
+	_, _, err = r.WireGet(domain.WireNameLower("\x04test\x00\x03com\x00"))
+	if err != domain.ErrEmptyLabel {
+		t.Errorf("Expected %q error but got %q", domain.ErrEmptyLabel, err)
 	}
 
-	_, _, err = r.WireGet(WireDomainNameLower(
+	_, _, err = r.WireGet(domain.WireNameLower(
 		"\x3ftoooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo" +
 			"\x3floooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong" +
 			"\x3fdoooooooooooooooooooooooooooooooooooooooooooooooooooooooooomain" +
 			"\x3fnaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaame" +
 			"\x00"))
-	if err != ErrNameTooLong {
-		t.Errorf("Expected %q error but got %q", ErrNameTooLong, err)
+	if err != domain.ErrNameTooLong {
+		t.Errorf("Expected %q error but got %q", domain.ErrNameTooLong, err)
 	}
 
-	v, ok, err = r.WireGet(WireDomainNameLower("\x04test\x03com\x00"))
+	v, ok, err = r.WireGet(domain.WireNameLower("\x04test\x03com\x00"))
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
 	} else {
 		assertValue(v, ok, "2", true, "fetching \"test.com\" from tree", t)
 	}
 
-	v, ok, err = r.WireGet(WireDomainNameLower("\x03www\x04test\x03com\x00"))
+	v, ok, err = r.WireGet(domain.WireNameLower("\x03www\x04test\x03com\x00"))
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
 	} else {
 		assertValue(v, ok, "5", true, "fetching \"www.test.com\" from tree", t)
 	}
 
-	v, ok, err = r.WireGet(WireDomainNameLower("\x02ns\x04test\x03com\x00"))
+	v, ok, err = r.WireGet(domain.WireNameLower("\x02ns\x04test\x03com\x00"))
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
 	} else {
 		assertValue(v, ok, "2", true, "fetching \"ns.test.com\" from tree", t)
 	}
 
-	v, ok, err = r.WireGet(WireDomainNameLower("\x04test\x03org\x00"))
+	v, ok, err = r.WireGet(domain.WireNameLower("\x04test\x03org\x00"))
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
 	} else {

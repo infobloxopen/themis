@@ -12,6 +12,7 @@ import (
 	pb "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pdp/ast"
 	"github.com/infobloxopen/themis/pdp/jcon"
+	_ "github.com/infobloxopen/themis/pdp/selector"
 )
 
 const (

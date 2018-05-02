@@ -1,6 +1,10 @@
 package dltree
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/infobloxopen/go-trees/domain"
+)
 
 const (
 	dirLeft = iota
@@ -8,7 +12,7 @@ const (
 )
 
 type node struct {
-	key   DomainLabel
+	key   domain.Label
 	value interface{}
 
 	chld [2]*node
@@ -57,7 +61,7 @@ func (n *node) dotString() string {
 	return fmt.Sprintf("[label=%s style=filled %s]", k, color)
 }
 
-func (n *node) insert(key DomainLabel, value interface{}) *node {
+func (n *node) insert(key domain.Label, value interface{}) *node {
 	if n == nil {
 		return &node{key: key, value: value}
 	}
@@ -162,7 +166,7 @@ func (n *node) insert(key DomainLabel, value interface{}) *node {
 			}
 		}
 
-		r = compare(n.key, key)
+		r = domain.Compare(n.key, key)
 	}
 
 	n.value = value
@@ -172,7 +176,7 @@ func (n *node) insert(key DomainLabel, value interface{}) *node {
 	return n
 }
 
-func (n *node) inplaceInsert(key DomainLabel, value interface{}) *node {
+func (n *node) inplaceInsert(key domain.Label, value interface{}) *node {
 	if n == nil {
 		return &node{key: key, value: value}
 	}
@@ -230,7 +234,7 @@ func (n *node) inplaceInsert(key DomainLabel, value interface{}) *node {
 			}
 		}
 
-		r = compare(n.key, key)
+		r = domain.Compare(n.key, key)
 	}
 
 	n.value = value
@@ -273,9 +277,9 @@ func (n *node) double(dir int) *node {
 	return n.single(dir)
 }
 
-func (n *node) get(key DomainLabel) (interface{}, bool) {
+func (n *node) get(key domain.Label) (interface{}, bool) {
 	for n != nil {
-		r := compare(n.key, key)
+		r := domain.Compare(n.key, key)
 
 		if r == 0 {
 			return n.value, true
@@ -318,7 +322,7 @@ func (n *node) rawEnumerate(ch chan RawPair) {
 	n.chld[dirRight].rawEnumerate(ch)
 }
 
-func (n *node) del(key DomainLabel) (*node, bool) {
+func (n *node) del(key domain.Label) (*node, bool) {
 	// Fake root.
 	root := &node{chld: [2]*node{nil, n}}
 
@@ -348,7 +352,7 @@ func (n *node) del(key DomainLabel) (*node, bool) {
 		n = n.chld[dir]
 
 		dir = dirLeft
-		r := compare(n.key, key)
+		r := domain.Compare(n.key, key)
 		if r < 0 {
 			dir = dirRight
 		}

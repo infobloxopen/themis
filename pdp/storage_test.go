@@ -17,7 +17,7 @@ func TestStorage(t *testing.T) {
 				algorithm: firstApplicableEffectRCA{}}},
 		algorithm: firstApplicableEffectPCA{}}
 
-	s := NewPolicyStorage(root, nil, nil)
+	s := NewPolicyStorage(root, Symbols{}, nil)
 	sr := s.Root()
 	if sr != root {
 		t.Errorf("Expected stored root policy to be exactly root policy but got different")
@@ -219,7 +219,22 @@ func TestStorageTransactionalUpdate(t *testing.T) {
 				algorithm: firstApplicableEffectRCA{}}},
 		algorithm: firstApplicableEffectPCA{}}
 
-	s := NewPolicyStorage(root, map[string]Attribute{"s": MakeAttribute("s", TypeString)}, &tag)
+	ft, err := NewFlagsType("f", "first")
+	if err != nil {
+		t.Fatalf("failed to create custom type: %s", err)
+	}
+	s := NewPolicyStorage(
+		root,
+		makeSymbols(
+			map[string]Type{
+				"f": ft,
+			},
+			map[string]Attribute{
+				"s": MakeAttribute("s", TypeString),
+			},
+		),
+		&tag,
+	)
 
 	newTag := uuid.New()
 
@@ -244,12 +259,17 @@ func TestStorageTransactionalUpdate(t *testing.T) {
 		t.Fatalf("Expected no error but got %T (%s)", err, err)
 	}
 
-	attrs := tr.Attributes()
-	if len(attrs) != 1 {
-		t.Fatalf("Expected one attribute but got %#v", attrs)
+	symbols := tr.Symbols()
+	if len(symbols.types) != 1 {
+		t.Errorf("Expected one custom type but got %#v", symbols.types)
+	} else if _, ok := symbols.types["f"]; !ok {
+		t.Errorf("Expected %q custom type but got %#v", "f", symbols.types)
 	}
-	if _, ok := attrs["s"]; !ok {
-		t.Errorf("Expected %q attribute but got %#v", "s", attrs)
+
+	if len(symbols.attrs) != 1 {
+		t.Errorf("Expected one attribute but got %#v", symbols.attrs)
+	} else if _, ok := symbols.attrs["s"]; !ok {
+		t.Errorf("Expected %q attribute but got %#v", "s", symbols.attrs)
 	}
 
 	err = tr.Apply(u)
@@ -308,5 +328,12 @@ func TestStorageTransactionalUpdate(t *testing.T) {
 		if effect != EffectNotApplicable {
 			t.Errorf("Expected \"not applicable\" effect but got %d", effect)
 		}
+	}
+}
+
+func makeSymbols(t map[string]Type, a map[string]Attribute) Symbols {
+	return Symbols{
+		types: t,
+		attrs: a,
 	}
 }
