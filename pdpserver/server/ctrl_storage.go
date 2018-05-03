@@ -16,7 +16,7 @@ type storageHandler struct {
 
 func (handler *storageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var (
-		depth int64
+		depth uint64
 		err   error
 	)
 
@@ -24,7 +24,7 @@ func (handler *storageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	queryOpt := r.URL.Query()
 	if depthOpt, ok := queryOpt["depth"]; ok {
 		depthStr := depthOpt[0]
-		depth, err = strconv.ParseInt(depthStr, 10, 64)
+		depth, err = strconv.ParseUint(depthStr, 10, 31)
 		if err != nil {
 			http.Error(w, strconv.Quote(err.Error()), 400)
 			return
