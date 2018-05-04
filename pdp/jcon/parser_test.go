@@ -68,11 +68,11 @@ const (
 				"name": "ft8",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07"]
 			},
-			"keys": ["domain"],
+			"keys": ["string"],
 			"data": {
-				"example.com": ["f00", "f02", "f04"],
-				"example.net": ["f01", "f03", "f05"],
-				"example.org": ["f02", "f04", "f06"]
+				"first": ["f00", "f02", "f04"],
+				"second": ["f01", "f03", "f05"],
+				"third": ["f02", "f04", "f06"]
 			}
 		},
 		"fourth": {
@@ -82,11 +82,11 @@ const (
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
 				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17"]
 			},
-			"keys": ["domain"],
+			"keys": ["string"],
 			"data": {
-				"example.com": ["f00", "f02", "f04"],
-				"example.net": ["f01", "f03", "f05"],
-				"example.org": ["f02", "f04", "f06"]
+				"first": ["f00", "f02", "f04"],
+				"second": ["f01", "f03", "f05"],
+				"third": ["f02", "f04", "f06"]
 			}
 		},
 		"fifth": {
@@ -98,11 +98,11 @@ const (
 				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
 				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37"]
 			},
-			"keys": ["domain"],
+			"keys": ["string"],
 			"data": {
-				"example.com": ["f00", "f02", "f04"],
-				"example.net": ["f01", "f03", "f05"],
-				"example.org": ["f02", "f04", "f06"]
+				"first": ["f00", "f02", "f04"],
+				"second": ["f01", "f03", "f05"],
+				"third": ["f02", "f04", "f06"]
 			}
 		},
 		"sixth": {
@@ -118,6 +118,42 @@ const (
 				          "f60", "f61", "f62", "f63", "f64", "f65", "f66", "f67",
 				          "f70", "f71", "f72", "f73", "f74", "f75", "f76", "f77"]
 			},
+			"keys": ["string"],
+			"data": {
+				"first": ["f00", "f02", "f04"],
+				"second": ["f01", "f03", "f05"],
+				"third": ["f02", "f04", "f06"]
+			}
+		},
+		"seventh": {
+			"type": "ft8",
+			"keys": ["domain"],
+			"data": {
+				"example.com": ["f00", "f02", "f04"],
+				"example.net": ["f01", "f03", "f05"],
+				"example.org": ["f02", "f04", "f06"]
+			}
+		},
+		"eighth": {
+			"type": "ft16",
+			"keys": ["domain"],
+			"data": {
+				"example.com": ["f00", "f02", "f04"],
+				"example.net": ["f01", "f03", "f05"],
+				"example.org": ["f02", "f04", "f06"]
+			}
+		},
+		"ninth": {
+			"type": "ft32",
+			"keys": ["domain"],
+			"data": {
+				"example.com": ["f00", "f02", "f04"],
+				"example.net": ["f01", "f03", "f05"],
+				"example.org": ["f02", "f04", "f06"]
+			}
+		},
+		"tenth": {
+			"type":  "ft64",
 			"keys": ["domain"],
 			"data": {
 				"example.com": ["f00", "f02", "f04"],
@@ -155,11 +191,11 @@ const (
   },
   {
     "op": "Delete",
-    "path": ["third", "example.org"]
+    "path": ["third", "third"]
   },
   {
     "op": "Add",
-    "path": ["third", "example.gov"],
+    "path": ["third", "fourth"],
     "entity": {
       "type": "ft8",
       "data": ["f03", "f05", "f07"]
@@ -167,11 +203,11 @@ const (
   },
   {
     "op": "Delete",
-    "path": ["fourth", "example.org"]
+    "path": ["fourth", "third"]
   },
   {
     "op": "Add",
-    "path": ["fourth", "example.gov"],
+    "path": ["fourth", "fourth"],
     "entity": {
       "type": "ft16",
       "data": ["f03", "f05", "f07"]
@@ -179,11 +215,11 @@ const (
   },
   {
     "op": "Delete",
-    "path": ["fifth", "example.org"]
+    "path": ["fifth", "third"]
   },
   {
     "op": "Add",
-    "path": ["fifth", "example.gov"],
+    "path": ["fifth", "fourth"],
     "entity": {
       "type": "ft32",
       "data": ["f03", "f05", "f07"]
@@ -191,11 +227,59 @@ const (
   },
   {
     "op": "Delete",
-    "path": ["sixth", "example.org"]
+    "path": ["sixth", "third"]
   },
   {
     "op": "Add",
-    "path": ["sixth", "example.gov"],
+    "path": ["sixth", "fourth"],
+    "entity": {
+      "type": "ft64",
+      "data": ["f03", "f05", "f07"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["seventh", "example.org"]
+  },
+  {
+    "op": "Add",
+    "path": ["seventh", "example.gov"],
+    "entity": {
+      "type": "ft8",
+      "data": ["f03", "f05", "f07"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["eighth", "example.org"]
+  },
+  {
+    "op": "Add",
+    "path": ["eighth", "example.gov"],
+    "entity": {
+      "type": "ft16",
+      "data": ["f03", "f05", "f07"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["ninth", "example.org"]
+  },
+  {
+    "op": "Add",
+    "path": ["ninth", "example.gov"],
+    "entity": {
+      "type": "ft32",
+      "data": ["f03", "f05", "f07"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["tenth", "example.org"]
+  },
+  {
+    "op": "Add",
+    "path": ["tenth", "example.gov"],
     "entity": {
       "type": "ft64",
       "data": ["f03", "f05", "f07"]
@@ -213,6 +297,69 @@ const (
 				"key-1": "value-1",
 				"key-2": "value-2",
 				"key-3": "value-3"
+			}
+		},
+		"str8-map": {
+			"type": {
+				"meta": "flags",
+				"name": "ft8",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07"]
+			},
+			"keys": ["string"],
+			"data": {
+				"key-1": ["f01"],
+				"key-2": ["f02", "f04"],
+				"key-3": ["f01", "f02"]
+			}
+		},
+		"str16-map": {
+			"type": {
+				"meta": "flags",
+				"name": "ft16",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17"]
+			},
+			"keys": ["string"],
+			"data": {
+				"key-1": ["f01"],
+				"key-2": ["f02", "f04"],
+				"key-3": ["f01", "f02"]
+			}
+		},
+		"str32-map": {
+			"type": {
+				"meta": "flags",
+				"name": "ft32",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37"]
+			},
+			"keys": ["string"],
+			"data": {
+				"key-1": ["f01"],
+				"key-2": ["f02", "f04"],
+				"key-3": ["f01", "f02"]
+			}
+		},
+		"str64-map": {
+			"type": {
+				"meta": "flags",
+				"name": "ft64",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37",
+				          "f40", "f41", "f42", "f43", "f44", "f45", "f46", "f47",
+				          "f50", "f51", "f52", "f53", "f54", "f55", "f56", "f57",
+				          "f60", "f61", "f62", "f63", "f64", "f65", "f66", "f67",
+				          "f70", "f71", "f72", "f73", "f74", "f75", "f76", "f77"]
+			},
+			"keys": ["string"],
+			"data": {
+				"key-1": ["f01"],
+				"key-2": ["f02", "f04"],
+				"key-3": ["f01", "f02"]
 			}
 		},
 		"net-map": {
@@ -234,11 +381,7 @@ const (
 			}
 		},
 		"dom8-map": {
-			"type": {
-				"meta": "flags",
-				"name": "ft8",
-				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07"]
-			},
+			"type":  "ft8",
 			"keys": ["domain"],
 			"data": {
 				"example.com": ["f01"],
@@ -247,12 +390,7 @@ const (
 			}
 		},
 		"dom16-map": {
-			"type": {
-				"meta": "flags",
-				"name": "ft16",
-				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
-				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17"]
-			},
+			"type":  "ft16",
 			"keys": ["domain"],
 			"data": {
 				"example.com": ["f01"],
@@ -261,14 +399,7 @@ const (
 			}
 		},
 		"dom32-map": {
-			"type": {
-				"meta": "flags",
-				"name": "ft32",
-				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
-				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
-				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
-				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37"]
-			},
+			"type":  "ft32",
 			"keys": ["domain"],
 			"data": {
 				"example.com": ["f01"],
@@ -277,18 +408,7 @@ const (
 			}
 		},
 		"dom64-map": {
-			"type": {
-				"meta": "flags",
-				"name": "ft64",
-				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
-				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
-				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
-				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37",
-				          "f40", "f41", "f42", "f43", "f44", "f45", "f46", "f47",
-				          "f50", "f51", "f52", "f53", "f54", "f55", "f56", "f57",
-				          "f60", "f61", "f62", "f63", "f64", "f65", "f66", "f67",
-				          "f70", "f71", "f72", "f73", "f74", "f75", "f76", "f77"]
-			},
+			"type":  "ft64",
 			"keys": ["domain"],
 			"data": {
 				"example.com": ["f01"],
@@ -309,6 +429,69 @@ const (
 				"key-3": "value-3"
 			},
 			"type": "string",
+			"keys": ["string"]
+		},
+		"str8-map": {
+			"data": {
+				"key-1": ["f01"],
+				"key-2": ["f02", "f04"],
+				"key-3": ["f01", "f02"]
+			},
+			"type": {
+				"meta": "flags",
+				"name": "ft8",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07"]
+			},
+			"keys": ["string"]
+		},
+		"str16-map": {
+			"data": {
+				"key-1": ["f01"],
+				"key-2": ["f02", "f04"],
+				"key-3": ["f01", "f02"]
+			},
+			"type": {
+				"meta": "flags",
+				"name": "ft16",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17"]
+			},
+			"keys": ["string"]
+		},
+		"str32-map": {
+			"data": {
+				"key-1": ["f01"],
+				"key-2": ["f02", "f04"],
+				"key-3": ["f01", "f02"]
+			},
+			"type": {
+				"meta": "flags",
+				"name": "ft32",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37"]
+			},
+			"keys": ["string"]
+		},
+		"str64-map": {
+			"data": {
+				"key-1": ["f01"],
+				"key-2": ["f02", "f04"],
+				"key-3": ["f01", "f02"]
+			},
+			"type": {
+				"meta": "flags",
+				"name": "ft64",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37",
+				          "f40", "f41", "f42", "f43", "f44", "f45", "f46", "f47",
+				          "f50", "f51", "f52", "f53", "f54", "f55", "f56", "f57",
+				          "f60", "f61", "f62", "f63", "f64", "f65", "f66", "f67",
+				          "f70", "f71", "f72", "f73", "f74", "f75", "f76", "f77"]
+			},
 			"keys": ["string"]
 		},
 		"net-map": {
@@ -335,11 +518,7 @@ const (
 				"example.net": ["f02", "f04"],
 				"example.org": ["f01", "f02"]
 			},
-			"type": {
-				"meta": "flags",
-				"name": "ft8",
-				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07"]
-			},
+			"type": "ft8",
 			"keys": ["domain"]
 		},
 		"dom16-map": {
@@ -348,12 +527,7 @@ const (
 				"example.net": ["f02", "f04"],
 				"example.org": ["f01", "f02"]
 			},
-			"type": {
-				"meta": "flags",
-				"name": "ft16",
-				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
-				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17"]
-			},
+			"type": "ft16",
 			"keys": ["domain"]
 		},
 		"dom32-map": {
@@ -362,14 +536,7 @@ const (
 				"example.net": ["f02", "f04"],
 				"example.org": ["f01", "f02"]
 			},
-			"type": {
-				"meta": "flags",
-				"name": "ft32",
-				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
-				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
-				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
-				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37"]
-			},
+			"type": "ft32",
 			"keys": ["domain"]
 		},
 		"dom64-map": {
@@ -378,18 +545,7 @@ const (
 				"example.net": ["f02", "f04"],
 				"example.org": ["f01", "f02"]
 			},
-			"type": {
-				"meta": "flags",
-				"name": "ft64",
-				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
-				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
-				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
-				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37",
-				          "f40", "f41", "f42", "f43", "f44", "f45", "f46", "f47",
-				          "f50", "f51", "f52", "f53", "f54", "f55", "f56", "f57",
-				          "f60", "f61", "f62", "f63", "f64", "f65", "f66", "f67",
-				          "f70", "f71", "f72", "f73", "f74", "f75", "f76", "f77"]
-			},
+			"type": "ft64",
 			"keys": ["domain"]
 		}
 	}

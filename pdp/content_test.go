@@ -14,6 +14,10 @@ import (
 	"github.com/infobloxopen/go-trees/uintX/domaintree32"
 	"github.com/infobloxopen/go-trees/uintX/domaintree64"
 	"github.com/infobloxopen/go-trees/uintX/domaintree8"
+	"github.com/infobloxopen/go-trees/uintX/strtree16"
+	"github.com/infobloxopen/go-trees/uintX/strtree32"
+	"github.com/infobloxopen/go-trees/uintX/strtree64"
+	"github.com/infobloxopen/go-trees/uintX/strtree8"
 )
 
 func TestLocalContentStorage(t *testing.T) {
@@ -162,11 +166,6 @@ func TestLocalContentStorage(t *testing.T) {
 
 	st := MakeSymbols()
 
-	dTree8 := &domaintree8.Node{}
-	dTree8.InplaceInsert("example.com", 1)
-	dTree8.InplaceInsert("example.net", 3)
-	dTree8.InplaceInsert("example.org", 5)
-
 	ft8, err := NewFlagsType("8flags",
 		"f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
 	)
@@ -177,18 +176,6 @@ func TestLocalContentStorage(t *testing.T) {
 	if err := st.PutType(ft8); err != nil {
 		t.Fatalf("Expected no error but got %s", err)
 	}
-
-	dm8c := MakeContentMappingItem(
-		"dom8-map",
-		ft8,
-		MakeSignature(TypeDomain),
-		MakeContentDomainFlags8Map(dTree8),
-	)
-
-	dTree16 := &domaintree16.Node{}
-	dTree16.InplaceInsert("example.com", 1)
-	dTree16.InplaceInsert("example.net", 3)
-	dTree16.InplaceInsert("example.org", 5)
 
 	ft16, err := NewFlagsType("16flags",
 		"f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
@@ -201,18 +188,6 @@ func TestLocalContentStorage(t *testing.T) {
 	if err := st.PutType(ft16); err != nil {
 		t.Fatalf("Expected no error but got %s", err)
 	}
-
-	dm16c := MakeContentMappingItem(
-		"dom16-map",
-		ft16,
-		MakeSignature(TypeDomain),
-		MakeContentDomainFlags16Map(dTree16),
-	)
-
-	dTree32 := &domaintree32.Node{}
-	dTree32.InplaceInsert("example.com", 1)
-	dTree32.InplaceInsert("example.net", 3)
-	dTree32.InplaceInsert("example.org", 5)
 
 	ft32, err := NewFlagsType("32flags",
 		"f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
@@ -227,18 +202,6 @@ func TestLocalContentStorage(t *testing.T) {
 	if err := st.PutType(ft32); err != nil {
 		t.Fatalf("Expected no error but got %s", err)
 	}
-
-	dm32c := MakeContentMappingItem(
-		"dom32-map",
-		ft32,
-		MakeSignature(TypeDomain),
-		MakeContentDomainFlags32Map(dTree32),
-	)
-
-	dTree64 := &domaintree64.Node{}
-	dTree64.InplaceInsert("example.com", 1)
-	dTree64.InplaceInsert("example.net", 3)
-	dTree64.InplaceInsert("example.org", 5)
 
 	ft64, err := NewFlagsType("64flags",
 		"f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
@@ -258,6 +221,95 @@ func TestLocalContentStorage(t *testing.T) {
 		t.Fatalf("Expected no error but got %s", err)
 	}
 
+	sTree8 := strtree8.NewTree()
+	sTree8.InplaceInsert("1-first", 1)
+	sTree8.InplaceInsert("2-second", 3)
+	sTree8.InplaceInsert("3-third", 5)
+
+	sm8c := MakeContentMappingItem(
+		"str8-map",
+		ft8,
+		MakeSignature(TypeString),
+		MakeContentStringFlags8Map(sTree8),
+	)
+
+	sTree16 := strtree16.NewTree()
+	sTree16.InplaceInsert("1-first", 1)
+	sTree16.InplaceInsert("2-second", 3)
+	sTree16.InplaceInsert("3-third", 5)
+
+	sm16c := MakeContentMappingItem(
+		"str16-map",
+		ft16,
+		MakeSignature(TypeString),
+		MakeContentStringFlags16Map(sTree16),
+	)
+
+	sTree32 := strtree32.NewTree()
+	sTree32.InplaceInsert("1-first", 1)
+	sTree32.InplaceInsert("2-second", 3)
+	sTree32.InplaceInsert("3-third", 5)
+
+	sm32c := MakeContentMappingItem(
+		"str32-map",
+		ft32,
+		MakeSignature(TypeString),
+		MakeContentStringFlags32Map(sTree32),
+	)
+
+	sTree64 := strtree64.NewTree()
+	sTree64.InplaceInsert("1-first", 1)
+	sTree64.InplaceInsert("2-second", 3)
+	sTree64.InplaceInsert("3-third", 5)
+
+	sm64c := MakeContentMappingItem(
+		"str64-map",
+		ft64,
+		MakeSignature(TypeString),
+		MakeContentStringFlags64Map(sTree64),
+	)
+
+	dTree8 := &domaintree8.Node{}
+	dTree8.InplaceInsert("example.com", 1)
+	dTree8.InplaceInsert("example.net", 3)
+	dTree8.InplaceInsert("example.org", 5)
+
+	dm8c := MakeContentMappingItem(
+		"dom8-map",
+		ft8,
+		MakeSignature(TypeDomain),
+		MakeContentDomainFlags8Map(dTree8),
+	)
+
+	dTree16 := &domaintree16.Node{}
+	dTree16.InplaceInsert("example.com", 1)
+	dTree16.InplaceInsert("example.net", 3)
+	dTree16.InplaceInsert("example.org", 5)
+
+	dm16c := MakeContentMappingItem(
+		"dom16-map",
+		ft16,
+		MakeSignature(TypeDomain),
+		MakeContentDomainFlags16Map(dTree16),
+	)
+
+	dTree32 := &domaintree32.Node{}
+	dTree32.InplaceInsert("example.com", 1)
+	dTree32.InplaceInsert("example.net", 3)
+	dTree32.InplaceInsert("example.org", 5)
+
+	dm32c := MakeContentMappingItem(
+		"dom32-map",
+		ft32,
+		MakeSignature(TypeDomain),
+		MakeContentDomainFlags32Map(dTree32),
+	)
+
+	dTree64 := &domaintree64.Node{}
+	dTree64.InplaceInsert("example.com", 1)
+	dTree64.InplaceInsert("example.net", 3)
+	dTree64.InplaceInsert("example.org", 5)
+
 	dm64c := MakeContentMappingItem(
 		"dom64-map",
 		ft64,
@@ -265,7 +317,11 @@ func TestLocalContentStorage(t *testing.T) {
 		MakeContentDomainFlags64Map(dTree64),
 	)
 
-	items := []*ContentItem{ssmc, snmc, sdmc, smc, nmc, dmc, dmcDel, dm8c, dm16c, dm32c, dm64c}
+	items := []*ContentItem{
+		ssmc, snmc, sdmc, smc, nmc, dmc, dmcDel,
+		sm8c, sm16c, sm32c, sm64c,
+		dm8c, dm16c, dm32c, dm64c,
+	}
 	s := NewLocalContentStorage([]*LocalContent{NewLocalContent("first", &tag, st, items)})
 
 	st = MakeSymbols()
@@ -307,6 +363,22 @@ func TestLocalContentStorage(t *testing.T) {
 		MakeContentValueItem("2001:db8:1000::1", TypeString, "fifth"))
 	u.Append(UODelete, []string{"str-map", "3-third"}, nil)
 
+	u.Append(UOAdd, []string{"str8-map", "4-fourth"},
+		MakeContentValueItem("fourth", ft8, uint8(10)))
+	u.Append(UODelete, []string{"str8-map", "2-second"}, nil)
+
+	u.Append(UOAdd, []string{"str16-map", "4-fourth"},
+		MakeContentValueItem("fourth", ft16, uint16(10)))
+	u.Append(UODelete, []string{"str16-map", "2-second"}, nil)
+
+	u.Append(UOAdd, []string{"str32-map", "4-fourth"},
+		MakeContentValueItem("fourth", ft32, uint32(10)))
+	u.Append(UODelete, []string{"str32-map", "2-second"}, nil)
+
+	u.Append(UOAdd, []string{"str64-map", "4-fourth"},
+		MakeContentValueItem("fourth", ft64, uint64(10)))
+	u.Append(UODelete, []string{"str64-map", "2-second"}, nil)
+
 	u.Append(UOAdd, []string{"dom8-map", "example.gov"},
 		MakeContentValueItem("example.gov", ft8, uint8(10)))
 	u.Append(UODelete, []string{"dom8-map", "example.net"}, nil)
@@ -342,6 +414,14 @@ func TestLocalContentStorage(t *testing.T) {
 		"- Add path (\"net-map\"/\"2001:db8:1000::/40\")\n"+
 		"- Add path (\"net-map\"/\"2001:db8:1000::1\")\n"+
 		"- Delete path (\"str-map\"/\"3-third\")\n"+
+		"- Add path (\"str8-map\"/\"4-fourth\")\n"+
+		"- Delete path (\"str8-map\"/\"2-second\")\n"+
+		"- Add path (\"str16-map\"/\"4-fourth\")\n"+
+		"- Delete path (\"str16-map\"/\"2-second\")\n"+
+		"- Add path (\"str32-map\"/\"4-fourth\")\n"+
+		"- Delete path (\"str32-map\"/\"2-second\")\n"+
+		"- Add path (\"str64-map\"/\"4-fourth\")\n"+
+		"- Delete path (\"str64-map\"/\"2-second\")\n"+
 		"- Add path (\"dom8-map\"/\"example.gov\")\n"+
 		"- Delete path (\"dom8-map\"/\"example.net\")\n"+
 		"- Add path (\"dom16-map\"/\"example.gov\")\n"+
@@ -448,6 +528,90 @@ func TestLocalContentStorage(t *testing.T) {
 			t.Errorf("Expected no error but got %T (%s)", err, err)
 		} else {
 			e := "fourth"
+			s, err := v.Serialize()
+			if err != nil {
+				t.Errorf("Expected no error but got %T (%s)", err, err)
+			} else if s != e {
+				t.Errorf("Expected %q but got %q", e, s)
+			}
+		}
+	}
+
+	c, err = s.Get("first", "str8-map")
+	if err != nil {
+		t.Errorf("Expected no error but got %T (%s)", err, err)
+	} else {
+		path := []Expression{
+			MakeStringValue("4-fourth"),
+		}
+		v, err := c.Get(path, nil)
+		if err != nil {
+			t.Errorf("Expected no error but got %T (%s)", err, err)
+		} else {
+			e := "\"f01\",\"f03\""
+			s, err := v.Serialize()
+			if err != nil {
+				t.Errorf("Expected no error but got %T (%s)", err, err)
+			} else if s != e {
+				t.Errorf("Expected %q but got %q", e, s)
+			}
+		}
+	}
+
+	c, err = s.Get("first", "str16-map")
+	if err != nil {
+		t.Errorf("Expected no error but got %T (%s)", err, err)
+	} else {
+		path := []Expression{
+			MakeStringValue("4-fourth"),
+		}
+		v, err := c.Get(path, nil)
+		if err != nil {
+			t.Errorf("Expected no error but got %T (%s)", err, err)
+		} else {
+			e := "\"f01\",\"f03\""
+			s, err := v.Serialize()
+			if err != nil {
+				t.Errorf("Expected no error but got %T (%s)", err, err)
+			} else if s != e {
+				t.Errorf("Expected %q but got %q", e, s)
+			}
+		}
+	}
+
+	c, err = s.Get("first", "str32-map")
+	if err != nil {
+		t.Errorf("Expected no error but got %T (%s)", err, err)
+	} else {
+		path := []Expression{
+			MakeStringValue("4-fourth"),
+		}
+		v, err := c.Get(path, nil)
+		if err != nil {
+			t.Errorf("Expected no error but got %T (%s)", err, err)
+		} else {
+			e := "\"f01\",\"f03\""
+			s, err := v.Serialize()
+			if err != nil {
+				t.Errorf("Expected no error but got %T (%s)", err, err)
+			} else if s != e {
+				t.Errorf("Expected %q but got %q", e, s)
+			}
+		}
+	}
+
+	c, err = s.Get("first", "str64-map")
+	if err != nil {
+		t.Errorf("Expected no error but got %T (%s)", err, err)
+	} else {
+		path := []Expression{
+			MakeStringValue("4-fourth"),
+		}
+		v, err := c.Get(path, nil)
+		if err != nil {
+			t.Errorf("Expected no error but got %T (%s)", err, err)
+		} else {
+			e := "\"f01\",\"f03\""
 			s, err := v.Serialize()
 			if err != nil {
 				t.Errorf("Expected no error but got %T (%s)", err, err)

@@ -89,29 +89,33 @@ const (
 	invalidContentDomainMapErrorID             = 75
 	invalidContentValueErrorID                 = 76
 	invalidContentValueTypeErrorID             = 77
-	invalidContentDomainFlags8MapValueErrorID  = 78
-	invalidContentDomainFlags16MapValueErrorID = 79
-	invalidContentDomainFlags32MapValueErrorID = 80
-	invalidContentDomainFlags64MapValueErrorID = 81
-	integerDivideByZeroErrorID                 = 82
-	floatDivideByZeroErrorID                   = 83
-	floatNanErrorID                            = 84
-	floatInfErrorID                            = 85
-	ReadOnlySymbolsChangeErrorID               = 86
-	nilTypeErrorID                             = 87
-	builtinCustomTypeErrorID                   = 88
-	duplicateCustomTypeErrorID                 = 89
-	duplicatesBuiltinTypeErrorID               = 90
-	duplicateFlagNameID                        = 91
-	noTypedAttributeErrorID                    = 92
-	undefinedAttributeTypeErrorID              = 93
-	unknownAttributeTypeErrorID                = 94
-	duplicateAttributeErrorID                  = 95
-	noFlagsDefinedErrorID                      = 96
-	tooManyFlagsDefinedErrorID                 = 97
-	listOfStringsTypeErrorID                   = 98
-	unsupportedSelectorSchemeErrorID           = 99
-	disabledSelectorErrorID                    = 100
+	invalidContentStringFlags8MapValueErrorID  = 78
+	invalidContentStringFlags16MapValueErrorID = 79
+	invalidContentStringFlags32MapValueErrorID = 80
+	invalidContentStringFlags64MapValueErrorID = 81
+	invalidContentDomainFlags8MapValueErrorID  = 82
+	invalidContentDomainFlags16MapValueErrorID = 83
+	invalidContentDomainFlags32MapValueErrorID = 84
+	invalidContentDomainFlags64MapValueErrorID = 85
+	integerDivideByZeroErrorID                 = 86
+	floatDivideByZeroErrorID                   = 87
+	floatNanErrorID                            = 88
+	floatInfErrorID                            = 89
+	ReadOnlySymbolsChangeErrorID               = 90
+	nilTypeErrorID                             = 91
+	builtinCustomTypeErrorID                   = 92
+	duplicateCustomTypeErrorID                 = 93
+	duplicatesBuiltinTypeErrorID               = 94
+	duplicateFlagNameID                        = 95
+	noTypedAttributeErrorID                    = 96
+	undefinedAttributeTypeErrorID              = 97
+	unknownAttributeTypeErrorID                = 98
+	duplicateAttributeErrorID                  = 99
+	noFlagsDefinedErrorID                      = 100
+	tooManyFlagsDefinedErrorID                 = 101
+	listOfStringsTypeErrorID                   = 102
+	unsupportedSelectorSchemeErrorID           = 103
+	disabledSelectorErrorID                    = 104
 )
 
 type externalError struct {
@@ -1371,6 +1375,66 @@ func (e *invalidContentValueTypeError) Error() string {
 	return e.errorf("Expected value of type %q but got %T", e.expected, e.value)
 }
 
+type invalidContentStringFlags8MapValueError struct {
+	errorLink
+	value ContentValue
+}
+
+func newInvalidContentStringFlags8MapValueError(value ContentValue) *invalidContentStringFlags8MapValueError {
+	return &invalidContentStringFlags8MapValueError{
+		errorLink: errorLink{id: invalidContentStringFlags8MapValueErrorID},
+		value:     value}
+}
+
+func (e *invalidContentStringFlags8MapValueError) Error() string {
+	return e.errorf("Expected uint8 value for string map but got %T", e.value.value)
+}
+
+type invalidContentStringFlags16MapValueError struct {
+	errorLink
+	value ContentValue
+}
+
+func newInvalidContentStringFlags16MapValueError(value ContentValue) *invalidContentStringFlags16MapValueError {
+	return &invalidContentStringFlags16MapValueError{
+		errorLink: errorLink{id: invalidContentStringFlags16MapValueErrorID},
+		value:     value}
+}
+
+func (e *invalidContentStringFlags16MapValueError) Error() string {
+	return e.errorf("Expected uint16 value for string map but got %T", e.value.value)
+}
+
+type invalidContentStringFlags32MapValueError struct {
+	errorLink
+	value ContentValue
+}
+
+func newInvalidContentStringFlags32MapValueError(value ContentValue) *invalidContentStringFlags32MapValueError {
+	return &invalidContentStringFlags32MapValueError{
+		errorLink: errorLink{id: invalidContentStringFlags32MapValueErrorID},
+		value:     value}
+}
+
+func (e *invalidContentStringFlags32MapValueError) Error() string {
+	return e.errorf("Expected uint32 value for string map but got %T", e.value.value)
+}
+
+type invalidContentStringFlags64MapValueError struct {
+	errorLink
+	value ContentValue
+}
+
+func newInvalidContentStringFlags64MapValueError(value ContentValue) *invalidContentStringFlags64MapValueError {
+	return &invalidContentStringFlags64MapValueError{
+		errorLink: errorLink{id: invalidContentStringFlags64MapValueErrorID},
+		value:     value}
+}
+
+func (e *invalidContentStringFlags64MapValueError) Error() string {
+	return e.errorf("Expected uint64 value for string map but got %T", e.value.value)
+}
+
 type invalidContentDomainFlags8MapValueError struct {
 	errorLink
 	value ContentValue
@@ -1383,7 +1447,7 @@ func newInvalidContentDomainFlags8MapValueError(value ContentValue) *invalidCont
 }
 
 func (e *invalidContentDomainFlags8MapValueError) Error() string {
-	return e.errorf("Expected uint8 value but got %T", e.value.value)
+	return e.errorf("Expected uint8 value for domain map but got %T", e.value.value)
 }
 
 type invalidContentDomainFlags16MapValueError struct {
@@ -1398,7 +1462,7 @@ func newInvalidContentDomainFlags16MapValueError(value ContentValue) *invalidCon
 }
 
 func (e *invalidContentDomainFlags16MapValueError) Error() string {
-	return e.errorf("Expected uint16 value but got %T", e.value.value)
+	return e.errorf("Expected uint16 value for domain map but got %T", e.value.value)
 }
 
 type invalidContentDomainFlags32MapValueError struct {
@@ -1413,7 +1477,7 @@ func newInvalidContentDomainFlags32MapValueError(value ContentValue) *invalidCon
 }
 
 func (e *invalidContentDomainFlags32MapValueError) Error() string {
-	return e.errorf("Expected uint32 value but got %T", e.value.value)
+	return e.errorf("Expected uint32 value for domain map but got %T", e.value.value)
 }
 
 type invalidContentDomainFlags64MapValueError struct {
@@ -1428,7 +1492,7 @@ func newInvalidContentDomainFlags64MapValueError(value ContentValue) *invalidCon
 }
 
 func (e *invalidContentDomainFlags64MapValueError) Error() string {
-	return e.errorf("Expected uint64 value but got %T", e.value.value)
+	return e.errorf("Expected uint64 value for domain map but got %T", e.value.value)
 }
 
 type integerDivideByZeroError struct {

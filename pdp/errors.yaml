@@ -702,11 +702,43 @@ errors:
   - field: expected
   - field: value
 
+- id: invalidContentStringFlags8MapValueError
+  fields:
+  - id: value
+    type: ContentValue
+  msg: "Expected uint8 value for string map but got %T"
+  args:
+  - field: value.value
+
+- id: invalidContentStringFlags16MapValueError
+  fields:
+  - id: value
+    type: ContentValue
+  msg: "Expected uint16 value for string map but got %T"
+  args:
+  - field: value.value
+
+- id: invalidContentStringFlags32MapValueError
+  fields:
+  - id: value
+    type: ContentValue
+  msg: "Expected uint32 value for string map but got %T"
+  args:
+  - field: value.value
+
+- id: invalidContentStringFlags64MapValueError
+  fields:
+  - id: value
+    type: ContentValue
+  msg: "Expected uint64 value for string map but got %T"
+  args:
+  - field: value.value
+
 - id: invalidContentDomainFlags8MapValueError
   fields:
   - id: value
     type: ContentValue
-  msg: "Expected uint8 value but got %T"
+  msg: "Expected uint8 value for domain map but got %T"
   args:
   - field: value.value
 
@@ -714,7 +746,7 @@ errors:
   fields:
   - id: value
     type: ContentValue
-  msg: "Expected uint16 value but got %T"
+  msg: "Expected uint16 value for domain map but got %T"
   args:
   - field: value.value
 
@@ -722,7 +754,7 @@ errors:
   fields:
   - id: value
     type: ContentValue
-  msg: "Expected uint32 value but got %T"
+  msg: "Expected uint32 value for domain map but got %T"
   args:
   - field: value.value
 
@@ -730,7 +762,7 @@ errors:
   fields:
   - id: value
     type: ContentValue
-  msg: "Expected uint64 value but got %T"
+  msg: "Expected uint64 value for domain map but got %T"
   args:
   - field: value.value
 
