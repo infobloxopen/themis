@@ -579,7 +579,7 @@ Content for the example:
 }
 ```
 
-For domain to flags map selector matches flag names by order of definition. Flags defined in policies YAST or JSON must have the same number of names as content have. For example if policy defines names "one", "two", "three" for some flags type and content defines names "red", "green" and "blue" for a map referred by selector URI, selector returns "one" for "red", "two" for "green" and "three" for "blue".
+When result of mapping is a flags value selector matches flag names by order of definition. Flags defined in policies YAST or JSON must have the same number of names as content have. For example if policy defines names "one", "two", "three" for some flags type and content defines names "red", "green" and "blue" for a map referred by selector URI, selector returns "one" for "red", "two" for "green" and "three" for "blue".
 
 ### Numerical Expression
 A numerical expression is constructed using the following numerical functions:
@@ -610,7 +610,7 @@ Local content is a set of content **items** (see example above). It's identified
 
 Local content supports string map (key type "string"), domain map (key type "domain") and network map (key type "network" or "address"). Selector expectes string expression as path item for string map, domain - for domain map and address or network - for network map ("address" expression is allowed even if content key is "network" and vice verse).
 
-Domain map supports also mapping to flags type. To create such map user needs to define flags in type field. Being defined a flags type can be used by name within the content and its updates. Type definition goes to **type** field of content item but it's represented by JSON object instead of string. The object should have following fields:
+Any map supports also mapping to flags type. To create such map user needs to define flags in type field. Being defined a flags type can be used by name within the content and its updates. Type definition goes to **type** field of content item but it's represented by JSON object instead of string. The object should have following fields:
 - **meta** - string "flags" (the only supported metatype for now);
 - **name** - type name (can be used late instead of the definition);
 - **flags** - list of flag names (up to 64).
