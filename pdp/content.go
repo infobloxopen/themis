@@ -15,6 +15,10 @@ import (
 	"github.com/infobloxopen/go-trees/uintX/domaintree32"
 	"github.com/infobloxopen/go-trees/uintX/domaintree64"
 	"github.com/infobloxopen/go-trees/uintX/domaintree8"
+	"github.com/infobloxopen/go-trees/uintX/iptree16"
+	"github.com/infobloxopen/go-trees/uintX/iptree32"
+	"github.com/infobloxopen/go-trees/uintX/iptree64"
+	"github.com/infobloxopen/go-trees/uintX/iptree8"
 	"github.com/infobloxopen/go-trees/uintX/strtree16"
 	"github.com/infobloxopen/go-trees/uintX/strtree32"
 	"github.com/infobloxopen/go-trees/uintX/strtree64"
@@ -1176,6 +1180,386 @@ func (m ContentNetworkMap) del(key AttributeValue) (ContentSubItem, error) {
 	if n, err := key.network(); err == nil {
 		if t, ok := m.tree.DeleteByNet(n); ok {
 			return MakeContentNetworkMap(t), nil
+		}
+
+		return m, newMissingValueError()
+	}
+
+	return nil, newNetworkMapKeyValueTypeError(key.GetResultType())
+}
+
+// ContentNetworkFlags8Map implements ContentSubItem as map of string
+// to ContentSubItem. In the case resulting ContentSubItem can be only
+// a ContentValue instance which holds 8 bits flags.
+type ContentNetworkFlags8Map struct {
+	tree *iptree8.Tree
+}
+
+// MakeContentNetworkFlags8Map creates instance of ContentNetworkFlags8Map
+// based on strtree8 from github.com/infobloxopen/go-trees. Nodes should be
+// of the same ContentSubItem compatible type wrapping 8 bits flags.
+func MakeContentNetworkFlags8Map(tree *iptree8.Tree) ContentNetworkFlags8Map {
+	return ContentNetworkFlags8Map{tree: tree}
+}
+
+func (m ContentNetworkFlags8Map) getByAttribute(key AttributeValue) (uint8, error) {
+	if a, err := key.address(); err == nil {
+		if v, ok := m.tree.GetByIP(a); ok {
+			return v, nil
+		}
+
+		return 0, newMissingValueError()
+	}
+
+	if n, err := key.network(); err == nil {
+		if v, ok := m.tree.GetByNet(n); ok {
+			return v, nil
+		}
+
+		return 0, newMissingValueError()
+	}
+
+	return 0, newNetworkMapKeyValueTypeError(key.GetResultType())
+}
+
+func (m ContentNetworkFlags8Map) getValue(key AttributeValue, t Type) (AttributeValue, error) {
+	v, err := m.getByAttribute(key)
+	if err != nil {
+		return UndefinedValue, err
+	}
+
+	return MakeFlagsValue8(v, t), nil
+}
+
+func (m ContentNetworkFlags8Map) next(key AttributeValue) (ContentSubItem, error) {
+	return nil, newMapContentSubitemError()
+}
+
+func (m ContentNetworkFlags8Map) put(key AttributeValue, value ContentSubItem) (ContentSubItem, error) {
+	if a, err := key.address(); err == nil {
+		if v, ok := value.(ContentValue); ok {
+			if n, ok := v.value.(uint8); ok {
+				return MakeContentNetworkFlags8Map(m.tree.InsertIP(a, n)), nil
+			}
+
+			return nil, newInvalidContentNetworkFlags8MapValueError(v)
+		}
+
+		return nil, newInvalidContentValueError(value)
+	}
+
+	if n, err := key.network(); err == nil {
+		if v, ok := value.(ContentValue); ok {
+			if d, ok := v.value.(uint8); ok {
+				return MakeContentNetworkFlags8Map(m.tree.InsertNet(n, d)), nil
+			}
+
+			return nil, newInvalidContentNetworkFlags8MapValueError(v)
+		}
+
+		return nil, newInvalidContentValueError(value)
+	}
+
+	return nil, newNetworkMapKeyValueTypeError(key.GetResultType())
+}
+
+func (m ContentNetworkFlags8Map) del(key AttributeValue) (ContentSubItem, error) {
+	if a, err := key.address(); err == nil {
+		if t, ok := m.tree.DeleteByIP(a); ok {
+			return MakeContentNetworkFlags8Map(t), nil
+		}
+
+		return m, newMissingValueError()
+	}
+
+	if n, err := key.network(); err == nil {
+		if t, ok := m.tree.DeleteByNet(n); ok {
+			return MakeContentNetworkFlags8Map(t), nil
+		}
+
+		return m, newMissingValueError()
+	}
+
+	return nil, newNetworkMapKeyValueTypeError(key.GetResultType())
+}
+
+// ContentNetworkFlags16Map implements ContentSubItem as map of string
+// to ContentSubItem. In the case resulting ContentSubItem can be only
+// a ContentValue instance which holds 16 bits flags.
+type ContentNetworkFlags16Map struct {
+	tree *iptree16.Tree
+}
+
+// MakeContentNetworkFlags16Map creates instance of ContentNetworkFlags16Map
+// based on strtree16 from github.com/infobloxopen/go-trees. Nodes should be
+// of the same ContentSubItem compatible type wrapping 16 bits flags.
+func MakeContentNetworkFlags16Map(tree *iptree16.Tree) ContentNetworkFlags16Map {
+	return ContentNetworkFlags16Map{tree: tree}
+}
+
+func (m ContentNetworkFlags16Map) getByAttribute(key AttributeValue) (uint16, error) {
+	if a, err := key.address(); err == nil {
+		if v, ok := m.tree.GetByIP(a); ok {
+			return v, nil
+		}
+
+		return 0, newMissingValueError()
+	}
+
+	if n, err := key.network(); err == nil {
+		if v, ok := m.tree.GetByNet(n); ok {
+			return v, nil
+		}
+
+		return 0, newMissingValueError()
+	}
+
+	return 0, newNetworkMapKeyValueTypeError(key.GetResultType())
+}
+
+func (m ContentNetworkFlags16Map) getValue(key AttributeValue, t Type) (AttributeValue, error) {
+	v, err := m.getByAttribute(key)
+	if err != nil {
+		return UndefinedValue, err
+	}
+
+	return MakeFlagsValue16(v, t), nil
+}
+
+func (m ContentNetworkFlags16Map) next(key AttributeValue) (ContentSubItem, error) {
+	return nil, newMapContentSubitemError()
+}
+
+func (m ContentNetworkFlags16Map) put(key AttributeValue, value ContentSubItem) (ContentSubItem, error) {
+	if a, err := key.address(); err == nil {
+		if v, ok := value.(ContentValue); ok {
+			if n, ok := v.value.(uint16); ok {
+				return MakeContentNetworkFlags16Map(m.tree.InsertIP(a, n)), nil
+			}
+
+			return nil, newInvalidContentNetworkFlags16MapValueError(v)
+		}
+
+		return nil, newInvalidContentValueError(value)
+	}
+
+	if n, err := key.network(); err == nil {
+		if v, ok := value.(ContentValue); ok {
+			if d, ok := v.value.(uint16); ok {
+				return MakeContentNetworkFlags16Map(m.tree.InsertNet(n, d)), nil
+			}
+
+			return nil, newInvalidContentNetworkFlags16MapValueError(v)
+		}
+
+		return nil, newInvalidContentValueError(value)
+	}
+
+	return nil, newNetworkMapKeyValueTypeError(key.GetResultType())
+}
+
+func (m ContentNetworkFlags16Map) del(key AttributeValue) (ContentSubItem, error) {
+	if a, err := key.address(); err == nil {
+		if t, ok := m.tree.DeleteByIP(a); ok {
+			return MakeContentNetworkFlags16Map(t), nil
+		}
+
+		return m, newMissingValueError()
+	}
+
+	if n, err := key.network(); err == nil {
+		if t, ok := m.tree.DeleteByNet(n); ok {
+			return MakeContentNetworkFlags16Map(t), nil
+		}
+
+		return m, newMissingValueError()
+	}
+
+	return nil, newNetworkMapKeyValueTypeError(key.GetResultType())
+}
+
+// ContentNetworkFlags32Map implements ContentSubItem as map of string
+// to ContentSubItem. In the case resulting ContentSubItem can be only
+// a ContentValue instance which holds 32 bits flags.
+type ContentNetworkFlags32Map struct {
+	tree *iptree32.Tree
+}
+
+// MakeContentNetworkFlags32Map creates instance of ContentNetworkFlags32Map
+// based on strtree32 from github.com/infobloxopen/go-trees. Nodes should be
+// of the same ContentSubItem compatible type wrapping 32 bits flags.
+func MakeContentNetworkFlags32Map(tree *iptree32.Tree) ContentNetworkFlags32Map {
+	return ContentNetworkFlags32Map{tree: tree}
+}
+
+func (m ContentNetworkFlags32Map) getByAttribute(key AttributeValue) (uint32, error) {
+	if a, err := key.address(); err == nil {
+		if v, ok := m.tree.GetByIP(a); ok {
+			return v, nil
+		}
+
+		return 0, newMissingValueError()
+	}
+
+	if n, err := key.network(); err == nil {
+		if v, ok := m.tree.GetByNet(n); ok {
+			return v, nil
+		}
+
+		return 0, newMissingValueError()
+	}
+
+	return 0, newNetworkMapKeyValueTypeError(key.GetResultType())
+}
+
+func (m ContentNetworkFlags32Map) getValue(key AttributeValue, t Type) (AttributeValue, error) {
+	v, err := m.getByAttribute(key)
+	if err != nil {
+		return UndefinedValue, err
+	}
+
+	return MakeFlagsValue32(v, t), nil
+}
+
+func (m ContentNetworkFlags32Map) next(key AttributeValue) (ContentSubItem, error) {
+	return nil, newMapContentSubitemError()
+}
+
+func (m ContentNetworkFlags32Map) put(key AttributeValue, value ContentSubItem) (ContentSubItem, error) {
+	if a, err := key.address(); err == nil {
+		if v, ok := value.(ContentValue); ok {
+			if n, ok := v.value.(uint32); ok {
+				return MakeContentNetworkFlags32Map(m.tree.InsertIP(a, n)), nil
+			}
+
+			return nil, newInvalidContentNetworkFlags32MapValueError(v)
+		}
+
+		return nil, newInvalidContentValueError(value)
+	}
+
+	if n, err := key.network(); err == nil {
+		if v, ok := value.(ContentValue); ok {
+			if d, ok := v.value.(uint32); ok {
+				return MakeContentNetworkFlags32Map(m.tree.InsertNet(n, d)), nil
+			}
+
+			return nil, newInvalidContentNetworkFlags32MapValueError(v)
+		}
+
+		return nil, newInvalidContentValueError(value)
+	}
+
+	return nil, newNetworkMapKeyValueTypeError(key.GetResultType())
+}
+
+func (m ContentNetworkFlags32Map) del(key AttributeValue) (ContentSubItem, error) {
+	if a, err := key.address(); err == nil {
+		if t, ok := m.tree.DeleteByIP(a); ok {
+			return MakeContentNetworkFlags32Map(t), nil
+		}
+
+		return m, newMissingValueError()
+	}
+
+	if n, err := key.network(); err == nil {
+		if t, ok := m.tree.DeleteByNet(n); ok {
+			return MakeContentNetworkFlags32Map(t), nil
+		}
+
+		return m, newMissingValueError()
+	}
+
+	return nil, newNetworkMapKeyValueTypeError(key.GetResultType())
+}
+
+// ContentNetworkFlags64Map implements ContentSubItem as map of string
+// to ContentSubItem. In the case resulting ContentSubItem can be only
+// a ContentValue instance which holds 64 bits flags.
+type ContentNetworkFlags64Map struct {
+	tree *iptree64.Tree
+}
+
+// MakeContentNetworkFlags64Map creates instance of ContentNetworkFlags64Map
+// based on strtree64 from github.com/infobloxopen/go-trees. Nodes should be
+// of the same ContentSubItem compatible type wrapping 64 bits flags.
+func MakeContentNetworkFlags64Map(tree *iptree64.Tree) ContentNetworkFlags64Map {
+	return ContentNetworkFlags64Map{tree: tree}
+}
+
+func (m ContentNetworkFlags64Map) getByAttribute(key AttributeValue) (uint64, error) {
+	if a, err := key.address(); err == nil {
+		if v, ok := m.tree.GetByIP(a); ok {
+			return v, nil
+		}
+
+		return 0, newMissingValueError()
+	}
+
+	if n, err := key.network(); err == nil {
+		if v, ok := m.tree.GetByNet(n); ok {
+			return v, nil
+		}
+
+		return 0, newMissingValueError()
+	}
+
+	return 0, newNetworkMapKeyValueTypeError(key.GetResultType())
+}
+
+func (m ContentNetworkFlags64Map) getValue(key AttributeValue, t Type) (AttributeValue, error) {
+	v, err := m.getByAttribute(key)
+	if err != nil {
+		return UndefinedValue, err
+	}
+
+	return MakeFlagsValue64(v, t), nil
+}
+
+func (m ContentNetworkFlags64Map) next(key AttributeValue) (ContentSubItem, error) {
+	return nil, newMapContentSubitemError()
+}
+
+func (m ContentNetworkFlags64Map) put(key AttributeValue, value ContentSubItem) (ContentSubItem, error) {
+	if a, err := key.address(); err == nil {
+		if v, ok := value.(ContentValue); ok {
+			if n, ok := v.value.(uint64); ok {
+				return MakeContentNetworkFlags64Map(m.tree.InsertIP(a, n)), nil
+			}
+
+			return nil, newInvalidContentNetworkFlags64MapValueError(v)
+		}
+
+		return nil, newInvalidContentValueError(value)
+	}
+
+	if n, err := key.network(); err == nil {
+		if v, ok := value.(ContentValue); ok {
+			if d, ok := v.value.(uint64); ok {
+				return MakeContentNetworkFlags64Map(m.tree.InsertNet(n, d)), nil
+			}
+
+			return nil, newInvalidContentNetworkFlags64MapValueError(v)
+		}
+
+		return nil, newInvalidContentValueError(value)
+	}
+
+	return nil, newNetworkMapKeyValueTypeError(key.GetResultType())
+}
+
+func (m ContentNetworkFlags64Map) del(key AttributeValue) (ContentSubItem, error) {
+	if a, err := key.address(); err == nil {
+		if t, ok := m.tree.DeleteByIP(a); ok {
+			return MakeContentNetworkFlags64Map(t), nil
+		}
+
+		return m, newMissingValueError()
+	}
+
+	if n, err := key.network(); err == nil {
+		if t, ok := m.tree.DeleteByNet(n); ok {
+			return MakeContentNetworkFlags64Map(t), nil
 		}
 
 		return m, newMissingValueError()

@@ -127,6 +127,46 @@ const (
 		},
 		"seventh": {
 			"type": "ft8",
+			"keys": ["network"],
+			"data": {
+				"192.0.2.16/28": ["f00", "f02", "f04"],
+				"192.0.2.32/28": ["f01", "f03", "f05"],
+				"2001:db8::/33": ["f02", "f04", "f06"],
+				"2001:db8:8000::1": ["f03", "f05", "f07"]
+			}
+		},
+		"eighth": {
+			"type": "ft16",
+			"keys": ["network"],
+			"data": {
+				"192.0.2.16/28": ["f00", "f02", "f04"],
+				"192.0.2.32/28": ["f01", "f03", "f05"],
+				"2001:db8::/33": ["f02", "f04", "f06"],
+				"2001:db8:8000::1": ["f03", "f05", "f07"]
+			}
+		},
+		"ninth": {
+			"type": "ft32",
+			"keys": ["network"],
+			"data": {
+				"192.0.2.16/28": ["f00", "f02", "f04"],
+				"192.0.2.32/28": ["f01", "f03", "f05"],
+				"2001:db8::/33": ["f02", "f04", "f06"],
+				"2001:db8:8000::1": ["f03", "f05", "f07"]
+			}
+		},
+		"tenth": {
+			"type": "ft64",
+			"keys": ["network"],
+			"data": {
+				"192.0.2.16/28": ["f00", "f02", "f04"],
+				"192.0.2.32/28": ["f01", "f03", "f05"],
+				"2001:db8::/33": ["f02", "f04", "f06"],
+				"2001:db8:8000::1": ["f03", "f05", "f07"]
+			}
+		},
+		"eleventh": {
+			"type": "ft8",
 			"keys": ["domain"],
 			"data": {
 				"example.com": ["f00", "f02", "f04"],
@@ -134,7 +174,7 @@ const (
 				"example.org": ["f02", "f04", "f06"]
 			}
 		},
-		"eighth": {
+		"twelveth": {
 			"type": "ft16",
 			"keys": ["domain"],
 			"data": {
@@ -143,7 +183,7 @@ const (
 				"example.org": ["f02", "f04", "f06"]
 			}
 		},
-		"ninth": {
+		"thirteenth": {
 			"type": "ft32",
 			"keys": ["domain"],
 			"data": {
@@ -152,7 +192,7 @@ const (
 				"example.org": ["f02", "f04", "f06"]
 			}
 		},
-		"tenth": {
+		"fourteenth": {
 			"type":  "ft64",
 			"keys": ["domain"],
 			"data": {
@@ -239,11 +279,107 @@ const (
   },
   {
     "op": "Delete",
-    "path": ["seventh", "example.org"]
+    "path": ["seventh", "192.0.2.32/28"]
   },
   {
     "op": "Add",
-    "path": ["seventh", "example.gov"],
+    "path": ["seventh", "192.0.2.48/28"],
+    "entity": {
+      "type": "ft8",
+      "data": ["f04", "f06", "f00"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["seventh", "2001:db8:8000::1"]
+  },
+  {
+    "op": "Add",
+    "path": ["seventh", "2001:db8:8000::2"],
+    "entity": {
+      "type": "ft8",
+      "data": ["f05", "f07", "f01"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["eighth", "192.0.2.32/28"]
+  },
+  {
+    "op": "Add",
+    "path": ["eighth", "192.0.2.48/28"],
+    "entity": {
+      "type": "ft16",
+      "data": ["f04", "f06", "f00"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["eighth", "2001:db8:8000::1"]
+  },
+  {
+    "op": "Add",
+    "path": ["eighth", "2001:db8:8000::2"],
+    "entity": {
+      "type": "ft16",
+      "data": ["f05", "f07", "f01"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["ninth", "192.0.2.32/28"]
+  },
+  {
+    "op": "Add",
+    "path": ["ninth", "192.0.2.48/28"],
+    "entity": {
+      "type": "ft32",
+      "data": ["f04", "f06", "f00"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["ninth", "2001:db8:8000::1"]
+  },
+  {
+    "op": "Add",
+    "path": ["ninth", "2001:db8:8000::2"],
+    "entity": {
+      "type": "ft32",
+      "data": ["f05", "f07", "f01"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["tenth", "192.0.2.32/28"]
+  },
+  {
+    "op": "Add",
+    "path": ["tenth", "192.0.2.48/28"],
+    "entity": {
+      "type": "ft64",
+      "data": ["f04", "f06", "f00"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["tenth", "2001:db8:8000::1"]
+  },
+  {
+    "op": "Add",
+    "path": ["tenth", "2001:db8:8000::2"],
+    "entity": {
+      "type": "ft64",
+      "data": ["f05", "f07", "f01"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["eleventh", "example.org"]
+  },
+  {
+    "op": "Add",
+    "path": ["eleventh", "example.gov"],
     "entity": {
       "type": "ft8",
       "data": ["f03", "f05", "f07"]
@@ -251,11 +387,11 @@ const (
   },
   {
     "op": "Delete",
-    "path": ["eighth", "example.org"]
+    "path": ["twelveth", "example.org"]
   },
   {
     "op": "Add",
-    "path": ["eighth", "example.gov"],
+    "path": ["twelveth", "example.gov"],
     "entity": {
       "type": "ft16",
       "data": ["f03", "f05", "f07"]
@@ -263,11 +399,11 @@ const (
   },
   {
     "op": "Delete",
-    "path": ["ninth", "example.org"]
+    "path": ["thirteenth", "example.org"]
   },
   {
     "op": "Add",
-    "path": ["ninth", "example.gov"],
+    "path": ["thirteenth", "example.gov"],
     "entity": {
       "type": "ft32",
       "data": ["f03", "f05", "f07"]
@@ -275,11 +411,11 @@ const (
   },
   {
     "op": "Delete",
-    "path": ["tenth", "example.org"]
+    "path": ["fourteenth", "example.org"]
   },
   {
     "op": "Add",
-    "path": ["tenth", "example.gov"],
+    "path": ["fourteenth", "example.gov"],
     "entity": {
       "type": "ft64",
       "data": ["f03", "f05", "f07"]
@@ -369,6 +505,46 @@ const (
 				"192.0.2.16/28": "value-1",
 				"192.0.2.32/28": "value-2",
 				"192.0.2.48/28": "value-3"
+			}
+		},
+		"net8-map": {
+			"type": "ft8",
+			"keys": ["network"],
+			"data": {
+				"192.0.2.16/28": ["f01"],
+				"192.0.2.32/28": ["f02", "f04"],
+				"2001:db8::/33": ["f01", "f02"],
+				"2001:db8:8000::1": ["f04", "f06"]
+			}
+		},
+		"net16-map": {
+			"type": "ft16",
+			"keys": ["network"],
+			"data": {
+				"192.0.2.16/28": ["f01"],
+				"192.0.2.32/28": ["f02", "f04"],
+				"2001:db8::/33": ["f01", "f02"],
+				"2001:db8:8000::1": ["f04", "f06"]
+			}
+		},
+		"net32-map": {
+			"type": "ft32",
+			"keys": ["network"],
+			"data": {
+				"192.0.2.16/28": ["f01"],
+				"192.0.2.32/28": ["f02", "f04"],
+				"2001:db8::/33": ["f01", "f02"],
+				"2001:db8:8000::1": ["f04", "f06"]
+			}
+		},
+		"net64-map": {
+			"type": "ft64",
+			"keys": ["network"],
+			"data": {
+				"192.0.2.16/28": ["f01"],
+				"192.0.2.32/28": ["f02", "f04"],
+				"2001:db8::/33": ["f01", "f02"],
+				"2001:db8:8000::1": ["f04", "f06"]
 			}
 		},
 		"dom-map": {
@@ -501,6 +677,46 @@ const (
 				"192.0.2.48/28": "value-3"
 			},
 			"type": "string",
+			"keys": ["network"]
+		},
+		"net8-map": {
+			"data": {
+				"192.0.2.16/28": ["f01"],
+				"192.0.2.32/28": ["f02", "f04"],
+				"2001:db8::/33": ["f01", "f02"],
+				"2001:db8:8000::1": ["f04", "f06"]
+			},
+			"type": "ft8",
+			"keys": ["network"]
+		},
+		"net16-map": {
+			"data": {
+				"192.0.2.16/28": ["f01"],
+				"192.0.2.32/28": ["f02", "f04"],
+				"2001:db8::/33": ["f01", "f02"],
+				"2001:db8:8000::1": ["f04", "f06"]
+			},
+			"type": "ft16",
+			"keys": ["network"]
+		},
+		"net32-map": {
+			"data": {
+				"192.0.2.16/28": ["f01"],
+				"192.0.2.32/28": ["f02", "f04"],
+				"2001:db8::/33": ["f01", "f02"],
+				"2001:db8:8000::1": ["f04", "f06"]
+			},
+			"type": "ft32",
+			"keys": ["network"]
+		},
+		"net64-map": {
+			"data": {
+				"192.0.2.16/28": ["f01"],
+				"192.0.2.32/28": ["f02", "f04"],
+				"2001:db8::/33": ["f01", "f02"],
+				"2001:db8:8000::1": ["f04", "f06"]
+			},
+			"type": "ft64",
 			"keys": ["network"]
 		},
 		"dom-map": {
@@ -1011,6 +1227,82 @@ func TestUnmarshal(t *testing.T) {
 			}
 		}
 
+		lc, err = c.Get("str8-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{pdp.MakeStringValue("key-2")}
+			r, err := lc.Get(path, nil)
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"f02\",\"f04\""
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected %q but got %q", e, s)
+				}
+			}
+		}
+
+		lc, err = c.Get("str16-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{pdp.MakeStringValue("key-2")}
+			r, err := lc.Get(path, nil)
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"f02\",\"f04\""
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected %q but got %q", e, s)
+				}
+			}
+		}
+
+		lc, err = c.Get("str32-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{pdp.MakeStringValue("key-2")}
+			r, err := lc.Get(path, nil)
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"f02\",\"f04\""
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected %q but got %q", e, s)
+				}
+			}
+		}
+
+		lc, err = c.Get("str64-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{pdp.MakeStringValue("key-2")}
+			r, err := lc.Get(path, nil)
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"f02\",\"f04\""
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected %q but got %q", e, s)
+				}
+			}
+		}
+
 		lc, err = c.Get("net-map")
 		if err != nil {
 			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
@@ -1025,6 +1317,102 @@ func TestUnmarshal(t *testing.T) {
 					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 				} else {
 					e := "value-2"
+					s, err := r.Serialize()
+					if err != nil {
+						t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+					} else if s != e {
+						t.Errorf("Expected %q but got %q", e, s)
+					}
+				}
+			}
+		}
+
+		lc, err = c.Get("net8-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			n, err := pdp.MakeValueFromString(pdp.TypeNetwork, "192.0.2.44/30")
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				path := []pdp.Expression{n}
+				r, err := lc.Get(path, nil)
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else {
+					e := "\"f02\",\"f04\""
+					s, err := r.Serialize()
+					if err != nil {
+						t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+					} else if s != e {
+						t.Errorf("Expected %q but got %q", e, s)
+					}
+				}
+			}
+		}
+
+		lc, err = c.Get("net16-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			n, err := pdp.MakeValueFromString(pdp.TypeNetwork, "192.0.2.44/30")
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				path := []pdp.Expression{n}
+				r, err := lc.Get(path, nil)
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else {
+					e := "\"f02\",\"f04\""
+					s, err := r.Serialize()
+					if err != nil {
+						t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+					} else if s != e {
+						t.Errorf("Expected %q but got %q", e, s)
+					}
+				}
+			}
+		}
+
+		lc, err = c.Get("net32-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			n, err := pdp.MakeValueFromString(pdp.TypeNetwork, "192.0.2.44/30")
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				path := []pdp.Expression{n}
+				r, err := lc.Get(path, nil)
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else {
+					e := "\"f02\",\"f04\""
+					s, err := r.Serialize()
+					if err != nil {
+						t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+					} else if s != e {
+						t.Errorf("Expected %q but got %q", e, s)
+					}
+				}
+			}
+		}
+
+		lc, err = c.Get("net64-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			n, err := pdp.MakeValueFromString(pdp.TypeNetwork, "192.0.2.44/30")
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				path := []pdp.Expression{n}
+				r, err := lc.Get(path, nil)
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else {
+					e := "\"f02\",\"f04\""
 					s, err := r.Serialize()
 					if err != nil {
 						t.Errorf("Expected no error but got (%T):\n\t%s", err, err)

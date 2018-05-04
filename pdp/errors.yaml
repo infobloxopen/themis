@@ -734,6 +734,38 @@ errors:
   args:
   - field: value.value
 
+- id: invalidContentNetworkFlags8MapValueError
+  fields:
+  - id: value
+    type: ContentValue
+  msg: "Expected uint8 value for network map but got %T"
+  args:
+  - field: value.value
+
+- id: invalidContentNetworkFlags16MapValueError
+  fields:
+  - id: value
+    type: ContentValue
+  msg: "Expected uint16 value for network map but got %T"
+  args:
+  - field: value.value
+
+- id: invalidContentNetworkFlags32MapValueError
+  fields:
+  - id: value
+    type: ContentValue
+  msg: "Expected uint32 value for network map but got %T"
+  args:
+  - field: value.value
+
+- id: invalidContentNetworkFlags64MapValueError
+  fields:
+  - id: value
+    type: ContentValue
+  msg: "Expected uint64 value for network map but got %T"
+  args:
+  - field: value.value
+
 - id: invalidContentDomainFlags8MapValueError
   fields:
   - id: value

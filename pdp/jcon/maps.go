@@ -11,6 +11,10 @@ import (
 	"github.com/infobloxopen/go-trees/uintX/domaintree32"
 	"github.com/infobloxopen/go-trees/uintX/domaintree64"
 	"github.com/infobloxopen/go-trees/uintX/domaintree8"
+	"github.com/infobloxopen/go-trees/uintX/iptree16"
+	"github.com/infobloxopen/go-trees/uintX/iptree32"
+	"github.com/infobloxopen/go-trees/uintX/iptree64"
+	"github.com/infobloxopen/go-trees/uintX/iptree8"
 	"github.com/infobloxopen/go-trees/uintX/strtree16"
 	"github.com/infobloxopen/go-trees/uintX/strtree32"
 	"github.com/infobloxopen/go-trees/uintX/strtree64"
@@ -58,13 +62,33 @@ func newTypedMap(c *contentItem, keyIdx int) (mapUnmarshaller, error) {
 			m:               strtree.NewTree()}, nil
 
 	case pdp.TypeAddress, pdp.TypeNetwork:
-		if _, ok := c.t.(*pdp.FlagsType); ok {
-			return nil, newInvalidContentValueTypeError(c.t)
+		if t, ok := c.t.(*pdp.FlagsType); ok {
+			switch t.Capacity() {
+			case 8:
+				return &network8Map{
+					contentItemLink: contentItemLink{c: c, i: keyIdx},
+					m:               iptree8.NewTree()}, nil
+
+			case 16:
+				return &network16Map{
+					contentItemLink: contentItemLink{c: c, i: keyIdx},
+					m:               iptree16.NewTree()}, nil
+
+			case 32:
+				return &network32Map{
+					contentItemLink: contentItemLink{c: c, i: keyIdx},
+					m:               iptree32.NewTree()}, nil
+			}
+
+			return &network64Map{
+				contentItemLink: contentItemLink{c: c, i: keyIdx},
+				m:               iptree64.NewTree()}, nil
 		}
 
 		return &networkMap{
 			contentItemLink: contentItemLink{c: c, i: keyIdx},
 			m:               iptree.NewTree()}, nil
+
 	case pdp.TypeDomain:
 		if t, ok := c.t.(*pdp.FlagsType); ok {
 			switch t.Capacity() {
@@ -320,6 +344,266 @@ func (m *networkMap) postProcess(p jparser.Pair) error {
 
 func (m *networkMap) get() interface{} {
 	return pdp.MakeContentNetworkMap(m.m)
+}
+
+type network8Map struct {
+	contentItemLink
+	m *iptree8.Tree
+}
+
+func (m *network8Map) unmarshal(k string, d *json.Decoder) error {
+	var (
+		n   *net.IPNet
+		err error
+	)
+
+	a := net.ParseIP(k)
+	if a == nil {
+		_, n, err = net.ParseCIDR(k)
+		if err != nil {
+			return newAddressNetworkCastError(k, err)
+		}
+	}
+
+	v, err := m.c.unmarshalFlags8Value(d)
+	if err != nil {
+		return bindError(err, k)
+	}
+
+	if a != nil {
+		m.m.InplaceInsertIP(a, v)
+	} else {
+		m.m.InplaceInsertNet(n, v)
+	}
+
+	return nil
+}
+
+func (m *network8Map) postProcess(p jparser.Pair) error {
+	var (
+		n   *net.IPNet
+		err error
+	)
+
+	a := net.ParseIP(p.K)
+	if a == nil {
+		_, n, err = net.ParseCIDR(p.K)
+		if err != nil {
+			return newAddressNetworkCastError(p.K, err)
+		}
+	}
+
+	v, err := m.c.postProcessFlags8Value(p.V)
+	if err != nil {
+		return bindError(err, p.K)
+	}
+
+	if a != nil {
+		m.m.InplaceInsertIP(a, v)
+	} else {
+		m.m.InplaceInsertNet(n, v)
+	}
+
+	return nil
+}
+
+func (m *network8Map) get() interface{} {
+	return pdp.MakeContentNetworkFlags8Map(m.m)
+}
+
+type network16Map struct {
+	contentItemLink
+	m *iptree16.Tree
+}
+
+func (m *network16Map) unmarshal(k string, d *json.Decoder) error {
+	var (
+		n   *net.IPNet
+		err error
+	)
+
+	a := net.ParseIP(k)
+	if a == nil {
+		_, n, err = net.ParseCIDR(k)
+		if err != nil {
+			return newAddressNetworkCastError(k, err)
+		}
+	}
+
+	v, err := m.c.unmarshalFlags16Value(d)
+	if err != nil {
+		return bindError(err, k)
+	}
+
+	if a != nil {
+		m.m.InplaceInsertIP(a, v)
+	} else {
+		m.m.InplaceInsertNet(n, v)
+	}
+
+	return nil
+}
+
+func (m *network16Map) postProcess(p jparser.Pair) error {
+	var (
+		n   *net.IPNet
+		err error
+	)
+
+	a := net.ParseIP(p.K)
+	if a == nil {
+		_, n, err = net.ParseCIDR(p.K)
+		if err != nil {
+			return newAddressNetworkCastError(p.K, err)
+		}
+	}
+
+	v, err := m.c.postProcessFlags16Value(p.V)
+	if err != nil {
+		return bindError(err, p.K)
+	}
+
+	if a != nil {
+		m.m.InplaceInsertIP(a, v)
+	} else {
+		m.m.InplaceInsertNet(n, v)
+	}
+
+	return nil
+}
+
+func (m *network16Map) get() interface{} {
+	return pdp.MakeContentNetworkFlags16Map(m.m)
+}
+
+type network32Map struct {
+	contentItemLink
+	m *iptree32.Tree
+}
+
+func (m *network32Map) unmarshal(k string, d *json.Decoder) error {
+	var (
+		n   *net.IPNet
+		err error
+	)
+
+	a := net.ParseIP(k)
+	if a == nil {
+		_, n, err = net.ParseCIDR(k)
+		if err != nil {
+			return newAddressNetworkCastError(k, err)
+		}
+	}
+
+	v, err := m.c.unmarshalFlags32Value(d)
+	if err != nil {
+		return bindError(err, k)
+	}
+
+	if a != nil {
+		m.m.InplaceInsertIP(a, v)
+	} else {
+		m.m.InplaceInsertNet(n, v)
+	}
+
+	return nil
+}
+
+func (m *network32Map) postProcess(p jparser.Pair) error {
+	var (
+		n   *net.IPNet
+		err error
+	)
+
+	a := net.ParseIP(p.K)
+	if a == nil {
+		_, n, err = net.ParseCIDR(p.K)
+		if err != nil {
+			return newAddressNetworkCastError(p.K, err)
+		}
+	}
+
+	v, err := m.c.postProcessFlags32Value(p.V)
+	if err != nil {
+		return bindError(err, p.K)
+	}
+
+	if a != nil {
+		m.m.InplaceInsertIP(a, v)
+	} else {
+		m.m.InplaceInsertNet(n, v)
+	}
+
+	return nil
+}
+
+func (m *network32Map) get() interface{} {
+	return pdp.MakeContentNetworkFlags32Map(m.m)
+}
+
+type network64Map struct {
+	contentItemLink
+	m *iptree64.Tree
+}
+
+func (m *network64Map) unmarshal(k string, d *json.Decoder) error {
+	var (
+		n   *net.IPNet
+		err error
+	)
+
+	a := net.ParseIP(k)
+	if a == nil {
+		_, n, err = net.ParseCIDR(k)
+		if err != nil {
+			return newAddressNetworkCastError(k, err)
+		}
+	}
+
+	v, err := m.c.unmarshalFlags64Value(d)
+	if err != nil {
+		return bindError(err, k)
+	}
+
+	if a != nil {
+		m.m.InplaceInsertIP(a, v)
+	} else {
+		m.m.InplaceInsertNet(n, v)
+	}
+
+	return nil
+}
+
+func (m *network64Map) postProcess(p jparser.Pair) error {
+	var (
+		n   *net.IPNet
+		err error
+	)
+
+	a := net.ParseIP(p.K)
+	if a == nil {
+		_, n, err = net.ParseCIDR(p.K)
+		if err != nil {
+			return newAddressNetworkCastError(p.K, err)
+		}
+	}
+
+	v, err := m.c.postProcessFlags64Value(p.V)
+	if err != nil {
+		return bindError(err, p.K)
+	}
+
+	if a != nil {
+		m.m.InplaceInsertIP(a, v)
+	} else {
+		m.m.InplaceInsertNet(n, v)
+	}
+
+	return nil
+}
+
+func (m *network64Map) get() interface{} {
+	return pdp.MakeContentNetworkFlags64Map(m.m)
 }
 
 type domainMap struct {
