@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/infobloxopen/go-trees/domaintree8"
+	"github.com/infobloxopen/go-trees/uintX/domaintree8"
 	"github.com/infobloxopen/themis/pdp"
 )
 

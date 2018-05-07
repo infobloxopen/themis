@@ -9,12 +9,12 @@ import (
 
 	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
-	"github.com/infobloxopen/go-trees/domaintree16"
-	"github.com/infobloxopen/go-trees/domaintree32"
-	"github.com/infobloxopen/go-trees/domaintree64"
-	"github.com/infobloxopen/go-trees/domaintree8"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
+	"github.com/infobloxopen/go-trees/uintX/domaintree16"
+	"github.com/infobloxopen/go-trees/uintX/domaintree32"
+	"github.com/infobloxopen/go-trees/uintX/domaintree64"
+	"github.com/infobloxopen/go-trees/uintX/domaintree8"
 )
 
 // ContentKeyTypes gathers all types which can be a key for content map.

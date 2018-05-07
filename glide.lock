@@ -1,5 +1,5 @@
-hash: 056c31bf9cf046c65519e6923e114431e01e8e73c9e13424cdfa0e5bdaeee8d5
-updated: 2018-04-24T12:36:48.504536+03:00
+hash: 3a89b4846213e07e7ff29d6752f83defda21457f038834e3d47aa03791308e83
+updated: 2018-05-07T15:27:18.244805+03:00
 imports:
 - name: github.com/apache/thrift
   version: d907cc92db5b93e699a4282e979d097ea863215a
@@ -72,7 +72,7 @@ imports:
   subpackages:
   - go/otgrpc
 - name: github.com/infobloxopen/go-trees
-  version: 5e11a56432a0acca1ebc7e3611aa5dc13e76c3a3
+  version: 0bd5ebe38ca0cdb8ecedeed33f4ef22a927ece2a
   subpackages:
   - dltree
   - domain
@@ -80,6 +80,18 @@ imports:
   - iptree
   - numtree
   - strtree
+  - uintX/domaintree16
+  - uintX/domaintree32
+  - uintX/domaintree64
+  - uintX/domaintree8
+  - uintX/iptree16
+  - uintX/iptree32
+  - uintX/iptree64
+  - uintX/iptree8
+  - uintX/strtree16
+  - uintX/strtree32
+  - uintX/strtree64
+  - uintX/strtree8
 - name: github.com/kr/logfmt
   version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
 - name: github.com/matttproud/golang_protobuf_extensions
