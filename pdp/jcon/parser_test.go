@@ -68,11 +68,11 @@ const (
 				"name": "ft8",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07"]
 			},
-			"keys": ["domain"],
+			"keys": ["string"],
 			"data": {
-				"example.com": ["f00", "f02", "f04"],
-				"example.net": ["f01", "f03", "f05"],
-				"example.org": ["f02", "f04", "f06"]
+				"first": ["f00", "f02", "f04"],
+				"second": ["f01", "f03", "f05"],
+				"third": ["f02", "f04", "f06"]
 			}
 		},
 		"fourth": {
@@ -82,11 +82,11 @@ const (
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
 				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17"]
 			},
-			"keys": ["domain"],
+			"keys": ["string"],
 			"data": {
-				"example.com": ["f00", "f02", "f04"],
-				"example.net": ["f01", "f03", "f05"],
-				"example.org": ["f02", "f04", "f06"]
+				"first": ["f00", "f02", "f04"],
+				"second": ["f01", "f03", "f05"],
+				"third": ["f02", "f04", "f06"]
 			}
 		},
 		"fifth": {
@@ -98,11 +98,11 @@ const (
 				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
 				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37"]
 			},
-			"keys": ["domain"],
+			"keys": ["string"],
 			"data": {
-				"example.com": ["f00", "f02", "f04"],
-				"example.net": ["f01", "f03", "f05"],
-				"example.org": ["f02", "f04", "f06"]
+				"first": ["f00", "f02", "f04"],
+				"second": ["f01", "f03", "f05"],
+				"third": ["f02", "f04", "f06"]
 			}
 		},
 		"sixth": {
@@ -118,6 +118,82 @@ const (
 				          "f60", "f61", "f62", "f63", "f64", "f65", "f66", "f67",
 				          "f70", "f71", "f72", "f73", "f74", "f75", "f76", "f77"]
 			},
+			"keys": ["string"],
+			"data": {
+				"first": ["f00", "f02", "f04"],
+				"second": ["f01", "f03", "f05"],
+				"third": ["f02", "f04", "f06"]
+			}
+		},
+		"seventh": {
+			"type": "ft8",
+			"keys": ["network"],
+			"data": {
+				"192.0.2.16/28": ["f00", "f02", "f04"],
+				"192.0.2.32/28": ["f01", "f03", "f05"],
+				"2001:db8::/33": ["f02", "f04", "f06"],
+				"2001:db8:8000::1": ["f03", "f05", "f07"]
+			}
+		},
+		"eighth": {
+			"type": "ft16",
+			"keys": ["network"],
+			"data": {
+				"192.0.2.16/28": ["f00", "f02", "f04"],
+				"192.0.2.32/28": ["f01", "f03", "f05"],
+				"2001:db8::/33": ["f02", "f04", "f06"],
+				"2001:db8:8000::1": ["f03", "f05", "f07"]
+			}
+		},
+		"ninth": {
+			"type": "ft32",
+			"keys": ["network"],
+			"data": {
+				"192.0.2.16/28": ["f00", "f02", "f04"],
+				"192.0.2.32/28": ["f01", "f03", "f05"],
+				"2001:db8::/33": ["f02", "f04", "f06"],
+				"2001:db8:8000::1": ["f03", "f05", "f07"]
+			}
+		},
+		"tenth": {
+			"type": "ft64",
+			"keys": ["network"],
+			"data": {
+				"192.0.2.16/28": ["f00", "f02", "f04"],
+				"192.0.2.32/28": ["f01", "f03", "f05"],
+				"2001:db8::/33": ["f02", "f04", "f06"],
+				"2001:db8:8000::1": ["f03", "f05", "f07"]
+			}
+		},
+		"eleventh": {
+			"type": "ft8",
+			"keys": ["domain"],
+			"data": {
+				"example.com": ["f00", "f02", "f04"],
+				"example.net": ["f01", "f03", "f05"],
+				"example.org": ["f02", "f04", "f06"]
+			}
+		},
+		"twelveth": {
+			"type": "ft16",
+			"keys": ["domain"],
+			"data": {
+				"example.com": ["f00", "f02", "f04"],
+				"example.net": ["f01", "f03", "f05"],
+				"example.org": ["f02", "f04", "f06"]
+			}
+		},
+		"thirteenth": {
+			"type": "ft32",
+			"keys": ["domain"],
+			"data": {
+				"example.com": ["f00", "f02", "f04"],
+				"example.net": ["f01", "f03", "f05"],
+				"example.org": ["f02", "f04", "f06"]
+			}
+		},
+		"fourteenth": {
+			"type":  "ft64",
 			"keys": ["domain"],
 			"data": {
 				"example.com": ["f00", "f02", "f04"],
@@ -155,11 +231,11 @@ const (
   },
   {
     "op": "Delete",
-    "path": ["third", "example.org"]
+    "path": ["third", "third"]
   },
   {
     "op": "Add",
-    "path": ["third", "example.gov"],
+    "path": ["third", "fourth"],
     "entity": {
       "type": "ft8",
       "data": ["f03", "f05", "f07"]
@@ -167,11 +243,11 @@ const (
   },
   {
     "op": "Delete",
-    "path": ["fourth", "example.org"]
+    "path": ["fourth", "third"]
   },
   {
     "op": "Add",
-    "path": ["fourth", "example.gov"],
+    "path": ["fourth", "fourth"],
     "entity": {
       "type": "ft16",
       "data": ["f03", "f05", "f07"]
@@ -179,11 +255,11 @@ const (
   },
   {
     "op": "Delete",
-    "path": ["fifth", "example.org"]
+    "path": ["fifth", "third"]
   },
   {
     "op": "Add",
-    "path": ["fifth", "example.gov"],
+    "path": ["fifth", "fourth"],
     "entity": {
       "type": "ft32",
       "data": ["f03", "f05", "f07"]
@@ -191,11 +267,155 @@ const (
   },
   {
     "op": "Delete",
-    "path": ["sixth", "example.org"]
+    "path": ["sixth", "third"]
   },
   {
     "op": "Add",
-    "path": ["sixth", "example.gov"],
+    "path": ["sixth", "fourth"],
+    "entity": {
+      "type": "ft64",
+      "data": ["f03", "f05", "f07"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["seventh", "192.0.2.32/28"]
+  },
+  {
+    "op": "Add",
+    "path": ["seventh", "192.0.2.48/28"],
+    "entity": {
+      "type": "ft8",
+      "data": ["f04", "f06", "f00"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["seventh", "2001:db8:8000::1"]
+  },
+  {
+    "op": "Add",
+    "path": ["seventh", "2001:db8:8000::2"],
+    "entity": {
+      "type": "ft8",
+      "data": ["f05", "f07", "f01"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["eighth", "192.0.2.32/28"]
+  },
+  {
+    "op": "Add",
+    "path": ["eighth", "192.0.2.48/28"],
+    "entity": {
+      "type": "ft16",
+      "data": ["f04", "f06", "f00"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["eighth", "2001:db8:8000::1"]
+  },
+  {
+    "op": "Add",
+    "path": ["eighth", "2001:db8:8000::2"],
+    "entity": {
+      "type": "ft16",
+      "data": ["f05", "f07", "f01"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["ninth", "192.0.2.32/28"]
+  },
+  {
+    "op": "Add",
+    "path": ["ninth", "192.0.2.48/28"],
+    "entity": {
+      "type": "ft32",
+      "data": ["f04", "f06", "f00"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["ninth", "2001:db8:8000::1"]
+  },
+  {
+    "op": "Add",
+    "path": ["ninth", "2001:db8:8000::2"],
+    "entity": {
+      "type": "ft32",
+      "data": ["f05", "f07", "f01"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["tenth", "192.0.2.32/28"]
+  },
+  {
+    "op": "Add",
+    "path": ["tenth", "192.0.2.48/28"],
+    "entity": {
+      "type": "ft64",
+      "data": ["f04", "f06", "f00"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["tenth", "2001:db8:8000::1"]
+  },
+  {
+    "op": "Add",
+    "path": ["tenth", "2001:db8:8000::2"],
+    "entity": {
+      "type": "ft64",
+      "data": ["f05", "f07", "f01"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["eleventh", "example.org"]
+  },
+  {
+    "op": "Add",
+    "path": ["eleventh", "example.gov"],
+    "entity": {
+      "type": "ft8",
+      "data": ["f03", "f05", "f07"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["twelveth", "example.org"]
+  },
+  {
+    "op": "Add",
+    "path": ["twelveth", "example.gov"],
+    "entity": {
+      "type": "ft16",
+      "data": ["f03", "f05", "f07"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["thirteenth", "example.org"]
+  },
+  {
+    "op": "Add",
+    "path": ["thirteenth", "example.gov"],
+    "entity": {
+      "type": "ft32",
+      "data": ["f03", "f05", "f07"]
+    }
+  },
+  {
+    "op": "Delete",
+    "path": ["fourteenth", "example.org"]
+  },
+  {
+    "op": "Add",
+    "path": ["fourteenth", "example.gov"],
     "entity": {
       "type": "ft64",
       "data": ["f03", "f05", "f07"]
@@ -215,52 +435,34 @@ const (
 				"key-3": "value-3"
 			}
 		},
-		"net-map": {
-			"type": "string",
-			"keys": ["network"],
-			"data": {
-				"192.0.2.16/28": "value-1",
-				"192.0.2.32/28": "value-2",
-				"192.0.2.48/28": "value-3"
-			}
-		},
-		"dom-map": {
-			"type": "string",
-			"keys": ["domain"],
-			"data": {
-				"example.com": "value-1",
-				"example.net": "value-2",
-				"example.org": "value-3"
-			}
-		},
-		"dom8-map": {
+		"str8-map": {
 			"type": {
 				"meta": "flags",
 				"name": "ft8",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07"]
 			},
-			"keys": ["domain"],
+			"keys": ["string"],
 			"data": {
-				"example.com": ["f01"],
-				"example.net": ["f02", "f04"],
-				"example.org": ["f01", "f02"]
+				"key-1": ["f01"],
+				"key-2": ["f02", "f04"],
+				"key-3": ["f01", "f02"]
 			}
 		},
-		"dom16-map": {
+		"str16-map": {
 			"type": {
 				"meta": "flags",
 				"name": "ft16",
 				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
 				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17"]
 			},
-			"keys": ["domain"],
+			"keys": ["string"],
 			"data": {
-				"example.com": ["f01"],
-				"example.net": ["f02", "f04"],
-				"example.org": ["f01", "f02"]
+				"key-1": ["f01"],
+				"key-2": ["f02", "f04"],
+				"key-3": ["f01", "f02"]
 			}
 		},
-		"dom32-map": {
+		"str32-map": {
 			"type": {
 				"meta": "flags",
 				"name": "ft32",
@@ -269,14 +471,14 @@ const (
 				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
 				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37"]
 			},
-			"keys": ["domain"],
+			"keys": ["string"],
 			"data": {
-				"example.com": ["f01"],
-				"example.net": ["f02", "f04"],
-				"example.org": ["f01", "f02"]
+				"key-1": ["f01"],
+				"key-2": ["f02", "f04"],
+				"key-3": ["f01", "f02"]
 			}
 		},
-		"dom64-map": {
+		"str64-map": {
 			"type": {
 				"meta": "flags",
 				"name": "ft64",
@@ -289,6 +491,100 @@ const (
 				          "f60", "f61", "f62", "f63", "f64", "f65", "f66", "f67",
 				          "f70", "f71", "f72", "f73", "f74", "f75", "f76", "f77"]
 			},
+			"keys": ["string"],
+			"data": {
+				"key-1": ["f01"],
+				"key-2": ["f02", "f04"],
+				"key-3": ["f01", "f02"]
+			}
+		},
+		"net-map": {
+			"type": "string",
+			"keys": ["network"],
+			"data": {
+				"192.0.2.16/28": "value-1",
+				"192.0.2.32/28": "value-2",
+				"192.0.2.48/28": "value-3"
+			}
+		},
+		"net8-map": {
+			"type": "ft8",
+			"keys": ["network"],
+			"data": {
+				"192.0.2.16/28": ["f01"],
+				"192.0.2.32/28": ["f02", "f04"],
+				"2001:db8::/33": ["f01", "f02"],
+				"2001:db8:8000::1": ["f04", "f06"]
+			}
+		},
+		"net16-map": {
+			"type": "ft16",
+			"keys": ["network"],
+			"data": {
+				"192.0.2.16/28": ["f01"],
+				"192.0.2.32/28": ["f02", "f04"],
+				"2001:db8::/33": ["f01", "f02"],
+				"2001:db8:8000::1": ["f04", "f06"]
+			}
+		},
+		"net32-map": {
+			"type": "ft32",
+			"keys": ["network"],
+			"data": {
+				"192.0.2.16/28": ["f01"],
+				"192.0.2.32/28": ["f02", "f04"],
+				"2001:db8::/33": ["f01", "f02"],
+				"2001:db8:8000::1": ["f04", "f06"]
+			}
+		},
+		"net64-map": {
+			"type": "ft64",
+			"keys": ["network"],
+			"data": {
+				"192.0.2.16/28": ["f01"],
+				"192.0.2.32/28": ["f02", "f04"],
+				"2001:db8::/33": ["f01", "f02"],
+				"2001:db8:8000::1": ["f04", "f06"]
+			}
+		},
+		"dom-map": {
+			"type": "string",
+			"keys": ["domain"],
+			"data": {
+				"example.com": "value-1",
+				"example.net": "value-2",
+				"example.org": "value-3"
+			}
+		},
+		"dom8-map": {
+			"type":  "ft8",
+			"keys": ["domain"],
+			"data": {
+				"example.com": ["f01"],
+				"example.net": ["f02", "f04"],
+				"example.org": ["f01", "f02"]
+			}
+		},
+		"dom16-map": {
+			"type":  "ft16",
+			"keys": ["domain"],
+			"data": {
+				"example.com": ["f01"],
+				"example.net": ["f02", "f04"],
+				"example.org": ["f01", "f02"]
+			}
+		},
+		"dom32-map": {
+			"type":  "ft32",
+			"keys": ["domain"],
+			"data": {
+				"example.com": ["f01"],
+				"example.net": ["f02", "f04"],
+				"example.org": ["f01", "f02"]
+			}
+		},
+		"dom64-map": {
+			"type":  "ft64",
 			"keys": ["domain"],
 			"data": {
 				"example.com": ["f01"],
@@ -311,6 +607,69 @@ const (
 			"type": "string",
 			"keys": ["string"]
 		},
+		"str8-map": {
+			"data": {
+				"key-1": ["f01"],
+				"key-2": ["f02", "f04"],
+				"key-3": ["f01", "f02"]
+			},
+			"type": {
+				"meta": "flags",
+				"name": "ft8",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07"]
+			},
+			"keys": ["string"]
+		},
+		"str16-map": {
+			"data": {
+				"key-1": ["f01"],
+				"key-2": ["f02", "f04"],
+				"key-3": ["f01", "f02"]
+			},
+			"type": {
+				"meta": "flags",
+				"name": "ft16",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17"]
+			},
+			"keys": ["string"]
+		},
+		"str32-map": {
+			"data": {
+				"key-1": ["f01"],
+				"key-2": ["f02", "f04"],
+				"key-3": ["f01", "f02"]
+			},
+			"type": {
+				"meta": "flags",
+				"name": "ft32",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37"]
+			},
+			"keys": ["string"]
+		},
+		"str64-map": {
+			"data": {
+				"key-1": ["f01"],
+				"key-2": ["f02", "f04"],
+				"key-3": ["f01", "f02"]
+			},
+			"type": {
+				"meta": "flags",
+				"name": "ft64",
+				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
+				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
+				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37",
+				          "f40", "f41", "f42", "f43", "f44", "f45", "f46", "f47",
+				          "f50", "f51", "f52", "f53", "f54", "f55", "f56", "f57",
+				          "f60", "f61", "f62", "f63", "f64", "f65", "f66", "f67",
+				          "f70", "f71", "f72", "f73", "f74", "f75", "f76", "f77"]
+			},
+			"keys": ["string"]
+		},
 		"net-map": {
 			"data": {
 				"192.0.2.16/28": "value-1",
@@ -318,6 +677,46 @@ const (
 				"192.0.2.48/28": "value-3"
 			},
 			"type": "string",
+			"keys": ["network"]
+		},
+		"net8-map": {
+			"data": {
+				"192.0.2.16/28": ["f01"],
+				"192.0.2.32/28": ["f02", "f04"],
+				"2001:db8::/33": ["f01", "f02"],
+				"2001:db8:8000::1": ["f04", "f06"]
+			},
+			"type": "ft8",
+			"keys": ["network"]
+		},
+		"net16-map": {
+			"data": {
+				"192.0.2.16/28": ["f01"],
+				"192.0.2.32/28": ["f02", "f04"],
+				"2001:db8::/33": ["f01", "f02"],
+				"2001:db8:8000::1": ["f04", "f06"]
+			},
+			"type": "ft16",
+			"keys": ["network"]
+		},
+		"net32-map": {
+			"data": {
+				"192.0.2.16/28": ["f01"],
+				"192.0.2.32/28": ["f02", "f04"],
+				"2001:db8::/33": ["f01", "f02"],
+				"2001:db8:8000::1": ["f04", "f06"]
+			},
+			"type": "ft32",
+			"keys": ["network"]
+		},
+		"net64-map": {
+			"data": {
+				"192.0.2.16/28": ["f01"],
+				"192.0.2.32/28": ["f02", "f04"],
+				"2001:db8::/33": ["f01", "f02"],
+				"2001:db8:8000::1": ["f04", "f06"]
+			},
+			"type": "ft64",
 			"keys": ["network"]
 		},
 		"dom-map": {
@@ -335,11 +734,7 @@ const (
 				"example.net": ["f02", "f04"],
 				"example.org": ["f01", "f02"]
 			},
-			"type": {
-				"meta": "flags",
-				"name": "ft8",
-				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07"]
-			},
+			"type": "ft8",
 			"keys": ["domain"]
 		},
 		"dom16-map": {
@@ -348,12 +743,7 @@ const (
 				"example.net": ["f02", "f04"],
 				"example.org": ["f01", "f02"]
 			},
-			"type": {
-				"meta": "flags",
-				"name": "ft16",
-				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
-				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17"]
-			},
+			"type": "ft16",
 			"keys": ["domain"]
 		},
 		"dom32-map": {
@@ -362,14 +752,7 @@ const (
 				"example.net": ["f02", "f04"],
 				"example.org": ["f01", "f02"]
 			},
-			"type": {
-				"meta": "flags",
-				"name": "ft32",
-				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
-				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
-				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
-				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37"]
-			},
+			"type": "ft32",
 			"keys": ["domain"]
 		},
 		"dom64-map": {
@@ -378,18 +761,7 @@ const (
 				"example.net": ["f02", "f04"],
 				"example.org": ["f01", "f02"]
 			},
-			"type": {
-				"meta": "flags",
-				"name": "ft64",
-				"flags": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07",
-				          "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17",
-				          "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
-				          "f30", "f31", "f32", "f33", "f34", "f35", "f36", "f37",
-				          "f40", "f41", "f42", "f43", "f44", "f45", "f46", "f47",
-				          "f50", "f51", "f52", "f53", "f54", "f55", "f56", "f57",
-				          "f60", "f61", "f62", "f63", "f64", "f65", "f66", "f67",
-				          "f70", "f71", "f72", "f73", "f74", "f75", "f76", "f77"]
-			},
+			"type": "ft64",
 			"keys": ["domain"]
 		}
 	}
@@ -855,6 +1227,82 @@ func TestUnmarshal(t *testing.T) {
 			}
 		}
 
+		lc, err = c.Get("str8-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{pdp.MakeStringValue("key-2")}
+			r, err := lc.Get(path, nil)
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"f02\",\"f04\""
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected %q but got %q", e, s)
+				}
+			}
+		}
+
+		lc, err = c.Get("str16-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{pdp.MakeStringValue("key-2")}
+			r, err := lc.Get(path, nil)
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"f02\",\"f04\""
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected %q but got %q", e, s)
+				}
+			}
+		}
+
+		lc, err = c.Get("str32-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{pdp.MakeStringValue("key-2")}
+			r, err := lc.Get(path, nil)
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"f02\",\"f04\""
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected %q but got %q", e, s)
+				}
+			}
+		}
+
+		lc, err = c.Get("str64-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			path := []pdp.Expression{pdp.MakeStringValue("key-2")}
+			r, err := lc.Get(path, nil)
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				e := "\"f02\",\"f04\""
+				s, err := r.Serialize()
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else if s != e {
+					t.Errorf("Expected %q but got %q", e, s)
+				}
+			}
+		}
+
 		lc, err = c.Get("net-map")
 		if err != nil {
 			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
@@ -869,6 +1317,102 @@ func TestUnmarshal(t *testing.T) {
 					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 				} else {
 					e := "value-2"
+					s, err := r.Serialize()
+					if err != nil {
+						t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+					} else if s != e {
+						t.Errorf("Expected %q but got %q", e, s)
+					}
+				}
+			}
+		}
+
+		lc, err = c.Get("net8-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			n, err := pdp.MakeValueFromString(pdp.TypeNetwork, "192.0.2.44/30")
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				path := []pdp.Expression{n}
+				r, err := lc.Get(path, nil)
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else {
+					e := "\"f02\",\"f04\""
+					s, err := r.Serialize()
+					if err != nil {
+						t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+					} else if s != e {
+						t.Errorf("Expected %q but got %q", e, s)
+					}
+				}
+			}
+		}
+
+		lc, err = c.Get("net16-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			n, err := pdp.MakeValueFromString(pdp.TypeNetwork, "192.0.2.44/30")
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				path := []pdp.Expression{n}
+				r, err := lc.Get(path, nil)
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else {
+					e := "\"f02\",\"f04\""
+					s, err := r.Serialize()
+					if err != nil {
+						t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+					} else if s != e {
+						t.Errorf("Expected %q but got %q", e, s)
+					}
+				}
+			}
+		}
+
+		lc, err = c.Get("net32-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			n, err := pdp.MakeValueFromString(pdp.TypeNetwork, "192.0.2.44/30")
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				path := []pdp.Expression{n}
+				r, err := lc.Get(path, nil)
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else {
+					e := "\"f02\",\"f04\""
+					s, err := r.Serialize()
+					if err != nil {
+						t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+					} else if s != e {
+						t.Errorf("Expected %q but got %q", e, s)
+					}
+				}
+			}
+		}
+
+		lc, err = c.Get("net64-map")
+		if err != nil {
+			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+		} else {
+			n, err := pdp.MakeValueFromString(pdp.TypeNetwork, "192.0.2.44/30")
+			if err != nil {
+				t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+			} else {
+				path := []pdp.Expression{n}
+				r, err := lc.Get(path, nil)
+				if err != nil {
+					t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
+				} else {
+					e := "\"f02\",\"f04\""
 					s, err := r.Serialize()
 					if err != nil {
 						t.Errorf("Expected no error but got (%T):\n\t%s", err, err)

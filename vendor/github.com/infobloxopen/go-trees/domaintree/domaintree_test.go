@@ -318,14 +318,41 @@ func TestDelete(t *testing.T) {
 	}
 
 	r, ok = r.Delete("")
-	if !ok {
-		t.Error("Expected not empty tree to be cleaned up")
+	if ok {
+		t.Error("Expected nothing to delete from root node as it has no any value")
 	}
 
+	r = r.Insert("", "root")
+	assertTree(r, "tree", t,
+		"\"\": \"root\"\n",
+		"\"example.com\": \"4\"\n",
+		"\"www.test.org\": \"6\"\n")
+
 	r, ok = r.Delete("")
-	if ok {
-		t.Error("Expected nothing to clean up from empty tree")
+	if !ok {
+		t.Error("Expected root node to be deleted")
 	}
+	assertTree(r, "tree", t,
+		"\"example.com\": \"4\"\n",
+		"\"www.test.org\": \"6\"\n")
+
+	r = r.Insert("", "root")
+	r, ok = r.Delete("example.com")
+	if !ok {
+		t.Error("Expected \"example.com\" to be deleted")
+	}
+	r, ok = r.Delete("www.test.org")
+	if !ok {
+		t.Error("Expected \"www.test.org\" to be deleted")
+	}
+	assertTree(r, "tree", t,
+		"\"\": \"root\"\n")
+
+	r, ok = r.Delete("")
+	if !ok {
+		t.Error("Expected root node to be deleted")
+	}
+	assertTree(r, "tree", t)
 
 	r = r.Insert("com", "1")
 	r = r.Insert("test.com", "2")

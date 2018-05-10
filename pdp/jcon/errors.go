@@ -22,27 +22,25 @@ const (
 	unknownTypeErrorID                    = 11
 	invalidContentItemTypeErrorID         = 12
 	invalidContentKeyTypeErrorID          = 13
-	invalidContentValueTypeErrorID        = 14
-	invalidFlagsCapacityErrorID           = 15
-	unknownFlagNameErrorID                = 16
-	duplicateContentItemFieldErrorID      = 17
-	missingMetaTypeNameErrorID            = 18
-	unknownMetaTypeErrorID                = 19
-	missingFlagNameListErrorID            = 20
-	newTypeOnUpdateErrorID                = 21
-	invalidTypeFormatErrorID              = 22
-	unknownTypeFieldErrorID               = 23
-	missingContentDataErrorID             = 24
-	missingContentTypeErrorID             = 25
-	invalidSequenceContentItemNodeErrorID = 26
-	invalidMapContentItemNodeErrorID      = 27
-	unknownCommadFieldErrorID             = 28
-	duplicateCommandFieldErrorID          = 29
-	missingCommandOpErrorID               = 30
-	missingCommandPathErrorID             = 31
-	missingCommandEntityErrorID           = 32
-	unknownContentUpdateOperationErrorID  = 33
-	arrayEndDelimiterErrorID              = 34
+	unknownFlagNameErrorID                = 14
+	duplicateContentItemFieldErrorID      = 15
+	missingMetaTypeNameErrorID            = 16
+	unknownMetaTypeErrorID                = 17
+	missingFlagNameListErrorID            = 18
+	newTypeOnUpdateErrorID                = 19
+	invalidTypeFormatErrorID              = 20
+	unknownTypeFieldErrorID               = 21
+	missingContentDataErrorID             = 22
+	missingContentTypeErrorID             = 23
+	invalidSequenceContentItemNodeErrorID = 24
+	invalidMapContentItemNodeErrorID      = 25
+	unknownCommadFieldErrorID             = 26
+	duplicateCommandFieldErrorID          = 27
+	missingCommandOpErrorID               = 28
+	missingCommandPathErrorID             = 29
+	missingCommandEntityErrorID           = 30
+	unknownContentUpdateOperationErrorID  = 31
+	arrayEndDelimiterErrorID              = 32
 )
 
 type externalError struct {
@@ -267,36 +265,6 @@ func newInvalidContentKeyTypeError(t pdp.Type, expected pdp.TypeSet) *invalidCon
 
 func (e *invalidContentKeyTypeError) Error() string {
 	return e.errorf("Can't use %q type as a key in content item (expected %s)", e.t, e.expected)
-}
-
-type invalidContentValueTypeError struct {
-	errorLink
-	t pdp.Type
-}
-
-func newInvalidContentValueTypeError(t pdp.Type) *invalidContentValueTypeError {
-	return &invalidContentValueTypeError{
-		errorLink: errorLink{id: invalidContentValueTypeErrorID},
-		t:         t}
-}
-
-func (e *invalidContentValueTypeError) Error() string {
-	return e.errorf("Can't use %q type as a value in content item (only domain map supports flags type)", e.t)
-}
-
-type invalidFlagsCapacityError struct {
-	errorLink
-	t *pdp.FlagsType
-}
-
-func newInvalidFlagsCapacityError(t *pdp.FlagsType) *invalidFlagsCapacityError {
-	return &invalidFlagsCapacityError{
-		errorLink: errorLink{id: invalidFlagsCapacityErrorID},
-		t:         t}
-}
-
-func (e *invalidFlagsCapacityError) Error() string {
-	return e.errorf("Type %q has invalid capacity %d", e.t, e.t.Capacity())
 }
 
 type unknownFlagNameError struct {

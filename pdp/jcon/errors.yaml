@@ -141,23 +141,6 @@ errors:
   - field: t
   - field: expected
 
-- id: invalidContentValueTypeError
-  fields:
-  - id: t
-    type: pdp.Type
-  msg: "Can't use %q type as a value in content item (only domain map supports flags type)"
-  args:
-  - field: t
-
-- id: invalidFlagsCapacityError
-  fields: 
-  - id: t 
-    type: "*pdp.FlagsType" 
-  msg: "Type %q has invalid capacity %d" 
-  args:
-  - field: t
-  - field: t.Capacity()
-
 - id: unknownFlagNameError
   fields:
   - id: name

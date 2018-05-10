@@ -156,8 +156,12 @@ func (n *Node) Delete(d string) (*Node, bool) {
 		return n.del(domain.Split(d))
 	}
 
-	if n.hasValue || !n.branches.IsEmpty() {
-		return &Node{}, true
+	if n.hasValue {
+		if n.branches.IsEmpty() {
+			return &Node{}, true
+		}
+
+		return &Node{branches: n.branches}, true
 	}
 
 	return n, false
