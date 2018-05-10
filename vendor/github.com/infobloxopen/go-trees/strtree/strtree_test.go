@@ -578,8 +578,8 @@ func TestIsEmpty(t *testing.T) {
 		t.Errorf("Expected two nodes tree to be not empty")
 	}
 
-	r, ok = r.Delete("0")
-	r, ok = r.Delete("6")
+	r, _ = r.Delete("0")
+	r, _ = r.Delete("6")
 
 	if !r.IsEmpty() {
 		t.Errorf("Expected empty non-nil tree to be empty")

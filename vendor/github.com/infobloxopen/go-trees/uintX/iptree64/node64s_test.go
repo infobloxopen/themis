@@ -46,7 +46,7 @@ func TestInsert64s(t *testing.T) {
 	r = r.Insert(0xAAAAAAAA00000000, 18, nBottom)
 	r = r.Insert(0xABAAAAAA00000000, 10, nTop)
 	assertTree64s(r, TestTree64sWithTopAfterBottomAndAdditionalNotLeafNodesInserted,
-		"64-tree with top after bottom and addtional not leaf nodes inserted", t)
+		"64-tree with top after bottom and additional not leaf nodes inserted", t)
 
 	r = nil
 	r = r.Insert(0xAAAAAAAA00000000, 18, nBottom)
@@ -111,7 +111,7 @@ func TestInplaceInsert64s(t *testing.T) {
 	r = r.InplaceInsert(0xAAAAAAAA00000000, 18, nBottom)
 	r = r.InplaceInsert(0xABAAAAAA00000000, 10, nTop)
 	assertTree64s(r, TestTree64sWithTopAfterBottomAndAdditionalNotLeafNodesInserted,
-		"64-tree with top after bottom and addtional not leaf nodes inplace inserted", t)
+		"64-tree with top after bottom and additional not leaf nodes inplace inserted", t)
 
 	r = nil
 	r = r.InplaceInsert(0xAAAAAAAA00000000, 18, nBottom)

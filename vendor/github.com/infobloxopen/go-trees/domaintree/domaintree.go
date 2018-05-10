@@ -2,6 +2,8 @@
 package domaintree
 
 import (
+	"errors"
+
 	"github.com/infobloxopen/go-trees/dltree"
 	"github.com/infobloxopen/go-trees/domain"
 )
@@ -16,38 +18,33 @@ type Node struct {
 
 // Pair represents a key-value pair returned by Enumerate method.
 type Pair struct {
-	Key   string
+	// Key is a human-readable representation of domain name.
+	Key string
+	// Value stores data related to the name.
 	Value interface{}
 }
 
-// Insert puts value using given domain as a key. The method returns new tree (old one remains unaffected). Input name converted to ASCII lowercase according to RFC-4343 (by mapping A-Z to a-z) to perform case-insensitive comparison when getting data from the tree.
-func (n *Node) Insert(d string, v interface{}) *Node {
-	if n == nil {
-		n = &Node{}
-	} else {
-		n = &Node{
-			branches: n.branches,
-			hasValue: n.hasValue,
-			value:    n.value}
-	}
+var errStopIterations = errors.New("stop iterations")
+
+// Insert puts value using given domain as a key. The method returns new tree (old one remains unaffected).
+func (n *Node) Insert(d domain.Name, v interface{}) *Node {
+	n = n.copy()
 	r := n
 
-	for _, label := range domain.Split(d) {
+	d.GetLabels(func(label string) error {
 		item, ok := n.branches.RawGet(label)
 		var next *Node
 		if ok {
-			next = item.(*Node)
-			next = &Node{
-				branches: next.branches,
-				hasValue: next.hasValue,
-				value:    next.value}
+			next = item.(*Node).copy()
 		} else {
-			next = &Node{}
+			next = new(Node)
 		}
 
 		n.branches = n.branches.RawInsert(label, next)
 		n = next
-	}
+
+		return nil
+	})
 
 	n.hasValue = true
 	n.value = v
@@ -55,13 +52,13 @@ func (n *Node) Insert(d string, v interface{}) *Node {
 	return r
 }
 
-// InplaceInsert puts or replaces value using given domain as a key. The method inserts data directly to current tree so make sure you have exclusive access to it. Input name converted in the same way as for Insert.
-func (n *Node) InplaceInsert(d string, v interface{}) {
+// InplaceInsert puts or replaces value using given domain as a key. The method inserts data directly to current tree so make sure you have exclusive access to it.
+func (n *Node) InplaceInsert(d domain.Name, v interface{}) {
 	if n.branches == nil {
 		n.branches = dltree.NewTree()
 	}
 
-	for _, label := range domain.Split(d) {
+	d.GetLabels(func(label string) error {
 		item, ok := n.branches.RawGet(label)
 		if ok {
 			n = item.(*Node)
@@ -70,13 +67,15 @@ func (n *Node) InplaceInsert(d string, v interface{}) {
 			n.branches.RawInplaceInsert(label, next)
 			n = next
 		}
-	}
+
+		return nil
+	})
 
 	n.hasValue = true
 	n.value = v
 }
 
-// Enumerate returns key-value pairs in given tree sorted by key first by top level domain label second by second level and so on.
+// Enumerate returns key-value pairs in given tree. It lists domains in the same order for the same tree.
 func (n *Node) Enumerate() chan Pair {
 	ch := make(chan Pair)
 
@@ -88,83 +87,102 @@ func (n *Node) Enumerate() chan Pair {
 	return ch
 }
 
-// Get gets value for domain which is equal to domain in the tree or is a subdomain of existing domain.
-func (n *Node) Get(d string) (interface{}, bool) {
+// Get gets value for given domain which is equal to domain in the tree or is a subdomain of existing domain.
+func (n *Node) Get(d domain.Name) (interface{}, bool) {
 	if n == nil {
 		return nil, false
 	}
 
-	for _, label := range domain.Split(d) {
+	d.GetLabels(func(label string) error {
 		item, ok := n.branches.RawGet(label)
 		if !ok {
-			break
+			return errStopIterations
 		}
 
 		n = item.(*Node)
-	}
+		return nil
+	})
 
 	return n.value, n.hasValue
 }
 
-// WireGet gets value for domain which is equal to domain in the tree or is a subdomain of existing domain. The method accepts domain name in "wire" format described by RFC-1035 section "3.1. Name space definitions". Additionally it requires all ASCII letters (A-Z) to be converted to their lowercase counterparts (a-z). Returns error in case of compressed names (label length > 63 octets), malformed domain names (last label length too big) and too long domain names (more than 255 bytes).
-func (n *Node) WireGet(d domain.WireNameLower) (interface{}, bool, error) {
-	if n == nil {
-		return nil, false, nil
-	}
-
-	err := domain.WireSplitCallback(d, func(label []byte) bool {
-		if item, ok := n.branches.RawGet(label); ok {
-			n = item.(*Node)
-			return true
-		}
-
-		return false
-	})
-	if err != nil {
-		return nil, false, err
-	}
-
-	return n.value, n.hasValue, nil
-}
-
 // DeleteSubdomains removes current domain and all its subdomains if any. It returns new tree and flag if deletion indeed occurs.
-func (n *Node) DeleteSubdomains(d string) (*Node, bool) {
+func (n *Node) DeleteSubdomains(d domain.Name) (*Node, bool) {
 	if n == nil {
 		return nil, false
 	}
 
-	labels := domain.Split(d)
-	if len(labels) > 0 {
-		return n.delSubdomains(domain.Split(d))
+	var (
+		labels [domain.MaxLabels]string
+		nodes  [domain.MaxLabels]*Node
+	)
+
+	i := n.getBranch(d, labels[:], nodes[:])
+	if i >= len(nodes) || !nodes[i].hasValue && n.branches.IsEmpty() {
+		return n, false
 	}
 
-	if n.hasValue || !n.branches.IsEmpty() {
-		return &Node{}, true
+	i++
+	if i >= len(nodes) {
+		return new(Node), true
 	}
 
-	return n, false
+	n = nodes[i].copy()
+	n.branches, _ = n.branches.RawDelete(labels[i])
+	i++
+
+	return n.copyBranch(labels[i:], nodes[i:]), true
 }
 
 // Delete removes current domain only. It returns new tree and flag if deletion indeed occurs.
-func (n *Node) Delete(d string) (*Node, bool) {
+func (n *Node) Delete(d domain.Name) (*Node, bool) {
 	if n == nil {
 		return nil, false
 	}
 
-	labels := domain.Split(d)
-	if len(labels) > 0 {
-		return n.del(domain.Split(d))
+	var (
+		labels [domain.MaxLabels]string
+		nodes  [domain.MaxLabels]*Node
+	)
+
+	i := n.getBranch(d, labels[:], nodes[:])
+	if i >= len(nodes) || !nodes[i].hasValue {
+		return n, false
 	}
 
-	if n.hasValue {
-		if n.branches.IsEmpty() {
-			return &Node{}, true
+	n = nodes[i]
+	i++
+
+	branches := n.branches
+	if i >= len(nodes) {
+		if branches.IsEmpty() {
+			return new(Node), true
 		}
 
-		return &Node{branches: n.branches}, true
+		return &Node{branches: branches}, true
 	}
 
-	return n, false
+	n = nodes[i].copy()
+	if branches.IsEmpty() {
+		n.branches, _ = n.branches.RawDelete(labels[i])
+	} else {
+		n.branches = n.branches.RawInsert(labels[i], &Node{branches: branches})
+	}
+	i++
+
+	return n.copyBranch(labels[i:], nodes[i:]), true
+}
+
+func (n *Node) copy() *Node {
+	if n == nil {
+		return new(Node)
+	}
+
+	return &Node{
+		branches: n.branches,
+		hasValue: n.hasValue,
+		value:    n.value,
+	}
 }
 
 func (n *Node) enumerate(s string, ch chan Pair) {
@@ -178,8 +196,8 @@ func (n *Node) enumerate(s string, ch chan Pair) {
 			Value: n.value}
 	}
 
-	for item := range n.branches.RawEnumerate() {
-		sub := item.Key.String()
+	for item := range n.branches.Enumerate() {
+		sub := item.Key
 		if len(s) > 0 {
 			sub += "." + s
 		}
@@ -189,82 +207,41 @@ func (n *Node) enumerate(s string, ch chan Pair) {
 	}
 }
 
-func (n *Node) delSubdomains(labels []domain.Label) (*Node, bool) {
-	label := labels[0]
-	if len(labels) > 1 {
-		item, ok := n.branches.RawGet(label)
+func (n *Node) getBranch(d domain.Name, labels []string, nodes []*Node) int {
+	i := len(labels) - 1
+	nodes[i] = n
+
+	if err := d.GetLabels(func(label string) error {
+		labels[i] = label
+
+		next, ok := n.branches.RawGet(label)
 		if !ok {
-			return n, false
+			return errStopIterations
 		}
 
-		next := item.(*Node)
-		next, ok = next.delSubdomains(labels[1:])
-		if !ok {
-			return n, false
-		}
+		n = next.(*Node)
 
-		if next.branches.IsEmpty() && !next.hasValue {
-			branches, _ := n.branches.RawDelete(label)
-			return &Node{
-				branches: branches,
-				hasValue: n.hasValue,
-				value:    n.value}, true
-		}
-
-		return &Node{
-			branches: n.branches.RawInsert(label, next),
-			hasValue: n.hasValue,
-			value:    n.value}, true
+		i--
+		nodes[i] = n
+		return nil
+	}); err != nil {
+		return len(labels)
 	}
 
-	branches, ok := n.branches.RawDelete(label)
-	if ok {
-		return &Node{
-			branches: branches,
-			hasValue: n.hasValue,
-			value:    n.value}, true
-	}
-
-	return n, false
+	return i
 }
 
-func (n *Node) del(labels []domain.Label) (*Node, bool) {
-	label := labels[0]
-	item, ok := n.branches.RawGet(label)
-	if !ok {
-		return n, false
-	}
-	next := item.(*Node)
-	if len(labels) > 1 {
-		next, ok = next.del(labels[1:])
-		if !ok {
-			return n, false
+func (n *Node) copyBranch(labels []string, nodes []*Node) *Node {
+	for i, p := range nodes {
+		p = p.copy()
+		if !n.hasValue && n.branches.IsEmpty() {
+			p.branches, _ = p.branches.RawDelete(labels[i])
+		} else {
+			p.branches = p.branches.RawInsert(labels[i], n)
 		}
 
-		if next.branches.IsEmpty() && !next.hasValue {
-			branches, _ := n.branches.RawDelete(label)
-			return &Node{
-				branches: branches,
-				hasValue: n.hasValue,
-				value:    n.value}, true
-		}
-
-		return &Node{
-			branches: n.branches.RawInsert(label, next),
-			hasValue: n.hasValue,
-			value:    n.value}, true
+		n = p
 	}
 
-	if next.branches.IsEmpty() {
-		branches, _ := n.branches.RawDelete(label)
-		return &Node{
-			branches: branches,
-			hasValue: n.hasValue,
-			value:    n.value}, true
-	}
-
-	return &Node{
-		branches: n.branches.RawInsert(label, &Node{branches: next.branches}),
-		hasValue: n.hasValue,
-		value:    n.value}, true
+	return n
 }

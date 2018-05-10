@@ -12,17 +12,17 @@ import (
 func TestInsert(t *testing.T) {
 	var r *Node
 
-	r1 := r.Insert("com", "1")
+	r1 := r.Insert(makeTestDN(t, "com"), "1")
 	if r1 == nil {
 		t.Error("Expected new tree but got nothing")
 	}
 
-	r2 := r1.Insert("test.com", "2")
-	r3 := r2.Insert("test.net", "3")
-	r4 := r3.Insert("example.com", "4")
-	r5 := r4.Insert("www.test.com.", "5")
-	r6 := r5.Insert(".", "6")
-	r6a := r6.Insert("", "6a")
+	r2 := r1.Insert(makeTestDN(t, "test.com"), "2")
+	r3 := r2.Insert(makeTestDN(t, "test.net"), "3")
+	r4 := r3.Insert(makeTestDN(t, "example.com"), "4")
+	r5 := r4.Insert(makeTestDN(t, "www.test.com."), "5")
+	r6 := r5.Insert(makeTestDN(t, "."), "6")
+	r6a := r6.Insert(makeTestDN(t, ""), "6a")
 
 	assertTree(r, "empty tree", t)
 
@@ -67,7 +67,7 @@ func TestInsert(t *testing.T) {
 		"\"example.com\": \"4\"\n",
 		"\"test.net\": \"3\"\n")
 
-	r = r.Insert("AbCdEfGhIjKlMnOpQrStUvWxYz.aBcDeFgHiJkLmNoPqRsTuVwXyZ", "test")
+	r = r.Insert(makeTestDN(t, "AbCdEfGhIjKlMnOpQrStUvWxYz.aBcDeFgHiJkLmNoPqRsTuVwXyZ"), "test")
 	assertTree(r, "case-check tree", t,
 		"\"abcdefghijklmnopqrstuvwxyz.abcdefghijklmnopqrstuvwxyz\": \"test\"\n")
 }
@@ -76,29 +76,29 @@ func TestInplaceInsert(t *testing.T) {
 	r := &Node{}
 	assertTree(r, "empty inplace tree", t)
 
-	r.InplaceInsert("com", "1")
+	r.InplaceInsert(makeTestDN(t, "com"), "1")
 	assertTree(r, "single element inplace tree", t,
 		"\"com\": \"1\"\n")
 
-	r.InplaceInsert("test.com", "2")
+	r.InplaceInsert(makeTestDN(t, "test.com"), "2")
 	assertTree(r, "two elements inplace tree", t,
 		"\"com\": \"1\"\n",
 		"\"test.com\": \"2\"\n")
 
-	r.InplaceInsert("test.net", "3")
+	r.InplaceInsert(makeTestDN(t, "test.net"), "3")
 	assertTree(r, "three elements inplace tree", t,
 		"\"com\": \"1\"\n",
 		"\"test.com\": \"2\"\n",
 		"\"test.net\": \"3\"\n")
 
-	r.InplaceInsert("example.com", "4")
+	r.InplaceInsert(makeTestDN(t, "example.com"), "4")
 	assertTree(r, "four elements inplace tree", t,
 		"\"com\": \"1\"\n",
 		"\"test.com\": \"2\"\n",
 		"\"example.com\": \"4\"\n",
 		"\"test.net\": \"3\"\n")
 
-	r.InplaceInsert("www.test.com", "5")
+	r.InplaceInsert(makeTestDN(t, "www.test.com"), "5")
 	assertTree(r, "five elements tree", t,
 		"\"com\": \"1\"\n",
 		"\"test.com\": \"2\"\n",
@@ -110,132 +110,62 @@ func TestInplaceInsert(t *testing.T) {
 func TestGet(t *testing.T) {
 	var r *Node
 
-	v, ok := r.Get("test.com")
+	v, ok := r.Get(makeTestDN(t, "test.com"))
 	assertValue(v, ok, "", false, "fetching from empty tree", t)
 
-	r = r.Insert("com", "1")
-	r = r.Insert("test.com", "2")
-	r = r.Insert("test.net", "3")
-	r = r.Insert("example.com", "4")
-	r = r.Insert("www.test.com", "5")
+	r = r.Insert(makeTestDN(t, "com"), "1")
+	r = r.Insert(makeTestDN(t, "test.com"), "2")
+	r = r.Insert(makeTestDN(t, "test.net"), "3")
+	r = r.Insert(makeTestDN(t, "example.com"), "4")
+	r = r.Insert(makeTestDN(t, "www.test.com"), "5")
 
-	v, ok = r.Get("test.com")
+	v, ok = r.Get(makeTestDN(t, "test.com"))
 	assertValue(v, ok, "2", true, "fetching \"test.com\" from tree", t)
 
-	v, ok = r.Get("www.test.com")
+	v, ok = r.Get(makeTestDN(t, "www.test.com"))
 	assertValue(v, ok, "5", true, "fetching \"www.test.com\" from tree", t)
 
-	v, ok = r.Get("ns.test.com")
+	v, ok = r.Get(makeTestDN(t, "ns.test.com"))
 	assertValue(v, ok, "2", true, "fetching \"ns.test.com\" from tree", t)
 
-	v, ok = r.Get("test.org")
+	v, ok = r.Get(makeTestDN(t, "test.org"))
 	assertValue(v, ok, "", false, "fetching \"test.org\" from tree", t)
 
-	v, ok = r.Get("nS.tEsT.cOm")
+	v, ok = r.Get(makeTestDN(t, "nS.tEsT.cOm"))
 	assertValue(v, ok, "2", true, "fetching \"nS.tEsT.cOm\" from tree", t)
-}
-
-func TestWireGet(t *testing.T) {
-	var r *Node
-
-	v, ok, err := r.WireGet(domain.WireNameLower("\x04test\x03com\x00"))
-	if err != nil {
-		t.Errorf("Expected no error but got %s", err)
-	} else {
-		assertValue(v, ok, "", false, "fetching from empty tree", t)
-	}
-
-	r = r.Insert("com", "1")
-	r = r.Insert("test.com", "2")
-	r = r.Insert("test.net", "3")
-	r = r.Insert("example.com", "4")
-	r = r.Insert("www.test.com", "5")
-
-	_, _, err = r.WireGet(domain.WireNameLower("\xC0\x2F"))
-	if err != domain.ErrCompressedName {
-		t.Errorf("Expected %q error but got %q", domain.ErrCompressedName, err)
-	}
-
-	_, _, err = r.WireGet(domain.WireNameLower("\x04test\x20com\x00"))
-	if err != domain.ErrLabelTooLong {
-		t.Errorf("Expected %q error but got %q", domain.ErrLabelTooLong, err)
-	}
-
-	_, _, err = r.WireGet(domain.WireNameLower("\x04test\x00\x03com\x00"))
-	if err != domain.ErrEmptyLabel {
-		t.Errorf("Expected %q error but got %q", domain.ErrEmptyLabel, err)
-	}
-
-	_, _, err = r.WireGet(domain.WireNameLower(
-		"\x3ftoooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo" +
-			"\x3floooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong" +
-			"\x3fdoooooooooooooooooooooooooooooooooooooooooooooooooooooooooomain" +
-			"\x3fnaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaame" +
-			"\x00"))
-	if err != domain.ErrNameTooLong {
-		t.Errorf("Expected %q error but got %q", domain.ErrNameTooLong, err)
-	}
-
-	v, ok, err = r.WireGet(domain.WireNameLower("\x04test\x03com\x00"))
-	if err != nil {
-		t.Errorf("Expected no error but got %s", err)
-	} else {
-		assertValue(v, ok, "2", true, "fetching \"test.com\" from tree", t)
-	}
-
-	v, ok, err = r.WireGet(domain.WireNameLower("\x03www\x04test\x03com\x00"))
-	if err != nil {
-		t.Errorf("Expected no error but got %s", err)
-	} else {
-		assertValue(v, ok, "5", true, "fetching \"www.test.com\" from tree", t)
-	}
-
-	v, ok, err = r.WireGet(domain.WireNameLower("\x02ns\x04test\x03com\x00"))
-	if err != nil {
-		t.Errorf("Expected no error but got %s", err)
-	} else {
-		assertValue(v, ok, "2", true, "fetching \"ns.test.com\" from tree", t)
-	}
-
-	v, ok, err = r.WireGet(domain.WireNameLower("\x04test\x03org\x00"))
-	if err != nil {
-		t.Errorf("Expected no error but got %s", err)
-	} else {
-		assertValue(v, ok, "", false, "fetching \"test.org\" from tree", t)
-	}
 }
 
 func TestDeleteSubdomains(t *testing.T) {
 	var r *Node
 
-	r, ok := r.DeleteSubdomains("test.com")
+	r, ok := r.DeleteSubdomains(makeTestDN(t, "test.com"))
 	if ok {
 		t.Error("Expected no deletion from empty tree but got deleted something")
 	}
 
-	r = r.Insert("com", "1")
-	r = r.Insert("test.com", "2")
-	r = r.Insert("test.net", "3")
-	r = r.Insert("example.com", "4")
-	r = r.Insert("www.test.com", "5")
-	r = r.Insert("www.test.org", "6")
+	r = r.Insert(makeTestDN(t, "com"), "1")
+	r = r.Insert(makeTestDN(t, "test.com"), "2")
+	r = r.Insert(makeTestDN(t, "test.net"), "3")
+	r = r.Insert(makeTestDN(t, "example.com"), "4")
+	r = r.Insert(makeTestDN(t, "www.test.com"), "5")
+	r = r.Insert(makeTestDN(t, "www.test.org"), "6")
 
-	r, ok = r.DeleteSubdomains("ns.test.com")
+	r, ok = r.DeleteSubdomains(makeTestDN(t, "ns.test.com"))
 	if ok {
 		t.Error("Expected \"ns.test.com\" to be not deleted as it's absent in the tree")
 	}
 
-	r, ok = r.DeleteSubdomains("test.com")
+	r, ok = r.DeleteSubdomains(makeTestDN(t, "test.com"))
 	if !ok {
 		t.Error("Expected \"test.com\" to be deleted")
 	}
 
-	r, ok = r.DeleteSubdomains("www.test.com")
+	r, ok = r.DeleteSubdomains(makeTestDN(t, "www.test.com"))
 	if ok {
 		t.Error("Expected \"www.test.com\" to be not deleted as it should be deleted with \"test.com\"")
 	}
 
-	r, ok = r.DeleteSubdomains("com")
+	r, ok = r.DeleteSubdomains(makeTestDN(t, "com"))
 	if !ok {
 		t.Error("Expected \"com\" to be deleted")
 	}
@@ -244,29 +174,29 @@ func TestDeleteSubdomains(t *testing.T) {
 		"\"test.net\": \"3\"\n",
 		"\"www.test.org\": \"6\"\n")
 
-	r, ok = r.DeleteSubdomains("test.net")
+	r, ok = r.DeleteSubdomains(makeTestDN(t, "test.net"))
 	if !ok {
 		t.Error("Expected \"test.net\" to be deleted")
 	}
 
-	r, ok = r.DeleteSubdomains("")
+	r, ok = r.DeleteSubdomains(makeTestDN(t, ""))
 	if !ok {
 		t.Error("Expected not empty tree to be cleaned up")
 	}
 
-	r, ok = r.DeleteSubdomains("")
+	r, ok = r.DeleteSubdomains(makeTestDN(t, ""))
 	if ok {
 		t.Error("Expected nothing to clean up from empty tree")
 	}
 
-	r = r.Insert("com", "1")
-	r = r.Insert("test.com", "2")
-	r = r.Insert("test.net", "3")
-	r = r.Insert("example.com", "4")
-	r = r.Insert("www.test.com", "5")
-	r = r.Insert("www.test.org", "6")
+	r = r.Insert(makeTestDN(t, "com"), "1")
+	r = r.Insert(makeTestDN(t, "test.com"), "2")
+	r = r.Insert(makeTestDN(t, "test.net"), "3")
+	r = r.Insert(makeTestDN(t, "example.com"), "4")
+	r = r.Insert(makeTestDN(t, "www.test.com"), "5")
+	r = r.Insert(makeTestDN(t, "www.test.org"), "6")
 
-	r, ok = r.DeleteSubdomains("WwW.tEsT.cOm")
+	r, ok = r.DeleteSubdomains(makeTestDN(t, "WwW.tEsT.cOm"))
 	if !ok {
 		t.Error("Expected \"WwW.tEsT.cOm\" to be deleted")
 	}
@@ -275,34 +205,34 @@ func TestDeleteSubdomains(t *testing.T) {
 func TestDelete(t *testing.T) {
 	var r *Node
 
-	r, ok := r.Delete("test.com")
+	r, ok := r.Delete(makeTestDN(t, "test.com"))
 	if ok {
 		t.Error("Expected no deletion from empty tree but got deleted something")
 	}
 
-	r = r.Insert("com", "1")
-	r = r.Insert("test.com", "2")
-	r = r.Insert("test.net", "3")
-	r = r.Insert("example.com", "4")
-	r = r.Insert("www.test.com", "5")
-	r = r.Insert("www.test.org", "6")
+	r = r.Insert(makeTestDN(t, "com"), "1")
+	r = r.Insert(makeTestDN(t, "test.com"), "2")
+	r = r.Insert(makeTestDN(t, "test.net"), "3")
+	r = r.Insert(makeTestDN(t, "example.com"), "4")
+	r = r.Insert(makeTestDN(t, "www.test.com"), "5")
+	r = r.Insert(makeTestDN(t, "www.test.org"), "6")
 
-	r, ok = r.Delete("ns.test.com")
+	r, ok = r.Delete(makeTestDN(t, "ns.test.com"))
 	if ok {
 		t.Error("Expected \"ns.test.com\" to be not deleted as it's absent in the tree")
 	}
 
-	r, ok = r.Delete("test.com")
+	r, ok = r.Delete(makeTestDN(t, "test.com"))
 	if !ok {
 		t.Error("Expected \"test.com\" to be deleted")
 	}
 
-	r, ok = r.Delete("www.test.com")
+	r, ok = r.Delete(makeTestDN(t, "www.test.com"))
 	if !ok {
 		t.Error("Expected \"www.test.com\" to be deleted")
 	}
 
-	r, ok = r.Delete("com")
+	r, ok = r.Delete(makeTestDN(t, "com"))
 	if !ok {
 		t.Error("Expected \"com\" to be deleted")
 	}
@@ -312,23 +242,23 @@ func TestDelete(t *testing.T) {
 		"\"test.net\": \"3\"\n",
 		"\"www.test.org\": \"6\"\n")
 
-	r, ok = r.Delete("test.net")
+	r, ok = r.Delete(makeTestDN(t, "test.net"))
 	if !ok {
 		t.Error("Expected \"test.net\" to be deleted")
 	}
 
-	r, ok = r.Delete("")
+	r, ok = r.Delete(makeTestDN(t, ""))
 	if ok {
 		t.Error("Expected nothing to delete from root node as it has no any value")
 	}
 
-	r = r.Insert("", "root")
+	r = r.Insert(makeTestDN(t, ""), "root")
 	assertTree(r, "tree", t,
 		"\"\": \"root\"\n",
 		"\"example.com\": \"4\"\n",
 		"\"www.test.org\": \"6\"\n")
 
-	r, ok = r.Delete("")
+	r, ok = r.Delete(makeTestDN(t, ""))
 	if !ok {
 		t.Error("Expected root node to be deleted")
 	}
@@ -336,35 +266,54 @@ func TestDelete(t *testing.T) {
 		"\"example.com\": \"4\"\n",
 		"\"www.test.org\": \"6\"\n")
 
-	r = r.Insert("", "root")
-	r, ok = r.Delete("example.com")
+	r = r.Insert(makeTestDN(t, ""), "root")
+	r, ok = r.Delete(makeTestDN(t, "example.com"))
 	if !ok {
 		t.Error("Expected \"example.com\" to be deleted")
 	}
-	r, ok = r.Delete("www.test.org")
+	r, ok = r.Delete(makeTestDN(t, "www.test.org"))
 	if !ok {
 		t.Error("Expected \"www.test.org\" to be deleted")
 	}
 	assertTree(r, "tree", t,
 		"\"\": \"root\"\n")
 
-	r, ok = r.Delete("")
+	r, ok = r.Delete(makeTestDN(t, ""))
 	if !ok {
 		t.Error("Expected root node to be deleted")
 	}
 	assertTree(r, "tree", t)
 
-	r = r.Insert("com", "1")
-	r = r.Insert("test.com", "2")
-	r = r.Insert("test.net", "3")
-	r = r.Insert("example.com", "4")
-	r = r.Insert("www.test.com", "5")
-	r = r.Insert("www.test.org", "6")
+	r = r.Insert(makeTestDN(t, "com"), "1")
+	r = r.Insert(makeTestDN(t, "test.com"), "2")
+	r = r.Insert(makeTestDN(t, "test.net"), "3")
+	r = r.Insert(makeTestDN(t, "example.com"), "4")
+	r = r.Insert(makeTestDN(t, "www.test.com"), "5")
+	r = r.Insert(makeTestDN(t, "www.test.org"), "6")
 
-	r, ok = r.Delete("WwW.tEsT.cOm")
+	r, ok = r.Delete(makeTestDN(t, "WwW.tEsT.cOm"))
 	if !ok {
 		t.Error("Expected \"WwW.tEsT.cOm\" to be deleted")
 	}
+
+	r = nil
+	r = r.Insert(makeTestDN(t, "escaped.\\\\label.com"), "root")
+	assertTree(r, "tree", t,
+		"\"escaped.\\\\\\\\label.com\": \"root\"\n")
+
+	r, ok = r.Delete(makeTestDN(t, "escaped.\\\\label.com"))
+	if !ok {
+		t.Error("Expected \"escaped.\\\\\\\\label.com\" to be deleted")
+	}
+}
+
+func makeTestDN(t *testing.T, s string) domain.Name {
+	d, err := domain.MakeNameFromString(s)
+	if err != nil {
+		t.Fatalf("can't create domain name from string %q: %s", s, err)
+	}
+
+	return d
 }
 
 func assertTree(r *Node, desc string, t *testing.T, e ...string) {

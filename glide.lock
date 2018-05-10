@@ -1,5 +1,5 @@
-hash: 3a89b4846213e07e7ff29d6752f83defda21457f038834e3d47aa03791308e83
-updated: 2018-05-07T15:27:18.244805+03:00
+hash: 9843abb4e39f4928d629e0b0d39773f2760f62899b9d88dfac30bd74c121d6c4
+updated: 2018-05-17T13:06:46.676001+03:00
 imports:
 - name: github.com/apache/thrift
   version: d907cc92db5b93e699a4282e979d097ea863215a
@@ -72,7 +72,7 @@ imports:
   subpackages:
   - go/otgrpc
 - name: github.com/infobloxopen/go-trees
-  version: 0bd5ebe38ca0cdb8ecedeed33f4ef22a927ece2a
+  version: fb9cddb08aeb183077bdb083c0a35f8f2bbf80b1
   subpackages:
   - dltree
   - domain

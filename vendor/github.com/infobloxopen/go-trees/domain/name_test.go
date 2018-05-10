@@ -2,291 +2,248 @@ package domain
 
 import (
 	"fmt"
-	"strconv"
 	"testing"
-
-	"github.com/pmezard/go-difflib/difflib"
 )
 
-func TestSplit(t *testing.T) {
-	dn := ""
-	labels := Split(dn)
-	if len(labels) != 0 {
-		t.Errorf("Expected zero labels for empty domain name %q but got %d", dn, len(labels))
+func TestNameMakeNameFromString(t *testing.T) {
+	s := "wiki.example.com"
+	n, err := MakeNameFromString(s)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	dn = "."
-	labels = Split(dn)
-	if len(labels) != 0 {
-		t.Errorf("Expected zero labels for root fqdn %q but got %d", dn, len(labels))
+	if n.h != s {
+		t.Errorf("expected %q as human-readable name but got %q", s, n.h)
 	}
 
-	dn = "www\\.test.com"
-	labels = Split(dn)
-	assertDomainName(labels, []string{
-		"com",
-		"www\\.test",
-	}, dn, t)
-
-	dn = "www.test.com."
-	labels = Split(dn)
-	assertDomainName(labels, []string{
-		"com",
-		"test",
-		"www",
-	}, dn, t)
-}
-
-func TestGetLabelsCount(t *testing.T) {
-	dn := ""
-	c := getLabelsCount(dn)
-	if c != 0 {
-		t.Errorf("Expected zero labels for empty domain name %q but got %d", dn, c)
-	}
-
-	dn = "."
-	c = getLabelsCount(dn)
-	if c != 0 {
-		t.Errorf("Expected zero labels for root fqdn %q but got %d", dn, c)
-	}
-
-	dn = "www\\.test.com"
-	c = getLabelsCount(dn)
-	if c != 2 {
-		t.Errorf("Expected two labels for domain name %q but got %d", dn, c)
-	}
-
-	dn = "www.test.com."
-	c = getLabelsCount(dn)
-	if c != 3 {
-		t.Errorf("Expected three labels for fqdn %q but got %d", dn, c)
+	e := "\x03COM\x07EXAMPLE\x04WIKI"
+	if n.c != e {
+		t.Errorf("expected %q as name for comparison but got %q", e, n.c)
 	}
 }
 
-func TestMakeWireDomainNameLower(t *testing.T) {
-	dn := "example.com"
-	wdn, err := MakeWireDomainNameLower(dn)
+func TestNameMakeNameFromStringEmpty(t *testing.T) {
+	s := ""
+	n, err := MakeNameFromString(s)
 	if err != nil {
-		t.Errorf("Expected no error for %q but got %s", dn, err)
+		t.Fatal(err)
 	}
 
-	if string(wdn) != "\x07example\x03com\x00" {
-		t.Errorf("Got %q for %q", wdn, wdn)
+	if n.h != s {
+		t.Errorf("expected %q as human-readable name but got %q", s, n.h)
 	}
 
-	dn = "tooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo.long.domain.label"
-	wdn, err = MakeWireDomainNameLower(dn)
+	e := ""
+	if n.c != e {
+		t.Errorf("expected %q as name for comparison but got %q", e, n.c)
+	}
+}
+
+func TestNameMakeNameFromStringDot(t *testing.T) {
+	s := "."
+	n, err := MakeNameFromString(s)
 	if err != nil {
-		if err != ErrLabelTooLong {
-			t.Errorf("Expected error \"%s\" for %q but got \"%s\"", ErrLabelTooLong, dn, err)
-		}
-	} else {
-		t.Errorf("Expected error for %q but got result %q", dn, wdn)
+		t.Fatal(err)
 	}
 
-	dn = "empty..domain.label"
-	wdn, err = MakeWireDomainNameLower(dn)
-	if err != nil {
-		if err != ErrEmptyLabel {
-			t.Errorf("Expected error \"%s\" for %q but got \"%s\"", ErrEmptyLabel, dn, err)
-		}
-	} else {
-		t.Errorf("Expected error for %q but got result %q", dn, wdn)
+	if n.h != s {
+		t.Errorf("expected %q as human-readable name but got %q", s, n.h)
 	}
 
-	dn = "toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo." +
+	e := ""
+	if n.c != e {
+		t.Errorf("expected %q as name for comparison but got %q", e, n.c)
+	}
+}
+
+func TestNameMakeNameFromStringWithNameTooLong(t *testing.T) {
+	s := "toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo." +
 		"loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong." +
-		"dooooooooooooooooooooooooooooooooooooooooooooooooooooooooooomai." +
+		"doooooooooooooooooooooooooooooooooooooooooooooooooooooooooomain." +
 		"naaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaame"
-	wdn, err = MakeWireDomainNameLower(dn)
-	if err != nil {
-		if err != ErrNameTooLong {
-			t.Errorf("Expected error \"%s\" for %q but got \"%s\"", ErrNameTooLong, dn, err)
-		}
-	} else {
-		t.Errorf("Expected error for %q but got result %q", dn, wdn)
+
+	n, err := MakeNameFromString(s)
+	if err == nil {
+		t.Fatalf("expected error but got name %q", n.c)
 	}
 
-	dn = "toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo." +
-		"loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong." +
-		"dooooooooooooooooooooooooooooooooooooooooooooooooooooooooooomai." +
-		"naaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaame." +
-		"iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiis." +
-		"toooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo." +
-		"loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong"
-	wdn, err = MakeWireDomainNameLower(dn)
-	if err != nil {
-		if err != ErrNameTooLong {
-			t.Errorf("Expected error \"%s\" for %q but got \"%s\"", ErrNameTooLong, dn, err)
-		}
-	} else {
-		t.Errorf("Expected error for %q but got result %q", dn, wdn)
-	}
-}
-
-func TestWireDomainNameLowerString(t *testing.T) {
-	dn := "example.com"
-	wdn := WireNameLower("\x07example\x03com\x00")
-	sdn := wdn.String()
-	if sdn != dn {
-		t.Errorf("Expected %q for %q but got %q", dn, wdn, sdn)
-	}
-
-	dn = "example.com."
-	wdn = WireNameLower("\x07example\x03com\x05")
-	sdn = wdn.String()
-	if sdn != dn {
-		t.Errorf("Expected %q for %q but got %q", dn, wdn, sdn)
-	}
-
-	dn = "example.com"
-	wdn = WireNameLower("\x07example\x03com")
-	sdn = wdn.String()
-	if sdn != dn {
-		t.Errorf("Expected %q for %q but got %q", dn, wdn, sdn)
-	}
-}
-
-func TestToLowerWireDomainName(t *testing.T) {
-	wdn := WireNameLower("\x07ExAmPlE\x03CoM\x00")
-	ewdn := "\x07example\x03com\x00"
-	wldn, err := ToLowerWireDomainName(wdn)
-	if err != nil {
-		t.Errorf("Expected no error for %q but got \"%s\"", string(wdn), err)
-	} else if string(wldn) != ewdn {
-		t.Errorf("Expected %q for %q but got %q", ewdn, string(wdn), string(wldn))
-	}
-
-	wdn = WireNameLower(
-		"\x3fTOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO" +
-			"\x3fLOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOONG" +
-			"\x3fDOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOMAI" +
-			"\x3fNAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAME" +
-			"\x3fIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIS" +
-			"\x3fTOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO" +
-			"\x3fLOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOONG" +
-			"\x00")
-	wldn, err = ToLowerWireDomainName(wdn)
-	if err != nil {
-		if err != ErrNameTooLong {
-			t.Errorf("Expected error \"%s\" for %q but got \"%s\"", ErrNameTooLong, string(wdn), err)
-		}
-	} else {
-		t.Errorf("Expected error for %q but got result %q", string(wdn), string(wldn))
-	}
-
-	wdn = WireNameLower("\x05EMPTY\x00\x06DOMAIN\x05LABEL\x00")
-	wldn, err = ToLowerWireDomainName(wdn)
-	if err != nil {
-		if err != ErrEmptyLabel {
-			t.Errorf("Expected error \"%s\" for %q but got \"%s\"", ErrEmptyLabel, string(wdn), err)
-		}
-	} else {
-		t.Errorf("Expected error for %q but got result %q", string(wdn), string(wldn))
-	}
-
-	wdn = WireNameLower("\x0aCOMPRESSED\xff\xff")
-	wldn, err = ToLowerWireDomainName(wdn)
-	if err != nil {
-		if err != ErrCompressedName {
-			t.Errorf("Expected error \"%s\" for %q but got \"%s\"", ErrCompressedName, string(wdn), err)
-		}
-	} else {
-		t.Errorf("Expected error for %q but got result %q", string(wdn), string(wldn))
-	}
-
-	wdn = WireNameLower("\x05LABEL")
-	wldn, err = ToLowerWireDomainName(wdn)
-	if err != nil {
-		if err != ErrLabelTooLong {
-			t.Errorf("Expected error \"%s\" for %q but got \"%s\"", ErrLabelTooLong, string(wdn), err)
-		}
-	} else {
-		t.Errorf("Expected error for %q but got result %q", string(wdn), string(wldn))
-	}
-}
-
-func TestWireSplitCallback(t *testing.T) {
-	labels := []Label{}
-	in := "\x04test\x03com\x00"
-	err := WireSplitCallback(WireNameLower(in), func(label []byte) bool {
-		labels = append(labels, Label(label))
-		return true
-	})
-	if err != nil {
-		t.Errorf("Expected no error for %q but got: %s", in, err)
-	} else {
-		assertDomainName(labels, []string{"com", "test"}, strconv.Quote(in), t)
-	}
-
-	labels = []Label{}
-	err = WireSplitCallback(WireNameLower(in), func(label []byte) bool {
-		labels = append(labels, Label(label))
-		return false
-	})
-	if err != nil {
-		t.Errorf("Expected no error for %q but got: %s", in, err)
-	} else {
-		assertDomainName(labels, []string{"com"}, fmt.Sprintf("terminated %q", in), t)
-	}
-
-	err = WireSplitCallback(WireNameLower("\xC0\x2F"), func(label []byte) bool {
-		return true
-	})
-	if err != ErrCompressedName {
-		t.Errorf("Expected %q error but got %q", ErrCompressedName, err)
-	}
-
-	err = WireSplitCallback(WireNameLower("\x04test\x20com\x00"), func(label []byte) bool {
-		return true
-	})
-	if err != ErrLabelTooLong {
-		t.Errorf("Expected %q error but got %q", ErrLabelTooLong, err)
-	}
-
-	err = WireSplitCallback(WireNameLower("\x04test\x00\x03com\x00"), func(label []byte) bool {
-		return true
-	})
-	if err != ErrEmptyLabel {
-		t.Errorf("Expected %q error but got %q", ErrEmptyLabel, err)
-	}
-
-	err = WireSplitCallback(WireNameLower(
-		"\x3ftoooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"+
-			"\x3floooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong"+
-			"\x3fdoooooooooooooooooooooooooooooooooooooooooooooooooooooooooomain"+
-			"\x3fnaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaame"+
-			"\x00",
-	), func(label []byte) bool {
-		return true
-	})
 	if err != ErrNameTooLong {
-		t.Errorf("Expected %q error but got %q", ErrNameTooLong, err)
+		t.Fatalf("expected ErrNameTooLong but got %q (%T)", err, err)
 	}
 }
 
-func assertDomainName(labels []Label, elabels []string, dn string, t *testing.T) {
-	for i := range elabels {
-		elabels[i] += "\n"
+func TestNameMakeNameFromStringWithTooManyLabels(t *testing.T) {
+	s := "0.1.2.3.4.5.6.7.8.9.0.1.2.3.4.5.6.7.8.9.0.1.2.3.4.5.6.7.8.9.0.1.2.3.4.5.6.7.8.9." +
+		"0.1.2.3.4.5.6.7.8.9.0.1.2.3.4.5.6.7.8.9.0.1.2.3.4.5.6.7.8.9.0.1.2.3.4.5.6.7.8.9." +
+		"0.1.2.3.4.5.6.7.8.9.0.1.2.3.4.5.6.7.8.9.0.1.2.3.4.5.6.7.8.9.0.1.2.3.4.5.6.7.8.9." +
+		"0.1.2.3.4.5.6.7"
+
+	n, err := MakeNameFromString(s)
+	if err == nil {
+		t.Fatalf("expected error but got name %q", n.c)
 	}
 
-	s := make([]string, len(labels))
-	for i, label := range labels {
-		s[i] = label.String() + "\n"
+	if err != ErrTooManyLabels {
+		t.Fatalf("expected ErrTooManyLabels but got %q (%T)", err, err)
+	}
+}
+
+func TestNameMakeNameFromStringWithTooLongLabel(t *testing.T) {
+	s := "www.looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong.com"
+
+	n, err := MakeNameFromString(s)
+	if err == nil {
+		t.Fatalf("expected error but got name %q", n.c)
 	}
 
-	ctx := difflib.ContextDiff{
-		A:        elabels,
-		B:        s,
-		FromFile: "Expected",
-		ToFile:   "Got"}
+	if err != ErrLabelTooLong {
+		t.Fatalf("expected ErrLabelTooLong but got %q (%T)", err, err)
+	}
+}
 
-	diff, err := difflib.GetContextDiffString(ctx)
+func TestNameString(t *testing.T) {
+	s := "wiki.example.com"
+	n, err := MakeNameFromString(s)
 	if err != nil {
-		panic(fmt.Errorf("can't compare labels for domain name \"%s\": %s", dn, err))
+		t.Fatal(err)
 	}
 
-	if len(diff) > 0 {
-		t.Errorf("Labels for domain name \"%s\" don't match:\n%s", dn, diff)
+	h := n.String()
+	if h != s {
+		t.Errorf("expected %q as human-readable name but got %q", s, n.h)
+	}
+}
+
+func TestGetLabel(t *testing.T) {
+	s := "wiki.example.com"
+	n, err := MakeNameFromString(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lbls := []string{}
+	off := 0
+	for {
+		lbl, next := n.GetLabel(off)
+		if next < 0 {
+			t.Fatalf("expected nonnegative offset but got %d after %d (%#v)", next, off, lbls)
+		}
+
+		lbls = append(lbls, lbl)
+		off = next
+		if off == 0 {
+			break
+		}
+	}
+
+	assertLabels(t, lbls, []string{"COM", "EXAMPLE", "WIKI"})
+}
+
+func TestGetLabelWithRoot(t *testing.T) {
+	s := ""
+	n, err := MakeNameFromString(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lbls := []string{}
+	off := 0
+	for {
+		lbl, next := n.GetLabel(off)
+		if next < 0 {
+			t.Fatalf("expected nonnegative offset but got %d after %d (%#v)", next, off, lbls)
+		}
+
+		lbls = append(lbls, lbl)
+		off = next
+		if off == 0 {
+			break
+		}
+	}
+
+	assertLabels(t, lbls, []string{""})
+}
+
+func TestGetLabelWithInvalidOffset(t *testing.T) {
+	s := "wiki.example.com"
+	n, err := MakeNameFromString(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lbl, off := n.GetLabel(-1)
+	if off >= 0 {
+		t.Errorf("expected negative offset but got label %q", lbl)
+	}
+
+	lbl, off = n.GetLabel(len(n.c))
+	if off >= 0 {
+		t.Errorf("expected negative offset but got label %q", lbl)
+	}
+
+	lbl, off = n.GetLabel(2)
+	if off >= 0 {
+		t.Errorf("expected negative offset but got label %q", lbl)
+	}
+}
+
+func TestGetLabels(t *testing.T) {
+	s := "wiki.example.com"
+	n, err := MakeNameFromString(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lbls := []string{}
+	if err := n.GetLabels(func(lbl string) error {
+		lbls = append(lbls, lbl)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	assertLabels(t, lbls, []string{"COM", "EXAMPLE", "WIKI"})
+}
+
+func TestGetLabelsWithError(t *testing.T) {
+	s := "wiki.example.com"
+	n, err := MakeNameFromString(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stop := fmt.Errorf("stop iteration")
+
+	lbls := []string{}
+	err = n.GetLabels(func(lbl string) error {
+		lbls = append(lbls, lbl)
+		if len(lbls) >= 2 {
+			return stop
+		}
+
+		return nil
+	})
+	if err == nil {
+		t.Fatalf("expected error but got %d labels:\n%#v", len(lbls), lbls)
+	}
+
+	if err != stop {
+		t.Errorf("expected \"stop\" error but got %q (%T)", err, err)
+	}
+
+	assertLabels(t, lbls, []string{"COM", "EXAMPLE"})
+}
+
+func assertLabels(t *testing.T, v, e []string) {
+	if len(v) != len(e) {
+		t.Errorf("expected %d labels\n\t%#v\nbut got %d\n\t%#v", len(e), e, len(v), v)
+		return
+	}
+
+	for i, b := range e {
+		if v[i] != b {
+			t.Errorf("expected labels\n\t%#v\nbut got\n\t%#v", e, v)
+			return
+		}
 	}
 }

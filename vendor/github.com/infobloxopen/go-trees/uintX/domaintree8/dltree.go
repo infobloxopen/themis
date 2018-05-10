@@ -13,11 +13,6 @@ type labelPair struct {
 	Value *Node
 }
 
-type labelRawPair struct {
-	Key   domain.Label
-	Value *Node
-}
-
 func newLabelTree() *labelTree {
 	return new(labelTree)
 }
@@ -35,7 +30,7 @@ func (t *labelTree) insert(key string, value *Node) *labelTree {
 	return &labelTree{root: n.insert(dl, value)}
 }
 
-func (t *labelTree) rawInsert(key []byte, value *Node) *labelTree {
+func (t *labelTree) rawInsert(key string, value *Node) *labelTree {
 	var (
 		n *node
 	)
@@ -44,7 +39,7 @@ func (t *labelTree) rawInsert(key []byte, value *Node) *labelTree {
 		n = t.root
 	}
 
-	return &labelTree{root: n.insert(domain.Label(key), value)}
+	return &labelTree{root: n.insert(key, value)}
 }
 
 func (t *labelTree) inplaceInsert(key string, value *Node) {
@@ -52,8 +47,8 @@ func (t *labelTree) inplaceInsert(key string, value *Node) {
 	t.root = t.root.inplaceInsert(dl, value)
 }
 
-func (t *labelTree) rawInplaceInsert(key []byte, value *Node) {
-	t.root = t.root.inplaceInsert(domain.Label(key), value)
+func (t *labelTree) rawInplaceInsert(key string, value *Node) {
+	t.root = t.root.inplaceInsert(key, value)
 }
 
 func (t *labelTree) get(key string) (*Node, bool) {
@@ -65,12 +60,12 @@ func (t *labelTree) get(key string) (*Node, bool) {
 	return t.root.get(dl)
 }
 
-func (t *labelTree) rawGet(key []byte) (*Node, bool) {
+func (t *labelTree) rawGet(key string) (*Node, bool) {
 	if t == nil {
 		return nil, false
 	}
 
-	return t.root.get(domain.Label(key))
+	return t.root.get(key)
 }
 
 func (t *labelTree) enumerate() chan labelPair {
@@ -89,8 +84,8 @@ func (t *labelTree) enumerate() chan labelPair {
 	return ch
 }
 
-func (t *labelTree) rawEnumerate() chan labelRawPair {
-	ch := make(chan labelRawPair)
+func (t *labelTree) rawEnumerate() chan labelPair {
+	ch := make(chan labelPair)
 
 	go func() {
 		defer close(ch)
@@ -115,12 +110,12 @@ func (t *labelTree) del(key string) (*labelTree, bool) {
 	return &labelTree{root: root}, ok
 }
 
-func (t *labelTree) rawDel(key []byte) (*labelTree, bool) {
+func (t *labelTree) rawDel(key string) (*labelTree, bool) {
 	if t == nil {
 		return nil, false
 	}
 
-	root, ok := t.root.del(domain.Label(key))
+	root, ok := t.root.del(key)
 	return &labelTree{root: root}, ok
 }
 

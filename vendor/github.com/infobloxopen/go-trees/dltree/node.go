@@ -2,6 +2,7 @@ package dltree
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/infobloxopen/go-trees/domain"
 )
@@ -12,7 +13,7 @@ const (
 )
 
 type node struct {
-	key   domain.Label
+	key   string
 	value interface{}
 
 	chld [2]*node
@@ -61,7 +62,7 @@ func (n *node) dotString() string {
 	return fmt.Sprintf("[label=%s style=filled %s]", k, color)
 }
 
-func (n *node) insert(key domain.Label, value interface{}) *node {
+func (n *node) insert(key string, value interface{}) *node {
 	if n == nil {
 		return &node{key: key, value: value}
 	}
@@ -150,7 +151,7 @@ func (n *node) insert(key domain.Label, value interface{}) *node {
 				// to keep correct gradparent's parent.
 				g = gp
 			} else {
-				// With double rotation if current node goes in the oposite direction.
+				// With double rotation if current node goes in the opposite direction.
 				gp.chld[grandParentDir] = g.double(parentDir)
 
 				// The rotation puts grandparent and parent as children of current node.
@@ -166,7 +167,10 @@ func (n *node) insert(key domain.Label, value interface{}) *node {
 			}
 		}
 
-		r = domain.Compare(n.key, key)
+		r = len(n.key) - len(key)
+		if r == 0 {
+			r = strings.Compare(n.key, key)
+		}
 	}
 
 	n.value = value
@@ -176,7 +180,7 @@ func (n *node) insert(key domain.Label, value interface{}) *node {
 	return n
 }
 
-func (n *node) inplaceInsert(key domain.Label, value interface{}) *node {
+func (n *node) inplaceInsert(key string, value interface{}) *node {
 	if n == nil {
 		return &node{key: key, value: value}
 	}
@@ -234,7 +238,10 @@ func (n *node) inplaceInsert(key domain.Label, value interface{}) *node {
 			}
 		}
 
-		r = domain.Compare(n.key, key)
+		r = len(n.key) - len(key)
+		if r == 0 {
+			r = strings.Compare(n.key, key)
+		}
 	}
 
 	n.value = value
@@ -277,12 +284,14 @@ func (n *node) double(dir int) *node {
 	return n.single(dir)
 }
 
-func (n *node) get(key domain.Label) (interface{}, bool) {
+func (n *node) get(key string) (interface{}, bool) {
 	for n != nil {
-		r := domain.Compare(n.key, key)
-
+		r := len(n.key) - len(key)
 		if r == 0 {
-			return n.value, true
+			r = strings.Compare(n.key, key)
+			if r == 0 {
+				return n.value, true
+			}
 		}
 
 		dir := dirLeft
@@ -303,26 +312,24 @@ func (n *node) enumerate(ch chan Pair) {
 
 	n.chld[dirLeft].enumerate(ch)
 
-	ch <- Pair{Key: n.key.String(), Value: n.value}
+	ch <- Pair{Key: domain.MakeHumanReadableLabel(n.key), Value: n.value}
 
 	n.chld[dirRight].enumerate(ch)
 }
 
-func (n *node) rawEnumerate(ch chan RawPair) {
+func (n *node) rawEnumerate(ch chan Pair) {
 	if n == nil {
 		return
 	}
 
 	n.chld[dirLeft].rawEnumerate(ch)
 
-	key := make([]byte, len(n.key))
-	copy(key, n.key)
-	ch <- RawPair{Key: key, Value: n.value}
+	ch <- Pair{Key: n.key, Value: n.value}
 
 	n.chld[dirRight].rawEnumerate(ch)
 }
 
-func (n *node) del(key domain.Label) (*node, bool) {
+func (n *node) del(key string) (*node, bool) {
 	// Fake root.
 	root := &node{chld: [2]*node{nil, n}}
 
@@ -352,7 +359,10 @@ func (n *node) del(key domain.Label) (*node, bool) {
 		n = n.chld[dir]
 
 		dir = dirLeft
-		r := domain.Compare(n.key, key)
+		r := len(n.key) - len(key)
+		if r == 0 {
+			r = strings.Compare(n.key, key)
+		}
 		if r < 0 {
 			dir = dirRight
 		}
