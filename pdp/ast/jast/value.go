@@ -79,7 +79,7 @@ func (ctx context) unmarshalDomainValue(d *json.Decoder) (pdp.AttributeValue, er
 		return pdp.UndefinedValue, err
 	}
 
-	dom, ierr := domain.MakeWireDomainNameLower(s)
+	dom, ierr := domain.MakeNameFromString(s)
 	if ierr != nil {
 		return pdp.UndefinedValue, newInvalidDomainError(s, ierr)
 	}
@@ -126,7 +126,12 @@ func (ctx context) unmarshalSetOfNetworksValue(d *json.Decoder) (pdp.AttributeVa
 }
 
 func (ctx context) unmarshalSetOfDomainsValueItem(s string, i int, set *domaintree.Node) error {
-	set.InplaceInsert(s, i)
+	d, ierr := domain.MakeNameFromString(s)
+	if ierr != nil {
+		return newInvalidDomainError(s, ierr)
+	}
+
+	set.InplaceInsert(d, i)
 
 	return nil
 }

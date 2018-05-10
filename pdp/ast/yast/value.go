@@ -71,7 +71,7 @@ func (ctx context) unmarshalDomainValue(v interface{}) (pdp.AttributeValue, boun
 		return pdp.UndefinedValue, err
 	}
 
-	d, ierr := domain.MakeWireDomainNameLower(s)
+	d, ierr := domain.MakeNameFromString(s)
 	if ierr != nil {
 		return pdp.UndefinedValue, newInvalidDomainError(s, ierr)
 	}
@@ -145,7 +145,12 @@ func (ctx context) unmarshalSetOfDomainsValueItem(v interface{}, i int, set *dom
 		return err
 	}
 
-	set.InplaceInsert(s, i)
+	d, ierr := domain.MakeNameFromString(s)
+	if ierr != nil {
+		return newInvalidDomainError(s, ierr)
+	}
+
+	set.InplaceInsert(d, i)
 
 	return nil
 }

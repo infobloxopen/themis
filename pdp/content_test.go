@@ -85,9 +85,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	dTree := new(domaintree.Node)
-	dTree.InplaceInsert("example.com", "first")
-	dTree.InplaceInsert("example.net", "second")
-	dTree.InplaceInsert("example.org", "third")
+	dTree.InplaceInsert(makeTestDN(t, "example.com"), "first")
+	dTree.InplaceInsert(makeTestDN(t, "example.net"), "second")
+	dTree.InplaceInsert(makeTestDN(t, "example.org"), "third")
 
 	kdm := MakeContentMappingItem(
 		"key-dom-map",
@@ -121,9 +121,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	dTree = new(domaintree.Node)
-	dTree.InplaceInsert("example.com", "first")
-	dTree.InplaceInsert("example.net", "second")
-	dTree.InplaceInsert("example.org", "third")
+	dTree.InplaceInsert(makeTestDN(t, "example.com"), "first")
+	dTree.InplaceInsert(makeTestDN(t, "example.net"), "second")
+	dTree.InplaceInsert(makeTestDN(t, "example.org"), "third")
 
 	dmc := MakeContentMappingItem(
 		"dom-map",
@@ -133,9 +133,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	dTree = &domaintree.Node{}
-	dTree.InplaceInsert("example.com", "first")
-	dTree.InplaceInsert("example.net", "second")
-	dTree.InplaceInsert("example.org", "third")
+	dTree.InplaceInsert(makeTestDN(t, "example.com"), "first")
+	dTree.InplaceInsert(makeTestDN(t, "example.net"), "second")
+	dTree.InplaceInsert(makeTestDN(t, "example.org"), "third")
 
 	dmcAdd := MakeContentMappingItem(
 		"dom-map-add",
@@ -145,9 +145,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	dTree = new(domaintree.Node)
-	dTree.InplaceInsert("example.com", "first")
-	dTree.InplaceInsert("example.net", "second")
-	dTree.InplaceInsert("example.org", "third")
+	dTree.InplaceInsert(makeTestDN(t, "example.com"), "first")
+	dTree.InplaceInsert(makeTestDN(t, "example.net"), "second")
+	dTree.InplaceInsert(makeTestDN(t, "example.org"), "third")
 
 	dmcDel := MakeContentMappingItem(
 		"dom-map-del",
@@ -320,9 +320,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	dTree8 := &domaintree8.Node{}
-	dTree8.InplaceInsert("example.com", 1)
-	dTree8.InplaceInsert("example.net", 3)
-	dTree8.InplaceInsert("example.org", 5)
+	dTree8.InplaceInsert(makeTestDN(t, "example.com"), 1)
+	dTree8.InplaceInsert(makeTestDN(t, "example.net"), 3)
+	dTree8.InplaceInsert(makeTestDN(t, "example.org"), 5)
 
 	dm8c := MakeContentMappingItem(
 		"dom8-map",
@@ -332,9 +332,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	dTree16 := &domaintree16.Node{}
-	dTree16.InplaceInsert("example.com", 1)
-	dTree16.InplaceInsert("example.net", 3)
-	dTree16.InplaceInsert("example.org", 5)
+	dTree16.InplaceInsert(makeTestDN(t, "example.com"), 1)
+	dTree16.InplaceInsert(makeTestDN(t, "example.net"), 3)
+	dTree16.InplaceInsert(makeTestDN(t, "example.org"), 5)
 
 	dm16c := MakeContentMappingItem(
 		"dom16-map",
@@ -344,9 +344,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	dTree32 := &domaintree32.Node{}
-	dTree32.InplaceInsert("example.com", 1)
-	dTree32.InplaceInsert("example.net", 3)
-	dTree32.InplaceInsert("example.org", 5)
+	dTree32.InplaceInsert(makeTestDN(t, "example.com"), 1)
+	dTree32.InplaceInsert(makeTestDN(t, "example.net"), 3)
+	dTree32.InplaceInsert(makeTestDN(t, "example.org"), 5)
 
 	dm32c := MakeContentMappingItem(
 		"dom32-map",
@@ -356,9 +356,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	dTree64 := &domaintree64.Node{}
-	dTree64.InplaceInsert("example.com", 1)
-	dTree64.InplaceInsert("example.net", 3)
-	dTree64.InplaceInsert("example.org", 5)
+	dTree64.InplaceInsert(makeTestDN(t, "example.com"), 1)
+	dTree64.InplaceInsert(makeTestDN(t, "example.net"), 3)
+	dTree64.InplaceInsert(makeTestDN(t, "example.org"), 5)
 
 	dm64c := MakeContentMappingItem(
 		"dom64-map",
@@ -378,9 +378,9 @@ func TestLocalContentStorage(t *testing.T) {
 	st = MakeSymbols()
 
 	dTree = &domaintree.Node{}
-	dTree.InplaceInsert("example.com", "first")
-	dTree.InplaceInsert("example.net", "second")
-	dTree.InplaceInsert("example.org", "third")
+	dTree.InplaceInsert(makeTestDN(t, "example.com"), "first")
+	dTree.InplaceInsert(makeTestDN(t, "example.net"), "second")
+	dTree.InplaceInsert(makeTestDN(t, "example.org"), "third")
 
 	dmc = MakeContentMappingItem(
 		"dom-map",
@@ -617,7 +617,7 @@ func TestLocalContentStorage(t *testing.T) {
 	} else {
 		path := []Expression{
 			MakeStringValue("key"),
-			MakeDomainValue(domain.WireNameLower("\x07example\x03gov\x00"))}
+			MakeDomainValue(makeTestDN(t, "example.gov"))}
 		v, err := c.Get(path, nil)
 		if err != nil {
 			t.Errorf("Expected no error but got %T (%s)", err, err)
@@ -933,7 +933,7 @@ func TestLocalContentStorage(t *testing.T) {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
 		path := []Expression{
-			MakeDomainValue(domain.WireNameLower("\x07example\x03gov\x00")),
+			MakeDomainValue(makeTestDN(t, "example.gov")),
 		}
 		v, err := c.Get(path, nil)
 		if err != nil {
@@ -954,7 +954,7 @@ func TestLocalContentStorage(t *testing.T) {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
 		path := []Expression{
-			MakeDomainValue(domain.WireNameLower("\x07example\x03gov\x00")),
+			MakeDomainValue(makeTestDN(t, "example.gov")),
 		}
 		v, err := c.Get(path, nil)
 		if err != nil {
@@ -975,7 +975,7 @@ func TestLocalContentStorage(t *testing.T) {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
 		path := []Expression{
-			MakeDomainValue(domain.WireNameLower("\x07example\x03gov\x00")),
+			MakeDomainValue(makeTestDN(t, "example.gov")),
 		}
 		v, err := c.Get(path, nil)
 		if err != nil {
@@ -996,7 +996,7 @@ func TestLocalContentStorage(t *testing.T) {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
 		path := []Expression{
-			MakeDomainValue(domain.WireNameLower("\x07example\x03gov\x00")),
+			MakeDomainValue(makeTestDN(t, "example.gov")),
 		}
 		v, err := c.Get(path, nil)
 		if err != nil {
@@ -1011,4 +1011,13 @@ func TestLocalContentStorage(t *testing.T) {
 			}
 		}
 	}
+}
+
+func makeTestDN(t *testing.T, s string) domain.Name {
+	d, err := domain.MakeNameFromString(s)
+	if err != nil {
+		t.Fatalf("can't create domain name from string %q: %s", s, err)
+	}
+
+	return d
 }

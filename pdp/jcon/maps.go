@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net"
 
+	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
@@ -612,23 +613,33 @@ type domainMap struct {
 }
 
 func (m *domainMap) unmarshal(k string, d *json.Decoder) error {
+	dn, err := domain.MakeNameFromString(k)
+	if err != nil {
+		return newDomainCastError(k, err)
+	}
+
 	v, err := m.c.unmarshalTypedData(d, m.i+1)
 	if err != nil {
 		return bindError(err, k)
 	}
 
-	m.m.InplaceInsert(k, v)
+	m.m.InplaceInsert(dn, v)
 
 	return nil
 }
 
 func (m *domainMap) postProcess(p jparser.Pair) error {
+	dn, err := domain.MakeNameFromString(p.K)
+	if err != nil {
+		return newDomainCastError(p.K, err)
+	}
+
 	v, err := m.c.postProcess(p.V, m.i+1)
 	if err != nil {
 		return bindError(err, p.K)
 	}
 
-	m.m.InplaceInsert(p.K, v)
+	m.m.InplaceInsert(dn, v)
 
 	return nil
 }
@@ -643,23 +654,33 @@ type domain8Map struct {
 }
 
 func (m *domain8Map) unmarshal(k string, d *json.Decoder) error {
+	dn, err := domain.MakeNameFromString(k)
+	if err != nil {
+		return newDomainCastError(k, err)
+	}
+
 	v, err := m.c.unmarshalFlags8Value(d)
 	if err != nil {
 		return bindError(err, k)
 	}
 
-	m.m.InplaceInsert(k, v)
+	m.m.InplaceInsert(dn, v)
 
 	return nil
 }
 
 func (m *domain8Map) postProcess(p jparser.Pair) error {
+	dn, err := domain.MakeNameFromString(p.K)
+	if err != nil {
+		return newDomainCastError(p.K, err)
+	}
+
 	v, err := m.c.postProcessFlags8Value(p.V)
 	if err != nil {
 		return bindError(err, p.K)
 	}
 
-	m.m.InplaceInsert(p.K, v)
+	m.m.InplaceInsert(dn, v)
 
 	return nil
 }
@@ -674,23 +695,33 @@ type domain16Map struct {
 }
 
 func (m *domain16Map) unmarshal(k string, d *json.Decoder) error {
+	dn, err := domain.MakeNameFromString(k)
+	if err != nil {
+		return newDomainCastError(k, err)
+	}
+
 	v, err := m.c.unmarshalFlags16Value(d)
 	if err != nil {
 		return bindError(err, k)
 	}
 
-	m.m.InplaceInsert(k, v)
+	m.m.InplaceInsert(dn, v)
 
 	return nil
 }
 
 func (m *domain16Map) postProcess(p jparser.Pair) error {
+	dn, err := domain.MakeNameFromString(p.K)
+	if err != nil {
+		return newDomainCastError(p.K, err)
+	}
+
 	v, err := m.c.postProcessFlags16Value(p.V)
 	if err != nil {
 		return bindError(err, p.K)
 	}
 
-	m.m.InplaceInsert(p.K, v)
+	m.m.InplaceInsert(dn, v)
 
 	return nil
 }
@@ -705,23 +736,33 @@ type domain32Map struct {
 }
 
 func (m *domain32Map) unmarshal(k string, d *json.Decoder) error {
+	dn, err := domain.MakeNameFromString(k)
+	if err != nil {
+		return newDomainCastError(k, err)
+	}
+
 	v, err := m.c.unmarshalFlags32Value(d)
 	if err != nil {
 		return bindError(err, k)
 	}
 
-	m.m.InplaceInsert(k, v)
+	m.m.InplaceInsert(dn, v)
 
 	return nil
 }
 
 func (m *domain32Map) postProcess(p jparser.Pair) error {
+	dn, err := domain.MakeNameFromString(p.K)
+	if err != nil {
+		return newDomainCastError(p.K, err)
+	}
+
 	v, err := m.c.postProcessFlags32Value(p.V)
 	if err != nil {
 		return bindError(err, p.K)
 	}
 
-	m.m.InplaceInsert(p.K, v)
+	m.m.InplaceInsert(dn, v)
 
 	return nil
 }
@@ -736,23 +777,33 @@ type domain64Map struct {
 }
 
 func (m *domain64Map) unmarshal(k string, d *json.Decoder) error {
+	dn, err := domain.MakeNameFromString(k)
+	if err != nil {
+		return newDomainCastError(k, err)
+	}
+
 	v, err := m.c.unmarshalFlags64Value(d)
 	if err != nil {
 		return bindError(err, k)
 	}
 
-	m.m.InplaceInsert(k, v)
+	m.m.InplaceInsert(dn, v)
 
 	return nil
 }
 
 func (m *domain64Map) postProcess(p jparser.Pair) error {
+	dn, err := domain.MakeNameFromString(p.K)
+	if err != nil {
+		return newDomainCastError(p.K, err)
+	}
+
 	v, err := m.c.postProcessFlags64Value(p.V)
 	if err != nil {
 		return bindError(err, p.K)
 	}
 
-	m.m.InplaceInsert(p.K, v)
+	m.m.InplaceInsert(dn, v)
 
 	return nil
 }

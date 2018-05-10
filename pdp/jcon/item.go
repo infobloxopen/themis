@@ -311,7 +311,7 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 			return nil, err
 		}
 
-		d, err := domain.MakeWireDomainNameLower(s)
+		d, err := domain.MakeNameFromString(s)
 		if err != nil {
 			return nil, newDomainCastError(s, err)
 		}
@@ -361,7 +361,12 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 	case pdp.TypeSetOfDomains:
 		m := &domaintree.Node{}
 		err := jparser.GetStringSequence(d, func(idx int, s string) error {
-			m.InplaceInsert(s, nil)
+			dn, err := domain.MakeNameFromString(s)
+			if err != nil {
+				return bindErrorf(newDomainCastError(s, err), "%d", idx)
+			}
+
+			m.InplaceInsert(dn, nil)
 			return nil
 		}, "set of domains value")
 		if err != nil {

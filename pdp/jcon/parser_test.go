@@ -1144,7 +1144,7 @@ func TestUnmarshal(t *testing.T) {
 				path := []pdp.Expression{
 					pdp.MakeStringValue("first"),
 					n,
-					pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03com\x00")),
+					pdp.MakeDomainValue(makeTestDN(t, "example.com")),
 				}
 				r, err := lc.Get(path, nil)
 				if err != nil {
@@ -1167,7 +1167,7 @@ func TestUnmarshal(t *testing.T) {
 				path := []pdp.Expression{
 					pdp.MakeStringValue("second"),
 					n,
-					pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+					pdp.MakeDomainValue(makeTestDN(t, "example.net")),
 				}
 				r, err := lc.Get(path, nil)
 				if err != nil {
@@ -1190,7 +1190,7 @@ func TestUnmarshal(t *testing.T) {
 				path := []pdp.Expression{
 					pdp.MakeStringValue("second"),
 					n,
-					pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+					pdp.MakeDomainValue(makeTestDN(t, "example.net")),
 				}
 				r, err := lc.Get(path, nil)
 				if err == nil {
@@ -1428,7 +1428,7 @@ func TestUnmarshal(t *testing.T) {
 			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		} else {
 			path := []pdp.Expression{
-				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+				pdp.MakeDomainValue(makeTestDN(t, "example.net")),
 			}
 			r, err := lc.Get(path, nil)
 			if err != nil {
@@ -1449,7 +1449,7 @@ func TestUnmarshal(t *testing.T) {
 			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		} else {
 			path := []pdp.Expression{
-				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+				pdp.MakeDomainValue(makeTestDN(t, "example.net")),
 			}
 			r, err := lc.Get(path, nil)
 			if err != nil {
@@ -1470,7 +1470,7 @@ func TestUnmarshal(t *testing.T) {
 			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		} else {
 			path := []pdp.Expression{
-				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+				pdp.MakeDomainValue(makeTestDN(t, "example.net")),
 			}
 			r, err := lc.Get(path, nil)
 			if err != nil {
@@ -1491,7 +1491,7 @@ func TestUnmarshal(t *testing.T) {
 			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		} else {
 			path := []pdp.Expression{
-				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+				pdp.MakeDomainValue(makeTestDN(t, "example.net")),
 			}
 			r, err := lc.Get(path, nil)
 			if err != nil {
@@ -1512,7 +1512,7 @@ func TestUnmarshal(t *testing.T) {
 			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		} else {
 			path := []pdp.Expression{
-				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+				pdp.MakeDomainValue(makeTestDN(t, "example.net")),
 			}
 			r, err := lc.Get(path, nil)
 			if err != nil {
@@ -1581,7 +1581,7 @@ func TestUnmarshal(t *testing.T) {
 			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		} else {
 			path := []pdp.Expression{
-				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+				pdp.MakeDomainValue(makeTestDN(t, "example.net")),
 			}
 			r, err := lc.Get(path, nil)
 			if err != nil {
@@ -1602,7 +1602,7 @@ func TestUnmarshal(t *testing.T) {
 			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		} else {
 			path := []pdp.Expression{
-				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+				pdp.MakeDomainValue(makeTestDN(t, "example.net")),
 			}
 			r, err := lc.Get(path, nil)
 			if err != nil {
@@ -1623,7 +1623,7 @@ func TestUnmarshal(t *testing.T) {
 			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		} else {
 			path := []pdp.Expression{
-				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+				pdp.MakeDomainValue(makeTestDN(t, "example.net")),
 			}
 			r, err := lc.Get(path, nil)
 			if err != nil {
@@ -1644,7 +1644,7 @@ func TestUnmarshal(t *testing.T) {
 			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		} else {
 			path := []pdp.Expression{
-				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+				pdp.MakeDomainValue(makeTestDN(t, "example.net")),
 			}
 			r, err := lc.Get(path, nil)
 			if err != nil {
@@ -1665,7 +1665,7 @@ func TestUnmarshal(t *testing.T) {
 			t.Errorf("Expected no error but got (%T):\n\t%s", err, err)
 		} else {
 			path := []pdp.Expression{
-				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03net\x00")),
+				pdp.MakeDomainValue(makeTestDN(t, "example.net")),
 			}
 			r, err := lc.Get(path, nil)
 			if err != nil {
@@ -2127,7 +2127,7 @@ func TestUnmarshalUpdate(t *testing.T) {
 			path := []pdp.Expression{
 				pdp.MakeStringValue("second"),
 				n,
-				pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03com\x00")),
+				pdp.MakeDomainValue(makeTestDN(t, "example.com")),
 			}
 			r, err := lc.Get(path, nil)
 			if err == nil {
@@ -2139,4 +2139,13 @@ func TestUnmarshalUpdate(t *testing.T) {
 			}
 		}
 	}
+}
+
+func makeTestDN(t *testing.T, s string) domain.Name {
+	d, err := domain.MakeNameFromString(s)
+	if err != nil {
+		t.Fatalf("can't create domain name from string %q: %s", s, err)
+	}
+
+	return d
 }

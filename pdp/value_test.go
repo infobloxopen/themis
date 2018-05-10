@@ -5,7 +5,6 @@ import (
 	"net"
 	"testing"
 
-	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
@@ -124,7 +123,7 @@ func TestAttributeValue(t *testing.T) {
 		t.Errorf("Expected %q as value description but got %q", expDesc, d)
 	}
 
-	v = MakeDomainValue(domain.WireNameLower("\x07example\x03com\x00"))
+	v = MakeDomainValue(makeTestDN(t, "example.com"))
 	vt = v.GetResultType()
 	if vt != TypeDomain {
 		t.Errorf("Expected %q as value type but got %q", TypeDomain, vt)
@@ -187,10 +186,10 @@ func TestAttributeValue(t *testing.T) {
 	}
 
 	dTree := &domaintree.Node{}
-	dTree.InplaceInsert("example.com", 1)
-	dTree.InplaceInsert("example.gov", 2)
-	dTree.InplaceInsert("example.net", 3)
-	dTree.InplaceInsert("example.org", 4)
+	dTree.InplaceInsert(makeTestDN(t, "example.com"), 1)
+	dTree.InplaceInsert(makeTestDN(t, "example.gov"), 2)
+	dTree.InplaceInsert(makeTestDN(t, "example.net"), 3)
+	dTree.InplaceInsert(makeTestDN(t, "example.org"), 4)
 	v = MakeSetOfDomainsValue(dTree)
 	vt = v.GetResultType()
 	if vt != TypeSetOfDomains {
@@ -632,11 +631,15 @@ func TestAttributeValueTypeCast(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected domain attribute value but got error: %s", err)
 	} else {
-		d, err := v.domain()
+		_, err := v.domain()
 		if err != nil {
 			t.Errorf("Expected domain value but got error: %s", err)
-		} else if string(d) != "\x07example\x03com\x00" {
-			t.Errorf("Expected \"\\aexample\\x03com\\x00\" as attribute value but got %s", d)
+		} else {
+			expDesc := "domain(example.com)"
+			d := v.describe()
+			if d != expDesc {
+				t.Errorf("Expected %q as attribute value but got %s", expDesc, d)
+			}
 		}
 
 		_, err = v.setOfStrings()
@@ -714,10 +717,10 @@ func TestAttributeValueTypeCast(t *testing.T) {
 	}
 
 	dTree := &domaintree.Node{}
-	dTree.InplaceInsert("example.com", 1)
-	dTree.InplaceInsert("example.gov", 2)
-	dTree.InplaceInsert("example.net", 3)
-	dTree.InplaceInsert("example.org", 4)
+	dTree.InplaceInsert(makeTestDN(t, "example.com"), 1)
+	dTree.InplaceInsert(makeTestDN(t, "example.gov"), 2)
+	dTree.InplaceInsert(makeTestDN(t, "example.net"), 3)
+	dTree.InplaceInsert(makeTestDN(t, "example.org"), 4)
 	v = MakeSetOfDomainsValue(dTree)
 	_, err = v.setOfDomains()
 	if err != nil {
@@ -1077,10 +1080,10 @@ func TestAttributeValueSerialize(t *testing.T) {
 	}
 
 	dTree := &domaintree.Node{}
-	dTree.InplaceInsert("example.com", 1)
-	dTree.InplaceInsert("example.gov", 2)
-	dTree.InplaceInsert("example.net", 3)
-	dTree.InplaceInsert("example.org", 4)
+	dTree.InplaceInsert(makeTestDN(t, "example.com"), 1)
+	dTree.InplaceInsert(makeTestDN(t, "example.gov"), 2)
+	dTree.InplaceInsert(makeTestDN(t, "example.net"), 3)
+	dTree.InplaceInsert(makeTestDN(t, "example.org"), 4)
 	v = MakeSetOfDomainsValue(dTree)
 	s, err = v.Serialize()
 	if err != nil {

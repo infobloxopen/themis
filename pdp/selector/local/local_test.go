@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/uintX/domaintree8"
 	"github.com/infobloxopen/themis/pdp"
 )
@@ -87,9 +88,9 @@ func TestSelectorCalculate(t *testing.T) {
 	}
 
 	dTree8 := &domaintree8.Node{}
-	dTree8.InplaceInsert("example.com", 1)
-	dTree8.InplaceInsert("example.net", 3)
-	dTree8.InplaceInsert("example.org", 5)
+	dTree8.InplaceInsert(makeTestDN(t, "example.com"), 1)
+	dTree8.InplaceInsert(makeTestDN(t, "example.net"), 3)
+	dTree8.InplaceInsert(makeTestDN(t, "example.org"), 5)
 
 	cs := pdp.NewLocalContentStorage([]*pdp.LocalContent{
 		pdp.NewLocalContent("test-content", nil, st,
@@ -191,4 +192,13 @@ func TestSelectorCalculate(t *testing.T) {
 
 		}
 	}
+}
+
+func makeTestDN(t *testing.T, s string) domain.Name {
+	d, err := domain.MakeNameFromString(s)
+	if err != nil {
+		t.Fatalf("can't create domain name from string %q: %s", s, err)
+	}
+
+	return d
 }
