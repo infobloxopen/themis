@@ -120,6 +120,11 @@ const (
 	listOfStringsTypeErrorID                    = 106
 	unsupportedSelectorSchemeErrorID            = 107
 	disabledSelectorErrorID                     = 108
+	marshalInvalidDepthErrorID                  = 109
+	invalidHeaderErrorID                        = 110
+	nonMarshableErrorID                         = 111
+	nilRootErrorID                              = 112
+	PathNotFoundErrorID                         = 113
 )
 
 type externalError struct {
@@ -1669,4 +1674,254 @@ func newDuplicateCustomTypeError(n, p Type) *duplicateCustomTypeError {
 
 func (e *duplicateCustomTypeError) Error() string {
 	return e.errorf("Can't put type %q into symbol table as it already contains %q", e.n, e.p)
+}
+
+type duplicatesBuiltinTypeError struct {
+	errorLink
+	name string
+}
+
+func newDuplicatesBuiltinTypeError(name string) *duplicatesBuiltinTypeError {
+	return &duplicatesBuiltinTypeError{
+		errorLink: errorLink{id: duplicatesBuiltinTypeErrorID},
+		name:      name}
+}
+
+func (e *duplicatesBuiltinTypeError) Error() string {
+	return e.errorf("Can't create flags type %q. The name is taken by a built-in types", e.name)
+}
+
+type duplicateFlagName struct {
+	errorLink
+	name string
+	flag string
+	i    int
+	j    int
+}
+
+func newDuplicateFlagName(name, flag string, i, j int) *duplicateFlagName {
+	return &duplicateFlagName{
+		errorLink: errorLink{id: duplicateFlagNameID},
+		name:      name,
+		flag:      flag,
+		i:         i,
+		j:         j}
+}
+
+func (e *duplicateFlagName) Error() string {
+	return e.errorf("Can't create flags type %q. Flag %q at %d position duplicates flag at %d", e.name, e.flag, e.i, e.j)
+}
+
+type noTypedAttributeError struct {
+	errorLink
+	a Attribute
+}
+
+func newNoTypedAttributeError(a Attribute) *noTypedAttributeError {
+	return &noTypedAttributeError{
+		errorLink: errorLink{id: noTypedAttributeErrorID},
+		a:         a}
+}
+
+func (e *noTypedAttributeError) Error() string {
+	return e.errorf("Attribute %q has no type", e.a.id)
+}
+
+type undefinedAttributeTypeError struct {
+	errorLink
+	a Attribute
+}
+
+func newUndefinedAttributeTypeError(a Attribute) *undefinedAttributeTypeError {
+	return &undefinedAttributeTypeError{
+		errorLink: errorLink{id: undefinedAttributeTypeErrorID},
+		a:         a}
+}
+
+func (e *undefinedAttributeTypeError) Error() string {
+	return e.errorf("Attribute %q has type %q", e.a.id, TypeUndefined)
+}
+
+type unknownAttributeTypeError struct {
+	errorLink
+	a Attribute
+}
+
+func newUnknownAttributeTypeError(a Attribute) *unknownAttributeTypeError {
+	return &unknownAttributeTypeError{
+		errorLink: errorLink{id: unknownAttributeTypeErrorID},
+		a:         a}
+}
+
+func (e *unknownAttributeTypeError) Error() string {
+	return e.errorf("Attribute %q has unknown type %q", e.a.id, e.a.t)
+}
+
+type duplicateAttributeError struct {
+	errorLink
+	a Attribute
+}
+
+func newDuplicateAttributeError(a Attribute) *duplicateAttributeError {
+	return &duplicateAttributeError{
+		errorLink: errorLink{id: duplicateAttributeErrorID},
+		a:         a}
+}
+
+func (e *duplicateAttributeError) Error() string {
+	return e.errorf("Can't put attribute %q into symbol table as it already contains one with the same id", e.a.id)
+}
+
+type noFlagsDefinedError struct {
+	errorLink
+	name string
+	n    int
+}
+
+func newNoFlagsDefinedError(name string, n int) *noFlagsDefinedError {
+	return &noFlagsDefinedError{
+		errorLink: errorLink{id: noFlagsDefinedErrorID},
+		name:      name,
+		n:         n}
+}
+
+func (e *noFlagsDefinedError) Error() string {
+	return e.errorf("Required at least one flag to define flags type %q got %d", e.name, e.n)
+}
+
+type tooManyFlagsDefinedError struct {
+	errorLink
+	name string
+	n    int
+}
+
+func newTooManyFlagsDefinedError(name string, n int) *tooManyFlagsDefinedError {
+	return &tooManyFlagsDefinedError{
+		errorLink: errorLink{id: tooManyFlagsDefinedErrorID},
+		name:      name,
+		n:         n}
+}
+
+func (e *tooManyFlagsDefinedError) Error() string {
+	return e.errorf("Required no more than 64 flags to define flags type %q got %d", e.name, e.n)
+}
+
+type listOfStringsTypeError struct {
+	errorLink
+	t Type
+}
+
+func newListOfStringsTypeError(t Type) *listOfStringsTypeError {
+	return &listOfStringsTypeError{
+		errorLink: errorLink{id: listOfStringsTypeErrorID},
+		t:         t}
+}
+
+func (e *listOfStringsTypeError) Error() string {
+	return e.errorf("Can't convert %q to %q", e.t, TypeListOfStrings)
+}
+
+type unsupportedSelectorSchemeError struct {
+	errorLink
+	uri *url.URL
+}
+
+func newUnsupportedSelectorSchemeError(uri *url.URL) *unsupportedSelectorSchemeError {
+	return &unsupportedSelectorSchemeError{
+		errorLink: errorLink{id: unsupportedSelectorSchemeErrorID},
+		uri:       uri}
+}
+
+func (e *unsupportedSelectorSchemeError) Error() string {
+	return e.errorf("Unsupported selector scheme %q", e.uri.Scheme)
+}
+
+type disabledSelectorError struct {
+	errorLink
+	s Selector
+}
+
+func newDisabledSelectorError(s Selector) *disabledSelectorError {
+	return &disabledSelectorError{
+		errorLink: errorLink{id: disabledSelectorErrorID},
+		s:         s}
+}
+
+func (e *disabledSelectorError) Error() string {
+	return e.errorf("Selector for %q is disabled", e.s.Scheme())
+}
+
+type marshalInvalidDepthError struct {
+	errorLink
+	t int
+}
+
+func newMarshalInvalidDepthError(t int) *marshalInvalidDepthError {
+	return &marshalInvalidDepthError{
+		errorLink: errorLink{id: marshalInvalidDepthErrorID},
+		t:         t}
+}
+
+func (e *marshalInvalidDepthError) Error() string {
+	return e.errorf("Expecting depth >= 0, got %d", e.t)
+}
+
+type invalidHeaderError struct {
+	errorLink
+	head interface{}
+}
+
+func newInvalidHeaderError(head interface{}) *invalidHeaderError {
+	return &invalidHeaderError{
+		errorLink: errorLink{id: invalidHeaderErrorID},
+		head:      head}
+}
+
+func (e *invalidHeaderError) Error() string {
+	return e.errorf("Invalid marshaled format for head interface %v+", e.head)
+}
+
+type nonMarshableError struct {
+	errorLink
+	s string
+}
+
+func newNonMarshableError(s string) *nonMarshableError {
+	return &nonMarshableError{
+		errorLink: errorLink{id: nonMarshableErrorID},
+		s:         s}
+}
+
+func (e *nonMarshableError) Error() string {
+	return e.errorf("Ecountered non-marshalable node \"%s\"", e.s)
+}
+
+type nilRootError struct {
+	errorLink
+}
+
+func newNilRootError() *nilRootError {
+	return &nilRootError{
+		errorLink: errorLink{id: nilRootErrorID}}
+}
+
+func (e *nilRootError) Error() string {
+	return e.errorf("Storage root is nil")
+}
+
+// PathNotFoundError indicates a non-existent path when traversing path.
+type PathNotFoundError struct {
+	errorLink
+	path []string
+}
+
+func newPathNotFoundError(path []string) *PathNotFoundError {
+	return &PathNotFoundError{
+		errorLink: errorLink{id: PathNotFoundErrorID},
+		path:      path}
+}
+
+// Error implements error interface.
+func (e *PathNotFoundError) Error() string {
+	return e.errorf("Path %v not found", e.path)
 }
