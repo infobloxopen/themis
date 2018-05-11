@@ -364,7 +364,22 @@ func TestStorageGetAtPath(t *testing.T) {
 		policies:  []Evaluable{p1, p2},
 		algorithm: firstApplicableEffectPCA{}}
 
-	s := NewPolicyStorage(root, map[string]Attribute{"s": MakeAttribute("s", TypeString)}, &tag)
+	ft, err := NewFlagsType("f", "first")
+	if err != nil {
+		t.Fatalf("failed to create custom type: %s", err)
+	}
+	s := NewPolicyStorage(
+		root,
+		makeSymbols(
+			map[string]Type{
+				"f": ft,
+			},
+			map[string]Attribute{
+				"s": MakeAttribute("s", TypeString),
+			},
+		),
+		&tag,
+	)
 
 	expectRoot, expectNil := s.GetAtPath([]string{"test"})
 	if expectNil != nil {
