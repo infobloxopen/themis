@@ -120,6 +120,11 @@ const (
 	listOfStringsTypeErrorID                    = 106
 	unsupportedSelectorSchemeErrorID            = 107
 	disabledSelectorErrorID                     = 108
+	marshalInvalidDepthErrorID                  = 109
+	invalidHeaderErrorID                        = 110
+	nonMarshableErrorID                         = 111
+	nilRootErrorID                              = 112
+	PathNotFoundErrorID                         = 113
 )
 
 type externalError struct {
@@ -1844,4 +1849,79 @@ func newDisabledSelectorError(s Selector) *disabledSelectorError {
 
 func (e *disabledSelectorError) Error() string {
 	return e.errorf("Selector for %q is disabled", e.s.Scheme())
+}
+
+type marshalInvalidDepthError struct {
+	errorLink
+	t int
+}
+
+func newMarshalInvalidDepthError(t int) *marshalInvalidDepthError {
+	return &marshalInvalidDepthError{
+		errorLink: errorLink{id: marshalInvalidDepthErrorID},
+		t:         t}
+}
+
+func (e *marshalInvalidDepthError) Error() string {
+	return e.errorf("Expecting depth >= 0, got %d", e.t)
+}
+
+type invalidHeaderError struct {
+	errorLink
+	head interface{}
+}
+
+func newInvalidHeaderError(head interface{}) *invalidHeaderError {
+	return &invalidHeaderError{
+		errorLink: errorLink{id: invalidHeaderErrorID},
+		head:      head}
+}
+
+func (e *invalidHeaderError) Error() string {
+	return e.errorf("Invalid marshaled format for head interface %v+", e.head)
+}
+
+type nonMarshableError struct {
+	errorLink
+	s string
+}
+
+func newNonMarshableError(s string) *nonMarshableError {
+	return &nonMarshableError{
+		errorLink: errorLink{id: nonMarshableErrorID},
+		s:         s}
+}
+
+func (e *nonMarshableError) Error() string {
+	return e.errorf("Ecountered non-marshalable node \"%s\"", e.s)
+}
+
+type nilRootError struct {
+	errorLink
+}
+
+func newNilRootError() *nilRootError {
+	return &nilRootError{
+		errorLink: errorLink{id: nilRootErrorID}}
+}
+
+func (e *nilRootError) Error() string {
+	return e.errorf("Storage root is nil")
+}
+
+// PathNotFoundError indicates a non-existent path when traversing path.
+type PathNotFoundError struct {
+	errorLink
+	path []string
+}
+
+func newPathNotFoundError(path []string) *PathNotFoundError {
+	return &PathNotFoundError{
+		errorLink: errorLink{id: PathNotFoundErrorID},
+		path:      path}
+}
+
+// Error implements error interface.
+func (e *PathNotFoundError) Error() string {
+	return e.errorf("Path %v not found", e.path)
 }

@@ -75,6 +75,13 @@ func WithProfilerAt(addr string) Option {
 	}
 }
 
+// WithStorageAt returns a Option which sets storage endpoint
+func WithStorageAt(addr string) Option {
+	return func(o *options) {
+		o.storage = addr
+	}
+}
+
 // WithTracingAt returns a Option which sets tracing endpoint
 func WithTracingAt(addr string) Option {
 	return func(o *options) {
@@ -122,6 +129,7 @@ type options struct {
 	control   string
 	health    string
 	profiler  string
+	storage   string
 	tracing   string
 	memLimits *MemLimits
 	streams   uint32
@@ -142,10 +150,11 @@ type Server struct {
 	startOnce sync.Once
 	errCh     chan error
 
-	requests transport
-	control  transport
-	health   transport
-	profiler net.Listener
+	requests    transport
+	control     transport
+	health      transport
+	profiler    net.Listener
+	storageCtrl net.Listener
 
 	q *queue
 
@@ -343,6 +352,21 @@ func (s *Server) listenProfiler() error {
 	return nil
 }
 
+func (s *Server) listenStorage() error {
+	if len(s.opts.storage) <= 0 {
+		return nil
+	}
+
+	s.opts.logger.WithField("address", s.opts.storage).Info("Opening storage port")
+	ln, err := net.Listen("tcp", s.opts.storage)
+	if err != nil {
+		return err
+	}
+
+	s.storageCtrl = ln
+	return nil
+}
+
 func (s *Server) configureRequests() []grpc.ServerOption {
 	opts := []grpc.ServerOption{}
 	if s.opts.streams > 0 {
@@ -415,6 +439,10 @@ func (s *Server) Serve() error {
 		return err
 	}
 
+	if err := s.listenStorage(); err != nil {
+		return err
+	}
+
 	if s.health.iface != nil {
 		healthMux := http.NewServeMux()
 		healthMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -443,6 +471,18 @@ func (s *Server) Serve() error {
 		go func(l net.Listener) {
 			s.errCh <- profilerServer.Serve(l)
 		}(s.profiler)
+	}
+
+	if s.storageCtrl != nil {
+		storageServer := &http.Server{Handler: &storageHandler{s}}
+		defer func() {
+			s.storageCtrl.Close()
+			s.storageCtrl = nil
+		}()
+
+		go func(l net.Listener) {
+			s.errCh <- storageServer.Serve(l)
+		}(s.storageCtrl)
 	}
 
 	s.opts.logger.Info("Creating service protocol handler")

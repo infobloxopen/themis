@@ -941,3 +941,41 @@ errors:
   msg: "Selector for %q is disabled"
   args:
   - field: s.Scheme()
+
+- id: marshalInvalidDepthError
+  fields:
+  - id: t
+    type: int
+  msg: "Expecting depth >= 0, got %d"
+  args:
+  - field: t
+
+- id: invalidHeaderError
+  fields:
+  - id: head
+    type: interface{}
+  msg: "Invalid marshaled format for head interface %v+"
+  args:
+    - field: head
+
+- id: nonMarshableError
+  fields:
+  - id: s
+    type: string
+  msg: "Ecountered non-marshalable node \"%s\""
+  args:
+    - field: s
+
+- id: nilRootError
+  fields:
+  msg: "Storage root is nil"
+  args:
+
+- id: PathNotFoundError
+  desc: "indicates a non-existent path when traversing path"
+  fields:
+  - id: path
+    type: "[]string"
+  msg: "Path %v not found"
+  args:
+    - field: path
