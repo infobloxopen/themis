@@ -988,3 +988,49 @@ errors:
   msg: "Path %v not found"
   args:
     - field: path
+
+- id: requestBufferUnderflow
+  msg: "Reached end of buffer while unmarshalling request"
+
+- id: requestVersionError
+  fields:
+  - id: actual
+    type: uint16
+  - id: expected
+    type: uint16
+  msg: "Got request of version %d while expected %d"
+  args:
+  - field: actual
+  - field: expected
+
+- id: requestAttributeTypeError
+  fields:
+  - id: t
+    type: int
+  msg: "Unknown attribute type in request %d"
+  args:
+  - field: t
+
+- id: requestAttributeUnmarshallingNotImplemented
+  fields:
+  - id: t
+    type: int
+  msg: "Unmarshalling for type %q hasn't been implemented yet"
+  args:
+  - expr: requestWireTypeNames[e.t]
+
+- id: requestIPv4InvalidMaskError
+  fields:
+  - id: b
+    type: byte
+  msg: "Invalid IPv4 CIDR: %d"
+  args:
+  - field: b
+
+- id: requestIPv6InvalidMaskError
+  fields:
+  - id: b
+    type: byte
+  msg: "Invalid IPv6 CIDR: %d"
+  args:
+  - field: b
