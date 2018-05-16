@@ -1,6 +1,8 @@
 package: pdp
 
 import:
+  - math
+  - net
   - net/url
   - strconv
   - strings
@@ -989,7 +991,10 @@ errors:
   args:
     - field: path
 
-- id: requestBufferUnderflow
+- id: requestBufferOverflowError
+  msg: "Reached end of buffer while marshalling request"
+
+- id: requestBufferUnderflowError
   msg: "Reached end of buffer while unmarshalling request"
 
 - id: requestVersionError
@@ -1003,11 +1008,44 @@ errors:
   - field: actual
   - field: expected
 
-- id: requestAttributeTypeError
+- id: requestInvalidAttributeCountError
+  fields:
+  - id: n
+    type: int
+  msg: "Invalid count of attributes %d"
+  args:
+  - field: n
+
+- id: requestTooManyAttributesError
+  fields:
+  - id: n
+    type: int
+  msg: "Expected no more than %d attributes but got %d"
+  args:
+  - expr: math.MaxUint16
+  - field: n
+
+- id: requestAttributeMarshallingTypeError
+  fields:
+  - id: t
+    type: int
+  msg: "Unknown attribute type for request %d"
+  args:
+  - field: t
+
+- id: requestAttributeUnmarshallingTypeError
   fields:
   - id: t
     type: int
   msg: "Unknown attribute type in request %d"
+  args:
+  - field: t
+
+- id: requestAttributeMarshallingNotImplemented
+  fields:
+  - id: t
+    type: Type
+  msg: "Marshalling for type %q hasn't been implemented yet"
   args:
   - field: t
 
@@ -1018,6 +1056,40 @@ errors:
   msg: "Unmarshalling for type %q hasn't been implemented yet"
   args:
   - expr: requestWireTypeNames[e.t]
+
+- id: requestTooLongAttributeNameError
+  fields:
+  - id: name
+    type: string
+  msg: "Attribute name is too long %d (expected no more than %d bytes)"
+  args:
+  - expr: len(e.name)
+  - expr: math.MaxUint8
+
+- id: requestTooLongStringValueError
+  fields:
+  - id: s
+    type: string
+  msg: "String value is too long %d (expected no more than %d bytes)"
+  args:
+  - expr: len(e.s)
+  - expr: math.MaxUint16
+
+- id: requestAddressValueError
+  fields:
+  - id: a
+    type: "[]byte"
+  msg: "Can't treat [% x] as IPv4 or IPv6 address"
+  args:
+  - field: a
+
+- id: requestInvalidNetworkValueError
+  fields:
+  - id: n
+    type: "*net.IPNet"
+  msg: "Can't treat %s as IPv4 or IPv6 network"
+  args:
+  - field: n
 
 - id: requestIPv4InvalidMaskError
   fields:

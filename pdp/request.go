@@ -25,6 +25,8 @@ const (
 	requestWireTypeSetOfNetworks
 	requestWireTypeSetOfDomains
 	requestWireTypeListOfStrings
+
+	requestWireTypesTotal
 )
 
 var requestWireTypeNames = []string{
@@ -44,9 +46,18 @@ var requestWireTypeNames = []string{
 	"list of strings",
 }
 
+func putRequestVersion(b []byte) (int, error) {
+	if len(b) < 2 {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	binary.LittleEndian.PutUint16(b, requestVersion)
+	return 2, nil
+}
+
 func checkRequestVersion(b []byte) (int, error) {
 	if len(b) < 2 {
-		return 0, newRequestBufferUnderflow()
+		return 0, newRequestBufferUnderflowError()
 	}
 
 	if v := binary.LittleEndian.Uint16(b); v != requestVersion {
@@ -56,12 +67,65 @@ func checkRequestVersion(b []byte) (int, error) {
 	return 2, nil
 }
 
+func putRequestAttributeCount(b []byte, n int) (int, error) {
+	if n < 0 {
+		return 0, newRequestInvalidAttributeCountError(n)
+	}
+
+	if n > math.MaxUint16 {
+		return 0, newRequestTooManyAttributesError(n)
+	}
+
+	if len(b) < 2 {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	binary.LittleEndian.PutUint16(b, uint16(n))
+	return 2, nil
+}
+
 func getRequestAttributeCount(b []byte) (int, int, error) {
 	if len(b) < 2 {
-		return 0, 0, newRequestBufferUnderflow()
+		return 0, 0, newRequestBufferUnderflowError()
 	}
 
 	return int(binary.LittleEndian.Uint16(b)), 2, nil
+}
+
+func putRequestAttribute(b []byte, name string, value AttributeValue) (int, error) {
+	t := value.GetResultType()
+
+	switch t {
+	case TypeBoolean:
+		v, _ := value.boolean()
+		return putRequestAttributeBoolean(b, name, v)
+
+	case TypeString:
+		v, _ := value.str()
+		return putRequestAttributeString(b, name, v)
+
+	case TypeInteger:
+		v, _ := value.integer()
+		return putRequestAttributeInteger(b, name, v)
+
+	case TypeFloat:
+		v, _ := value.float()
+		return putRequestAttributeFloat(b, name, v)
+
+	case TypeAddress:
+		v, _ := value.address()
+		return putRequestAttributeAddress(b, name, v)
+
+	case TypeNetwork:
+		v, _ := value.network()
+		return putRequestAttributeNetwork(b, name, v)
+
+	case TypeDomain:
+		v, _ := value.domain()
+		return putRequestAttributeDomain(b, name, v)
+	}
+
+	return 0, newRequestAttributeMarshallingNotImplemented(t)
 }
 
 func getRequestAttribute(b []byte) (string, AttributeValue, int, error) {
@@ -152,62 +216,252 @@ func getRequestAttribute(b []byte) (string, AttributeValue, int, error) {
 		return name, MakeDomainValue(d), off + n, nil
 	}
 
-	return "", UndefinedValue, 0, bindError(newRequestAttributeTypeError(t), name)
+	return "", UndefinedValue, 0, bindError(newRequestAttributeUnmarshallingTypeError(t), name)
+}
+
+func putRequestAttributeName(b []byte, name string) (int, error) {
+	if len(name) > math.MaxUint8 {
+		return 0, newRequestTooLongAttributeNameError(name)
+	}
+
+	n := len(name) + 1
+	if len(b) < n {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	b[0] = byte(len(name))
+	copy(b[1:], []byte(name))
+
+	return n, nil
 }
 
 func getRequestAttributeName(b []byte) (string, int, error) {
 	if len(b) < 1 {
-		return "", 0, newRequestBufferUnderflow()
+		return "", 0, newRequestBufferUnderflowError()
 	}
 
 	off := int(b[0]) + 1
 	if len(b) < off {
-		return "", 0, newRequestBufferUnderflow()
+		return "", 0, newRequestBufferUnderflowError()
 	}
 
 	return string(b[1:off]), off, nil
 }
 
+func putRequestAttributeType(b []byte, t int) (int, error) {
+	if t < 0 || t >= requestWireTypesTotal {
+		return 0, newRequestAttributeMarshallingTypeError(t)
+	}
+
+	if len(b) < 1 {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	b[0] = byte(t)
+	return 1, nil
+}
+
 func getRequestAttributeType(b []byte) (int, int, error) {
 	if len(b) < 1 {
-		return 0, 0, newRequestBufferUnderflow()
+		return 0, 0, newRequestBufferUnderflowError()
 	}
 
 	return int(b[0]), 1, nil
 }
 
+func putRequestAttributeBoolean(b []byte, name string, value bool) (int, error) {
+	off, err := putRequestAttributeName(b, name)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestBooleanValue(b[off:], value)
+	if err != nil {
+		return 0, err
+	}
+
+	return off + n, err
+}
+
+func putRequestBooleanValue(b []byte, value bool) (int, error) {
+	if value {
+		return putRequestAttributeType(b, requestWireTypeBooleanTrue)
+	}
+
+	return putRequestAttributeType(b, requestWireTypeBooleanFalse)
+}
+
+func putRequestAttributeString(b []byte, name string, value string) (int, error) {
+	off, err := putRequestAttributeName(b, name)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestStringValue(b[off:], value)
+	if err != nil {
+		return 0, err
+	}
+
+	return off + n, err
+}
+
+func putRequestStringValue(b []byte, value string) (int, error) {
+	off, err := putRequestAttributeType(b, requestWireTypeString)
+	if err != nil {
+		return 0, err
+	}
+
+	b = b[off:]
+
+	if len(value) > math.MaxUint16 {
+		return 0, newRequestTooLongStringValueError(value)
+	}
+
+	n := len(value) + 2
+	if len(b) < n {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	binary.LittleEndian.PutUint16(b, uint16(len(value)))
+	copy(b[2:], value)
+
+	return off + n, nil
+}
+
 func getRequestStringValue(b []byte) (string, int, error) {
 	if len(b) < 2 {
-		return "", 0, newRequestBufferUnderflow()
+		return "", 0, newRequestBufferUnderflowError()
 	}
 
 	off := int(binary.LittleEndian.Uint16(b)) + 2
 	if len(b) < off {
-		return "", 0, newRequestBufferUnderflow()
+		return "", 0, newRequestBufferUnderflowError()
 	}
 
 	return string(b[2:off]), off, nil
 }
 
+func putRequestAttributeInteger(b []byte, name string, value int64) (int, error) {
+	off, err := putRequestAttributeName(b, name)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestIntegerValue(b[off:], value)
+	if err != nil {
+		return 0, err
+	}
+
+	return off + n, err
+}
+
+func putRequestIntegerValue(b []byte, value int64) (int, error) {
+	off, err := putRequestAttributeType(b, requestWireTypeInteger)
+	if err != nil {
+		return 0, err
+	}
+
+	b = b[off:]
+
+	if len(b) < 8 {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	binary.LittleEndian.PutUint64(b, uint64(value))
+	return off + 8, nil
+}
+
 func getRequestIntegerValue(b []byte) (int64, int, error) {
 	if len(b) < 8 {
-		return 0, 0, newRequestBufferUnderflow()
+		return 0, 0, newRequestBufferUnderflowError()
 	}
 
 	return int64(binary.LittleEndian.Uint64(b)), 8, nil
 }
 
+func putRequestAttributeFloat(b []byte, name string, value float64) (int, error) {
+	off, err := putRequestAttributeName(b, name)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestFloatValue(b[off:], value)
+	if err != nil {
+		return 0, err
+	}
+
+	return off + n, err
+}
+
+func putRequestFloatValue(b []byte, value float64) (int, error) {
+	off, err := putRequestAttributeType(b, requestWireTypeFloat)
+	if err != nil {
+		return 0, err
+	}
+
+	b = b[off:]
+
+	if len(b) < 8 {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	binary.LittleEndian.PutUint64(b, math.Float64bits(value))
+	return off + 8, nil
+}
+
 func getRequestFloatValue(b []byte) (float64, int, error) {
 	if len(b) < 8 {
-		return 0, 0, newRequestBufferUnderflow()
+		return 0, 0, newRequestBufferUnderflowError()
 	}
 
 	return math.Float64frombits(binary.LittleEndian.Uint64(b)), 8, nil
 }
 
+func putRequestAttributeAddress(b []byte, name string, value net.IP) (int, error) {
+	off, err := putRequestAttributeName(b, name)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestAddressValue(b[off:], value)
+	if err != nil {
+		return 0, err
+	}
+
+	return off + n, err
+}
+
+func putRequestAddressValue(b []byte, value net.IP) (int, error) {
+	t := requestWireTypeIPv4Address
+
+	ip := value.To4()
+	if ip == nil {
+		t = requestWireTypeIPv6Address
+
+		ip = value.To16()
+		if ip == nil {
+			return 0, newRequestAddressValueError(value)
+		}
+	}
+
+	off, err := putRequestAttributeType(b, t)
+	if err != nil {
+		return 0, err
+	}
+
+	b = b[off:]
+
+	if len(b) < len(ip) {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	copy(b, ip)
+	return off + len(ip), nil
+}
+
 func getRequestIPv4AddressValue(b []byte) (net.IP, int, error) {
 	if len(b) < 4 {
-		return nil, 0, newRequestBufferUnderflow()
+		return nil, 0, newRequestBufferUnderflowError()
 	}
 
 	return net.IPv4(b[0], b[1], b[2], b[3]), 4, nil
@@ -215,7 +469,7 @@ func getRequestIPv4AddressValue(b []byte) (net.IP, int, error) {
 
 func getRequestIPv6AddressValue(b []byte) (net.IP, int, error) {
 	if len(b) < 16 {
-		return nil, 0, newRequestBufferUnderflow()
+		return nil, 0, newRequestBufferUnderflowError()
 	}
 
 	ip := net.IP(make([]byte, 16))
@@ -223,9 +477,59 @@ func getRequestIPv6AddressValue(b []byte) (net.IP, int, error) {
 	return ip, 16, nil
 }
 
+func putRequestAttributeNetwork(b []byte, name string, value *net.IPNet) (int, error) {
+	off, err := putRequestAttributeName(b, name)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestNetworkValue(b[off:], value)
+	if err != nil {
+		return 0, err
+	}
+
+	return off + n, err
+}
+
+func putRequestNetworkValue(b []byte, value *net.IPNet) (int, error) {
+	if value == nil {
+		return 0, newRequestInvalidNetworkValueError(value)
+	}
+
+	ip := value.IP
+	if len(ip) != 4 && len(ip) != 16 {
+		return 0, newRequestInvalidNetworkValueError(value)
+	}
+
+	t := requestWireTypeIPv4Network
+	ones, bits := value.Mask.Size()
+	if bits != 32 {
+		t = requestWireTypeIPv6Network
+		if bits != 128 {
+			return 0, newRequestInvalidNetworkValueError(value)
+		}
+	}
+
+	off, err := putRequestAttributeType(b, t)
+	if err != nil {
+		return 0, err
+	}
+
+	b = b[off:]
+
+	if len(b) < len(ip)+1 {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	b[0] = byte(ones)
+
+	copy(b[1:], ip)
+	return off + len(ip) + 1, nil
+}
+
 func getRequestIPv4NetworkValue(b []byte) (*net.IPNet, int, error) {
 	if len(b) < 5 {
-		return nil, 0, newRequestBufferUnderflow()
+		return nil, 0, newRequestBufferUnderflowError()
 	}
 
 	mask := net.CIDRMask(int(b[0]), 32)
@@ -241,7 +545,7 @@ func getRequestIPv4NetworkValue(b []byte) (*net.IPNet, int, error) {
 
 func getRequestIPv6NetworkValue(b []byte) (*net.IPNet, int, error) {
 	if len(b) < 17 {
-		return nil, 0, newRequestBufferUnderflow()
+		return nil, 0, newRequestBufferUnderflowError()
 	}
 
 	mask := net.CIDRMask(int(b[0]), 128)
@@ -256,6 +560,41 @@ func getRequestIPv6NetworkValue(b []byte) (*net.IPNet, int, error) {
 		IP:   ip.Mask(mask),
 		Mask: mask,
 	}, 17, nil
+}
+
+func putRequestAttributeDomain(b []byte, name string, value domain.Name) (int, error) {
+	off, err := putRequestAttributeName(b, name)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestDomainValue(b[off:], value)
+	if err != nil {
+		return 0, err
+	}
+
+	return off + n, err
+}
+
+func putRequestDomainValue(b []byte, value domain.Name) (int, error) {
+	s := value.String()
+
+	off, err := putRequestAttributeType(b, requestWireTypeDomain)
+	if err != nil {
+		return 0, err
+	}
+
+	b = b[off:]
+
+	n := len(s) + 2
+	if len(b) < n {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	binary.LittleEndian.PutUint16(b, uint16(len(s)))
+	copy(b[2:], []byte(s))
+
+	return off + n, nil
 }
 
 func getRequestDomainValue(b []byte) (domain.Name, int, error) {

@@ -4,6 +4,8 @@ package pdp
 
 import (
 	"github.com/google/uuid"
+	"math"
+	"net"
 	"net/url"
 	"strconv"
 	"strings"
@@ -126,12 +128,21 @@ const (
 	nonMarshableErrorID                           = 112
 	nilRootErrorID                                = 113
 	PathNotFoundErrorID                           = 114
-	requestBufferUnderflowID                      = 115
-	requestVersionErrorID                         = 116
-	requestAttributeTypeErrorID                   = 117
-	requestAttributeUnmarshallingNotImplementedID = 118
-	requestIPv4InvalidMaskErrorID                 = 119
-	requestIPv6InvalidMaskErrorID                 = 120
+	requestBufferOverflowErrorID                  = 115
+	requestBufferUnderflowErrorID                 = 116
+	requestVersionErrorID                         = 117
+	requestInvalidAttributeCountErrorID           = 118
+	requestTooManyAttributesErrorID               = 119
+	requestAttributeMarshallingTypeErrorID        = 120
+	requestAttributeUnmarshallingTypeErrorID      = 121
+	requestAttributeMarshallingNotImplementedID   = 122
+	requestAttributeUnmarshallingNotImplementedID = 123
+	requestTooLongAttributeNameErrorID            = 124
+	requestTooLongStringValueErrorID              = 125
+	requestAddressValueErrorID                    = 126
+	requestInvalidNetworkValueErrorID             = 127
+	requestIPv4InvalidMaskErrorID                 = 128
+	requestIPv6InvalidMaskErrorID                 = 129
 )
 
 type externalError struct {
@@ -1948,16 +1959,29 @@ func (e *PathNotFoundError) Error() string {
 	return e.errorf("Path %v not found", e.path)
 }
 
-type requestBufferUnderflow struct {
+type requestBufferOverflowError struct {
 	errorLink
 }
 
-func newRequestBufferUnderflow() *requestBufferUnderflow {
-	return &requestBufferUnderflow{
-		errorLink: errorLink{id: requestBufferUnderflowID}}
+func newRequestBufferOverflowError() *requestBufferOverflowError {
+	return &requestBufferOverflowError{
+		errorLink: errorLink{id: requestBufferOverflowErrorID}}
 }
 
-func (e *requestBufferUnderflow) Error() string {
+func (e *requestBufferOverflowError) Error() string {
+	return e.errorf("Reached end of buffer while marshalling request")
+}
+
+type requestBufferUnderflowError struct {
+	errorLink
+}
+
+func newRequestBufferUnderflowError() *requestBufferUnderflowError {
+	return &requestBufferUnderflowError{
+		errorLink: errorLink{id: requestBufferUnderflowErrorID}}
+}
+
+func (e *requestBufferUnderflowError) Error() string {
 	return e.errorf("Reached end of buffer while unmarshalling request")
 }
 
@@ -1978,19 +2002,79 @@ func (e *requestVersionError) Error() string {
 	return e.errorf("Got request of version %d while expected %d", e.actual, e.expected)
 }
 
-type requestAttributeTypeError struct {
+type requestInvalidAttributeCountError struct {
+	errorLink
+	n int
+}
+
+func newRequestInvalidAttributeCountError(n int) *requestInvalidAttributeCountError {
+	return &requestInvalidAttributeCountError{
+		errorLink: errorLink{id: requestInvalidAttributeCountErrorID},
+		n:         n}
+}
+
+func (e *requestInvalidAttributeCountError) Error() string {
+	return e.errorf("Invalid count of attributes %d", e.n)
+}
+
+type requestTooManyAttributesError struct {
+	errorLink
+	n int
+}
+
+func newRequestTooManyAttributesError(n int) *requestTooManyAttributesError {
+	return &requestTooManyAttributesError{
+		errorLink: errorLink{id: requestTooManyAttributesErrorID},
+		n:         n}
+}
+
+func (e *requestTooManyAttributesError) Error() string {
+	return e.errorf("Expected no more than %d attributes but got %d", math.MaxUint16, e.n)
+}
+
+type requestAttributeMarshallingTypeError struct {
 	errorLink
 	t int
 }
 
-func newRequestAttributeTypeError(t int) *requestAttributeTypeError {
-	return &requestAttributeTypeError{
-		errorLink: errorLink{id: requestAttributeTypeErrorID},
+func newRequestAttributeMarshallingTypeError(t int) *requestAttributeMarshallingTypeError {
+	return &requestAttributeMarshallingTypeError{
+		errorLink: errorLink{id: requestAttributeMarshallingTypeErrorID},
 		t:         t}
 }
 
-func (e *requestAttributeTypeError) Error() string {
+func (e *requestAttributeMarshallingTypeError) Error() string {
+	return e.errorf("Unknown attribute type for request %d", e.t)
+}
+
+type requestAttributeUnmarshallingTypeError struct {
+	errorLink
+	t int
+}
+
+func newRequestAttributeUnmarshallingTypeError(t int) *requestAttributeUnmarshallingTypeError {
+	return &requestAttributeUnmarshallingTypeError{
+		errorLink: errorLink{id: requestAttributeUnmarshallingTypeErrorID},
+		t:         t}
+}
+
+func (e *requestAttributeUnmarshallingTypeError) Error() string {
 	return e.errorf("Unknown attribute type in request %d", e.t)
+}
+
+type requestAttributeMarshallingNotImplemented struct {
+	errorLink
+	t Type
+}
+
+func newRequestAttributeMarshallingNotImplemented(t Type) *requestAttributeMarshallingNotImplemented {
+	return &requestAttributeMarshallingNotImplemented{
+		errorLink: errorLink{id: requestAttributeMarshallingNotImplementedID},
+		t:         t}
+}
+
+func (e *requestAttributeMarshallingNotImplemented) Error() string {
+	return e.errorf("Marshalling for type %q hasn't been implemented yet", e.t)
 }
 
 type requestAttributeUnmarshallingNotImplemented struct {
@@ -2006,6 +2090,66 @@ func newRequestAttributeUnmarshallingNotImplemented(t int) *requestAttributeUnma
 
 func (e *requestAttributeUnmarshallingNotImplemented) Error() string {
 	return e.errorf("Unmarshalling for type %q hasn't been implemented yet", requestWireTypeNames[e.t])
+}
+
+type requestTooLongAttributeNameError struct {
+	errorLink
+	name string
+}
+
+func newRequestTooLongAttributeNameError(name string) *requestTooLongAttributeNameError {
+	return &requestTooLongAttributeNameError{
+		errorLink: errorLink{id: requestTooLongAttributeNameErrorID},
+		name:      name}
+}
+
+func (e *requestTooLongAttributeNameError) Error() string {
+	return e.errorf("Attribute name is too long %d (expected no more than %d bytes)", len(e.name), math.MaxUint8)
+}
+
+type requestTooLongStringValueError struct {
+	errorLink
+	s string
+}
+
+func newRequestTooLongStringValueError(s string) *requestTooLongStringValueError {
+	return &requestTooLongStringValueError{
+		errorLink: errorLink{id: requestTooLongStringValueErrorID},
+		s:         s}
+}
+
+func (e *requestTooLongStringValueError) Error() string {
+	return e.errorf("String value is too long %d (expected no more than %d bytes)", len(e.s), math.MaxUint16)
+}
+
+type requestAddressValueError struct {
+	errorLink
+	a []byte
+}
+
+func newRequestAddressValueError(a []byte) *requestAddressValueError {
+	return &requestAddressValueError{
+		errorLink: errorLink{id: requestAddressValueErrorID},
+		a:         a}
+}
+
+func (e *requestAddressValueError) Error() string {
+	return e.errorf("Can't treat [% x] as IPv4 or IPv6 address", e.a)
+}
+
+type requestInvalidNetworkValueError struct {
+	errorLink
+	n *net.IPNet
+}
+
+func newRequestInvalidNetworkValueError(n *net.IPNet) *requestInvalidNetworkValueError {
+	return &requestInvalidNetworkValueError{
+		errorLink: errorLink{id: requestInvalidNetworkValueErrorID},
+		n:         n}
+}
+
+func (e *requestInvalidNetworkValueError) Error() string {
+	return e.errorf("Can't treat %s as IPv4 or IPv6 network", e.n)
 }
 
 type requestIPv4InvalidMaskError struct {
