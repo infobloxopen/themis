@@ -684,8 +684,10 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		r = respMsg
 	case typeRedirect:
 		status, err = p.redirect(ctx, w, r, ah.redirect)
+		r.AuthenticatedData = false
 	case typeBlock:
 		status = dns.RcodeNameError
+		r.AuthenticatedData = false
 	case typeRefuse:
 		status = dns.RcodeRefused
 	case typeDrop:
