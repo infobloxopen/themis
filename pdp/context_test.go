@@ -32,23 +32,13 @@ func TestContext(t *testing.T) {
 			return "s", MakeStringValue("test"), nil
 
 		case 2:
-			a := net.ParseIP("192.0.2.1")
-			if a == nil {
-				return "", UndefinedValue, fmt.Errorf("can't make IP address")
-			}
-
-			return "a", MakeAddressValue(a), nil
+			return "a", MakeAddressValue(net.ParseIP("192.0.2.1")), nil
 
 		case 3:
-			_, n, err := net.ParseCIDR("192.0.2.0/24")
-			if err != nil {
-				return "", UndefinedValue, fmt.Errorf("can't make IP network: %s", err)
-			}
-
-			return "n", MakeNetworkValue(n), nil
+			return "n", MakeNetworkValue(makeTestNetwork("192.0.2.0/24")), nil
 
 		case 4:
-			return "d", MakeDomainValue(makeTestDN(t, "example.com")), nil
+			return "d", MakeDomainValue(makeTestDomain("example.com")), nil
 
 		case 5:
 			st := strtree.NewTree()
@@ -59,28 +49,16 @@ func TestContext(t *testing.T) {
 
 		case 6:
 			nt := iptree.NewTree()
-			_, n, err := net.ParseCIDR("192.0.2.0/28")
-			if err != nil {
-				return "", UndefinedValue, fmt.Errorf("can't make IP network: %s", err)
-			}
-			nt.InplaceInsertNet(n, 1)
-			_, n, err = net.ParseCIDR("192.0.2.16/28")
-			if err != nil {
-				return "", UndefinedValue, fmt.Errorf("can't make IP network: %s", err)
-			}
-			nt.InplaceInsertNet(n, 2)
-			_, n, err = net.ParseCIDR("192.0.2.32/28")
-			if err != nil {
-				return "", UndefinedValue, fmt.Errorf("can't make IP network: %s", err)
-			}
-			nt.InplaceInsertNet(n, 3)
+			nt.InplaceInsertNet(makeTestNetwork("192.0.2.0/28"), 1)
+			nt.InplaceInsertNet(makeTestNetwork("192.0.2.16/28"), 2)
+			nt.InplaceInsertNet(makeTestNetwork("192.0.2.32/28"), 3)
 			return "sn", MakeSetOfNetworksValue(nt), nil
 
 		case 7:
 			dt := &domaintree.Node{}
-			dt.InplaceInsert(makeTestDN(t, "example.com"), 1)
-			dt.InplaceInsert(makeTestDN(t, "example.org"), 2)
-			dt.InplaceInsert(makeTestDN(t, "example.net"), 3)
+			dt.InplaceInsert(makeTestDomain("example.com"), 1)
+			dt.InplaceInsert(makeTestDomain("example.org"), 2)
+			dt.InplaceInsert(makeTestDomain("example.net"), 3)
 			return "sd", MakeSetOfDomainsValue(dt), nil
 
 		case 8:

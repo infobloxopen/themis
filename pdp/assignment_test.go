@@ -1,10 +1,6 @@
 package pdp
 
-import (
-	"testing"
-
-	"github.com/infobloxopen/go-trees/domain"
-)
+import "testing"
 
 func TestAttributeAssignmentExpression(t *testing.T) {
 	ctx, err := NewContext(nil, 0, nil)
@@ -26,24 +22,19 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 		t.Errorf("Expected %q, %q, %q but got %q, %q, %q", a.id, a.t.GetKey(), expect, id, tKey, s)
 	}
 
-	dn, err := domain.MakeNameFromString("example.com")
-	if err != nil {
-		t.Errorf("Expected no error but got %s", err)
-	} else {
-		dv := MakeDomainValue(dn)
-		v = MakeStringValue(expect)
-		e := makeFunctionStringEqual(v, dv)
-		a = Attribute{
-			id: "test-id",
-			t:  TypeBoolean}
+	dv := MakeDomainValue(makeTestDomain("example.com"))
+	v = MakeStringValue(expect)
+	e := makeFunctionStringEqual(v, dv)
+	a = Attribute{
+		id: "test-id",
+		t:  TypeBoolean}
 
-		ae = MakeAttributeAssignmentExpression(a, e)
-		id, tKey, s, err = ae.Serialize(ctx)
-		if err == nil {
-			t.Errorf("Expected error but got %q, %q, %q", id, tKey, s)
-		} else if _, ok := err.(*attributeValueTypeError); !ok {
-			t.Errorf("Expected *attributeValueTypeError error but got %T (%s)", err, err)
-		}
+	ae = MakeAttributeAssignmentExpression(a, e)
+	id, tKey, s, err = ae.Serialize(ctx)
+	if err == nil {
+		t.Errorf("Expected error but got %q, %q, %q", id, tKey, s)
+	} else if _, ok := err.(*attributeValueTypeError); !ok {
+		t.Errorf("Expected *attributeValueTypeError error but got %T (%s)", err, err)
 	}
 
 	expect = "test-value"
@@ -61,7 +52,7 @@ func TestAttributeAssignmentExpression(t *testing.T) {
 
 	fv := MakeFloatValue(2.718282)
 	v = MakeStringValue(expect)
-	e := makeFunctionStringEqual(v, fv)
+	e = makeFunctionStringEqual(v, fv)
 	a = Attribute{
 		id: "test-id",
 		t:  TypeInteger}

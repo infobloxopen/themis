@@ -7,6 +7,7 @@ import (
 	"math"
 	"net"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 )
@@ -143,6 +144,11 @@ const (
 	requestInvalidNetworkValueErrorID             = 127
 	requestIPv4InvalidMaskErrorID                 = 128
 	requestIPv6InvalidMaskErrorID                 = 129
+	requestTooLongDomainValueErrorID              = 130
+	requestInvalidExpressionErrorID               = 131
+	requestAssignmentsOverflowErrorID             = 132
+	requestUnmarshalIntegerOverflowErrorID        = 133
+	requestUnmarshalIntegerUnderflowErrorID       = 134
 )
 
 type externalError struct {
@@ -2180,4 +2186,83 @@ func newRequestIPv6InvalidMaskError(b byte) *requestIPv6InvalidMaskError {
 
 func (e *requestIPv6InvalidMaskError) Error() string {
 	return e.errorf("Invalid IPv6 CIDR: %d", e.b)
+}
+
+type requestTooLongDomainValueError struct {
+	errorLink
+	d string
+}
+
+func newRequestTooLongDomainValueError(d string) *requestTooLongDomainValueError {
+	return &requestTooLongDomainValueError{
+		errorLink: errorLink{id: requestTooLongDomainValueErrorID},
+		d:         d}
+}
+
+func (e *requestTooLongDomainValueError) Error() string {
+	return e.errorf("Domain value is too long %d (expected no more than %d bytes)", len(e.d), math.MaxUint16)
+}
+
+type requestInvalidExpressionError struct {
+	errorLink
+	a AttributeAssignmentExpression
+}
+
+func newRequestInvalidExpressionError(a AttributeAssignmentExpression) *requestInvalidExpressionError {
+	return &requestInvalidExpressionError{
+		errorLink: errorLink{id: requestInvalidExpressionErrorID},
+		a:         a}
+}
+
+func (e *requestInvalidExpressionError) Error() string {
+	return e.errorf("Expected value as right part of assignment expression for %s but got %T", e.a.a.describe(), e.a.e)
+}
+
+type requestAssignmentsOverflowError struct {
+	errorLink
+	actual   int
+	expected int
+}
+
+func newRequestAssignmentsOverflowError(actual, expected int) *requestAssignmentsOverflowError {
+	return &requestAssignmentsOverflowError{
+		errorLink: errorLink{id: requestAssignmentsOverflowErrorID},
+		actual:    actual,
+		expected:  expected}
+}
+
+func (e *requestAssignmentsOverflowError) Error() string {
+	return e.errorf("Expected buffer for at least %d assignments but got %d", e.expected, e.actual)
+}
+
+type requestUnmarshalIntegerOverflowError struct {
+	errorLink
+	n int64
+	k reflect.Kind
+}
+
+func newRequestUnmarshalIntegerOverflowError(n int64, k reflect.Kind) *requestUnmarshalIntegerOverflowError {
+	return &requestUnmarshalIntegerOverflowError{
+		errorLink: errorLink{id: requestUnmarshalIntegerOverflowErrorID},
+		n:         n,
+		k:         k}
+}
+
+func (e *requestUnmarshalIntegerOverflowError) Error() string {
+	return e.errorf("Integer value %d overflows %s", e.n, e.k)
+}
+
+type requestUnmarshalIntegerUnderflowError struct {
+	errorLink
+	n int64
+}
+
+func newRequestUnmarshalIntegerUnderflowError(n int64) *requestUnmarshalIntegerUnderflowError {
+	return &requestUnmarshalIntegerUnderflowError{
+		errorLink: errorLink{id: requestUnmarshalIntegerUnderflowErrorID},
+		n:         n}
+}
+
+func (e *requestUnmarshalIntegerUnderflowError) Error() string {
+	return e.errorf("Negative integer value %d underflows unsigned integer", e.n)
 }

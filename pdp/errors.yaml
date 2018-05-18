@@ -4,6 +4,7 @@ import:
   - math
   - net
   - net/url
+  - reflect
   - strconv
   - strings
   - github.com/google/uuid
@@ -1106,3 +1107,51 @@ errors:
   msg: "Invalid IPv6 CIDR: %d"
   args:
   - field: b
+
+- id: requestTooLongDomainValueError
+  fields:
+  - id: d
+    type: string
+  msg: "Domain value is too long %d (expected no more than %d bytes)"
+  args:
+  - expr: len(e.d)
+  - expr: math.MaxUint16
+
+- id: requestInvalidExpressionError
+  fields:
+  - id: a
+    type: AttributeAssignmentExpression
+  msg: "Expected value as right part of assignment expression for %s but got %T"
+  args:
+  - field: a.a.describe()
+  - field: a.e
+
+- id: requestAssignmentsOverflowError
+  fields:
+  - id: actual
+    type: int
+  - id: expected
+    type: int
+  msg: "Expected buffer for at least %d assignments but got %d"
+  args:
+  - field: expected
+  - field: actual
+
+- id: requestUnmarshalIntegerOverflowError
+  fields:
+  - id: n
+    type: int64
+  - id: k
+    type: reflect.Kind
+  msg: "Integer value %d overflows %s"
+  args:
+  - field: n
+  - field: k
+
+- id: requestUnmarshalIntegerUnderflowError
+  fields:
+  - id: n
+    type: int64
+  msg: "Negative integer value %d underflows unsigned integer"
+  args:
+  - field: n

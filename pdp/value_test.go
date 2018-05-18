@@ -5,6 +5,7 @@ import (
 	"net"
 	"testing"
 
+	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
@@ -107,11 +108,7 @@ func TestAttributeValue(t *testing.T) {
 		t.Errorf("Expected %q as value description but got %q", expDesc, d)
 	}
 
-	_, n, err := net.ParseCIDR("192.0.2.0/24")
-	if err != nil {
-		t.Fatalf("Can't parse 192.0.2.0/24 as network: %s", err)
-	}
-	v = MakeNetworkValue(n)
+	v = MakeNetworkValue(makeTestNetwork("192.0.2.0/24"))
 	vt = v.GetResultType()
 	if vt != TypeNetwork {
 		t.Errorf("Expected %q as value type but got %q", TypeNetwork, vt)
@@ -123,7 +120,7 @@ func TestAttributeValue(t *testing.T) {
 		t.Errorf("Expected %q as value description but got %q", expDesc, d)
 	}
 
-	v = MakeDomainValue(makeTestDN(t, "example.com"))
+	v = MakeDomainValue(makeTestDomain("example.com"))
 	vt = v.GetResultType()
 	if vt != TypeDomain {
 		t.Errorf("Expected %q as value type but got %q", TypeDomain, vt)
@@ -153,26 +150,10 @@ func TestAttributeValue(t *testing.T) {
 	}
 
 	nTree := iptree.NewTree()
-	_, n, err = net.ParseCIDR("192.0.2.16/28")
-	if err != nil {
-		t.Fatalf("Can't parse 192.0.2.16/28 as network: %s", err)
-	}
-	nTree.InplaceInsertNet(n, 1)
-	_, n, err = net.ParseCIDR("192.0.2.32/28")
-	if err != nil {
-		t.Fatalf("Can't parse 192.0.2.32/28 as network: %s", err)
-	}
-	nTree.InplaceInsertNet(n, 2)
-	_, n, err = net.ParseCIDR("192.0.2.48/28")
-	if err != nil {
-		t.Fatalf("Can't parse 192.0.2.48/28 as network: %s", err)
-	}
-	nTree.InplaceInsertNet(n, 3)
-	_, n, err = net.ParseCIDR("192.0.2.64/28")
-	if err != nil {
-		t.Fatalf("Can't parse 192.0.2.64/28 as network: %s", err)
-	}
-	nTree.InplaceInsertNet(n, 4)
+	nTree.InplaceInsertNet(makeTestNetwork("192.0.2.16/28"), 1)
+	nTree.InplaceInsertNet(makeTestNetwork("192.0.2.32/28"), 2)
+	nTree.InplaceInsertNet(makeTestNetwork("192.0.2.48/28"), 3)
+	nTree.InplaceInsertNet(makeTestNetwork("192.0.2.64/28"), 4)
 	v = MakeSetOfNetworksValue(nTree)
 	vt = v.GetResultType()
 	if vt != TypeSetOfNetworks {
@@ -186,10 +167,10 @@ func TestAttributeValue(t *testing.T) {
 	}
 
 	dTree := &domaintree.Node{}
-	dTree.InplaceInsert(makeTestDN(t, "example.com"), 1)
-	dTree.InplaceInsert(makeTestDN(t, "example.gov"), 2)
-	dTree.InplaceInsert(makeTestDN(t, "example.net"), 3)
-	dTree.InplaceInsert(makeTestDN(t, "example.org"), 4)
+	dTree.InplaceInsert(makeTestDomain("example.com"), 1)
+	dTree.InplaceInsert(makeTestDomain("example.gov"), 2)
+	dTree.InplaceInsert(makeTestDomain("example.net"), 3)
+	dTree.InplaceInsert(makeTestDomain("example.org"), 4)
 	v = MakeSetOfDomainsValue(dTree)
 	vt = v.GetResultType()
 	if vt != TypeSetOfDomains {
@@ -676,26 +657,10 @@ func TestAttributeValueTypeCast(t *testing.T) {
 	}
 
 	nTree := iptree.NewTree()
-	_, n, err := net.ParseCIDR("192.0.2.16/28")
-	if err != nil {
-		t.Fatalf("Can't parse 192.0.2.16/28 as network: %s", err)
-	}
-	nTree.InplaceInsertNet(n, 1)
-	_, n, err = net.ParseCIDR("192.0.2.32/28")
-	if err != nil {
-		t.Fatalf("Can't parse 192.0.2.32/28 as network: %s", err)
-	}
-	nTree.InplaceInsertNet(n, 2)
-	_, n, err = net.ParseCIDR("192.0.2.48/28")
-	if err != nil {
-		t.Fatalf("Can't parse 192.0.2.48/28 as network: %s", err)
-	}
-	nTree.InplaceInsertNet(n, 3)
-	_, n, err = net.ParseCIDR("192.0.2.64/28")
-	if err != nil {
-		t.Fatalf("Can't parse 192.0.2.64/28 as network: %s", err)
-	}
-	nTree.InplaceInsertNet(n, 4)
+	nTree.InplaceInsertNet(makeTestNetwork("192.0.2.16/28"), 1)
+	nTree.InplaceInsertNet(makeTestNetwork("192.0.2.32/28"), 2)
+	nTree.InplaceInsertNet(makeTestNetwork("192.0.2.48/28"), 3)
+	nTree.InplaceInsertNet(makeTestNetwork("192.0.2.48/28"), 4)
 	v = MakeSetOfNetworksValue(nTree)
 
 	_, err = v.setOfNetworks()
@@ -717,10 +682,10 @@ func TestAttributeValueTypeCast(t *testing.T) {
 	}
 
 	dTree := &domaintree.Node{}
-	dTree.InplaceInsert(makeTestDN(t, "example.com"), 1)
-	dTree.InplaceInsert(makeTestDN(t, "example.gov"), 2)
-	dTree.InplaceInsert(makeTestDN(t, "example.net"), 3)
-	dTree.InplaceInsert(makeTestDN(t, "example.org"), 4)
+	dTree.InplaceInsert(makeTestDomain("example.com"), 1)
+	dTree.InplaceInsert(makeTestDomain("example.gov"), 2)
+	dTree.InplaceInsert(makeTestDomain("example.net"), 3)
+	dTree.InplaceInsert(makeTestDomain("example.org"), 4)
 	v = MakeSetOfDomainsValue(dTree)
 	_, err = v.setOfDomains()
 	if err != nil {
@@ -1048,26 +1013,10 @@ func TestAttributeValueSerialize(t *testing.T) {
 	}
 
 	nTree := iptree.NewTree()
-	_, n, err := net.ParseCIDR("192.0.2.16/28")
-	if err != nil {
-		t.Fatalf("Can't parse 192.0.2.16/28 as network: %s", err)
-	}
-	nTree.InplaceInsertNet(n, 1)
-	_, n, err = net.ParseCIDR("192.0.2.32/28")
-	if err != nil {
-		t.Fatalf("Can't parse 192.0.2.32/28 as network: %s", err)
-	}
-	nTree.InplaceInsertNet(n, 2)
-	_, n, err = net.ParseCIDR("192.0.2.48/28")
-	if err != nil {
-		t.Fatalf("Can't parse 192.0.2.48/28 as network: %s", err)
-	}
-	nTree.InplaceInsertNet(n, 3)
-	_, n, err = net.ParseCIDR("192.0.2.64/28")
-	if err != nil {
-		t.Fatalf("Can't parse 192.0.2.64/28 as network: %s", err)
-	}
-	nTree.InplaceInsertNet(n, 4)
+	nTree.InplaceInsertNet(makeTestNetwork("192.0.2.16/28"), 1)
+	nTree.InplaceInsertNet(makeTestNetwork("192.0.2.32/28"), 2)
+	nTree.InplaceInsertNet(makeTestNetwork("192.0.2.48/28"), 3)
+	nTree.InplaceInsertNet(makeTestNetwork("192.0.2.64/28"), 4)
 	v = MakeSetOfNetworksValue(nTree)
 	s, err = v.Serialize()
 	if err != nil {
@@ -1080,10 +1029,10 @@ func TestAttributeValueSerialize(t *testing.T) {
 	}
 
 	dTree := &domaintree.Node{}
-	dTree.InplaceInsert(makeTestDN(t, "example.com"), 1)
-	dTree.InplaceInsert(makeTestDN(t, "example.gov"), 2)
-	dTree.InplaceInsert(makeTestDN(t, "example.net"), 3)
-	dTree.InplaceInsert(makeTestDN(t, "example.org"), 4)
+	dTree.InplaceInsert(makeTestDomain("example.com"), 1)
+	dTree.InplaceInsert(makeTestDomain("example.gov"), 2)
+	dTree.InplaceInsert(makeTestDomain("example.net"), 3)
+	dTree.InplaceInsert(makeTestDomain("example.org"), 4)
 	v = MakeSetOfDomainsValue(dTree)
 	s, err = v.Serialize()
 	if err != nil {
@@ -1301,4 +1250,22 @@ func assertPanicWithError(t *testing.T, f func(), format string, args ...interfa
 	}()
 
 	f()
+}
+
+func makeTestNetwork(s string) *net.IPNet {
+	_, n, err := net.ParseCIDR(s)
+	if err != nil {
+		panic(err)
+	}
+
+	return n
+}
+
+func makeTestDomain(s string) domain.Name {
+	n, err := domain.MakeNameFromString(s)
+	if err != nil {
+		panic(err)
+	}
+
+	return n
 }
