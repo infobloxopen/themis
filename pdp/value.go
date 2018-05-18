@@ -70,7 +70,7 @@ func MakeNetworkValue(v *net.IPNet) AttributeValue {
 
 // MakeDomainValue creates instance of domain name attribute value. Argument
 // should be valid domain name. Caller is responsible for the validation.
-func MakeDomainValue(v domain.WireNameLower) AttributeValue {
+func MakeDomainValue(v domain.Name) AttributeValue {
 	return AttributeValue{
 		t: TypeDomain,
 		v: v}
@@ -223,7 +223,7 @@ func MakeValueFromString(t Type, s string) (AttributeValue, error) {
 		return MakeNetworkValue(n), nil
 
 	case TypeDomain:
-		d, err := domain.MakeWireDomainNameLower(s)
+		d, err := domain.MakeNameFromString(s)
 		if err != nil {
 			return UndefinedValue, newInvalidDomainNameStringCastError(s, err)
 		}
@@ -294,7 +294,7 @@ func (v AttributeValue) describe() string {
 		return v.v.(*net.IPNet).String()
 
 	case TypeDomain:
-		return fmt.Sprintf("domain(%s)", v.v.(domain.WireNameLower).String())
+		return fmt.Sprintf("domain(%s)", v.v.(domain.Name).String())
 
 	case TypeSetOfStrings:
 		var s []string
@@ -431,13 +431,13 @@ func (v AttributeValue) network() (*net.IPNet, error) {
 	return v.v.(*net.IPNet), nil
 }
 
-func (v AttributeValue) domain() (domain.WireNameLower, error) {
+func (v AttributeValue) domain() (domain.Name, error) {
 	err := v.typeCheck(TypeDomain)
 	if err != nil {
-		return nil, err
+		return domain.Name{}, err
 	}
 
-	return v.v.(domain.WireNameLower), nil
+	return v.v.(domain.Name), nil
 }
 
 func (v AttributeValue) setOfStrings() (*strtree.Tree, error) {
@@ -589,7 +589,7 @@ func (v AttributeValue) Serialize() (string, error) {
 		return v.v.(*net.IPNet).String(), nil
 
 	case TypeDomain:
-		return v.v.(domain.WireNameLower).String(), nil
+		return v.v.(domain.Name).String(), nil
 
 	case TypeSetOfStrings:
 		s := sortSetOfStrings(v.v.(*strtree.Tree))

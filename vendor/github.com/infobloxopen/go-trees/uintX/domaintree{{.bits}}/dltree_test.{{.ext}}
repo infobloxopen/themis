@@ -7,8 +7,6 @@ import (
 	"testing"
 
 	"github.com/pmezard/go-difflib/difflib"
-
-	"github.com/infobloxopen/go-trees/domain"
 )
 
 func TestLabelNewTree(t *testing.T) {
@@ -588,8 +586,8 @@ func TestLabelIsEmpty(t *testing.T) {
 		t.Errorf("Expected two nodes tree to be not empty")
 	}
 
-	r, ok = r.del("0")
-	r, ok = r.del("6")
+	r, _ = r.del("0")
+	r, _ = r.del("6")
 
 	if !r.isEmpty() {
 		t.Errorf("Expected empty non-nil tree to be empty")
@@ -601,23 +599,23 @@ func TestLabelRawMethods(t *testing.T) {
 
 	n := new(Node)
 
-	r = r.rawInsert([]byte("k"), n)
+	r = r.rawInsert("K", n)
 	assertLabelTree(r, fmt.Sprintf(TestSingleNodeTree, n), "single node tree", t)
 
 	r = newLabelTree()
-	r = r.rawInsert([]byte("k"), n)
+	r = r.rawInsert("K", n)
 	assertLabelTree(r, fmt.Sprintf(TestSingleNodeTree, n), "single node tree", t)
 
 	r = newLabelTree()
-	r.rawInplaceInsert([]byte("k"), n)
+	r.rawInplaceInsert("K", n)
 	assertLabelTree(r, fmt.Sprintf(TestSingleNodeTree, n), "single node inplace tree", t)
 
 	r = newLabelTree()
-	r.rawInplaceInsert([]byte("k"), n)
+	r.rawInplaceInsert("K", n)
 	assertLabelTree(r, fmt.Sprintf(TestSingleNodeTree, n), "single node inplace tree", t)
 
 	r = nil
-	v, ok := r.rawGet([]byte("0"))
+	v, ok := r.rawGet("0")
 	if ok {
 		t.Errorf("Expected nothing but got %T (%#v)", v, v)
 	}
@@ -635,7 +633,7 @@ func TestLabelRawMethods(t *testing.T) {
 	r = r.insert("2", n2)
 	r = r.insert("3", n3)
 
-	v, ok = r.rawGet([]byte("3"))
+	v, ok = r.rawGet("3")
 	if !ok {
 		t.Errorf("Expected %p but got nothing", n3)
 	} else if v != n3 {
@@ -643,9 +641,9 @@ func TestLabelRawMethods(t *testing.T) {
 	}
 
 	var e *labelTree
-	assertRawEnumerate(e.rawEnumerate(), "empty tree", t)
+	assertEnumerate(e.rawEnumerate(), "empty tree", t)
 
-	assertRawEnumerate(r.rawEnumerate(), "raw enumeration of tree 10423", t,
+	assertEnumerate(r.rawEnumerate(), "raw enumeration of tree 10423", t,
 		fmt.Sprintf("\"0\": \"%p\"\n", n0),
 		fmt.Sprintf("\"1\": \"%p\"\n", n1),
 		fmt.Sprintf("\"2\": \"%p\"\n", n2),
@@ -653,12 +651,12 @@ func TestLabelRawMethods(t *testing.T) {
 		fmt.Sprintf("\"4\": \"%p\"\n", n4),
 	)
 
-	e, ok = e.rawDel([]byte("0"))
+	e, ok = e.rawDel("0")
 	if ok {
 		t.Errorf("Expected nothing to be deleted from empty tree but something has been deleted:\n%s", e.dot())
 	}
 
-	_, ok = r.rawDel([]byte("0"))
+	_, ok = r.rawDel("0")
 	if !ok {
 		t.Errorf("Expected node \"0\" to be deleted but got nothing")
 	}
@@ -671,7 +669,7 @@ N0 [label="nil" style=filled fontcolor=white fillcolor=black]
 `
 
 	TestSingleNodeTree = `digraph d {
-N0 [label="k: \"k\" v: %p" style=filled fontcolor=white fillcolor=black]
+N0 [label="k: \"K\" v: %p" style=filled fontcolor=white fillcolor=black]
 }
 `
 
@@ -695,24 +693,24 @@ N4 [label="4" style=filled fillcolor=red]
 `
 
 	Test16InversedNodeTree = `digraph d {
-N0 [label="c" style=filled fontcolor=white fillcolor=black]
+N0 [label="C" style=filled fontcolor=white fillcolor=black]
 N0 -> { N1 N2 }
 N1 [label="8" style=filled fillcolor=red]
 N1 -> { N3 N4 }
-N2 [label="e" style=filled fontcolor=white fillcolor=black]
+N2 [label="E" style=filled fontcolor=white fillcolor=black]
 N2 -> { N5 N6 }
 N3 [label="4" style=filled fontcolor=white fillcolor=black]
 N3 -> { N7 N8 }
-N4 [label="a" style=filled fontcolor=white fillcolor=black]
+N4 [label="A" style=filled fontcolor=white fillcolor=black]
 N4 -> { N9 N10 }
-N5 [label="d" style=filled fontcolor=white fillcolor=black]
-N6 [label="f" style=filled fontcolor=white fillcolor=black]
+N5 [label="D" style=filled fontcolor=white fillcolor=black]
+N6 [label="F" style=filled fontcolor=white fillcolor=black]
 N7 [label="2" style=filled fillcolor=red]
 N7 -> { N11 N12 }
 N8 [label="6" style=filled fillcolor=red]
 N8 -> { N13 N14 }
 N9 [label="9" style=filled fontcolor=white fillcolor=black]
-N10 [label="b" style=filled fontcolor=white fillcolor=black]
+N10 [label="B" style=filled fontcolor=white fillcolor=black]
 N11 [label="1" style=filled fontcolor=white fillcolor=black]
 N11 -> { N15 N16 }
 N12 [label="3" style=filled fontcolor=white fillcolor=black]
@@ -734,21 +732,21 @@ N3 [label="0" style=filled fontcolor=white fillcolor=black]
 N4 [label="2" style=filled fontcolor=white fillcolor=black]
 N5 [label="5" style=filled fontcolor=white fillcolor=black]
 N5 -> { N7 N8 }
-N6 [label="b" style=filled fontcolor=white fillcolor=black]
+N6 [label="B" style=filled fontcolor=white fillcolor=black]
 N6 -> { N9 N10 }
 N7 [label="4" style=filled fontcolor=white fillcolor=black]
 N8 [label="6" style=filled fontcolor=white fillcolor=black]
 N9 [label="9" style=filled fillcolor=red]
 N9 -> { N11 N12 }
-N10 [label="d" style=filled fillcolor=red]
+N10 [label="D" style=filled fillcolor=red]
 N10 -> { N13 N14 }
 N11 [label="8" style=filled fontcolor=white fillcolor=black]
-N12 [label="a" style=filled fontcolor=white fillcolor=black]
-N13 [label="c" style=filled fontcolor=white fillcolor=black]
-N14 [label="e" style=filled fontcolor=white fillcolor=black]
+N12 [label="A" style=filled fontcolor=white fillcolor=black]
+N13 [label="C" style=filled fontcolor=white fillcolor=black]
+N14 [label="E" style=filled fontcolor=white fillcolor=black]
 N14 -> { N15 N16 }
 N15 [label="nil" style=filled fontcolor=white fillcolor=black]
-N16 [label="f" style=filled fillcolor=red]
+N16 [label="F" style=filled fillcolor=red]
 }
 `
 
@@ -757,7 +755,7 @@ N0 [label="6" style=filled fontcolor=white fillcolor=black]
 N0 -> { N1 N2 }
 N1 [label="2" style=filled fontcolor=white fillcolor=black]
 N1 -> { N3 N4 }
-N2 [label="a" style=filled fontcolor=white fillcolor=black]
+N2 [label="A" style=filled fontcolor=white fillcolor=black]
 N2 -> { N5 N6 }
 N3 [label="0" style=filled fontcolor=white fillcolor=black]
 N3 -> { N7 N8 }
@@ -765,7 +763,7 @@ N4 [label="4" style=filled fontcolor=white fillcolor=black]
 N4 -> { N9 N10 }
 N5 [label="8" style=filled fontcolor=white fillcolor=black]
 N5 -> { N11 N12 }
-N6 [label="c" style=filled fillcolor=red]
+N6 [label="C" style=filled fillcolor=red]
 N6 -> { N13 N14 }
 N7 [label="nil" style=filled fontcolor=white fillcolor=black]
 N8 [label="1" style=filled fillcolor=red]
@@ -773,11 +771,11 @@ N9 [label="3" style=filled fillcolor=red]
 N10 [label="5" style=filled fillcolor=red]
 N11 [label="7" style=filled fillcolor=red]
 N12 [label="9" style=filled fillcolor=red]
-N13 [label="b" style=filled fontcolor=white fillcolor=black]
-N14 [label="e" style=filled fontcolor=white fillcolor=black]
+N13 [label="B" style=filled fontcolor=white fillcolor=black]
+N14 [label="E" style=filled fontcolor=white fillcolor=black]
 N14 -> { N15 N16 }
-N15 [label="d" style=filled fillcolor=red]
-N16 [label="f" style=filled fillcolor=red]
+N15 [label="D" style=filled fillcolor=red]
+N16 [label="F" style=filled fillcolor=red]
 }
 `
 
@@ -786,24 +784,24 @@ N0 [label="9" style=filled fontcolor=white fillcolor=black]
 N0 -> { N1 N2 }
 N1 [label="5" style=filled fontcolor=white fillcolor=black]
 N1 -> { N3 N4 }
-N2 [label="d" style=filled fontcolor=white fillcolor=black]
+N2 [label="D" style=filled fontcolor=white fillcolor=black]
 N2 -> { N5 N6 }
 N3 [label="3" style=filled fillcolor=red]
 N3 -> { N7 N8 }
 N4 [label="7" style=filled fontcolor=white fillcolor=black]
 N4 -> { N9 N10 }
-N5 [label="b" style=filled fontcolor=white fillcolor=black]
+N5 [label="B" style=filled fontcolor=white fillcolor=black]
 N5 -> { N11 N12 }
-N6 [label="f" style=filled fontcolor=white fillcolor=black]
+N6 [label="F" style=filled fontcolor=white fillcolor=black]
 N6 -> { N13 N14 }
 N7 [label="1" style=filled fontcolor=white fillcolor=black]
 N7 -> { N15 N16 }
 N8 [label="4" style=filled fontcolor=white fillcolor=black]
 N9 [label="6" style=filled fillcolor=red]
 N10 [label="8" style=filled fillcolor=red]
-N11 [label="a" style=filled fillcolor=red]
-N12 [label="c" style=filled fillcolor=red]
-N13 [label="e" style=filled fillcolor=red]
+N11 [label="A" style=filled fillcolor=red]
+N12 [label="C" style=filled fillcolor=red]
+N13 [label="E" style=filled fillcolor=red]
 N14 [label="nil" style=filled fontcolor=white fillcolor=black]
 N15 [label="0" style=filled fillcolor=red]
 N16 [label="2" style=filled fillcolor=red]
@@ -822,25 +820,25 @@ N3 -> { N7 N8 }
 N4 [label="4" style=filled fontcolor=white fillcolor=black]
 N5 [label="7" style=filled fontcolor=white fillcolor=black]
 N5 -> { N9 N10 }
-N6 [label="c" style=filled fillcolor=red]
+N6 [label="C" style=filled fillcolor=red]
 N6 -> { N11 N12 }
 N7 [label="0" style=filled fillcolor=red]
 N8 [label="2" style=filled fillcolor=red]
 N9 [label="6" style=filled fillcolor=red]
 N10 [label="8" style=filled fillcolor=red]
-N11 [label="a" style=filled fontcolor=white fillcolor=black]
+N11 [label="A" style=filled fontcolor=white fillcolor=black]
 N11 -> { N13 N14 }
-N12 [label="e" style=filled fontcolor=white fillcolor=black]
+N12 [label="E" style=filled fontcolor=white fillcolor=black]
 N12 -> { N15 N16 }
 N13 [label="nil" style=filled fontcolor=white fillcolor=black]
-N14 [label="b" style=filled fillcolor=red]
-N15 [label="d" style=filled fillcolor=red]
-N16 [label="f" style=filled fillcolor=red]
+N14 [label="B" style=filled fillcolor=red]
+N15 [label="D" style=filled fillcolor=red]
+N16 [label="F" style=filled fillcolor=red]
 }
 `
 
 	Test32AlternatingNodeTree = `digraph d {
-N0 [label="0e" style=filled fontcolor=white fillcolor=black]
+N0 [label="0E" style=filled fontcolor=white fillcolor=black]
 N0 -> { N1 N2 }
 N1 [label="06" style=filled fontcolor=white fillcolor=black]
 N1 -> { N3 N4 }
@@ -848,11 +846,11 @@ N2 [label="16" style=filled fontcolor=white fillcolor=black]
 N2 -> { N5 N6 }
 N3 [label="02" style=filled fontcolor=white fillcolor=black]
 N3 -> { N7 N8 }
-N4 [label="0a" style=filled fontcolor=white fillcolor=black]
+N4 [label="0A" style=filled fontcolor=white fillcolor=black]
 N4 -> { N9 N10 }
 N5 [label="12" style=filled fontcolor=white fillcolor=black]
 N5 -> { N11 N12 }
-N6 [label="1a" style=filled fontcolor=white fillcolor=black]
+N6 [label="1A" style=filled fontcolor=white fillcolor=black]
 N6 -> { N13 N14 }
 N7 [label="00" style=filled fontcolor=white fillcolor=black]
 N7 -> { N15 N16 }
@@ -860,7 +858,7 @@ N8 [label="04" style=filled fontcolor=white fillcolor=black]
 N8 -> { N17 N18 }
 N9 [label="08" style=filled fontcolor=white fillcolor=black]
 N9 -> { N19 N20 }
-N10 [label="0c" style=filled fontcolor=white fillcolor=black]
+N10 [label="0C" style=filled fontcolor=white fillcolor=black]
 N10 -> { N21 N22 }
 N11 [label="10" style=filled fontcolor=white fillcolor=black]
 N11 -> { N23 N24 }
@@ -868,7 +866,7 @@ N12 [label="14" style=filled fontcolor=white fillcolor=black]
 N12 -> { N25 N26 }
 N13 [label="18" style=filled fontcolor=white fillcolor=black]
 N13 -> { N27 N28 }
-N14 [label="1c" style=filled fillcolor=red]
+N14 [label="1C" style=filled fillcolor=red]
 N14 -> { N29 N30 }
 N15 [label="nil" style=filled fontcolor=white fillcolor=black]
 N16 [label="01" style=filled fillcolor=red]
@@ -876,19 +874,19 @@ N17 [label="03" style=filled fillcolor=red]
 N18 [label="05" style=filled fillcolor=red]
 N19 [label="07" style=filled fillcolor=red]
 N20 [label="09" style=filled fillcolor=red]
-N21 [label="0b" style=filled fillcolor=red]
-N22 [label="0d" style=filled fillcolor=red]
-N23 [label="0f" style=filled fillcolor=red]
+N21 [label="0B" style=filled fillcolor=red]
+N22 [label="0D" style=filled fillcolor=red]
+N23 [label="0F" style=filled fillcolor=red]
 N24 [label="11" style=filled fillcolor=red]
 N25 [label="13" style=filled fillcolor=red]
 N26 [label="15" style=filled fillcolor=red]
 N27 [label="17" style=filled fillcolor=red]
 N28 [label="19" style=filled fillcolor=red]
-N29 [label="1b" style=filled fontcolor=white fillcolor=black]
-N30 [label="1e" style=filled fontcolor=white fillcolor=black]
+N29 [label="1B" style=filled fontcolor=white fillcolor=black]
+N30 [label="1E" style=filled fontcolor=white fillcolor=black]
 N30 -> { N31 N32 }
-N31 [label="1d" style=filled fillcolor=red]
-N32 [label="1f" style=filled fillcolor=red]
+N31 [label="1D" style=filled fillcolor=red]
+N32 [label="1F" style=filled fillcolor=red]
 }
 `
 
@@ -904,20 +902,20 @@ N3 -> { N7 N8 }
 N4 [label="4" style=filled fontcolor=white fillcolor=black]
 N5 [label="7" style=filled fontcolor=white fillcolor=black]
 N5 -> { N9 N10 }
-N6 [label="c" style=filled fillcolor=red]
+N6 [label="C" style=filled fillcolor=red]
 N6 -> { N11 N12 }
 N7 [label="0" style=filled fillcolor=red]
 N8 [label="2" style=filled fillcolor=red]
 N9 [label="6" style=filled fillcolor=red]
 N10 [label="8" style=filled fillcolor=red]
-N11 [label="a" style=filled fontcolor=white fillcolor=black]
+N11 [label="A" style=filled fontcolor=white fillcolor=black]
 N11 -> { N13 N14 }
-N12 [label="e" style=filled fontcolor=white fillcolor=black]
+N12 [label="E" style=filled fontcolor=white fillcolor=black]
 N12 -> { N15 N16 }
 N13 [label="nil" style=filled fontcolor=white fillcolor=black]
-N14 [label="b" style=filled fillcolor=red]
-N15 [label="d" style=filled fillcolor=red]
-N16 [label="f" style=filled fillcolor=red]
+N14 [label="B" style=filled fillcolor=red]
+N15 [label="D" style=filled fillcolor=red]
+N16 [label="F" style=filled fillcolor=red]
 }
 `
 
@@ -926,50 +924,50 @@ N0 [label="5" style=filled fontcolor=white fillcolor=black]
 N0 -> { N1 N2 }
 N1 [label="3" style=filled fontcolor=white fillcolor=black]
 N1 -> { N3 N4 }
-N2 [label="c" style=filled fontcolor=white fillcolor=black]
+N2 [label="C" style=filled fontcolor=white fillcolor=black]
 N2 -> { N5 N6 }
 N3 [label="1" style=filled fontcolor=white fillcolor=black]
 N3 -> { N7 N8 }
 N4 [label="4" style=filled fontcolor=white fillcolor=black]
 N5 [label="9" style=filled fillcolor=red]
 N5 -> { N9 N10 }
-N6 [label="e" style=filled fontcolor=white fillcolor=black]
+N6 [label="E" style=filled fontcolor=white fillcolor=black]
 N6 -> { N11 N12 }
 N7 [label="0" style=filled fillcolor=red]
 N8 [label="2" style=filled fillcolor=red]
 N9 [label="7" style=filled fontcolor=white fillcolor=black]
 N9 -> { N13 N14 }
-N10 [label="a" style=filled fontcolor=white fillcolor=black]
+N10 [label="A" style=filled fontcolor=white fillcolor=black]
 N10 -> { N15 N16 }
-N11 [label="d" style=filled fillcolor=red]
-N12 [label="f" style=filled fillcolor=red]
+N11 [label="D" style=filled fillcolor=red]
+N12 [label="F" style=filled fillcolor=red]
 N13 [label="nil" style=filled fontcolor=white fillcolor=black]
 N14 [label="8" style=filled fillcolor=red]
 N15 [label="nil" style=filled fontcolor=white fillcolor=black]
-N16 [label="b" style=filled fillcolor=red]
+N16 [label="B" style=filled fillcolor=red]
 }
 `
 
 	TestTreeAfterNodes7859Deletion = `digraph d {
-N0 [label="a" style=filled fontcolor=white fillcolor=black]
+N0 [label="A" style=filled fontcolor=white fillcolor=black]
 N0 -> { N1 N2 }
 N1 [label="2" style=filled fontcolor=white fillcolor=black]
 N1 -> { N3 N4 }
-N2 [label="c" style=filled fontcolor=white fillcolor=black]
+N2 [label="C" style=filled fontcolor=white fillcolor=black]
 N2 -> { N5 N6 }
 N3 [label="1" style=filled fontcolor=white fillcolor=black]
 N3 -> { N7 N8 }
 N4 [label="4" style=filled fontcolor=white fillcolor=black]
 N4 -> { N9 N10 }
-N5 [label="b" style=filled fontcolor=white fillcolor=black]
-N6 [label="e" style=filled fontcolor=white fillcolor=black]
+N5 [label="B" style=filled fontcolor=white fillcolor=black]
+N6 [label="E" style=filled fontcolor=white fillcolor=black]
 N6 -> { N11 N12 }
 N7 [label="0" style=filled fillcolor=red]
 N8 [label="nil" style=filled fontcolor=white fillcolor=black]
 N9 [label="3" style=filled fillcolor=red]
 N10 [label="nil" style=filled fontcolor=white fillcolor=black]
-N11 [label="d" style=filled fillcolor=red]
-N12 [label="f" style=filled fillcolor=red]
+N11 [label="D" style=filled fillcolor=red]
+N12 [label="F" style=filled fillcolor=red]
 }
 `
 )
@@ -982,15 +980,6 @@ func assertEnumerate(ch chan labelPair, desc string, t *testing.T, e ...string) 
 	pairs := []string{}
 	for p := range ch {
 		pairs = append(pairs, fmt.Sprintf("%q: \"%p\"\n", p.Key, p.Value))
-	}
-
-	assertStringLists(pairs, e, desc, t)
-}
-
-func assertRawEnumerate(ch chan labelRawPair, desc string, t *testing.T, e ...string) {
-	pairs := []string{}
-	for p := range ch {
-		pairs = append(pairs, fmt.Sprintf("%q: \"%p\"\n", domain.Label(p.Key), p.Value))
 	}
 
 	assertStringLists(pairs, e, desc, t)

@@ -33,7 +33,7 @@ func TestInsert32(t *testing.T) {
 	r = r.Insert(0xAAAAAAAA, 18, 2)
 	r = r.Insert(0xABAAAAAA, 10, 3)
 	assertTree32(r, TestTree32WithTopAfterBottomAndAdditionalNotLeafNodesInserted,
-		"32-tree with top after bottom and addtional not leaf nodes inserted", t)
+		"32-tree with top after bottom and additional not leaf nodes inserted", t)
 
 	r = nil
 	r = r.Insert(0xAAAAAAAA, 18, 2)
@@ -112,7 +112,7 @@ func TestInplaceInsert32(t *testing.T) {
 	r = r.InplaceInsert(0xAAAAAAAA, 18, 2)
 	r = r.InplaceInsert(0xABAAAAAA, 10, 3)
 	assertTree32(r, TestTree32WithTopAfterBottomAndAdditionalNotLeafNodesInserted,
-		"32-tree with top after bottom and addtional not leaf nodes inplace inserted", t)
+		"32-tree with top after bottom and additional not leaf nodes inplace inserted", t)
 
 	r = nil
 	r = r.InplaceInsert(0xAAAAAAAA, 18, 2)

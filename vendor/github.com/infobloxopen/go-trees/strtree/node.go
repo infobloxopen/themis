@@ -146,7 +146,7 @@ func (n *node) insert(key string, value interface{}, compare Compare) *node {
 				// to keep correct gradparent's parent.
 				g = gp
 			} else {
-				// With double rotation if current node goes in the oposite direction.
+				// With double rotation if current node goes in the opposite direction.
 				gp.chld[grandParentDir] = g.double(parentDir)
 
 				// The rotation puts grandparent and parent as children of current node.

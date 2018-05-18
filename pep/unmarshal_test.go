@@ -181,7 +181,12 @@ func TestUnmarshalTaggedStruct(t *testing.T) {
 	nv := pdp.MakeNetworkValue(n)
 
 	da := pdp.MakeAttribute("da", pdp.TypeDomain)
-	dv := pdp.MakeDomainValue(domain.WireNameLower("\x07example\x03com\x00"))
+
+	dn, err := domain.MakeNameFromString("example.com")
+	if err != nil {
+		t.Fatalf("Can't create domain: %s", err)
+	}
+	dv := pdp.MakeDomainValue(dn)
 
 	assignments := []pdp.AttributeAssignmentExpression{
 		pdp.MakeAttributeAssignmentExpression(ba, bv),

@@ -247,10 +247,10 @@ func (c *Context) calculateAddressExpression(e Expression) (net.IP, error) {
 	return v.address()
 }
 
-func (c *Context) calculateDomainExpression(e Expression) (domain.WireNameLower, error) {
+func (c *Context) calculateDomainExpression(e Expression) (domain.Name, error) {
 	v, err := e.Calculate(c)
 	if err != nil {
-		return nil, err
+		return domain.Name{}, err
 	}
 
 	return v.domain()

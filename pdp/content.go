@@ -1587,11 +1587,7 @@ func (m ContentDomainMap) getValue(key AttributeValue, t Type) (AttributeValue, 
 		return UndefinedValue, err
 	}
 
-	v, ok, err := m.tree.WireGet(d)
-	if err != nil {
-		return UndefinedValue, err
-	}
-
+	v, ok := m.tree.Get(d)
 	if !ok {
 		return UndefinedValue, newMissingValueError()
 	}
@@ -1605,11 +1601,7 @@ func (m ContentDomainMap) next(key AttributeValue) (ContentSubItem, error) {
 		return nil, err
 	}
 
-	v, ok, err := m.tree.WireGet(d)
-	if err != nil {
-		return nil, err
-	}
-
+	v, ok := m.tree.Get(d)
 	if !ok {
 		return nil, newMissingValueError()
 	}
@@ -1629,10 +1621,10 @@ func (m ContentDomainMap) put(key AttributeValue, value ContentSubItem) (Content
 	}
 
 	if v, ok := value.(ContentValue); ok {
-		return MakeContentDomainMap(m.tree.Insert(d.String(), v.value)), nil
+		return MakeContentDomainMap(m.tree.Insert(d, v.value)), nil
 	}
 
-	return MakeContentDomainMap(m.tree.Insert(d.String(), value)), nil
+	return MakeContentDomainMap(m.tree.Insert(d, value)), nil
 }
 
 func (m ContentDomainMap) del(key AttributeValue) (ContentSubItem, error) {
@@ -1641,7 +1633,7 @@ func (m ContentDomainMap) del(key AttributeValue) (ContentSubItem, error) {
 		return m, err
 	}
 
-	t, ok := m.tree.Delete(d.String())
+	t, ok := m.tree.Delete(d)
 	if !ok {
 		return m, newMissingValueError()
 	}
@@ -1669,11 +1661,7 @@ func (m ContentDomainFlags8Map) getValue(key AttributeValue, t Type) (AttributeV
 		return UndefinedValue, err
 	}
 
-	v, ok, err := m.tree.WireGet(d)
-	if err != nil {
-		return UndefinedValue, err
-	}
-
+	v, ok := m.tree.Get(d)
 	if !ok {
 		return UndefinedValue, newMissingValueError()
 	}
@@ -1693,7 +1681,7 @@ func (m ContentDomainFlags8Map) put(key AttributeValue, value ContentSubItem) (C
 
 	if v, ok := value.(ContentValue); ok {
 		if n, ok := v.value.(uint8); ok {
-			return MakeContentDomainFlags8Map(m.tree.Insert(d.String(), n)), nil
+			return MakeContentDomainFlags8Map(m.tree.Insert(d, n)), nil
 		}
 
 		return nil, newInvalidContentDomainFlags8MapValueError(v)
@@ -1708,7 +1696,7 @@ func (m ContentDomainFlags8Map) del(key AttributeValue) (ContentSubItem, error) 
 		return m, err
 	}
 
-	t, ok := m.tree.Delete(d.String())
+	t, ok := m.tree.Delete(d)
 	if !ok {
 		return m, newMissingValueError()
 	}
@@ -1736,11 +1724,7 @@ func (m ContentDomainFlags16Map) getValue(key AttributeValue, t Type) (Attribute
 		return UndefinedValue, err
 	}
 
-	v, ok, err := m.tree.WireGet(d)
-	if err != nil {
-		return UndefinedValue, err
-	}
-
+	v, ok := m.tree.Get(d)
 	if !ok {
 		return UndefinedValue, newMissingValueError()
 	}
@@ -1760,7 +1744,7 @@ func (m ContentDomainFlags16Map) put(key AttributeValue, value ContentSubItem) (
 
 	if v, ok := value.(ContentValue); ok {
 		if n, ok := v.value.(uint16); ok {
-			return MakeContentDomainFlags16Map(m.tree.Insert(d.String(), n)), nil
+			return MakeContentDomainFlags16Map(m.tree.Insert(d, n)), nil
 		}
 
 		return nil, newInvalidContentDomainFlags16MapValueError(v)
@@ -1775,7 +1759,7 @@ func (m ContentDomainFlags16Map) del(key AttributeValue) (ContentSubItem, error)
 		return m, err
 	}
 
-	t, ok := m.tree.Delete(d.String())
+	t, ok := m.tree.Delete(d)
 	if !ok {
 		return m, newMissingValueError()
 	}
@@ -1803,11 +1787,7 @@ func (m ContentDomainFlags32Map) getValue(key AttributeValue, t Type) (Attribute
 		return UndefinedValue, err
 	}
 
-	v, ok, err := m.tree.WireGet(d)
-	if err != nil {
-		return UndefinedValue, err
-	}
-
+	v, ok := m.tree.Get(d)
 	if !ok {
 		return UndefinedValue, newMissingValueError()
 	}
@@ -1827,7 +1807,7 @@ func (m ContentDomainFlags32Map) put(key AttributeValue, value ContentSubItem) (
 
 	if v, ok := value.(ContentValue); ok {
 		if n, ok := v.value.(uint32); ok {
-			return MakeContentDomainFlags32Map(m.tree.Insert(d.String(), n)), nil
+			return MakeContentDomainFlags32Map(m.tree.Insert(d, n)), nil
 		}
 
 		return nil, newInvalidContentDomainFlags32MapValueError(v)
@@ -1842,7 +1822,7 @@ func (m ContentDomainFlags32Map) del(key AttributeValue) (ContentSubItem, error)
 		return m, err
 	}
 
-	t, ok := m.tree.Delete(d.String())
+	t, ok := m.tree.Delete(d)
 	if !ok {
 		return m, newMissingValueError()
 	}
@@ -1870,11 +1850,7 @@ func (m ContentDomainFlags64Map) getValue(key AttributeValue, t Type) (Attribute
 		return UndefinedValue, err
 	}
 
-	v, ok, err := m.tree.WireGet(d)
-	if err != nil {
-		return UndefinedValue, err
-	}
-
+	v, ok := m.tree.Get(d)
 	if !ok {
 		return UndefinedValue, newMissingValueError()
 	}
@@ -1894,7 +1870,7 @@ func (m ContentDomainFlags64Map) put(key AttributeValue, value ContentSubItem) (
 
 	if v, ok := value.(ContentValue); ok {
 		if n, ok := v.value.(uint64); ok {
-			return MakeContentDomainFlags64Map(m.tree.Insert(d.String(), n)), nil
+			return MakeContentDomainFlags64Map(m.tree.Insert(d, n)), nil
 		}
 
 		return nil, newInvalidContentDomainFlags64MapValueError(v)
@@ -1909,7 +1885,7 @@ func (m ContentDomainFlags64Map) del(key AttributeValue) (ContentSubItem, error)
 		return m, err
 	}
 
-	t, ok := m.tree.Delete(d.String())
+	t, ok := m.tree.Delete(d)
 	if !ok {
 		return m, newMissingValueError()
 	}
@@ -1953,7 +1929,7 @@ func (v ContentValue) getValue(key AttributeValue, t Type) (AttributeValue, erro
 		return MakeNetworkValue(v.value.(*net.IPNet)), nil
 
 	case TypeDomain:
-		return MakeDomainValue(v.value.(domain.WireNameLower)), nil
+		return MakeDomainValue(v.value.(domain.Name)), nil
 
 	case TypeSetOfStrings:
 		return MakeSetOfStringsValue(v.value.(*strtree.Tree)), nil

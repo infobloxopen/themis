@@ -4,208 +4,122 @@ package domain
 import "errors"
 
 var (
-	// ErrCompressedName is the error returned by WireGet when domain label exceeds 63 bytes.
-	ErrCompressedName = errors.New("can't handle compressed domain name")
-	// ErrLabelTooLong is the error returned by WireGet when last domain label length doesn't
-	// fit whole domain name length.
-	ErrLabelTooLong = errors.New("label too long")
-	// ErrEmptyLabel means that label of zero length met in the middle of domain name.
+	// ErrTooManyLabels is returned for domain name with more than 127 labels.
+	ErrTooManyLabels = errors.New("too many labels")
+	// ErrEmptyLabel indicates that domain name contains empty label.
 	ErrEmptyLabel = errors.New("empty label")
-	// ErrNameTooLong is the error returned when overall domain name length exeeds 256 bytes.
-	ErrNameTooLong = errors.New("domain name too long")
+	// ErrLabelTooLong is returned when one of domain labels has more than 63 characters.
+	ErrLabelTooLong = errors.New("label too long")
+	// ErrNameTooLong is returned when domain name has more than 255 characters.
+	ErrNameTooLong = errors.New("name too long")
+	// ErrInvalidEscape is returned for invalid escape sequence.
+	ErrInvalidEscape = errors.New("invalid escape sequence")
 )
 
-// Split slices its argument into labels. It assumes s is a name in human readable format.
-func Split(s string) []Label {
-	dn := make([]Label, getLabelsCount(s))
-	if len(dn) > 0 {
-		end := len(dn) - 1
-		start := 0
-		for i := range dn {
-			label, p := MakeLabel(s[start:])
-			start += p + 1
-			dn[end-i] = label
-		}
-	}
-
-	return dn
+// Name is a structure which represents domain name.
+type Name struct {
+	h string
+	c string
 }
 
-func getLabelsCount(s string) int {
-	labels := 0
-	start := 0
-	for {
-		size, p := GetFirstLabelSize(s[start:])
-		start += p + 1
-		if start >= len(s) {
-			if size > 0 {
-				labels++
-			}
+const (
+	// MaxName is maximum number of bytes for whole domain name.
+	MaxName = 255
+	// MaxLabels is maximum number of labels domain name can consist of.
+	MaxLabels = MaxName / 2
+	// MaxLabel is maximim number of bytes for single label.
+	MaxLabel = 63
+)
 
-			break
-		}
+// MakeNameFromString creates a Name from human-readable domain name string.
+func MakeNameFromString(s string) (Name, error) {
+	out := Name{h: s}
 
-		labels++
+	if len(s) < 1 {
+		return out, nil
 	}
 
-	return labels
-}
-
-// WireNameLower is a type to store domain name in "wire" format as described in RFC-1035 section "3.1. Name space definitions" with all lowercase ASCII letters.
-type WireNameLower []byte
-
-// MakeWireDomainNameLower creates lowercase "wire" representation of given domain name.
-func MakeWireDomainNameLower(s string) (WireNameLower, error) {
-	out := WireNameLower{}
-	start := 0
-	for {
-		label, p := MakeLabel(s[start:])
-		if len(label) > 63 {
-			return nil, ErrLabelTooLong
-		}
-
-		start += p + 1
-		if start >= len(s) {
-			if len(label) > 0 {
-				out = append(out, byte(len(label)))
-				out = append(out, label...)
-				if len(out) > 255 {
-					return nil, ErrNameTooLong
-				}
-			}
-
-			break
-		}
-
-		if len(label) <= 0 {
-			return nil, ErrEmptyLabel
-		}
-
-		out = append(out, byte(len(label)))
-		out = append(out, label...)
-		if len(out) > 255 {
-			return nil, ErrNameTooLong
-		}
+	if len(s) == 1 && s[0] == '.' {
+		return out, nil
 	}
 
-	return append(out, 0), nil
-}
+	var offs [MaxLabels]int
 
-// ToLowerWireDomainName converts "wire" domain name to lowercase.
-func ToLowerWireDomainName(d []byte) (WireNameLower, error) {
-	if len(d) > 256 {
-		return nil, ErrNameTooLong
+	n, err := markLabels(s, offs[:])
+	if err != nil {
+		return out, err
 	}
 
-	out := make(WireNameLower, len(d))
-	ll := 0
-	for i, c := range d {
-		if ll > 0 {
-			ll--
+	var (
+		label [MaxLabel + 1]byte
+		name  [MaxName]byte
+	)
 
-			if c >= 'A' && c <= 'Z' {
-				c += 0x20
-			}
-		} else {
-			ll = int(c)
-			if ll <= 0 && i != len(d)-1 {
-				return nil, ErrEmptyLabel
-			}
+	j := 0
+	end := len(s)
+	for i := n - 1; i >= 0; i-- {
+		start := offs[i]
 
-			if ll > 63 {
-				return nil, ErrCompressedName
-			}
+		n, err := getLabel(s[start:end], label[:])
+		if err != nil {
+			return out, err
 		}
 
-		out[i] = c
+		if copied := copy(name[j:], label[:n]); copied < n {
+			return out, ErrNameTooLong
+		}
+
+		j += n
+
+		end = start
 	}
 
-	if out[len(out)-1] != 0 {
-		return nil, ErrLabelTooLong
-	}
+	out.c = string(name[:j])
 
 	return out, nil
 }
 
-// String returns domain name in human readable format.
-func (d WireNameLower) String() string {
-	out := ""
-	start := 0
-	for start < len(d) {
-		ll := int(d[start])
-
-		start++
-		if start >= len(d) {
-			if ll > 0 {
-				out += "."
-			}
-
-			return out
-		}
-
-		if ll > 0 {
-			label := Label(d[start : start+ll]).String()
-			if len(out) > 0 {
-				out += "." + label
-			} else {
-				out = label
-			}
-
-			start += ll
-		}
-	}
-
-	return out
+// String method returns domain name in human-readable format.
+func (n Name) String() string {
+	return n.h
 }
 
-// WireSplitCallback function splits given name into labels and calls function for each label.
-func WireSplitCallback(name WireNameLower, f func(label []byte) bool) error {
-	if len(name) > 256 {
-		return ErrNameTooLong
+// GetLabel returns label starting from given offset and offset of the next label. The method returns zero offset for the last label and -1 in case of error.
+func (n Name) GetLabel(off int) (string, int) {
+	if off == 0 && len(n.c) == 0 {
+		return "", 0
 	}
 
-	if len(name) > 0 {
-		var lPos [256]int
-		labels := 0
-		idx := 0
-		max := 0
-		for {
-			ll := int(name[idx])
-			if ll <= 0 {
-				if idx != len(name)-1 {
-					return ErrEmptyLabel
-				}
+	if off < 0 || off >= len(n.c) {
+		return "", -1
+	}
 
-				break
-			}
+	size := int(n.c[off])
+	if size < 1 || size > 63 {
+		return "", -1
+	}
 
-			if ll > 63 {
-				return ErrCompressedName
-			}
+	start := off + 1
+	end := start + size
+	if end >= len(n.c) {
+		return n.c[start:], 0
+	}
 
-			if idx+ll+1 > len(name) {
-				return ErrLabelTooLong
-			}
+	return n.c[start:end], end
+}
 
-			if ll > max {
-				max = ll
-			}
+// GetLabels iterate through name labels in reversed order.
+func (n Name) GetLabels(f func(string) error) error {
+	off := 0
+	for off < len(n.c) {
+		off++
+		next := off + int(n.c[off-1])
 
-			lPos[labels] = idx
-			labels++
-			idx += ll + 1
+		if err := f(n.c[off:next]); err != nil {
+			return err
 		}
 
-		for labels > 0 {
-			labels--
-			idx := lPos[labels]
-			ll := int(name[idx])
-			start := idx + 1
-			end := start + ll
-			if !f(name[start:end]) {
-				break
-			}
-		}
+		off = next
 	}
 
 	return nil

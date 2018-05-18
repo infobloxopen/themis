@@ -1,281 +1,261 @@
 package domain
 
 import (
-	"bytes"
+	"fmt"
 	"math"
-	"strconv"
 )
 
-// A Label represents content of a label.
-type Label []byte
+const (
+	escRegular = iota
+	escFirstChar
+	escSecondDigit
+	escThirdDigit
+)
 
-// GetFirstLabelSize returns size in bytes needed to store first label of given domain name as a DomainLabel. Additionally the function returns position right after the label in given string (or length of the string if the first label also is the last).
-func GetFirstLabelSize(s string) (int, int) {
-	size := 0
-	escaped := 0
-	var code [3]byte
+// MakeLabel makes uppercase domain label from given human-readable representation. Ignores ending dot.
+func MakeLabel(s string) (string, error) {
+	var label [MaxLabel + 1]byte
 
+	n, err := getLabel(s, label[:])
+	if err != nil {
+		return "", err
+	}
+
+	return string(label[1:n]), nil
+}
+
+// MakeHumanReadableLabel makes human-readable label by escaping according RFC-4343.
+func MakeHumanReadableLabel(s string) string {
+	var label [4 * MaxLabel]byte
+
+	j := 0
 	for i := 0; i < len(s); i++ {
 		c := s[i]
-		if escaped <= 0 {
-			switch c {
-			case '.':
-				return size, i
-
-			case '\\':
-				escaped = 1
-
-			default:
-				size++
+		if c == '.' || c == '\\' {
+			if j >= len(label)-1 {
+				return string(label[:j])
 			}
-		} else if escaped == 1 {
-			if c >= '0' && c <= '9' {
-				code[0] = c
-				escaped++
-			} else {
-				size++
-				escaped = 0
+
+			label[j] = '\\'
+			label[j+1] = c
+			j += 2
+
+		} else if c < '!' || c > '~' {
+			if j >= len(label)-3 {
+				return string(label[:j])
 			}
-		} else if escaped > 1 && escaped < 4 {
-			if c >= '0' && c <= '9' {
-				code[escaped-1] = c
-				escaped++
-			} else {
-				size += escaped
-				escaped = 0
 
-				switch c {
-				case '.':
-					return size, i
+			label[j] = '\\'
 
-				case '\\':
-					escaped = 1
+			r := c % 10
+			label[j+3] = r + '0'
 
-				default:
-					size++
-				}
-			}
+			c /= 10
+			r = c % 10
+			label[j+2] = r + '0'
+
+			c /= 10
+			label[j+1] = c + '0'
+
+			j += 4
+		} else if c >= 'A' && c <= 'Z' {
+			label[j] = c | 0x20
+			j++
 		} else {
-			if n, _ := strconv.Atoi(string(code[:])); n >= 0 && n <= math.MaxUint8 {
-				size++
-			} else {
-				size += escaped
+			if j >= len(label) {
+				return string(label[:j])
 			}
 
-			escaped = 0
-
-			switch c {
-			case '.':
-				return size, i
-
-			case '\\':
-				escaped = 1
-
-			default:
-				size++
-			}
+			label[j] = c
+			j++
 		}
 	}
 
-	if escaped > 0 && escaped < 4 {
-		size += escaped
-	} else if escaped >= 4 {
-		if n, _ := strconv.Atoi(string(code[:])); n >= 0 && n <= math.MaxUint8 {
-			size++
-		} else {
-			size += escaped
-		}
-	}
-
-	return size, len(s)
+	return string(label[:j])
 }
 
-// MakeLabel returns first domain label found in given string as DomainLabel and position in the string right after the label.
-func MakeLabel(s string) (Label, int) {
-	size, end := GetFirstLabelSize(s)
-	out := make(Label, size)
-
-	escaped := 0
-	var code [3]byte
-	p := 0
-
+func markLabels(s string, offs []int) (int, error) {
+	n := 0
+	start := 0
+	esc := escRegular
+	var code int
 	for i := 0; i < len(s); i++ {
 		c := s[i]
-		if escaped <= 0 {
+		switch esc {
+		case escRegular:
 			switch c {
 			case '.':
-				return out, end
+				if start >= i {
+					return 0, ErrEmptyLabel
+				}
+
+				if n >= len(offs) {
+					return 0, ErrTooManyLabels
+				}
+
+				offs[n] = start
+				n++
+
+				start = i + 1
 
 			case '\\':
-				escaped = 1
-
-			default:
-				if c >= 'A' && c <= 'Z' {
-					c += 0x20
-				}
-				out[p] = c
-				p++
+				esc = escFirstChar
 			}
-		} else if escaped == 1 {
-			if c >= '0' && c <= '9' {
-				code[0] = c
-				escaped++
+
+		case escFirstChar:
+			if c < '0' || c > '9' {
+				esc = escRegular
 			} else {
-				if c >= 'A' && c <= 'Z' {
-					c += 0x20
-				}
-				out[p] = c
-				p++
-
-				escaped = 0
-			}
-		} else if escaped > 1 && escaped < 4 {
-			if c >= '0' && c <= '9' {
-				code[escaped-1] = c
-				escaped++
-			} else {
-				out[p] = '\\'
-				p++
-
-				for j := 0; j < escaped-1; j++ {
-					out[p] = code[j]
-					p++
+				code = int(c-'0') * 100
+				if code > math.MaxUint8 {
+					return 0, ErrInvalidEscape
 				}
 
-				escaped = 0
-
-				switch c {
-				case '.':
-					return out, end
-
-				case '\\':
-					escaped = 1
-
-				default:
-					if c >= 'A' && c <= 'Z' {
-						c += 0x20
-					}
-					out[p] = c
-					p++
-				}
-			}
-		} else {
-			if n, _ := strconv.Atoi(string(code[:])); n >= 0 && n <= math.MaxUint8 {
-				out[p] = byte(n)
-				if out[p] >= 'A' && out[p] <= 'Z' {
-					out[p] += 0x20
-				}
-				p++
-			} else {
-				out[p] = '\\'
-				p++
-
-				for _, b := range code {
-					out[p] = b
-					p++
-				}
+				esc = escSecondDigit
 			}
 
-			escaped = 0
+		case escSecondDigit:
+			if c < '0' || c > '9' {
+				return 0, ErrInvalidEscape
+			}
 
+			code += int(c-'0') * 10
+			if code > math.MaxUint8 {
+				return 0, ErrInvalidEscape
+			}
+
+			esc = escThirdDigit
+
+		case escThirdDigit:
+			if c < '0' || c > '9' {
+				return 0, ErrInvalidEscape
+			}
+
+			code += int(c - '0')
+			if code > math.MaxUint8 {
+				return 0, ErrInvalidEscape
+			}
+
+			esc = escRegular
+		}
+	}
+
+	if esc != escRegular {
+		return 0, ErrInvalidEscape
+	}
+
+	if start < len(s) {
+		if n >= len(offs) {
+			return 0, ErrTooManyLabels
+		}
+
+		offs[n] = start
+		n++
+	}
+
+	return n, nil
+}
+
+func getLabel(s string, out []byte) (int, error) {
+	j := 1
+	esc := escRegular
+	var code int
+
+Loop:
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch esc {
+		case escRegular:
 			switch c {
+			default:
+				if c >= 'a' && c <= 'z' {
+					c &= 0xdf
+				}
+
+				if j >= len(out) {
+					return 0, ErrLabelTooLong
+				}
+
+				out[j] = c
+				j++
+
 			case '.':
-				return out, end
+				if i < len(s)-1 {
+					panic(fmt.Errorf("unescaped dot at %d index before last character %d", i, len(s)-1))
+				}
+
+				break Loop
 
 			case '\\':
-				escaped = 1
+				esc = escFirstChar
+			}
 
-			default:
-				if c >= 'A' && c <= 'Z' {
-					c += 0x20
+		case escFirstChar:
+			if c < '0' || c > '9' {
+				if c >= 'a' && c <= 'z' {
+					c &= 0xdf
 				}
-				out[p] = c
-				p++
-			}
-		}
-	}
 
-	if escaped > 0 && escaped < 4 {
-		out[p] = '\\'
-		p++
-
-		for i := 0; i < escaped-1; i++ {
-			out[p] = code[i]
-			p++
-		}
-	} else if escaped >= 4 {
-		if n, _ := strconv.Atoi(string(code[:])); n >= 0 && n <= math.MaxUint8 {
-			out[p] = byte(n)
-			if out[p] >= 'A' && out[p] <= 'Z' {
-				out[p] += 0x20
-			}
-			p++
-		} else {
-			out[p] = '\\'
-			p++
-
-			for _, b := range code {
-				out[p] = b
-				p++
-			}
-		}
-	}
-
-	return out, end
-}
-
-// String returns domain label in human readable format.
-func (l Label) String() string {
-	size := 0
-	for _, c := range l {
-		size++
-		if c < ' ' || c > '~' {
-			size += 3
-		} else if c == '.' || c == '\\' {
-			size++
-		}
-	}
-
-	out := make([]byte, size)
-	i := 0
-	for _, c := range l {
-		if c < ' ' || c > '~' {
-			out[i] = '\\'
-
-			if c < 100 {
-				i++
-				out[i] = '0'
-				if c < 10 {
-					i++
-					out[i] = '0'
+				if j >= len(out) {
+					return 0, ErrLabelTooLong
 				}
+
+				out[j] = c
+				j++
+
+				esc = escRegular
+			} else {
+				code = int(c-'0') * 100
+				if code > math.MaxUint8 {
+					return 0, ErrInvalidEscape
+				}
+
+				esc = escSecondDigit
 			}
 
-			for _, n := range strconv.Itoa(int(c)) {
-				i++
-				out[i] = byte(n)
-			}
-		} else {
-			if c == '.' || c == '\\' {
-				out[i] = '\\'
-				i++
+		case escSecondDigit:
+			if c < '0' || c > '9' {
+				return 0, ErrInvalidEscape
 			}
 
-			out[i] = c
+			code += int(c-'0') * 10
+			if code > math.MaxUint8 {
+				return 0, ErrInvalidEscape
+			}
+
+			esc = escThirdDigit
+
+		case escThirdDigit:
+			if c < '0' || c > '9' {
+				return 0, ErrInvalidEscape
+			}
+
+			code += int(c - '0')
+			if code > math.MaxUint8 {
+				return 0, ErrInvalidEscape
+			}
+
+			c = byte(code)
+			if c >= 'a' && c <= 'z' {
+				c &= 0xdf
+			}
+
+			if j >= len(out) {
+				return 0, ErrLabelTooLong
+			}
+
+			out[j] = c
+			j++
+
+			esc = escRegular
 		}
-
-		i++
 	}
 
-	return string(out)
-}
-
-// Compare function compares a couple of given Label values. First it compares sizes of its arguments and returns it difference. If the sizes are equal it uses bytes.Compare to compare labels content.
-func Compare(a, b Label) int {
-	d := len(a) - len(b)
-	if d != 0 {
-		return d
+	if esc != escRegular {
+		return 0, ErrInvalidEscape
 	}
 
-	return bytes.Compare(a, b)
+	out[0] = byte(j - 1)
+
+	return j, nil
 }

@@ -1,9 +1,9 @@
-package domain
+package domaintree
 
 import (
-	"errors"
-	"strings"
 	"testing"
+
+	"github.com/infobloxopen/go-trees/domain"
 )
 
 var (
@@ -1034,123 +1034,57 @@ var (
 		"xkbisrk.gxgryyxblkry.snkxapcpqyk",
 	}
 
-	names  []Name
-	labels [][]string
-
-	errStop = errors.New("stop iteration")
+	names []domain.Name
+	tree  *Node
 )
 
 func init() {
-	names = make([]Name, len(strs))
-	labels = make([][]string, len(strs))
+	names = make([]domain.Name, len(strs))
+	tree = new(Node)
 
 	for i, s := range strs {
-		n, err := MakeNameFromString(s)
+		n, err := domain.MakeNameFromString(s)
 		if err != nil {
 			panic(err)
 		}
 
 		names[i] = n
-
-		seq := strings.Split(s, ".")
-		rev := make([]string, len(seq))
-		last := len(rev) - 1
-		for i, s := range seq {
-			rev[last-i] = strings.ToUpper(s)
-		}
-
-		labels[i] = rev
+		tree.InplaceInsert(n, "test")
 	}
 }
 
-func BenchmarkDomainComparison(b *testing.B) {
+func BenchmarkDomainTreeGet(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		i := n & 1023
 		name := names[i]
-		seq := labels[i]
 
-		j := 0
-		if err := name.GetLabels(func(s string) error {
-			sl := seq[j]
-			if len(s) == len(sl) && s == sl {
-				j++
-				return nil
-			}
+		v, ok := tree.Get(names[i])
+		if !ok {
+			b.Fatalf("can't find data for %q (%q) at %d (%d)", strs[i], name, n, i)
+		}
 
-			return errStop
-		}); err != nil {
-			b.Fatalf("not equal for %q at %d (%d:%d)", name, n, i, j)
+		if _, ok := v.(string); !ok {
+			b.Fatalf("expected string for %q (%q) at %d (%d) but got %T (%#v)", strs[i], name, n, i, v, v)
 		}
 	}
 }
 
-func BenchmarkDomainComparisonWithConversion(b *testing.B) {
+func BenchmarkDomainTreeGetWithConversion(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		i := n & 1023
-		seq := labels[i]
-
 		s := strs[i]
-		name, err := MakeNameFromString(s)
+		name, err := domain.MakeNameFromString(s)
 		if err != nil {
 			b.Fatalf("can't convert %q at %d (%d) to name: %s", s, n, i, err)
 		}
 
-		j := 0
-		if err := name.GetLabels(func(s string) error {
-			sl := seq[j]
-			if len(s) == len(sl) && s == sl {
-				j++
-				return nil
-			}
-
-			return errStop
-		}); err != nil {
-			b.Fatalf("not equal for %q at %d (%d:%d)", name, n, i, j)
-		}
-	}
-}
-
-func BenchmarkDomainComparisonWithStringsCompare(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		i := n & 1023
-		name := names[i]
-		seq := labels[i]
-
-		j := 0
-		if err := name.GetLabels(func(s string) error {
-			if strings.Compare(s, seq[j]) == 0 {
-				j++
-				return nil
-			}
-
-			return errStop
-		}); err != nil {
-			b.Fatalf("not equal for %q at %d (%d:%d)", name, n, i, j)
-		}
-	}
-}
-
-func BenchmarkDomainComparisonWithConversionAndStringsCompare(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		i := n & 1023
-		seq := labels[i]
-
-		s := strs[i]
-		name, err := MakeNameFromString(s)
-		if err != nil {
-			b.Fatalf("can't convert %q at %d (%d) to name: %s", s, n, i, err)
+		v, ok := tree.Get(name)
+		if !ok {
+			b.Fatalf("can't find data for %q (%q) at %d (%d)", strs[i], name, n, i)
 		}
 
-		j := 0
-		if err := name.GetLabels(func(s string) error {
-			if strings.Compare(s, seq[j]) == 0 {
-				j++
-				return nil
-			}
-
-			return errStop
-		}); err != nil {
-			b.Fatalf("not equal for %q at %d (%d:%d)", name, n, i, j)
+		if _, ok := v.(string); !ok {
+			b.Fatalf("expected string for %q (%q) at %d (%d) but got %T (%#v)", strs[i], name, n, i, v, v)
 		}
 	}
 }
