@@ -149,6 +149,8 @@ const (
 	requestAssignmentsOverflowErrorID             = 132
 	requestUnmarshalIntegerOverflowErrorID        = 133
 	requestUnmarshalIntegerUnderflowErrorID       = 134
+	responseEffectErrorID                         = 135
+	ResponseServerErrorID                         = 136
 )
 
 type externalError struct {
@@ -2265,4 +2267,36 @@ func newRequestUnmarshalIntegerUnderflowError(n int64) *requestUnmarshalIntegerU
 
 func (e *requestUnmarshalIntegerUnderflowError) Error() string {
 	return e.errorf("Negative integer value %d underflows unsigned integer", e.n)
+}
+
+type responseEffectError struct {
+	errorLink
+	effect int
+}
+
+func newResponseEffectError(effect int) *responseEffectError {
+	return &responseEffectError{
+		errorLink: errorLink{id: responseEffectErrorID},
+		effect:    effect}
+}
+
+func (e *responseEffectError) Error() string {
+	return e.errorf("Unknown effect %d", e.effect)
+}
+
+// ResponseServerError indicates that server returned an error message.
+type ResponseServerError struct {
+	errorLink
+	msg string
+}
+
+func newResponseServerError(msg string) *ResponseServerError {
+	return &ResponseServerError{
+		errorLink: errorLink{id: ResponseServerErrorID},
+		msg:       msg}
+}
+
+// Error implements error interface.
+func (e *ResponseServerError) Error() string {
+	return e.errorf("%s", e.msg)
 }

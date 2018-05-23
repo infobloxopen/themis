@@ -38,7 +38,7 @@ const (
 	// EffectPermit.
 	EffectIndeterminateDP
 
-	EffectOutOfRange
+	effectTotalCount
 )
 
 var (
@@ -66,9 +66,10 @@ type Context struct {
 
 // EffectNameFromEnum returns human readable name for Effect enum
 func EffectNameFromEnum(effectEnum int) string {
-	if effectEnum >= EffectOutOfRange {
-		return "EffectOutOfRange"
+	if effectEnum < 0 || effectEnum >= effectTotalCount {
+		return fmt.Sprintf("<unknown %d>", effectEnum)
 	}
+
 	return effectNames[effectEnum]
 }
 

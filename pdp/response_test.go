@@ -21,6 +21,279 @@ var (
 	}
 )
 
+func TestMarshalResponse(t *testing.T) {
+	var b [90]byte
+
+	n, err := MarshalResponse(b[:], EffectIndeterminate, testRequestAssignments,
+		fmt.Errorf("testError1"),
+		fmt.Errorf("testError2"),
+	)
+	assertRequestBytesBuffer(t, "MarshalResponse", err, b[:], n, append(
+		[]byte{
+			1, 0, 3,
+			43, 0, 'm', 'u', 'l', 't', 'i', 'p', 'l', 'e', ' ', 'e', 'r', 'r', 'o', 'r', 's', ':', ' ',
+			'"', 't', 'e', 's', 't', 'E', 'r', 'r', 'o', 'r', '1', '"', ',', ' ',
+			'"', 't', 'e', 's', 't', 'E', 'r', 'r', 'o', 'r', '2', '"',
+		},
+		testWireAttributes...)...,
+	)
+
+	n, err = MarshalResponse([]byte{}, EffectIndeterminate, testRequestAssignments,
+		fmt.Errorf("testError1"),
+		fmt.Errorf("testError2"),
+	)
+	assertRequestBufferOverflow(t, "MarshalResponse", err, n)
+
+	n, err = MarshalResponse(b[:2], EffectIndeterminate, testRequestAssignments,
+		fmt.Errorf("testError1"),
+		fmt.Errorf("testError2"),
+	)
+	if err == nil {
+		t.Errorf("expected no data put to small buffer but got %d", n)
+	} else if _, ok := err.(*requestBufferOverflowError); !ok {
+		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
+	}
+
+	n, err = MarshalResponse(b[:5], EffectIndeterminate, testRequestAssignments,
+		fmt.Errorf("testError1"),
+		fmt.Errorf("testError2"),
+	)
+	if err == nil {
+		t.Errorf("expected no data put to small buffer but got %d", n)
+	} else if _, ok := err.(*requestBufferOverflowError); !ok {
+		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
+	}
+
+	n, err = MarshalResponse(b[:20], EffectIndeterminate, testRequestAssignments,
+		fmt.Errorf("testError1"),
+		fmt.Errorf("testError2"),
+	)
+	assertRequestBytesBuffer(t, "MarshalResponse(longStatus)", err, b[:20], n,
+		1, 0, 3,
+		15, 0, 's', 't', 'a', 't', 'u', 's', ' ', 't', 'o', 'o', ' ', 'l', 'o', 'n', 'g',
+	)
+
+	n, err = MarshalResponse(b[:25], EffectIndeterminate, testRequestAssignments, fmt.Errorf("testError"))
+	assertRequestBytesBuffer(t, "MarshalResponse(longStatus)", err, b[:25], n,
+		1, 0, 3,
+		20, 0, 'o', 'b', 'l', 'i', 'g', 'a', 't', 'i', 'o', 'n', 's', ' ', 't', 'o', 'o', ' ', 'l', 'o', 'n', 'g',
+	)
+
+	n, err = MarshalResponse(b[:14], EffectIndeterminate, testRequestAssignments,
+		fmt.Errorf("testError"),
+	)
+	if err == nil {
+		t.Errorf("expected no data put to small buffer but got %d", n)
+	} else if _, ok := err.(*requestBufferOverflowError); !ok {
+		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
+	}
+
+	n, err = MarshalResponse(b[:], EffectIndeterminate, []AttributeAssignmentExpression{
+		MakeAttributeAssignmentExpression(
+			MakeAttribute("address", TypeAddress),
+			MakeAddressValue(net.IP{1, 2, 3, 4, 5, 6}),
+		),
+	})
+	if err == nil {
+		t.Errorf("expected no data put to buffer for response with invalid network but got %d", n)
+	} else if _, ok := err.(*requestAddressValueError); !ok {
+		t.Errorf("expected *requestAddressValueError but got %T (%s)", err, err)
+	}
+}
+
+func TestUnmarshalResponse(t *testing.T) {
+	var a [3]AttributeAssignmentExpression
+
+	effect, n, err := UnmarshalResponse(append([]byte{1, 0, 1, 0, 0}, testWireAttributes...), a[:])
+	assertRequestAssignmentExpressions(t, "UnmarshalResponse", err, a[:], n, testRequestAssignments...)
+	if effect != EffectPermit {
+		t.Errorf("expected %q effect but got %q", EffectNameFromEnum(EffectPermit), EffectNameFromEnum(effect))
+	}
+
+	effect, n, err = UnmarshalResponse(append([]byte{
+		1, 0, 3,
+		9, 0, 't', 'e', 's', 't', 'E', 'r', 'r', 'o', 'r',
+	}, testWireAttributes...), a[:])
+	if err == nil {
+		t.Errorf("expected *ResponseServerError but got no error")
+	} else if _, ok := err.(*ResponseServerError); !ok {
+		t.Errorf("expected *ResponseServerError but got %T (%s)", err, err)
+	}
+
+	assertRequestAssignmentExpressions(t, "UnmarshalResponse", nil, a[:], n, testRequestAssignments...)
+	if effect != EffectIndeterminate {
+		t.Errorf("expected %q effect but got %q", EffectNameFromEnum(EffectIndeterminate), EffectNameFromEnum(effect))
+	}
+
+	effect, n, err = UnmarshalResponse([]byte{}, a[:])
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got effect %q and %d attributes",
+			EffectNameFromEnum(effect), n)
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	effect, n, err = UnmarshalResponse([]byte{
+		1, 0,
+	}, a[:])
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got effect %q and %d attributes",
+			EffectNameFromEnum(effect), n)
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	effect, n, err = UnmarshalResponse([]byte{
+		1, 0, 3,
+	}, a[:])
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got effect %q and %d attributes",
+			EffectNameFromEnum(effect), n)
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	effect, n, err = UnmarshalResponse([]byte{
+		1, 0, 3, 0, 0,
+	}, a[:])
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got effect %q and %d attributes",
+			EffectNameFromEnum(effect), n)
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestPutResponseEffect(t *testing.T) {
+	var b [1]byte
+
+	n, err := putResponseEffect(b[:], EffectPermit)
+	assertRequestBytesBuffer(t, "putResponseEffect", err, b[:], n, 1)
+
+	n, err = putResponseEffect([]byte{}, EffectPermit)
+	assertRequestBufferOverflow(t, "putResponseEffect", err, n)
+
+	n, err = putResponseEffect(b[:], -1)
+	if err == nil {
+		t.Errorf("expected no data put to buffer for invalid effect but got %d", n)
+	} else if _, ok := err.(*responseEffectError); !ok {
+		t.Errorf("expected *responseEffectError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetResponseEffect(t *testing.T) {
+	effect, n, err := getResponseEffect([]byte{1})
+	if err != nil {
+		t.Error(err)
+	} else if n != 1 {
+		t.Errorf("expected one byte consumed but got %d", n)
+	} else if effect != EffectPermit {
+		t.Errorf("expected %q effect but got %q",
+			EffectNameFromEnum(EffectPermit), EffectNameFromEnum(effect),
+		)
+	}
+
+	effect, n, err = getResponseEffect([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but consumed %d bytes and got %q effect",
+			n, EffectNameFromEnum(effect),
+		)
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	effect, n, err = getResponseEffect([]byte{255})
+	if err == nil {
+		t.Errorf("expected *responseEffectError but consumed %d bytes and got %q effect",
+			n, EffectNameFromEnum(effect),
+		)
+	} else if _, ok := err.(*responseEffectError); !ok {
+		t.Errorf("expected *responseEffectError but got %T (%s)", err, err)
+	}
+}
+
+func TestPutResponseStatus(t *testing.T) {
+	var b [65536]byte
+
+	n, err := putResponseStatus(b[:])
+	assertRequestBytesBuffer(t, "putResponseStatus", err, b[:2], n,
+		0, 0,
+	)
+
+	n, err = putResponseStatus(b[:], fmt.Errorf("test"))
+	assertRequestBytesBuffer(t, "putResponseStatus(1)", err, b[:6], n,
+		4, 0, 't', 'e', 's', 't',
+	)
+
+	n, err = putResponseStatus(b[:], fmt.Errorf("test1"), fmt.Errorf("test2"))
+	assertRequestBytesBuffer(t, "putResponseStatus(2)", err, b[:35], n,
+		33, 0, 'm', 'u', 'l', 't', 'i', 'p', 'l', 'e', ' ', 'e', 'r', 'r', 'o', 'r', 's', ':', ' ',
+		'"', 't', 'e', 's', 't', '1', '"', ',', ' ', '"', 't', 'e', 's', 't', '2', '"',
+	)
+
+	n, err = putResponseStatus([]byte{})
+	assertRequestBufferOverflow(t, "putResponseStatus", err, n)
+
+	n, err = putResponseStatus([]byte{}, fmt.Errorf("test"))
+	assertRequestBufferOverflow(t, "putResponseStatus(1)", err, n)
+
+	s := ""
+	for i := 0; i < 6553; i++ {
+		s += "0123456789"
+	}
+	s += "0123\u56db56789"
+
+	e := make([]byte, 65536)
+	e[0] = 254
+	e[1] = 255
+	for i := 0; i < 6553; i++ {
+		copy(e[10*i+2:], "0123456789")
+	}
+	e[65532] = '0'
+	e[65533] = '1'
+	e[65534] = '2'
+	e[65535] = '3'
+
+	n, err = putResponseStatus(b[:], fmt.Errorf(s))
+	assertRequestBytesBuffer(t, "putResponseStatus(long)", err, b[:], n, e...)
+}
+
+func TestPutResponseStatusTooLong(t *testing.T) {
+	if len(responseStatusTooLong) > math.MaxUint16 {
+		t.Errorf("expected no more than %d bytes for responseStatusTooLong but got %d",
+			math.MaxUint16, len(responseStatusTooLong),
+		)
+	}
+
+	var b [17]byte
+
+	n, err := putResponseStatusTooLong(b[:])
+	assertRequestBytesBuffer(t, "putResponseStatusTooLong", err, b[:], n,
+		15, 0, 's', 't', 'a', 't', 'u', 's', ' ', 't', 'o', 'o', ' ', 'l', 'o', 'n', 'g',
+	)
+
+	n, err = putResponseStatusTooLong([]byte{})
+	assertRequestBufferOverflow(t, "putResponseStatusTooLong", err, n)
+}
+
+func TestPutResponseObligationsTooLong(t *testing.T) {
+	if len(responseStatusObligationsTooLong) > math.MaxUint16 {
+		t.Errorf("expected no more than %d bytes for responseStatusObligationsTooLong but got %d",
+			math.MaxUint16, len(responseStatusObligationsTooLong),
+		)
+	}
+
+	var b [22]byte
+
+	n, err := putResponseObligationsTooLong(b[:])
+	assertRequestBytesBuffer(t, "putResponseObligationsTooLong", err, b[:], n,
+		20, 0, 'o', 'b', 'l', 'i', 'g', 'a', 't', 'i', 'o', 'n', 's', ' ', 't', 'o', 'o', ' ', 'l', 'o', 'n', 'g',
+	)
+
+	n, err = putResponseObligationsTooLong([]byte{})
+	assertRequestBufferOverflow(t, "putResponseObligationsTooLong", err, n)
+}
+
 func TestPutAssignmentExpressions(t *testing.T) {
 	var b [42]byte
 	n, err := putAssignmentExpressions(b[:], testRequestAssignments)

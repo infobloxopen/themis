@@ -1155,3 +1155,20 @@ errors:
   msg: "Negative integer value %d underflows unsigned integer"
   args:
   - field: n
+
+- id: responseEffectError
+  fields:
+  - id: effect
+    type: int
+  msg: "Unknown effect %d"
+  args:
+  - field: effect
+
+- id: ResponseServerError
+  desc: "indicates that server returned an error message"
+  fields:
+  - id: msg
+    type: string
+  msg: "%s"
+  args:
+  - field: msg
