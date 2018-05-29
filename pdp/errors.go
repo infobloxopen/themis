@@ -147,10 +147,30 @@ const (
 	requestTooLongDomainValueErrorID              = 130
 	requestInvalidExpressionErrorID               = 131
 	requestAssignmentsOverflowErrorID             = 132
-	requestUnmarshalIntegerOverflowErrorID        = 133
-	requestUnmarshalIntegerUnderflowErrorID       = 134
-	responseEffectErrorID                         = 135
-	ResponseServerErrorID                         = 136
+	requestUnmarshalEffectConstErrorID            = 133
+	requestUnmarshalEffectTypeErrorID             = 134
+	requestUnmarshalStatusConstErrorID            = 135
+	requestUnmarshalStatusTypeErrorID             = 136
+	requestUnmarshalBooleanConstErrorID           = 137
+	requestUnmarshalBooleanTypeErrorID            = 138
+	requestUnmarshalStringConstErrorID            = 139
+	requestUnmarshalStringTypeErrorID             = 140
+	requestUnmarshalIntegerConstErrorID           = 141
+	requestUnmarshalIntegerTypeErrorID            = 142
+	requestUnmarshalIntegerOverflowErrorID        = 143
+	requestUnmarshalIntegerUnderflowErrorID       = 144
+	requestUnmarshalFloatConstErrorID             = 145
+	requestUnmarshalFloatTypeErrorID              = 146
+	requestUnmarshalAddressConstErrorID           = 147
+	requestUnmarshalAddressTypeErrorID            = 148
+	requestUnmarshalNetworkConstErrorID           = 149
+	requestUnmarshalNetworkTypeErrorID            = 150
+	requestUnmarshalDomainConstErrorID            = 151
+	requestUnmarshalDomainTypeErrorID             = 152
+	responseEffectErrorID                         = 153
+	ResponseServerErrorID                         = 154
+	policyCalculationErrorID                      = 155
+	obligationCalculationErrorID                  = 156
 )
 
 type externalError struct {
@@ -2237,36 +2257,308 @@ func (e *requestAssignmentsOverflowError) Error() string {
 	return e.errorf("Expected buffer for at least %d assignments but got %d", e.expected, e.actual)
 }
 
+type requestUnmarshalEffectConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalEffectConstError(v reflect.Value) *requestUnmarshalEffectConstError {
+	return &requestUnmarshalEffectConstError{
+		errorLink: errorLink{id: requestUnmarshalEffectConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalEffectConstError) Error() string {
+	return e.errorf("Can't unmarshal effect to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalEffectTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalEffectTypeError(v reflect.Value) *requestUnmarshalEffectTypeError {
+	return &requestUnmarshalEffectTypeError{
+		errorLink: errorLink{id: requestUnmarshalEffectTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalEffectTypeError) Error() string {
+	return e.errorf("Can't unmarshal effect to %s", e.v.Type())
+}
+
+type requestUnmarshalStatusConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalStatusConstError(v reflect.Value) *requestUnmarshalStatusConstError {
+	return &requestUnmarshalStatusConstError{
+		errorLink: errorLink{id: requestUnmarshalStatusConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalStatusConstError) Error() string {
+	return e.errorf("Can't unmarshal status to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalStatusTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalStatusTypeError(v reflect.Value) *requestUnmarshalStatusTypeError {
+	return &requestUnmarshalStatusTypeError{
+		errorLink: errorLink{id: requestUnmarshalStatusTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalStatusTypeError) Error() string {
+	return e.errorf("Can't unmarshal status to %s", e.v.Type())
+}
+
+type requestUnmarshalBooleanConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalBooleanConstError(v reflect.Value) *requestUnmarshalBooleanConstError {
+	return &requestUnmarshalBooleanConstError{
+		errorLink: errorLink{id: requestUnmarshalBooleanConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalBooleanConstError) Error() string {
+	return e.errorf("Can't unmarshal boolean to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalBooleanTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalBooleanTypeError(v reflect.Value) *requestUnmarshalBooleanTypeError {
+	return &requestUnmarshalBooleanTypeError{
+		errorLink: errorLink{id: requestUnmarshalBooleanTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalBooleanTypeError) Error() string {
+	return e.errorf("Can't unmarshal boolean to %s", e.v.Type())
+}
+
+type requestUnmarshalStringConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalStringConstError(v reflect.Value) *requestUnmarshalStringConstError {
+	return &requestUnmarshalStringConstError{
+		errorLink: errorLink{id: requestUnmarshalStringConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalStringConstError) Error() string {
+	return e.errorf("Can't unmarshal string to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalStringTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalStringTypeError(v reflect.Value) *requestUnmarshalStringTypeError {
+	return &requestUnmarshalStringTypeError{
+		errorLink: errorLink{id: requestUnmarshalStringTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalStringTypeError) Error() string {
+	return e.errorf("Can't unmarshal string to %s", e.v.Type())
+}
+
+type requestUnmarshalIntegerConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalIntegerConstError(v reflect.Value) *requestUnmarshalIntegerConstError {
+	return &requestUnmarshalIntegerConstError{
+		errorLink: errorLink{id: requestUnmarshalIntegerConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalIntegerConstError) Error() string {
+	return e.errorf("Can't unmarshal integer to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalIntegerTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalIntegerTypeError(v reflect.Value) *requestUnmarshalIntegerTypeError {
+	return &requestUnmarshalIntegerTypeError{
+		errorLink: errorLink{id: requestUnmarshalIntegerTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalIntegerTypeError) Error() string {
+	return e.errorf("Can't unmarshal integer to %s", e.v.Type())
+}
+
 type requestUnmarshalIntegerOverflowError struct {
 	errorLink
 	n int64
-	k reflect.Kind
+	v reflect.Value
 }
 
-func newRequestUnmarshalIntegerOverflowError(n int64, k reflect.Kind) *requestUnmarshalIntegerOverflowError {
+func newRequestUnmarshalIntegerOverflowError(n int64, v reflect.Value) *requestUnmarshalIntegerOverflowError {
 	return &requestUnmarshalIntegerOverflowError{
 		errorLink: errorLink{id: requestUnmarshalIntegerOverflowErrorID},
 		n:         n,
-		k:         k}
+		v:         v}
 }
 
 func (e *requestUnmarshalIntegerOverflowError) Error() string {
-	return e.errorf("Integer value %d overflows %s", e.n, e.k)
+	return e.errorf("Integer value %d overflows %s", e.n, e.v.Type())
 }
 
 type requestUnmarshalIntegerUnderflowError struct {
 	errorLink
 	n int64
+	v reflect.Value
 }
 
-func newRequestUnmarshalIntegerUnderflowError(n int64) *requestUnmarshalIntegerUnderflowError {
+func newRequestUnmarshalIntegerUnderflowError(n int64, v reflect.Value) *requestUnmarshalIntegerUnderflowError {
 	return &requestUnmarshalIntegerUnderflowError{
 		errorLink: errorLink{id: requestUnmarshalIntegerUnderflowErrorID},
-		n:         n}
+		n:         n,
+		v:         v}
 }
 
 func (e *requestUnmarshalIntegerUnderflowError) Error() string {
-	return e.errorf("Negative integer value %d underflows unsigned integer", e.n)
+	return e.errorf("Negative integer value %d underflows %s", e.n, e.v.Type())
+}
+
+type requestUnmarshalFloatConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalFloatConstError(v reflect.Value) *requestUnmarshalFloatConstError {
+	return &requestUnmarshalFloatConstError{
+		errorLink: errorLink{id: requestUnmarshalFloatConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalFloatConstError) Error() string {
+	return e.errorf("Can't unmarshal float to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalFloatTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalFloatTypeError(v reflect.Value) *requestUnmarshalFloatTypeError {
+	return &requestUnmarshalFloatTypeError{
+		errorLink: errorLink{id: requestUnmarshalFloatTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalFloatTypeError) Error() string {
+	return e.errorf("Can't unmarshal float to %s", e.v.Type())
+}
+
+type requestUnmarshalAddressConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalAddressConstError(v reflect.Value) *requestUnmarshalAddressConstError {
+	return &requestUnmarshalAddressConstError{
+		errorLink: errorLink{id: requestUnmarshalAddressConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalAddressConstError) Error() string {
+	return e.errorf("Can't unmarshal address to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalAddressTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalAddressTypeError(v reflect.Value) *requestUnmarshalAddressTypeError {
+	return &requestUnmarshalAddressTypeError{
+		errorLink: errorLink{id: requestUnmarshalAddressTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalAddressTypeError) Error() string {
+	return e.errorf("Can't unmarshal address to %s", e.v.Type())
+}
+
+type requestUnmarshalNetworkConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalNetworkConstError(v reflect.Value) *requestUnmarshalNetworkConstError {
+	return &requestUnmarshalNetworkConstError{
+		errorLink: errorLink{id: requestUnmarshalNetworkConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalNetworkConstError) Error() string {
+	return e.errorf("Can't unmarshal network to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalNetworkTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalNetworkTypeError(v reflect.Value) *requestUnmarshalNetworkTypeError {
+	return &requestUnmarshalNetworkTypeError{
+		errorLink: errorLink{id: requestUnmarshalNetworkTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalNetworkTypeError) Error() string {
+	return e.errorf("Can't unmarshal network to %s", e.v.Type())
+}
+
+type requestUnmarshalDomainConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalDomainConstError(v reflect.Value) *requestUnmarshalDomainConstError {
+	return &requestUnmarshalDomainConstError{
+		errorLink: errorLink{id: requestUnmarshalDomainConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalDomainConstError) Error() string {
+	return e.errorf("Can't unmarshal domain to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalDomainTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalDomainTypeError(v reflect.Value) *requestUnmarshalDomainTypeError {
+	return &requestUnmarshalDomainTypeError{
+		errorLink: errorLink{id: requestUnmarshalDomainTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalDomainTypeError) Error() string {
+	return e.errorf("Can't unmarshal domain to %s", e.v.Type())
 }
 
 type responseEffectError struct {
@@ -2299,4 +2591,36 @@ func newResponseServerError(msg string) *ResponseServerError {
 // Error implements error interface.
 func (e *ResponseServerError) Error() string {
 	return e.errorf("%s", e.msg)
+}
+
+type policyCalculationError struct {
+	errorLink
+	err error
+}
+
+func newPolicyCalculationError(err error) *policyCalculationError {
+	return &policyCalculationError{
+		errorLink: errorLink{id: policyCalculationErrorID},
+		err:       err}
+}
+
+func (e *policyCalculationError) Error() string {
+	return e.errorf("Failed to process request: %s", e.err)
+}
+
+type obligationCalculationError struct {
+	errorLink
+	a   Attribute
+	err error
+}
+
+func newObligationCalculationError(a Attribute, err error) *obligationCalculationError {
+	return &obligationCalculationError{
+		errorLink: errorLink{id: obligationCalculationErrorID},
+		a:         a,
+		err:       err}
+}
+
+func (e *obligationCalculationError) Error() string {
+	return e.errorf("Failed to calculate obligation for %s: %s", e.a.describe(), e.err)
 }

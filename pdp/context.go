@@ -91,30 +91,43 @@ func NewContext(c *LocalContentStorage, count int, f func(i int) (string, Attrib
 			return nil, err
 		}
 
-		t := av.GetResultType()
-		if v, ok := ctx.a[ID]; ok {
-			switch v := v.(type) {
-			default:
-				panic(fmt.Errorf("expected AttributeValue or map[int]AttributeValue but got: %T, %#v", v, v))
+		err = ctx.putAttribute(ID, av)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-			case AttributeValue:
-				if v.t == t {
-					return nil, newDuplicateAttributeValueError(ID, t, av, v)
-				}
+	return ctx, nil
+}
 
-				m := make(map[Type]AttributeValue, 2)
-				m[v.t] = v
-				m[t] = av
+// NewContextFromBytes creates new instance of context. It requires a pointer
+// to local content storage and a request represented as a byte sequence.
+// Requirements for the storage are the same as NewContext function has.
+// The request umarshaled to sequence of attributes as descirbed by
+// (Un)MarshalRequest* functions help.
+func NewContextFromBytes(c *LocalContentStorage, b []byte) (*Context, error) {
+	off, err := checkRequestVersion(b)
+	if err != nil {
+		return nil, err
+	}
 
-			case map[Type]AttributeValue:
-				if old, ok := v[t]; ok {
-					return nil, newDuplicateAttributeValueError(ID, t, av, old)
-				}
+	count, n, err := getRequestAttributeCount(b[off:])
+	if err != nil {
+		return nil, err
+	}
+	off += n
 
-				v[t] = av
-			}
-		} else {
-			ctx.a[ID] = av
+	ctx := &Context{a: make(map[string]interface{}, count), c: c}
+	for i := 0; i < count; i++ {
+		ID, v, n, err := getRequestAttribute(b[off:])
+		if err != nil {
+			return nil, bindErrorf(err, "%d", i+1)
+		}
+		off += n
+
+		err = ctx.putAttribute(ID, v)
+		if err != nil {
+			return nil, bindErrorf(err, "%d", i+1)
 		}
 	}
 
@@ -153,6 +166,37 @@ func (c *Context) String() string {
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+func (c *Context) putAttribute(ID string, a AttributeValue) error {
+	if v, ok := c.a[ID]; ok {
+		switch v := v.(type) {
+		default:
+			panic(fmt.Errorf("expected AttributeValue or map[int]AttributeValue but got: %T, %#v", v, v))
+
+		case AttributeValue:
+			t := a.GetResultType()
+			if v.t == t {
+				return newDuplicateAttributeValueError(ID, t, a, v)
+			}
+
+			m := make(map[Type]AttributeValue, 2)
+			m[v.t] = v
+			m[t] = a
+
+		case map[Type]AttributeValue:
+			t := a.GetResultType()
+			if old, ok := v[t]; ok {
+				return newDuplicateAttributeValueError(ID, t, a, old)
+			}
+
+			v[t] = a
+		}
+	} else {
+		c.a[ID] = a
+	}
+
+	return nil
 }
 
 func (c *Context) getAttribute(a Attribute) (AttributeValue, error) {
@@ -341,15 +385,40 @@ func (c *Context) calculateFlags64Expression(e Expression) (uint64, error) {
 // Response represent result of policies evaluation.
 type Response struct {
 	// Effect is resulting effect.
-	Effect      int
-	status      boundError
-	obligations []AttributeAssignmentExpression
+	Effect int
+	// Status contains an error if any occurs on response evaluation.
+	Status error
+	// Obligations constain set of obligation expressions collected during evaluation.
+	Obligations []AttributeAssignmentExpression
 }
 
-// Status returns response's effect, obligation (as list of assignment
-// expression) and error if any occurs during evaluation.
-func (r Response) Status() (int, []AttributeAssignmentExpression, error) {
-	return r.Effect, r.obligations, r.status
+// Marshal fills given byte array with marshalled representation of
+// the response. The method returns number of bytes filled or error.
+func (r Response) Marshal(b []byte, ctx *Context) (int, error) {
+	var errs [2]error
+
+	nErr := 0
+	if r.Status != nil {
+		errs[nErr] = newPolicyCalculationError(r.Status)
+		nErr++
+	}
+
+	a := make([]AttributeAssignmentExpression, len(r.Obligations))
+	for i, e := range r.Obligations {
+		v, err := e.e.Calculate(ctx)
+		if err != nil {
+			a = a[:i]
+
+			errs[nErr] = newObligationCalculationError(e.a, err)
+			nErr++
+
+			break
+		}
+
+		a[i] = MakeAttributeAssignmentExpression(e.a, v)
+	}
+
+	return marshalResponse(b, r.Effect, a, errs[:nErr]...)
 }
 
 // Evaluable interface defines abstract PDP's entity which can be evaluated

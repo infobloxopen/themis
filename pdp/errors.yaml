@@ -1137,24 +1137,171 @@ errors:
   - field: expected
   - field: actual
 
+- id: requestUnmarshalEffectConstError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal effect to unchengeable %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalEffectTypeError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal effect to %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalStatusConstError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal status to unchengeable %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalStatusTypeError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal status to %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalBooleanConstError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal boolean to unchengeable %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalBooleanTypeError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal boolean to %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalStringConstError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal string to unchengeable %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalStringTypeError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal string to %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalIntegerConstError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal integer to unchengeable %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalIntegerTypeError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal integer to %s"
+  args:
+  - field: v.Type()
+
 - id: requestUnmarshalIntegerOverflowError
   fields:
   - id: n
     type: int64
-  - id: k
-    type: reflect.Kind
+  - id: v
+    type: reflect.Value
   msg: "Integer value %d overflows %s"
   args:
   - field: n
-  - field: k
+  - field: v.Type()
 
 - id: requestUnmarshalIntegerUnderflowError
   fields:
   - id: n
     type: int64
-  msg: "Negative integer value %d underflows unsigned integer"
+  - id: v
+    type: reflect.Value
+  msg: "Negative integer value %d underflows %s"
   args:
   - field: n
+  - field: v.Type()
+
+- id: requestUnmarshalFloatConstError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal float to unchengeable %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalFloatTypeError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal float to %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalAddressConstError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal address to unchengeable %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalAddressTypeError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal address to %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalNetworkConstError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal network to unchengeable %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalNetworkTypeError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal network to %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalDomainConstError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal domain to unchengeable %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalDomainTypeError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal domain to %s"
+  args:
+  - field: v.Type()
 
 - id: responseEffectError
   fields:
@@ -1172,3 +1319,22 @@ errors:
   msg: "%s"
   args:
   - field: msg
+
+- id: policyCalculationError
+  fields:
+  - id: err
+    type: error
+  msg: "Failed to process request: %s"
+  args:
+  - field: err
+
+- id: obligationCalculationError
+  fields:
+  - id: a
+    type: Attribute
+  - id: err
+    type: error
+  msg: "Failed to calculate obligation for %s: %s"
+  args:
+  - field: a.describe()
+  - field: err

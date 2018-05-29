@@ -41,10 +41,10 @@ func TestMapperRCAOrdering(t *testing.T) {
 	)
 
 	r := p.Calculate(c)
-	if len(r.obligations) != 1 {
-		t.Errorf("Expected the only obligation got %#v", r.obligations)
+	if len(r.Obligations) != 1 {
+		t.Errorf("Expected the only obligation got %#v", r.Obligations)
 	} else {
-		ID, ot, s, err := r.obligations[0].Serialize(c)
+		ID, ot, s, err := r.Obligations[0].Serialize(c)
 		if err != nil {
 			t.Errorf("Expected no error but got %s", err)
 		}
@@ -81,10 +81,10 @@ func TestMapperRCAOrdering(t *testing.T) {
 	)
 
 	r = p.Calculate(c)
-	if len(r.obligations) != 1 {
-		t.Errorf("Expected the only obligation got %#v", r.obligations)
+	if len(r.Obligations) != 1 {
+		t.Errorf("Expected the only obligation got %#v", r.Obligations)
 	} else {
-		ID, ot, s, err := r.obligations[0].Serialize(c)
+		ID, ot, s, err := r.Obligations[0].Serialize(c)
 		if err != nil {
 			t.Errorf("Expected no error but got %s", err)
 		}

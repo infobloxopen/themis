@@ -122,20 +122,20 @@ func TestUnmarshalRequestReflection(t *testing.T) {
 		reflect.Indirect(reflect.ValueOf(&num)),
 	}
 
-	err := UnmarshalRequestReflection(testWireRequest, func(id string, t Type) (reflect.Value, bool, error) {
+	err := UnmarshalRequestReflection(testWireRequest, func(id string, t Type) (reflect.Value, error) {
 		if i >= len(names) || i >= len(values) || i >= len(types) {
-			return reflect.ValueOf(nil), false, fmt.Errorf("requested invalid value number: %d", i)
+			return reflect.ValueOf(nil), fmt.Errorf("requested invalid value number: %d", i)
 		}
 
 		if et := types[i]; t != et {
-			return reflect.ValueOf(nil), false, fmt.Errorf("expected %q for %d but got %q", et, i, t)
+			return reflect.ValueOf(nil), fmt.Errorf("expected %q for %d but got %q", et, i, t)
 		}
 
 		names[i] = id
 		v := values[i]
 		i++
 
-		return v, true, nil
+		return v, nil
 	})
 
 	a := []AttributeAssignmentExpression{
@@ -155,8 +155,8 @@ func TestUnmarshalRequestReflection(t *testing.T) {
 
 	assertRequestAssignmentExpressions(t, "UnmarshalRequestReflection", err, a, i, testRequestAssignments...)
 
-	err = UnmarshalRequestReflection([]byte{}, func(id string, t Type) (reflect.Value, bool, error) {
-		return reflect.ValueOf(nil), false, fmt.Errorf("in unreacheable place with id %q and type %q", id, t)
+	err = UnmarshalRequestReflection([]byte{}, func(id string, t Type) (reflect.Value, error) {
+		return reflect.ValueOf(nil), fmt.Errorf("in unreacheable place with id %q and type %q", id, t)
 	})
 	if err == nil {
 		t.Error("expected *requestBufferUnderflowError but got nothing")
@@ -166,8 +166,8 @@ func TestUnmarshalRequestReflection(t *testing.T) {
 
 	err = UnmarshalRequestReflection([]byte{
 		1, 0,
-	}, func(id string, t Type) (reflect.Value, bool, error) {
-		return reflect.ValueOf(nil), false, fmt.Errorf("in unreacheable place with id %q and type %q", id, t)
+	}, func(id string, t Type) (reflect.Value, error) {
+		return reflect.ValueOf(nil), fmt.Errorf("in unreacheable place with id %q and type %q", id, t)
 	})
 	if err == nil {
 		t.Error("expected *requestBufferUnderflowError but got nothing")

@@ -62,6 +62,11 @@ var (
 	}
 )
 
+// MarshalRequestAssignments marshals list of assignment expressions
+// to sequence of bytes. It requires each expression to be assignment of
+// immediate value (which can be created with MakeStringValue or similar
+// functions). Caller should provide large enough buffer. Function fills
+// the buffer and returns number of bytes written.
 func MarshalRequestAssignments(b []byte, in []AttributeAssignmentExpression) (int, error) {
 	off, err := putRequestVersion(b)
 	if err != nil {
@@ -76,6 +81,17 @@ func MarshalRequestAssignments(b []byte, in []AttributeAssignmentExpression) (in
 	return off + n, nil
 }
 
+// MarshalRequestReflection marshals set of attributes wrapped with
+// reflect.Value to sequence of bytes. Caller should provide large enough
+// buffer. Also caller put attribute count to marshal. For each attribute
+// MarshalRequestReflection calls f function with index of the attribute.
+// It expects the function to return attribute id, type and value.
+// For TypeBoolean MarshalRequestReflection expects bool value, for TypeString
+// - string, for TypeInteger - intX, uintX (internally converting to int64),
+// TypeFloat - float32 or float64, TypeAddress - net.IP, TypeNetwork - net.IPNet
+// or *net.IPNet, TypeDomain - string or domain.Name from
+// github.com/infobloxopen/go-trees/domain package. The function fills given
+// buffer and returns number of bytes written.
 func MarshalRequestReflection(b []byte, c int, f func(i int) (string, Type, reflect.Value, error)) (int, error) {
 	off, err := putRequestVersion(b)
 	if err != nil {
@@ -90,6 +106,9 @@ func MarshalRequestReflection(b []byte, c int, f func(i int) (string, Type, refl
 	return off + n, nil
 }
 
+// UnmarshalRequestAssignments parses given sequence of bytes as
+// list of assignment expressions. Caller should provide large enough out
+// slice. The function returns number of expressions written.
 func UnmarshalRequestAssignments(b []byte, out []AttributeAssignmentExpression) (int, error) {
 	n, err := checkRequestVersion(b)
 	if err != nil {
@@ -99,7 +118,12 @@ func UnmarshalRequestAssignments(b []byte, out []AttributeAssignmentExpression) 
 	return getAssignmentExpressions(b[n:], out)
 }
 
-func UnmarshalRequestReflection(b []byte, f func(string, Type) (reflect.Value, bool, error)) error {
+// UnmarshalRequestReflection parses given sequence of bytes to set of reflected
+// values. It calls f function for each attribute extracted from buffer with
+// attribute id and type. The f function should return value to set.
+// If it returns error UnmarshalRequestReflection stops parsing and exits with
+// the error.
+func UnmarshalRequestReflection(b []byte, f func(string, Type) (reflect.Value, error)) error {
 	n, err := checkRequestVersion(b)
 	if err != nil {
 		return err

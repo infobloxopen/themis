@@ -43,10 +43,10 @@ func TestPolicy(t *testing.T) {
 			effectNames[EffectNotApplicable], effectNames[r.Effect])
 	}
 
-	_, ok = r.status.(*missingAttributeError)
+	_, ok = r.Status.(*missingAttributeError)
 	if !ok {
 		t.Errorf("Expected missing attribute status for policy with FirstApplicableEffectRCA and "+
-			"not found attribute but got %T (%s)", r.status, r.status)
+			"not found attribute but got %T (%s)", r.Status, r.Status)
 	}
 
 	p = &Policy{
@@ -60,10 +60,10 @@ func TestPolicy(t *testing.T) {
 			effectNames[EffectNotApplicable], effectNames[r.Effect])
 	}
 
-	_, ok = r.status.(*missingAttributeError)
+	_, ok = r.Status.(*missingAttributeError)
 	if !ok {
 		t.Errorf("Expected missing attribute status for policy with FirstApplicableEffectRCA and "+
-			"attribute with wrong type but got %T (%s)", r.status, r.status)
+			"attribute with wrong type but got %T (%s)", r.Status, r.Status)
 	}
 
 	p = &Policy{
@@ -77,9 +77,9 @@ func TestPolicy(t *testing.T) {
 			effectNames[EffectNotApplicable], effectNames[r.Effect])
 	}
 
-	if r.status != nil {
+	if r.Status != nil {
 		t.Errorf("Expected no error status for policy with FirstApplicableEffectRCA and "+
-			"attribute with not maching value but got %T (%s)", r.status, r.status)
+			"attribute with not maching value but got %T (%s)", r.Status, r.Status)
 	}
 
 	p = &Policy{
@@ -95,13 +95,13 @@ func TestPolicy(t *testing.T) {
 			effectNames[EffectPermit], effectNames[r.Effect])
 	}
 
-	if r.status != nil {
+	if r.Status != nil {
 		t.Errorf("Expected no error status for policy with rule and obligations but got %T (%s)",
-			r.status, r.status)
+			r.Status, r.Status)
 	}
 
-	if len(r.obligations) != 1 {
-		t.Errorf("Expected single obligation for with rule and obligations but got %#v", r.obligations)
+	if len(r.Obligations) != 1 {
+		t.Errorf("Expected single obligation for with rule and obligations but got %#v", r.Obligations)
 	}
 
 	defaultRule := makeSimpleRule("Default", EffectDeny)
@@ -133,9 +133,9 @@ func TestPolicy(t *testing.T) {
 			effectNames[EffectPermit], effectNames[r.Effect])
 	}
 
-	if r.status != nil {
+	if r.Status != nil {
 		t.Errorf("Expected no error status for policy rule and obligations but got %T (%s)",
-			r.status, r.status)
+			r.Status, r.Status)
 	}
 
 	c = &Context{
@@ -149,10 +149,10 @@ func TestPolicy(t *testing.T) {
 			effectNames[EffectIndeterminate], effectNames[r.Effect])
 	}
 
-	_, ok = r.status.(*missingAttributeError)
+	_, ok = r.Status.(*missingAttributeError)
 	if !ok {
 		t.Errorf("Expected missing attribute status for policy with rule and obligations but got %T (%s)",
-			r.status, r.status)
+			r.Status, r.Status)
 	}
 }
 

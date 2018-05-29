@@ -24,11 +24,11 @@ var (
 func TestMarshalResponse(t *testing.T) {
 	var b [90]byte
 
-	n, err := MarshalResponse(b[:], EffectIndeterminate, testRequestAssignments,
+	n, err := marshalResponse(b[:], EffectIndeterminate, testRequestAssignments,
 		fmt.Errorf("testError1"),
 		fmt.Errorf("testError2"),
 	)
-	assertRequestBytesBuffer(t, "MarshalResponse", err, b[:], n, append(
+	assertRequestBytesBuffer(t, "marshalResponse", err, b[:], n, append(
 		[]byte{
 			1, 0, 3,
 			43, 0, 'm', 'u', 'l', 't', 'i', 'p', 'l', 'e', ' ', 'e', 'r', 'r', 'o', 'r', 's', ':', ' ',
@@ -38,13 +38,13 @@ func TestMarshalResponse(t *testing.T) {
 		testWireAttributes...)...,
 	)
 
-	n, err = MarshalResponse([]byte{}, EffectIndeterminate, testRequestAssignments,
+	n, err = marshalResponse([]byte{}, EffectIndeterminate, testRequestAssignments,
 		fmt.Errorf("testError1"),
 		fmt.Errorf("testError2"),
 	)
-	assertRequestBufferOverflow(t, "MarshalResponse", err, n)
+	assertRequestBufferOverflow(t, "marshalResponse", err, n)
 
-	n, err = MarshalResponse(b[:2], EffectIndeterminate, testRequestAssignments,
+	n, err = marshalResponse(b[:2], EffectIndeterminate, testRequestAssignments,
 		fmt.Errorf("testError1"),
 		fmt.Errorf("testError2"),
 	)
@@ -54,7 +54,7 @@ func TestMarshalResponse(t *testing.T) {
 		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
 	}
 
-	n, err = MarshalResponse(b[:5], EffectIndeterminate, testRequestAssignments,
+	n, err = marshalResponse(b[:5], EffectIndeterminate, testRequestAssignments,
 		fmt.Errorf("testError1"),
 		fmt.Errorf("testError2"),
 	)
@@ -64,22 +64,24 @@ func TestMarshalResponse(t *testing.T) {
 		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
 	}
 
-	n, err = MarshalResponse(b[:20], EffectIndeterminate, testRequestAssignments,
+	n, err = marshalResponse(b[:22], EffectIndeterminate, testRequestAssignments,
 		fmt.Errorf("testError1"),
 		fmt.Errorf("testError2"),
 	)
-	assertRequestBytesBuffer(t, "MarshalResponse(longStatus)", err, b[:20], n,
+	assertRequestBytesBuffer(t, "marshalResponse(longStatus)", err, b[:22], n,
 		1, 0, 3,
 		15, 0, 's', 't', 'a', 't', 'u', 's', ' ', 't', 'o', 'o', ' ', 'l', 'o', 'n', 'g',
+		0, 0,
 	)
 
-	n, err = MarshalResponse(b[:25], EffectIndeterminate, testRequestAssignments, fmt.Errorf("testError"))
-	assertRequestBytesBuffer(t, "MarshalResponse(longStatus)", err, b[:25], n,
+	n, err = marshalResponse(b[:27], EffectIndeterminate, testRequestAssignments, fmt.Errorf("testError"))
+	assertRequestBytesBuffer(t, "marshalResponse(longObligation)", err, b[:27], n,
 		1, 0, 3,
 		20, 0, 'o', 'b', 'l', 'i', 'g', 'a', 't', 'i', 'o', 'n', 's', ' ', 't', 'o', 'o', ' ', 'l', 'o', 'n', 'g',
+		0, 0,
 	)
 
-	n, err = MarshalResponse(b[:14], EffectIndeterminate, testRequestAssignments,
+	n, err = marshalResponse(b[:14], EffectIndeterminate, testRequestAssignments,
 		fmt.Errorf("testError"),
 	)
 	if err == nil {
@@ -88,7 +90,7 @@ func TestMarshalResponse(t *testing.T) {
 		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
 	}
 
-	n, err = MarshalResponse(b[:], EffectIndeterminate, []AttributeAssignmentExpression{
+	n, err = marshalResponse(b[:], EffectIndeterminate, []AttributeAssignmentExpression{
 		MakeAttributeAssignmentExpression(
 			MakeAttribute("address", TypeAddress),
 			MakeAddressValue(net.IP{1, 2, 3, 4, 5, 6}),
@@ -99,6 +101,17 @@ func TestMarshalResponse(t *testing.T) {
 	} else if _, ok := err.(*requestAddressValueError); !ok {
 		t.Errorf("expected *requestAddressValueError but got %T (%s)", err, err)
 	}
+}
+
+func TestMakeIndeterminateResponse(t *testing.T) {
+	var b [17]byte
+
+	n, err := MakeIndeterminateResponse(b[:], fmt.Errorf("test error"))
+	assertRequestBytesBuffer(t, "MakeIndeterminateResponse", err, b[:], n,
+		1, 0, 3,
+		10, 0, 't', 'e', 's', 't', ' ', 'e', 'r', 'r', 'o', 'r',
+		0, 0,
+	)
 }
 
 func TestUnmarshalResponse(t *testing.T) {
@@ -161,6 +174,158 @@ func TestUnmarshalResponse(t *testing.T) {
 			EffectNameFromEnum(effect), n)
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestUnmarshalResponseToReflection(t *testing.T) {
+	var (
+		effect int
+		s      string
+		b      bool
+		i64    int64
+	)
+
+	if err := UnmarshalResponseToReflection(append([]byte{1, 0, 1, 0, 0}, testWireAttributes...),
+		func(id string, t Type) (reflect.Value, error) {
+			switch id {
+			case ResponseEffectFieldName:
+				return reflect.Indirect(reflect.ValueOf(&effect)), nil
+
+			case ResponseStatusFieldName:
+				return reflectValueNil, nil
+
+			case "string":
+				return reflect.Indirect(reflect.ValueOf(&s)), nil
+
+			case "boolean":
+				return reflect.Indirect(reflect.ValueOf(&b)), nil
+
+			case "integer":
+				return reflect.Indirect(reflect.ValueOf(&i64)), nil
+			}
+
+			return reflectValueNil, fmt.Errorf("unexpected attribute %s.(%s)", id, t)
+		},
+	); err != nil {
+		t.Error(err)
+	} else {
+		if effect != EffectPermit {
+			t.Errorf("expected %q effect but got %q", EffectNameFromEnum(EffectPermit), EffectNameFromEnum(effect))
+		}
+
+		a := []AttributeAssignmentExpression{
+			MakeAttributeAssignmentExpression(
+				MakeAttribute("string", TypeString),
+				MakeStringValue(s),
+			),
+			MakeAttributeAssignmentExpression(
+				MakeAttribute("boolean", TypeBoolean),
+				MakeBooleanValue(b),
+			),
+			MakeAttributeAssignmentExpression(
+				MakeAttribute("integer", TypeInteger),
+				MakeIntegerValue(i64),
+			),
+		}
+		assertRequestAssignmentExpressions(t, "UnmarshalResponseToReflection", err, a, 3, testRequestAssignments...)
+	}
+
+	err := UnmarshalResponseToReflection([]byte{255, 255}, func(id string, t Type) (reflect.Value, error) {
+		return reflectValueNil, fmt.Errorf("unexpected attribute %s.(%s)", id, t)
+	})
+	if err == nil {
+		t.Error("expected *requestVersionError")
+	} else if _, ok := err.(*requestVersionError); !ok {
+		t.Errorf("expected *requestVersionError but got %T (%s)", err, err)
+	}
+
+	err = UnmarshalResponseToReflection([]byte{1, 0, 255}, func(id string, t Type) (reflect.Value, error) {
+		return reflectValueNil, fmt.Errorf("unexpected attribute %s.(%s)", id, t)
+	})
+	if err == nil {
+		t.Error("expected *responseEffectError")
+	} else if _, ok := err.(*responseEffectError); !ok {
+		t.Errorf("expected *responseEffectError but got %T (%s)", err, err)
+	}
+
+	testErr := fmt.Errorf("testError")
+	err = UnmarshalResponseToReflection([]byte{1, 0, 1}, func(id string, t Type) (reflect.Value, error) {
+		if id == ResponseEffectFieldName {
+			return reflectValueNil, testErr
+		}
+
+		return reflectValueNil, fmt.Errorf("unexpected attribute %s.(%s)", id, t)
+	})
+	if err == nil {
+		t.Error("expected testErr")
+	} else if err != testErr {
+		t.Errorf("expected testErr but got %T (%s)", err, err)
+	}
+
+	err = UnmarshalResponseToReflection([]byte{1, 0, 1}, func(id string, t Type) (reflect.Value, error) {
+		if id == ResponseEffectFieldName {
+			return reflect.ValueOf(effect), nil
+		}
+
+		return reflectValueNil, fmt.Errorf("unexpected attribute %s.(%s)", id, t)
+	})
+	if err == nil {
+		t.Error("expected *requestUnmarshalEffectConstError")
+	} else if _, ok := err.(*requestUnmarshalEffectConstError); !ok {
+		t.Errorf("expected *requestUnmarshalEffectConstError but got %T (%s)", err, err)
+	}
+
+	err = UnmarshalResponseToReflection([]byte{
+		1, 0, 1, 8, 0, 't', 'e', 's', 't',
+	}, func(id string, t Type) (reflect.Value, error) {
+		if id == ResponseEffectFieldName {
+			return reflect.Indirect(reflect.ValueOf(&effect)), nil
+		}
+
+		return reflectValueNil, fmt.Errorf("unexpected attribute %s.(%s)", id, t)
+	})
+	if err == nil {
+		t.Error("expected *requestBufferUnderflowError")
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	err = UnmarshalResponseToReflection([]byte{
+		1, 0, 1, 4, 0, 't', 'e', 's', 't',
+	}, func(id string, t Type) (reflect.Value, error) {
+		if id == ResponseEffectFieldName {
+			return reflect.Indirect(reflect.ValueOf(&effect)), nil
+		}
+
+		if id == ResponseStatusFieldName {
+			return reflectValueNil, testErr
+		}
+
+		return reflectValueNil, fmt.Errorf("unexpected attribute %s.(%s)", id, t)
+	})
+	if err == nil {
+		t.Error("expected testErr")
+	} else if err != testErr {
+		t.Errorf("expected testErr but got %T (%s)", err, err)
+	}
+
+	err = UnmarshalResponseToReflection([]byte{
+		1, 0, 1, 4, 0, 't', 'e', 's', 't',
+	}, func(id string, t Type) (reflect.Value, error) {
+		if id == ResponseEffectFieldName {
+			return reflect.Indirect(reflect.ValueOf(&effect)), nil
+		}
+
+		if id == ResponseStatusFieldName {
+			return reflect.ValueOf(s), nil
+		}
+
+		return reflectValueNil, fmt.Errorf("unexpected attribute %s.(%s)", id, t)
+	})
+	if err == nil {
+		t.Error("expected *requestUnmarshalStatusConstError")
+	} else if _, ok := err.(*requestUnmarshalStatusConstError); !ok {
+		t.Errorf("expected *requestUnmarshalStatusConstError but got %T (%s)", err, err)
 	}
 }
 
@@ -349,7 +514,7 @@ func TestPutAttributesFromReflection(t *testing.T) {
 			return "domain", TypeDomain, reflect.ValueOf(makeTestDomain("www.example.com")), nil
 		}
 
-		return "", TypeUndefined, reflect.ValueOf(nil), fmt.Errorf("unexpected intex %d", i)
+		return "", TypeUndefined, reflectValueNil, fmt.Errorf("unexpected intex %d", i)
 	}
 	n, err := putAttributesFromReflection(b[:], 7, f)
 	assertRequestBytesBuffer(t, "putAttributesFromReflection", err, b[:], n,
@@ -370,7 +535,7 @@ func TestPutAttributesFromReflection(t *testing.T) {
 
 	testFuncErr := errors.New("test function error")
 	n, err = putAttributesFromReflection(b[:], 1, func(i int) (string, Type, reflect.Value, error) {
-		return "", TypeUndefined, reflect.ValueOf(nil), testFuncErr
+		return "", TypeUndefined, reflectValueNil, testFuncErr
 	})
 	if err == nil {
 		t.Errorf("expected no data put to buffer for broken function but got %d", n)
@@ -379,7 +544,7 @@ func TestPutAttributesFromReflection(t *testing.T) {
 	}
 
 	n, err = putAttributesFromReflection(b[:], 1, func(i int) (string, Type, reflect.Value, error) {
-		return "undefined", TypeUndefined, reflect.ValueOf(nil), nil
+		return "undefined", TypeUndefined, reflectValueNil, nil
 	})
 	if err == nil {
 		t.Errorf("expected no data put to buffer for undefined value but got %d", n)
@@ -472,20 +637,20 @@ func TestGetAttributesToReflection(t *testing.T) {
 		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		6, 'd', 'o', 'm', 'a', 'i', 'n', byte(requestWireTypeDomain),
 		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
-	}, func(id string, t Type) (reflect.Value, bool, error) {
+	}, func(id string, t Type) (reflect.Value, error) {
 		if i >= len(names) || i >= len(values) || i >= len(builtinTypeByWire) {
-			return reflect.ValueOf(nil), false, fmt.Errorf("requested invalid value number: %d", i)
+			return reflectValueNil, fmt.Errorf("requested invalid value number: %d", i)
 		}
 
 		if et := builtinTypeByWire[i]; t != et {
-			return reflect.ValueOf(nil), false, fmt.Errorf("expected %q for %d but got %q", et, i, t)
+			return reflectValueNil, fmt.Errorf("expected %q for %d but got %q", et, i, t)
 		}
 
 		names[i] = id
 		v := values[i]
 		i++
 
-		return v, true, nil
+		return v, nil
 	})
 
 	a := []AttributeAssignmentExpression{
@@ -574,8 +739,8 @@ func TestGetAttributesToReflection(t *testing.T) {
 		),
 	)
 
-	err = getAttributesToReflection([]byte{}, func(id string, t Type) (reflect.Value, bool, error) {
-		return reflect.ValueOf(nil), false, fmt.Errorf("in unreacheable place with id %q and type %q", id, t)
+	err = getAttributesToReflection([]byte{}, func(id string, t Type) (reflect.Value, error) {
+		return reflectValueNil, fmt.Errorf("in unreacheable place with id %q and type %q", id, t)
 	})
 	if err == nil {
 		t.Error("expected *requestBufferUnderflowError but got nothing")
@@ -585,8 +750,8 @@ func TestGetAttributesToReflection(t *testing.T) {
 
 	err = getAttributesToReflection([]byte{
 		1, 0,
-	}, func(id string, t Type) (reflect.Value, bool, error) {
-		return reflect.ValueOf(nil), false, fmt.Errorf("in unreacheable place with id %q and type %q", id, t)
+	}, func(id string, t Type) (reflect.Value, error) {
+		return reflectValueNil, fmt.Errorf("in unreacheable place with id %q and type %q", id, t)
 	})
 	if err == nil {
 		t.Error("expected *requestBufferUnderflowError but got nothing")
@@ -597,8 +762,8 @@ func TestGetAttributesToReflection(t *testing.T) {
 	err = getAttributesToReflection([]byte{
 		1, 0,
 		7, 's', 't', 'r', 'i', 'n', 'g', 's',
-	}, func(id string, t Type) (reflect.Value, bool, error) {
-		return reflect.ValueOf(nil), false, fmt.Errorf("in unreacheable place with id %q and type %q", id, t)
+	}, func(id string, t Type) (reflect.Value, error) {
+		return reflectValueNil, fmt.Errorf("in unreacheable place with id %q and type %q", id, t)
 	})
 	if err == nil {
 		t.Error("expected *requestBufferUnderflowError but got nothing")
@@ -609,8 +774,8 @@ func TestGetAttributesToReflection(t *testing.T) {
 	err = getAttributesToReflection([]byte{
 		1, 0,
 		7, 's', 't', 'r', 'i', 'n', 'g', 's', byte(requestWireTypeSetOfStrings),
-	}, func(id string, t Type) (reflect.Value, bool, error) {
-		return reflect.ValueOf(nil), false, fmt.Errorf("in unreacheable place with id %q and type %q", id, t)
+	}, func(id string, t Type) (reflect.Value, error) {
+		return reflectValueNil, fmt.Errorf("in unreacheable place with id %q and type %q", id, t)
 	})
 	if err == nil {
 		t.Error("expected *requestAttributeUnmarshallingNotImplemented but got nothing")
@@ -621,8 +786,8 @@ func TestGetAttributesToReflection(t *testing.T) {
 	err = getAttributesToReflection([]byte{
 		1, 0,
 		7, 's', 't', 'r', 'i', 'n', 'g', 's', 255,
-	}, func(id string, t Type) (reflect.Value, bool, error) {
-		return reflect.ValueOf(nil), false, fmt.Errorf("in unreacheable place with id %q and type %q", id, t)
+	}, func(id string, t Type) (reflect.Value, error) {
+		return reflectValueNil, fmt.Errorf("in unreacheable place with id %q and type %q", id, t)
 	})
 	if err == nil {
 		t.Error("expected *requestAttributeUnmarshallingTypeError but got nothing")
@@ -631,8 +796,8 @@ func TestGetAttributesToReflection(t *testing.T) {
 	}
 
 	testFuncErr := errors.New("test function error")
-	err = getAttributesToReflection(testWireAttributes, func(id string, t Type) (reflect.Value, bool, error) {
-		return reflect.ValueOf(nil), false, testFuncErr
+	err = getAttributesToReflection(testWireAttributes, func(id string, t Type) (reflect.Value, error) {
+		return reflectValueNil, testFuncErr
 	})
 	if err == nil {
 		t.Error("expected testFuncErr but got nothing")
@@ -643,8 +808,8 @@ func TestGetAttributesToReflection(t *testing.T) {
 	err = getAttributesToReflection([]byte{
 		1, 0,
 		7, 's', 't', 'r', 'i', 'n', 'g', 's', byte(requestWireTypeString), 4, 0, 't', 'e',
-	}, func(id string, t Type) (reflect.Value, bool, error) {
-		return values[2], true, nil
+	}, func(id string, t Type) (reflect.Value, error) {
+		return values[2], nil
 	})
 	if err == nil {
 		t.Errorf("expected *requestBufferUnderflowError but got %s", str)
@@ -655,11 +820,11 @@ func TestGetAttributesToReflection(t *testing.T) {
 	err = getAttributesToReflection([]byte{
 		1, 0,
 		7, 'i', 'n', 't', 'e', 'g', 'e', 'r', byte(requestWireTypeInteger), 1, 0, 0, 0,
-	}, func(id string, t Type) (reflect.Value, bool, error) {
-		return values[3], true, nil
+	}, func(id string, t Type) (reflect.Value, error) {
+		return values[3], nil
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got %s", str)
+		t.Errorf("expected *requestBufferUnderflowError but got %d", num)
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
@@ -670,11 +835,11 @@ func TestGetAttributesToReflection(t *testing.T) {
 	err = getAttributesToReflection([]byte{
 		1, 0,
 		7, 'i', 'n', 't', 'e', 'g', 'e', 'r', byte(requestWireTypeInteger), 128, 0, 0, 0, 0, 0, 0, 0,
-	}, func(id string, t Type) (reflect.Value, bool, error) {
-		return v, true, nil
+	}, func(id string, t Type) (reflect.Value, error) {
+		return v, nil
 	})
 	if err == nil {
-		t.Errorf("expected *requestUnmarshalIntegerOverflowError but got %s", str)
+		t.Errorf("expected *requestUnmarshalIntegerOverflowError but got %d", i8)
 	} else if _, ok := err.(*requestUnmarshalIntegerOverflowError); !ok {
 		t.Errorf("expected *requestUnmarshalIntegerOverflowError but got %T (%s)", err, err)
 	}
@@ -682,8 +847,8 @@ func TestGetAttributesToReflection(t *testing.T) {
 	err = getAttributesToReflection([]byte{
 		1, 0,
 		5, 'f', 'l', 'o', 'a', 't', byte(requestWireTypeFloat), 24, 45, 68, 84,
-	}, func(id string, t Type) (reflect.Value, bool, error) {
-		return values[4], true, nil
+	}, func(id string, t Type) (reflect.Value, error) {
+		return values[4], nil
 	})
 	if err == nil {
 		t.Errorf("expected *requestBufferUnderflowError but got %s", str)
@@ -694,8 +859,8 @@ func TestGetAttributesToReflection(t *testing.T) {
 	err = getAttributesToReflection([]byte{
 		1, 0,
 		8, 'a', 'd', 'd', 'r', 'e', 's', 's', '4', byte(requestWireTypeIPv4Address), 192, 0,
-	}, func(id string, t Type) (reflect.Value, bool, error) {
-		return values[5], true, nil
+	}, func(id string, t Type) (reflect.Value, error) {
+		return values[5], nil
 	})
 	if err == nil {
 		t.Errorf("expected *requestBufferUnderflowError but got %s", str)
@@ -706,8 +871,8 @@ func TestGetAttributesToReflection(t *testing.T) {
 	err = getAttributesToReflection([]byte{
 		1, 0,
 		8, 'a', 'd', 'd', 'r', 'e', 's', 's', '6', byte(requestWireTypeIPv6Address), 32, 1, 13, 184, 0, 0, 0, 0,
-	}, func(id string, t Type) (reflect.Value, bool, error) {
-		return values[6], true, nil
+	}, func(id string, t Type) (reflect.Value, error) {
+		return values[6], nil
 	})
 	if err == nil {
 		t.Errorf("expected *requestBufferUnderflowError but got %s", str)
@@ -718,8 +883,8 @@ func TestGetAttributesToReflection(t *testing.T) {
 	err = getAttributesToReflection([]byte{
 		1, 0,
 		8, 'n', 'e', 't', 'w', 'o', 'r', 'k', '4', byte(requestWireTypeIPv4Network), 24, 192, 0,
-	}, func(id string, t Type) (reflect.Value, bool, error) {
-		return values[7], true, nil
+	}, func(id string, t Type) (reflect.Value, error) {
+		return values[7], nil
 	})
 	if err == nil {
 		t.Errorf("expected *requestBufferUnderflowError but got %s", str)
@@ -730,8 +895,8 @@ func TestGetAttributesToReflection(t *testing.T) {
 	err = getAttributesToReflection([]byte{
 		1, 0,
 		8, 'n', 'e', 't', 'w', 'o', 'r', 'k', '6', byte(requestWireTypeIPv6Network), 32, 32, 1, 13, 184, 0, 0, 0, 0,
-	}, func(id string, t Type) (reflect.Value, bool, error) {
-		return values[8], true, nil
+	}, func(id string, t Type) (reflect.Value, error) {
+		return values[8], nil
 	})
 	if err == nil {
 		t.Errorf("expected *requestBufferUnderflowError but got %s", str)
@@ -743,8 +908,8 @@ func TestGetAttributesToReflection(t *testing.T) {
 		1, 0,
 		6, 'd', 'o', 'm', 'a', 'i', 'n', byte(requestWireTypeDomain),
 		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e',
-	}, func(id string, t Type) (reflect.Value, bool, error) {
-		return values[9], true, nil
+	}, func(id string, t Type) (reflect.Value, error) {
+		return values[9], nil
 	})
 	if err == nil {
 		t.Errorf("expected *requestBufferUnderflowError but got %s", str)

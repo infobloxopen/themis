@@ -1,12 +1,9 @@
 package pdp
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 	"testing"
-
-	"github.com/pmezard/go-difflib/difflib"
 )
 
 func TestBuiltinTypes(t *testing.T) {
@@ -369,31 +366,13 @@ func TestTypeSet(t *testing.T) {
 }
 
 func assertMapStringIntKeys(v map[string]int, e []string, desc string, t *testing.T) {
-	veol := make([]string, len(v))
+	vs := make([]string, len(v))
 	i := 0
 	for s := range v {
-		veol[i] = s + "\n"
+		vs[i] = s
 		i++
 	}
-	sort.Strings(veol)
+	sort.Strings(vs)
 
-	eeol := make([]string, len(e))
-	for i, s := range e {
-		eeol[i] = s + "\n"
-	}
-
-	ctx := difflib.ContextDiff{
-		A:        eeol,
-		B:        veol,
-		FromFile: "Expected",
-		ToFile:   "Got"}
-
-	diff, err := difflib.GetContextDiffString(ctx)
-	if err != nil {
-		panic(fmt.Errorf("can't compare \"%s\": %s", desc, err))
-	}
-
-	if len(diff) > 0 {
-		t.Errorf("\"%s\" doesn't match:\n%s", desc, diff)
-	}
+	assertStrings(vs, e, desc, t)
 }

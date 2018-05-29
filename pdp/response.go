@@ -16,7 +16,28 @@ const (
 	responseStatusObligationsTooLong = "obligations too long"
 )
 
-func MarshalResponse(b []byte, effect int, obligations []AttributeAssignmentExpression, errs ...error) (int, error) {
+// Names of special response fields.
+const (
+	// ResponseEffectFieldName holds name of response effect.
+	ResponseEffectFieldName = "effect"
+	// ResponseStatusFieldName stores name of response status.
+	ResponseStatusFieldName = "status"
+)
+
+// MinResponseSize represents lower response buffer limit required to return
+// error that real error message or set of obligations are too long.
+var MinResponseSize uint
+
+func init() {
+	n := len(responseStatusTooLong)
+	if len(responseStatusObligationsTooLong) > n {
+		n = len(responseStatusObligationsTooLong)
+	}
+
+	MinResponseSize = 7 + uint(n)
+}
+
+func marshalResponse(b []byte, effect int, obligations []AttributeAssignmentExpression, errs ...error) (int, error) {
 	off, err := putRequestVersion(b)
 	if err != nil {
 		return off, err
@@ -31,6 +52,12 @@ func MarshalResponse(b []byte, effect int, obligations []AttributeAssignmentExpr
 	n, err = putResponseStatus(b[off:], errs...)
 	if err != nil {
 		n, err = putResponseStatusTooLong(b[off:])
+		if err != nil {
+			return off, err
+		}
+		off += n
+
+		n, err = putRequestAttributeCount(b[off:], 0)
 		if err != nil {
 			return off, err
 		}
@@ -51,6 +78,12 @@ func MarshalResponse(b []byte, effect int, obligations []AttributeAssignmentExpr
 			if err != nil {
 				return off, err
 			}
+			off += n
+
+			n, err = putRequestAttributeCount(b[off:], 0)
+			if err != nil {
+				return off, err
+			}
 
 			return off + n, nil
 		}
@@ -61,6 +94,21 @@ func MarshalResponse(b []byte, effect int, obligations []AttributeAssignmentExpr
 	return off + n, nil
 }
 
+// MakeIndeterminateResponse marshals given error as indenterminate response
+// with no obligations to given buffer. Caller need to allocate big enough
+// buffer. It should be at least MinResponseSize to put message that buffer
+// isn't long enough. The function returns number of bytes written to
+// the buffer.
+func MakeIndeterminateResponse(b []byte, err error) (int, error) {
+	return marshalResponse(b, EffectIndeterminate, nil, err)
+}
+
+// UnmarshalResponse unmarshals response from given sequence of bytes.
+// Effect is returned as the first result value. The second returned value gives
+// number of obligations put to out parameter. Finally, the third value is
+// an error occured during unmarshalling or response status if it has type
+// *ResponseServerError. Caller need to allocate and pass big enough array to
+// out argument.
 func UnmarshalResponse(b []byte, out []AttributeAssignmentExpression) (int, int, error) {
 	off, err := checkRequestVersion(b)
 	if err != nil {
@@ -89,6 +137,62 @@ func UnmarshalResponse(b []byte, out []AttributeAssignmentExpression) (int, int,
 	}
 
 	return effect, n, nil
+}
+
+// UnmarshalResponseToReflection unmarshals response from given sequence
+// of bytes to a set reflected values. The function extracts a parameter or
+// obligation from response and calls f function with its name and type.
+// The function should return reflected value to put data to. If f returns
+// error unmarshlling stopped with the error. If f don't want to get value of
+// attribute or response parameter it can return invalid reflect.Value
+// (reflect.Value(nil). For Effect parameter UnmarshalResponseToReflection
+// passes to f ResponseEffectFieldName as name and nil type and expectes
+// value of bool, string, intX or uintX (for bool true means EffectPermit and
+// false all other effects). For Status parameter ResponseStatusFieldName with
+// nil type passed to f and string or error expected as reflected value.
+// For any obligation its name and Type passed to f. Which value is expected
+// depends on attribute type for TypeBoolean - bool, TypeString - string,
+// TypeInteger - intX or uintX (note that small int types can be overflowed
+// while uint can't take negative value), TypeFloat - float32/64, TypeAddress -
+// net.IP, TypeNetwork - net.IPNet or *net.IPNet, TypeDomain - string or
+// domain.Name from github.com/infobloxopen/go-trees/domain package.
+func UnmarshalResponseToReflection(b []byte, f func(string, Type) (reflect.Value, error)) error {
+	off, err := checkRequestVersion(b)
+	if err != nil {
+		return err
+	}
+
+	effect, n, err := getResponseEffect(b[off:])
+	if err != nil {
+		return err
+	}
+	off += n
+
+	v, err := f(ResponseEffectFieldName, nil)
+	if err != nil {
+		return err
+	}
+
+	if err := setEffect(v, effect); err != nil {
+		return err
+	}
+
+	s, n, err := getRequestStringValue(b[off:])
+	if err != nil {
+		return err
+	}
+	off += n
+
+	v, err = f(ResponseStatusFieldName, nil)
+	if err != nil {
+		return err
+	}
+
+	if err := setStatus(v, s); err != nil {
+		return err
+	}
+
+	return getAttributesToReflection(b[off:], f)
 }
 
 func putResponseEffect(b []byte, effect int) (int, error) {
@@ -243,10 +347,10 @@ func putAttributesFromReflection(b []byte, c int, f func(i int) (string, Type, r
 			n, err = putRequestAttributeAddress(b[off:], id, net.IP(v.Bytes()))
 
 		case TypeNetwork:
-			n, err = putRequestAttributeNetwork(b[off:], id, v.Interface().(*net.IPNet))
+			n, err = putRequestAttributeNetwork(b[off:], id, getNetwork(v))
 
 		case TypeDomain:
-			n, err = putRequestAttributeDomain(b[off:], id, v.Interface().(domain.Name))
+			n, err = putRequestAttributeDomain(b[off:], id, domain.MakeNameFromReflection(v))
 		}
 
 		if err != nil {
@@ -282,7 +386,7 @@ func getAssignmentExpressions(b []byte, out []AttributeAssignmentExpression) (in
 	return c, nil
 }
 
-func getAttributesToReflection(b []byte, f func(string, Type) (reflect.Value, bool, error)) error {
+func getAttributesToReflection(b []byte, f func(string, Type) (reflect.Value, error)) error {
 	c, n, err := getRequestAttributeCount(b)
 	if err != nil {
 		return err
@@ -310,111 +414,101 @@ func getAttributesToReflection(b []byte, f func(string, Type) (reflect.Value, bo
 			return bindError(newRequestAttributeUnmarshallingTypeError(t), id)
 		}
 
-		v, ok, err := f(id, builtinTypeByWire[t])
+		v, err := f(id, builtinTypeByWire[t])
 		if err != nil {
 			return err
 		}
 
 		switch t {
 		case requestWireTypeBooleanFalse:
-			if ok {
-				v.SetBool(false)
-			}
+			err = setBool(v, false)
 
 		case requestWireTypeBooleanTrue:
-			if ok {
-				v.SetBool(true)
-			}
+			err = setBool(v, true)
 
 		case requestWireTypeString:
-			s, n, err := getRequestStringValue(b)
+			var s string
+			s, n, err = getRequestStringValue(b)
 			if err != nil {
 				return bindError(err, id)
 			}
 			b = b[n:]
 
-			if ok {
-				v.SetString(s)
-			}
+			err = setString(v, s)
 
 		case requestWireTypeInteger:
-			i, n, err := getRequestIntegerValue(b)
+			var i int64
+			i, n, err = getRequestIntegerValue(b)
 			if err != nil {
 				return bindError(err, id)
 			}
 			b = b[n:]
 
-			if ok {
-				if err := setInt(v, i); err != nil {
-					return bindError(err, id)
-				}
-			}
+			err = setInt(v, i)
 
 		case requestWireTypeFloat:
-			f, n, err := getRequestFloatValue(b)
+			var f float64
+			f, n, err = getRequestFloatValue(b)
 			if err != nil {
 				return bindError(err, id)
 			}
 			b = b[n:]
 
-			if ok {
-				v.SetFloat(f)
-			}
+			err = setFloat(v, f)
 
 		case requestWireTypeIPv4Address:
-			a, n, err := getRequestIPv4AddressValue(b)
+			var a net.IP
+			a, n, err = getRequestIPv4AddressValue(b)
 			if err != nil {
 				return bindError(err, id)
 			}
 			b = b[n:]
 
-			if ok {
-				v.Set(reflect.ValueOf(a))
-			}
+			err = setAddress(v, a)
 
 		case requestWireTypeIPv6Address:
-			a, n, err := getRequestIPv6AddressValue(b)
+			var a net.IP
+			a, n, err = getRequestIPv6AddressValue(b)
 			if err != nil {
 				return bindError(err, id)
 			}
 			b = b[n:]
 
-			if ok {
-				v.Set(reflect.ValueOf(a))
-			}
+			err = setAddress(v, a)
 
 		case requestWireTypeIPv4Network:
-			ip, n, err := getRequestIPv4NetworkValue(b)
+			var ip *net.IPNet
+			ip, n, err = getRequestIPv4NetworkValue(b)
 			if err != nil {
 				return bindError(err, id)
 			}
 			b = b[n:]
 
-			if ok {
-				v.Set(reflect.ValueOf(ip))
-			}
+			err = setNetwork(v, ip)
 
 		case requestWireTypeIPv6Network:
-			ip, n, err := getRequestIPv6NetworkValue(b)
+			var ip *net.IPNet
+			ip, n, err = getRequestIPv6NetworkValue(b)
 			if err != nil {
 				return bindError(err, id)
 			}
 			b = b[n:]
 
-			if ok {
-				v.Set(reflect.ValueOf(ip))
-			}
+			err = setNetwork(v, ip)
 
 		case requestWireTypeDomain:
-			d, n, err := getRequestDomainValue(b)
+			var d domain.Name
+			d, n, err = getRequestDomainValue(b)
 			if err != nil {
 				return bindError(err, id)
 			}
 			b = b[n:]
 
-			if ok {
-				v.Set(reflect.ValueOf(d))
-			}
+			err = setDomain(v, d)
+		}
+
+		if err != nil {
+			return bindError(err, id)
 		}
 	}
 
