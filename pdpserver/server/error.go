@@ -1,6 +1,6 @@
 package server
 
-//go:generate bash -c "(egen -i $GOPATH/src/github.com/infobloxopen/themis/pdpserver/errors.yaml > $GOPATH/src/github.com/infobloxopen/themis/pdpserver/errors.go) && gofmt -l -s -w $GOPATH/src/github.com/infobloxopen/themis/pdpserver/errors.go"
+//go:generate bash -c "(egen -i $GOPATH/src/github.com/infobloxopen/themis/pdpserver/server/errors.yaml > $GOPATH/src/github.com/infobloxopen/themis/pdpserver/server/errors.go) && gofmt -l -s -w $GOPATH/src/github.com/infobloxopen/themis/pdpserver/server/errors.go"
 
 import (
 	"fmt"

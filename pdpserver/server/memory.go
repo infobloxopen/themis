@@ -225,7 +225,7 @@ func (s *Server) memStatsLogging(done <-chan struct{}) {
 		maxE := e
 		sameE := true
 
-		var prevNumGC uint32 = 0
+		var prevNumGC uint32
 
 		ticker := time.NewTicker(memStatsCheckInterval)
 		for {
