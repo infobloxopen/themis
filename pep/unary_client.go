@@ -105,8 +105,14 @@ func (c *unaryClient) Validate(in, out interface{}) error {
 		return ErrorNotConnected
 	}
 
-	b := c.pool.Get()
-	defer c.pool.Put(b)
+	var b []byte
+	switch in.(type) {
+	default:
+		b = c.pool.Get()
+		defer c.pool.Put(b)
+
+	case []byte, pb.Msg, *pb.Msg:
+	}
 
 	req, err := makeRequest(in, b)
 	if err != nil {
