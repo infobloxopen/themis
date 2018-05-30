@@ -17,6 +17,8 @@ type unaryClient struct {
 	conn   *grpc.ClientConn
 	client *pb.PDPClient
 
+	pool bytePool
+
 	opts options
 }
 
@@ -24,6 +26,7 @@ func newUnaryClient(opts options) *unaryClient {
 	return &unaryClient{
 		lock: &sync.RWMutex{},
 		opts: opts,
+		pool: makeBytePool(int(opts.maxRequestSize), opts.noPool),
 	}
 }
 
@@ -102,7 +105,10 @@ func (c *unaryClient) Validate(in, out interface{}) error {
 		return ErrorNotConnected
 	}
 
-	req, err := makeRequest(in)
+	b := c.pool.Get()
+	defer c.pool.Put(b)
+
+	req, err := makeRequest(in, b)
 	if err != nil {
 		return err
 	}

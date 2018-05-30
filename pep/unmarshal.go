@@ -3,10 +3,7 @@ package pep
 import (
 	"errors"
 	"fmt"
-	"math"
-	"net"
 	"reflect"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -33,18 +30,40 @@ type resFieldsInfo struct {
 var (
 	resTypeCache     = map[string]resFieldsInfo{}
 	resTypeCacheLock = sync.RWMutex{}
+
+	specialNameByID = map[string]string{
+		pdp.ResponseEffectFieldName: effectFieldName,
+		pdp.ResponseStatusFieldName: reasonFieldName,
+	}
 )
 
-func fillResponse(res *pb.Response, v interface{}) error {
-	if out, ok := v.(*pb.Response); ok {
-		*out = *res
+func fillResponse(res *pb.Msg, v interface{}) error {
+	switch v := v.(type) {
+	case *pb.Msg:
+		*v = *res
+		return nil
+
+	case *pdp.Response:
+		effect, n, err := pdp.UnmarshalResponse(res.Body, v.Obligations)
+		if err != nil {
+			if _, ok := err.(*pdp.ResponseServerError); !ok {
+				return err
+			}
+		}
+
+		v.Effect = effect
+		v.Status = err
+		if v.Obligations != nil {
+			v.Obligations = v.Obligations[:n]
+		}
+
 		return nil
 	}
 
-	return unmarshalToValue(res, reflect.ValueOf(v))
+	return unmarshalToValue(res.Body, reflect.ValueOf(v))
 }
 
-func unmarshalToValue(res *pb.Response, v reflect.Value) error {
+func unmarshalToValue(res []byte, v reflect.Value) error {
 	if v.Kind() != reflect.Ptr {
 		return ErrorInvalidDestination
 	}
@@ -77,25 +96,17 @@ func parseTag(tag string, f reflect.StructField, t reflect.Type) (string, error)
 				effectFieldName, reasonFieldName, t.Name(), f.Name)
 		}
 
-		taggedType, ok := typeByTag[strings.ToLower(taggedTypeName)]
+		taggedTypes, ok := typeByTag[strings.ToLower(taggedTypeName)]
 		if !ok {
 			return "", fmt.Errorf("unknown type \"%s\" (%s.%s)", taggedTypeName, t.Name(), f.Name)
 		}
 
-		if taggedType != f.Type {
+		if _, ok := taggedTypes[f.Type]; !ok {
 			return "", fmt.Errorf("tagged type \"%s\" doesn't match field type \"%s\" (%s.%s)",
 				taggedTypeName, f.Type.Name(), t.Name(), f.Name)
 		}
 
 		return tag, nil
-	}
-
-	if tag == effectFieldName {
-		return effectFieldName, nil
-	}
-
-	if tag == reasonFieldName {
-		return reasonFieldName, nil
 	}
 
 	return tag, nil
@@ -145,301 +156,103 @@ func makeFieldMap(t reflect.Type) (map[string]string, error) {
 	return m, err
 }
 
-type fieldUnmarshaller func(attr *pb.Attribute, v reflect.Value) error
+func unmarshalToTaggedStruct(res []byte, v reflect.Value, fields map[string]string) error {
+	return pdp.UnmarshalResponseToReflection(res, func(id string, t pdp.Type) (reflect.Value, error) {
+		if t == nil {
+			name, ok := specialNameByID[id]
+			if !ok {
+				return reflect.ValueOf(nil), fmt.Errorf("unknown id %q", id)
+			}
 
-var unmarshallersByType = map[string]fieldUnmarshaller{
-	pdp.TypeBoolean.GetKey(): boolUnmarshaller,
-	pdp.TypeString.GetKey():  stringUnmarshaller,
-	pdp.TypeInteger.GetKey(): intUnmarshaller,
-	pdp.TypeFloat.GetKey():   floatUnmarshaller,
-	pdp.TypeAddress.GetKey(): addressUnmarshaller,
-	pdp.TypeNetwork.GetKey(): networkUnmarshaller,
-	pdp.TypeDomain.GetKey():  domainUnmarshaller}
+			name, ok = fields[name]
+			if !ok {
+				return reflect.ValueOf(nil), nil
+			}
 
-func unmarshalToTaggedStruct(res *pb.Response, v reflect.Value, fields map[string]string) error {
-	name, ok := fields[effectFieldName]
-	if ok {
-		setToUntaggedEffect(res, v, name)
-	}
+			return v.FieldByName(name), nil
+		}
 
-	name, ok = fields[reasonFieldName]
-	if ok {
-		setToUntaggedReason(res, v, name)
-	}
-
-	for _, attr := range res.Obligation {
-		name, ok := fields[attr.Id]
+		name, ok := fields[id]
 		if !ok {
-			continue
+			return reflect.ValueOf(nil), nil
 		}
 
 		f := v.FieldByName(name)
 		if !f.CanSet() {
-			return fmt.Errorf("field %s.%s is tagged but can't be set", v.Type().Name(), name)
+			return reflect.ValueOf(nil), fmt.Errorf("field %s.%s is tagged but can't be set", v.Type().Name(), name)
 		}
 
-		unmarshaller, ok := unmarshallersByType[attr.Type]
+		types, ok := typeByAttrType[t]
 		if !ok {
-			return fmt.Errorf("can't unmarshal \"%s\" of \"%s\" type", attr.Id, attr.Type)
+			return reflect.ValueOf(nil), fmt.Errorf("can't unmarshal \"%s\" of \"%s\" type", id, t)
 		}
 
-		if t, ok := typeByTag[attr.Type]; ok {
-			if t != f.Type() {
-				return fmt.Errorf("can't unmarshal \"%s\" of \"%s\" type to field %s.%s",
-					attr.Id, attr.Type, v.Type().Name(), name)
+		if _, ok := types[f.Type()]; !ok {
+			return reflect.ValueOf(nil), fmt.Errorf("can't unmarshal \"%s\" of \"%s\" type to field %s.%s",
+				id, t, v.Type().Name(), name)
+		}
+
+		return f, nil
+	})
+}
+
+func unmarshalToUntaggedStruct(res []byte, v reflect.Value) error {
+	return pdp.UnmarshalResponseToReflection(res, func(id string, t pdp.Type) (reflect.Value, error) {
+		if t == nil {
+			name, ok := specialNameByID[id]
+			if !ok {
+				return reflect.ValueOf(nil), fmt.Errorf("unknown id %q", id)
 			}
-		} else {
-			return fmt.Errorf("can't unmarshal \"%s\" of \"%s\" type", attr.Id, attr.Type)
+
+			f := v.FieldByName(name)
+			if !f.CanSet() {
+				return reflect.ValueOf(nil), nil
+			}
+
+			k := f.Kind()
+			switch id {
+			case pdp.ResponseEffectFieldName:
+				if k != reflect.Bool &&
+					k != reflect.Int &&
+					k != reflect.Int8 &&
+					k != reflect.Int16 &&
+					k != reflect.Int32 &&
+					k != reflect.Int64 &&
+					k != reflect.Uint &&
+					k != reflect.Uint8 &&
+					k != reflect.Uint16 &&
+					k != reflect.Uint32 &&
+					k != reflect.Uint64 &&
+					k != reflect.String {
+					return reflect.ValueOf(nil), nil
+				}
+
+			case pdp.ResponseStatusFieldName:
+				if k != reflect.String {
+					t := f.Type()
+					if t.PkgPath() != "" || t.Name() != "error" {
+						return reflect.ValueOf(nil), nil
+					}
+				}
+			}
+
+			return f, nil
 		}
 
-		err := unmarshaller(attr, f)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func setToUntaggedEffect(res *pb.Response, v reflect.Value, name string) bool {
-	f := v.FieldByName(name)
-	if !f.CanSet() {
-		return false
-	}
-
-	k := f.Kind()
-	if k == reflect.Bool {
-		f.SetBool(res.Effect == pb.Response_PERMIT)
-		return true
-	}
-
-	if k == reflect.Int || k == reflect.Int8 || k == reflect.Int16 || k == reflect.Int32 || k == reflect.Int64 {
-		f.SetInt(int64(res.Effect))
-		return true
-	}
-
-	if k == reflect.Uint || k == reflect.Uint8 || k == reflect.Uint16 || k == reflect.Uint32 || k == reflect.Uint64 {
-		f.SetUint(uint64(res.Effect))
-		return true
-	}
-
-	if k == reflect.String {
-		f.SetString(pb.Response_Effect_name[int32(res.Effect)])
-		return true
-	}
-
-	return false
-}
-
-func setToUntaggedReason(res *pb.Response, v reflect.Value, name string) bool {
-	f := v.FieldByName(name)
-	if !f.CanSet() {
-		return false
-	}
-
-	if f.Kind() == reflect.String {
-		f.SetString(res.Reason)
-		return true
-	}
-
-	return false
-}
-
-func unmarshalToUntaggedStruct(res *pb.Response, v reflect.Value) error {
-	skipEffect := setToUntaggedEffect(res, v, effectFieldName)
-	skipReason := setToUntaggedReason(res, v, reasonFieldName)
-
-	for _, attr := range res.Obligation {
-		if attr.Id == effectFieldName && skipEffect {
-			continue
-		}
-
-		if attr.Id == reasonFieldName && skipReason {
-			continue
-		}
-
-		f := v.FieldByName(attr.Id)
+		f := v.FieldByName(id)
 		if !f.CanSet() {
-			continue
+			return reflect.ValueOf(nil), nil
 		}
 
-		unmarshaller, ok := unmarshallersByType[attr.Type]
+		types, ok := typeByAttrType[t]
 		if !ok {
-			return fmt.Errorf("can't unmarshal \"%s\" of \"%s\" type", attr.Id, attr.Type)
+			return reflect.ValueOf(nil), nil
 		}
 
-		if t, ok := typeByTag[attr.Type]; !ok || t != f.Type() {
-			continue
+		if _, ok := types[f.Type()]; !ok {
+			return reflect.ValueOf(nil), nil
 		}
 
-		err := unmarshaller(attr, f)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func boolUnmarshaller(attr *pb.Attribute, v reflect.Value) error {
-	b, err := strconv.ParseBool(attr.Value)
-	if err != nil {
-		return fmt.Errorf("can't treat \"%s\" value (%s) as boolean: %s", attr.Id, attr.Value, err)
-	}
-
-	v.SetBool(b)
-	return nil
-}
-
-func stringUnmarshaller(attr *pb.Attribute, v reflect.Value) error {
-	v.SetString(attr.Value)
-	return nil
-}
-
-func intUnmarshaller(attr *pb.Attribute, v reflect.Value) error {
-	i, err := strconv.ParseInt(attr.Value, 0, 64)
-	if err != nil {
-		return fmt.Errorf("can't treat \"%s\" value (%s) as integer: %s", attr.Id, attr.Value, err)
-	}
-
-	switch v.Kind() {
-	case reflect.Int:
-		if i < math.MinInt32 || i > math.MaxInt32 {
-			return fmt.Errorf("\"%s\" %d overflows int value", attr.Id, i)
-		}
-
-		v.SetInt(i)
-		return nil
-
-	case reflect.Int8:
-		if i < math.MinInt8 || i > math.MaxInt8 {
-			return fmt.Errorf("\"%s\" %d overflows int8 value", attr.Id, i)
-		}
-
-		v.SetInt(i)
-		return nil
-
-	case reflect.Int16:
-		if i < math.MinInt16 || i > math.MaxInt16 {
-			return fmt.Errorf("\"%s\" %d overflows int16 value", attr.Id, i)
-		}
-
-		v.SetInt(i)
-		return nil
-
-	case reflect.Int32:
-		if i < math.MinInt32 || i > math.MaxInt32 {
-			return fmt.Errorf("\"%s\" %d overflows int32 value", attr.Id, i)
-		}
-
-		v.SetInt(i)
-		return nil
-
-	case reflect.Int64:
-		v.SetInt(i)
-		return nil
-
-	case reflect.Uint:
-		if i < 0 || i > math.MaxUint32 {
-			return fmt.Errorf("\"%s\" %d overflows uint value", attr.Id, i)
-		}
-
-		v.SetUint(uint64(i))
-		return nil
-
-	case reflect.Uint8:
-		if i < 0 || i > math.MaxUint8 {
-			return fmt.Errorf("\"%s\" %d overflows uint8 value", attr.Id, i)
-		}
-
-		v.SetUint(uint64(i))
-		return nil
-
-	case reflect.Uint16:
-		if i < 0 || i > math.MaxUint16 {
-			return fmt.Errorf("\"%s\" %d overflows uint16 value", attr.Id, i)
-		}
-
-		v.SetUint(uint64(i))
-		return nil
-
-	case reflect.Uint32:
-		if i < 0 || i > math.MaxUint32 {
-			return fmt.Errorf("\"%s\" %d overflows uint32 value", attr.Id, i)
-		}
-
-		v.SetUint(uint64(i))
-		return nil
-
-	case reflect.Uint64:
-		if i < 0 {
-			return fmt.Errorf("\"%s\" %d overflows uint64 value", attr.Id, i)
-		}
-
-		v.SetUint(uint64(i))
-		return nil
-
-	}
-
-	return fmt.Errorf("can't set value %q of \"%s\" attribute to %s", attr.Value, attr.Id, v.Type().Name())
-}
-
-func floatUnmarshaller(attr *pb.Attribute, v reflect.Value) error {
-	f, err := strconv.ParseFloat(attr.Value, 64)
-	if err != nil {
-		return fmt.Errorf("can't treat \"%s\" value (%s) as integer: %s", attr.Id, attr.Value, err)
-	}
-
-	switch v.Kind() {
-	case reflect.Float32:
-		absF := math.Abs(f)
-		if absF > math.MaxFloat32 {
-			return fmt.Errorf("\"%s\" %g overflows float32 value", attr.Id, f)
-		}
-		if absF < math.SmallestNonzeroFloat32 {
-			return fmt.Errorf("\"%s\" %g underflows float32 value", attr.Id, f)
-		}
-		v.SetFloat(f)
-		return nil
-
-	case reflect.Float64:
-		v.SetFloat(f)
-		return nil
-	}
-
-	return fmt.Errorf("can't set value %q of \"%s\" attribute to %s", attr.Value, attr.Id, v.Type().Name())
-}
-
-func addressUnmarshaller(attr *pb.Attribute, v reflect.Value) error {
-	s := attr.Value
-	if strings.Contains(s, ":") {
-		if strings.Contains(s, "]") {
-			s = strings.Split(s, "]")[0][1:]
-		} else if strings.Contains(s, ".") {
-			s = strings.Split(s, ":")[0]
-		}
-	}
-
-	ip := net.ParseIP(s)
-	if ip == nil {
-		return fmt.Errorf("can't treat \"%s\" value (%s) as address", attr.Id, attr.Value)
-	}
-
-	v.Set(reflect.ValueOf(ip))
-	return nil
-}
-
-func networkUnmarshaller(attr *pb.Attribute, v reflect.Value) error {
-	_, n, err := net.ParseCIDR(attr.Value)
-	if err != nil {
-		return fmt.Errorf("can't treat \"%s\" value (%s) as network: %s", attr.Id, attr.Value, err)
-	}
-
-	v.Set(reflect.ValueOf(*n))
-	return nil
-}
-
-func domainUnmarshaller(attr *pb.Attribute, v reflect.Value) error {
-	v.SetString(attr.Value)
-	return nil
+		return f, nil
+	})
 }

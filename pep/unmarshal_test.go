@@ -20,32 +20,47 @@ type TestResponseStruct struct {
 	Bool    bool
 	String  string
 	Address net.IP
-	Network net.IPNet
+	Network *net.IPNet
 }
 
 type TestTaggedResponseStruct struct {
 	Result  string `pdp:"Effect"`
 	Error   string `pdp:"Reason"`
 	Bool1   bool
-	Bool2   bool      `pdp:""`
-	Bool3   bool      `pdp:"flag"`
-	Int     int       `pdp:"i,integer"`
-	Float   float64   `pdp:"f,float"`
-	Domain  string    `pdp:"d,domain"`
-	Address net.IP    `pdp:""`
-	Network net.IPNet `pdp:"net,network"`
+	Bool2   bool       `pdp:""`
+	Bool3   bool       `pdp:"flag"`
+	Int     int        `pdp:"i,integer"`
+	Float   float64    `pdp:"f,float"`
+	Domain  string     `pdp:"d,domain"`
+	Address net.IP     `pdp:""`
+	Network *net.IPNet `pdp:"net,network"`
 }
 
 type TestTaggedAllTypesResponseStruct struct {
-	Effect  string    `pdp:"Effect"`
-	Reason  string    `pdp:"Reason"`
-	Bool    bool      `pdp:"ba"`
-	String  string    `pdp:"sa"`
-	Int     int       `pdp:"ia"`
-	Float   float64   `pdp:"fa"`
-	Address net.IP    `pdp:"aa"`
-	Network net.IPNet `pdp:"na"`
-	Domain  string    `pdp:"da,domain"`
+	Effect     string      `pdp:"Effect"`
+	Reason     string      `pdp:"Reason"`
+	BoolFalse  bool        `pdp:"baf"`
+	BoolTrue   bool        `pdp:"bat"`
+	String     string      `pdp:"sa"`
+	Int        int         `pdp:"ia"`
+	Int8       int8        `pdp:"i8a"`
+	Int16      int16       `pdp:"i16a"`
+	Int32      int32       `pdp:"i32a"`
+	Int64      int64       `pdp:"i64a"`
+	Uint       uint        `pdp:"uia"`
+	Uint8      uint8       `pdp:"ui8a"`
+	Uint16     uint16      `pdp:"ui16a"`
+	Uint32     uint32      `pdp:"ui32a"`
+	Uint64     uint64      `pdp:"ui64a"`
+	Float32    float32     `pdp:"f32a"`
+	Float64    float64     `pdp:"f64a"`
+	Address4   net.IP      `pdp:"aa4"`
+	Address6   net.IP      `pdp:"aa6"`
+	Network4   net.IPNet   `pdp:"na4"`
+	Network6   net.IPNet   `pdp:"na6"`
+	NetworkPtr *net.IPNet  `pdp:"pna"`
+	DomainS    string      `pdp:"das,domain"`
+	DomainD    domain.Name `pdp:"dad,domain"`
 }
 
 type TestInvalidResponseStruct1 struct {
@@ -69,166 +84,135 @@ type TestInvalidResponseStruct5 struct {
 }
 
 var (
-	TestObligations = []*pb.Attribute{
-		{"Bool", "boolean", "true"},
-		{"String", "string", "test"},
-		{"Int", "integer", "1234"},
-		{"Float", "float", "567890.1234"},
-		{"Address", "address", "1.2.3.4"},
-		{"Network", "network", "1.2.3.4/32"}}
+	TestResponse = []byte{
+		1, 0, 1,
+		0, 0,
+		6, 0,
+		4, 'B', 'o', 'o', 'l', 1,
+		6, 'S', 't', 'r', 'i', 'n', 'g', 2, 4, 0, 't', 'e', 's', 't',
+		3, 'I', 'n', 't', 3, 210, 4, 0, 0, 0, 0, 0, 0,
+		5, 'F', 'l', 'o', 'a', 't', 4, 233, 72, 46, 63, 164, 84, 33, 65,
+		7, 'A', 'd', 'd', 'r', 'e', 's', 's', 5, 1, 2, 3, 4,
+		7, 'N', 'e', 't', 'w', 'o', 'r', 'k', 7, 32, 1, 2, 3, 4,
+	}
 
-	TestTaggedObligations = []*pb.Attribute{
-		{"Bool2", "boolean", "false"},
-		{"flag", "boolean", "true"},
-		{"d", "domain", "example.com"},
-		{"Address", "address", "1.2.3.4"},
-		{"net", "network", "1.2.3.4/32"}}
+	TestTaggedResponse = []byte{
+		1, 0, 3,
+		11, 0, 'T', 'e', 's', 't', ' ', 'E', 'r', 'r', 'o', 'r', '!',
+		5, 0,
+		5, 'B', 'o', 'o', 'l', '2', 0,
+		4, 'f', 'l', 'a', 'g', 1,
+		1, 'd', 9, 11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+		7, 'A', 'd', 'd', 'r', 'e', 's', 's', 5, 1, 2, 3, 4,
+		3, 'n', 'e', 't', 7, 32, 1, 2, 3, 4,
+	}
 
-	TestInvalidObligations1 = []*pb.Attribute{
-		{"Bool", "boolean", "unknown"},
-		{"String", "string", "test"},
-		{"Address", "address", "1.2.3.4"},
-		{"Network", "network", "1.2.3.4/32"}}
-
-	TestInvalidObligations2 = []*pb.Attribute{
-		{"Bool", "boolean", "false"},
-		{"String", "string", "test"},
-		{"Address", "address", "1.2:3.4"},
-		{"Network", "network", "1.2.3.4/32"}}
-
-	TestInvalidObligations3 = []*pb.Attribute{
-		{"Bool", "boolean", "false"},
-		{"String", "string", "test"},
-		{"Address", "address", "1.2.3.4"},
-		{"Network", "network", "1.2.3.4/77"}}
-
-	TestInvalidObligations4 = []*pb.Attribute{
-		{"Bool", "boolean", "false"},
-		{"String", "long", "test"},
-		{"Address", "address", "1.2.3.4"},
-		{"Network", "network", "1.2.3.4/77"}}
-
-	TestInvalidObligations5 = []*pb.Attribute{
-		{"Bool2", "boolean", "false"},
-		{"flag", "long", "true"},
-		{"d", "domain", "example.com"},
-		{"Address", "address", "1.2.3.4"},
-		{"net", "network", "1.2.3.4/32"}}
-
-	TestInvalidObligations6 = []*pb.Attribute{
-		{"Bool2", "boolean", "false"},
-		{"flag", "network", "true"},
-		{"d", "domain", "example.com"},
-		{"Address", "address", "1.2.3.4"},
-		{"net", "network", "1.2.3.4/32"}}
+	TestTaggedAllTypesResponse = []byte{
+		1, 0, 3,
+		11, 0, 'T', 'e', 's', 't', ' ', 'E', 'r', 'r', 'o', 'r', '!',
+		22, 0,
+		3, 'b', 'a', 'f', 0,
+		3, 'b', 'a', 't', 1,
+		2, 's', 'a', 2, 4, 0, 't', 'e', 's', 't',
+		2, 'i', 'a', 3, 210, 4, 0, 0, 0, 0, 0, 0,
+		3, 'i', '8', 'a', 3, 64, 0, 0, 0, 0, 0, 0, 0,
+		4, 'i', '1', '6', 'a', 3, 210, 4, 0, 0, 0, 0, 0, 0,
+		4, 'i', '3', '2', 'a', 3, 210, 4, 0, 0, 0, 0, 0, 0,
+		4, 'i', '6', '4', 'a', 3, 210, 4, 0, 0, 0, 0, 0, 0,
+		3, 'u', 'i', 'a', 3, 210, 4, 0, 0, 0, 0, 0, 0,
+		4, 'u', 'i', '8', 'a', 3, 64, 0, 0, 0, 0, 0, 0, 0,
+		5, 'u', 'i', '1', '6', 'a', 3, 210, 4, 0, 0, 0, 0, 0, 0,
+		5, 'u', 'i', '3', '2', 'a', 3, 210, 4, 0, 0, 0, 0, 0, 0,
+		5, 'u', 'i', '6', '4', 'a', 3, 210, 4, 0, 0, 0, 0, 0, 0,
+		4, 'f', '3', '2', 'a', 4, 190, 193, 23, 38, 3, 133, 186, 64,
+		4, 'f', '6', '4', 'a', 4, 190, 193, 23, 38, 3, 133, 186, 64,
+		3, 'a', 'a', '4', 5, 192, 0, 2, 1,
+		3, 'a', 'a', '6', 6, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+		3, 'n', 'a', '4', 7, 24, 192, 0, 2, 0,
+		3, 'n', 'a', '6', 8, 32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		3, 'p', 'n', 'a', 8, 32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		3, 'd', 'a', 's', 9, 11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+		3, 'd', 'a', 'd', 9, 11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+	}
 )
 
 func TestUnmarshalUntaggedStruct(t *testing.T) {
-	r := newResponse(pb.Response_PERMIT, "", TestObligations)
 	v := TestResponseStruct{}
 
-	err := unmarshalToValue(r, reflect.ValueOf(&v))
+	err := unmarshalToValue(TestResponse, reflect.ValueOf(&v))
 	if err != nil {
-		t.Errorf("Expected no error but got: %s", err)
+		t.Error(err)
 	} else {
-		_, n, _ := net.ParseCIDR("1.2.3.4/32")
-		CompareTestResponseStruct(v, TestResponseStruct{true, 1234, 567890.1234, true, "test", net.ParseIP("1.2.3.4"), *n}, t)
+		assertTestResponseStruct(t, v,
+			TestResponseStruct{
+				Effect:  true,
+				Int:     1234,
+				Float:   567890.1234,
+				Bool:    true,
+				String:  "test",
+				Address: net.ParseIP("1.2.3.4"),
+				Network: makeTestNetwork("1.2.3.4/32"),
+			},
+		)
 	}
 }
 
 func TestUnmarshalTaggedStruct(t *testing.T) {
-	r := newResponse(pb.Response_INDETERMINATED, "Test Error!", TestTaggedObligations)
 	v := TestTaggedResponseStruct{}
 
-	err := unmarshalToValue(r, reflect.ValueOf(&v))
+	err := unmarshalToValue(TestTaggedResponse, reflect.ValueOf(&v))
 	if err != nil {
-		t.Errorf("Expected no error but got: %s", err)
+		t.Error(err)
 	} else {
-		_, n, _ := net.ParseCIDR("1.2.3.4/32")
-		e := TestTaggedResponseStruct{
-			pb.Response_Effect_name[int32(pb.Response_INDETERMINATED)],
-			"Test Error!",
-			false, false, true, 0, 0.,
-			"example.com",
-			net.ParseIP("1.2.3.4"), *n}
-		CompareTestTaggedStruct(v, e, t)
+		assertTestTaggedStruct(t, v,
+			TestTaggedResponseStruct{
+				Result:  pdp.EffectNameFromEnum(pdp.EffectIndeterminate),
+				Error:   "Test Error!",
+				Bool1:   false,
+				Bool2:   false,
+				Bool3:   true,
+				Int:     0,
+				Float:   0.,
+				Domain:  "example.com",
+				Address: net.ParseIP("1.2.3.4"),
+				Network: makeTestNetwork("1.2.3.4/32"),
+			},
+		)
 	}
 
-	ba := pdp.MakeAttribute("ba", pdp.TypeBoolean)
-	bv := pdp.MakeBooleanValue(true)
-
-	sa := pdp.MakeAttribute("sa", pdp.TypeString)
-	sv := pdp.MakeStringValue("test")
-
-	ia := pdp.MakeAttribute("ia", pdp.TypeInteger)
-	iv := pdp.MakeIntegerValue(1234)
-
-	fa := pdp.MakeAttribute("fa", pdp.TypeFloat)
-	fv := pdp.MakeFloatValue(6789.0123)
-
-	aa := pdp.MakeAttribute("aa", pdp.TypeAddress)
-	a := net.ParseIP("192.0.2.1")
-	if a == nil {
-		t.Fatal("Can't create IP address")
-	}
-	av := pdp.MakeAddressValue(a)
-
-	na := pdp.MakeAttribute("na", pdp.TypeNetwork)
-	_, n, err := net.ParseCIDR("192.0.2.0/24")
-	if err != nil {
-		t.Fatalf("Can't create network: %s", err)
-	}
-	nv := pdp.MakeNetworkValue(n)
-
-	da := pdp.MakeAttribute("da", pdp.TypeDomain)
-
-	dn, err := domain.MakeNameFromString("example.com")
-	if err != nil {
-		t.Fatalf("Can't create domain: %s", err)
-	}
-	dv := pdp.MakeDomainValue(dn)
-
-	assignments := []pdp.AttributeAssignmentExpression{
-		pdp.MakeAttributeAssignmentExpression(ba, bv),
-		pdp.MakeAttributeAssignmentExpression(sa, sv),
-		pdp.MakeAttributeAssignmentExpression(ia, iv),
-		pdp.MakeAttributeAssignmentExpression(fa, fv),
-		pdp.MakeAttributeAssignmentExpression(aa, av),
-		pdp.MakeAttributeAssignmentExpression(na, nv),
-		pdp.MakeAttributeAssignmentExpression(da, dv),
-	}
-
-	obligations := make([]*pb.Attribute, len(assignments))
-	for i, assignment := range assignments {
-		id, attrType, v, err := assignment.Serialize(nil)
-		if err != nil {
-			t.Fatalf("Can't serialize assignment %d: %s", i, err)
-		}
-
-		obligations[i] = &pb.Attribute{
-			Id:    id,
-			Type:  attrType,
-			Value: v,
-		}
-	}
-
-	r = newResponse(pb.Response_INDETERMINATED, "Test Error!", obligations)
 	vAllTypes := TestTaggedAllTypesResponseStruct{}
-	err = unmarshalToValue(r, reflect.ValueOf(&vAllTypes))
+	err = unmarshalToValue(TestTaggedAllTypesResponse, reflect.ValueOf(&vAllTypes))
 	if err != nil {
-		t.Errorf("Expected no error but got: %s", err)
+		t.Error(err)
 	} else {
-		eAllTypes := TestTaggedAllTypesResponseStruct{
-			Effect:  pb.Response_Effect_name[int32(pb.Response_INDETERMINATED)],
-			Reason:  "Test Error!",
-			Bool:    true,
-			String:  "test",
-			Int:     1234,
-			Float:   6789.0123,
-			Address: a,
-			Network: *n,
-			Domain:  "example.com"}
-		CompareTestTaggedAllTypesStruct(vAllTypes, eAllTypes, t)
+		assertTestTaggedAllTypesStruct(t, vAllTypes,
+			TestTaggedAllTypesResponseStruct{
+				Effect:     pdp.EffectNameFromEnum(pdp.EffectIndeterminate),
+				Reason:     "Test Error!",
+				BoolFalse:  false,
+				BoolTrue:   true,
+				String:     "test",
+				Int:        1234,
+				Int8:       64,
+				Int16:      1234,
+				Int32:      1234,
+				Int64:      1234,
+				Uint:       1234,
+				Uint8:      64,
+				Uint16:     1234,
+				Uint32:     1234,
+				Uint64:     1234,
+				Float32:    6789.012,
+				Float64:    6789.0123,
+				Address4:   net.ParseIP("192.0.2.1"),
+				Address6:   net.ParseIP("2001:db8::1"),
+				Network4:   *makeTestNetwork("192.0.2.1/24"),
+				Network6:   *makeTestNetwork("2001:db8::/32"),
+				NetworkPtr: makeTestNetwork("2001:db8::/32"),
+				DomainS:    "example.com",
+				DomainD:    makeTestDomain("example.com"),
+			},
+		)
 	}
 }
 
@@ -241,159 +225,152 @@ type TestUintResponse struct {
 }
 
 func TestUnmarshalEffectTypes(t *testing.T) {
-	r := newResponse(pb.Response_INDETERMINATEDP, "", nil)
+	r := []byte{1, 0, 5, 0, 0, 0, 0}
 
 	v1 := TestIntResponse{}
 	err := unmarshalToValue(r, reflect.ValueOf(&v1))
 	if err != nil {
-		t.Errorf("Expected no error but got: %s", err)
-	} else if v1.Effect != int8(pb.Response_INDETERMINATEDP) {
-		t.Errorf("Expected %d effect but got: %d", pb.Response_INDETERMINATEDP, v1.Effect)
+		t.Error(err)
+	} else if v1.Effect != int8(pdp.EffectIndeterminateP) {
+		t.Errorf("expected %d %q effect but got %d %q",
+			pdp.EffectIndeterminateP, pdp.EffectNameFromEnum(pdp.EffectIndeterminateP),
+			v1.Effect, pdp.EffectNameFromEnum(int(v1.Effect)),
+		)
 	}
 
 	v2 := TestUintResponse{}
 	err = unmarshalToValue(r, reflect.ValueOf(&v2))
 	if err != nil {
-		t.Errorf("Expected no error but got: %s", err)
-	} else if v2.Effect != uint8(pb.Response_INDETERMINATEDP) {
-		t.Errorf("Expected %d effect but got: %d", pb.Response_INDETERMINATEDP, v2.Effect)
+		t.Error(err)
+	} else if v2.Effect != uint8(pdp.EffectIndeterminateP) {
+		t.Errorf("expected %d %q effect but got %d %q",
+			pdp.EffectIndeterminateP, pdp.EffectNameFromEnum(pdp.EffectIndeterminateP),
+			v2.Effect, pdp.EffectNameFromEnum(int(v1.Effect)),
+		)
 	}
 }
 
-func TestUnmarshalInvalidObligations(t *testing.T) {
-	r := newResponse(pb.Response_INDETERMINATEDP, "", TestInvalidObligations1)
-	v := TestResponseStruct{}
+type TestErrorResponse struct {
+	Reason error
+}
+
+func TestUnmarshalReasonErrorType(t *testing.T) {
+	r := []byte{
+		1, 0, 3,
+		11, 0, 'T', 'e', 's', 't', ' ', 'E', 'r', 'r', 'o', 'r', '!',
+		0, 0,
+	}
+
+	v := TestErrorResponse{}
 	err := unmarshalToValue(r, reflect.ValueOf(&v))
 	if err != nil {
-		if !strings.Contains(err.Error(), "can't treat") {
-			t.Errorf("Expected \"can't treat\" error but got: %s", err)
-		}
+		t.Error(err)
 	} else {
-		t.Errorf("Expected \"can't treat\" error")
-	}
-
-	r = newResponse(pb.Response_INDETERMINATEDP, "", TestInvalidObligations2)
-	v = TestResponseStruct{}
-	err = unmarshalToValue(r, reflect.ValueOf(&v))
-	if err != nil {
-		if !strings.Contains(err.Error(), "can't treat") {
-			t.Errorf("Expected \"can't treat\" error but got: %s", err)
+		if v.Reason == nil {
+			t.Error("expected \"Test Error!\" but got nothing")
+		} else if !strings.Contains(v.Reason.Error(), "Test Error!") {
+			t.Errorf("expected \"Test Error!\" but got %q", v.Reason.Error())
 		}
-	} else {
-		t.Errorf("Expected \"can't treat\" error")
-	}
-
-	r = newResponse(pb.Response_INDETERMINATEDP, "", TestInvalidObligations3)
-	v = TestResponseStruct{}
-	err = unmarshalToValue(r, reflect.ValueOf(&v))
-	if err != nil {
-		if !strings.Contains(err.Error(), "can't treat") {
-			t.Errorf("Expected \"can't treat\" error but got: %s", err)
-		}
-	} else {
-		t.Errorf("Expected \"can't treat\" error")
-	}
-
-	r = newResponse(pb.Response_INDETERMINATEDP, "", TestInvalidObligations4)
-	v = TestResponseStruct{}
-	err = unmarshalToValue(r, reflect.ValueOf(&v))
-	if err != nil {
-		if !strings.Contains(err.Error(), "can't unmarshal") {
-			t.Errorf("Expected \"can't unmarshal\" error but got: %s", err)
-		}
-	} else {
-		t.Errorf("Expected \"can't unmarshal\" error")
-	}
-
-	r = newResponse(pb.Response_INDETERMINATEDP, "", TestInvalidObligations5)
-	v1 := TestTaggedResponseStruct{}
-	err = unmarshalToValue(r, reflect.ValueOf(&v1))
-	if err != nil {
-		if !strings.Contains(err.Error(), "can't unmarshal") {
-			t.Errorf("Expected \"can't unmarshal\" error but got: %s", err)
-		}
-	} else {
-		t.Errorf("Expected \"can't unmarshal\" error")
-	}
-
-	r = newResponse(pb.Response_INDETERMINATEDP, "", TestInvalidObligations6)
-	v1 = TestTaggedResponseStruct{}
-	err = unmarshalToValue(r, reflect.ValueOf(&v1))
-	if err != nil {
-		if !strings.Contains(err.Error(), "can't unmarshal") {
-			t.Errorf("Expected \"can't unmarshal\" error but got: %s", err)
-		}
-	} else {
-		t.Errorf("Expected \"can't unmarshal\" error")
 	}
 }
 
 func TestUnmarshalInvalidStructures(t *testing.T) {
-	r := newResponse(pb.Response_INDETERMINATEDP, "", nil)
+	r := []byte{1, 0, 5, 0, 0, 0, 0}
 	v1 := TestInvalidResponseStruct1{}
 	err := unmarshalToValue(r, reflect.ValueOf(&v1))
 	if err != nil {
 		if !strings.Contains(err.Error(), "don't support type definition") {
-			t.Errorf("Expected \"don't support type definition\" error but got: %s", err)
+			t.Errorf("expected \"don't support type definition\" error but got: %s", err)
 		}
 	} else {
-		t.Errorf("Expected \"don't support type definition\" error")
+		t.Errorf("expected \"don't support type definition\" error")
 	}
 
-	r = newResponse(pb.Response_INDETERMINATEDP, "", nil)
 	v2 := TestInvalidResponseStruct2{}
 	err = unmarshalToValue(r, reflect.ValueOf(&v2))
 	if err != nil {
 		if !strings.Contains(err.Error(), "don't support type definition") {
-			t.Errorf("Expected \"don't support type definition\" error but got: %s", err)
+			t.Errorf("expected \"don't support type definition\" error but got: %s", err)
 		}
 	} else {
-		t.Errorf("Expected \"don't support type definition\" error")
+		t.Errorf("expected \"don't support type definition\" error")
 	}
 
-	r = newResponse(pb.Response_INDETERMINATEDP, "", nil)
 	v3 := TestInvalidResponseStruct3{}
 	err = unmarshalToValue(r, reflect.ValueOf(&v3))
 	if err != nil {
 		if !strings.Contains(err.Error(), "unknown type") {
-			t.Errorf("Expected \"unknown type\" error but got: %s", err)
+			t.Errorf("expected \"unknown type\" error but got: %s", err)
 		}
 	} else {
-		t.Errorf("Expected \"unknown type\" error")
+		t.Errorf("expected \"unknown type\" error")
 	}
 
-	r = newResponse(pb.Response_INDETERMINATEDP, "", nil)
 	v4 := TestInvalidResponseStruct4{}
 	err = unmarshalToValue(r, reflect.ValueOf(&v4))
 	if err != nil {
 		if !strings.Contains(err.Error(), "tagged type") {
-			t.Errorf("Expected \"tagged type\" error but got: %s", err)
+			t.Errorf("expected \"tagged type\" error but got: %s", err)
 		}
 	} else {
-		t.Errorf("Expected \"tagged type\" error")
+		t.Errorf("expected \"tagged type\" error")
 	}
 
-	r = newResponse(pb.Response_INDETERMINATED, "Test Error!", TestTaggedObligations)
 	v5 := TestInvalidResponseStruct5{}
-	err = unmarshalToValue(r, reflect.ValueOf(&v5))
+	err = unmarshalToValue(TestTaggedResponse, reflect.ValueOf(&v5))
 	if err != nil {
 		if !strings.Contains(err.Error(), "can't be set") {
-			t.Errorf("Expected \"can't be set\" error but got: %s", err)
+			t.Errorf("expected \"can't be set\" error but got: %s", err)
 		}
 	} else {
-		t.Errorf("Expected \"can't be set\" error")
+		t.Errorf("expected \"can't be set\" error")
 	}
 }
 
-func newResponse(effect pb.Response_Effect, reason string, obligation []*pb.Attribute) *pb.Response {
-	return &pb.Response{
-		Effect:     effect,
-		Reason:     reason,
-		Obligation: obligation,
+func TestFillResponse(t *testing.T) {
+	r := &pb.Msg{
+		Body: TestResponse,
+	}
+
+	m := new(pb.Msg)
+	err := fillResponse(r, m)
+	if err != nil {
+		t.Error(err)
+	} else if string(m.Body) != string(r.Body) {
+		t.Errorf("expected same body %p as original response but got %p", r.Body, m.Body)
+	}
+
+	o := make([]pdp.AttributeAssignmentExpression, 10)
+	pr := &pdp.Response{
+		Obligations: o,
+	}
+	err = fillResponse(r, pr)
+	if err != nil {
+		t.Error(err)
+	} else if len(pr.Obligations) != 6 {
+		t.Errorf("expected %d obligations but got %d", 6, len(pr.Obligations))
+	}
+
+	v := TestResponseStruct{}
+	err = fillResponse(r, &v)
+	if err != nil {
+		t.Error(err)
+	} else {
+		assertTestResponseStruct(t, v,
+			TestResponseStruct{
+				Effect:  true,
+				Int:     1234,
+				Float:   567890.1234,
+				Bool:    true,
+				String:  "test",
+				Address: net.ParseIP("1.2.3.4"),
+				Network: makeTestNetwork("1.2.3.4/32"),
+			},
+		)
 	}
 }
 
-func CompareTestResponseStruct(v, e TestResponseStruct, t *testing.T) {
+func assertTestResponseStruct(t *testing.T, v, e TestResponseStruct) {
 	if v.Effect != e.Effect ||
 		v.Int != e.Int ||
 		v.Float != e.Float ||
@@ -401,11 +378,11 @@ func CompareTestResponseStruct(v, e TestResponseStruct, t *testing.T) {
 		v.String != e.String ||
 		v.Address.String() != e.Address.String() ||
 		v.Network.String() != e.Network.String() {
-		t.Errorf("Expected:\n%v\nbut got:\n%v\n", SprintfTestResponseStruct(e), SprintfTestResponseStruct(v))
+		t.Errorf("expected:\n%v\nbut got:\n%v\n", SprintfTestResponseStruct(e), SprintfTestResponseStruct(v))
 	}
 }
 
-func CompareTestTaggedStruct(v, e TestTaggedResponseStruct, t *testing.T) {
+func assertTestTaggedStruct(t *testing.T, v, e TestTaggedResponseStruct) {
 	if v.Result != e.Result ||
 		v.Error != e.Error ||
 		v.Bool1 != e.Bool1 ||
@@ -416,38 +393,113 @@ func CompareTestTaggedStruct(v, e TestTaggedResponseStruct, t *testing.T) {
 		v.Domain != e.Domain ||
 		v.Address.String() != e.Address.String() ||
 		v.Network.String() != e.Network.String() {
-		t.Errorf("Expected:\n%v\nbut got:\n%v\n", SprintfTestTaggedStruct(e), SprintfTestTaggedStruct(v))
+		t.Errorf("expected:\n%v\nbut got:\n%v\n", SprintfTestTaggedStruct(e), SprintfTestTaggedStruct(v))
 	}
 }
 
-func CompareTestTaggedAllTypesStruct(v, e TestTaggedAllTypesResponseStruct, t *testing.T) {
+func assertTestTaggedAllTypesStruct(t *testing.T, v, e TestTaggedAllTypesResponseStruct) {
+	vN := "<nil>"
+	if v.NetworkPtr != nil {
+		vN = v.NetworkPtr.String()
+	}
+
+	eN := "<nil>"
+	if e.NetworkPtr != nil {
+		eN = e.NetworkPtr.String()
+	}
+
 	if v.Effect != e.Effect ||
 		v.Reason != e.Reason ||
-		v.Bool != e.Bool ||
+		v.BoolFalse != v.BoolFalse ||
+		v.BoolTrue != e.BoolTrue ||
 		v.String != e.String ||
 		v.Int != e.Int ||
-		v.Address.String() != e.Address.String() ||
-		v.Network.String() != e.Network.String() ||
-		v.Domain != e.Domain {
-		t.Errorf("Expected:\n%v\nbut got:\n%v\n", SprintfTestTaggedAllTypesStruct(e), SprintfTestTaggedAllTypesStruct(v))
+		v.Int8 != e.Int8 ||
+		v.Int16 != e.Int16 ||
+		v.Int32 != e.Int32 ||
+		v.Int64 != e.Int64 ||
+		v.Uint != e.Uint ||
+		v.Uint8 != e.Uint8 ||
+		v.Uint16 != e.Uint16 ||
+		v.Uint32 != e.Uint32 ||
+		v.Uint64 != e.Uint64 ||
+		v.Float32 != e.Float32 ||
+		v.Float64 != e.Float64 ||
+		v.Address4.String() != e.Address4.String() ||
+		v.Address6.String() != e.Address6.String() ||
+		v.Network4.String() != e.Network4.String() ||
+		v.Network6.String() != e.Network6.String() ||
+		vN != eN ||
+		v.DomainS != e.DomainS ||
+		v.DomainD.String() != e.DomainD.String() {
+		t.Errorf("expected:\n%v\nbut got:\n%v\n",
+			SprintfTestTaggedAllTypesStruct(e),
+			SprintfTestTaggedAllTypesStruct(v),
+		)
 	}
 }
 
 func SprintfTestResponseStruct(v TestResponseStruct) string {
-	return fmt.Sprintf("\tEffect: %v\n\tInt: %v\n\tBool: %v\n\tString: %v\n\tAddress: %s\n\tNetwork: %s\n",
-		v.Effect, v.Int, v.Bool, v.String, v.Address.String(), v.Network.String())
+	return fmt.Sprintf(
+		"\tEffect.: %v\n"+
+			"\tInt....: %v\n"+
+			"\tFloat..: %v\n"+
+			"\tBool...: %v\n"+
+			"\tString.: %v\n"+
+			"\tAddress: %s\n"+
+			"\tNetwork: %s\n",
+		v.Effect, v.Int, v.Float, v.Bool, v.String, v.Address.String(), v.Network.String())
 }
 
 func SprintfTestTaggedStruct(v TestTaggedResponseStruct) string {
-	return fmt.Sprintf("\tResult: %v\n\tError: %v\n"+
-		"\tBool1: %v\n\tBool2: %v\n\tBool3: %v\n"+
-		"\tDomain: %v\n\tAddress: %v\n\tNetwork: %v\n",
+	return fmt.Sprintf(
+		"\tResult.: %v\n"+
+			"\tError..: %v\n"+
+			"\tBool1..: %v\n"+
+			"\tBool2..: %v\n"+
+			"\tBool3..: %v\n"+
+			"\tDomain.: %v\n"+
+			"\tAddress: %v\n"+
+			"\tNetwork: %v\n",
 		v.Result, v.Error, v.Bool1, v.Bool2, v.Bool3, v.Domain, v.Address.String(), v.Network.String())
 }
 
 func SprintfTestTaggedAllTypesStruct(v TestTaggedAllTypesResponseStruct) string {
-	return fmt.Sprintf("\tEffect: %v\n\tReason: %v\n"+
-		"\tBool: %v\n\tString: %v\n\tInteger: %v\n\tAddress:%v\n"+
-		"\tNetwork: %v\n\tDomain: %q\n",
-		v.Effect, v.Reason, v.Bool, v.String, v.Int, v.Address.String(), v.Network.String(), v.Domain)
+	n := "<nil>"
+	if v.NetworkPtr != nil {
+		n = v.NetworkPtr.String()
+	}
+
+	return fmt.Sprintf(
+		"\tEffect....: %v\n"+
+			"\tReason....: %v\n"+
+			"\tBoolFalse.: %v\n"+
+			"\tBoolTrue..: %v\n"+
+			"\tString....: %v\n"+
+			"\tInt.......: %v\n"+
+			"\tInt8......: %v\n"+
+			"\tInt16.....: %v\n"+
+			"\tInt32.....: %v\n"+
+			"\tInt64.....: %v\n"+
+			"\tUint......: %v\n"+
+			"\tUint8.....: %v\n"+
+			"\tUint16....: %v\n"+
+			"\tUint32....: %v\n"+
+			"\tUint64....: %v\n"+
+			"\tFloat32...: %v\n"+
+			"\tFloat64...: %v\n"+
+			"\tAddress4..: %v\n"+
+			"\tAddress6..: %v\n"+
+			"\tNetwork4..: %v\n"+
+			"\tNetwork6..: %v\n"+
+			"\tNetworkPtr: %v\n"+
+			"\tDomainS...: %q\n"+
+			"\tDomainD...: %q\n",
+		v.Effect, v.Reason, v.BoolFalse, v.BoolTrue, v.String,
+		v.Int, v.Int8, v.Int16, v.Int32, v.Int64,
+		v.Uint, v.Uint8, v.Uint16, v.Uint32, v.Uint64,
+		v.Float32, v.Float64,
+		v.Address4.String(), v.Address6.String(), v.Network4.String(), v.Network6.String(), n,
+		v.DomainS, v.DomainD,
+	)
 }

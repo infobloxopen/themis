@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/infobloxopen/themis/pdp"
 	"github.com/infobloxopen/themis/pdpserver/server"
 )
 
@@ -24,9 +25,9 @@ policies:
 `
 
 func TestUnaryClientValidation(t *testing.T) {
-	pdp := startTestPDPServer(allPermitPolicy, 5555, t)
+	pdpServer := startTestPDPServer(allPermitPolicy, 5555, t)
 	defer func() {
-		if logs := pdp.Stop(); len(logs) > 0 {
+		if logs := pdpServer.Stop(); len(logs) > 0 {
 			t.Logf("server logs:\n%s", logs)
 		}
 	}()
@@ -49,8 +50,8 @@ func TestUnaryClientValidation(t *testing.T) {
 		t.Errorf("expected no error but got %s", err)
 	}
 
-	if out.Effect != "PERMIT" || out.Reason != "Ok" || out.X != "AllPermitRule" {
-		t.Errorf("got unexpected response: %#v", out)
+	if out.Effect != pdp.EffectPermit || out.Reason != nil || out.X != "AllPermitRule" {
+		t.Errorf("got unexpected response: %s", out)
 	}
 }
 

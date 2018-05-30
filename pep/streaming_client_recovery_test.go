@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
@@ -57,20 +58,18 @@ func singleClientRecovery(streams int, t *testing.T) {
 	}
 	defer c.Close()
 
-	in := pb.Request{
-		Attributes: []*pb.Attribute{
-			{
-				Id:    IDID,
-				Value: "1",
-			},
-			{
-				Id:    failID,
-				Value: thisRequest,
-			},
-		},
+	in := []pdp.AttributeAssignmentExpression{
+		pdp.MakeAttributeAssignmentExpression(
+			pdp.MakeAttribute(IDID, pdp.TypeInteger),
+			pdp.MakeIntegerValue(1),
+		),
+		pdp.MakeAttributeAssignmentExpression(
+			pdp.MakeAttribute(failID, pdp.TypeString),
+			pdp.MakeStringValue(thisRequest),
+		),
 	}
 
-	var out pb.Request
+	var out pb.Msg
 	err = c.Validate(in, &out)
 	if err != nil {
 		t.Fatalf("can't send first request: %s", err)
@@ -131,20 +130,18 @@ func hotSotBalancedClientRecovery(streams int, t *testing.T) {
 	}
 	defer c.Close()
 
-	in := pb.Request{
-		Attributes: []*pb.Attribute{
-			{
-				Id:    IDID,
-				Value: "1",
-			},
-			{
-				Id:    failID,
-				Value: thisRequest,
-			},
-		},
+	in := []pdp.AttributeAssignmentExpression{
+		pdp.MakeAttributeAssignmentExpression(
+			pdp.MakeAttribute(IDID, pdp.TypeInteger),
+			pdp.MakeIntegerValue(1),
+		),
+		pdp.MakeAttributeAssignmentExpression(
+			pdp.MakeAttribute(failID, pdp.TypeString),
+			pdp.MakeStringValue(thisRequest),
+		),
 	}
 
-	var out pb.Request
+	var out pb.Msg
 	err = c.Validate(in, &out)
 	if err != nil {
 		t.Fatalf("can't send first request: %s", err)

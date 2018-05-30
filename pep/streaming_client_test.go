@@ -5,12 +5,14 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/infobloxopen/themis/pdp"
 )
 
 func TestStreamingClientValidation(t *testing.T) {
-	pdp := startTestPDPServer(allPermitPolicy, 5555, t)
+	pdpServer := startTestPDPServer(allPermitPolicy, 5555, t)
 	defer func() {
-		if logs := pdp.Stop(); len(logs) > 0 {
+		if logs := pdpServer.Stop(); len(logs) > 0 {
 			t.Logf("server logs:\n%s", logs)
 		}
 	}()
@@ -33,8 +35,8 @@ func TestStreamingClientValidation(t *testing.T) {
 		t.Errorf("expected no error but got %s", err)
 	}
 
-	if out.Effect != "PERMIT" || out.Reason != "Ok" || out.X != "AllPermitRule" {
-		t.Errorf("got unexpected response: %#v", out)
+	if out.Effect != pdp.EffectPermit || out.Reason != nil || out.X != "AllPermitRule" {
+		t.Errorf("got unexpected response: %s", out)
 	}
 }
 
@@ -76,8 +78,8 @@ func TestStreamingClientValidationWithRoundRobingBalancer(t *testing.T) {
 		t.Errorf("expected no error but got %s", err)
 	}
 
-	if out.Effect != "PERMIT" || out.Reason != "Ok" || out.X != "AllPermitRule" {
-		t.Errorf("got unexpected response: %#v", out)
+	if out.Effect != pdp.EffectPermit || out.Reason != nil || out.X != "AllPermitRule" {
+		t.Errorf("got unexpected response: %s", out)
 	}
 }
 
@@ -125,7 +127,7 @@ func TestStreamingClientValidationWithHotSpotBalancer(t *testing.T) {
 			err := c.Validate(in, &out)
 			if err != nil {
 				errs[i] = err
-			} else if out.Effect != "PERMIT" || out.Reason != "Ok" || out.X != "AllPermitRule" {
+			} else if out.Effect != pdp.EffectPermit || out.Reason != nil || out.X != "AllPermitRule" {
 				errs[i] = fmt.Errorf("got unexpected response: %#v", out)
 			}
 		}(i)

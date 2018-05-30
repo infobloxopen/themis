@@ -464,13 +464,13 @@ func (c *streamConn) putStream(s boundStream) error {
 	return nil
 }
 
-func (c *streamConn) validate(in, out interface{}) error {
+func (c *streamConn) validate(m *pb.Msg, out interface{}) error {
 	s, err := c.getStream()
 	if err != nil {
 		return err
 	}
 
-	err = s.s.validate(in, out)
+	err = s.s.validate(m, out)
 	if err != nil {
 		c.lock.RLock()
 		defer c.lock.RUnlock()
@@ -485,7 +485,7 @@ func (c *streamConn) validate(in, out interface{}) error {
 	return nil
 }
 
-func (c *streamConn) tryValidate(in, out interface{}) (bool, error) {
+func (c *streamConn) tryValidate(m *pb.Msg, out interface{}) (bool, error) {
 	s, ok, err := c.tryGetStream()
 	if err != nil {
 		return false, err
@@ -495,7 +495,7 @@ func (c *streamConn) tryValidate(in, out interface{}) (bool, error) {
 		return false, nil
 	}
 
-	err = s.s.validate(in, out)
+	err = s.s.validate(m, out)
 	if err != nil {
 		c.lock.RLock()
 		defer c.lock.RUnlock()

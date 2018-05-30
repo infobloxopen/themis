@@ -4,13 +4,14 @@ import (
 	"errors"
 	"io"
 	"net"
-	"strconv"
+	"reflect"
 	"strings"
 	"sync/atomic"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
+	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
@@ -55,7 +56,7 @@ func (s *failServer) Stop() {
 	s.s.Stop()
 }
 
-func (s *failServer) Validate(ctx context.Context, in *pb.Request) (*pb.Response, error) {
+func (s *failServer) Validate(ctx context.Context, in *pb.Msg) (*pb.Msg, error) {
 	reqID := atomic.AddUint64(&s.ID, 1)
 
 	targetID, fail := parseFailRequest(in)
@@ -63,10 +64,11 @@ func (s *failServer) Validate(ctx context.Context, in *pb.Request) (*pb.Response
 		return nil, errRequested
 	}
 
-	return &pb.Response{
-		Effect:     pb.Response_PERMIT,
-		Reason:     "Ok",
-		Obligation: in.Attributes,
+	return &pb.Msg{
+		Body: append(
+			[]byte{1, 0, 1, 0, 0},
+			in.Body[2:]...,
+		),
 	}, nil
 }
 
@@ -87,10 +89,11 @@ func (s *failServer) NewValidationStream(stream pb.PDP_NewValidationStreamServer
 			return errRequested
 		}
 
-		err = stream.Send(&pb.Response{
-			Effect:     pb.Response_PERMIT,
-			Reason:     "Ok",
-			Obligation: in.Attributes,
+		err = stream.Send(&pb.Msg{
+			Body: append(
+				[]byte{1, 0, 1, 0, 0},
+				in.Body[2:]...,
+			),
 		})
 		if err != nil {
 			return err
@@ -100,20 +103,29 @@ func (s *failServer) NewValidationStream(stream pb.PDP_NewValidationStreamServer
 	return nil
 }
 
-func parseFailRequest(in *pb.Request) (uint64, string) {
-	var targetID uint64
-	fail := ""
-	for _, attr := range in.Attributes {
-		switch strings.ToLower(attr.Id) {
+func parseFailRequest(in *pb.Msg) (uint64, string) {
+	var (
+		targetID uint64
+		fail     string
+	)
+
+	err := pdp.UnmarshalRequestReflection(in.Body, func(id string, t pdp.Type) (reflect.Value, error) {
+		switch strings.ToLower(id) {
 		case IDID:
-			ID, err := strconv.ParseUint(attr.Value, 10, 64)
-			if err == nil {
-				targetID = ID
+			if t == pdp.TypeInteger {
+				return reflect.ValueOf(&targetID).Elem(), nil
 			}
 
 		case failID:
-			fail = strings.ToLower(attr.Value)
+			if t == pdp.TypeString {
+				return reflect.ValueOf(&fail).Elem(), nil
+			}
 		}
+
+		return reflect.ValueOf(nil), nil
+	})
+	if err != nil {
+		panic(err)
 	}
 
 	return targetID, fail

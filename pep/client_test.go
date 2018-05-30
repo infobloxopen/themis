@@ -56,3 +56,27 @@ func TestNewClientWithTracer(t *testing.T) {
 		t.Errorf("Expected NoopTracer as client option but got %v", uc.opts.tracer)
 	}
 }
+
+func TestNewClientWithMaxRequestSize(t *testing.T) {
+	c := NewClient(WithMaxRequestSize(1024))
+	uc, ok := c.(*unaryClient)
+	if !ok {
+		t.Fatalf("Expected *pdpUnaryClient from NewClient got %v", c)
+	}
+
+	if uc.opts.maxRequestSize != 1024 {
+		t.Errorf("Expected max size of %d bytes but got %d", 1024, uc.opts.maxRequestSize)
+	}
+}
+
+func TestNewClientWithNoRequestBufferPool(t *testing.T) {
+	c := NewClient(WithNoRequestBufferPool())
+	uc, ok := c.(*unaryClient)
+	if !ok {
+		t.Fatalf("Expected *pdpUnaryClient from NewClient got %v", c)
+	}
+
+	if uc.pool.b != nil {
+		t.Errorf("Expected no pool but got %#v", uc.pool.b)
+	}
+}

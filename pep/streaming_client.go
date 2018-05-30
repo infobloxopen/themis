@@ -3,6 +3,8 @@ package pep
 import (
 	"fmt"
 	"sync/atomic"
+
+	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
 const (
@@ -13,7 +15,7 @@ const (
 	scsClosed
 )
 
-type validator func(in, out interface{}) error
+type validator func(m *pb.Msg, out interface{}) error
 
 type streamingClient struct {
 	opts options
@@ -24,6 +26,8 @@ type streamingClient struct {
 	validate validator
 
 	crp *connRetryPool
+
+	pool bytePool
 }
 
 func newStreamingClient(opts options) *streamingClient {
@@ -33,10 +37,12 @@ func newStreamingClient(opts options) *streamingClient {
 
 	state := scsDisconnected
 	counter := uint64(0)
+
 	return &streamingClient{
 		opts:    opts,
 		state:   &state,
 		counter: &counter,
+		pool:    makeBytePool(int(opts.maxRequestSize), opts.noPool),
 	}
 }
 
@@ -84,6 +90,14 @@ func (c *streamingClient) Close() {
 }
 
 func (c *streamingClient) Validate(in, out interface{}) error {
+	b := c.pool.Get()
+	defer c.pool.Put(b)
+
+	m, err := makeRequest(in, b)
+	if err != nil {
+		return err
+	}
+
 	for atomic.LoadUint32(c.state) == scsConnected {
 		if !c.crp.check() {
 			c.crp.tryStart()
@@ -93,7 +107,7 @@ func (c *streamingClient) Validate(in, out interface{}) error {
 		}
 
 		for i := 0; i < len(c.conns); i++ {
-			err := c.validate(in, out)
+			err := c.validate(&m, out)
 			if err == nil {
 				return nil
 			}
@@ -111,9 +125,9 @@ func (c *streamingClient) Validate(in, out interface{}) error {
 }
 
 func (c *streamingClient) makeSimpleValidator() validator {
-	return func(in, out interface{}) error {
+	return func(m *pb.Msg, out interface{}) error {
 		conn := c.conns[0]
-		err := conn.validate(in, out)
+		err := conn.validate(m, out)
 		if err == errConnFailure {
 			c.crp.put(conn)
 		}
@@ -123,10 +137,10 @@ func (c *streamingClient) makeSimpleValidator() validator {
 }
 
 func (c *streamingClient) makeRoundRobinValidator() validator {
-	return func(in, out interface{}) error {
+	return func(m *pb.Msg, out interface{}) error {
 		i := int((atomic.AddUint64(c.counter, 1) - 1) % uint64(len(c.conns)))
 		conn := c.conns[i]
-		err := conn.validate(in, out)
+		err := conn.validate(m, out)
 		if err == errConnFailure {
 			c.crp.put(conn)
 		}
@@ -136,13 +150,13 @@ func (c *streamingClient) makeRoundRobinValidator() validator {
 }
 
 func (c *streamingClient) makeHotSpotValidator() validator {
-	return func(in, out interface{}) error {
+	return func(m *pb.Msg, out interface{}) error {
 		total := uint64(len(c.conns))
 		start := atomic.LoadUint64(c.counter)
 		i := int(start % total)
 		for {
 			conn := c.conns[i]
-			ok, err := conn.tryValidate(in, out)
+			ok, err := conn.tryValidate(m, out)
 			if ok {
 				if err == errConnFailure {
 					c.crp.put(conn)
@@ -160,7 +174,7 @@ func (c *streamingClient) makeHotSpotValidator() validator {
 		}
 
 		conn := c.conns[i]
-		err := conn.validate(in, out)
+		err := conn.validate(m, out)
 		if err == errConnFailure {
 			c.crp.put(conn)
 		}

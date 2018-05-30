@@ -135,6 +135,22 @@ func WithConnectionStateNotification(callback ConnectionStateNotificationCallbac
 	}
 }
 
+// WithMaxRequestSize returns an Option which limits request size in bytes
+// to given value. Default 10KB.
+func WithMaxRequestSize(size uint32) Option {
+	return func(o *options) {
+		o.maxRequestSize = size
+	}
+}
+
+// WithNoRequestBufferPool returns an Option which makes client allocate new
+// buffer for each request.
+func WithNoRequestBufferPool() Option {
+	return func(o *options) {
+		o.noPool = true
+	}
+}
+
 const (
 	noBalancer = iota
 	roundRobinBalancer
@@ -142,18 +158,21 @@ const (
 )
 
 type options struct {
-	addresses   []string
-	balancer    int
-	tracer      ot.Tracer
-	maxStreams  int
-	connTimeout time.Duration
-	connStateCb ConnectionStateNotificationCallback
+	addresses      []string
+	balancer       int
+	tracer         ot.Tracer
+	maxStreams     int
+	connTimeout    time.Duration
+	connStateCb    ConnectionStateNotificationCallback
+	maxRequestSize uint32
+	noPool         bool
 }
 
 // NewClient creates client instance using given options.
 func NewClient(opts ...Option) Client {
 	o := options{
-		connTimeout: -1,
+		connTimeout:    -1,
+		maxRequestSize: 10240,
 	}
 	for _, opt := range opts {
 		opt(&o)
