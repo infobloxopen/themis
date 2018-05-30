@@ -8,7 +8,10 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 )
 
-const missingStorageMsg = `"Server missing policy storage"`
+const (
+	queryCmd          = "query"
+	missingStorageMsg = `"Server missing policy storage"`
+)
 
 type storageHandler struct {
 	s *Server
@@ -19,6 +22,10 @@ func (handler *storageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		depth uint64
 		err   error
 	)
+	path := strings.FieldsFunc(r.URL.Path, func(c rune) bool { return c == '/' })
+	if len(path) == 0 || path[0] != queryCmd {
+		http.Error(w, "404 page not found", 404)
+	}
 
 	// parse depth
 	queryOpt := r.URL.Query()
@@ -39,7 +46,7 @@ func (handler *storageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	}
 
 	// parse path
-	path := strings.FieldsFunc(r.URL.Path, func(c rune) bool { return c == '/' })[1:]
+	path = path[1:] // remove queryCmd
 	target, err := root.GetAtPath(path)
 	if err != nil {
 		var errCode int
