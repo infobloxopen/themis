@@ -30,6 +30,8 @@ func main() {
 	err := conf.cmd(
 		conf.servers[0],
 		opts,
+		uint32(conf.maxRequestSize),
+		uint32(conf.maxResponseObligations),
 		conf.input,
 		conf.output,
 		conf.count,

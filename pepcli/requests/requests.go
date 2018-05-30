@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	"math"
 	"net"
 	"strconv"
 	"strings"
 
+	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
@@ -21,7 +23,7 @@ type requests struct {
 }
 
 // Load reads given YAML file and porduces list of requests to run.
-func Load(name string) ([]pb.Request, error) {
+func Load(name string, size uint32) ([]pb.Msg, error) {
 	b, err := ioutil.ReadFile(name)
 	if err != nil {
 		return nil, err
@@ -43,9 +45,9 @@ func Load(name string) ([]pb.Request, error) {
 		symbols[k] = t
 	}
 
-	out := make([]pb.Request, len(in.Requests))
+	out := make([]pb.Msg, len(in.Requests))
 	for i, r := range in.Requests {
-		attrs := make([]*pb.Attribute, len(r))
+		attrs := make([]pdp.AttributeAssignmentExpression, len(r))
 		j := 0
 		for k, v := range r {
 			a, err := makeAttribute(k, v, symbols)
@@ -57,13 +59,19 @@ func Load(name string) ([]pb.Request, error) {
 			j++
 		}
 
-		out[i] = pb.Request{Attributes: attrs}
+		b := make([]byte, 10240)
+		n, err := pdp.MarshalRequestAssignments(b, attrs)
+		if err != nil {
+			return nil, fmt.Errorf("can't create request: %s", err)
+		}
+
+		out[i] = pb.Msg{Body: b[:n]}
 	}
 
 	return out, nil
 }
 
-type attributeMarshaller func(value interface{}) (string, error)
+type attributeMarshaller func(value interface{}) (pdp.AttributeValue, error)
 
 var marshallers = map[pdp.Type]attributeMarshaller{
 	pdp.TypeBoolean: booleanMarshaller,
@@ -74,31 +82,33 @@ var marshallers = map[pdp.Type]attributeMarshaller{
 	pdp.TypeNetwork: networkMarshaller,
 	pdp.TypeDomain:  domainMarshaller}
 
-func makeAttribute(name string, value interface{}, symbols map[string]pdp.Type) (*pb.Attribute, error) {
+func makeAttribute(name string, value interface{}, symbols map[string]pdp.Type) (pdp.AttributeAssignmentExpression, error) {
 	t, ok := symbols[name]
 	var err error
 	if !ok {
 		t, err = guessType(value)
 		if err != nil {
-			return nil, fmt.Errorf("type of %q attribute isn't defined and can't be derived: %s", name, err)
+			return pdp.AttributeAssignmentExpression{},
+				fmt.Errorf("type of %q attribute isn't defined and can't be derived: %s", name, err)
 		}
 	}
 
 	marshaller, ok := marshallers[t]
 	if !ok {
-		return nil, fmt.Errorf("marshaling hasn't been implemented for type %q of %q attribute", t, name)
+		return pdp.AttributeAssignmentExpression{},
+			fmt.Errorf("marshaling hasn't been implemented for type %q of %q attribute", t, name)
 	}
 
-	s, err := marshaller(value)
+	v, err := marshaller(value)
 	if err != nil {
-		return nil, fmt.Errorf("can't marshal %q attribute as %q: %s", name, t, err)
+		return pdp.AttributeAssignmentExpression{},
+			fmt.Errorf("can't marshal %q attribute as %q: %s", name, t, err)
 	}
 
-	return &pb.Attribute{
-		Id:    name,
-		Type:  t.GetKey(),
-		Value: s,
-	}, nil
+	return pdp.MakeAttributeAssignmentExpression(
+		pdp.MakeAttribute(name, t),
+		v,
+	), nil
 }
 
 func guessType(value interface{}) (pdp.Type, error) {
@@ -118,122 +128,143 @@ func guessType(value interface{}) (pdp.Type, error) {
 	return pdp.TypeUndefined, fmt.Errorf("marshaling hasn't been implemented for %T", value)
 }
 
-func booleanMarshaller(value interface{}) (string, error) {
+func booleanMarshaller(value interface{}) (pdp.AttributeValue, error) {
 	switch value := value.(type) {
 	case bool:
-		return strconv.FormatBool(value), nil
+		return pdp.MakeBooleanValue(value), nil
 	case string:
-		_, err := strconv.ParseBool(value)
+		b, err := strconv.ParseBool(value)
 		if err != nil {
-			return "", fmt.Errorf("can't marshal \"%s\" as boolean", value)
+			return pdp.UndefinedValue, fmt.Errorf("can't marshal \"%s\" as boolean", value)
 		}
 
-		return value, nil
+		return pdp.MakeBooleanValue(b), nil
 	}
 
-	return "", fmt.Errorf("can't marshal %T as boolean", value)
+	return pdp.UndefinedValue, fmt.Errorf("can't marshal %T as boolean", value)
 }
 
-func stringMarshaller(value interface{}) (string, error) {
+func stringMarshaller(value interface{}) (pdp.AttributeValue, error) {
 	s, ok := value.(string)
 	if !ok {
-		return "", fmt.Errorf("can't marshal %T as string", value)
+		return pdp.UndefinedValue, fmt.Errorf("can't marshal %T as string", value)
 	}
 
-	return s, nil
+	return pdp.MakeStringValue(s), nil
 }
 
-func integerMarshaller(value interface{}) (string, error) {
-	var err error
+func integerMarshaller(value interface{}) (pdp.AttributeValue, error) {
+	var (
+		i   int64
+		err error
+	)
+
 	switch value := value.(type) {
 	case int:
-		return strconv.FormatInt(int64(value), 10), nil
+		return pdp.MakeIntegerValue(int64(value)), nil
 	case int64:
-		return strconv.FormatInt(value, 10), nil
+		return pdp.MakeIntegerValue(value), nil
 	case uint:
-		return strconv.FormatInt(int64(value), 10), nil
+		if value <= math.MaxInt64 {
+			return pdp.MakeIntegerValue(int64(value)), nil
+		}
+		err = fmt.Errorf("can't marshal %T (%d) as int64", value, value)
+
 	case uint64:
-		return strconv.FormatInt(int64(value), 10), nil
+		if value <= math.MaxInt64 {
+			return pdp.MakeIntegerValue(int64(value)), nil
+		}
+		err = fmt.Errorf("can't marshal %T (%d) as int64", value, value)
+
 	case float64:
 		if value > -9007199254740992 && value < 9007199254740992 {
-			return strconv.FormatInt(int64(value), 10), nil
+			return pdp.MakeIntegerValue(int64(value)), nil
 		}
-		err = fmt.Errorf("can't marshal %T as int64", value)
+		err = fmt.Errorf("can't marshal %T (%g) as int64", value, value)
 
 	case string:
-		_, err = strconv.ParseInt(value, 10, 64)
+		i, err = strconv.ParseInt(value, 10, 64)
 		if err == nil {
-			return value, nil
+			return pdp.MakeIntegerValue(i), nil
 		}
 		err = fmt.Errorf("can't marshal \"%s\" as int64", value)
 	}
 
-	return "", err
+	return pdp.UndefinedValue, err
 }
 
-func floatMarshaller(value interface{}) (string, error) {
-	var err error
+func floatMarshaller(value interface{}) (pdp.AttributeValue, error) {
+	var (
+		f   float64
+		err error
+	)
+
 	switch value := value.(type) {
 	case int:
-		return strconv.FormatFloat(float64(value), 'g', -1, 64), nil
+		return pdp.MakeFloatValue(float64(value)), nil
 	case int64:
-		return strconv.FormatFloat(float64(value), 'g', -1, 64), nil
+		return pdp.MakeFloatValue(float64(value)), nil
 	case uint:
-		return strconv.FormatFloat(float64(value), 'g', -1, 64), nil
+		return pdp.MakeFloatValue(float64(value)), nil
 	case uint64:
-		return strconv.FormatFloat(float64(value), 'g', -1, 64), nil
+		return pdp.MakeFloatValue(float64(value)), nil
 	case float64:
-		return strconv.FormatFloat(value, 'g', -1, 64), nil
+		return pdp.MakeFloatValue(float64(value)), nil
 	case string:
-		_, err = strconv.ParseFloat(value, 64)
+		f, err = strconv.ParseFloat(value, 64)
 		if err == nil {
-			return value, nil
+			return pdp.MakeFloatValue(f), nil
 		}
 		err = fmt.Errorf("can't marshal \"%s\" as float64", value)
 	}
 
-	return "", err
+	return pdp.UndefinedValue, err
 }
 
-func addressMarshaller(value interface{}) (string, error) {
+func addressMarshaller(value interface{}) (pdp.AttributeValue, error) {
 	switch value := value.(type) {
 	case net.IP:
-		return value.String(), nil
+		return pdp.MakeAddressValue(value), nil
 	case string:
 		addr := net.ParseIP(value)
 		if addr == nil {
-			return "", fmt.Errorf("can't marshal \"%s\" as IP address", value)
+			return pdp.UndefinedValue, fmt.Errorf("can't marshal \"%s\" as IP address", value)
 		}
 
-		return value, nil
+		return pdp.MakeAddressValue(addr), nil
 	}
 
-	return "", fmt.Errorf("can't marshal %T as IP address", value)
+	return pdp.UndefinedValue, fmt.Errorf("can't marshal %T as IP address", value)
 }
 
-func networkMarshaller(value interface{}) (string, error) {
+func networkMarshaller(value interface{}) (pdp.AttributeValue, error) {
 	switch value := value.(type) {
 	case net.IPNet:
-		return (&value).String(), nil
+		return pdp.MakeNetworkValue(&value), nil
 	case *net.IPNet:
-		return value.String(), nil
+		return pdp.MakeNetworkValue(value), nil
 	case string:
-		_, _, err := net.ParseCIDR(value)
+		_, n, err := net.ParseCIDR(value)
 		if err != nil {
-			return "", fmt.Errorf("can't marshal \"%s\" as network", value)
+			return pdp.UndefinedValue, fmt.Errorf("can't marshal \"%s\" as network", value)
 		}
 
-		return value, nil
+		return pdp.MakeNetworkValue(n), nil
 	}
 
-	return "", fmt.Errorf("can't marshal %T as network", value)
+	return pdp.UndefinedValue, fmt.Errorf("can't marshal %T as network", value)
 }
 
-func domainMarshaller(value interface{}) (string, error) {
+func domainMarshaller(value interface{}) (pdp.AttributeValue, error) {
 	s, ok := value.(string)
 	if !ok {
-		return "", fmt.Errorf("can't marshal %T as domain", value)
+		return pdp.UndefinedValue, fmt.Errorf("can't marshal %T as domain", value)
 	}
 
-	return s, nil
+	d, err := domain.MakeNameFromString(s)
+	if err != nil {
+		return pdp.UndefinedValue, fmt.Errorf("can't marshal %q as domain: %s", s, err)
+	}
+
+	return pdp.MakeDomainValue(d), nil
 }

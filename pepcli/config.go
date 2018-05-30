@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"path"
 	"strings"
@@ -19,6 +20,9 @@ type config struct {
 	count   int
 	streams int
 	output  string
+
+	maxRequestSize         uint
+	maxResponseObligations uint
 
 	cmdConf interface{}
 	cmd     cmdExec
@@ -38,7 +42,7 @@ func (s *stringSet) Set(v string) error {
 var conf = config{}
 
 type (
-	cmdExec       func(addr string, opts []pep.Option, in, out string, n int, conf interface{}) error
+	cmdExec       func(addr string, opts []pep.Option, maxRequestSize, maxResponseObligations uint32, in, out string, n int, conf interface{}) error
 	cmdFlagParser func(args []string) interface{}
 
 	command struct {
@@ -87,11 +91,25 @@ func init() {
 		"(default and value less than one means all requests from file)")
 	flag.IntVar(&conf.streams, "streams", 0, "number of streams to use with gRPC streaming (< 1 unary gRPC)")
 	flag.StringVar(&conf.output, "o", "", "file to write command output (default stdout)")
+	flag.UintVar(&conf.maxRequestSize, "request-limit", 10240, "size limit for request buffer in bytes")
+	flag.UintVar(&conf.maxResponseObligations, "response-limit", 128, "limit for obligations in response")
 
 	flag.Parse()
 
 	if len(conf.servers) <= 0 {
 		conf.servers = stringSet{"127.0.0.1:5555"}
+	}
+
+	if conf.maxRequestSize > math.MaxUint32 {
+		fmt.Fprintf(os.Stderr, "too big limit for request size %d (expected no more than %d)",
+			conf.maxRequestSize, math.MaxUint32)
+		os.Exit(2)
+	}
+
+	if conf.maxResponseObligations > math.MaxUint32 {
+		fmt.Fprintf(os.Stderr, "too big limit for response obligations %d (expected no more than %d)",
+			conf.maxResponseObligations, math.MaxUint32)
+		os.Exit(2)
 	}
 
 	count := flag.NArg()
