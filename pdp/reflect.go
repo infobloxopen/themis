@@ -14,6 +14,7 @@ var (
 
 	reflectTypeString   = reflect.TypeOf("")
 	reflectTypeIP       = reflect.TypeOf(net.IP{})
+	reflectTypeIPNet    = reflect.TypeOf(net.IPNet{})
 	reflectTypePtrIPNet = reflect.TypeOf(new(net.IPNet))
 	reflectTypeDomain   = reflect.TypeOf(domain.Name{})
 )
@@ -244,11 +245,14 @@ func setAddress(v reflect.Value, a net.IP) error {
 }
 
 func getNetwork(v reflect.Value) *net.IPNet {
-	if v.Type() != reflectTypePtrIPNet {
-		panic(fmt.Errorf("can't marshal %s as network value", v.Type()))
+	t := v.Type()
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
 	}
 
-	v = v.Elem()
+	if v.Type() != reflectTypeIPNet {
+		panic(fmt.Errorf("can't marshal %s as network value", t))
+	}
 
 	return &net.IPNet{
 		IP:   net.IP(v.FieldByName("IP").Bytes()),
@@ -265,11 +269,17 @@ func setNetwork(v reflect.Value, n *net.IPNet) error {
 		return newRequestUnmarshalNetworkConstError(v)
 	}
 
-	if v.Type() != reflectTypePtrIPNet {
+	switch v.Type() {
+	default:
 		return newRequestUnmarshalNetworkTypeError(v)
+
+	case reflectTypeIPNet:
+		v.Set(reflect.ValueOf(*n))
+
+	case reflectTypePtrIPNet:
+		v.Set(reflect.ValueOf(n))
 	}
 
-	v.Set(reflect.ValueOf(n))
 	return nil
 }
 

@@ -387,9 +387,34 @@ func TestSetAddress(t *testing.T) {
 	}
 }
 
+func TestGetNetwork(t *testing.T) {
+	en := makeTestNetwork("192.0.2.0/24")
+
+	n := getNetwork(reflect.ValueOf(en))
+	if n.String() != en.String() {
+		t.Errorf("expected %q but got %q", en, n)
+	}
+
+	n = getNetwork(reflect.ValueOf(*en))
+	if n.String() != en.String() {
+		t.Errorf("expected %q but got %q", en, n)
+	}
+
+	assertPanicWithError(t, func() {
+		n = getNetwork(reflect.ValueOf("string"))
+	}, "can't marshal %s as network value", reflect.TypeOf("string"))
+}
+
 func TestSetNetwork(t *testing.T) {
 	en := makeTestNetwork("192.0.2.0/24")
-	var n *net.IPNet
+	var nPtr *net.IPNet
+	if err := setNetwork(reflect.Indirect(reflect.ValueOf(&nPtr)), en); err != nil {
+		t.Error(err)
+	} else if nPtr.String() != en.String() {
+		t.Errorf("expected %q but got %q", en, nPtr)
+	}
+
+	var n net.IPNet
 	if err := setNetwork(reflect.Indirect(reflect.ValueOf(&n)), en); err != nil {
 		t.Error(err)
 	} else if n.String() != en.String() {
@@ -423,6 +448,13 @@ func TestSetDomain(t *testing.T) {
 		t.Error(err)
 	} else if dn.String() != eDn.String() {
 		t.Errorf("expected %q but got %q", eDn, dn)
+	}
+
+	var s string
+	if err := setDomain(reflect.Indirect(reflect.ValueOf(&s)), eDn); err != nil {
+		t.Error(err)
+	} else if s != eDn.String() {
+		t.Errorf("expected %q but got %q", eDn, s)
 	}
 
 	if err := setDomain(reflect.ValueOf(nil), eDn); err != nil {
