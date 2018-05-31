@@ -3,31 +3,10 @@ syntax = "proto3";
 package service;
 
 service PDP {
-  rpc Validate (Request) returns (Response) {}
-  rpc NewValidationStream (stream Request) returns (stream Response) {}
+  rpc Validate (Msg) returns (Msg) {}
+  rpc NewValidationStream (stream Msg) returns (stream Msg) {}
 }
 
-message Attribute {
-  string id = 1;
-  string type = 2;
-  string value = 3;
-}
-
-message Request {
-  repeated Attribute attributes = 1;
-}
-
-message Response {
-  enum Effect {
-    DENY            = 0;
-    PERMIT          = 1;
-    NOTAPPLICABLE   = 2;
-    INDETERMINATE   = 3;
-    INDETERMINATED  = 4;
-    INDETERMINATEP  = 5;
-    INDETERMINATEDP = 6;
-  }
-  Effect effect = 1;
-  string reason = 2;
-  repeated Attribute obligation = 3;
+message Msg {
+  bytes body = 1;
 }
