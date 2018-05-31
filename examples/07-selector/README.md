@@ -21,29 +21,25 @@ INFO[0000] Serving decision requests
 In other terminal run pepcli:
 ```
 $ pepcli -i selector.requests.yaml test
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "s"
       type: "string"
       value: "Good"
 
-- effect: DENY
-  reason: "Ok"
+- effect: Deny
   obligation:
     - id: "s"
       type: "string"
       value: "Bad"
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "s"
       type: "string"
       value: "Good"
 
-- effect: DENY
-  reason: "Ok"
+- effect: Deny
   obligation:
     - id: "s"
       type: "string"
@@ -60,31 +56,31 @@ DEBU[0280] Request context                               context="content:
 attributes:
 - d.(Domain): domain(example.com)
 - a.(Address): 192.0.2.18"
-DEBU[0280] Response                                      effect=PERMIT obligation="attributes:
-- s.(string): \"Good\"" reason=Ok
+DEBU[0280] Response                                      effect=Permit obligations="attributes:
+- s.(string): \"Good\"" reason="<nil>"
 DEBU[0280] Request context                               context="content:
 - content: no tag
 
 attributes:
 - d.(Domain): domain(example.com)
 - a.(Address): 2001:db8:1000::1"
-DEBU[0280] Response                                      effect=DENY obligation="attributes:
-- s.(string): \"Bad\"" reason=Ok
+DEBU[0280] Response                                      effect=Deny obligations="attributes:
+- s.(string): \"Bad\"" reason="<nil>"
 DEBU[0280] Request context                               context="content:
 - content: no tag
 
 attributes:
 - d.(Domain): domain(test.com)
 - a.(Address): 192.0.2.50"
-DEBU[0280] Response                                      effect=PERMIT obligation="attributes:
-- s.(string): \"Good\"" reason=Ok
+DEBU[0280] Response                                      effect=Permit obligations="attributes:
+- s.(string): \"Good\"" reason="<nil>"
 DEBU[0280] Request context                               context="content:
 - content: no tag
 
 attributes:
 - d.(Domain): domain(test.com)
 - a.(Address): 2001:db8:3000::1"
-DEBU[0280] Response                                      effect=DENY obligation="attributes:
-- s.(string): \"Bad\"" reason=Ok
+DEBU[0280] Response                                      effect=Deny obligations="attributes:
+- s.(string): \"Bad\"" reason="<nil>"
 ...
 ```

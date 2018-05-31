@@ -19,68 +19,65 @@ INFO[0000] Serving decision requests
 In other terminal run pepcli:
 ```
 $ pepcli -i target.requests.yaml test
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "r"
       type: "string"
       value: "first"
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "r"
       type: "string"
       value: "second"
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "r"
       type: "string"
       value: "third"
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "r"
       type: "string"
       value: "fourth"
 
-- effect: NOTAPPLICABLE
-  reason: "Ok"
+- effect: NotApplicable
 
 ```
 
 PDP logs:
 ```
+...
 DEBU[0003] Request context                               context="attributes:
+- a.(Address): 192.0.2.1
 - x.(String): \"test\"
-- c.(Network): 192.0.2.0/24
-- a.(Address): 192.0.2.1"
-DEBU[0003] Response                                      effect=PERMIT obligation="attributes:
-- r.(string): \"first\"" reason=Ok
+- c.(Network): 192.0.2.0/24"
+DEBU[0003] Response                                      effect=Permit obligations="attributes:
+- r.(string): \"first\"" reason="<nil>"
 DEBU[0003] Request context                               context="attributes:
 - x.(String): \"test\"
 - c.(Network): 192.0.2.32/28
 - a.(Address): 192.0.2.17"
-DEBU[0003] Response                                      effect=PERMIT obligation="attributes:
-- r.(string): \"second\"" reason=Ok
+DEBU[0003] Response                                      effect=Permit obligations="attributes:
+- r.(string): \"second\"" reason="<nil>"
 DEBU[0003] Request context                               context="attributes:
 - c.(Network): 192.0.2.32/28
 - a.(Address): 192.0.2.33
 - x.(String): \"test\""
-DEBU[0003] Response                                      effect=PERMIT obligation="attributes:
-- r.(string): \"third\"" reason=Ok
+DEBU[0003] Response                                      effect=Permit obligations="attributes:
+- r.(string): \"third\"" reason="<nil>"
 DEBU[0003] Request context                               context="attributes:
-- x.(String): \"test\"
+- c.(Network): 192.0.2.32/28
+- a.(Address): 192.0.3.1
+- x.(String): \"test\""
+DEBU[0003] Response                                      effect=Permit obligations="attributes:
+- r.(string): \"fourth\"" reason="<nil>"
+DEBU[0003] Request context                               context="attributes:
+- x.(String): \"example\"
 - c.(Network): 192.0.2.32/28
 - a.(Address): 192.0.3.1"
-DEBU[0003] Response                                      effect=PERMIT obligation="attributes:
-- r.(string): \"fourth\"" reason=Ok
-DEBU[0003] Request context                               context="attributes:
-- a.(Address): 192.0.3.1
-- x.(String): \"example\"
-- c.(Network): 192.0.2.32/28"
-DEBU[0003] Response                                      effect=NOTAPPLICABLE obligation="no attributes" reason=Ok
+DEBU[0003] Response                                      effect=NotApplicable obligations="no attributes" reason="<nil>"
+...
 ```

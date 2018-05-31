@@ -21,118 +21,113 @@ INFO[0000] Serving decision requests
 In other terminal run pepcli:
 ```
 $ pepcli -i mapper.requests.yaml test
-- effect: DENY
-  reason: "Ok"
+- effect: Deny
 
-- effect: DENY
-  reason: "Ok"
+- effect: Deny
   obligation:
     - id: "err"
       type: "string"
       value: "Can't calculate policy id"
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "p"
       type: "string"
       value: "First PermitNet"
 
-- effect: DENY
-  reason: "Ok"
+- effect: Deny
   obligation:
     - id: "p"
       type: "string"
       value: "First DenyCom"
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "p"
       type: "string"
       value: "Second PermitCom"
 
-- effect: DENY
-  reason: "Ok"
+- effect: Deny
   obligation:
     - id: "p"
       type: "string"
       value: "Second DenyNet"
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "p"
       type: "string"
       value: "External Second"
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "p"
       type: "string"
       value: "Internal First"
+
 ```
 
 PDP logs:
 ```
+...
 DEBU[0033] Request context                               context="content:
 - content: no tag
 
 attributes:
 - p.(String): \"Unknown\""
-DEBU[0033] Response                                      effect=DENY obligation="no attributes" reason=Ok
+DEBU[0033] Response                                      effect=Deny obligations="no attributes" reason="<nil>"
 DEBU[0033] Request context                               context="content:
 - content: no tag
 
 attributes:
 - d.(Domain): domain(example.com)"
-DEBU[0033] Response                                      effect=DENY obligation="attributes:
-- err.(string): \"Can't calculate policy id\"" reason=Ok
+DEBU[0033] Response                                      effect=Deny obligations="attributes:
+- err.(string): \"Can't calculate policy id\"" reason="<nil>"
 DEBU[0033] Request context                               context="content:
 - content: no tag
 
 attributes:
 - p.(String): \"First\"
 - d.(Domain): domain(example.net)"
-DEBU[0033] Response                                      effect=PERMIT obligation="attributes:
-- p.(string): \"First PermitNet\"" reason=Ok
+DEBU[0033] Response                                      effect=Permit obligations="attributes:
+- p.(string): \"First PermitNet\"" reason="<nil>"
 DEBU[0033] Request context                               context="content:
 - content: no tag
 
 attributes:
 - p.(String): \"First\"
 - d.(Domain): domain(example.com)"
-DEBU[0033] Response                                      effect=DENY obligation="attributes:
-- p.(string): \"First DenyCom\"" reason=Ok
+DEBU[0033] Response                                      effect=Deny obligations="attributes:
+- p.(string): \"First DenyCom\"" reason="<nil>"
 DEBU[0033] Request context                               context="content:
 - content: no tag
 
 attributes:
 - p.(String): \"Second\"
 - d.(Domain): domain(example.com)"
-DEBU[0033] Response                                      effect=PERMIT obligation="attributes:
-- p.(string): \"Second PermitCom\"" reason=Ok
+DEBU[0033] Response                                      effect=Permit obligations="attributes:
+- p.(string): \"Second PermitCom\"" reason="<nil>"
 DEBU[0033] Request context                               context="content:
 - content: no tag
 
 attributes:
 - p.(String): \"Second\"
 - d.(Domain): domain(example.net)"
-DEBU[0033] Response                                      effect=DENY obligation="attributes:
-- p.(string): \"Second DenyNet\"" reason=Ok
+DEBU[0033] Response                                      effect=Deny obligations="attributes:
+- p.(string): \"Second DenyNet\"" reason="<nil>"
 DEBU[0033] Request context                               context="content:
 - content: no tag
 
 attributes:
 - p.(String): \"External\""
-DEBU[0033] Response                                      effect=PERMIT obligation="attributes:
-- p.(string): \"External Second\"" reason=Ok
+DEBU[0033] Response                                      effect=Permit obligations="attributes:
+- p.(string): \"External Second\"" reason="<nil>"
 DEBU[0033] Request context                               context="content:
 - content: no tag
 
 attributes:
 - p.(String): \"Internal\""
-DEBU[0033] Response                                      effect=PERMIT obligation="attributes:
-- p.(string): \"Internal First\"" reason=Ok
+DEBU[0033] Response                                      effect=Permit obligations="attributes:
+- p.(string): \"Internal First\"" reason="<nil>"
+...
 ```
