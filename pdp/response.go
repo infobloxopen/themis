@@ -37,7 +37,7 @@ func init() {
 	MinResponseSize = 7 + uint(n)
 }
 
-func marshalResponse(b []byte, effect int, obligations []AttributeAssignmentExpression, errs ...error) (int, error) {
+func marshalResponse(b []byte, effect int, obligations []AttributeAssignment, errs ...error) (int, error) {
 	off, err := putRequestVersion(b)
 	if err != nil {
 		return off, err
@@ -109,7 +109,7 @@ func MakeIndeterminateResponse(b []byte, err error) (int, error) {
 // an error occured during unmarshalling or response status if it has type
 // *ResponseServerError. Caller need to allocate and pass big enough array to
 // out argument.
-func UnmarshalResponse(b []byte, out []AttributeAssignmentExpression) (int, int, error) {
+func UnmarshalResponse(b []byte, out []AttributeAssignment) (int, int, error) {
 	off, err := checkRequestVersion(b)
 	if err != nil {
 		return EffectIndeterminate, 0, err
@@ -291,7 +291,7 @@ func putResponseObligationsTooLong(b []byte) (int, error) {
 	return size, nil
 }
 
-func putAssignmentExpressions(b []byte, in []AttributeAssignmentExpression) (int, error) {
+func putAssignmentExpressions(b []byte, in []AttributeAssignment) (int, error) {
 	off, err := putRequestAttributeCount(b, len(in))
 	if err != nil {
 		return off, err
@@ -362,7 +362,7 @@ func putAttributesFromReflection(b []byte, c int, f func(i int) (string, Type, r
 	return off, nil
 }
 
-func getAssignmentExpressions(b []byte, out []AttributeAssignmentExpression) (int, error) {
+func getAssignmentExpressions(b []byte, out []AttributeAssignment) (int, error) {
 	c, n, err := getRequestAttributeCount(b)
 	if err != nil {
 		return 0, err
@@ -380,7 +380,7 @@ func getAssignmentExpressions(b []byte, out []AttributeAssignmentExpression) (in
 		}
 		b = b[n:]
 
-		out[i] = MakeAttributeAssignmentExpression(MakeAttribute(id, v.GetResultType()), v)
+		out[i] = MakeExpressionAssignment(id, v)
 	}
 
 	return c, nil

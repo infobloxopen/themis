@@ -2227,10 +2227,10 @@ func (e *requestTooLongDomainValueError) Error() string {
 
 type requestInvalidExpressionError struct {
 	errorLink
-	a AttributeAssignmentExpression
+	a AttributeAssignment
 }
 
-func newRequestInvalidExpressionError(a AttributeAssignmentExpression) *requestInvalidExpressionError {
+func newRequestInvalidExpressionError(a AttributeAssignment) *requestInvalidExpressionError {
 	return &requestInvalidExpressionError{
 		errorLink: errorLink{id: requestInvalidExpressionErrorID},
 		a:         a}

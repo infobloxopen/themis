@@ -2,41 +2,41 @@ package yast
 
 import "github.com/infobloxopen/themis/pdp"
 
-func (ctx context) unmarshalObligationItem(v interface{}) (pdp.AttributeAssignmentExpression, boundError) {
+func (ctx context) unmarshalObligationItem(v interface{}) (pdp.AttributeAssignment, boundError) {
 	m, err := ctx.validateMap(v, "obligation")
 	if err != nil {
-		return pdp.AttributeAssignmentExpression{}, err
+		return pdp.AttributeAssignment{}, err
 	}
 
 	k, v, err := ctx.getSingleMapPair(m, "obligation")
 	if err != nil {
-		return pdp.AttributeAssignmentExpression{}, err
+		return pdp.AttributeAssignment{}, err
 	}
 
 	ID, err := ctx.validateString(k, "obligation attribute id")
 	if err != nil {
-		return pdp.AttributeAssignmentExpression{}, err
+		return pdp.AttributeAssignment{}, err
 	}
 
 	a, ok := ctx.symbols.GetAttribute(ID)
 	if !ok {
-		return pdp.AttributeAssignmentExpression{}, newUnknownAttributeError(ID)
+		return pdp.AttributeAssignment{}, newUnknownAttributeError(ID)
 	}
 
 	m, err = ctx.validateMap(v, "obligation assignment")
 	if err != nil {
-		return pdp.AttributeAssignmentExpression{}, bindError(err, ID)
+		return pdp.AttributeAssignment{}, bindError(err, ID)
 	}
 
 	e, err := ctx.unmarshalExpression(v)
 	if err != nil {
-		return pdp.AttributeAssignmentExpression{}, bindError(err, ID)
+		return pdp.AttributeAssignment{}, bindError(err, ID)
 	}
 
-	return pdp.MakeAttributeAssignmentExpression(a, e), nil
+	return pdp.MakeAttributeAssignment(a, e), nil
 }
 
-func (ctx context) unmarshalObligations(m map[interface{}]interface{}) ([]pdp.AttributeAssignmentExpression, boundError) {
+func (ctx context) unmarshalObligations(m map[interface{}]interface{}) ([]pdp.AttributeAssignment, boundError) {
 	items, ok, err := ctx.extractListOpt(m, yastTagObligation, "obligations")
 	if err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func (ctx context) unmarshalObligations(m map[interface{}]interface{}) ([]pdp.At
 		return nil, nil
 	}
 
-	var r []pdp.AttributeAssignmentExpression
+	var r []pdp.AttributeAssignment
 	for i, item := range items {
 		o, err := ctx.unmarshalObligationItem(item)
 		if err != nil {

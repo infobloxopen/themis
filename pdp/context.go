@@ -388,8 +388,8 @@ type Response struct {
 	Effect int
 	// Status contains an error if any occurs on response evaluation.
 	Status error
-	// Obligations constain set of obligation expressions collected during evaluation.
-	Obligations []AttributeAssignmentExpression
+	// Obligations constain set of obligations collected during evaluation.
+	Obligations []AttributeAssignment
 }
 
 // Marshal fills given byte array with marshalled representation of
@@ -403,7 +403,7 @@ func (r Response) Marshal(b []byte, ctx *Context) (int, error) {
 		nErr++
 	}
 
-	a := make([]AttributeAssignmentExpression, len(r.Obligations))
+	a := make([]AttributeAssignment, len(r.Obligations))
 	for i, e := range r.Obligations {
 		v, err := e.e.Calculate(ctx)
 		if err != nil {
@@ -415,7 +415,7 @@ func (r Response) Marshal(b []byte, ctx *Context) (int, error) {
 			break
 		}
 
-		a[i] = MakeAttributeAssignmentExpression(e.a, v)
+		a[i] = MakeAttributeAssignment(e.a, v)
 	}
 
 	return marshalResponse(b, r.Effect, a, errs[:nErr]...)

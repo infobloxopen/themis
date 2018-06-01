@@ -58,15 +58,9 @@ func singleClientRecovery(streams int, t *testing.T) {
 	}
 	defer c.Close()
 
-	in := []pdp.AttributeAssignmentExpression{
-		pdp.MakeAttributeAssignmentExpression(
-			pdp.MakeAttribute(IDID, pdp.TypeInteger),
-			pdp.MakeIntegerValue(1),
-		),
-		pdp.MakeAttributeAssignmentExpression(
-			pdp.MakeAttribute(failID, pdp.TypeString),
-			pdp.MakeStringValue(thisRequest),
-		),
+	in := []pdp.AttributeAssignment{
+		pdp.MakeIntegerAssignment(IDID, 1),
+		pdp.MakeStringAssignment(failID, thisRequest),
 	}
 
 	var out pb.Msg
@@ -130,15 +124,9 @@ func hotSotBalancedClientRecovery(streams int, t *testing.T) {
 	}
 	defer c.Close()
 
-	in := []pdp.AttributeAssignmentExpression{
-		pdp.MakeAttributeAssignmentExpression(
-			pdp.MakeAttribute(IDID, pdp.TypeInteger),
-			pdp.MakeIntegerValue(1),
-		),
-		pdp.MakeAttributeAssignmentExpression(
-			pdp.MakeAttribute(failID, pdp.TypeString),
-			pdp.MakeStringValue(thisRequest),
-		),
+	in := []pdp.AttributeAssignment{
+		pdp.MakeIntegerAssignment(IDID, 1),
+		pdp.MakeStringAssignment(failID, thisRequest),
 	}
 
 	var out pb.Msg

@@ -43,7 +43,7 @@ func sequential(c pep.Client, n int, reqs []pb.Msg, maxResponseObligations uint3
 	out := make([]timing, n)
 
 	var res pdp.Response
-	obligation := make([]pdp.AttributeAssignmentExpression, maxResponseObligations)
+	obligation := make([]pdp.AttributeAssignment, maxResponseObligations)
 
 	for i := 0; i < n; i++ {
 		idx := i % len(reqs)
@@ -65,7 +65,7 @@ func sequentialWithPause(c pep.Client, n int, p time.Duration, reqs []pb.Msg, ma
 	out := make([]timing, n)
 
 	var res pdp.Response
-	obligation := make([]pdp.AttributeAssignmentExpression, maxResponseObligations)
+	obligation := make([]pdp.AttributeAssignment, maxResponseObligations)
 
 	for i := 0; i < n; i++ {
 		idx := i % len(reqs)
@@ -158,9 +158,9 @@ func parallelWithPause(c pep.Client, n int, p time.Duration, reqs []pb.Msg, maxR
 func parallelWithLimit(c pep.Client, n, l int, reqs []pb.Msg, maxResponseObligations uint32) ([]timing, error) {
 	out := make([]timing, n)
 
-	obligations := make(chan []pdp.AttributeAssignmentExpression, l)
+	obligations := make(chan []pdp.AttributeAssignment, l)
 	for i := 0; i < cap(obligations); i++ {
-		obligations <- make([]pdp.AttributeAssignmentExpression, maxResponseObligations)
+		obligations <- make([]pdp.AttributeAssignment, maxResponseObligations)
 	}
 
 	ch := make(chan int, l)
@@ -200,9 +200,9 @@ func parallelWithLimit(c pep.Client, n, l int, reqs []pb.Msg, maxResponseObligat
 func parallelWithLimitAndPause(c pep.Client, n, l int, p time.Duration, reqs []pb.Msg, maxResponseObligations uint32) ([]timing, error) {
 	out := make([]timing, n)
 
-	obligations := make(chan []pdp.AttributeAssignmentExpression, l)
+	obligations := make(chan []pdp.AttributeAssignment, l)
 	for i := 0; i < cap(obligations); i++ {
-		obligations <- make([]pdp.AttributeAssignmentExpression, maxResponseObligations)
+		obligations <- make([]pdp.AttributeAssignment, maxResponseObligations)
 	}
 
 	ch := make(chan int, l)

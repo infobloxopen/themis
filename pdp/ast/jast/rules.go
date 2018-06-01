@@ -33,7 +33,7 @@ func (ctx context) unmarshalRule(d *json.Decoder) (*pdp.Rule, error) {
 		effect = -1
 		target pdp.Target
 		cond   pdp.Expression
-		obligs []pdp.AttributeAssignmentExpression
+		obligs []pdp.AttributeAssignment
 	)
 
 	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {

@@ -220,7 +220,7 @@ func makeRequest(v interface{}, b []byte) (pb.Msg, error) {
 		err error
 	)
 
-	if a, ok := v.([]pdp.AttributeAssignmentExpression); ok {
+	if a, ok := v.([]pdp.AttributeAssignment); ok {
 		n, err = pdp.MarshalRequestAssignments(b, a)
 	} else {
 		n, err = marshalValue(reflect.ValueOf(v), b)

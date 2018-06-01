@@ -873,7 +873,7 @@ func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
 	b.Run("BenchmarkThreeStagePolicySetRaw", func(b *testing.B) {
 		var (
 			out        pdp.Response
-			assignment [16]pdp.AttributeAssignmentExpression
+			assignment [16]pdp.AttributeAssignment
 		)
 		for n := 0; n < b.N; n++ {
 			in := rawRequests[n%len(rawRequests)]
@@ -915,9 +915,9 @@ func benchmarkStreamingClient(name string, ports []uint16, b *testing.B, opts ..
 	b.Run(name, func(b *testing.B) {
 		errs := make([]error, b.N)
 
-		assignments := make(chan []pdp.AttributeAssignmentExpression, streams)
+		assignments := make(chan []pdp.AttributeAssignment, streams)
 		for i := 0; i < cap(assignments); i++ {
-			assignments <- make([]pdp.AttributeAssignmentExpression, 16)
+			assignments <- make([]pdp.AttributeAssignment, 16)
 		}
 
 		th := make(chan int, streams)

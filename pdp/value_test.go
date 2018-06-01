@@ -1269,3 +1269,30 @@ func makeTestDomain(s string) domain.Name {
 
 	return n
 }
+
+func newStrTree(args ...string) *strtree.Tree {
+	t := strtree.NewTree()
+	for i, s := range args {
+		t.InplaceInsert(s, i)
+	}
+
+	return t
+}
+
+func newIPTree(args ...*net.IPNet) *iptree.Tree {
+	t := iptree.NewTree()
+	for i, n := range args {
+		t.InplaceInsertNet(n, i)
+	}
+
+	return t
+}
+
+func newDomainTree(args ...domain.Name) *domaintree.Node {
+	t := new(domaintree.Node)
+	for i, d := range args {
+		t.InplaceInsert(d, i)
+	}
+
+	return t
+}

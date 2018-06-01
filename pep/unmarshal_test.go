@@ -340,7 +340,7 @@ func TestFillResponse(t *testing.T) {
 		t.Errorf("expected same body %p as original response but got %p", r.Body, m.Body)
 	}
 
-	o := make([]pdp.AttributeAssignmentExpression, 10)
+	o := make([]pdp.AttributeAssignment, 10)
 	pr := &pdp.Response{
 		Obligations: o,
 	}

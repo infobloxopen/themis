@@ -807,19 +807,10 @@ func init() {
 			panic(fmt.Errorf("failed to make domain for request %d: %s", i+1, err))
 		}
 
-		n, err := pdp.MarshalRequestAssignments(b, []pdp.AttributeAssignmentExpression{
-			pdp.MakeAttributeAssignmentExpression(
-				pdp.MakeAttribute("k1", pdp.TypeString),
-				pdp.MakeStringValue(directionOpts[rand.Intn(len(directionOpts))]),
-			),
-			pdp.MakeAttributeAssignmentExpression(
-				pdp.MakeAttribute("k2", pdp.TypeString),
-				pdp.MakeStringValue(policySetOpts[rand.Intn(len(policySetOpts))]),
-			),
-			pdp.MakeAttributeAssignmentExpression(
-				pdp.MakeAttribute("k3", pdp.TypeDomain),
-				pdp.MakeDomainValue(dn),
-			),
+		n, err := pdp.MarshalRequestAssignments(b, []pdp.AttributeAssignment{
+			pdp.MakeStringAssignment("k1", directionOpts[rand.Intn(len(directionOpts))]),
+			pdp.MakeStringAssignment("k2", policySetOpts[rand.Intn(len(policySetOpts))]),
+			pdp.MakeDomainAssignment("k3", dn),
 		})
 		if err != nil {
 			panic(fmt.Errorf("failed to marshal request %d: %s", i+1, err))
@@ -834,7 +825,7 @@ func benchmarkPolicySet(p *pdp.PolicyStorage, b *testing.B) {
 	s.p = p
 	s.c = benchmarkContentStorage
 
-	var a [1]pdp.AttributeAssignmentExpression
+	var a [1]pdp.AttributeAssignment
 
 	for n := 0; n < b.N; n++ {
 		r, err := s.Validate(nil, benchmarkRequests[n%len(benchmarkRequests)])
@@ -871,7 +862,7 @@ func benchmarkRawPolicySet(p *pdp.PolicyStorage, b *testing.B) {
 	s.p = p
 	s.c = benchmarkContentStorage
 
-	var a [1]pdp.AttributeAssignmentExpression
+	var a [1]pdp.AttributeAssignment
 	var buf [10240]byte
 
 	for n := 0; n < b.N; n++ {

@@ -146,35 +146,14 @@ func TestMakeRequest(t *testing.T) {
 	m, err = makeRequest(testStruct, b[:])
 	assertBytesBuffer(t, "makeRequest(testStruct)", err, m.Body, len(m.Body), testRequestBuffer...)
 
-	m, err = makeRequest([]pdp.AttributeAssignmentExpression{
-		pdp.MakeAttributeAssignmentExpression(
-			pdp.MakeAttribute("Bool", pdp.TypeBoolean),
-			pdp.MakeBooleanValue(true),
-		),
-		pdp.MakeAttributeAssignmentExpression(
-			pdp.MakeAttribute("Int", pdp.TypeInteger),
-			pdp.MakeIntegerValue(5),
-		),
-		pdp.MakeAttributeAssignmentExpression(
-			pdp.MakeAttribute("Float", pdp.TypeFloat),
-			pdp.MakeFloatValue(555.5),
-		),
-		pdp.MakeAttributeAssignmentExpression(
-			pdp.MakeAttribute("String", pdp.TypeString),
-			pdp.MakeStringValue("test"),
-		),
-		pdp.MakeAttributeAssignmentExpression(
-			pdp.MakeAttribute("Address", pdp.TypeAddress),
-			pdp.MakeAddressValue(net.ParseIP("1.2.3.4")),
-		),
-		pdp.MakeAttributeAssignmentExpression(
-			pdp.MakeAttribute("Network", pdp.TypeNetwork),
-			pdp.MakeNetworkValue(makeTestNetwork("1.2.3.4/32")),
-		),
-		pdp.MakeAttributeAssignmentExpression(
-			pdp.MakeAttribute("Domain", pdp.TypeDomain),
-			pdp.MakeDomainValue(makeTestDomain("example.com")),
-		),
+	m, err = makeRequest([]pdp.AttributeAssignment{
+		pdp.MakeBooleanAssignment("Bool", true),
+		pdp.MakeIntegerAssignment("Int", 5),
+		pdp.MakeFloatAssignment("Float", 555.5),
+		pdp.MakeStringAssignment("String", "test"),
+		pdp.MakeAddressAssignment("Address", net.ParseIP("1.2.3.4")),
+		pdp.MakeNetworkAssignment("Network", makeTestNetwork("1.2.3.4/32")),
+		pdp.MakeDomainAssignment("Domain", makeTestDomain("example.com")),
 	}, b[:])
 	assertBytesBuffer(t, "makeRequest(assignments)", err, m.Body, len(m.Body), testRequestBuffer...)
 }

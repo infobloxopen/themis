@@ -592,39 +592,66 @@ func (v AttributeValue) Serialize() (string, error) {
 		return v.v.(domain.Name).String(), nil
 
 	case TypeSetOfStrings:
-		s := sortSetOfStrings(v.v.(*strtree.Tree))
-		for i, item := range s {
-			s[i] = strconv.Quote(item)
-		}
-
-		return strings.Join(s, ","), nil
+		return serializeSetOfStrings(v.v.(*strtree.Tree)), nil
 
 	case TypeSetOfNetworks:
-		var s []string
-		for p := range v.v.(*iptree.Tree).Enumerate() {
-			s = append(s, strconv.Quote(p.Key.String()))
-		}
-
-		return strings.Join(s, ","), nil
+		return serializeSetOfNetworks(v.v.(*iptree.Tree)), nil
 
 	case TypeSetOfDomains:
-		var s []string
-		for p := range v.v.(*domaintree.Node).Enumerate() {
-			s = append(s, strconv.Quote(p.Key))
-		}
-
-		return strings.Join(s, ","), nil
+		return serializeSetOfDomains(v.v.(*domaintree.Node)), nil
 
 	case TypeListOfStrings:
-		var s []string
-		for _, item := range v.v.([]string) {
-			s = append(s, strconv.Quote(item))
-		}
-
-		return strings.Join(s, ","), nil
+		return serializeListOfStrings(v.v.([]string)), nil
 	}
 
 	return "", newUnknownTypeSerializationError(v.t)
+}
+
+func serializeSetOfStrings(v *strtree.Tree) string {
+	s := sortSetOfStrings(v)
+	for i, item := range s {
+		s[i] = strconv.QuoteToASCII(item)
+	}
+
+	return strings.Join(s, ",")
+}
+
+func serializeSetOfNetworks(v *iptree.Tree) string {
+	var s []string
+	for p := range v.Enumerate() {
+		s = append(s, strconv.QuoteToASCII(p.Key.String()))
+	}
+
+	return strings.Join(s, ",")
+}
+
+func serializeSetOfDomains(v *domaintree.Node) string {
+	var s []string
+	for p := range v.Enumerate() {
+		s = append(s, strconv.QuoteToASCII(p.Key))
+	}
+
+	return strings.Join(s, ",")
+}
+
+func serializeListOfStrings(v []string) string {
+	s := make([]string, len(v))
+	for i, item := range v {
+		s[i] = strconv.QuoteToASCII(item)
+	}
+
+	return strings.Join(s, ",")
+}
+
+func serializeFlags(v uint64, t *FlagsType) string {
+	var s []string
+	for i, b := range t.b {
+		if v&(1<<uint(i)) != 0 {
+			s = append(s, strconv.QuoteToASCII(b))
+		}
+	}
+
+	return strings.Join(s, ",")
 }
 
 // Rebind produces copy of the value with given type if the type matches original value type.

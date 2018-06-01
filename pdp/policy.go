@@ -41,7 +41,7 @@ type Policy struct {
 	hidden      bool
 	target      Target
 	rules       []*Rule
-	obligations []AttributeAssignmentExpression
+	obligations []AttributeAssignment
 	algorithm   RuleCombiningAlg
 }
 
@@ -49,7 +49,7 @@ type Policy struct {
 // set of rules, algorithm and obligations. To make instance of algorithm it
 // uses one of makers from RuleCombiningAlgs or RuleCombiningParamAlgs and its
 // parameters if it requires any.
-func NewPolicy(ID string, hidden bool, target Target, rules []*Rule, makeRCA RuleCombiningAlgMaker, params interface{}, obligations []AttributeAssignmentExpression) *Policy {
+func NewPolicy(ID string, hidden bool, target Target, rules []*Rule, makeRCA RuleCombiningAlgMaker, params interface{}, obligations []AttributeAssignment) *Policy {
 	for i, r := range rules {
 		r.ord = i
 	}
@@ -334,7 +334,7 @@ func (a denyOverridesRCA) describe() string {
 
 func (a denyOverridesRCA) execute(rules []*Rule, ctx *Context) Response {
 	errs := []error{}
-	obligations := make([]AttributeAssignmentExpression, 0)
+	obligations := make([]AttributeAssignment, 0)
 
 	indetD := 0
 	indetP := 0

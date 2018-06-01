@@ -46,32 +46,93 @@ func TestAttributeDesignator(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error but got %s", err)
 	}
+}
 
-	i := Attribute{
-		id: "test-id-i",
-		t:  TypeInteger}
-	d = MakeAttributeDesignator(i)
-	dat = d.GetResultType()
-	if dat != TypeInteger {
-		t.Errorf("Expected %q type but got %q", TypeInteger, dat)
+func TestMakeDesignator(t *testing.T) {
+	d := MakeDesignator("test-id", TypeString)
+	dai := d.GetID()
+	if dai != "test-id" {
+		t.Errorf("Expected %q id but got %q", "test-id", dai)
 	}
 
-	_, err = d.Calculate(ctx)
-	if err != nil {
-		t.Errorf("Expected no error but got %s", err)
+	dat := d.GetResultType()
+	if dat != TypeString {
+		t.Errorf("Expected %q type but got %q", TypeString, dat)
 	}
 
-	f := Attribute{
-		id: "test-id-f",
-		t:  TypeFloat}
-	d = MakeAttributeDesignator(f)
-	dat = d.GetResultType()
-	if dat != TypeFloat {
-		t.Errorf("Expected %q type but got %q", TypeFloat, dat)
+	testCases := []struct {
+		f func(string) AttributeDesignator
+		i string
+		t Type
+	}{
+		{
+			f: MakeBooleanDesignator,
+			i: "b",
+			t: TypeBoolean,
+		},
+		{
+			f: MakeStringDesignator,
+			i: "s",
+			t: TypeString,
+		},
+		{
+			f: MakeIntegerDesignator,
+			i: "i",
+			t: TypeInteger,
+		},
+		{
+			f: MakeFloatDesignator,
+			i: "f",
+			t: TypeFloat,
+		},
+		{
+			f: MakeAddressDesignator,
+			i: "a",
+			t: TypeAddress,
+		},
+		{
+			f: MakeNetworkDesignator,
+			i: "n",
+			t: TypeNetwork,
+		},
+		{
+			f: MakeDomainDesignator,
+			i: "d",
+			t: TypeDomain,
+		},
+		{
+			f: MakeSetOfStringsDesignator,
+			i: "ss",
+			t: TypeSetOfStrings,
+		},
+		{
+			f: MakeSetOfNetworksDesignator,
+			i: "sn",
+			t: TypeSetOfNetworks,
+		},
+		{
+			f: MakeSetOfDomainsDesignator,
+			i: "sd",
+			t: TypeSetOfDomains,
+		},
+		{
+			f: MakeListOfStringsDesignator,
+			i: "ls",
+			t: TypeListOfStrings,
+		},
 	}
 
-	_, err = d.Calculate(ctx)
-	if err != nil {
-		t.Errorf("Expected no error but got %s", err)
+	for i, c := range testCases {
+		d := c.f(c.i)
+
+		dai := d.GetID()
+		if dai != c.i {
+			t.Errorf("Expected %q id for %d designator but got %q", c.i, i+1, dai)
+		}
+
+		dat := d.GetResultType()
+		if dat != c.t {
+			t.Errorf("Expected %q type for %d %q designator but got %q", c.t, i+1, dai, dat)
+		}
 	}
 }

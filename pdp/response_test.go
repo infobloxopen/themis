@@ -90,11 +90,8 @@ func TestMarshalResponse(t *testing.T) {
 		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
 	}
 
-	n, err = marshalResponse(b[:], EffectIndeterminate, []AttributeAssignmentExpression{
-		MakeAttributeAssignmentExpression(
-			MakeAttribute("address", TypeAddress),
-			MakeAddressValue(net.IP{1, 2, 3, 4, 5, 6}),
-		),
+	n, err = marshalResponse(b[:], EffectIndeterminate, []AttributeAssignment{
+		MakeAddressAssignment("address", net.IP{1, 2, 3, 4, 5, 6}),
 	})
 	if err == nil {
 		t.Errorf("expected no data put to buffer for response with invalid network but got %d", n)
@@ -115,7 +112,7 @@ func TestMakeIndeterminateResponse(t *testing.T) {
 }
 
 func TestUnmarshalResponse(t *testing.T) {
-	var a [3]AttributeAssignmentExpression
+	var a [3]AttributeAssignment
 
 	effect, n, err := UnmarshalResponse(append([]byte{1, 0, 1, 0, 0}, testWireAttributes...), a[:])
 	assertRequestAssignmentExpressions(t, "UnmarshalResponse", err, a[:], n, testRequestAssignments...)
@@ -213,19 +210,10 @@ func TestUnmarshalResponseToReflection(t *testing.T) {
 			t.Errorf("expected %q effect but got %q", EffectNameFromEnum(EffectPermit), EffectNameFromEnum(effect))
 		}
 
-		a := []AttributeAssignmentExpression{
-			MakeAttributeAssignmentExpression(
-				MakeAttribute("string", TypeString),
-				MakeStringValue(s),
-			),
-			MakeAttributeAssignmentExpression(
-				MakeAttribute("boolean", TypeBoolean),
-				MakeBooleanValue(b),
-			),
-			MakeAttributeAssignmentExpression(
-				MakeAttribute("integer", TypeInteger),
-				MakeIntegerValue(i64),
-			),
+		a := []AttributeAssignment{
+			MakeStringAssignment("string", s),
+			MakeBooleanAssignment("boolean", b),
+			MakeIntegerAssignment("integer", i64),
 		}
 		assertRequestAssignmentExpressions(t, "UnmarshalResponseToReflection", err, a, 3, testRequestAssignments...)
 	}
@@ -467,11 +455,8 @@ func TestPutAssignmentExpressions(t *testing.T) {
 	n, err = putAssignmentExpressions([]byte{}, testRequestAssignments)
 	assertRequestBufferOverflow(t, "putAssignmentExpressions", err, n)
 
-	n, err = putAssignmentExpressions(b[:], []AttributeAssignmentExpression{
-		MakeAttributeAssignmentExpression(
-			MakeAttribute("boolean", TypeBoolean),
-			makeFunctionBooleanNot([]Expression{MakeBooleanValue(true)}),
-		),
+	n, err = putAssignmentExpressions(b[:], []AttributeAssignment{
+		MakeExpressionAssignment("boolean", makeFunctionBooleanNot([]Expression{MakeBooleanValue(true)})),
 	})
 	if err == nil {
 		t.Errorf("expected no data put to buffer for invalid expression but got %d", n)
@@ -561,7 +546,7 @@ func TestPutAttributesFromReflection(t *testing.T) {
 }
 
 func TestGetAssignmentExpressions(t *testing.T) {
-	var a [3]AttributeAssignmentExpression
+	var a [3]AttributeAssignment
 
 	n, err := getAssignmentExpressions(testWireAttributes, a[:])
 	assertRequestAssignmentExpressions(t, "getAssignmentExpressions", err, a[:], n, testRequestAssignments...)
@@ -653,90 +638,30 @@ func TestGetAttributesToReflection(t *testing.T) {
 		return v, nil
 	})
 
-	a := []AttributeAssignmentExpression{
-		MakeAttributeAssignmentExpression(
-			MakeAttribute(names[0], TypeBoolean),
-			MakeBooleanValue(booleanFalse),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute(names[1], TypeBoolean),
-			MakeBooleanValue(booleanTrue),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute(names[2], TypeString),
-			MakeStringValue(str),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute(names[3], TypeInteger),
-			MakeIntegerValue(num),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute(names[4], TypeFloat),
-			MakeFloatValue(flt),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute(names[5], TypeAddress),
-			MakeAddressValue(av4),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute(names[6], TypeAddress),
-			MakeAddressValue(av6),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute(names[7], TypeNetwork),
-			MakeNetworkValue(nv4),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute(names[8], TypeNetwork),
-			MakeNetworkValue(nv6),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute(names[9], TypeDomain),
-			MakeDomainValue(dn),
-		),
+	a := []AttributeAssignment{
+		MakeBooleanAssignment(names[0], booleanFalse),
+		MakeBooleanAssignment(names[1], booleanTrue),
+		MakeStringAssignment(names[2], str),
+		MakeIntegerAssignment(names[3], num),
+		MakeFloatAssignment(names[4], flt),
+		MakeAddressAssignment(names[5], av4),
+		MakeAddressAssignment(names[6], av6),
+		MakeNetworkAssignment(names[7], nv4),
+		MakeNetworkAssignment(names[8], nv6),
+		MakeDomainAssignment(names[9], dn),
 	}
 
 	assertRequestAssignmentExpressions(t, "getAttributesToReflection", err, a, i,
-		MakeAttributeAssignmentExpression(
-			MakeAttribute("booleanFalse", TypeBoolean),
-			MakeBooleanValue(false),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute("booleanTrue", TypeBoolean),
-			MakeBooleanValue(true),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute("string", TypeString),
-			MakeStringValue("test"),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute("integer", TypeInteger),
-			MakeIntegerValue(1),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute("float", TypeFloat),
-			MakeFloatValue(float64(math.Pi)),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute("address4", TypeAddress),
-			MakeAddressValue(net.ParseIP("192.0.2.1")),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute("address6", TypeAddress),
-			MakeAddressValue(net.ParseIP("2001:db8::1")),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute("network4", TypeNetwork),
-			MakeNetworkValue(makeTestNetwork("192.0.2.0/24")),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute("network6", TypeNetwork),
-			MakeNetworkValue(makeTestNetwork("2001:db8::/32")),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute("domain", TypeDomain),
-			MakeDomainValue(makeTestDomain("www.example.com")),
-		),
+		MakeBooleanAssignment("booleanFalse", false),
+		MakeBooleanAssignment("booleanTrue", true),
+		MakeStringAssignment("string", "test"),
+		MakeIntegerAssignment("integer", 1),
+		MakeFloatAssignment("float", float64(math.Pi)),
+		MakeAddressAssignment("address4", net.ParseIP("192.0.2.1")),
+		MakeAddressAssignment("address6", net.ParseIP("2001:db8::1")),
+		MakeNetworkAssignment("network4", makeTestNetwork("192.0.2.0/24")),
+		MakeNetworkAssignment("network6", makeTestNetwork("2001:db8::/32")),
+		MakeDomainAssignment("domain", makeTestDomain("www.example.com")),
 	)
 
 	err = getAttributesToReflection([]byte{}, func(id string, t Type) (reflect.Value, error) {

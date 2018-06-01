@@ -62,12 +62,12 @@ var (
 	}
 )
 
-// MarshalRequestAssignments marshals list of assignment expressions
-// to sequence of bytes. It requires each expression to be assignment of
-// immediate value (which can be created with MakeStringValue or similar
-// functions). Caller should provide large enough buffer. Function fills
-// the buffer and returns number of bytes written.
-func MarshalRequestAssignments(b []byte, in []AttributeAssignmentExpression) (int, error) {
+// MarshalRequestAssignments marshals list of assignments to sequence of bytes.
+// It requires each assignment to have immediate value as an expression (which
+// can be created with MakeStringValue or similar functions). Caller should
+// provide large enough buffer. Function fills the buffer and returns
+// number of bytes written.
+func MarshalRequestAssignments(b []byte, in []AttributeAssignment) (int, error) {
 	off, err := putRequestVersion(b)
 	if err != nil {
 		return off, err
@@ -106,10 +106,10 @@ func MarshalRequestReflection(b []byte, c int, f func(i int) (string, Type, refl
 	return off + n, nil
 }
 
-// UnmarshalRequestAssignments parses given sequence of bytes as
-// list of assignment expressions. Caller should provide large enough out
-// slice. The function returns number of expressions written.
-func UnmarshalRequestAssignments(b []byte, out []AttributeAssignmentExpression) (int, error) {
+// UnmarshalRequestAssignments parses given sequence of bytes as a list of
+// assignments. Caller should provide large enough out slice. The function
+// returns number of assignments written.
+func UnmarshalRequestAssignments(b []byte, out []AttributeAssignment) (int, error) {
 	n, err := checkRequestVersion(b)
 	if err != nil {
 		return 0, err

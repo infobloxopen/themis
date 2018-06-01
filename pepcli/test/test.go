@@ -48,7 +48,7 @@ func Exec(addr string, opts []pep.Option, maxRequestSize, maxResponseObligations
 	}
 	defer c.Close()
 
-	obligations := make([]pdp.AttributeAssignmentExpression, maxResponseObligations)
+	obligations := make([]pdp.AttributeAssignment, maxResponseObligations)
 	res := pdp.Response{}
 	for i := 0; i < n; i++ {
 		idx := i % len(reqs)

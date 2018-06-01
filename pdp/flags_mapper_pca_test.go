@@ -30,7 +30,7 @@ func TestFlagsMapperPCAOrdering(t *testing.T) {
 			),
 		},
 		makeMapperPCA, MapperPCAParams{
-			Argument:  AttributeDesignator{a: Attribute{id: "f", t: ft}},
+			Argument:  MakeDesignator("f", ft),
 			Order:     MapperPCAInternalOrder,
 			Algorithm: firstApplicableEffectPCA{},
 		},
@@ -70,7 +70,7 @@ func TestFlagsMapperPCAOrdering(t *testing.T) {
 			),
 		},
 		makeMapperPCA, MapperPCAParams{
-			Argument:  AttributeDesignator{a: Attribute{id: "f", t: ft}},
+			Argument:  MakeDesignator("f", ft),
 			Order:     MapperPCAExternalOrder,
 			Algorithm: firstApplicableEffectPCA{},
 		},

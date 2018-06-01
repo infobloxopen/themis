@@ -47,7 +47,7 @@ func Load(name string, size uint32) ([]pb.Msg, error) {
 
 	out := make([]pb.Msg, len(in.Requests))
 	for i, r := range in.Requests {
-		attrs := make([]pdp.AttributeAssignmentExpression, len(r))
+		attrs := make([]pdp.AttributeAssignment, len(r))
 		j := 0
 		for k, v := range r {
 			a, err := makeAttribute(k, v, symbols)
@@ -82,33 +82,30 @@ var marshallers = map[pdp.Type]attributeMarshaller{
 	pdp.TypeNetwork: networkMarshaller,
 	pdp.TypeDomain:  domainMarshaller}
 
-func makeAttribute(name string, value interface{}, symbols map[string]pdp.Type) (pdp.AttributeAssignmentExpression, error) {
+func makeAttribute(name string, value interface{}, symbols map[string]pdp.Type) (pdp.AttributeAssignment, error) {
 	t, ok := symbols[name]
 	var err error
 	if !ok {
 		t, err = guessType(value)
 		if err != nil {
-			return pdp.AttributeAssignmentExpression{},
+			return pdp.AttributeAssignment{},
 				fmt.Errorf("type of %q attribute isn't defined and can't be derived: %s", name, err)
 		}
 	}
 
 	marshaller, ok := marshallers[t]
 	if !ok {
-		return pdp.AttributeAssignmentExpression{},
+		return pdp.AttributeAssignment{},
 			fmt.Errorf("marshaling hasn't been implemented for type %q of %q attribute", t, name)
 	}
 
 	v, err := marshaller(value)
 	if err != nil {
-		return pdp.AttributeAssignmentExpression{},
+		return pdp.AttributeAssignment{},
 			fmt.Errorf("can't marshal %q attribute as %q: %s", name, t, err)
 	}
 
-	return pdp.MakeAttributeAssignmentExpression(
-		pdp.MakeAttribute(name, t),
-		v,
-	), nil
+	return pdp.MakeExpressionAssignment(name, v), nil
 }
 
 func guessType(value interface{}) (pdp.Type, error) {

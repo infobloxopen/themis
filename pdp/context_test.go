@@ -75,42 +75,15 @@ func TestContext(t *testing.T) {
 		t.Error(err)
 	} else {
 		assertContextAttributes(t, "NewContext", ctx,
-			MakeAttributeAssignmentExpression(
-				MakeAttribute("a", TypeAddress),
-				MakeAddressValue(net.ParseIP("192.0.2.1")),
-			),
-			MakeAttributeAssignmentExpression(
-				MakeAttribute("b", TypeBoolean),
-				MakeBooleanValue(true),
-			),
-			MakeAttributeAssignmentExpression(
-				MakeAttribute("d", TypeDomain),
-				MakeDomainValue(makeTestDomain("example.com")),
-			),
-			MakeAttributeAssignmentExpression(
-				MakeAttribute("ls", TypeListOfStrings),
-				MakeListOfStringsValue(lt),
-			),
-			MakeAttributeAssignmentExpression(
-				MakeAttribute("n", TypeNetwork),
-				MakeNetworkValue(makeTestNetwork("192.0.2.0/24")),
-			),
-			MakeAttributeAssignmentExpression(
-				MakeAttribute("s", TypeString),
-				MakeStringValue("test"),
-			),
-			MakeAttributeAssignmentExpression(
-				MakeAttribute("sd", TypeSetOfDomains),
-				MakeSetOfDomainsValue(dt),
-			),
-			MakeAttributeAssignmentExpression(
-				MakeAttribute("sn", TypeSetOfNetworks),
-				MakeSetOfNetworksValue(nt),
-			),
-			MakeAttributeAssignmentExpression(
-				MakeAttribute("ss", TypeSetOfStrings),
-				MakeSetOfStringsValue(st),
-			),
+			MakeAddressAssignment("a", net.ParseIP("192.0.2.1")),
+			MakeBooleanAssignment("b", true),
+			MakeDomainAssignment("d", makeTestDomain("example.com")),
+			MakeListOfStringsAssignment("ls", lt),
+			MakeNetworkAssignment("n", makeTestNetwork("192.0.2.0/24")),
+			MakeStringAssignment("s", "test"),
+			MakeSetOfDomainsAssignment("sd", dt),
+			MakeSetOfNetworksAssignment("sn", nt),
+			MakeSetOfStringsAssignment("ss", st),
 		)
 	}
 
@@ -140,8 +113,8 @@ func TestResponse(t *testing.T) {
 		Status: bindError(newMissingAttributeError(), MakeAttribute("t", TypeInteger).describe()),
 		Obligations: append(
 			testRequestAssignments,
-			MakeAttributeAssignmentExpression(
-				MakeAttribute("x", TypeInteger),
+			MakeExpressionAssignment(
+				"x",
 				makeFunctionIntegerAdd(
 					MakeAttributeDesignator(MakeAttribute("y", TypeInteger)),
 					MakeAttributeDesignator(MakeAttribute("z", TypeInteger)),
@@ -177,7 +150,7 @@ func TestResponse(t *testing.T) {
 	)
 }
 
-func assertContextAttributes(t *testing.T, desc string, ctx *Context, attrs ...AttributeAssignmentExpression) {
+func assertContextAttributes(t *testing.T, desc string, ctx *Context, attrs ...AttributeAssignment) {
 	if ctx == nil {
 		t.Errorf("expected some context for %q but got nothing", desc)
 		return

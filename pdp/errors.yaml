@@ -1120,7 +1120,7 @@ errors:
 - id: requestInvalidExpressionError
   fields:
   - id: a
-    type: AttributeAssignmentExpression
+    type: AttributeAssignment
   msg: "Expected value as right part of assignment expression for %s but got %T"
   args:
   - field: a.a.describe()

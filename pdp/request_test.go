@@ -14,19 +14,10 @@ import (
 var (
 	testWireRequest = append([]byte{1, 0}, testWireAttributes...)
 
-	testRequestAssignments = []AttributeAssignmentExpression{
-		MakeAttributeAssignmentExpression(
-			MakeAttribute("string", TypeString),
-			MakeStringValue("test"),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute("boolean", TypeBoolean),
-			MakeBooleanValue(true),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute("integer", TypeInteger),
-			MakeIntegerValue(9223372036854775807),
-		),
+	testRequestAssignments = []AttributeAssignment{
+		MakeStringAssignment("string", "test"),
+		MakeBooleanAssignment("boolean", true),
+		MakeIntegerAssignment("integer", 9223372036854775807),
 	}
 )
 
@@ -77,7 +68,7 @@ func TestMarshalRequestReflection(t *testing.T) {
 }
 
 func TestUnmarshalRequestAssignments(t *testing.T) {
-	var a [3]AttributeAssignmentExpression
+	var a [3]AttributeAssignment
 
 	n, err := UnmarshalRequestAssignments(testWireRequest, a[:])
 	assertRequestAssignmentExpressions(t, "UnmarshalRequestAssignments", err, a[:], n, testRequestAssignments...)
@@ -138,19 +129,10 @@ func TestUnmarshalRequestReflection(t *testing.T) {
 		return v, nil
 	})
 
-	a := []AttributeAssignmentExpression{
-		MakeAttributeAssignmentExpression(
-			MakeAttribute(names[0], TypeString),
-			MakeStringValue(str),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute(names[1], TypeBoolean),
-			MakeBooleanValue(boolean),
-		),
-		MakeAttributeAssignmentExpression(
-			MakeAttribute(names[2], TypeInteger),
-			MakeIntegerValue(num),
-		),
+	a := []AttributeAssignment{
+		MakeStringAssignment(names[0], str),
+		MakeBooleanAssignment(names[1], boolean),
+		MakeIntegerAssignment(names[2], num),
 	}
 
 	assertRequestAssignmentExpressions(t, "UnmarshalRequestReflection", err, a, i, testRequestAssignments...)
@@ -1392,7 +1374,7 @@ func assertRequestBufferOverflow(t *testing.T, desc string, err error, n int) {
 	}
 }
 
-func assertRequestAssignmentExpressions(t *testing.T, desc string, err error, a []AttributeAssignmentExpression, n int, e ...AttributeAssignmentExpression) {
+func assertRequestAssignmentExpressions(t *testing.T, desc string, err error, a []AttributeAssignment, n int, e ...AttributeAssignment) {
 	if err != nil {
 		t.Errorf("expected no error for %s but got: %s", desc, err)
 	} else if n != len(a) {
@@ -1414,7 +1396,7 @@ func assertRequestAssignmentExpressions(t *testing.T, desc string, err error, a 
 	}
 }
 
-func serializeAssignmentExpressions(a []AttributeAssignmentExpression) ([]string, error) {
+func serializeAssignmentExpressions(a []AttributeAssignment) ([]string, error) {
 	out := make([]string, len(a))
 	for i, a := range a {
 		id, t, v, err := a.Serialize(nil)

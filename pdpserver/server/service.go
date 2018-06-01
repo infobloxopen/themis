@@ -83,7 +83,7 @@ func (s *Server) Validate(ctx context.Context, in *pb.Msg) (*pb.Msg, error) {
 
 type obligations struct {
 	ctx *pdp.Context
-	o   []pdp.AttributeAssignmentExpression
+	o   []pdp.AttributeAssignment
 }
 
 func (o obligations) String() string {

@@ -30,7 +30,7 @@ func TestFlagsMapperRCAOrdering(t *testing.T) {
 			),
 		},
 		makeMapperRCA, MapperRCAParams{
-			Argument:  AttributeDesignator{a: Attribute{id: "f", t: ft}},
+			Argument:  MakeDesignator("f", ft),
 			Order:     MapperRCAInternalOrder,
 			Algorithm: firstApplicableEffectRCA{},
 		},
@@ -70,7 +70,7 @@ func TestFlagsMapperRCAOrdering(t *testing.T) {
 			),
 		},
 		makeMapperRCA, MapperRCAParams{
-			Argument:  AttributeDesignator{a: Attribute{id: "f", t: ft}},
+			Argument:  MakeDesignator("f", ft),
 			Order:     MapperRCAExternalOrder,
 			Algorithm: firstApplicableEffectRCA{},
 		},

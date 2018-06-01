@@ -43,7 +43,7 @@ type PolicySet struct {
 	hidden      bool
 	target      Target
 	policies    []Evaluable
-	obligations []AttributeAssignmentExpression
+	obligations []AttributeAssignment
 	algorithm   PolicyCombiningAlg
 }
 
@@ -51,7 +51,7 @@ type PolicySet struct {
 // target, set of policy sets or policies, algorithm and obligations. To make
 // instance of algorithm it uses one of makers from PolicyCombiningAlgs or
 // PolicyCombiningParamAlgs and its parameters if it requires any.
-func NewPolicySet(ID string, hidden bool, target Target, policies []Evaluable, makePCA PolicyCombiningAlgMaker, params interface{}, obligations []AttributeAssignmentExpression) *PolicySet {
+func NewPolicySet(ID string, hidden bool, target Target, policies []Evaluable, makePCA PolicyCombiningAlgMaker, params interface{}, obligations []AttributeAssignment) *PolicySet {
 	for i, p := range policies {
 		p.setOrder(i)
 	}
@@ -372,7 +372,7 @@ func (a denyOverridesPCA) describe() string {
 
 func (a denyOverridesPCA) execute(policies []Evaluable, ctx *Context) Response {
 	errs := []error{}
-	obligations := make([]AttributeAssignmentExpression, 0)
+	obligations := make([]AttributeAssignment, 0)
 
 	indetD := 0
 	indetP := 0

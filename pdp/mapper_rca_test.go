@@ -33,7 +33,7 @@ func TestMapperRCAOrdering(t *testing.T) {
 			),
 		},
 		makeMapperRCA, MapperRCAParams{
-			Argument:  AttributeDesignator{a: Attribute{id: "k", t: TypeListOfStrings}},
+			Argument:  MakeListOfStringsDesignator("k"),
 			Order:     MapperRCAInternalOrder,
 			Algorithm: firstApplicableEffectRCA{},
 		},
@@ -73,7 +73,7 @@ func TestMapperRCAOrdering(t *testing.T) {
 			),
 		},
 		makeMapperRCA, MapperRCAParams{
-			Argument:  AttributeDesignator{a: Attribute{id: "k", t: TypeListOfStrings}},
+			Argument:  MakeListOfStringsDesignator("k"),
 			Order:     MapperRCAExternalOrder,
 			Algorithm: firstApplicableEffectRCA{},
 		},

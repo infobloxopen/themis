@@ -113,14 +113,14 @@ func TestPolicy(t *testing.T) {
 		algorithm: makeMapperRCA(
 			[]*Rule{defaultRule, errorRule, permitRule},
 			MapperRCAParams{
-				Argument: AttributeDesignator{a: Attribute{id: "x", t: TypeSetOfStrings}},
+				Argument: MakeSetOfStringsDesignator("x"),
 				DefOk:    true,
 				Def:      "Default",
 				ErrOk:    true,
 				Err:      "Error",
 				Algorithm: makeMapperRCA(
 					nil,
-					MapperRCAParams{Argument: AttributeDesignator{a: Attribute{id: "y", t: TypeString}}})})}
+					MapperRCAParams{Argument: MakeStringDesignator("y")})})}
 
 	c = &Context{
 		a: map[string]interface{}{
@@ -315,7 +315,7 @@ func TestPolicyAppend(t *testing.T) {
 			makeSimpleRule("third", EffectPermit),
 		},
 		makeMapperRCA, MapperRCAParams{
-			Argument: AttributeDesignator{a: Attribute{id: "k", t: TypeString}},
+			Argument: MakeStringDesignator("k"),
 			DefOk:    true,
 			Def:      "first",
 			ErrOk:    true,
@@ -396,7 +396,7 @@ func TestPolicyAppend(t *testing.T) {
 			makeSimpleRule("third", EffectPermit),
 		},
 		makeMapperRCA, MapperRCAParams{
-			Argument: AttributeDesignator{a: Attribute{id: "f", t: ft}},
+			Argument: MakeDesignator("f", ft),
 			DefOk:    true,
 			Def:      "first",
 			ErrOk:    true,
@@ -603,7 +603,7 @@ func TestPolicyDelete(t *testing.T) {
 			makeSimpleRule("third", EffectPermit),
 		},
 		makeMapperRCA, MapperRCAParams{
-			Argument: AttributeDesignator{a: Attribute{id: "k", t: TypeString}},
+			Argument: MakeStringDesignator("k"),
 			DefOk:    true,
 			Def:      "first",
 			ErrOk:    true,
@@ -661,7 +661,7 @@ func TestPolicyDelete(t *testing.T) {
 			makeSimpleRule("fifth", EffectPermit),
 		},
 		makeMapperRCA, MapperRCAParams{
-			Argument: AttributeDesignator{a: Attribute{id: "f", t: ft}},
+			Argument: MakeDesignator("f", ft),
 			DefOk:    true,
 			Def:      "first",
 			ErrOk:    true,
@@ -823,7 +823,7 @@ func makeSimpleHiddenPolicy(rules ...*Rule) *Policy {
 	)
 }
 
-func makeSimplePermitPolicyWithObligations(ID string, obligations []AttributeAssignmentExpression) *Policy {
+func makeSimplePermitPolicyWithObligations(ID string, obligations []AttributeAssignment) *Policy {
 	return NewPolicy(
 		ID, false,
 		Target{},
@@ -854,7 +854,7 @@ func makeSimpleHiddenRule(effect int) *Rule {
 	)
 }
 
-func makeSimplePermitRuleWithObligations(ID string, obligations []AttributeAssignmentExpression) *Rule {
+func makeSimplePermitRuleWithObligations(ID string, obligations []AttributeAssignment) *Rule {
 	return NewRule(
 		ID, false,
 		Target{},
@@ -867,15 +867,12 @@ func makeSimplePermitRuleWithObligations(ID string, obligations []AttributeAssig
 func makeSimpleStringTarget(ID, value string) Target {
 	return Target{a: []AnyOf{{a: []AllOf{{m: []Match{{
 		m: functionStringEqual{
-			first:  AttributeDesignator{a: Attribute{id: ID, t: TypeString}},
+			first:  MakeStringDesignator(ID),
 			second: MakeStringValue(value)}}}}}}}}
 }
 
-func makeSingleStringObligation(ID, value string) []AttributeAssignmentExpression {
-	return []AttributeAssignmentExpression{
-		{
-			a: Attribute{id: ID, t: TypeString},
-			e: MakeStringValue(value)}}
+func makeSingleStringObligation(ID, value string) []AttributeAssignment {
+	return []AttributeAssignment{MakeStringAssignment(ID, value)}
 }
 
 func assertMapperRCAMapKeys(a RuleCombiningAlg, desc string, t *testing.T, expected ...string) {

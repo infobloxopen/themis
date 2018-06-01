@@ -33,7 +33,7 @@ func TestMapperPCAOrdering(t *testing.T) {
 			),
 		},
 		makeMapperPCA, MapperPCAParams{
-			Argument:  AttributeDesignator{a: Attribute{id: "k", t: TypeListOfStrings}},
+			Argument:  MakeListOfStringsDesignator("k"),
 			Order:     MapperPCAInternalOrder,
 			Algorithm: firstApplicableEffectPCA{},
 		},
@@ -73,7 +73,7 @@ func TestMapperPCAOrdering(t *testing.T) {
 			),
 		},
 		makeMapperPCA, MapperPCAParams{
-			Argument:  AttributeDesignator{a: Attribute{id: "k", t: TypeListOfStrings}},
+			Argument:  MakeListOfStringsDesignator("k"),
 			Order:     MapperPCAExternalOrder,
 			Algorithm: firstApplicableEffectPCA{},
 		},
