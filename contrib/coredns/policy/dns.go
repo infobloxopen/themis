@@ -14,7 +14,7 @@ var errInvalidDNSMessage = errors.New("invalid DNS message")
 
 func getNameAndType(r *dns.Msg) (string, uint16) {
 	if r == nil || len(r.Question) <= 0 {
-		return ".", 0
+		return ".", dns.TypeNone
 	}
 
 	q := r.Question[0]
@@ -23,7 +23,7 @@ func getNameAndType(r *dns.Msg) (string, uint16) {
 
 func getNameAndClass(r *dns.Msg) (string, uint16) {
 	if r == nil || len(r.Question) <= 0 {
-		return ".", 0
+		return ".", dns.ClassNONE
 	}
 
 	q := r.Question[0]
@@ -140,6 +140,7 @@ func (p *policyPlugin) setRedirectQueryAnswer(ctx context.Context, w dns.Respons
 
 		nw := nonwriter.New(w)
 		if _, err := plugin.NextOrFailure(p.Name(), p.next, ctx, nw, r); err != nil {
+			r.Question[0].Name = origName
 			return dns.RcodeServerFailure, err
 		}
 

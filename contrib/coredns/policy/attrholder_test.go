@@ -218,14 +218,16 @@ func TestActionDomainResponse(t *testing.T) {
 	r := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
 	w := newTestAddressedNonwriter("192.0.2.1")
 	for i, test := range tests {
-		ah := newAttrHolderWithDnReq(w, r, nil, nil)
-		ah.addDnRes(test.res, nil)
-		if ah.action != test.action {
-			t.Errorf("unexpected action in TC #%d: expected=%d, actual=%d", i, test.action, ah.action)
-		}
-		if ah.dst != test.dst {
-			t.Errorf("unexpected redirect destination in TC #%d: expected=%q, actual=%q", i, test.dst, ah.dst)
-		}
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			ah := newAttrHolderWithDnReq(w, r, nil, nil)
+			ah.addDnRes(test.res, nil)
+			if ah.action != test.action {
+				t.Errorf("unexpected action in TC #%d: expected=%d, actual=%d", i, test.action, ah.action)
+			}
+			if ah.dst != test.dst {
+				t.Errorf("unexpected redirect destination in TC #%d: expected=%q, actual=%q", i, test.dst, ah.dst)
+			}
+		})
 	}
 }
 
@@ -311,15 +313,17 @@ func TestActionIpResponse(t *testing.T) {
 	r := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
 	w := newTestAddressedNonwriter("192.0.2.1")
 	for i, test := range tests {
-		ah := newAttrHolderWithDnReq(w, r, nil, nil)
-		ah.action = test.initAction
-		ah.addIPRes(test.res)
-		if ah.action != test.action {
-			t.Errorf("unexpected action in TC #%d: expected=%d, actual=%d", i, test.action, ah.action)
-		}
-		if ah.dst != test.dst {
-			t.Errorf("unexpected redirect destination in TC #%d: expected=%q, actual=%q", i, test.dst, ah.dst)
-		}
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			ah := newAttrHolderWithDnReq(w, r, nil, nil)
+			ah.action = test.initAction
+			ah.addIPRes(test.res)
+			if ah.action != test.action {
+				t.Errorf("unexpected action in TC #%d: expected=%d, actual=%d", i, test.action, ah.action)
+			}
+			if ah.dst != test.dst {
+				t.Errorf("unexpected redirect destination in TC #%d: expected=%q, actual=%q", i, test.dst, ah.dst)
+			}
+		})
 	}
 }
 
@@ -611,64 +615,66 @@ func TestAddResponse(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		w := newTestAddressedNonwriter(fmt.Sprintf("192.0.2.%d", i+1))
-		if test.dnRes != nil {
-			r := makeTestDNSMsgWithEdns0("example.com", dns.TypeA, dns.ClassINET, copyEdns0(test.opts...)...)
-			ah := newAttrHolderWithDnReq(w, r, optsMap, nil)
-			ah.addDnRes(test.resp, custAttrs)
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			w := newTestAddressedNonwriter(fmt.Sprintf("192.0.2.%d", i+1))
+			if test.dnRes != nil {
+				r := makeTestDNSMsgWithEdns0("example.com", dns.TypeA, dns.ClassINET, copyEdns0(test.opts...)...)
+				ah := newAttrHolderWithDnReq(w, r, optsMap, nil)
+				ah.addDnRes(test.resp, custAttrs)
 
-			pdp.AssertAttributeAssignments(t,
-				fmt.Sprintf("TestAddResponse test %d dnRes", i+1),
-				ah.dnRes, test.dnRes...,
-			)
-			if test.edns0 != nil {
 				pdp.AssertAttributeAssignments(t,
-					fmt.Sprintf("TestAddResponse test %d (dnRes) - edns0", i+1),
-					ah.dnReq[ednsAttrsStart:], test.edns0...,
+					fmt.Sprintf("TestAddResponse test %d dnRes", i+1),
+					ah.dnRes, test.dnRes...,
 				)
+				if test.edns0 != nil {
+					pdp.AssertAttributeAssignments(t,
+						fmt.Sprintf("TestAddResponse test %d (dnRes) - edns0", i+1),
+						ah.dnReq[ednsAttrsStart:], test.edns0...,
+					)
+				}
+				if test.trans != nil {
+					pdp.AssertAttributeAssignments(t,
+						fmt.Sprintf("TestAddResponse test %d (dnRes) - trans", i+1),
+						ah.transfer, test.trans...,
+					)
+				}
+				if test.dnstap != nil {
+					pdp.AssertAttributeAssignments(t,
+						fmt.Sprintf("TestAddResponse test %d (dnRes) - dnstap", i+1),
+						ah.dnstap, test.dnstap...,
+					)
+				}
 			}
-			if test.trans != nil {
-				pdp.AssertAttributeAssignments(t,
-					fmt.Sprintf("TestAddResponse test %d (dnRes) - trans", i+1),
-					ah.transfer, test.trans...,
-				)
-			}
-			if test.dnstap != nil {
-				pdp.AssertAttributeAssignments(t,
-					fmt.Sprintf("TestAddResponse test %d (dnRes) - dnstap", i+1),
-					ah.dnstap, test.dnstap...,
-				)
-			}
-		}
 
-		if test.ipRes != nil {
-			r := makeTestDNSMsgWithEdns0("example.com", dns.TypeA, dns.ClassINET, copyEdns0(test.opts...)...)
-			ah := newAttrHolderWithDnReq(w, r, optsMap, nil)
-			ah.addIPRes(test.resp)
+			if test.ipRes != nil {
+				r := makeTestDNSMsgWithEdns0("example.com", dns.TypeA, dns.ClassINET, copyEdns0(test.opts...)...)
+				ah := newAttrHolderWithDnReq(w, r, optsMap, nil)
+				ah.addIPRes(test.resp)
 
-			pdp.AssertAttributeAssignments(t,
-				fmt.Sprintf("TestAddResponse test %d ipRes", i+1),
-				ah.dnRes, test.dnRes...,
-			)
-			if test.edns0 != nil {
 				pdp.AssertAttributeAssignments(t,
-					fmt.Sprintf("TestAddResponse test %d (ipRes) - edns0", i+1),
-					ah.dnReq[ednsAttrsStart:], test.edns0...,
+					fmt.Sprintf("TestAddResponse test %d ipRes", i+1),
+					ah.dnRes, test.dnRes...,
 				)
+				if test.edns0 != nil {
+					pdp.AssertAttributeAssignments(t,
+						fmt.Sprintf("TestAddResponse test %d (ipRes) - edns0", i+1),
+						ah.dnReq[ednsAttrsStart:], test.edns0...,
+					)
+				}
+				if test.trans != nil {
+					pdp.AssertAttributeAssignments(t,
+						fmt.Sprintf("TestAddResponse test %d (ipRes) - trans", i+1),
+						ah.transfer, test.trans...,
+					)
+				}
+				if test.dnstap != nil {
+					pdp.AssertAttributeAssignments(t,
+						fmt.Sprintf("TestAddResponse test %d (ipRes) - dnstap", i+1),
+						ah.dnstap, test.dnstap...,
+					)
+				}
 			}
-			if test.trans != nil {
-				pdp.AssertAttributeAssignments(t,
-					fmt.Sprintf("TestAddResponse test %d (ipRes) - trans", i+1),
-					ah.transfer, test.trans...,
-				)
-			}
-			if test.dnstap != nil {
-				pdp.AssertAttributeAssignments(t,
-					fmt.Sprintf("TestAddResponse test %d (ipRes) - dnstap", i+1),
-					ah.dnstap, test.dnstap...,
-				)
-			}
-		}
+		})
 	}
 }
 

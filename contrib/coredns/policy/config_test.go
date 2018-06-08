@@ -11,6 +11,7 @@ import (
 
 func TestPolicyConfigParse(t *testing.T) {
 	tests := []struct {
+		desc  string
 		input string
 		err   error
 
@@ -24,14 +25,17 @@ func TestPolicyConfigParse(t *testing.T) {
 		passthrough []string
 		connTimeout *time.Duration
 		maxReqSize  *int
+		maxResAttrs *int
 	}{
 		{
+			desc: "MissingPolicySection",
 			input: `.:53 {
 						log stdout
 					}`,
 			err: errors.New("Policy setup called without keyword 'policy' in Corefile"),
 		},
 		{
+			desc: "InvalidOption",
 			input: `.:53 {
 						policy {
 							error option
@@ -40,6 +44,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("invalid policy plugin option"),
 		},
 		{
+			desc: "NoEndpointArguemnts",
 			input: `.:53 {
 						policy {
 							endpoint
@@ -48,6 +53,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
+			desc: "SingleEntryEndpoint",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -56,6 +62,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			endpoints: []string{"10.2.4.1:5555"},
 		},
 		{
+			desc: "ThreeEntriesEndpoint",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555 10.2.4.2:5555
@@ -64,6 +71,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			endpoints: []string{"10.2.4.1:5555", "10.2.4.2:5555"},
 		},
 		{
+			desc: "InvalidEDNS0Size",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -73,6 +81,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Could not parse EDNS0 data size"),
 		},
 		{
+			desc: "EDNS0Hex",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -94,6 +103,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			},
 		},
 		{
+			desc: "InvalidEDNS0Code",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -103,6 +113,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Could not parse EDNS0 code"),
 		},
 		{
+			desc: "InvalidEDNS0StartIndex",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -112,6 +123,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Could not parse EDNS0 start index"),
 		},
 		{
+			desc: "InvalidEDNS0EndIndex",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -121,6 +133,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Could not parse EDNS0 end index"),
 		},
 		{
+			desc: "EDNS0Hex2",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -150,6 +163,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			},
 		},
 		{
+			desc: "InvalidEDNS0StartEndPair",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -159,6 +173,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("End index should be > start index"),
 		},
 		{
+			desc: "InvalidEDNS0SizeEndPair",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -168,6 +183,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("End index should be <= size"),
 		},
 		{
+			desc: "NotEnoughEDNS0Arguments",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -177,6 +193,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Invalid edns0 directive"),
 		},
 		{
+			desc: "InvalidEDNS0Type",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -186,6 +203,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Could not add EDNS0"),
 		},
 		{
+			desc: "NoDebugQuerySuffixArguments",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -195,6 +213,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
+			desc: "DebugQuerySuffix",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -204,6 +223,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			debugSuffix: newStringPtr("debug.local."),
 		},
 		{
+			desc: "PDPClientStreams",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -213,6 +233,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			streams: newIntPtr(10),
 		},
 		{
+			desc: "InvalidPDPClientStreams",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -222,6 +243,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Could not parse number of streams"),
 		},
 		{
+			desc: "NoPDPClientStreamsArguments",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -231,6 +253,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
+			desc: "NegativePDPClientStreams",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -240,6 +263,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Expected at least one stream got -1"),
 		},
 		{
+			desc: "PDPClientStreamsWithRoundRobin",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -250,6 +274,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			hotSpot: newBoolPtr(false),
 		},
 		{
+			desc: "PDPClientStreamsWithHotSpot",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -260,6 +285,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			hotSpot: newBoolPtr(true),
 		},
 		{
+			desc: "InvalidPDPClientStreamsBalancer",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -269,6 +295,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Expected round-robin or hot-spot balancing but got Unknown-Balancer"),
 		},
 		{
+			desc: "TransferAttribute",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -280,6 +307,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			},
 		},
 		{
+			desc: "ComplexAttributeConfig",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -315,6 +343,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			},
 		},
 		{
+			desc: "NoDNStapArguments",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -324,6 +353,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
+			desc: "NoTransferArguments",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -333,6 +363,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
+			desc: "DebugID",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -386,6 +417,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			debugID: newStringPtr("corednsinstance"),
 		},
 		{
+			desc: "NoDebugIDArguments",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -395,6 +427,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
+			desc: "Passthrough",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -407,6 +440,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			},
 		},
 		{
+			desc: "NoPassthroughArguments",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -416,6 +450,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
+			desc: "NoConnectionTimeoutArguments",
 			input: `.:53 {
 						policy {
 							connection_timeout
@@ -424,6 +459,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
+			desc: "NoConnectionTimeout",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -433,6 +469,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			connTimeout: newDurationPtr(-1),
 		},
 		{
+			desc: "ConnectionTimeout",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -442,6 +479,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			connTimeout: newDurationPtr(500 * time.Millisecond),
 		},
 		{
+			desc: "InvalidConnectionTimeout",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -451,6 +489,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Could not parse timeout: time: invalid duration invalid"),
 		},
 		{
+			desc: "Log",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -459,6 +498,7 @@ func TestPolicyConfigParse(t *testing.T) {
 					}`,
 		},
 		{
+			desc: "TrailingLogArgument",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -468,6 +508,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
+			desc: "MaxRequestSize",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -477,6 +518,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			maxReqSize: newIntPtr(128),
 		},
 		{
+			desc: "NoMaxRequestSizeArguments",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -486,6 +528,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
+			desc: "InvalidMaxRequestSize",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -495,6 +538,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Could not parse PDP request size limit"),
 		},
 		{
+			desc: "OverflowMaxRequestSize",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -503,119 +547,171 @@ func TestPolicyConfigParse(t *testing.T) {
 					}`,
 			err: errors.New("Size limit 2147483648 (> 2147483647) for PDP request is too high"),
 		},
+		{
+			desc: "MaxResponseAttributes",
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							max_response_attributes 128
+						}
+					}`,
+			maxResAttrs: newIntPtr(128),
+		},
+		{
+			desc: "NoMaxResponseAttributesArguments",
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							max_response_attributes
+						}
+					}`,
+			err: errors.New("Wrong argument count or unexpected line ending"),
+		},
+		{
+			desc: "InvalidMaxResponseAttributes",
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							max_response_attributes invalid
+						}
+					}`,
+			err: errors.New("Could not parse PDP response attributes limit"),
+		},
+		{
+			desc: "OverflowMaxResponseAttributes",
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							max_response_attributes 2147483648
+						}
+					}`,
+			err: errors.New("Attributes limit 2147483648 (> 2147483647) for PDP response is too high"),
+		},
 	}
 
 	for _, test := range tests {
-		c := caddy.NewTestController("dns", test.input)
-		mw, err := policyParse(c)
-		if err != nil {
-			if test.err != nil {
-				if !strings.Contains(err.Error(), test.err.Error()) {
-					t.Errorf("Expected error '%v' but got '%v'\n", test.err, err)
-				}
-			} else {
-				t.Errorf("Expected no error but got '%v'\n", err)
-			}
-		} else {
-			if test.err != nil {
-				t.Errorf("Expected error '%v' but got 'nil'\n", test.err)
-			} else {
-				if test.endpoints != nil {
-					if len(test.endpoints) != len(mw.conf.endpoints) {
-						t.Errorf("Expected endpoints %v but got %v\n", test.endpoints, mw.conf.endpoints)
-					} else {
-						for i := 0; i < len(test.endpoints); i++ {
-							if test.endpoints[i] != mw.conf.endpoints[i] {
-								t.Errorf("Expected endpoint '%s' but got '%s'\n", test.endpoints[i], mw.conf.endpoints[i])
-							}
-						}
+		t.Run(test.desc, func(t *testing.T) {
+			c := caddy.NewTestController("dns", test.input)
+			mw, err := policyParse(c)
+			if err != nil {
+				if test.err != nil {
+					if !strings.Contains(err.Error(), test.err.Error()) {
+						t.Errorf("Expected error '%v' but got '%v'\n", test.err, err)
 					}
+				} else {
+					t.Errorf("Expected no error but got '%v'\n", err)
 				}
-
-				if test.options != nil {
-					for k, testOpts := range test.options {
-						if mwOpts, ok := mw.conf.options[k]; ok {
-							if len(testOpts) != len(mwOpts) {
-								t.Errorf("Expected %d EDNS0 options for 0x%04x but got %d",
-									len(testOpts), k, len(mwOpts))
-							} else {
-								for i, testOpt := range testOpts {
-									mwOpt := mwOpts[i]
-									if testOpt.name != mwOpt.name ||
-										testOpt.dataType != mwOpt.dataType ||
-										testOpt.size != mwOpt.size ||
-										testOpt.start != mwOpt.start ||
-										testOpt.end != mwOpt.end {
-										t.Errorf("Expected EDNS0 option:\n\t\"%#v\""+
-											"\nfor 0x%04x at %d but got:\n\t\"%#v\"",
-											*testOpt, k, i, *mwOpt)
-									}
+			} else {
+				if test.err != nil {
+					t.Errorf("Expected error '%v' but got 'nil'\n", test.err)
+				} else {
+					if test.endpoints != nil {
+						if len(test.endpoints) != len(mw.conf.endpoints) {
+							t.Errorf("Expected endpoints %v but got %v\n", test.endpoints, mw.conf.endpoints)
+						} else {
+							for i := 0; i < len(test.endpoints); i++ {
+								if test.endpoints[i] != mw.conf.endpoints[i] {
+									t.Errorf("Expected endpoint '%s' but got '%s'\n",
+										test.endpoints[i], mw.conf.endpoints[i])
 								}
 							}
-						} else {
-							t.Errorf("Expected EDNS0 options 0x%04x but got nothing", k)
 						}
 					}
 
-					for k := range mw.conf.options {
-						if _, ok := test.options[k]; !ok {
-							t.Errorf("Got unexpected options 0x%04x", k)
+					if test.options != nil {
+						for k, testOpts := range test.options {
+							if mwOpts, ok := mw.conf.options[k]; ok {
+								if len(testOpts) != len(mwOpts) {
+									t.Errorf("Expected %d EDNS0 options for 0x%04x but got %d",
+										len(testOpts), k, len(mwOpts))
+								} else {
+									for i, testOpt := range testOpts {
+										mwOpt := mwOpts[i]
+										if testOpt.name != mwOpt.name ||
+											testOpt.dataType != mwOpt.dataType ||
+											testOpt.size != mwOpt.size ||
+											testOpt.start != mwOpt.start ||
+											testOpt.end != mwOpt.end {
+											t.Errorf("Expected EDNS0 option:\n\t\"%#v\""+
+												"\nfor 0x%04x at %d but got:\n\t\"%#v\"",
+												*testOpt, k, i, *mwOpt)
+										}
+									}
+								}
+							} else {
+								t.Errorf("Expected EDNS0 options 0x%04x but got nothing", k)
+							}
 						}
-					}
-				}
 
-				if test.debugSuffix != nil && *test.debugSuffix != mw.conf.debugSuffix {
-					t.Errorf("Expected debug suffix %q but got %q", *test.debugSuffix, mw.conf.debugSuffix)
-				}
-
-				if test.streams != nil && *test.streams != mw.conf.streams {
-					t.Errorf("Expected %d streams but got %d", *test.streams, mw.conf.streams)
-				}
-
-				if test.hotSpot != nil && *test.hotSpot != mw.conf.hotSpot {
-					t.Errorf("Expected hotSpot=%v but got %v", *test.hotSpot, mw.conf.hotSpot)
-				}
-
-				if test.custAttrs != nil {
-					for k, et := range test.custAttrs {
-						at, ok := mw.conf.custAttrs[k]
-						if !ok {
-							t.Errorf("Missing conf attribute %q", k)
-						} else if et != at {
-							t.Errorf("Unexpected type of conf attribute %q; expected=%d, actual=%d", k, et, at)
-						}
-					}
-
-					for k, at := range mw.conf.custAttrs {
-						if _, ok := test.custAttrs[k]; !ok {
-							t.Errorf("Unexpected conf attribute %q=%d", k, at)
-						}
-					}
-				}
-
-				if test.debugID != nil && *test.debugID != mw.conf.debugID {
-					t.Errorf("Expected debug id %q but got %q", *test.debugID, mw.conf.debugID)
-				}
-
-				if test.passthrough != nil {
-					if len(test.passthrough) != len(mw.conf.passthrough) {
-						t.Errorf("Expected %d passthrough suffixes but got %d",
-							len(test.passthrough), len(mw.conf.passthrough))
-					} else {
-						for i, s := range test.passthrough {
-							if s != mw.conf.passthrough[i] {
-								t.Errorf("Expected %q passthrough suffix at %d but got %q",
-									s, i, mw.conf.passthrough[i])
+						for k := range mw.conf.options {
+							if _, ok := test.options[k]; !ok {
+								t.Errorf("Got unexpected options 0x%04x", k)
 							}
 						}
 					}
-				}
 
-				if test.connTimeout != nil && *test.connTimeout != mw.conf.connTimeout {
-					t.Errorf("Expected connection timeout %s but got %s", *test.connTimeout, mw.conf.connTimeout)
+					if test.debugSuffix != nil && *test.debugSuffix != mw.conf.debugSuffix {
+						t.Errorf("Expected debug suffix %q but got %q", *test.debugSuffix, mw.conf.debugSuffix)
+					}
+
+					if test.streams != nil && *test.streams != mw.conf.streams {
+						t.Errorf("Expected %d streams but got %d", *test.streams, mw.conf.streams)
+					}
+
+					if test.hotSpot != nil && *test.hotSpot != mw.conf.hotSpot {
+						t.Errorf("Expected hotSpot=%v but got %v", *test.hotSpot, mw.conf.hotSpot)
+					}
+
+					if test.custAttrs != nil {
+						for k, et := range test.custAttrs {
+							at, ok := mw.conf.custAttrs[k]
+							if !ok {
+								t.Errorf("Missing conf attribute %q", k)
+							} else if et != at {
+								t.Errorf("Unexpected type of conf attribute %q; expected=%d, actual=%d", k, et, at)
+							}
+						}
+
+						for k, at := range mw.conf.custAttrs {
+							if _, ok := test.custAttrs[k]; !ok {
+								t.Errorf("Unexpected conf attribute %q=%d", k, at)
+							}
+						}
+					}
+
+					if test.debugID != nil && *test.debugID != mw.conf.debugID {
+						t.Errorf("Expected debug id %q but got %q", *test.debugID, mw.conf.debugID)
+					}
+
+					if test.passthrough != nil {
+						if len(test.passthrough) != len(mw.conf.passthrough) {
+							t.Errorf("Expected %d passthrough suffixes but got %d",
+								len(test.passthrough), len(mw.conf.passthrough))
+						} else {
+							for i, s := range test.passthrough {
+								if s != mw.conf.passthrough[i] {
+									t.Errorf("Expected %q passthrough suffix at %d but got %q",
+										s, i, mw.conf.passthrough[i])
+								}
+							}
+						}
+					}
+
+					if test.connTimeout != nil && *test.connTimeout != mw.conf.connTimeout {
+						t.Errorf("Expected connection timeout %s but got %s", *test.connTimeout, mw.conf.connTimeout)
+					}
+
+					if test.maxReqSize != nil && *test.maxReqSize != mw.conf.maxReqSize {
+						t.Errorf("Expected request size limit %d but got %d", *test.maxReqSize, mw.conf.maxReqSize)
+					}
+
+					if test.maxResAttrs != nil && *test.maxResAttrs != mw.conf.maxResAttrs {
+						t.Errorf("Expected response attributes limit %d but got %d",
+							*test.maxResAttrs, mw.conf.maxResAttrs)
+					}
 				}
 			}
-		}
+		})
 	}
 }
 

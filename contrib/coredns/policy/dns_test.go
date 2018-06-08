@@ -1,10 +1,12 @@
 package policy
 
 import (
+	"errors"
 	"net"
 	"testing"
 
 	"github.com/miekg/dns"
+	"golang.org/x/net/context"
 )
 
 func TestGetNameAndType(t *testing.T) {
@@ -20,7 +22,7 @@ func TestGetNameAndType(t *testing.T) {
 		t.Errorf("expected %d as query type but got %d", dns.TypeA, qType)
 	}
 
-	fqdn = dns.Fqdn("")
+	fqdn = "."
 	qName, qType = getNameAndType(nil)
 	if qName != fqdn {
 		t.Errorf("expected %q as query name but got %q", fqdn, qName)
@@ -28,6 +30,30 @@ func TestGetNameAndType(t *testing.T) {
 
 	if qType != dns.TypeNone {
 		t.Errorf("expected %d as query type but got %d", dns.TypeNone, qType)
+	}
+}
+
+func TestGetNameAndClass(t *testing.T) {
+	fqdn := dns.Fqdn("example.com")
+	m := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+
+	qName, qClass := getNameAndClass(m)
+	if qName != fqdn {
+		t.Errorf("expected %q as query name but got %q", fqdn, qName)
+	}
+
+	if qClass != dns.ClassINET {
+		t.Errorf("expected %d as query class but got %d", dns.ClassINET, qClass)
+	}
+
+	fqdn = "."
+	qName, qClass = getNameAndClass(nil)
+	if qName != fqdn {
+		t.Errorf("expected %q as query name but got %q", fqdn, qName)
+	}
+
+	if qClass != dns.ClassNONE {
+		t.Errorf("expected %d as query class but got %d", dns.ClassNONE, qClass)
 	}
 }
 
@@ -118,6 +144,123 @@ func TestExtractOptionsFromEDNS0(t *testing.T) {
 	} else if len(o.Option) != 2 {
 		t.Errorf("expected exactly %d options remaining but got %d", 2, len(o.Option))
 	}
+}
+
+func TestClearECS(t *testing.T) {
+	m := makeTestDNSMsgWithEdns0("example.com", dns.TypeA, dns.ClassINET,
+		newEdns0(
+			newEdns0Cookie("badc0de."),
+			newEdns0Subnet(net.ParseIP("192.0.2.1")),
+			newEdns0Local(0xfffe, []byte{0xb, 0xad, 0xc0, 0xde}),
+			newEdns0Subnet(net.ParseIP("2001:db8::1")),
+		),
+	)
+
+	clearECS(m)
+	assertDNSMessage(t, "clearECS", 0, m, 0,
+		";; opcode: QUERY, status: NOERROR, id: 0\n"+
+			";; flags:; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1\n\n"+
+			";; QUESTION SECTION:\n"+
+			";example.com.\tIN\t A\n\n"+
+			";; ADDITIONAL SECTION:\n\n"+
+			";; OPT PSEUDOSECTION:\n"+
+			"; EDNS: version 0; flags: ; udp: 0\n"+
+			"; COOKIE: badc0de.\n"+
+			"; LOCAL OPT: 65534:0x0badc0de\n",
+	)
+}
+
+func TestSetRedirectQueryAnswer(t *testing.T) {
+	p := newPolicyPlugin()
+
+	mp := &mockPlugin{
+		ip: net.ParseIP("192.0.2.153"),
+	}
+	p.next = mp
+
+	m := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w := newTestAddressedNonwriter("192.0.2.1")
+
+	rc, err := p.setRedirectQueryAnswer(context.TODO(), w, m, "192.0.2.53")
+	if err != nil {
+		t.Error(err)
+	}
+	assertDNSMessage(t, "setRedirectQueryAnswer(192.0.2.53)", rc, m, dns.RcodeSuccess,
+		";; opcode: QUERY, status: NOERROR, id: 0\n"+
+			";; flags:; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
+			";; QUESTION SECTION:\n"+
+			";example.com.\tIN\t A\n\n"+
+			";; ANSWER SECTION:\n"+
+			"example.com.\t0\tIN\tA\t192.0.2.53\n",
+	)
+
+	m = makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w = newTestAddressedNonwriter("192.0.2.1")
+
+	rc, err = p.setRedirectQueryAnswer(context.TODO(), w, m, "2001:db8::53")
+	if err != nil {
+		t.Error(err)
+	}
+	assertDNSMessage(t, "setRedirectQueryAnswer(2001:db8::53)", rc, m, dns.RcodeSuccess,
+		";; opcode: QUERY, status: NOERROR, id: 0\n"+
+			";; flags:; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
+			";; QUESTION SECTION:\n"+
+			";example.com.\tIN\t A\n\n"+
+			";; ANSWER SECTION:\n"+
+			"example.com.\t0\tIN\tAAAA\t2001:db8::53\n",
+	)
+
+	m = makeTestDNSMsg("redirect.example.com", dns.TypeA, dns.ClassINET)
+	w = newTestAddressedNonwriter("192.0.2.1")
+
+	rc, err = p.setRedirectQueryAnswer(context.TODO(), w, m, "example.com")
+	if err != nil {
+		t.Error(err)
+	}
+	assertDNSMessage(t, "setRedirectQueryAnswer(redirect.example.com->example.com)", rc, m, dns.RcodeSuccess,
+		";; opcode: QUERY, status: NOERROR, id: 0\n"+
+			";; flags: qr aa; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
+			";; QUESTION SECTION:\n"+
+			";redirect.example.com.\tIN\t A\n\n"+
+			";; ANSWER SECTION:\n"+
+			"redirect.example.com.\t0\tIN\tCNAME\texample.com.\n"+
+			"example.com.\t0\tIN\tA\t192.0.2.153\n",
+	)
+
+	m = new(dns.Msg)
+	w = newTestAddressedNonwriter("192.0.2.1")
+
+	rc, err = p.setRedirectQueryAnswer(context.TODO(), w, m, "example.com")
+	if err == nil {
+		t.Errorf("expected errInvalidDNSMessage")
+	} else if err != errInvalidDNSMessage {
+		t.Errorf("expected errInvalidDNSMessage but got %T: %s", err, err)
+	}
+
+	assertDNSMessage(t, "setRedirectQueryAnswer(empty)", rc, m, dns.RcodeServerFailure,
+		";; opcode: QUERY, status: NOERROR, id: 0\n"+
+			";; flags:; QUERY: 0, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0\n",
+	)
+
+	m = makeTestDNSMsg("redirect.example.com", dns.TypeA, dns.ClassINET)
+	w = newTestAddressedNonwriter("192.0.2.1")
+
+	errTest := errors.New("testError")
+	mp.err = errTest
+
+	rc, err = p.setRedirectQueryAnswer(context.TODO(), w, m, "example.com")
+	if err == nil {
+		t.Errorf("expected errTest")
+	} else if err != errTest {
+		t.Errorf("expected errTest but got %T: %s", err, err)
+	}
+
+	assertDNSMessage(t, "setRedirectQueryAnswer(redirect.example.com->error)", rc, m, dns.RcodeServerFailure,
+		";; opcode: QUERY, status: NOERROR, id: 0\n"+
+			";; flags:; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
+			";; QUESTION SECTION:\n;"+
+			"redirect.example.com.\tIN\t A\n",
+	)
 }
 
 func makeTestDNSMsg(n string, t uint16, c uint16) *dns.Msg {
@@ -215,9 +358,26 @@ func newEdns0Local(c uint16, b []byte) dns.EDNS0 {
 	return out
 }
 
+func newEdns0Subnet(ip net.IP) dns.EDNS0 {
+	out := new(dns.EDNS0_SUBNET)
+	out.Code = dns.EDNS0SUBNET
+	if ipv4 := ip.To4(); ipv4 != nil {
+		out.Family = 1
+		out.SourceNetmask = 32
+		out.Address = ipv4
+	} else if ipv6 := ip.To16(); ipv6 != nil {
+		out.Family = 2
+		out.SourceNetmask = 128
+		out.Address = ipv6
+	}
+	out.SourceScope = 0
+
+	return out
+}
+
 type testAddressedNonwriter struct {
 	dns.ResponseWriter
-	ra  *testUDPAddr
+	ra  net.Addr
 	Msg *dns.Msg
 }
 
@@ -229,6 +389,13 @@ func newTestAddressedNonwriter(ra string) *testAddressedNonwriter {
 	return &testAddressedNonwriter{
 		ResponseWriter: nil,
 		ra:             newUDPAddr(ra),
+	}
+}
+
+func newTestAddressedNonwriterWithAddr(ra net.Addr) *testAddressedNonwriter {
+	return &testAddressedNonwriter{
+		ResponseWriter: nil,
+		ra:             ra,
 	}
 }
 
