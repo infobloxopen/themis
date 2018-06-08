@@ -1,6 +1,9 @@
 package policy
 
-import "testing"
+import (
+	"strconv"
+	"testing"
+)
 
 func TestNewEdns0Opt(t *testing.T) {
 	c, o, err := newEdns0Opt("0xfffe", "edns", "hex", "16", "0", "8")
@@ -39,10 +42,12 @@ func TestNewEdns0Opt(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		c, o, err := newEdns0Opt(test.c, test.n, test.t, test.s, test.b, test.e)
-		if err == nil {
-			t.Errorf("expected error for test %d but got EDNS0 0x%x %+v", i, c, o)
-		}
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			c, o, err := newEdns0Opt(test.c, test.n, test.t, test.s, test.b, test.e)
+			if err == nil {
+				t.Errorf("expected error but got EDNS0 0x%x %+v", c, o)
+			}
+		})
 	}
 }
 

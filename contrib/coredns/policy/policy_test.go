@@ -44,7 +44,7 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 	p.conf.streams = 1
 	p.conf.log = true
 	p.conf.debugID = "<DEBUG>"
-	p.conf.debugSuffix = "debug.infoblox.com."
+	p.conf.debugSuffix = "debug.local."
 
 	mp := &mockPlugin{
 		ip: net.ParseIP("192.0.2.53"),
@@ -73,7 +73,7 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 		)
 	}
 
-	m = makeTestDNSMsg("example.com.debug.infoblox.com", dns.TypeTXT, dns.ClassCHAOS)
+	m = makeTestDNSMsg("example.com.debug.local", dns.TypeTXT, dns.ClassCHAOS)
 	w = newTestAddressedNonwriter("192.0.2.1")
 
 	rc, err = p.ServeDNS(context.TODO(), w, m)
@@ -84,9 +84,9 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 			";; opcode: QUERY, status: NOERROR, id: 0\n"+
 				";; flags: qr; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
 				";; QUESTION SECTION:\n"+
-				";example.com.debug.infoblox.com.\tCH\t TXT\n\n"+
+				";example.com.debug.local.\tCH\t TXT\n\n"+
 				";; ANSWER SECTION:\n"+
-				"example.com.debug.infoblox.com.\t0\tCH\tTXT\t\"resolve:yes,query:'allow',ident:'<DEBUG>'\"\n",
+				"example.com.debug.local.\t0\tCH\tTXT\t\"resolve:yes,query:'allow',ident:'<DEBUG>'\"\n",
 		)
 	}
 
@@ -259,9 +259,9 @@ func TestPolicyPluginServeDNSPassthrough(t *testing.T) {
 	p.conf.connTimeout = time.Second
 	p.conf.streams = 1
 	p.conf.log = true
-	p.conf.passthrough = []string{"passthrough.infoblox.com."}
+	p.conf.passthrough = []string{"passthrough.local."}
 	p.conf.debugID = "<DEBUG>"
-	p.conf.debugSuffix = "debug.infoblox.com."
+	p.conf.debugSuffix = "debug.local."
 
 	p.next = &mockPlugin{
 		ip: net.ParseIP("192.0.2.53"),
@@ -272,7 +272,7 @@ func TestPolicyPluginServeDNSPassthrough(t *testing.T) {
 	}
 	defer p.closeConn()
 
-	m := makeTestDNSMsg("example.passthrough.infoblox.com", dns.TypeA, dns.ClassINET)
+	m := makeTestDNSMsg("example.passthrough.local", dns.TypeA, dns.ClassINET)
 	w := newTestAddressedNonwriter("192.0.2.1")
 
 	rc, err := p.ServeDNS(context.TODO(), w, m)
@@ -283,13 +283,13 @@ func TestPolicyPluginServeDNSPassthrough(t *testing.T) {
 			";; opcode: QUERY, status: NOERROR, id: 0\n"+
 				";; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
 				";; QUESTION SECTION:\n"+
-				";example.passthrough.infoblox.com.\tIN\t A\n\n"+
+				";example.passthrough.local.\tIN\t A\n\n"+
 				";; ANSWER SECTION:\n"+
-				"example.passthrough.infoblox.com.\t0\tIN\tA\t192.0.2.53\n",
+				"example.passthrough.local.\t0\tIN\tA\t192.0.2.53\n",
 		)
 	}
 
-	m = makeTestDNSMsg("example.passthrough.infoblox.com.debug.infoblox.com.", dns.TypeTXT, dns.ClassCHAOS)
+	m = makeTestDNSMsg("example.passthrough.local.debug.local.", dns.TypeTXT, dns.ClassCHAOS)
 	w = newTestAddressedNonwriter("192.0.2.1")
 
 	rc, err = p.ServeDNS(context.TODO(), w, m)
@@ -300,9 +300,9 @@ func TestPolicyPluginServeDNSPassthrough(t *testing.T) {
 			";; opcode: QUERY, status: NOERROR, id: 0\n"+
 				";; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
 				";; QUESTION SECTION:\n"+
-				";example.passthrough.infoblox.com.debug.infoblox.com.\tCH\t TXT\n\n"+
+				";example.passthrough.local.debug.local.\tCH\t TXT\n\n"+
 				";; ANSWER SECTION:\n"+
-				"example.passthrough.infoblox.com.debug.infoblox.com.\t0\tCH\tTXT\t\"action:passthrough\"\n",
+				"example.passthrough.local.debug.local.\t0\tCH\tTXT\t\"action:passthrough\"\n",
 		)
 	}
 }
@@ -491,16 +491,17 @@ policies:
 
 func assertDNSMessage(t *testing.T, desc string, rc int, m *dns.Msg, erc int, eMsg string) {
 	if rc != erc {
-		t.Errorf("expected %d rcode but got %d", erc, rc)
+		t.Errorf("expected %d rcode for %q but got %d", erc, desc, rc)
 	}
 
 	if m.String() != eMsg {
-		t.Errorf("expected response:\n%q\nbut got:\n%q", eMsg, m)
+		t.Errorf("expected response for %q:\n%q\nbut got:\n%q", desc, eMsg, m)
 	}
 }
 
 type mockPlugin struct {
-	ip net.IP
+	ip  net.IP
+	err error
 }
 
 // Name implements the plugin.Handler interface.
@@ -510,6 +511,10 @@ func (p *mockPlugin) Name() string {
 
 // ServeDNS implements the plugin.Handler interface.
 func (p *mockPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+	if p.err != nil {
+		return dns.RcodeServerFailure, p.err
+	}
+
 	if r == nil || len(r.Question) <= 0 {
 		return dns.RcodeServerFailure, nil
 	}

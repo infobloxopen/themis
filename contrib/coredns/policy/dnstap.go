@@ -51,6 +51,7 @@ func (s *policyDnstapSender) sendCRExtraMsg(w dns.ResponseWriter, msg *dns.Msg, 
 	}
 
 	now := time.Now()
+	log.Printf("[ERROR] %q", w.RemoteAddr())
 	b := tapmsg.New().Time(now).Addr(w.RemoteAddr())
 	b.Msg(msg)
 	crMsg, err := b.ToClientResponse()

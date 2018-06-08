@@ -179,16 +179,17 @@ func assertCRMessage(t *testing.T, desc string, msg *tap.Message, e *dns.Msg) {
 		return
 	}
 
-	d := dtest.TestingData()
 	bin, err := e.Pack()
 	if err != nil {
 		t.Errorf("Failed to pack message for %q (%v)", desc, err)
 		return
 	}
+
+	d := dtest.TestingData()
 	d.Packed = bin
 	eMsg, _ := d.ToClientResponse()
 	if !dtest.MsgEqual(eMsg, msg) {
-		t.Errorf("Unexpected message for %q: expected: %v\nactual: %v", desc, eMsg, msg)
+		t.Errorf("Unexpected message for %q: expected:\n%v\nactual:\n%v", desc, eMsg, msg)
 	}
 }
 
