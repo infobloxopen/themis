@@ -798,7 +798,7 @@ func init() {
 		panic(err)
 	}
 
-	benchmarkRequests = make([]*pb.Msg, 2000000)
+	benchmarkRequests = make([]*pb.Msg, 1024)
 	for i := range benchmarkRequests {
 		b := make([]byte, 1024)
 
@@ -863,7 +863,7 @@ func benchmarkRawPolicySet(p *pdp.PolicyStorage, b *testing.B) {
 	s.c = benchmarkContentStorage
 
 	var a [1]pdp.AttributeAssignment
-	var buf [10240]byte
+	var buf [1024]byte
 
 	for n := 0; n < b.N; n++ {
 		s.RLock()
