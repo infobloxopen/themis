@@ -1,6 +1,10 @@
 hash: a4a66e499f1440ef993567fb449663af4d7300bc0436545f4a4f740e852dd42a
-updated: 2018-06-12T20:55:37.964774+03:00
+updated: 2018-06-12T20:59:36.134332+03:00
 imports:
+- name: github.com/allegro/bigcache
+  version: ca9a59ef2ad95442436b6a0ed9f061e6a47e376a
+  subpackages:
+  - queue
 - name: github.com/apache/thrift
   version: d907cc92db5b93e699a4282e979d097ea863215a
   subpackages:

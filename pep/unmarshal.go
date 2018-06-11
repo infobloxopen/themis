@@ -37,10 +37,10 @@ var (
 	}
 )
 
-func fillResponse(res *pb.Msg, v interface{}) error {
+func fillResponse(res pb.Msg, v interface{}) error {
 	switch v := v.(type) {
 	case *pb.Msg:
-		*v = *res
+		*v = res
 		return nil
 
 	case *pdp.Response:

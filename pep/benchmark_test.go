@@ -796,7 +796,7 @@ type testRequest3Keys struct {
 }
 
 func init() {
-	decisionRequests = make([]decisionRequest, 2000000)
+	decisionRequests = make([]decisionRequest, 0x40000)
 	for i := range decisionRequests {
 		decisionRequests[i] = decisionRequest{
 			Direction: directionOpts[rand.Intn(len(directionOpts))],
@@ -805,7 +805,7 @@ func init() {
 		}
 	}
 
-	rawRequests = make([]pb.Msg, 2000000)
+	rawRequests = make([]pb.Msg, len(decisionRequests))
 	for i := range rawRequests {
 		b := make([]byte, 128)
 
@@ -870,7 +870,9 @@ func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
 		}
 	}()
 
-	b.Run("BenchmarkThreeStagePolicySetRaw", func(b *testing.B) {
+	name := "BenchmarkThreeStagePolicySetRaw"
+
+	b.Run(name, func(b *testing.B) {
 		var (
 			out        pdp.Response
 			assignment [16]pdp.AttributeAssignment
@@ -881,7 +883,54 @@ func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
 			out.Obligations = assignment[:]
 			c.Validate(in, &out)
 
-			err := assertBenchMsg(&out, "\"BenchmarkThreeStagePolicySetRaw\" request %d", n)
+			err := assertBenchMsg(&out, "%q request %d", name, n)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+}
+
+func BenchmarkThreeStagePolicySetRawWithCache(b *testing.B) {
+	pdpServer, _, c := startPDPServer(threeStageBenchmarkPolicySet, nil, b, withCache())
+	defer func() {
+		c.Close()
+		if logs := pdpServer.Stop(); len(logs) > 0 {
+			b.Logf("server logs:\n%s", logs)
+		}
+	}()
+
+	name := "BenchmarkThreeStagePolicySetRawWithCache"
+
+	cc := 10
+	var (
+		out        pdp.Response
+		assignment [16]pdp.AttributeAssignment
+	)
+	for n := 0; n < cc; n++ {
+		in := rawRequests[n%cc]
+
+		out.Obligations = assignment[:]
+		c.Validate(in, &out)
+
+		err := assertBenchMsg(&out, "%q request %d", name, n)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+
+	b.Run(name, func(b *testing.B) {
+		var (
+			out        pdp.Response
+			assignment [16]pdp.AttributeAssignment
+		)
+		for n := 0; n < b.N; n++ {
+			in := rawRequests[n%cc]
+
+			out.Obligations = assignment[:]
+			c.Validate(in, &out)
+
+			err := assertBenchMsg(&out, "%q request %d", name, n)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -913,8 +962,6 @@ func benchmarkStreamingClient(name string, ports []uint16, b *testing.B, opts ..
 	}()
 
 	b.Run(name, func(b *testing.B) {
-		errs := make([]error, b.N)
-
 		assignments := make(chan []pdp.AttributeAssignment, streams)
 		for i := 0; i < cap(assignments); i++ {
 			assignments <- make([]pdp.AttributeAssignment, 16)
@@ -933,14 +980,10 @@ func benchmarkStreamingClient(name string, ports []uint16, b *testing.B, opts ..
 				out.Obligations = assignment
 
 				c.Validate(rawRequests[i%len(rawRequests)], &out)
-				errs[i] = assertBenchMsg(&out, "%q request %d", name, i)
+				if err := assertBenchMsg(&out, "%q request %d", name, i); err != nil {
+					panic(err)
+				}
 			}(n)
-		}
-
-		for i, err := range errs {
-			if err != nil {
-				b.Fatalf("request %d failed: %s", i, err)
-			}
 		}
 	})
 }
@@ -969,6 +1012,66 @@ func BenchmarkHotSpotStreamingClient(b *testing.B) {
 		b,
 		WithHotSpotBalancer("127.0.0.1:5555", "127.0.0.1:5556"),
 	)
+}
+
+func BenchmarkStreamingClientWithCache(b *testing.B) {
+	streams := 96
+
+	pdpServer, _, c := startPDPServer(threeStageBenchmarkPolicySet, nil, b,
+		WithStreams(streams),
+		withCache(),
+	)
+	defer func() {
+		c.Close()
+		if logs := pdpServer.Stop(); len(logs) > 0 {
+			b.Logf("server logs:\n%s", logs)
+		}
+	}()
+
+	name := "BenchmarkStreamingClientWithCache"
+
+	cc := 10 * streams
+	var (
+		out        pdp.Response
+		assignment [16]pdp.AttributeAssignment
+	)
+	for n := 0; n < cc; n++ {
+		in := rawRequests[n%cc]
+
+		out.Obligations = assignment[:]
+		c.Validate(in, &out)
+
+		err := assertBenchMsg(&out, "%q request %d", name, n)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+
+	b.Run(name, func(b *testing.B) {
+		assignments := make(chan []pdp.AttributeAssignment, streams)
+		for i := 0; i < cap(assignments); i++ {
+			assignments <- make([]pdp.AttributeAssignment, 16)
+		}
+
+		th := make(chan int, streams)
+		for n := 0; n < b.N; n++ {
+			th <- 0
+			go func(i int) {
+				defer func() { <-th }()
+
+				var out pdp.Response
+
+				assignment := <-assignments
+				defer func() { assignments <- assignment }()
+				out.Obligations = assignment
+
+				c.Validate(rawRequests[i%cc], &out)
+				if err := assertBenchMsg(&out, "%q request %d", name, i); err != nil {
+					panic(err)
+				}
+			}(n)
+		}
+	})
 }
 
 func waitForPortOpened(address string) error {
