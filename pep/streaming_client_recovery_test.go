@@ -52,6 +52,7 @@ func singleClientRecovery(streams int, t *testing.T) {
 			}
 		}),
 	)
+
 	err = c.Connect(fakeServerAddress)
 	if err != nil {
 		t.Fatalf("can't connect to fake server: %s", err)
@@ -118,6 +119,7 @@ func hotSotBalancedClientRecovery(streams int, t *testing.T) {
 			}
 		}),
 	)
+
 	err = c.Connect(fakeServerAddress)
 	if err != nil {
 		t.Fatalf("can't connect to fake server: %s", err)

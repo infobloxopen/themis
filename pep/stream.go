@@ -95,29 +95,29 @@ func (s *stream) drop() {
 	s.stream.Store(ssNil)
 }
 
-func (s *stream) validate(m *pb.Msg, out interface{}) error {
+func (s *stream) validate(m *pb.Msg) (pb.Msg, error) {
 	sp := s.stream.Load().(*pb.PDP_NewValidationStreamClient)
 	if sp == nil {
-		return errStreamWrongState
+		return pb.Msg{}, errStreamWrongState
 	}
 
 	err := (*sp).Send(m)
 	if err != nil {
 		if err == transport.ErrConnClosing || err == balancer.ErrTransientFailure {
-			return errConnFailure
+			return pb.Msg{}, errConnFailure
 		}
 
-		return errStreamFailure
+		return pb.Msg{}, errStreamFailure
 	}
 
 	res, err := (*sp).Recv()
 	if err != nil {
 		if err == transport.ErrConnClosing || err == balancer.ErrTransientFailure {
-			return errConnFailure
+			return pb.Msg{}, errConnFailure
 		}
 
-		return errStreamFailure
+		return pb.Msg{}, errStreamFailure
 	}
 
-	return fillResponse(res, out)
+	return *res, nil
 }

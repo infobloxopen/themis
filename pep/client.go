@@ -151,6 +151,12 @@ func WithNoRequestBufferPool() Option {
 	}
 }
 
+func withCache() Option {
+	return func(o *options) {
+		o.cache = true
+	}
+}
+
 const (
 	noBalancer = iota
 	roundRobinBalancer
@@ -166,6 +172,7 @@ type options struct {
 	connStateCb    ConnectionStateNotificationCallback
 	maxRequestSize uint32
 	noPool         bool
+	cache          bool
 }
 
 // NewClient creates client instance using given options.
