@@ -209,8 +209,10 @@ func NewIntegratedServer(policyFile string, contentFiles []string) *Server {
 
 	ext := filepath.Ext(policyFile)
 	switch ext {
-	case ".json": o.parser = ast.NewJSONParser()
-	case ".yaml": o.parser = ast.NewYAMLParser()
+	case ".json":
+		o.parser = ast.NewJSONParser()
+	case ".yaml":
+		o.parser = ast.NewYAMLParser()
 	}
 
 	if o.parser == nil {
@@ -218,10 +220,10 @@ func NewIntegratedServer(policyFile string, contentFiles []string) *Server {
 	}
 
 	s := &Server{
-		opts:                o,
-		errCh:               make(chan error, 100),
-		q:                   newQueue(),
-		c:                   pdp.NewLocalContentStorage(nil),
+		opts:  o,
+		errCh: make(chan error, 100),
+		q:     newQueue(),
+		c:     pdp.NewLocalContentStorage(nil),
 		//memProfBaseDumpDone: memProfBaseDumpDone,
 	}
 
