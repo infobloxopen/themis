@@ -230,9 +230,11 @@ func NewIntegratedServer(policyFile string, contentFiles []string) *Server {
 		return nil
 	}
 
-	err = s.LoadContent(contentFiles)
-	if err != nil {
-		return nil
+	if contentFiles != nil && len(contentFiles) > 0 {
+		err = s.LoadContent(contentFiles)
+		if err != nil {
+			return nil
+		}
 	}
 
 	return s
