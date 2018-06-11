@@ -7,7 +7,7 @@ import (
 )
 
 type integratedClient struct {
-	s      *ps.Server
+	s *ps.Server
 }
 
 func NewIntegratedClient(policyFile string, contentFiles []string) *integratedClient {
