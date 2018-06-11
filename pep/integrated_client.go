@@ -3,7 +3,6 @@ package pep
 import (
 	"golang.org/x/net/context"
 
-	//pb "github.com/infobloxopen/themis/pdp-service"
 	ps "github.com/infobloxopen/themis/pdpserver/server"
 )
 
@@ -33,8 +32,6 @@ func (c *integratedClient) Validate(in, out interface{}) error {
 	if err != nil {
 		return err
 	}
-
-	//func (s *Server) Validate(ctx context.Context, in *pb.Request) (*pb.Response, error) {
 
 	res, err := c.s.Validate(context.Background(), &req)
 	if err != nil {
