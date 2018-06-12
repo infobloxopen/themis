@@ -798,9 +798,9 @@ func init() {
 		panic(err)
 	}
 
-	benchmarkRequests = make([]*pb.Msg, 1024)
+	benchmarkRequests = make([]*pb.Msg, 0x40000)
 	for i := range benchmarkRequests {
-		b := make([]byte, 1024)
+		b := make([]byte, 128)
 
 		dn, err := domain.MakeNameFromString(domainOpts[rand.Intn(len(domainOpts))])
 		if err != nil {

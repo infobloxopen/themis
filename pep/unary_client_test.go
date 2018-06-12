@@ -65,7 +65,10 @@ func TestUnaryClientValidationWithCache(t *testing.T) {
 		}
 	}()
 
-	c := NewClient(WithCacheTTL(15 * time.Minute))
+	c := NewClient(
+		WithMaxRequestSize(128),
+		WithCacheTTL(15*time.Minute),
+	)
 	err := c.Connect("127.0.0.1:5555")
 	if err != nil {
 		t.Fatalf("expected no error but got %s", err)
