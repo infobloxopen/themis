@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/infobloxopen/go-trees/domain"
+	"github.com/infobloxopen/go-trees/strtree"
 
 	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
@@ -21,6 +22,7 @@ type TestResponseStruct struct {
 	String  string
 	Address net.IP
 	Network *net.IPNet
+	Strings *strtree.Tree
 }
 
 type TestTaggedResponseStruct struct {
@@ -37,30 +39,31 @@ type TestTaggedResponseStruct struct {
 }
 
 type TestTaggedAllTypesResponseStruct struct {
-	Effect     string      `pdp:"Effect"`
-	Reason     string      `pdp:"Reason"`
-	BoolFalse  bool        `pdp:"baf"`
-	BoolTrue   bool        `pdp:"bat"`
-	String     string      `pdp:"sa"`
-	Int        int         `pdp:"ia"`
-	Int8       int8        `pdp:"i8a"`
-	Int16      int16       `pdp:"i16a"`
-	Int32      int32       `pdp:"i32a"`
-	Int64      int64       `pdp:"i64a"`
-	Uint       uint        `pdp:"uia"`
-	Uint8      uint8       `pdp:"ui8a"`
-	Uint16     uint16      `pdp:"ui16a"`
-	Uint32     uint32      `pdp:"ui32a"`
-	Uint64     uint64      `pdp:"ui64a"`
-	Float32    float32     `pdp:"f32a"`
-	Float64    float64     `pdp:"f64a"`
-	Address4   net.IP      `pdp:"aa4"`
-	Address6   net.IP      `pdp:"aa6"`
-	Network4   net.IPNet   `pdp:"na4"`
-	Network6   net.IPNet   `pdp:"na6"`
-	NetworkPtr *net.IPNet  `pdp:"pna"`
-	DomainS    string      `pdp:"das,domain"`
-	DomainD    domain.Name `pdp:"dad,domain"`
+	Effect     string        `pdp:"Effect"`
+	Reason     string        `pdp:"Reason"`
+	BoolFalse  bool          `pdp:"baf"`
+	BoolTrue   bool          `pdp:"bat"`
+	String     string        `pdp:"sa"`
+	Int        int           `pdp:"ia"`
+	Int8       int8          `pdp:"i8a"`
+	Int16      int16         `pdp:"i16a"`
+	Int32      int32         `pdp:"i32a"`
+	Int64      int64         `pdp:"i64a"`
+	Uint       uint          `pdp:"uia"`
+	Uint8      uint8         `pdp:"ui8a"`
+	Uint16     uint16        `pdp:"ui16a"`
+	Uint32     uint32        `pdp:"ui32a"`
+	Uint64     uint64        `pdp:"ui64a"`
+	Float32    float32       `pdp:"f32a"`
+	Float64    float64       `pdp:"f64a"`
+	Address4   net.IP        `pdp:"aa4"`
+	Address6   net.IP        `pdp:"aa6"`
+	Network4   net.IPNet     `pdp:"na4"`
+	Network6   net.IPNet     `pdp:"na6"`
+	NetworkPtr *net.IPNet    `pdp:"pna"`
+	DomainS    string        `pdp:"das,domain"`
+	DomainD    domain.Name   `pdp:"dad,domain"`
+	Strings    *strtree.Tree `pdp:"ssa,set of strings"`
 }
 
 type TestInvalidResponseStruct1 struct {
@@ -110,7 +113,7 @@ var (
 	TestTaggedAllTypesResponse = []byte{
 		1, 0, 3,
 		11, 0, 'T', 'e', 's', 't', ' ', 'E', 'r', 'r', 'o', 'r', '!',
-		22, 0,
+		23, 0,
 		3, 'b', 'a', 'f', 0,
 		3, 'b', 'a', 't', 1,
 		2, 's', 'a', 2, 4, 0, 't', 'e', 's', 't',
@@ -133,6 +136,7 @@ var (
 		3, 'p', 'n', 'a', 8, 32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		3, 'd', 'a', 's', 9, 11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
 		3, 'd', 'a', 'd', 9, 11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+		3, 's', 's', 'a', 10, 3, 0, 3, 0, 'o', 'n', 'e', 3, 0, 't', 'w', 'o', 5, 0, 't', 'h', 'r', 'e', 'e',
 	}
 )
 
@@ -152,6 +156,7 @@ func TestUnmarshalUntaggedStruct(t *testing.T) {
 				String:  "test",
 				Address: net.ParseIP("1.2.3.4"),
 				Network: makeTestNetwork("1.2.3.4/32"),
+				Strings: newStrTree("one", "two", "three"),
 			},
 		)
 	}
@@ -211,6 +216,7 @@ func TestUnmarshalTaggedStruct(t *testing.T) {
 				NetworkPtr: makeTestNetwork("2001:db8::/32"),
 				DomainS:    "example.com",
 				DomainD:    makeTestDomain("example.com"),
+				Strings:    newStrTree("one", "two", "three"),
 			},
 		)
 	}
@@ -431,7 +437,8 @@ func assertTestTaggedAllTypesStruct(t *testing.T, v, e TestTaggedAllTypesRespons
 		v.Network6.String() != e.Network6.String() ||
 		vN != eN ||
 		v.DomainS != e.DomainS ||
-		v.DomainD.String() != e.DomainD.String() {
+		v.DomainD.String() != e.DomainD.String() ||
+		!setOfStringsEqual(v.Strings, e.Strings) {
 		t.Errorf("expected:\n%v\nbut got:\n%v\n",
 			SprintfTestTaggedAllTypesStruct(e),
 			SprintfTestTaggedAllTypesStruct(v),
@@ -447,8 +454,10 @@ func SprintfTestResponseStruct(v TestResponseStruct) string {
 			"\tBool...: %v\n"+
 			"\tString.: %v\n"+
 			"\tAddress: %s\n"+
-			"\tNetwork: %s\n",
-		v.Effect, v.Int, v.Float, v.Bool, v.String, v.Address.String(), v.Network.String())
+			"\tNetwork: %s\n"+
+			"\tStrings: %v\n",
+		v.Effect,
+		v.Int, v.Float, v.Bool, v.String, v.Address.String(), v.Network.String(), pdp.SortSetOfStrings(v.Strings))
 }
 
 func SprintfTestTaggedStruct(v TestTaggedResponseStruct) string {
@@ -461,7 +470,8 @@ func SprintfTestTaggedStruct(v TestTaggedResponseStruct) string {
 			"\tDomain.: %v\n"+
 			"\tAddress: %v\n"+
 			"\tNetwork: %v\n",
-		v.Result, v.Error, v.Bool1, v.Bool2, v.Bool3, v.Domain, v.Address.String(), v.Network.String())
+		v.Result, v.Error,
+		v.Bool1, v.Bool2, v.Bool3, v.Domain, v.Address.String(), v.Network.String())
 }
 
 func SprintfTestTaggedAllTypesStruct(v TestTaggedAllTypesResponseStruct) string {
@@ -494,12 +504,31 @@ func SprintfTestTaggedAllTypesStruct(v TestTaggedAllTypesResponseStruct) string 
 			"\tNetwork6..: %v\n"+
 			"\tNetworkPtr: %v\n"+
 			"\tDomainS...: %q\n"+
-			"\tDomainD...: %q\n",
+			"\tDomainD...: %q\n"+
+			"\tStrings...: %v\n",
 		v.Effect, v.Reason, v.BoolFalse, v.BoolTrue, v.String,
 		v.Int, v.Int8, v.Int16, v.Int32, v.Int64,
 		v.Uint, v.Uint8, v.Uint16, v.Uint32, v.Uint64,
 		v.Float32, v.Float64,
 		v.Address4.String(), v.Address6.String(), v.Network4.String(), v.Network6.String(), n,
 		v.DomainS, v.DomainD,
+		pdp.SortSetOfStrings(v.Strings),
 	)
+}
+
+func setOfStringsEqual(v, e *strtree.Tree) bool {
+	ss := pdp.SortSetOfStrings(v)
+	se := pdp.SortSetOfStrings(e)
+
+	if len(ss) != len(se) {
+		return false
+	}
+
+	for i, s := range ss {
+		if s != se[i] {
+			return false
+		}
+	}
+
+	return true
 }

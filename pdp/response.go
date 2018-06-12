@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/infobloxopen/go-trees/domain"
+	"github.com/infobloxopen/go-trees/strtree"
 )
 
 const (
@@ -155,7 +156,9 @@ func UnmarshalResponse(b []byte, out []AttributeAssignment) (int, int, error) {
 // TypeInteger - intX or uintX (note that small int types can be overflowed
 // while uint can't take negative value), TypeFloat - float32/64, TypeAddress -
 // net.IP, TypeNetwork - net.IPNet or *net.IPNet, TypeDomain - string or
-// domain.Name from github.com/infobloxopen/go-trees/domain package.
+// domain.Name from github.com/infobloxopen/go-trees/domain package,
+// TypeSetOfStrings - *strtree.Tree from
+// github.com/infobloxopen/go-trees/strtree package.
 func UnmarshalResponseToReflection(b []byte, f func(string, Type) (reflect.Value, error)) error {
 	off, err := checkRequestVersion(b)
 	if err != nil {
@@ -351,6 +354,9 @@ func putAttributesFromReflection(b []byte, c int, f func(i int) (string, Type, r
 
 		case TypeDomain:
 			n, err = putRequestAttributeDomain(b[off:], id, domain.MakeNameFromReflection(v))
+
+		case TypeSetOfStrings:
+			n, err = putRequestAttributeSetOfStrings(b[off:], id, getSetOfStrings(v))
 		}
 
 		if err != nil {
@@ -406,7 +412,7 @@ func getAttributesToReflection(b []byte, f func(string, Type) (reflect.Value, er
 		}
 		b = b[n:]
 
-		if t == requestWireTypeSetOfStrings || t == requestWireTypeSetOfNetworks || t == requestWireTypeSetOfDomains || t == requestWireTypeListOfStrings {
+		if t == requestWireTypeSetOfNetworks || t == requestWireTypeSetOfDomains || t == requestWireTypeListOfStrings {
 			return bindError(newRequestAttributeUnmarshallingNotImplemented(t), id)
 		}
 
@@ -505,6 +511,16 @@ func getAttributesToReflection(b []byte, f func(string, Type) (reflect.Value, er
 			b = b[n:]
 
 			err = setDomain(v, d)
+
+		case requestWireTypeSetOfStrings:
+			var ss *strtree.Tree
+			ss, n, err = getRequestSetOfStringsValue(b)
+			if err != nil {
+				return bindError(err, id)
+			}
+			b = b[n:]
+
+			err = setSetOfStrings(v, ss)
 		}
 
 		if err != nil {

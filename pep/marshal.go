@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/infobloxopen/go-trees/domain"
+	"github.com/infobloxopen/go-trees/strtree"
 
 	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
@@ -46,8 +47,9 @@ var (
 	float64Type     = reflect.TypeOf(float64(0))
 	netIPType       = reflect.TypeOf(net.IP{})
 	netIPNetType    = reflect.TypeOf(net.IPNet{})
-	ptrNetIPNetType = reflect.TypeOf(new(net.IPNet))
+	ptrNetIPNetType = reflect.TypeOf((*net.IPNet)(nil))
 	domainType      = reflect.TypeOf(domain.Name{})
+	strtreeType     = reflect.TypeOf((*strtree.Tree)(nil))
 
 	attrTypeByType = map[reflect.Type]pdp.Type{
 		boolType:        pdp.TypeBoolean,
@@ -68,16 +70,18 @@ var (
 		netIPNetType:    pdp.TypeNetwork,
 		ptrNetIPNetType: pdp.TypeNetwork,
 		domainType:      pdp.TypeDomain,
+		strtreeType:     pdp.TypeSetOfStrings,
 	}
 
 	attrTypeByTag = map[string]pdp.Type{
-		pdp.TypeBoolean.GetKey(): pdp.TypeBoolean,
-		pdp.TypeString.GetKey():  pdp.TypeString,
-		pdp.TypeInteger.GetKey(): pdp.TypeInteger,
-		pdp.TypeFloat.GetKey():   pdp.TypeFloat,
-		pdp.TypeAddress.GetKey(): pdp.TypeAddress,
-		pdp.TypeNetwork.GetKey(): pdp.TypeNetwork,
-		pdp.TypeDomain.GetKey():  pdp.TypeDomain,
+		pdp.TypeBoolean.GetKey():      pdp.TypeBoolean,
+		pdp.TypeString.GetKey():       pdp.TypeString,
+		pdp.TypeInteger.GetKey():      pdp.TypeInteger,
+		pdp.TypeFloat.GetKey():        pdp.TypeFloat,
+		pdp.TypeAddress.GetKey():      pdp.TypeAddress,
+		pdp.TypeNetwork.GetKey():      pdp.TypeNetwork,
+		pdp.TypeDomain.GetKey():       pdp.TypeDomain,
+		pdp.TypeSetOfStrings.GetKey(): pdp.TypeSetOfStrings,
 	}
 
 	typeByAttrType = map[pdp.Type]map[reflect.Type]struct{}{
@@ -113,6 +117,9 @@ var (
 		pdp.TypeDomain: {
 			stringType: {},
 			domainType: {},
+		},
+		pdp.TypeSetOfStrings: {
+			strtreeType: {},
 		},
 	}
 

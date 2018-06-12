@@ -6,7 +6,9 @@ import (
 	"github.com/infobloxopen/go-trees/strtree"
 )
 
-func sortSetOfStrings(v *strtree.Tree) []string {
+// SortSetOfStrings converts set of strings to a slice ordered by assigned
+// integer values. It panics if given tree contains not int value.
+func SortSetOfStrings(v *strtree.Tree) []string {
 	pairs := newPairList(v)
 	sort.Sort(pairs)
 

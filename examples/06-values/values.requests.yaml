@@ -18,10 +18,10 @@ requests:
   a: 192.0.2.13
 
 # Matches set of domains value
-- s: example
-  c: 192.0.2.2/31
-  a: 192.0.2.16
-  d: example.com
+# - s: example
+#   c: 192.0.2.2/31
+#   a: 192.0.2.16
+#   d: example.com
 
 # Matches set of strings value
 - s: first
@@ -30,19 +30,19 @@ requests:
   d: example.net
 
 # Matches set of networks value
-- s: third
-  c: 192.0.2.2/31
-  a: 192.0.2.16
-  d: example.net
+# - s: third
+#   c: 192.0.2.2/31
+#   a: 192.0.2.16
+#   d: example.net
 
 # Goes to mapper by list of strings (and matches first rule)
-- s: first-rule
-  c: 192.0.2.2/31
-  a: 192.0.2.33
-  d: example.net
+# - s: first-rule
+#   c: 192.0.2.2/31
+#   a: 192.0.2.33
+#   d: example.net
 
 # Goes to mapper by list of strings (and matches second rule)
-- s: second-rule
-  c: 192.0.2.2/31
-  a: 192.0.2.33
-  d: example.net
+# - s: second-rule
+#   c: 192.0.2.2/31
+#   a: 192.0.2.33
+#   d: example.net

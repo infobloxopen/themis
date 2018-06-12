@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/infobloxopen/go-trees/domain"
+	"github.com/infobloxopen/go-trees/strtree"
 
 	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
@@ -29,17 +30,20 @@ type TestStruct struct {
 	Slice   []int
 	Struct  DummyStruct
 	Domain  domain.Name
+	Strings *strtree.Tree
 }
 
 type TestTaggedStruct struct {
-	Bool1   bool
-	Bool2   bool        `pdp:""`
-	Bool3   bool        `pdp:"flag"`
-	Int     int         `pdp:"i,integer"`
-	Float   float64     `pdp:"f,float"`
-	Domain  domain.Name `pdp:"d,domain"`
-	Address net.IP      `pdp:""`
-	network *net.IPNet  `pdp:"net,network"`
+	bool1   bool
+	Bool2   bool          `pdp:""`
+	bool3   bool          `pdp:"flag"`
+	str     string        `pdp:"s,string"`
+	integer int           `pdp:"i,integer"`
+	float   float64       `pdp:"f,float"`
+	domain  domain.Name   `pdp:"d,domain"`
+	address net.IP        `pdp:"Address"`
+	network *net.IPNet    `pdp:"net,network"`
+	strings *strtree.Tree `pdp:"ss,set of strings"`
 }
 
 type TestInvalidStruct1 struct {
@@ -63,11 +67,12 @@ var (
 		Slice:   []int{1, 2, 3, 4},
 		Struct:  DummyStruct{},
 		Domain:  makeTestDomain("example.com"),
+		Strings: newStrTree("one", "two", "three"),
 	}
 
 	testRequestBuffer = []byte{
 		1, 0,
-		7, 0,
+		8, 0,
 		4, 'B', 'o', 'o', 'l', 1,
 		3, 'I', 'n', 't', 3, 5, 0, 0, 0, 0, 0, 0, 0,
 		5, 'F', 'l', 'o', 'a', 't', 4, 0, 0, 0, 0, 0, 92, 129, 64,
@@ -75,41 +80,47 @@ var (
 		7, 'A', 'd', 'd', 'r', 'e', 's', 's', 5, 1, 2, 3, 4,
 		7, 'N', 'e', 't', 'w', 'o', 'r', 'k', 7, 32, 1, 2, 3, 4,
 		6, 'D', 'o', 'm', 'a', 'i', 'n', 9, 11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+		7, 'S', 't', 'r', 'i', 'n', 'g', 's', 10, 3, 0,
+		3, 0, 'o', 'n', 'e', 3, 0, 't', 'w', 'o', 5, 0, 't', 'h', 'r', 'e', 'e',
 	}
 )
 
 func TestMarshalUntaggedStruct(t *testing.T) {
-	var b [100]byte
+	var b [128]byte
 
 	n, err := marshalValue(reflect.ValueOf(testStruct), b[:])
 	assertBytesBuffer(t, "marshalValue(TestStruct)", err, b[:], n, testRequestBuffer...)
 }
 
 func TestMarshalTaggedStruct(t *testing.T) {
-	var b [78]byte
+	var b [110]byte
 
 	v := TestTaggedStruct{
-		Bool1:   true,
+		bool1:   true,
 		Bool2:   false,
-		Bool3:   true,
-		Int:     math.MaxInt32,
-		Float:   12345.6789,
-		Domain:  makeTestDomain("example.com"),
-		Address: net.ParseIP("1.2.3.4"),
+		bool3:   true,
+		str:     "test",
+		integer: math.MaxInt32,
+		float:   12345.6789,
+		domain:  makeTestDomain("example.com"),
+		address: net.ParseIP("1.2.3.4"),
 		network: makeTestNetwork("1.2.3.4/32"),
+		strings: newStrTree("one", "two", "three"),
 	}
 
 	n, err := marshalValue(reflect.ValueOf(v), b[:])
 	assertBytesBuffer(t, "marshalValue(TestTaggedStruct)", err, b[:], n,
 		1, 0,
-		7, 0,
+		9, 0,
 		5, 'B', 'o', 'o', 'l', '2', 0,
 		4, 'f', 'l', 'a', 'g', 1,
+		1, 's', 2, 4, 0, 't', 'e', 's', 't',
 		1, 'i', 3, 255, 255, 255, 127, 00, 00, 00, 00,
 		1, 'f', 4, 161, 248, 49, 230, 214, 28, 200, 64,
 		1, 'd', 9, 11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
 		7, 'A', 'd', 'd', 'r', 'e', 's', 's', 5, 1, 2, 3, 4,
 		3, 'n', 'e', 't', 7, 32, 1, 2, 3, 4,
+		2, 's', 's', 10, 3, 0, 3, 0, 'o', 'n', 'e', 3, 0, 't', 'w', 'o', 5, 0, 't', 'h', 'r', 'e', 'e',
 	)
 }
 
@@ -132,7 +143,7 @@ func TestMarshalInvalidStructs(t *testing.T) {
 }
 
 func TestMakeRequest(t *testing.T) {
-	var b [100]byte
+	var b [128]byte
 
 	m, err := makeRequest(pb.Msg{Body: testRequestBuffer}, b[:])
 	assertBytesBuffer(t, "makeRequest(pb.Msg)", err, m.Body, len(m.Body), testRequestBuffer...)
@@ -154,6 +165,7 @@ func TestMakeRequest(t *testing.T) {
 		pdp.MakeAddressAssignment("Address", net.ParseIP("1.2.3.4")),
 		pdp.MakeNetworkAssignment("Network", makeTestNetwork("1.2.3.4/32")),
 		pdp.MakeDomainAssignment("Domain", makeTestDomain("example.com")),
+		pdp.MakeSetOfStringsAssignment("Strings", newStrTree("one", "two", "three")),
 	}, b[:])
 	assertBytesBuffer(t, "makeRequest(assignments)", err, m.Body, len(m.Body), testRequestBuffer...)
 }
@@ -174,6 +186,15 @@ func makeTestDomain(s string) domain.Name {
 	}
 
 	return d
+}
+
+func newStrTree(args ...string) *strtree.Tree {
+	t := strtree.NewTree()
+	for i, s := range args {
+		t.InplaceInsert(s, i)
+	}
+
+	return t
 }
 
 func assertBytesBuffer(t *testing.T, desc string, err error, b []byte, n int, e ...byte) {

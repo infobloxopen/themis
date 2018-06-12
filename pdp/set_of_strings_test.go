@@ -3,7 +3,7 @@ package pdp
 import "testing"
 
 func TestSortSetOfStrings(t *testing.T) {
-	list := sortSetOfStrings(newStrTree("First", "Second", "Third"))
+	list := SortSetOfStrings(newStrTree("First", "Second", "Third"))
 
 	expected := []string{"First", "Second", "Third"}
 	if len(list) != len(expected) {

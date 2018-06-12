@@ -76,7 +76,7 @@ func appendConcatArg(s []string, arg Expression, ctx *Context) ([]string, error)
 			return s, err
 		}
 
-		return append(s, sortSetOfStrings(v)...), nil
+		return append(s, SortSetOfStrings(v)...), nil
 
 	case TypeListOfStrings:
 		v, err := ctx.calculateListOfStringsExpression(arg)

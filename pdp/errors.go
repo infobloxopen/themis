@@ -145,32 +145,35 @@ const (
 	requestIPv4InvalidMaskErrorID                 = 128
 	requestIPv6InvalidMaskErrorID                 = 129
 	requestTooLongDomainValueErrorID              = 130
-	requestInvalidExpressionErrorID               = 131
-	requestAssignmentsOverflowErrorID             = 132
-	requestUnmarshalEffectConstErrorID            = 133
-	requestUnmarshalEffectTypeErrorID             = 134
-	requestUnmarshalStatusConstErrorID            = 135
-	requestUnmarshalStatusTypeErrorID             = 136
-	requestUnmarshalBooleanConstErrorID           = 137
-	requestUnmarshalBooleanTypeErrorID            = 138
-	requestUnmarshalStringConstErrorID            = 139
-	requestUnmarshalStringTypeErrorID             = 140
-	requestUnmarshalIntegerConstErrorID           = 141
-	requestUnmarshalIntegerTypeErrorID            = 142
-	requestUnmarshalIntegerOverflowErrorID        = 143
-	requestUnmarshalIntegerUnderflowErrorID       = 144
-	requestUnmarshalFloatConstErrorID             = 145
-	requestUnmarshalFloatTypeErrorID              = 146
-	requestUnmarshalAddressConstErrorID           = 147
-	requestUnmarshalAddressTypeErrorID            = 148
-	requestUnmarshalNetworkConstErrorID           = 149
-	requestUnmarshalNetworkTypeErrorID            = 150
-	requestUnmarshalDomainConstErrorID            = 151
-	requestUnmarshalDomainTypeErrorID             = 152
-	responseEffectErrorID                         = 153
-	ResponseServerErrorID                         = 154
-	policyCalculationErrorID                      = 155
-	obligationCalculationErrorID                  = 156
+	requestTooLongSetOfStringsValueErrorID        = 131
+	requestInvalidExpressionErrorID               = 132
+	requestAssignmentsOverflowErrorID             = 133
+	requestUnmarshalEffectConstErrorID            = 134
+	requestUnmarshalEffectTypeErrorID             = 135
+	requestUnmarshalStatusConstErrorID            = 136
+	requestUnmarshalStatusTypeErrorID             = 137
+	requestUnmarshalBooleanConstErrorID           = 138
+	requestUnmarshalBooleanTypeErrorID            = 139
+	requestUnmarshalStringConstErrorID            = 140
+	requestUnmarshalStringTypeErrorID             = 141
+	requestUnmarshalIntegerConstErrorID           = 142
+	requestUnmarshalIntegerTypeErrorID            = 143
+	requestUnmarshalIntegerOverflowErrorID        = 144
+	requestUnmarshalIntegerUnderflowErrorID       = 145
+	requestUnmarshalFloatConstErrorID             = 146
+	requestUnmarshalFloatTypeErrorID              = 147
+	requestUnmarshalAddressConstErrorID           = 148
+	requestUnmarshalAddressTypeErrorID            = 149
+	requestUnmarshalNetworkConstErrorID           = 150
+	requestUnmarshalNetworkTypeErrorID            = 151
+	requestUnmarshalDomainConstErrorID            = 152
+	requestUnmarshalDomainTypeErrorID             = 153
+	requestUnmarshalSetOfStringsConstErrorID      = 154
+	requestUnmarshalSetOfStringsTypeErrorID       = 155
+	responseEffectErrorID                         = 156
+	ResponseServerErrorID                         = 157
+	policyCalculationErrorID                      = 158
+	obligationCalculationErrorID                  = 159
 )
 
 type externalError struct {
@@ -2225,6 +2228,21 @@ func (e *requestTooLongDomainValueError) Error() string {
 	return e.errorf("Domain value is too long %d (expected no more than %d bytes)", len(e.d), math.MaxUint16)
 }
 
+type requestTooLongSetOfStringsValueError struct {
+	errorLink
+	n int
+}
+
+func newRequestTooLongSetOfStringsValueError(n int) *requestTooLongSetOfStringsValueError {
+	return &requestTooLongSetOfStringsValueError{
+		errorLink: errorLink{id: requestTooLongSetOfStringsValueErrorID},
+		n:         n}
+}
+
+func (e *requestTooLongSetOfStringsValueError) Error() string {
+	return e.errorf("Number of elements in set of strings value is too big %d (expected no more than %d)", e.n, math.MaxUint16)
+}
+
 type requestInvalidExpressionError struct {
 	errorLink
 	a AttributeAssignment
@@ -2559,6 +2577,36 @@ func newRequestUnmarshalDomainTypeError(v reflect.Value) *requestUnmarshalDomain
 
 func (e *requestUnmarshalDomainTypeError) Error() string {
 	return e.errorf("Can't unmarshal domain to %s", e.v.Type())
+}
+
+type requestUnmarshalSetOfStringsConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalSetOfStringsConstError(v reflect.Value) *requestUnmarshalSetOfStringsConstError {
+	return &requestUnmarshalSetOfStringsConstError{
+		errorLink: errorLink{id: requestUnmarshalSetOfStringsConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalSetOfStringsConstError) Error() string {
+	return e.errorf("Can't unmarshal set of strings to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalSetOfStringsTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalSetOfStringsTypeError(v reflect.Value) *requestUnmarshalSetOfStringsTypeError {
+	return &requestUnmarshalSetOfStringsTypeError{
+		errorLink: errorLink{id: requestUnmarshalSetOfStringsTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalSetOfStringsTypeError) Error() string {
+	return e.errorf("Can't unmarshal set of strings to %s", e.v.Type())
 }
 
 type responseEffectError struct {

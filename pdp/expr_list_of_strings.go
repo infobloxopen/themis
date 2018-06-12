@@ -39,7 +39,7 @@ func (f functionListOfStrings) Calculate(ctx *Context) (AttributeValue, error) {
 			return UndefinedValue, bindError(err, f.describe())
 		}
 
-		return MakeListOfStringsValue(sortSetOfStrings(v)), nil
+		return MakeListOfStringsValue(SortSetOfStrings(v)), nil
 
 	case TypeListOfStrings:
 		v, err := f.e.Calculate(ctx)

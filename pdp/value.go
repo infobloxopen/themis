@@ -608,7 +608,7 @@ func (v AttributeValue) Serialize() (string, error) {
 }
 
 func serializeSetOfStrings(v *strtree.Tree) string {
-	s := sortSetOfStrings(v)
+	s := SortSetOfStrings(v)
 	for i, item := range s {
 		s[i] = strconv.QuoteToASCII(item)
 	}
