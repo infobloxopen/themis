@@ -5,8 +5,10 @@ import (
 	"math"
 	"net"
 	"reflect"
+	"unsafe"
 
 	"github.com/infobloxopen/go-trees/domain"
+	"github.com/infobloxopen/go-trees/strtree"
 )
 
 var (
@@ -15,8 +17,9 @@ var (
 	reflectTypeString   = reflect.TypeOf("")
 	reflectTypeIP       = reflect.TypeOf(net.IP{})
 	reflectTypeIPNet    = reflect.TypeOf(net.IPNet{})
-	reflectTypePtrIPNet = reflect.TypeOf(new(net.IPNet))
+	reflectTypePtrIPNet = reflect.TypeOf((*net.IPNet)(nil))
 	reflectTypeDomain   = reflect.TypeOf(domain.Name{})
+	reflectTypeStrtree  = reflect.TypeOf((*strtree.Tree)(nil))
 )
 
 func setEffect(v reflect.Value, effect int) error {
@@ -245,6 +248,10 @@ func setAddress(v reflect.Value, a net.IP) error {
 }
 
 func getNetwork(v reflect.Value) *net.IPNet {
+	if v == reflectValueNil {
+		return nil
+	}
+
 	t := v.Type()
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
@@ -303,5 +310,35 @@ func setDomain(v reflect.Value, d domain.Name) error {
 		v.Set(reflect.ValueOf(d))
 	}
 
+	return nil
+}
+
+func getSetOfStrings(v reflect.Value) *strtree.Tree {
+	if v == reflectValueNil {
+		return nil
+	}
+
+	t := v.Type()
+	if t == reflectTypeStrtree {
+		return (*strtree.Tree)(unsafe.Pointer(v.Pointer()))
+	}
+
+	panic(fmt.Errorf("can't marshal %s as set of strings value", t))
+}
+
+func setSetOfStrings(v reflect.Value, ss *strtree.Tree) error {
+	if v == reflectValueNil {
+		return nil
+	}
+
+	if !v.CanSet() {
+		return newRequestUnmarshalSetOfStringsConstError(v)
+	}
+
+	if v.Type() != reflectTypeStrtree {
+		return newRequestUnmarshalSetOfStringsTypeError(v)
+	}
+
+	v.Set(reflect.ValueOf(ss))
 	return nil
 }

@@ -1117,6 +1117,15 @@ errors:
   - expr: len(e.d)
   - expr: math.MaxUint16
 
+- id: requestTooLongSetOfStringsValueError
+  fields:
+  - id: n
+    type: int
+  msg: "Number of elements in set of strings value is too big %d (expected no more than %d)"
+  args:
+  - field: n
+  - expr: math.MaxUint16
+
 - id: requestInvalidExpressionError
   fields:
   - id: a
@@ -1300,6 +1309,22 @@ errors:
   - id: v
     type: reflect.Value
   msg: "Can't unmarshal domain to %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalSetOfStringsConstError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal set of strings to unchengeable %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalSetOfStringsTypeError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal set of strings to %s"
   args:
   - field: v.Type()
 

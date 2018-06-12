@@ -6,9 +6,11 @@ import (
 	"math"
 	"net"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/infobloxopen/go-trees/domain"
+	"github.com/infobloxopen/go-trees/strtree"
 )
 
 var (
@@ -542,6 +544,42 @@ func TestGetRequestDomainValue(t *testing.T) {
 	}
 }
 
+func TestGetRequestSetOfStringsValue(t *testing.T) {
+	testWireSetOfStringsValue := []byte{
+		3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
+	}
+
+	v, n, err := getRequestSetOfStringsValue(testWireSetOfStringsValue)
+	if err != nil {
+		t.Error(err)
+	} else if n != len(testWireSetOfStringsValue) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireSetOfStringsValue), n)
+	} else {
+		assertStrings(SortSetOfStrings(v), []string{"one", "two", "three"}, "getRequestSetOfStringsValue", t)
+	}
+
+	v, _, err = getRequestSetOfStringsValue([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got domain %#v", SortSetOfStrings(v))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, _, err = getRequestSetOfStringsValue([]byte{
+		3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got domain %#v", SortSetOfStrings(v))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
 func TestGetRequestAttribute(t *testing.T) {
 	testWireBooleanFalseAttribute := []byte{
 		2, 'n', 'o', byte(requestWireTypeBooleanFalse),
@@ -794,6 +832,34 @@ func TestGetRequestAttribute(t *testing.T) {
 		}
 	}
 
+	testWireSetOfStringsAttribute := []byte{
+		14, 's', 'e', 't', ' ', 'o', 'f', ' ', 's', 't', 'r', 'i', 'n', 'g', 's', byte(requestWireTypeSetOfStrings),
+		3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
+	}
+	name, v, n, err = getRequestAttribute(testWireSetOfStringsAttribute)
+	if err != nil {
+		t.Error(err)
+	} else if n != len(testWireSetOfStringsAttribute) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireSetOfStringsAttribute), n)
+	} else if name != "set of strings" {
+		t.Errorf("expected %q as attribute name but got %q", "set of strings", name)
+	} else if vt := v.GetResultType(); vt != TypeSetOfStrings {
+		t.Errorf("expected value of %q type but got %q %s", TypeSetOfStrings, vt, v.describe())
+	} else {
+		s, err := v.Serialize()
+		if err != nil {
+			t.Error(err)
+		} else {
+			e := "\"one\",\"two\",\"three\""
+			if s != e {
+				t.Errorf("expected %q but got %q", e, s)
+			}
+		}
+	}
+
 	name, v, _, err = getRequestAttribute([]byte{})
 	if err == nil {
 		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
@@ -901,6 +967,18 @@ func TestGetRequestAttribute(t *testing.T) {
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
+
+	name, v, _, err = getRequestAttribute([]byte{
+		14, 's', 'e', 't', ' ', 'o', 'f', ' ', 's', 't', 'r', 'i', 'n', 'g', 's', byte(requestWireTypeSetOfStrings),
+		3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
 }
 
 func TestPutRequestVersion(t *testing.T) {
@@ -977,7 +1055,7 @@ func TestPutRequestAttributeType(t *testing.T) {
 }
 
 func TestPutRequestAttribute(t *testing.T) {
-	var b [25]byte
+	var b [35]byte
 
 	n, err := putRequestAttribute(b[:9], "boolean", MakeBooleanValue(true))
 	assertRequestBytesBuffer(t, "putRequestAttribute(boolean)", err, b[:9], n,
@@ -1013,6 +1091,15 @@ func TestPutRequestAttribute(t *testing.T) {
 	assertRequestBytesBuffer(t, "putRequestAttribute(domain)", err, b[:25], n,
 		6, 'd', 'o', 'm', 'a', 'i', 'n', byte(requestWireTypeDomain),
 		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+	)
+
+	n, err = putRequestAttribute(b[:35], "set of strings", MakeSetOfStringsValue(newStrTree("one", "two", "three")))
+	assertRequestBytesBuffer(t, "putRequestAttribute(set of strings)", err, b[:], n,
+		14, 's', 'e', 't', ' ', 'o', 'f', ' ', 's', 't', 'r', 'i', 'n', 'g', 's', byte(requestWireTypeSetOfStrings),
+		3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
 	)
 
 	n, err = putRequestAttribute(b[:], "undefined", UndefinedValue)
@@ -1178,6 +1265,32 @@ func TestPutRequestAttributeDomain(t *testing.T) {
 	}
 
 	n, err = putRequestAttributeDomain(b[:10], "domain", makeTestDomain("www.example.com"))
+	if err == nil {
+		t.Errorf("expected no data put to small buffer but got %d", n)
+	} else if _, ok := err.(*requestBufferOverflowError); !ok {
+		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestPutRequestAttributeSetOfStrings(t *testing.T) {
+	var b [28]byte
+
+	n, err := putRequestAttributeSetOfStrings(b[:], "strings", newStrTree("one", "two", "three"))
+	assertRequestBytesBuffer(t, "putRequestAttributeString", err, b[:], n,
+		7, 's', 't', 'r', 'i', 'n', 'g', 's', byte(requestWireTypeSetOfStrings), 3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
+	)
+
+	n, err = putRequestAttributeSetOfStrings(b[:5], "strings", newStrTree("one", "two", "three"))
+	if err == nil {
+		t.Errorf("expected no data put to small buffer but got %d", n)
+	} else if _, ok := err.(*requestBufferOverflowError); !ok {
+		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
+	}
+
+	n, err = putRequestAttributeSetOfStrings(b[:13], "strings", newStrTree("one", "two", "three"))
 	if err == nil {
 		t.Errorf("expected no data put to small buffer but got %d", n)
 	} else if _, ok := err.(*requestBufferOverflowError); !ok {
@@ -1351,6 +1464,47 @@ func TestPutRequestDomainValue(t *testing.T) {
 		t.Errorf("expected no data put to small buffer but got %d", n)
 	} else if _, ok := err.(*requestBufferOverflowError); !ok {
 		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestPutRequestSetOfStringsValue(t *testing.T) {
+	var b [20]byte
+
+	n, err := putRequestSetOfStringsValue(b[:], newStrTree("one", "two", "three"))
+	assertRequestBytesBuffer(t, "putRequestSetOfStringsValue", err, b[:], n,
+		byte(requestWireTypeSetOfStrings), 3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
+	)
+
+	n, err = putRequestSetOfStringsValue(nil, newStrTree("one", "two", "three"))
+	assertRequestBufferOverflow(t, "putRequestSetOfStringsValue", err, n)
+
+	n, err = putRequestSetOfStringsValue(b[:10], newStrTree("one", "two", "three"))
+	if err == nil {
+		t.Errorf("expected no data put to small buffer but got %d", n)
+	} else if _, ok := err.(*requestBufferOverflowError); !ok {
+		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
+	}
+
+	ss := strtree.NewTree()
+	for i := 0; i < math.MaxUint16+1; i++ {
+		ss.InplaceInsert(strconv.Itoa(i), i)
+	}
+
+	n, err = putRequestSetOfStringsValue(b[:], ss)
+	if err == nil {
+		t.Errorf("expected no data put from too big set but got %d", n)
+	} else if _, ok := err.(*requestTooLongSetOfStringsValueError); !ok {
+		t.Errorf("expected *requestTooLongSetOfStringsValueError but got %T (%s)", err, err)
+	}
+
+	n, err = putRequestSetOfStringsValue(b[:], newStrTree("one", "two", string(make([]byte, math.MaxUint16+1))))
+	if err == nil {
+		t.Errorf("expected no data put with too big set of strings element but got %d", n)
+	} else if _, ok := err.(*requestTooLongStringValueError); !ok {
+		t.Errorf("expected *requestTooLongStringValueError but got %T (%s)", err, err)
 	}
 }
 

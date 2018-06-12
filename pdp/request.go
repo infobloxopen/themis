@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	"github.com/infobloxopen/go-trees/domain"
+	"github.com/infobloxopen/go-trees/strtree"
 )
 
 const requestVersion = uint16(1)
@@ -59,6 +60,7 @@ var (
 		TypeNetwork,
 		TypeNetwork,
 		TypeDomain,
+		TypeSetOfStrings,
 	}
 )
 
@@ -90,8 +92,9 @@ func MarshalRequestAssignments(b []byte, in []AttributeAssignment) (int, error) 
 // - string, for TypeInteger - intX, uintX (internally converting to int64),
 // TypeFloat - float32 or float64, TypeAddress - net.IP, TypeNetwork - net.IPNet
 // or *net.IPNet, TypeDomain - string or domain.Name from
-// github.com/infobloxopen/go-trees/domain package. The function fills given
-// buffer and returns number of bytes written.
+// github.com/infobloxopen/go-trees/domain package, TypeSetOfStrings -
+// *strtree.Tree from github.com/infobloxopen/go-trees/strtree package.
+// The function fills given buffer and returns number of bytes written.
 func MarshalRequestReflection(b []byte, c int, f func(i int) (string, Type, reflect.Value, error)) (int, error) {
 	off, err := putRequestVersion(b)
 	if err != nil {
@@ -210,6 +213,10 @@ func putRequestAttribute(b []byte, name string, value AttributeValue) (int, erro
 	case TypeDomain:
 		v, _ := value.domain()
 		return putRequestAttributeDomain(b, name, v)
+
+	case TypeSetOfStrings:
+		v, _ := value.setOfStrings()
+		return putRequestAttributeSetOfStrings(b, name, v)
 	}
 
 	return 0, newRequestAttributeMarshallingNotImplemented(t)
@@ -229,7 +236,7 @@ func getRequestAttribute(b []byte) (string, AttributeValue, int, error) {
 	off += n
 
 	switch t {
-	case requestWireTypeSetOfStrings, requestWireTypeSetOfNetworks, requestWireTypeSetOfDomains, requestWireTypeListOfStrings:
+	case requestWireTypeSetOfNetworks, requestWireTypeSetOfDomains, requestWireTypeListOfStrings:
 		return "", UndefinedValue, 0, bindError(newRequestAttributeUnmarshallingNotImplemented(t), name)
 
 	case requestWireTypeBooleanFalse:
@@ -301,6 +308,14 @@ func getRequestAttribute(b []byte) (string, AttributeValue, int, error) {
 		}
 
 		return name, MakeDomainValue(d), off + n, nil
+
+	case requestWireTypeSetOfStrings:
+		ss, n, err := getRequestSetOfStringsValue(b[off:])
+		if err != nil {
+			return "", UndefinedValue, 0, bindError(bindError(err, "value"), name)
+		}
+
+		return name, MakeSetOfStringsValue(ss), off + n, nil
 	}
 
 	return "", UndefinedValue, 0, bindError(newRequestAttributeUnmarshallingTypeError(t), name)
@@ -696,4 +711,81 @@ func getRequestDomainValue(b []byte) (domain.Name, int, error) {
 	}
 
 	return d, n, nil
+}
+
+func putRequestAttributeSetOfStrings(b []byte, name string, value *strtree.Tree) (int, error) {
+	off, err := putRequestAttributeName(b, name)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestSetOfStringsValue(b[off:], value)
+	if err != nil {
+		return 0, err
+	}
+
+	return off + n, err
+}
+
+func putRequestSetOfStringsValue(b []byte, value *strtree.Tree) (int, error) {
+	off, err := putRequestAttributeType(b, requestWireTypeSetOfStrings)
+	if err != nil {
+		return 0, err
+	}
+
+	ss := SortSetOfStrings(value)
+
+	if len(ss) > math.MaxUint16 {
+		return 0, newRequestTooLongSetOfStringsValueError(len(ss))
+	}
+
+	total := 2 * (len(ss) + 1)
+	for i, s := range ss {
+		if len(s) > math.MaxUint16 {
+			return 0, bindErrorf(newRequestTooLongStringValueError(s), "%d", i+1)
+		}
+
+		total += len(s)
+	}
+
+	if len(b[off:]) < total {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	binary.LittleEndian.PutUint16(b[off:], uint16(len(ss)))
+	off += 2
+
+	for _, s := range ss {
+		binary.LittleEndian.PutUint16(b[off:], uint16(len(s)))
+		off += 2
+
+		copy(b[off:], s)
+		off += len(s)
+	}
+
+	return off, nil
+}
+
+func getRequestSetOfStringsValue(b []byte) (*strtree.Tree, int, error) {
+	if len(b) < 2 {
+		return nil, 0, newRequestBufferUnderflowError()
+	}
+
+	ss := strtree.NewTree()
+
+	count := int(binary.LittleEndian.Uint16(b))
+	off := 2
+
+	for i := 0; i < count; i++ {
+		s, n, err := getRequestStringValue(b[off:])
+		if err != nil {
+			return nil, 0, bindErrorf(err, "%d", i+1)
+		}
+
+		off += n
+
+		ss.InplaceInsert(s, i)
+	}
+
+	return ss, off, nil
 }

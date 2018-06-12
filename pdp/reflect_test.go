@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/infobloxopen/go-trees/domain"
+	"github.com/infobloxopen/go-trees/strtree"
 )
 
 func TestSetEffect(t *testing.T) {
@@ -400,6 +401,11 @@ func TestGetNetwork(t *testing.T) {
 		t.Errorf("expected %q but got %q", en, n)
 	}
 
+	n = getNetwork(reflect.ValueOf(nil))
+	if n != nil {
+		t.Errorf("expected nil but got %q", n)
+	}
+
 	assertPanicWithError(t, func() {
 		n = getNetwork(reflect.ValueOf("string"))
 	}, "can't marshal %s as network value", reflect.TypeOf("string"))
@@ -474,6 +480,51 @@ func TestSetDomain(t *testing.T) {
 		t.Errorf("expected *requestUnmarshalDomainTypeError but got %d", n)
 	} else if _, ok := err.(*requestUnmarshalDomainTypeError); !ok {
 		t.Errorf("expected *requestUnmarshalDomainTypeError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetSetOfStrings(t *testing.T) {
+	eSs := newStrTree("one", "two", "three")
+
+	ss := getSetOfStrings(reflect.ValueOf(eSs))
+	assertStrings(SortSetOfStrings(ss), SortSetOfStrings(eSs), "getSetOfStrings", t)
+
+	ss = getSetOfStrings(reflect.ValueOf(nil))
+	if ss != nil {
+		t.Errorf("expected nil but got %#v", SortSetOfStrings(ss))
+	}
+
+	assertPanicWithError(t, func() {
+		ss = getSetOfStrings(reflect.ValueOf(true))
+	}, "can't marshal %s as set of strings value", reflect.TypeOf(true))
+}
+
+func TestSetSetOfStrings(t *testing.T) {
+	eSs := newStrTree("one", "two", "three")
+	var ss *strtree.Tree
+	if err := setSetOfStrings(reflect.Indirect(reflect.ValueOf(&ss)), eSs); err != nil {
+		t.Error(err)
+	} else {
+		assertStrings(SortSetOfStrings(ss), SortSetOfStrings(eSs), "setSetOfStrings", t)
+	}
+
+	if err := setSetOfStrings(reflect.ValueOf(nil), eSs); err != nil {
+		t.Error(err)
+	}
+
+	err := setSetOfStrings(reflect.ValueOf(ss), eSs)
+	if err == nil {
+		t.Errorf("expected *requestUnmarshalSetOfStringsConstError but got %#v", SortSetOfStrings(ss))
+	} else if _, ok := err.(*requestUnmarshalSetOfStringsConstError); !ok {
+		t.Errorf("expected *requestUnmarshalSetOfStringsConstError but got %T (%s)", err, err)
+	}
+
+	var n int64
+	err = setSetOfStrings(reflect.Indirect(reflect.ValueOf(&n)), eSs)
+	if err == nil {
+		t.Errorf("expected *requestUnmarshalSetOfStringsTypeError but got %d", n)
+	} else if _, ok := err.(*requestUnmarshalSetOfStringsTypeError); !ok {
+		t.Errorf("expected *requestUnmarshalSetOfStringsTypeError but got %T (%s)", err, err)
 	}
 }
 
