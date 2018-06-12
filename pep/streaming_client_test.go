@@ -51,6 +51,7 @@ func TestStreamingClientValidationWithCache(t *testing.T) {
 
 	c := NewClient(
 		WithStreams(1),
+		WithMaxRequestSize(128),
 		WithCacheTTL(15*time.Minute),
 	)
 	err := c.Connect("127.0.0.1:5555")

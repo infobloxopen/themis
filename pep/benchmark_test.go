@@ -850,18 +850,18 @@ func benchmarkPolicySet(name, p string, b *testing.B) {
 }
 
 func BenchmarkOneStagePolicySet(b *testing.B) {
-	benchmarkPolicySet("BenchmarkOneStagePolicySet", oneStageBenchmarkPolicySet, b)
+	benchmarkPolicySet("OneStagePolicySet", oneStageBenchmarkPolicySet, b)
 }
 
 func BenchmarkTwoStagePolicySet(b *testing.B) {
-	benchmarkPolicySet("BenchmarkTwoStagePolicySet", twoStageBenchmarkPolicySet, b)
+	benchmarkPolicySet("TwoStagePolicySet", twoStageBenchmarkPolicySet, b)
 }
 
 func BenchmarkThreeStagePolicySet(b *testing.B) {
-	benchmarkPolicySet("BenchmarkThreeStagePolicySet", threeStageBenchmarkPolicySet, b)
+	benchmarkPolicySet("ThreeStagePolicySet", threeStageBenchmarkPolicySet, b)
 }
 
-func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
+func BenchmarkUnaryRaw(b *testing.B) {
 	pdpServer, _, c := startPDPServer(threeStageBenchmarkPolicySet, nil, b)
 	defer func() {
 		c.Close()
@@ -870,7 +870,7 @@ func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
 		}
 	}()
 
-	name := "BenchmarkThreeStagePolicySetRaw"
+	name := "UnaryRaw"
 
 	b.Run(name, func(b *testing.B) {
 		var (
@@ -891,8 +891,11 @@ func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
 	})
 }
 
-func BenchmarkThreeStagePolicySetRawWithCache(b *testing.B) {
-	pdpServer, _, c := startPDPServer(threeStageBenchmarkPolicySet, nil, b, WithCacheTTL(15*time.Minute))
+func BenchmarkUnaryWithCache(b *testing.B) {
+	pdpServer, _, c := startPDPServer(threeStageBenchmarkPolicySet, nil, b,
+		WithMaxRequestSize(128),
+		WithCacheTTL(15*time.Minute),
+	)
 	defer func() {
 		c.Close()
 		if logs := pdpServer.Stop(); len(logs) > 0 {
@@ -900,7 +903,7 @@ func BenchmarkThreeStagePolicySetRawWithCache(b *testing.B) {
 		}
 	}()
 
-	name := "BenchmarkThreeStagePolicySetRawWithCache"
+	name := "UnaryWithCache"
 
 	cc := 10
 	var (
@@ -989,11 +992,11 @@ func benchmarkStreamingClient(name string, ports []uint16, b *testing.B, opts ..
 }
 
 func BenchmarkStreamingClient(b *testing.B) {
-	benchmarkStreamingClient("BenchmarkStreamingClient", nil, b)
+	benchmarkStreamingClient("StreamingClient", nil, b)
 }
 
 func BenchmarkRoundRobinStreamingClient(b *testing.B) {
-	benchmarkStreamingClient("BenchmarkRoundRobinStreamingClient",
+	benchmarkStreamingClient("RoundRobinStreamingClient",
 		[]uint16{
 			5555,
 			5556,
@@ -1004,7 +1007,7 @@ func BenchmarkRoundRobinStreamingClient(b *testing.B) {
 }
 
 func BenchmarkHotSpotStreamingClient(b *testing.B) {
-	benchmarkStreamingClient("BenchmarkHotSpotStreamingClient",
+	benchmarkStreamingClient("HotSpotStreamingClient",
 		[]uint16{
 			5555,
 			5556,
@@ -1019,6 +1022,7 @@ func BenchmarkStreamingClientWithCache(b *testing.B) {
 
 	pdpServer, _, c := startPDPServer(threeStageBenchmarkPolicySet, nil, b,
 		WithStreams(streams),
+		WithMaxRequestSize(128),
 		WithCacheTTL(15*time.Minute),
 	)
 	defer func() {
@@ -1028,7 +1032,7 @@ func BenchmarkStreamingClientWithCache(b *testing.B) {
 		}
 	}()
 
-	name := "BenchmarkStreamingClientWithCache"
+	name := "StreamingClientWithCache"
 
 	cc := 10 * streams
 	var (
