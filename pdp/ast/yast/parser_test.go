@@ -756,6 +756,28 @@ policies:
       alg: FirstApplicableEffect
       rules:
       - effect: Deny
+
+  - id: TryAndConcat
+    alg: FirstApplicableEffect
+    rules:
+    - id: Try
+      effect: Permit
+      obligations:
+      - lsAttr:
+          try:
+          - attr: lsAttr
+          - val:
+              type: list of strings
+              content: ["one", "two", "three"]
+    - id: Concat
+      effect: Permit
+      obligations:
+      - lsAttr:
+          concat:
+          - attr: lsAttr
+          - val:
+              type: flags64
+              content: [f00, f76]
 `
 )
 
