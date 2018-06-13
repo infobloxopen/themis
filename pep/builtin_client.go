@@ -6,24 +6,24 @@ import (
 	ps "github.com/infobloxopen/themis/pdpserver/server"
 )
 
-type integratedClient struct {
+type builtinClient struct {
 	s *ps.Server
 }
 
-func NewIntegratedClient(policyFile string, contentFiles []string) *integratedClient {
+func NewBuiltinClient(policyFile string, contentFiles []string) *builtinClient {
 	s := ps.NewIntegratedServer(policyFile, contentFiles)
-	return &integratedClient{
+	return &builtinClient{
 		s: s,
 	}
 }
 
-func (c *integratedClient) Connect(addr string) error {
+func (c *builtinClient) Connect(addr string) error {
 	return nil
 }
 
-func (c *integratedClient) Close() {}
+func (c *builtinClient) Close() {}
 
-func (c *integratedClient) Validate(in, out interface{}) error {
+func (c *builtinClient) Validate(in, out interface{}) error {
 	if c.s == nil {
 		return ErrorNotConnected
 	}
