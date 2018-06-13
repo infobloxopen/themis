@@ -11,7 +11,7 @@ type builtinClient struct {
 }
 
 func NewBuiltinClient(policyFile string, contentFiles []string) *builtinClient {
-	s := ps.NewIntegratedServer(policyFile, contentFiles)
+	s := ps.NewBuiltinServer(policyFile, contentFiles)
 	return &builtinClient{
 		s: s,
 	}

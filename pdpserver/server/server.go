@@ -199,8 +199,8 @@ func NewServer(opts ...Option) *Server {
 	}
 }
 
-// NewServer returns new Server instance
-func NewIntegratedServer(policyFile string, contentFiles []string) *Server {
+// NewBuiltinServer returns new Builtin Server instance
+func NewBuiltinServer(policyFile string, contentFiles []string) *Server {
 	o := options{
 		logger:              log.StandardLogger(),
 		service:             ":5555",
