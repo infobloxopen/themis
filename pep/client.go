@@ -151,9 +151,24 @@ func WithNoRequestBufferPool() Option {
 	}
 }
 
-func withCache() Option {
+// WithCacheTTL returns an Option which adds cache with given TTL for cached
+// requests. Cache size isn't limited in the case and can consume all available
+// memory on machine.
+func WithCacheTTL(ttl time.Duration) Option {
 	return func(o *options) {
 		o.cache = true
+		o.cacheTTL = ttl
+	}
+}
+
+// WithCacheTTLAndMaxSize returns an Option which adds cache with given TTL
+// and size limit for entire cache in MB. When the limit is reached then new
+// requests override the oldest ones.
+func WithCacheTTLAndMaxSize(ttl time.Duration, size int) Option {
+	return func(o *options) {
+		o.cache = true
+		o.cacheTTL = ttl
+		o.cacheMaxSize = size
 	}
 }
 
@@ -173,6 +188,8 @@ type options struct {
 	maxRequestSize uint32
 	noPool         bool
 	cache          bool
+	cacheTTL       time.Duration
+	cacheMaxSize   int
 }
 
 // NewClient creates client instance using given options.
