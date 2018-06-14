@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/infobloxopen/themis/pep"
 	"github.com/infobloxopen/themis/pepcli/perf"
@@ -26,6 +27,8 @@ type config struct {
 
 	cmdConf interface{}
 	cmd     cmdExec
+
+	cacheTTL time.Duration
 }
 
 type stringSet []string
@@ -91,8 +94,9 @@ func init() {
 		"(default and value less than one means all requests from file)")
 	flag.IntVar(&conf.streams, "streams", 0, "number of streams to use with gRPC streaming (< 1 unary gRPC)")
 	flag.StringVar(&conf.output, "o", "", "file to write command output (default stdout)")
-	flag.UintVar(&conf.maxRequestSize, "request-limit", 10240, "size limit for request buffer in bytes")
+	flag.UintVar(&conf.maxRequestSize, "request-limit", 1024, "size limit for request buffer in bytes")
 	flag.UintVar(&conf.maxResponseObligations, "response-limit", 128, "limit for obligations in response")
+	flag.DurationVar(&conf.cacheTTL, "cache-ttl", 0, "enable decision cache and set given TTL for cached entries")
 
 	flag.Parse()
 

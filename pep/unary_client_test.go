@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
@@ -64,7 +65,7 @@ func TestUnaryClientValidationWithCache(t *testing.T) {
 		}
 	}()
 
-	c := NewClient(withCache())
+	c := NewClient(WithCacheTTL(15 * time.Minute))
 	err := c.Connect("127.0.0.1:5555")
 	if err != nil {
 		t.Fatalf("expected no error but got %s", err)

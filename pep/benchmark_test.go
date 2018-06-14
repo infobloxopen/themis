@@ -892,7 +892,7 @@ func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
 }
 
 func BenchmarkThreeStagePolicySetRawWithCache(b *testing.B) {
-	pdpServer, _, c := startPDPServer(threeStageBenchmarkPolicySet, nil, b, withCache())
+	pdpServer, _, c := startPDPServer(threeStageBenchmarkPolicySet, nil, b, WithCacheTTL(15*time.Minute))
 	defer func() {
 		c.Close()
 		if logs := pdpServer.Stop(); len(logs) > 0 {
@@ -1019,7 +1019,7 @@ func BenchmarkStreamingClientWithCache(b *testing.B) {
 
 	pdpServer, _, c := startPDPServer(threeStageBenchmarkPolicySet, nil, b,
 		WithStreams(streams),
-		withCache(),
+		WithCacheTTL(15*time.Minute),
 	)
 	defer func() {
 		c.Close()

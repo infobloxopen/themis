@@ -27,6 +27,12 @@ func main() {
 		}
 	}
 
+	if conf.cacheTTL > 0 {
+		opts = append(opts,
+			pep.WithCacheTTL(conf.cacheTTL),
+		)
+	}
+
 	err := conf.cmd(
 		conf.servers[0],
 		opts,
