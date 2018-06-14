@@ -926,6 +926,15 @@ errors:
   - field: t
   - expr: TypeListOfStrings
 
+- id: concatTypeError
+  fields:
+  - id: t
+    type: Type
+  msg: "Can't concatenate %q with %q"
+  args:
+  - field: t
+  - expr: TypeListOfStrings
+
 - id: unsupportedSelectorSchemeError
   fields:
   - id: uri

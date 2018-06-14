@@ -602,6 +602,12 @@ Each of the above numerical functions performs the respective numerical operatio
 - if all the arguments are floats, the operation is performed using floating point arithmetic and the result returned as a float. (In the case of **range**, the result is a string)
 - if the arguments include a combination of integers and floats, the integers are first promoted to floats and then operation is performed using floating point arithmetic. The result is returned as a float. (In the case of **range**, the result is a string)
 
+### Other functions
+There are several other functions available:
+- **list of strings** - converts its argument to list of strings. It accepts set of strings, list of strings and flags. In case of set of strings the function returns list of strings sorted in order maintained by set (set keeps order of initial value definition). List of strings returned by the function as is. And for flags it returns list of names for flags which are set (keeping order of names from flags type definition).
+- **concat** - concatenates all given arguments to single list of strings. Similarly to **list of strings** function it works with lists of strings, sets of strings and flags.
+- **try** - returns result of first expression which calculated with no error. If all arguments calculated with error it throws the last one. It accepts expressions of any types but all of them must be of the same type (which becomes type of function result).
+
 ### Local Content
 Local content is a set of content **items** (see example above). It's identified by **id** field which can be any string with no slash character (`/`). Each content item also has id (key of "items" JSON object) and following fields:
 - **keys** - list of types of nested maps (optional, if not present data should contain immediate value of type);
