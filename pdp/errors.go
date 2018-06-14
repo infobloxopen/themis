@@ -144,8 +144,8 @@ const (
 	requestInvalidNetworkValueErrorID             = 127
 	requestIPv4InvalidMaskErrorID                 = 128
 	requestIPv6InvalidMaskErrorID                 = 129
-	requestTooLongDomainValueErrorID              = 130
-	requestTooLongSetOfStringsValueErrorID        = 131
+	requestTooLongSetOfStringsValueErrorID        = 130
+	requestTooLongSetOfDomainsValueErrorID        = 131
 	requestInvalidExpressionErrorID               = 132
 	requestAssignmentsOverflowErrorID             = 133
 	requestUnmarshalEffectConstErrorID            = 134
@@ -170,10 +170,12 @@ const (
 	requestUnmarshalDomainTypeErrorID             = 153
 	requestUnmarshalSetOfStringsConstErrorID      = 154
 	requestUnmarshalSetOfStringsTypeErrorID       = 155
-	responseEffectErrorID                         = 156
-	ResponseServerErrorID                         = 157
-	policyCalculationErrorID                      = 158
-	obligationCalculationErrorID                  = 159
+	requestUnmarshalSetOfDomainsConstErrorID      = 156
+	requestUnmarshalSetOfDomainsTypeErrorID       = 157
+	responseEffectErrorID                         = 158
+	ResponseServerErrorID                         = 159
+	policyCalculationErrorID                      = 160
+	obligationCalculationErrorID                  = 161
 )
 
 type externalError struct {
@@ -2213,21 +2215,6 @@ func (e *requestIPv6InvalidMaskError) Error() string {
 	return e.errorf("Invalid IPv6 CIDR: %d", e.b)
 }
 
-type requestTooLongDomainValueError struct {
-	errorLink
-	d string
-}
-
-func newRequestTooLongDomainValueError(d string) *requestTooLongDomainValueError {
-	return &requestTooLongDomainValueError{
-		errorLink: errorLink{id: requestTooLongDomainValueErrorID},
-		d:         d}
-}
-
-func (e *requestTooLongDomainValueError) Error() string {
-	return e.errorf("Domain value is too long %d (expected no more than %d bytes)", len(e.d), math.MaxUint16)
-}
-
 type requestTooLongSetOfStringsValueError struct {
 	errorLink
 	n int
@@ -2241,6 +2228,21 @@ func newRequestTooLongSetOfStringsValueError(n int) *requestTooLongSetOfStringsV
 
 func (e *requestTooLongSetOfStringsValueError) Error() string {
 	return e.errorf("Number of elements in set of strings value is too big %d (expected no more than %d)", e.n, math.MaxUint16)
+}
+
+type requestTooLongSetOfDomainsValueError struct {
+	errorLink
+	n int
+}
+
+func newRequestTooLongSetOfDomainsValueError(n int) *requestTooLongSetOfDomainsValueError {
+	return &requestTooLongSetOfDomainsValueError{
+		errorLink: errorLink{id: requestTooLongSetOfDomainsValueErrorID},
+		n:         n}
+}
+
+func (e *requestTooLongSetOfDomainsValueError) Error() string {
+	return e.errorf("Number of elements in set of domains value is too big %d (expected no more than %d)", e.n, math.MaxUint16)
 }
 
 type requestInvalidExpressionError struct {
@@ -2607,6 +2609,36 @@ func newRequestUnmarshalSetOfStringsTypeError(v reflect.Value) *requestUnmarshal
 
 func (e *requestUnmarshalSetOfStringsTypeError) Error() string {
 	return e.errorf("Can't unmarshal set of strings to %s", e.v.Type())
+}
+
+type requestUnmarshalSetOfDomainsConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalSetOfDomainsConstError(v reflect.Value) *requestUnmarshalSetOfDomainsConstError {
+	return &requestUnmarshalSetOfDomainsConstError{
+		errorLink: errorLink{id: requestUnmarshalSetOfDomainsConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalSetOfDomainsConstError) Error() string {
+	return e.errorf("Can't unmarshal set of domains to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalSetOfDomainsTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalSetOfDomainsTypeError(v reflect.Value) *requestUnmarshalSetOfDomainsTypeError {
+	return &requestUnmarshalSetOfDomainsTypeError{
+		errorLink: errorLink{id: requestUnmarshalSetOfDomainsTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalSetOfDomainsTypeError) Error() string {
+	return e.errorf("Can't unmarshal set of domains to %s", e.v.Type())
 }
 
 type responseEffectError struct {

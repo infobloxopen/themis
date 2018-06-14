@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/infobloxopen/go-trees/domain"
+	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/strtree"
 
 	"github.com/infobloxopen/themis/pdp"
@@ -50,6 +51,7 @@ var (
 	ptrNetIPNetType = reflect.TypeOf((*net.IPNet)(nil))
 	domainType      = reflect.TypeOf(domain.Name{})
 	strtreeType     = reflect.TypeOf((*strtree.Tree)(nil))
+	domaintreeType  = reflect.TypeOf((*domaintree.Node)(nil))
 
 	attrTypeByType = map[reflect.Type]pdp.Type{
 		boolType:        pdp.TypeBoolean,
@@ -71,6 +73,7 @@ var (
 		ptrNetIPNetType: pdp.TypeNetwork,
 		domainType:      pdp.TypeDomain,
 		strtreeType:     pdp.TypeSetOfStrings,
+		domaintreeType:  pdp.TypeSetOfDomains,
 	}
 
 	attrTypeByTag = map[string]pdp.Type{
@@ -82,6 +85,7 @@ var (
 		pdp.TypeNetwork.GetKey():      pdp.TypeNetwork,
 		pdp.TypeDomain.GetKey():       pdp.TypeDomain,
 		pdp.TypeSetOfStrings.GetKey(): pdp.TypeSetOfStrings,
+		pdp.TypeSetOfDomains.GetKey(): pdp.TypeSetOfDomains,
 	}
 
 	typeByAttrType = map[pdp.Type]map[reflect.Type]struct{}{
@@ -120,6 +124,9 @@ var (
 		},
 		pdp.TypeSetOfStrings: {
 			strtreeType: {},
+		},
+		pdp.TypeSetOfDomains: {
+			domaintreeType: {},
 		},
 	}
 

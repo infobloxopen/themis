@@ -18,10 +18,10 @@ requests:
   a: 192.0.2.13
 
 # Matches set of domains value
-# - s: example
-#   c: 192.0.2.2/31
-#   a: 192.0.2.16
-#   d: example.com
+- s: example
+  c: 192.0.2.2/31
+  a: 192.0.2.16
+  d: example.com
 
 # Matches set of strings value
 - s: first
