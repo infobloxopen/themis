@@ -8,18 +8,20 @@ import (
 	"unsafe"
 
 	"github.com/infobloxopen/go-trees/domain"
+	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/strtree"
 )
 
 var (
 	reflectValueNil = reflect.ValueOf(nil)
 
-	reflectTypeString   = reflect.TypeOf("")
-	reflectTypeIP       = reflect.TypeOf(net.IP{})
-	reflectTypeIPNet    = reflect.TypeOf(net.IPNet{})
-	reflectTypePtrIPNet = reflect.TypeOf((*net.IPNet)(nil))
-	reflectTypeDomain   = reflect.TypeOf(domain.Name{})
-	reflectTypeStrtree  = reflect.TypeOf((*strtree.Tree)(nil))
+	reflectTypeString     = reflect.TypeOf("")
+	reflectTypeIP         = reflect.TypeOf(net.IP{})
+	reflectTypeIPNet      = reflect.TypeOf(net.IPNet{})
+	reflectTypePtrIPNet   = reflect.TypeOf((*net.IPNet)(nil))
+	reflectTypeDomain     = reflect.TypeOf(domain.Name{})
+	reflectTypeStrtree    = reflect.TypeOf((*strtree.Tree)(nil))
+	reflectTypeDomaintree = reflect.TypeOf((*domaintree.Node)(nil))
 )
 
 func setEffect(v reflect.Value, effect int) error {
@@ -340,5 +342,35 @@ func setSetOfStrings(v reflect.Value, ss *strtree.Tree) error {
 	}
 
 	v.Set(reflect.ValueOf(ss))
+	return nil
+}
+
+func getSetOfDomains(v reflect.Value) *domaintree.Node {
+	if v == reflectValueNil {
+		return nil
+	}
+
+	t := v.Type()
+	if t == reflectTypeDomaintree {
+		return (*domaintree.Node)(unsafe.Pointer(v.Pointer()))
+	}
+
+	panic(fmt.Errorf("can't marshal %s as set of domains value", t))
+}
+
+func setSetOfDomains(v reflect.Value, sd *domaintree.Node) error {
+	if v == reflectValueNil {
+		return nil
+	}
+
+	if !v.CanSet() {
+		return newRequestUnmarshalSetOfDomainsConstError(v)
+	}
+
+	if v.Type() != reflectTypeDomaintree {
+		return newRequestUnmarshalSetOfDomainsTypeError(v)
+	}
+
+	v.Set(reflect.ValueOf(sd))
 	return nil
 }

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/infobloxopen/go-trees/domain"
+	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/strtree"
 
 	"github.com/infobloxopen/themis/pdp"
@@ -39,31 +40,32 @@ type TestTaggedResponseStruct struct {
 }
 
 type TestTaggedAllTypesResponseStruct struct {
-	Effect     string        `pdp:"Effect"`
-	Reason     string        `pdp:"Reason"`
-	BoolFalse  bool          `pdp:"baf"`
-	BoolTrue   bool          `pdp:"bat"`
-	String     string        `pdp:"sa"`
-	Int        int           `pdp:"ia"`
-	Int8       int8          `pdp:"i8a"`
-	Int16      int16         `pdp:"i16a"`
-	Int32      int32         `pdp:"i32a"`
-	Int64      int64         `pdp:"i64a"`
-	Uint       uint          `pdp:"uia"`
-	Uint8      uint8         `pdp:"ui8a"`
-	Uint16     uint16        `pdp:"ui16a"`
-	Uint32     uint32        `pdp:"ui32a"`
-	Uint64     uint64        `pdp:"ui64a"`
-	Float32    float32       `pdp:"f32a"`
-	Float64    float64       `pdp:"f64a"`
-	Address4   net.IP        `pdp:"aa4"`
-	Address6   net.IP        `pdp:"aa6"`
-	Network4   net.IPNet     `pdp:"na4"`
-	Network6   net.IPNet     `pdp:"na6"`
-	NetworkPtr *net.IPNet    `pdp:"pna"`
-	DomainS    string        `pdp:"das,domain"`
-	DomainD    domain.Name   `pdp:"dad,domain"`
-	Strings    *strtree.Tree `pdp:"ssa,set of strings"`
+	Effect     string           `pdp:"Effect"`
+	Reason     string           `pdp:"Reason"`
+	BoolFalse  bool             `pdp:"baf"`
+	BoolTrue   bool             `pdp:"bat"`
+	String     string           `pdp:"sa"`
+	Int        int              `pdp:"ia"`
+	Int8       int8             `pdp:"i8a"`
+	Int16      int16            `pdp:"i16a"`
+	Int32      int32            `pdp:"i32a"`
+	Int64      int64            `pdp:"i64a"`
+	Uint       uint             `pdp:"uia"`
+	Uint8      uint8            `pdp:"ui8a"`
+	Uint16     uint16           `pdp:"ui16a"`
+	Uint32     uint32           `pdp:"ui32a"`
+	Uint64     uint64           `pdp:"ui64a"`
+	Float32    float32          `pdp:"f32a"`
+	Float64    float64          `pdp:"f64a"`
+	Address4   net.IP           `pdp:"aa4"`
+	Address6   net.IP           `pdp:"aa6"`
+	Network4   net.IPNet        `pdp:"na4"`
+	Network6   net.IPNet        `pdp:"na6"`
+	NetworkPtr *net.IPNet       `pdp:"pna"`
+	DomainS    string           `pdp:"das,domain"`
+	DomainD    domain.Name      `pdp:"dad,domain"`
+	Strings    *strtree.Tree    `pdp:"ssa,set of strings"`
+	Domains    *domaintree.Node `pdp:"sda,set of domains"`
 }
 
 type TestInvalidResponseStruct1 struct {
@@ -438,7 +440,8 @@ func assertTestTaggedAllTypesStruct(t *testing.T, v, e TestTaggedAllTypesRespons
 		vN != eN ||
 		v.DomainS != e.DomainS ||
 		v.DomainD.String() != e.DomainD.String() ||
-		!setOfStringsEqual(v.Strings, e.Strings) {
+		!setOfStringsEqual(v.Strings, e.Strings) ||
+		!setOfDomainsEqual(v.Domains, e.Domains) {
 		t.Errorf("expected:\n%v\nbut got:\n%v\n",
 			SprintfTestTaggedAllTypesStruct(e),
 			SprintfTestTaggedAllTypesStruct(v),
@@ -505,7 +508,8 @@ func SprintfTestTaggedAllTypesStruct(v TestTaggedAllTypesResponseStruct) string 
 			"\tNetworkPtr: %v\n"+
 			"\tDomainS...: %q\n"+
 			"\tDomainD...: %q\n"+
-			"\tStrings...: %v\n",
+			"\tStrings...: %v\n"+
+			"\tDomains...: %v\n",
 		v.Effect, v.Reason, v.BoolFalse, v.BoolTrue, v.String,
 		v.Int, v.Int8, v.Int16, v.Int32, v.Int64,
 		v.Uint, v.Uint8, v.Uint16, v.Uint32, v.Uint64,
@@ -513,6 +517,7 @@ func SprintfTestTaggedAllTypesStruct(v TestTaggedAllTypesResponseStruct) string 
 		v.Address4.String(), v.Address6.String(), v.Network4.String(), v.Network6.String(), n,
 		v.DomainS, v.DomainD,
 		pdp.SortSetOfStrings(v.Strings),
+		pdp.SortSetOfDomains(v.Domains),
 	)
 }
 
@@ -525,6 +530,23 @@ func setOfStringsEqual(v, e *strtree.Tree) bool {
 	}
 
 	for i, s := range ss {
+		if s != se[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func setOfDomainsEqual(v, e *domaintree.Node) bool {
+	sd := pdp.SortSetOfDomains(v)
+	se := pdp.SortSetOfDomains(e)
+
+	if len(sd) != len(se) {
+		return false
+	}
+
+	for i, s := range sd {
 		if s != se[i] {
 			return false
 		}

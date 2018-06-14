@@ -626,9 +626,9 @@ func serializeSetOfNetworks(v *iptree.Tree) string {
 }
 
 func serializeSetOfDomains(v *domaintree.Node) string {
-	var s []string
-	for p := range v.Enumerate() {
-		s = append(s, strconv.QuoteToASCII(p.Key))
+	s := SortSetOfDomains(v)
+	for i, item := range s {
+		s[i] = strconv.QuoteToASCII(item)
 	}
 
 	return strings.Join(s, ",")

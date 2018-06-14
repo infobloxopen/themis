@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/infobloxopen/go-trees/domain"
+	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/strtree"
 )
 
@@ -525,6 +526,60 @@ func TestSetSetOfStrings(t *testing.T) {
 		t.Errorf("expected *requestUnmarshalSetOfStringsTypeError but got %d", n)
 	} else if _, ok := err.(*requestUnmarshalSetOfStringsTypeError); !ok {
 		t.Errorf("expected *requestUnmarshalSetOfStringsTypeError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetSetOfDomains(t *testing.T) {
+	eSd := newDomainTree(
+		makeTestDomain("example.com"),
+		makeTestDomain("example.gov"),
+		makeTestDomain("www.example.com"),
+	)
+
+	sd := getSetOfDomains(reflect.ValueOf(eSd))
+	assertStrings(SortSetOfDomains(sd), SortSetOfDomains(eSd), "getSetOfDomains", t)
+
+	sd = getSetOfDomains(reflect.ValueOf(nil))
+	if sd != nil {
+		t.Errorf("expected nil but got %#v", SortSetOfDomains(sd))
+	}
+
+	assertPanicWithError(t, func() {
+		sd = getSetOfDomains(reflect.ValueOf(true))
+	}, "can't marshal %s as set of domains value", reflect.TypeOf(true))
+}
+
+func TestSetSetOfDomains(t *testing.T) {
+	eSd := newDomainTree(
+		makeTestDomain("example.com"),
+		makeTestDomain("example.gov"),
+		makeTestDomain("www.example.com"),
+	)
+
+	var sd *domaintree.Node
+	if err := setSetOfDomains(reflect.Indirect(reflect.ValueOf(&sd)), eSd); err != nil {
+		t.Error(err)
+	} else {
+		assertStrings(SortSetOfDomains(sd), SortSetOfDomains(eSd), "setSetOfDomains", t)
+	}
+
+	if err := setSetOfDomains(reflect.ValueOf(nil), eSd); err != nil {
+		t.Error(err)
+	}
+
+	err := setSetOfDomains(reflect.ValueOf(sd), eSd)
+	if err == nil {
+		t.Errorf("expected *requestUnmarshalSetOfDomainsConstError but got %#v", SortSetOfDomains(sd))
+	} else if _, ok := err.(*requestUnmarshalSetOfDomainsConstError); !ok {
+		t.Errorf("expected *requestUnmarshalSetOfDomainsConstError but got %T (%s)", err, err)
+	}
+
+	var n int64
+	err = setSetOfDomains(reflect.Indirect(reflect.ValueOf(&n)), eSd)
+	if err == nil {
+		t.Errorf("expected *requestUnmarshalSetOfDomainsTypeError but got %d", n)
+	} else if _, ok := err.(*requestUnmarshalSetOfDomainsTypeError); !ok {
+		t.Errorf("expected *requestUnmarshalSetOfDomainsTypeError but got %T (%s)", err, err)
 	}
 }
 

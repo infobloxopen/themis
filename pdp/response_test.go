@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/infobloxopen/go-trees/domain"
+	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/strtree"
 )
 
@@ -491,7 +492,7 @@ func TestPutAssignmentExpressions(t *testing.T) {
 }
 
 func TestPutAttributesFromReflection(t *testing.T) {
-	var b [144]byte
+	var b [205]byte
 
 	f := func(i int) (string, Type, reflect.Value, error) {
 		switch i {
@@ -518,13 +519,20 @@ func TestPutAttributesFromReflection(t *testing.T) {
 
 		case 7:
 			return "set of strings", TypeSetOfStrings, reflect.ValueOf(newStrTree("one", "two", "three")), nil
+
+		case 8:
+			return "set of domains", TypeSetOfDomains, reflect.ValueOf(newDomainTree(
+				makeTestDomain("example.com"),
+				makeTestDomain("example.gov"),
+				makeTestDomain("www.example.com"),
+			)), nil
 		}
 
 		return "", TypeUndefined, reflectValueNil, fmt.Errorf("unexpected intex %d", i)
 	}
-	n, err := putAttributesFromReflection(b[:], 8, f)
+	n, err := putAttributesFromReflection(b[:], 9, f)
 	assertRequestBytesBuffer(t, "putAttributesFromReflection", err, b[:], n,
-		8, 0,
+		9, 0,
 		7, 'b', 'o', 'o', 'l', 'e', 'a', 'n', byte(requestWireTypeBooleanTrue),
 		6, 's', 't', 'r', 'i', 'n', 'g', byte(requestWireTypeString), 4, 0, 't', 'e', 's', 't',
 		7, 'i', 'n', 't', 'e', 'g', 'e', 'r', byte(requestWireTypeInteger),
@@ -539,6 +547,11 @@ func TestPutAttributesFromReflection(t *testing.T) {
 		3, 0, 'o', 'n', 'e',
 		3, 0, 't', 'w', 'o',
 		5, 0, 't', 'h', 'r', 'e', 'e',
+		14, 's', 'e', 't', ' ', 'o', 'f', ' ', 'd', 'o', 'm', 'a', 'i', 'n', 's', byte(requestWireTypeSetOfDomains),
+		3, 0,
+		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
+		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
 	)
 
 	n, err = putAttributesFromReflection([]byte{}, 1, f)
@@ -601,7 +614,7 @@ func TestGetAssignmentExpressions(t *testing.T) {
 
 func TestGetAttributesToReflection(t *testing.T) {
 	var (
-		names [11]string
+		names [12]string
 	)
 
 	i := 0
@@ -619,6 +632,7 @@ func TestGetAttributesToReflection(t *testing.T) {
 		nv6 *net.IPNet
 		dn  domain.Name
 		ss  *strtree.Tree
+		sd  *domaintree.Node
 	)
 
 	values := []reflect.Value{
@@ -633,6 +647,7 @@ func TestGetAttributesToReflection(t *testing.T) {
 		reflect.Indirect(reflect.ValueOf(&nv6)),
 		reflect.Indirect(reflect.ValueOf(&dn)),
 		reflect.Indirect(reflect.ValueOf(&ss)),
+		reflect.Indirect(reflect.ValueOf(&sd)),
 	}
 
 	err := getAttributesToReflection([]byte{
@@ -655,6 +670,11 @@ func TestGetAttributesToReflection(t *testing.T) {
 		3, 0, 'o', 'n', 'e',
 		3, 0, 't', 'w', 'o',
 		5, 0, 't', 'h', 'r', 'e', 'e',
+		14, 's', 'e', 't', ' ', 'o', 'f', ' ', 'd', 'o', 'm', 'a', 'i', 'n', 's', byte(requestWireTypeSetOfDomains),
+		3, 0,
+		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
+		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
 	}, func(id string, t Type) (reflect.Value, error) {
 		if i >= len(names) || i >= len(values) || i >= len(builtinTypeByWire) {
 			return reflectValueNil, fmt.Errorf("requested invalid value number: %d", i)
@@ -683,6 +703,7 @@ func TestGetAttributesToReflection(t *testing.T) {
 		MakeNetworkAssignment(names[8], nv6),
 		MakeDomainAssignment(names[9], dn),
 		MakeSetOfStringsAssignment(names[10], ss),
+		MakeSetOfDomainsAssignment(names[11], sd),
 	}
 
 	assertRequestAssignmentExpressions(t, "getAttributesToReflection", err, a, i,
@@ -697,6 +718,11 @@ func TestGetAttributesToReflection(t *testing.T) {
 		MakeNetworkAssignment("network6", makeTestNetwork("2001:db8::/32")),
 		MakeDomainAssignment("domain", makeTestDomain("www.example.com")),
 		MakeSetOfStringsAssignment("set of strings", newStrTree("one", "two", "three")),
+		MakeSetOfDomainsAssignment("set of domains", newDomainTree(
+			makeTestDomain("example.com"),
+			makeTestDomain("example.gov"),
+			makeTestDomain("www.example.com"),
+		)),
 	)
 
 	err = getAttributesToReflection([]byte{}, func(id string, t Type) (reflect.Value, error) {
@@ -885,6 +911,21 @@ func TestGetAttributesToReflection(t *testing.T) {
 		3, 0, 't', 'w', 'o',
 	}, func(id string, t Type) (reflect.Value, error) {
 		return values[10], nil
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %s", str)
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	err = getAttributesToReflection([]byte{
+		1, 0,
+		14, 's', 'e', 't', ' ', 'o', 'f', ' ', 'd', 'o', 'm', 'a', 'i', 'n', 's', byte(requestWireTypeSetOfDomains),
+		3, 0,
+		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
+	}, func(id string, t Type) (reflect.Value, error) {
+		return values[11], nil
 	})
 	if err == nil {
 		t.Errorf("expected *requestBufferUnderflowError but got %s", str)

@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	"github.com/infobloxopen/go-trees/domain"
+	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/strtree"
 )
 
@@ -24,8 +25,8 @@ const (
 	requestWireTypeIPv6Network
 	requestWireTypeDomain
 	requestWireTypeSetOfStrings
-	requestWireTypeSetOfNetworks
 	requestWireTypeSetOfDomains
+	requestWireTypeSetOfNetworks
 	requestWireTypeListOfStrings
 
 	requestWireTypesTotal
@@ -44,8 +45,8 @@ var (
 		"IPv6 network",
 		"domain",
 		"set of strings",
-		"set of networks",
 		"set of domains",
+		"set of networks",
 		"list of strings",
 	}
 
@@ -61,6 +62,7 @@ var (
 		TypeNetwork,
 		TypeDomain,
 		TypeSetOfStrings,
+		TypeSetOfDomains,
 	}
 )
 
@@ -94,7 +96,9 @@ func MarshalRequestAssignments(b []byte, in []AttributeAssignment) (int, error) 
 // or *net.IPNet, TypeDomain - string or domain.Name from
 // github.com/infobloxopen/go-trees/domain package, TypeSetOfStrings -
 // *strtree.Tree from github.com/infobloxopen/go-trees/strtree package.
-// The function fills given buffer and returns number of bytes written.
+// The function fills given buffer and returns number of bytes written,
+// TypeSetOfDomains - *domaintree.Nodea from
+// github.com/infobloxopen/go-trees/domaintree.
 func MarshalRequestReflection(b []byte, c int, f func(i int) (string, Type, reflect.Value, error)) (int, error) {
 	off, err := putRequestVersion(b)
 	if err != nil {
@@ -217,6 +221,10 @@ func putRequestAttribute(b []byte, name string, value AttributeValue) (int, erro
 	case TypeSetOfStrings:
 		v, _ := value.setOfStrings()
 		return putRequestAttributeSetOfStrings(b, name, v)
+
+	case TypeSetOfDomains:
+		v, _ := value.setOfDomains()
+		return putRequestAttributeSetOfDomains(b, name, v)
 	}
 
 	return 0, newRequestAttributeMarshallingNotImplemented(t)
@@ -236,7 +244,7 @@ func getRequestAttribute(b []byte) (string, AttributeValue, int, error) {
 	off += n
 
 	switch t {
-	case requestWireTypeSetOfNetworks, requestWireTypeSetOfDomains, requestWireTypeListOfStrings:
+	case requestWireTypeSetOfNetworks, requestWireTypeListOfStrings:
 		return "", UndefinedValue, 0, bindError(newRequestAttributeUnmarshallingNotImplemented(t), name)
 
 	case requestWireTypeBooleanFalse:
@@ -316,6 +324,14 @@ func getRequestAttribute(b []byte) (string, AttributeValue, int, error) {
 		}
 
 		return name, MakeSetOfStringsValue(ss), off + n, nil
+
+	case requestWireTypeSetOfDomains:
+		sd, n, err := getRequestSetOfDomainsValue(b[off:])
+		if err != nil {
+			return "", UndefinedValue, 0, bindError(bindError(err, "value"), name)
+		}
+
+		return name, MakeSetOfDomainsValue(sd), off + n, nil
 	}
 
 	return "", UndefinedValue, 0, bindError(newRequestAttributeUnmarshallingTypeError(t), name)
@@ -788,4 +804,77 @@ func getRequestSetOfStringsValue(b []byte) (*strtree.Tree, int, error) {
 	}
 
 	return ss, off, nil
+}
+
+func putRequestAttributeSetOfDomains(b []byte, name string, value *domaintree.Node) (int, error) {
+	off, err := putRequestAttributeName(b, name)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestSetOfDomainsValue(b[off:], value)
+	if err != nil {
+		return 0, err
+	}
+
+	return off + n, err
+}
+
+func putRequestSetOfDomainsValue(b []byte, value *domaintree.Node) (int, error) {
+	off, err := putRequestAttributeType(b, requestWireTypeSetOfDomains)
+	if err != nil {
+		return 0, err
+	}
+
+	sd := SortSetOfDomains(value)
+
+	if len(sd) > math.MaxUint16 {
+		return 0, newRequestTooLongSetOfDomainsValueError(len(sd))
+	}
+
+	total := 2 * (len(sd) + 1)
+	for _, s := range sd {
+		total += len(s)
+	}
+
+	if len(b[off:]) < total {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	binary.LittleEndian.PutUint16(b[off:], uint16(len(sd)))
+	off += 2
+
+	for _, s := range sd {
+		binary.LittleEndian.PutUint16(b[off:], uint16(len(s)))
+		off += 2
+
+		copy(b[off:], s)
+		off += len(s)
+	}
+
+	return off, nil
+}
+
+func getRequestSetOfDomainsValue(b []byte) (*domaintree.Node, int, error) {
+	if len(b) < 2 {
+		return nil, 0, newRequestBufferUnderflowError()
+	}
+
+	sd := new(domaintree.Node)
+
+	count := int(binary.LittleEndian.Uint16(b))
+	off := 2
+
+	for i := 0; i < count; i++ {
+		d, n, err := getRequestDomainValue(b[off:])
+		if err != nil {
+			return nil, 0, bindErrorf(err, "%d", i+1)
+		}
+
+		off += n
+
+		sd.InplaceInsert(d, i)
+	}
+
+	return sd, off, nil
 }

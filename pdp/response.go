@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/infobloxopen/go-trees/domain"
+	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/strtree"
 )
 
@@ -158,7 +159,8 @@ func UnmarshalResponse(b []byte, out []AttributeAssignment) (int, int, error) {
 // net.IP, TypeNetwork - net.IPNet or *net.IPNet, TypeDomain - string or
 // domain.Name from github.com/infobloxopen/go-trees/domain package,
 // TypeSetOfStrings - *strtree.Tree from
-// github.com/infobloxopen/go-trees/strtree package.
+// github.com/infobloxopen/go-trees/strtree package, TypeSetOfDomainss -
+// *domaintree.Node from github.com/infobloxopen/go-trees/domaintree package.
 func UnmarshalResponseToReflection(b []byte, f func(string, Type) (reflect.Value, error)) error {
 	off, err := checkRequestVersion(b)
 	if err != nil {
@@ -357,6 +359,9 @@ func putAttributesFromReflection(b []byte, c int, f func(i int) (string, Type, r
 
 		case TypeSetOfStrings:
 			n, err = putRequestAttributeSetOfStrings(b[off:], id, getSetOfStrings(v))
+
+		case TypeSetOfDomains:
+			n, err = putRequestAttributeSetOfDomains(b[off:], id, getSetOfDomains(v))
 		}
 
 		if err != nil {
@@ -412,7 +417,7 @@ func getAttributesToReflection(b []byte, f func(string, Type) (reflect.Value, er
 		}
 		b = b[n:]
 
-		if t == requestWireTypeSetOfNetworks || t == requestWireTypeSetOfDomains || t == requestWireTypeListOfStrings {
+		if t == requestWireTypeSetOfNetworks || t == requestWireTypeListOfStrings {
 			return bindError(newRequestAttributeUnmarshallingNotImplemented(t), id)
 		}
 
@@ -521,6 +526,16 @@ func getAttributesToReflection(b []byte, f func(string, Type) (reflect.Value, er
 			b = b[n:]
 
 			err = setSetOfStrings(v, ss)
+
+		case requestWireTypeSetOfDomains:
+			var sd *domaintree.Node
+			sd, n, err = getRequestSetOfDomainsValue(b)
+			if err != nil {
+				return bindError(err, id)
+			}
+			b = b[n:]
+
+			err = setSetOfDomains(v, sd)
 		}
 
 		if err != nil {
