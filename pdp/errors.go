@@ -118,13 +118,14 @@ const (
 	noFlagsDefinedErrorID                       = 104
 	tooManyFlagsDefinedErrorID                  = 105
 	listOfStringsTypeErrorID                    = 106
-	unsupportedSelectorSchemeErrorID            = 107
-	disabledSelectorErrorID                     = 108
-	marshalInvalidDepthErrorID                  = 109
-	invalidHeaderErrorID                        = 110
-	nonMarshableErrorID                         = 111
-	nilRootErrorID                              = 112
-	PathNotFoundErrorID                         = 113
+	concatTypeErrorID                           = 107
+	unsupportedSelectorSchemeErrorID            = 108
+	disabledSelectorErrorID                     = 109
+	marshalInvalidDepthErrorID                  = 110
+	invalidHeaderErrorID                        = 111
+	nonMarshableErrorID                         = 112
+	nilRootErrorID                              = 113
+	PathNotFoundErrorID                         = 114
 )
 
 type externalError struct {
@@ -1819,6 +1820,21 @@ func newListOfStringsTypeError(t Type) *listOfStringsTypeError {
 
 func (e *listOfStringsTypeError) Error() string {
 	return e.errorf("Can't convert %q to %q", e.t, TypeListOfStrings)
+}
+
+type concatTypeError struct {
+	errorLink
+	t Type
+}
+
+func newConcatTypeError(t Type) *concatTypeError {
+	return &concatTypeError{
+		errorLink: errorLink{id: concatTypeErrorID},
+		t:         t}
+}
+
+func (e *concatTypeError) Error() string {
+	return e.errorf("Can't concatenate %q with %q", e.t, TypeListOfStrings)
 }
 
 type unsupportedSelectorSchemeError struct {

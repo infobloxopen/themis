@@ -292,6 +292,15 @@ func (c *Context) calculateSetOfDomainsExpression(e Expression) (*domaintree.Nod
 	return v.setOfDomains()
 }
 
+func (c *Context) calculateListOfStringsExpression(e Expression) ([]string, error) {
+	v, err := e.Calculate(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return v.listOfStrings()
+}
+
 func (c *Context) calculateFlags8Expression(e Expression) (uint8, error) {
 	v, err := e.Calculate(c)
 	if err != nil {

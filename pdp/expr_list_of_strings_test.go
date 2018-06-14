@@ -47,7 +47,7 @@ func TestFunctionListOfStrings(t *testing.T) {
 
 	m := findValidator("list of strings", l)
 	if m == nil {
-		t.Errorf("Expected makeFunctionListOfStringsAlt got but got %v", m)
+		t.Errorf("Expected makeFunctionListOfStringsAlt but got %v", m)
 	} else {
 		f := m([]Expression{l})
 		if _, ok := f.(functionListOfStrings); !ok {
@@ -80,7 +80,7 @@ func TestFunctionListOfStrings(t *testing.T) {
 
 	m = findValidator("list of strings", s)
 	if m == nil {
-		t.Errorf("Expected makeFunctionListOfStringsAlt got but got %v", m)
+		t.Errorf("Expected makeFunctionListOfStringsAlt but got %v", m)
 	} else {
 		f := m([]Expression{s})
 		if _, ok := f.(functionListOfStrings); !ok {
@@ -111,7 +111,7 @@ func TestFunctionListOfStrings(t *testing.T) {
 
 		m := findValidator("list of strings", MakeFlagsValue8(0x55, ft8))
 		if m == nil {
-			t.Errorf("Expected makeFunctionListOfStringsAlt got but got %v", m)
+			t.Errorf("Expected makeFunctionListOfStringsAlt but got %v", m)
 		} else {
 			f := m([]Expression{MakeFlagsValue8(0x55, ft8)})
 			if _, ok := f.(functionListOfStrings); !ok {
@@ -203,12 +203,12 @@ func TestFunctionListOfStrings(t *testing.T) {
 
 	m = findValidator("list of strings", s, s)
 	if m != nil {
-		t.Errorf("Expected nil got but got %v", m)
+		t.Errorf("Expected nil but got %v", m)
 	}
 
 	m = findValidator("list of strings", MakeStringValue("test"))
 	if m != nil {
-		t.Errorf("Expected nil got but got %v", m)
+		t.Errorf("Expected nil but got %v", m)
 	}
 }
 
