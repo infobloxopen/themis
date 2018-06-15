@@ -3,6 +3,7 @@ package pdp
 import (
 	"bytes"
 	"fmt"
+	"net"
 	"strings"
 	"testing"
 
@@ -901,6 +902,20 @@ func assertFlagsMapperRCAMapKeys(a RuleCombiningAlg, desc string, t *testing.T, 
 	} else {
 		t.Errorf("Expected flags mapper as rule combining algorithm but got %T for %s", a, desc)
 	}
+}
+
+func assertNetworks(v, e []*net.IPNet, desc string, t *testing.T) {
+	sv := make([]string, len(v))
+	for i, n := range v {
+		sv[i] = n.String()
+	}
+
+	se := make([]string, len(e))
+	for i, n := range e {
+		se[i] = n.String()
+	}
+
+	assertStrings(sv, se, desc, t)
 }
 
 func assertStrings(v, e []string, desc string, t *testing.T) {

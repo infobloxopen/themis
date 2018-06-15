@@ -10,6 +10,7 @@ import (
 
 	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
+	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
 )
 
@@ -492,7 +493,7 @@ func TestPutAssignmentExpressions(t *testing.T) {
 }
 
 func TestPutAttributesFromReflection(t *testing.T) {
-	var b [205]byte
+	var b [251]byte
 
 	f := func(i int) (string, Type, reflect.Value, error) {
 		switch i {
@@ -521,6 +522,13 @@ func TestPutAttributesFromReflection(t *testing.T) {
 			return "set of strings", TypeSetOfStrings, reflect.ValueOf(newStrTree("one", "two", "three")), nil
 
 		case 8:
+			return "set of networks", TypeSetOfNetworks, reflect.ValueOf(newIPTree(
+				makeTestNetwork("192.0.2.0/24"),
+				makeTestNetwork("2001:db8::/32"),
+				makeTestNetwork("192.0.2.16/28"),
+			)), nil
+
+		case 9:
 			return "set of domains", TypeSetOfDomains, reflect.ValueOf(newDomainTree(
 				makeTestDomain("example.com"),
 				makeTestDomain("example.gov"),
@@ -530,9 +538,9 @@ func TestPutAttributesFromReflection(t *testing.T) {
 
 		return "", TypeUndefined, reflectValueNil, fmt.Errorf("unexpected intex %d", i)
 	}
-	n, err := putAttributesFromReflection(b[:], 9, f)
+	n, err := putAttributesFromReflection(b[:], 10, f)
 	assertRequestBytesBuffer(t, "putAttributesFromReflection", err, b[:], n,
-		9, 0,
+		10, 0,
 		7, 'b', 'o', 'o', 'l', 'e', 'a', 'n', byte(requestWireTypeBooleanTrue),
 		6, 's', 't', 'r', 'i', 'n', 'g', byte(requestWireTypeString), 4, 0, 't', 'e', 's', 't',
 		7, 'i', 'n', 't', 'e', 'g', 'e', 'r', byte(requestWireTypeInteger),
@@ -547,6 +555,11 @@ func TestPutAttributesFromReflection(t *testing.T) {
 		3, 0, 'o', 'n', 'e',
 		3, 0, 't', 'w', 'o',
 		5, 0, 't', 'h', 'r', 'e', 'e',
+		15, 's', 'e', 't', ' ', 'o', 'f', ' ', 'n', 'e', 't', 'w', 'o', 'r', 'k', 's',
+		byte(requestWireTypeSetOfNetworks), 3, 0,
+		216, 192, 0, 2, 0,
+		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		220, 192, 0, 2, 16,
 		14, 's', 'e', 't', ' ', 'o', 'f', ' ', 'd', 'o', 'm', 'a', 'i', 'n', 's', byte(requestWireTypeSetOfDomains),
 		3, 0,
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
@@ -614,7 +627,7 @@ func TestGetAssignmentExpressions(t *testing.T) {
 
 func TestGetAttributesToReflection(t *testing.T) {
 	var (
-		names [12]string
+		names [13]string
 	)
 
 	i := 0
@@ -632,6 +645,7 @@ func TestGetAttributesToReflection(t *testing.T) {
 		nv6 *net.IPNet
 		dn  domain.Name
 		ss  *strtree.Tree
+		sn  *iptree.Tree
 		sd  *domaintree.Node
 	)
 
@@ -647,6 +661,7 @@ func TestGetAttributesToReflection(t *testing.T) {
 		reflect.Indirect(reflect.ValueOf(&nv6)),
 		reflect.Indirect(reflect.ValueOf(&dn)),
 		reflect.Indirect(reflect.ValueOf(&ss)),
+		reflect.Indirect(reflect.ValueOf(&sn)),
 		reflect.Indirect(reflect.ValueOf(&sd)),
 	}
 
@@ -670,6 +685,11 @@ func TestGetAttributesToReflection(t *testing.T) {
 		3, 0, 'o', 'n', 'e',
 		3, 0, 't', 'w', 'o',
 		5, 0, 't', 'h', 'r', 'e', 'e',
+		15, 's', 'e', 't', ' ', 'o', 'f', ' ', 'n', 'e', 't', 'w', 'o', 'r', 'k', 's',
+		byte(requestWireTypeSetOfNetworks), 3, 0,
+		216, 192, 0, 2, 0,
+		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		220, 192, 0, 2, 16,
 		14, 's', 'e', 't', ' ', 'o', 'f', ' ', 'd', 'o', 'm', 'a', 'i', 'n', 's', byte(requestWireTypeSetOfDomains),
 		3, 0,
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
@@ -703,7 +723,8 @@ func TestGetAttributesToReflection(t *testing.T) {
 		MakeNetworkAssignment(names[8], nv6),
 		MakeDomainAssignment(names[9], dn),
 		MakeSetOfStringsAssignment(names[10], ss),
-		MakeSetOfDomainsAssignment(names[11], sd),
+		MakeSetOfNetworksAssignment(names[11], sn),
+		MakeSetOfDomainsAssignment(names[12], sd),
 	}
 
 	assertRequestAssignmentExpressions(t, "getAttributesToReflection", err, a, i,
@@ -718,6 +739,11 @@ func TestGetAttributesToReflection(t *testing.T) {
 		MakeNetworkAssignment("network6", makeTestNetwork("2001:db8::/32")),
 		MakeDomainAssignment("domain", makeTestDomain("www.example.com")),
 		MakeSetOfStringsAssignment("set of strings", newStrTree("one", "two", "three")),
+		MakeSetOfNetworksAssignment("set of networks", newIPTree(
+			makeTestNetwork("192.0.2.0/24"),
+			makeTestNetwork("2001:db8::/32"),
+			makeTestNetwork("192.0.2.16/28"),
+		)),
 		MakeSetOfDomainsAssignment("set of domains", newDomainTree(
 			makeTestDomain("example.com"),
 			makeTestDomain("example.gov"),
@@ -759,7 +785,7 @@ func TestGetAttributesToReflection(t *testing.T) {
 
 	err = getAttributesToReflection([]byte{
 		1, 0,
-		7, 's', 't', 'r', 'i', 'n', 'g', 's', byte(requestWireTypeSetOfNetworks),
+		7, 's', 't', 'r', 'i', 'n', 'g', 's', byte(requestWireTypeListOfStrings),
 	}, func(id string, t Type) (reflect.Value, error) {
 		return reflectValueNil, fmt.Errorf("in unreacheable place with id %q and type %q", id, t)
 	})
@@ -837,7 +863,7 @@ func TestGetAttributesToReflection(t *testing.T) {
 		return values[4], nil
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got %s", str)
+		t.Errorf("expected *requestBufferUnderflowError but got %g", flt)
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
@@ -849,7 +875,7 @@ func TestGetAttributesToReflection(t *testing.T) {
 		return values[5], nil
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got %s", str)
+		t.Errorf("expected *requestBufferUnderflowError but got %s", av4)
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
@@ -861,7 +887,7 @@ func TestGetAttributesToReflection(t *testing.T) {
 		return values[6], nil
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got %s", str)
+		t.Errorf("expected *requestBufferUnderflowError but got %s", av6)
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
@@ -873,7 +899,7 @@ func TestGetAttributesToReflection(t *testing.T) {
 		return values[7], nil
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got %s", str)
+		t.Errorf("expected *requestBufferUnderflowError but got %s", nv4)
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
@@ -885,7 +911,7 @@ func TestGetAttributesToReflection(t *testing.T) {
 		return values[8], nil
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got %s", str)
+		t.Errorf("expected *requestBufferUnderflowError but got %s", nv6)
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
@@ -898,7 +924,7 @@ func TestGetAttributesToReflection(t *testing.T) {
 		return values[9], nil
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got %s", str)
+		t.Errorf("expected *requestBufferUnderflowError but got %q", dn)
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
@@ -913,7 +939,22 @@ func TestGetAttributesToReflection(t *testing.T) {
 		return values[10], nil
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got %s", str)
+		t.Errorf("expected *requestBufferUnderflowError but got %s", MakeSetOfStringsValue(ss).describe())
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	err = getAttributesToReflection([]byte{
+		1, 0,
+		15, 's', 'e', 't', ' ', 'o', 'f', ' ', 'n', 'e', 't', 'w', 'o', 'r', 'k', 's',
+		byte(requestWireTypeSetOfNetworks), 3, 0,
+		216, 192, 0, 2, 0,
+		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	}, func(id string, t Type) (reflect.Value, error) {
+		return values[11], nil
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %s", MakeSetOfNetworksValue(sn).describe())
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
@@ -925,10 +966,10 @@ func TestGetAttributesToReflection(t *testing.T) {
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
 	}, func(id string, t Type) (reflect.Value, error) {
-		return values[11], nil
+		return values[12], nil
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got %s", str)
+		t.Errorf("expected *requestBufferUnderflowError but got %s", MakeSetOfDomainsValue(sd).describe())
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}

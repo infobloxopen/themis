@@ -8,6 +8,7 @@ import (
 
 	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
+	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
 )
 
@@ -25,8 +26,8 @@ const (
 	requestWireTypeIPv6Network
 	requestWireTypeDomain
 	requestWireTypeSetOfStrings
-	requestWireTypeSetOfDomains
 	requestWireTypeSetOfNetworks
+	requestWireTypeSetOfDomains
 	requestWireTypeListOfStrings
 
 	requestWireTypesTotal
@@ -45,8 +46,8 @@ var (
 		"IPv6 network",
 		"domain",
 		"set of strings",
-		"set of domains",
 		"set of networks",
+		"set of domains",
 		"list of strings",
 	}
 
@@ -62,6 +63,7 @@ var (
 		TypeNetwork,
 		TypeDomain,
 		TypeSetOfStrings,
+		TypeSetOfNetworks,
 		TypeSetOfDomains,
 	}
 )
@@ -95,10 +97,11 @@ func MarshalRequestAssignments(b []byte, in []AttributeAssignment) (int, error) 
 // TypeFloat - float32 or float64, TypeAddress - net.IP, TypeNetwork - net.IPNet
 // or *net.IPNet, TypeDomain - string or domain.Name from
 // github.com/infobloxopen/go-trees/domain package, TypeSetOfStrings -
-// *strtree.Tree from github.com/infobloxopen/go-trees/strtree package.
-// The function fills given buffer and returns number of bytes written,
-// TypeSetOfDomains - *domaintree.Nodea from
-// github.com/infobloxopen/go-trees/domaintree.
+// *strtree.Tree from github.com/infobloxopen/go-trees/strtree package,
+// TypeSetOfNetworks - *iptree.Node from
+// github.com/infobloxopen/go-trees/iptree, TypeSetOfDomains - *domaintree.Node
+// from github.com/infobloxopen/go-trees/domaintree. The function fills given
+// buffer and returns number of bytes written.
 func MarshalRequestReflection(b []byte, c int, f func(i int) (string, Type, reflect.Value, error)) (int, error) {
 	off, err := putRequestVersion(b)
 	if err != nil {
@@ -222,6 +225,10 @@ func putRequestAttribute(b []byte, name string, value AttributeValue) (int, erro
 		v, _ := value.setOfStrings()
 		return putRequestAttributeSetOfStrings(b, name, v)
 
+	case TypeSetOfNetworks:
+		v, _ := value.setOfNetworks()
+		return putRequestAttributeSetOfNetworks(b, name, v)
+
 	case TypeSetOfDomains:
 		v, _ := value.setOfDomains()
 		return putRequestAttributeSetOfDomains(b, name, v)
@@ -244,7 +251,7 @@ func getRequestAttribute(b []byte) (string, AttributeValue, int, error) {
 	off += n
 
 	switch t {
-	case requestWireTypeSetOfNetworks, requestWireTypeListOfStrings:
+	case requestWireTypeListOfStrings:
 		return "", UndefinedValue, 0, bindError(newRequestAttributeUnmarshallingNotImplemented(t), name)
 
 	case requestWireTypeBooleanFalse:
@@ -324,6 +331,14 @@ func getRequestAttribute(b []byte) (string, AttributeValue, int, error) {
 		}
 
 		return name, MakeSetOfStringsValue(ss), off + n, nil
+
+	case requestWireTypeSetOfNetworks:
+		sn, n, err := getRequestSetOfNetworksValue(b[off:])
+		if err != nil {
+			return "", UndefinedValue, 0, bindError(bindError(err, "value"), name)
+		}
+
+		return name, MakeSetOfNetworksValue(sn), off + n, nil
 
 	case requestWireTypeSetOfDomains:
 		sd, n, err := getRequestSetOfDomainsValue(b[off:])
@@ -752,7 +767,7 @@ func putRequestSetOfStringsValue(b []byte, value *strtree.Tree) (int, error) {
 	ss := SortSetOfStrings(value)
 
 	if len(ss) > math.MaxUint16 {
-		return 0, newRequestTooLongSetOfStringsValueError(len(ss))
+		return 0, newRequestTooLongCollectionValueError(TypeSetOfStrings, len(ss))
 	}
 
 	total := 2 * (len(ss) + 1)
@@ -806,6 +821,116 @@ func getRequestSetOfStringsValue(b []byte) (*strtree.Tree, int, error) {
 	return ss, off, nil
 }
 
+func putRequestAttributeSetOfNetworks(b []byte, name string, value *iptree.Tree) (int, error) {
+	off, err := putRequestAttributeName(b, name)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestSetOfNetworksValue(b[off:], value)
+	if err != nil {
+		return 0, err
+	}
+
+	return off + n, err
+}
+
+func putRequestSetOfNetworksValue(b []byte, value *iptree.Tree) (int, error) {
+	off, err := putRequestAttributeType(b, requestWireTypeSetOfNetworks)
+	if err != nil {
+		return 0, err
+	}
+
+	sn := SortSetOfNetworks(value)
+
+	if len(sn) > math.MaxUint16 {
+		return 0, newRequestTooLongCollectionValueError(TypeSetOfNetworks, len(sn))
+	}
+
+	total := len(sn) + 2
+	for _, n := range sn {
+		total += len(n.IP)
+	}
+
+	if len(b[off:]) < total {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	binary.LittleEndian.PutUint16(b[off:], uint16(len(sn)))
+	off += 2
+
+	for _, n := range sn {
+		ones, bits := n.Mask.Size()
+		if bits == 32 {
+			ones += 0xc0
+		}
+
+		b[off] = byte(ones)
+		copy(b[off+1:], n.IP)
+		off += len(n.IP) + 1
+	}
+
+	return off, nil
+}
+
+func getRequestSetOfNetworksValue(b []byte) (*iptree.Tree, int, error) {
+	if len(b) < 2 {
+		return nil, 0, newRequestBufferUnderflowError()
+	}
+
+	sn := iptree.NewTree()
+
+	count := int(binary.LittleEndian.Uint16(b))
+	off := 2
+
+	var (
+		size int
+		mask net.IPMask
+		n    net.IPNet
+	)
+	for i := 0; i < count; i++ {
+		if len(b) <= off {
+			return nil, 0, newRequestBufferUnderflowError()
+		}
+		ones := b[off]
+		off++
+
+		if ones >= 0xc0 {
+			size = 4
+
+			ones -= 0xc0
+			mask = net.CIDRMask(int(ones), 32)
+			if mask == nil {
+				return nil, 0, bindError(bindErrorf(newRequestIPv4InvalidMaskError(ones), "%d", i+1),
+					TypeSetOfNetworks.String())
+			}
+		} else {
+			size = 16
+
+			mask = net.CIDRMask(int(ones), 128)
+			if mask == nil {
+				return nil, 0, bindError(bindErrorf(newRequestIPv6InvalidMaskError(ones), "%d", i+1),
+					TypeSetOfNetworks.String())
+			}
+		}
+
+		if len(b) < off+size {
+			return nil, 0, newRequestBufferUnderflowError()
+		}
+		ip := net.IP(b[off : off+size])
+		off += size
+
+		n = net.IPNet{
+			IP:   ip.Mask(mask),
+			Mask: mask,
+		}
+
+		sn.InplaceInsertNet(&n, i)
+	}
+
+	return sn, off, nil
+}
+
 func putRequestAttributeSetOfDomains(b []byte, name string, value *domaintree.Node) (int, error) {
 	off, err := putRequestAttributeName(b, name)
 	if err != nil {
@@ -829,7 +954,7 @@ func putRequestSetOfDomainsValue(b []byte, value *domaintree.Node) (int, error) 
 	sd := SortSetOfDomains(value)
 
 	if len(sd) > math.MaxUint16 {
-		return 0, newRequestTooLongSetOfDomainsValueError(len(sd))
+		return 0, newRequestTooLongCollectionValueError(TypeSetOfDomains, len(sd))
 	}
 
 	total := 2 * (len(sd) + 1)

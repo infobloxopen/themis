@@ -30,10 +30,10 @@ requests:
   d: example.net
 
 # Matches set of networks value
-# - s: third
-#   c: 192.0.2.2/31
-#   a: 192.0.2.16
-#   d: example.net
+- s: third
+  c: 192.0.2.2/31
+  a: 192.0.2.16
+  d: example.net
 
 # Goes to mapper by list of strings (and matches first rule)
 # - s: first-rule

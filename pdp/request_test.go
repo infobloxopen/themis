@@ -2,6 +2,7 @@ package pdp
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"net"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
+	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
 )
 
@@ -564,7 +566,7 @@ func TestGetRequestSetOfStringsValue(t *testing.T) {
 
 	v, _, err = getRequestSetOfStringsValue([]byte{})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got domain %#v", SortSetOfStrings(v))
+		t.Errorf("expected *requestBufferUnderflowError but got set of strings %#v", SortSetOfStrings(v))
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
@@ -575,9 +577,79 @@ func TestGetRequestSetOfStringsValue(t *testing.T) {
 		3, 0, 't', 'w', 'o',
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got domain %#v", SortSetOfStrings(v))
+		t.Errorf("expected *requestBufferUnderflowError but got set of strings %#v", SortSetOfStrings(v))
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetRequestSetOfNetworksValue(t *testing.T) {
+	testWireSetOfNetworksValue := []byte{
+		3, 0,
+		216, 192, 0, 2, 0,
+		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		220, 192, 0, 2, 16,
+	}
+
+	v, n, err := getRequestSetOfNetworksValue(testWireSetOfNetworksValue)
+	if err != nil {
+		t.Error(err)
+	} else if n != len(testWireSetOfNetworksValue) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireSetOfNetworksValue), n)
+	} else {
+		assertNetworks(SortSetOfNetworks(v), []*net.IPNet{
+			makeTestNetwork("192.0.2.0/24"),
+			makeTestNetwork("2001:db8::/32"),
+			makeTestNetwork("192.0.2.16/28"),
+		}, "getRequestSetOfNetworksValue", t)
+	}
+
+	v, _, err = getRequestSetOfNetworksValue([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got set of networks %#v", SortSetOfNetworks(v))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, _, err = getRequestSetOfNetworksValue([]byte{
+		3, 0,
+		216, 192, 0, 2, 0,
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got set of networks %#v", SortSetOfNetworks(v))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, _, err = getRequestSetOfNetworksValue([]byte{
+		3, 0,
+		216, 192, 0, 2, 0,
+		32, 32, 1, 13, 184,
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got set of networks %#v", SortSetOfNetworks(v))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, _, err = getRequestSetOfNetworksValue([]byte{
+		1, 0,
+		225, 192, 0, 2, 0,
+	})
+	if err == nil {
+		t.Errorf("expected *requestIPv4InvalidMaskError but got set of networks %#v", SortSetOfNetworks(v))
+	} else if _, ok := err.(*requestIPv4InvalidMaskError); !ok {
+		t.Errorf("expected *requestIPv4InvalidMaskError but got %T (%s)", err, err)
+	}
+
+	v, _, err = getRequestSetOfNetworksValue([]byte{
+		1, 0,
+		129, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	})
+	if err == nil {
+		t.Errorf("expected *requestIPv6InvalidMaskError but got set of networks %#v", SortSetOfNetworks(v))
+	} else if _, ok := err.(*requestIPv6InvalidMaskError); !ok {
+		t.Errorf("expected *requestIPv6InvalidMaskError but got %T (%s)", err, err)
 	}
 }
 
@@ -604,7 +676,7 @@ func TestGetRequestSetOfDomainsValue(t *testing.T) {
 
 	v, _, err = getRequestSetOfDomainsValue([]byte{})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got domain %#v", SortSetOfDomains(v))
+		t.Errorf("expected *requestBufferUnderflowError but got domains %#v", SortSetOfDomains(v))
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
@@ -615,7 +687,7 @@ func TestGetRequestSetOfDomainsValue(t *testing.T) {
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got domain %#v", SortSetOfDomains(v))
+		t.Errorf("expected *requestBufferUnderflowError but got domains %#v", SortSetOfDomains(v))
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
@@ -901,6 +973,34 @@ func TestGetRequestAttribute(t *testing.T) {
 		}
 	}
 
+	testWireSetOfNetworksAttribute := []byte{
+		15, 's', 'e', 't', ' ', 'o', 'f', ' ', 'n', 'e', 't', 'w', 'o', 'r', 'k', 's',
+		byte(requestWireTypeSetOfNetworks), 3, 0,
+		216, 192, 0, 2, 0,
+		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		220, 192, 0, 2, 16,
+	}
+	name, v, n, err = getRequestAttribute(testWireSetOfNetworksAttribute)
+	if err != nil {
+		t.Error(err)
+	} else if n != len(testWireSetOfNetworksAttribute) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireSetOfNetworksAttribute), n)
+	} else if name != "set of networks" {
+		t.Errorf("expected %q as attribute name but got %q", "set of networks", name)
+	} else if vt := v.GetResultType(); vt != TypeSetOfNetworks {
+		t.Errorf("expected value of %q type but got %q %s", TypeSetOfNetworks, vt, v.describe())
+	} else {
+		s, err := v.Serialize()
+		if err != nil {
+			t.Error(err)
+		} else {
+			e := "\"192.0.2.0/24\",\"2001:db8::/32\",\"192.0.2.16/28\""
+			if s != e {
+				t.Errorf("expected %q but got %q", e, s)
+			}
+		}
+	}
+
 	testWireSetOfDomainsAttribute := []byte{
 		14, 's', 'e', 't', ' ', 'o', 'f', ' ', 'd', 'o', 'm', 'a', 'i', 'n', 's', byte(requestWireTypeSetOfDomains),
 		3, 0,
@@ -1050,6 +1150,18 @@ func TestGetRequestAttribute(t *testing.T) {
 	}
 
 	name, v, _, err = getRequestAttribute([]byte{
+		15, 's', 'e', 't', ' ', 'o', 'f', ' ', 'n', 'e', 't', 'w', 'o', 'r', 'k', 's',
+		byte(requestWireTypeSetOfNetworks), 3, 0,
+		216, 192, 0, 2, 0,
+		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	name, v, _, err = getRequestAttribute([]byte{
 		14, 's', 'e', 't', ' ', 'o', 'f', ' ', 'd', 'o', 'm', 'a', 'i', 'n', 's', byte(requestWireTypeSetOfDomains),
 		3, 0,
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
@@ -1181,6 +1293,19 @@ func TestPutRequestAttribute(t *testing.T) {
 		3, 0, 'o', 'n', 'e',
 		3, 0, 't', 'w', 'o',
 		5, 0, 't', 'h', 'r', 'e', 'e',
+	)
+
+	n, err = putRequestAttribute(b[:46], "set of networks", MakeSetOfNetworksValue(newIPTree(
+		makeTestNetwork("192.0.2.0/24"),
+		makeTestNetwork("2001:db8::/32"),
+		makeTestNetwork("192.0.2.16/28"),
+	)))
+	assertRequestBytesBuffer(t, "putRequestAttribute(set of networks)", err, b[:46], n,
+		15, 's', 'e', 't', ' ', 'o', 'f', ' ', 'n', 'e', 't', 'w', 'o', 'r', 'k', 's',
+		byte(requestWireTypeSetOfNetworks), 3, 0,
+		216, 192, 0, 2, 0,
+		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		220, 192, 0, 2, 16,
 	)
 
 	n, err = putRequestAttribute(b[:61], "set of domains", MakeSetOfDomainsValue(newDomainTree(
@@ -1370,7 +1495,7 @@ func TestPutRequestAttributeSetOfStrings(t *testing.T) {
 	var b [28]byte
 
 	n, err := putRequestAttributeSetOfStrings(b[:], "strings", newStrTree("one", "two", "three"))
-	assertRequestBytesBuffer(t, "putRequestAttributeString", err, b[:], n,
+	assertRequestBytesBuffer(t, "putRequestAttributeSetOfStrings", err, b[:], n,
 		7, 's', 't', 'r', 'i', 'n', 'g', 's', byte(requestWireTypeSetOfStrings), 3, 0,
 		3, 0, 'o', 'n', 'e',
 		3, 0, 't', 'w', 'o',
@@ -1392,6 +1517,44 @@ func TestPutRequestAttributeSetOfStrings(t *testing.T) {
 	}
 }
 
+func TestPutRequestAttributeSetOfNetworks(t *testing.T) {
+	var b [39]byte
+
+	n, err := putRequestAttributeSetOfNetworks(b[:], "networks", newIPTree(
+		makeTestNetwork("192.0.2.0/24"),
+		makeTestNetwork("2001:db8::/32"),
+		makeTestNetwork("192.0.2.16/28"),
+	))
+	assertRequestBytesBuffer(t, "putRequestAttributeSetOfNetworks", err, b[:], n,
+		8, 'n', 'e', 't', 'w', 'o', 'r', 'k', 's', byte(requestWireTypeSetOfNetworks), 3, 0,
+		216, 192, 0, 2, 0,
+		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		220, 192, 0, 2, 16,
+	)
+
+	n, err = putRequestAttributeSetOfNetworks(b[:5], "networks", newIPTree(
+		makeTestNetwork("192.0.2.0/24"),
+		makeTestNetwork("2001:db8::/32"),
+		makeTestNetwork("192.0.2.16/28"),
+	))
+	if err == nil {
+		t.Errorf("expected no data put to small buffer but got %d", n)
+	} else if _, ok := err.(*requestBufferOverflowError); !ok {
+		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
+	}
+
+	n, err = putRequestAttributeSetOfNetworks(b[:15], "networks", newIPTree(
+		makeTestNetwork("192.0.2.0/24"),
+		makeTestNetwork("2001:db8::/32"),
+		makeTestNetwork("192.0.2.16/28"),
+	))
+	if err == nil {
+		t.Errorf("expected no data put to small buffer but got %d", n)
+	} else if _, ok := err.(*requestBufferOverflowError); !ok {
+		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
+	}
+}
+
 func TestPutRequestAttributeSetOfDomains(t *testing.T) {
 	var b [54]byte
 
@@ -1400,7 +1563,7 @@ func TestPutRequestAttributeSetOfDomains(t *testing.T) {
 		makeTestDomain("example.gov"),
 		makeTestDomain("www.example.com"),
 	))
-	assertRequestBytesBuffer(t, "putRequestAttributeDomain", err, b[:], n,
+	assertRequestBytesBuffer(t, "putRequestAttributeSetOfDomains", err, b[:], n,
 		7, 'd', 'o', 'm', 'a', 'i', 'n', 's', byte(requestWireTypeSetOfDomains), 3, 0,
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
@@ -1628,8 +1791,8 @@ func TestPutRequestSetOfStringsValue(t *testing.T) {
 	n, err = putRequestSetOfStringsValue(b[:], ss)
 	if err == nil {
 		t.Errorf("expected no data put from too big set but got %d", n)
-	} else if _, ok := err.(*requestTooLongSetOfStringsValueError); !ok {
-		t.Errorf("expected *requestTooLongSetOfStringsValueError but got %T (%s)", err, err)
+	} else if _, ok := err.(*requestTooLongCollectionValueError); !ok {
+		t.Errorf("expected *requestTooLongCollectionValueError but got %T (%s)", err, err)
 	}
 
 	n, err = putRequestSetOfStringsValue(b[:], newStrTree("one", "two", string(make([]byte, math.MaxUint16+1))))
@@ -1637,6 +1800,51 @@ func TestPutRequestSetOfStringsValue(t *testing.T) {
 		t.Errorf("expected no data put with too big set of strings element but got %d", n)
 	} else if _, ok := err.(*requestTooLongStringValueError); !ok {
 		t.Errorf("expected *requestTooLongStringValueError but got %T (%s)", err, err)
+	}
+}
+
+func TestPutRequestSetOfNetworksValue(t *testing.T) {
+	var b [30]byte
+
+	n, err := putRequestSetOfNetworksValue(b[:], newIPTree(
+		makeTestNetwork("192.0.2.0/24"),
+		makeTestNetwork("2001:db8::/32"),
+		makeTestNetwork("192.0.2.16/28"),
+	))
+	assertRequestBytesBuffer(t, "putRequestSetOfNetworksValue", err, b[:], n,
+		byte(requestWireTypeSetOfNetworks), 3, 0,
+		216, 192, 0, 2, 0,
+		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		220, 192, 0, 2, 16,
+	)
+
+	n, err = putRequestSetOfNetworksValue(nil, newIPTree(
+		makeTestNetwork("192.0.2.0/24"),
+		makeTestNetwork("2001:db8::/32"),
+		makeTestNetwork("192.0.2.16/28"),
+	))
+	assertRequestBufferOverflow(t, "putRequestSetOfNetworksValue", err, n)
+
+	n, err = putRequestSetOfNetworksValue(b[:8], newIPTree(
+		makeTestNetwork("192.0.2.0/24"),
+		makeTestNetwork("2001:db8::/32"),
+		makeTestNetwork("192.0.2.16/28"),
+	))
+	assertRequestBufferOverflow(t, "putRequestSetOfNetworksValue", err, n)
+
+	sn := iptree.NewTree()
+	var ip [4]byte
+	for i := 0; i < math.MaxUint16+1; i++ {
+		binary.BigEndian.PutUint32(ip[:], uint32(i+1))
+		ip[0] = 127
+		sn.InplaceInsertIP(net.IP(ip[:]), i)
+	}
+
+	n, err = putRequestSetOfNetworksValue(b[:], sn)
+	if err == nil {
+		t.Errorf("expected no data put from too big set but got %d", n)
+	} else if _, ok := err.(*requestTooLongCollectionValueError); !ok {
+		t.Errorf("expected *requestTooLongCollectionValueError but got %T (%s)", err, err)
 	}
 }
 
@@ -1681,8 +1889,8 @@ func TestPutRequestSetOfDomainsValue(t *testing.T) {
 	n, err = putRequestSetOfDomainsValue(b[:], sd)
 	if err == nil {
 		t.Errorf("expected no data put from too big set but got %d", n)
-	} else if _, ok := err.(*requestTooLongSetOfDomainsValueError); !ok {
-		t.Errorf("expected *requestTooLongSetOfDomainsValueError but got %T (%s)", err, err)
+	} else if _, ok := err.(*requestTooLongCollectionValueError); !ok {
+		t.Errorf("expected *requestTooLongCollectionValueError but got %T (%s)", err, err)
 	}
 }
 

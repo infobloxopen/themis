@@ -198,17 +198,20 @@ func (c *contentItem) ppValue(v interface{}) (interface{}, error) {
 
 	case pdp.TypeSetOfNetworks:
 		m := iptree.NewTree()
+		i := 0
 		err := ppStringSequence(v, "set of networks value", func(s string) error {
 			a := net.ParseIP(s)
 			if a != nil {
-				m.InplaceInsertIP(a, nil)
+				m.InplaceInsertIP(a, i)
+				i++
 			} else {
 				_, n, err := net.ParseCIDR(s)
 				if err != nil {
 					return newAddressNetworkCastError(s, err)
 				}
 
-				m.InplaceInsertNet(n, nil)
+				m.InplaceInsertNet(n, i)
+				i++
 			}
 
 			return nil
@@ -221,13 +224,16 @@ func (c *contentItem) ppValue(v interface{}) (interface{}, error) {
 
 	case pdp.TypeSetOfDomains:
 		m := &domaintree.Node{}
+		i := 0
 		err := ppStringSequence(v, "set of domains value", func(s string) error {
 			dn, err := domain.MakeNameFromString(s)
 			if err != nil {
 				return newDomainCastError(s, err)
 			}
 
-			m.InplaceInsert(dn, nil)
+			m.InplaceInsert(dn, i)
+			i++
+
 			return nil
 		})
 		if err != nil {
