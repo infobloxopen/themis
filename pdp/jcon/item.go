@@ -337,17 +337,20 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 
 	case pdp.TypeSetOfNetworks:
 		m := iptree.NewTree()
+		i := 0
 		err := jparser.GetStringSequence(d, func(idx int, s string) error {
 			a := net.ParseIP(s)
 			if a != nil {
-				m.InplaceInsertIP(a, nil)
+				m.InplaceInsertIP(a, i)
+				i++
 			} else {
 				_, n, err := net.ParseCIDR(s)
 				if err != nil {
 					return bindErrorf(newAddressNetworkCastError(s, err), "%d", idx)
 				}
 
-				m.InplaceInsertNet(n, nil)
+				m.InplaceInsertNet(n, i)
+				i++
 			}
 
 			return nil
@@ -360,13 +363,16 @@ func (c *contentItem) unmarshalValue(d *json.Decoder) (interface{}, error) {
 
 	case pdp.TypeSetOfDomains:
 		m := &domaintree.Node{}
+		i := 0
 		err := jparser.GetStringSequence(d, func(idx int, s string) error {
 			dn, err := domain.MakeNameFromString(s)
 			if err != nil {
 				return bindErrorf(newDomainCastError(s, err), "%d", idx)
 			}
 
-			m.InplaceInsert(dn, nil)
+			m.InplaceInsert(dn, i)
+			i++
+
 			return nil
 		}, "set of domains value")
 		if err != nil {

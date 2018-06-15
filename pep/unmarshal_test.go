@@ -9,6 +9,7 @@ import (
 
 	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
+	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
 
 	"github.com/infobloxopen/themis/pdp"
@@ -65,6 +66,7 @@ type TestTaggedAllTypesResponseStruct struct {
 	DomainS    string           `pdp:"das,domain"`
 	DomainD    domain.Name      `pdp:"dad,domain"`
 	Strings    *strtree.Tree    `pdp:"ssa,set of strings"`
+	Networks   *iptree.Tree     `pdp:"sna,set of networks"`
 	Domains    *domaintree.Node `pdp:"sda,set of domains"`
 }
 
@@ -441,6 +443,7 @@ func assertTestTaggedAllTypesStruct(t *testing.T, v, e TestTaggedAllTypesRespons
 		v.DomainS != e.DomainS ||
 		v.DomainD.String() != e.DomainD.String() ||
 		!setOfStringsEqual(v.Strings, e.Strings) ||
+		!setOfNetworksEqual(v.Networks, e.Networks) ||
 		!setOfDomainsEqual(v.Domains, e.Domains) {
 		t.Errorf("expected:\n%v\nbut got:\n%v\n",
 			SprintfTestTaggedAllTypesStruct(e),
@@ -509,6 +512,7 @@ func SprintfTestTaggedAllTypesStruct(v TestTaggedAllTypesResponseStruct) string 
 			"\tDomainS...: %q\n"+
 			"\tDomainD...: %q\n"+
 			"\tStrings...: %v\n"+
+			"\tNetworks..: %v\n"+
 			"\tDomains...: %v\n",
 		v.Effect, v.Reason, v.BoolFalse, v.BoolTrue, v.String,
 		v.Int, v.Int8, v.Int16, v.Int32, v.Int64,
@@ -517,6 +521,7 @@ func SprintfTestTaggedAllTypesStruct(v TestTaggedAllTypesResponseStruct) string 
 		v.Address4.String(), v.Address6.String(), v.Network4.String(), v.Network6.String(), n,
 		v.DomainS, v.DomainD,
 		pdp.SortSetOfStrings(v.Strings),
+		makeStringFromNetworks(v.Networks),
 		pdp.SortSetOfDomains(v.Domains),
 	)
 }
@@ -538,6 +543,34 @@ func setOfStringsEqual(v, e *strtree.Tree) bool {
 	return true
 }
 
+func makeStringFromNetworks(t *iptree.Tree) []string {
+	sn := pdp.SortSetOfNetworks(t)
+
+	out := make([]string, len(sn))
+	for i, n := range sn {
+		out[i] = n.String()
+	}
+
+	return out
+}
+
+func setOfNetworksEqual(v, e *iptree.Tree) bool {
+	sn := makeStringFromNetworks(v)
+	se := makeStringFromNetworks(e)
+
+	if len(sn) != len(se) {
+		return false
+	}
+
+	for i, n := range sn {
+		if n != se[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
 func setOfDomainsEqual(v, e *domaintree.Node) bool {
 	sd := pdp.SortSetOfDomains(v)
 	se := pdp.SortSetOfDomains(e)
@@ -546,8 +579,8 @@ func setOfDomainsEqual(v, e *domaintree.Node) bool {
 		return false
 	}
 
-	for i, s := range sd {
-		if s != se[i] {
+	for i, d := range sd {
+		if d != se[i] {
 			return false
 		}
 	}

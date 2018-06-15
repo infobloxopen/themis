@@ -10,6 +10,7 @@ import (
 
 	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
+	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
 
 	"github.com/infobloxopen/themis/pdp"
@@ -51,6 +52,7 @@ var (
 	ptrNetIPNetType = reflect.TypeOf((*net.IPNet)(nil))
 	domainType      = reflect.TypeOf(domain.Name{})
 	strtreeType     = reflect.TypeOf((*strtree.Tree)(nil))
+	iptreeType      = reflect.TypeOf((*iptree.Tree)(nil))
 	domaintreeType  = reflect.TypeOf((*domaintree.Node)(nil))
 
 	attrTypeByType = map[reflect.Type]pdp.Type{
@@ -73,19 +75,21 @@ var (
 		ptrNetIPNetType: pdp.TypeNetwork,
 		domainType:      pdp.TypeDomain,
 		strtreeType:     pdp.TypeSetOfStrings,
+		iptreeType:      pdp.TypeSetOfNetworks,
 		domaintreeType:  pdp.TypeSetOfDomains,
 	}
 
 	attrTypeByTag = map[string]pdp.Type{
-		pdp.TypeBoolean.GetKey():      pdp.TypeBoolean,
-		pdp.TypeString.GetKey():       pdp.TypeString,
-		pdp.TypeInteger.GetKey():      pdp.TypeInteger,
-		pdp.TypeFloat.GetKey():        pdp.TypeFloat,
-		pdp.TypeAddress.GetKey():      pdp.TypeAddress,
-		pdp.TypeNetwork.GetKey():      pdp.TypeNetwork,
-		pdp.TypeDomain.GetKey():       pdp.TypeDomain,
-		pdp.TypeSetOfStrings.GetKey(): pdp.TypeSetOfStrings,
-		pdp.TypeSetOfDomains.GetKey(): pdp.TypeSetOfDomains,
+		pdp.TypeBoolean.GetKey():       pdp.TypeBoolean,
+		pdp.TypeString.GetKey():        pdp.TypeString,
+		pdp.TypeInteger.GetKey():       pdp.TypeInteger,
+		pdp.TypeFloat.GetKey():         pdp.TypeFloat,
+		pdp.TypeAddress.GetKey():       pdp.TypeAddress,
+		pdp.TypeNetwork.GetKey():       pdp.TypeNetwork,
+		pdp.TypeDomain.GetKey():        pdp.TypeDomain,
+		pdp.TypeSetOfStrings.GetKey():  pdp.TypeSetOfStrings,
+		pdp.TypeSetOfNetworks.GetKey(): pdp.TypeSetOfNetworks,
+		pdp.TypeSetOfDomains.GetKey():  pdp.TypeSetOfDomains,
 	}
 
 	typeByAttrType = map[pdp.Type]map[reflect.Type]struct{}{
@@ -124,6 +128,9 @@ var (
 		},
 		pdp.TypeSetOfStrings: {
 			strtreeType: {},
+		},
+		pdp.TypeSetOfNetworks: {
+			iptreeType: {},
 		},
 		pdp.TypeSetOfDomains: {
 			domaintreeType: {},

@@ -1108,21 +1108,15 @@ errors:
   args:
   - field: b
 
-- id: requestTooLongSetOfStringsValueError
+- id: requestTooLongCollectionValueError
   fields:
+  - id: t
+    type: Type
   - id: n
     type: int
-  msg: "Number of elements in set of strings value is too big %d (expected no more than %d)"
+  msg: "Number of elements in %s value is too big %d (expected no more than %d)"
   args:
-  - field: n
-  - expr: math.MaxUint16
-
-- id: requestTooLongSetOfDomainsValueError
-  fields:
-  - id: n
-    type: int
-  msg: "Number of elements in set of domains value is too big %d (expected no more than %d)"
-  args:
+  - field: t
   - field: n
   - expr: math.MaxUint16
 
@@ -1325,6 +1319,22 @@ errors:
   - id: v
     type: reflect.Value
   msg: "Can't unmarshal set of strings to %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalSetOfNetworksConstError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal set of networks to unchengeable %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalSetOfNetworksTypeError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal set of networks to %s"
   args:
   - field: v.Type()
 

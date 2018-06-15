@@ -9,6 +9,7 @@ import (
 
 	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
+	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
 )
 
@@ -21,6 +22,7 @@ var (
 	reflectTypePtrIPNet   = reflect.TypeOf((*net.IPNet)(nil))
 	reflectTypeDomain     = reflect.TypeOf(domain.Name{})
 	reflectTypeStrtree    = reflect.TypeOf((*strtree.Tree)(nil))
+	reflectTypeIPTree     = reflect.TypeOf((*iptree.Tree)(nil))
 	reflectTypeDomaintree = reflect.TypeOf((*domaintree.Node)(nil))
 )
 
@@ -342,6 +344,36 @@ func setSetOfStrings(v reflect.Value, ss *strtree.Tree) error {
 	}
 
 	v.Set(reflect.ValueOf(ss))
+	return nil
+}
+
+func getSetOfNetworks(v reflect.Value) *iptree.Tree {
+	if v == reflectValueNil {
+		return nil
+	}
+
+	t := v.Type()
+	if t == reflectTypeIPTree {
+		return (*iptree.Tree)(unsafe.Pointer(v.Pointer()))
+	}
+
+	panic(fmt.Errorf("can't marshal %s as set of networks value", t))
+}
+
+func setSetOfNetworks(v reflect.Value, sn *iptree.Tree) error {
+	if v == reflectValueNil {
+		return nil
+	}
+
+	if !v.CanSet() {
+		return newRequestUnmarshalSetOfNetworksConstError(v)
+	}
+
+	if v.Type() != reflectTypeIPTree {
+		return newRequestUnmarshalSetOfNetworksTypeError(v)
+	}
+
+	v.Set(reflect.ValueOf(sn))
 	return nil
 }
 

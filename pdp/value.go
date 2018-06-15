@@ -617,9 +617,11 @@ func serializeSetOfStrings(v *strtree.Tree) string {
 }
 
 func serializeSetOfNetworks(v *iptree.Tree) string {
+	n := SortSetOfNetworks(v)
+
 	var s []string
-	for p := range v.Enumerate() {
-		s = append(s, strconv.QuoteToASCII(p.Key.String()))
+	for _, n := range n {
+		s = append(s, strconv.QuoteToASCII(n.String()))
 	}
 
 	return strings.Join(s, ",")

@@ -9,6 +9,7 @@ import (
 
 	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
+	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
 )
 
@@ -526,6 +527,60 @@ func TestSetSetOfStrings(t *testing.T) {
 		t.Errorf("expected *requestUnmarshalSetOfStringsTypeError but got %d", n)
 	} else if _, ok := err.(*requestUnmarshalSetOfStringsTypeError); !ok {
 		t.Errorf("expected *requestUnmarshalSetOfStringsTypeError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetSetOfNetworks(t *testing.T) {
+	eSn := newIPTree(
+		makeTestNetwork("192.0.2.0/24"),
+		makeTestNetwork("2001:db8::/32"),
+		makeTestNetwork("192.0.2.16/28"),
+	)
+
+	sn := getSetOfNetworks(reflect.ValueOf(eSn))
+	assertNetworks(SortSetOfNetworks(sn), SortSetOfNetworks(eSn), "getSetOfNetworks", t)
+
+	sn = getSetOfNetworks(reflect.ValueOf(nil))
+	if sn != nil {
+		t.Errorf("expected nil but got %#v", SortSetOfNetworks(sn))
+	}
+
+	assertPanicWithError(t, func() {
+		sn = getSetOfNetworks(reflect.ValueOf(true))
+	}, "can't marshal %s as set of networks value", reflect.TypeOf(true))
+}
+
+func TestSetSetOfNetworks(t *testing.T) {
+	eSn := newIPTree(
+		makeTestNetwork("192.0.2.0/24"),
+		makeTestNetwork("2001:db8::/32"),
+		makeTestNetwork("192.0.2.16/28"),
+	)
+
+	var sn *iptree.Tree
+	if err := setSetOfNetworks(reflect.Indirect(reflect.ValueOf(&sn)), eSn); err != nil {
+		t.Error(err)
+	} else {
+		assertNetworks(SortSetOfNetworks(sn), SortSetOfNetworks(eSn), "setSetOfNetworks", t)
+	}
+
+	if err := setSetOfNetworks(reflect.ValueOf(nil), eSn); err != nil {
+		t.Error(err)
+	}
+
+	err := setSetOfNetworks(reflect.ValueOf(sn), eSn)
+	if err == nil {
+		t.Errorf("expected *requestUnmarshalSetOfNetworksConstError but got %#v", SortSetOfNetworks(sn))
+	} else if _, ok := err.(*requestUnmarshalSetOfNetworksConstError); !ok {
+		t.Errorf("expected *requestUnmarshalSetOfNetworksConstError but got %T (%s)", err, err)
+	}
+
+	var n int64
+	err = setSetOfNetworks(reflect.Indirect(reflect.ValueOf(&n)), eSn)
+	if err == nil {
+		t.Errorf("expected *requestUnmarshalSetOfNetworksTypeError but got %d", n)
+	} else if _, ok := err.(*requestUnmarshalSetOfNetworksTypeError); !ok {
+		t.Errorf("expected *requestUnmarshalSetOfNetworksTypeError but got %T (%s)", err, err)
 	}
 }
 

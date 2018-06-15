@@ -10,6 +10,7 @@ import (
 
 	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
+	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
 
 	"github.com/infobloxopen/themis/pdp"
@@ -20,33 +21,35 @@ type DummyStruct struct {
 }
 
 type TestStruct struct {
-	Bool    bool
-	Int     int
-	Float   float64
-	String  string
-	If      interface{}
-	Address net.IP
-	hidden  string
-	Network *net.IPNet
-	Slice   []int
-	Struct  DummyStruct
-	Domain  domain.Name
-	Strings *strtree.Tree
-	Domains *domaintree.Node
+	Bool     bool
+	Int      int
+	Float    float64
+	String   string
+	If       interface{}
+	Address  net.IP
+	hidden   string
+	Network  *net.IPNet
+	Slice    []int
+	Struct   DummyStruct
+	Domain   domain.Name
+	Strings  *strtree.Tree
+	Networks *iptree.Tree
+	Domains  *domaintree.Node
 }
 
 type TestTaggedStruct struct {
-	bool1   bool
-	Bool2   bool             `pdp:""`
-	bool3   bool             `pdp:"flag"`
-	str     string           `pdp:"s,string"`
-	integer int              `pdp:"i,integer"`
-	float   float64          `pdp:"f,float"`
-	domain  domain.Name      `pdp:"d,domain"`
-	address net.IP           `pdp:"Address"`
-	network *net.IPNet       `pdp:"net,network"`
-	strings *strtree.Tree    `pdp:"ss,set of strings"`
-	domains *domaintree.Node `pdp:"sd,set of domains"`
+	bool1    bool
+	Bool2    bool             `pdp:""`
+	bool3    bool             `pdp:"flag"`
+	str      string           `pdp:"s,string"`
+	integer  int              `pdp:"i,integer"`
+	float    float64          `pdp:"f,float"`
+	domain   domain.Name      `pdp:"d,domain"`
+	address  net.IP           `pdp:"Address"`
+	network  *net.IPNet       `pdp:"net,network"`
+	strings  *strtree.Tree    `pdp:"ss,set of strings"`
+	networks *iptree.Tree     `pdp:"sn,set of networks"`
+	domains  *domaintree.Node `pdp:"sd,set of domains"`
 }
 
 type TestInvalidStruct1 struct {
@@ -71,6 +74,11 @@ var (
 		Struct:  DummyStruct{},
 		Domain:  makeTestDomain("example.com"),
 		Strings: newStrTree("one", "two", "three"),
+		Networks: newIPTree(
+			makeTestNetwork("192.0.2.0/24"),
+			makeTestNetwork("2001:db8::/32"),
+			makeTestNetwork("192.0.2.16/28"),
+		),
 		Domains: newDomainTree(
 			makeTestDomain("example.com"),
 			makeTestDomain("example.gov"),
@@ -80,7 +88,7 @@ var (
 
 	testRequestBuffer = []byte{
 		1, 0,
-		9, 0,
+		10, 0,
 		4, 'B', 'o', 'o', 'l', 1,
 		3, 'I', 'n', 't', 3, 5, 0, 0, 0, 0, 0, 0, 0,
 		5, 'F', 'l', 'o', 'a', 't', 4, 0, 0, 0, 0, 0, 92, 129, 64,
@@ -90,7 +98,11 @@ var (
 		6, 'D', 'o', 'm', 'a', 'i', 'n', 9, 11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
 		7, 'S', 't', 'r', 'i', 'n', 'g', 's', 10, 3, 0,
 		3, 0, 'o', 'n', 'e', 3, 0, 't', 'w', 'o', 5, 0, 't', 'h', 'r', 'e', 'e',
-		7, 'D', 'o', 'm', 'a', 'i', 'n', 's', 11, 3, 0,
+		8, 'N', 'e', 't', 'w', 'o', 'r', 'k', 's', 11, 3, 0,
+		216, 192, 0, 2, 0,
+		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		220, 192, 0, 2, 16,
+		7, 'D', 'o', 'm', 'a', 'i', 'n', 's', 12, 3, 0,
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
 		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
@@ -98,14 +110,14 @@ var (
 )
 
 func TestMarshalUntaggedStruct(t *testing.T) {
-	var b [182]byte
+	var b [221]byte
 
 	n, err := marshalValue(reflect.ValueOf(testStruct), b[:])
 	assertBytesBuffer(t, "marshalValue(TestStruct)", err, b[:], n, testRequestBuffer...)
 }
 
 func TestMarshalTaggedStruct(t *testing.T) {
-	var b [159]byte
+	var b [192]byte
 
 	v := TestTaggedStruct{
 		bool1:   true,
@@ -118,6 +130,11 @@ func TestMarshalTaggedStruct(t *testing.T) {
 		address: net.ParseIP("1.2.3.4"),
 		network: makeTestNetwork("1.2.3.4/32"),
 		strings: newStrTree("one", "two", "three"),
+		networks: newIPTree(
+			makeTestNetwork("192.0.2.0/24"),
+			makeTestNetwork("2001:db8::/32"),
+			makeTestNetwork("192.0.2.16/28"),
+		),
 		domains: newDomainTree(
 			makeTestDomain("example.com"),
 			makeTestDomain("example.gov"),
@@ -128,7 +145,7 @@ func TestMarshalTaggedStruct(t *testing.T) {
 	n, err := marshalValue(reflect.ValueOf(v), b[:])
 	assertBytesBuffer(t, "marshalValue(TestTaggedStruct)", err, b[:], n,
 		1, 0,
-		10, 0,
+		11, 0,
 		5, 'B', 'o', 'o', 'l', '2', 0,
 		4, 'f', 'l', 'a', 'g', 1,
 		1, 's', 2, 4, 0, 't', 'e', 's', 't',
@@ -138,7 +155,11 @@ func TestMarshalTaggedStruct(t *testing.T) {
 		7, 'A', 'd', 'd', 'r', 'e', 's', 's', 5, 1, 2, 3, 4,
 		3, 'n', 'e', 't', 7, 32, 1, 2, 3, 4,
 		2, 's', 's', 10, 3, 0, 3, 0, 'o', 'n', 'e', 3, 0, 't', 'w', 'o', 5, 0, 't', 'h', 'r', 'e', 'e',
-		2, 's', 'd', 11, 3, 0,
+		2, 's', 'n', 11, 3, 0,
+		216, 192, 0, 2, 0,
+		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		220, 192, 0, 2, 16,
+		2, 's', 'd', 12, 3, 0,
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
 		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
@@ -164,7 +185,7 @@ func TestMarshalInvalidStructs(t *testing.T) {
 }
 
 func TestMakeRequest(t *testing.T) {
-	var b [182]byte
+	var b [221]byte
 
 	m, err := makeRequest(pb.Msg{Body: testRequestBuffer}, b[:])
 	assertBytesBuffer(t, "makeRequest(pb.Msg)", err, m.Body, len(m.Body), testRequestBuffer...)
@@ -187,6 +208,11 @@ func TestMakeRequest(t *testing.T) {
 		pdp.MakeNetworkAssignment("Network", makeTestNetwork("1.2.3.4/32")),
 		pdp.MakeDomainAssignment("Domain", makeTestDomain("example.com")),
 		pdp.MakeSetOfStringsAssignment("Strings", newStrTree("one", "two", "three")),
+		pdp.MakeSetOfNetworksAssignment("Networks", newIPTree(
+			makeTestNetwork("192.0.2.0/24"),
+			makeTestNetwork("2001:db8::/32"),
+			makeTestNetwork("192.0.2.16/28"),
+		)),
 		pdp.MakeSetOfDomainsAssignment("Domains", newDomainTree(
 			makeTestDomain("example.com"),
 			makeTestDomain("example.gov"),
@@ -223,10 +249,19 @@ func newStrTree(args ...string) *strtree.Tree {
 	return t
 }
 
+func newIPTree(args ...*net.IPNet) *iptree.Tree {
+	t := iptree.NewTree()
+	for i, n := range args {
+		t.InplaceInsertNet(n, i)
+	}
+
+	return t
+}
+
 func newDomainTree(args ...domain.Name) *domaintree.Node {
 	t := new(domaintree.Node)
-	for i, s := range args {
-		t.InplaceInsert(s, i)
+	for i, d := range args {
+		t.InplaceInsert(d, i)
 	}
 
 	return t
