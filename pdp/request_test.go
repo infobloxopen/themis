@@ -693,6 +693,42 @@ func TestGetRequestSetOfDomainsValue(t *testing.T) {
 	}
 }
 
+func TestGetRequestListOfStringsValue(t *testing.T) {
+	testWireListOfStringsValue := []byte{
+		3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
+	}
+
+	v, n, err := getRequestListOfStringsValue(testWireListOfStringsValue)
+	if err != nil {
+		t.Error(err)
+	} else if n != len(testWireListOfStringsValue) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireListOfStringsValue), n)
+	} else {
+		assertStrings(v, []string{"one", "two", "three"}, "getRequestListOfStringsValue", t)
+	}
+
+	v, _, err = getRequestListOfStringsValue([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got list of strings %#v", v)
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, _, err = getRequestListOfStringsValue([]byte{
+		3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got list of strings %#v", v)
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
 func TestGetRequestAttribute(t *testing.T) {
 	testWireBooleanFalseAttribute := []byte{
 		2, 'n', 'o', byte(requestWireTypeBooleanFalse),
@@ -1029,6 +1065,34 @@ func TestGetRequestAttribute(t *testing.T) {
 		}
 	}
 
+	testWireListOfStringsAttribute := []byte{
+		15, 'l', 'i', 's', 't', ' ', 'o', 'f', ' ', 's', 't', 'r', 'i', 'n', 'g', 's',
+		byte(requestWireTypeListOfStrings), 3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
+	}
+	name, v, n, err = getRequestAttribute(testWireListOfStringsAttribute)
+	if err != nil {
+		t.Error(err)
+	} else if n != len(testWireListOfStringsAttribute) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireListOfStringsAttribute), n)
+	} else if name != "list of strings" {
+		t.Errorf("expected %q as attribute name but got %q", "list of strings", name)
+	} else if vt := v.GetResultType(); vt != TypeListOfStrings {
+		t.Errorf("expected value of %q type but got %q %s", TypeListOfStrings, vt, v.describe())
+	} else {
+		s, err := v.Serialize()
+		if err != nil {
+			t.Error(err)
+		} else {
+			e := "\"one\",\"two\",\"three\""
+			if s != e {
+				t.Errorf("expected %q but got %q", e, s)
+			}
+		}
+	}
+
 	name, v, _, err = getRequestAttribute([]byte{})
 	if err == nil {
 		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
@@ -1052,16 +1116,6 @@ func TestGetRequestAttribute(t *testing.T) {
 		t.Errorf("expected *requestAttributeUnmarshallingTypeError but got attribute %q = %s", name, v.describe())
 	} else if _, ok := err.(*requestAttributeUnmarshallingTypeError); !ok {
 		t.Errorf("expected *requestAttributeUnmarshallingTypeError but got %T (%s)", err, err)
-	}
-
-	name, v, _, err = getRequestAttribute([]byte{
-		7, 'n', 'o', 't', 'i', 'm', 'p', 'l', byte(requestWireTypeListOfStrings),
-	})
-	if err == nil {
-		t.Errorf("expected *requestAttributeUnmarshallingNotImplemented error but got attribute %q = %s",
-			name, v.describe())
-	} else if _, ok := err.(*requestAttributeUnmarshallingNotImplemented); !ok {
-		t.Errorf("expected *requestAttributeUnmarshallingNotImplemented error but got %T (%s)", err, err)
 	}
 
 	name, v, _, err = getRequestAttribute([]byte{
@@ -1166,6 +1220,18 @@ func TestGetRequestAttribute(t *testing.T) {
 		3, 0,
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	name, v, _, err = getRequestAttribute([]byte{
+		15, 'l', 'i', 's', 't', ' ', 'o', 'f', ' ', 's', 't', 'r', 'i', 'n', 'g', 's',
+		byte(requestWireTypeListOfStrings), 3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
 	})
 	if err == nil {
 		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
@@ -1319,6 +1385,15 @@ func TestPutRequestAttribute(t *testing.T) {
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
 		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+	)
+
+	n, err = putRequestAttribute(b[:36], "list of strings", MakeListOfStringsValue([]string{"one", "two", "three"}))
+	assertRequestBytesBuffer(t, "putRequestAttribute(list of strings)", err, b[:36], n,
+		15, 'l', 'i', 's', 't', ' ', 'o', 'f', ' ', 's', 't', 'r', 'i', 'n', 'g', 's',
+		byte(requestWireTypeListOfStrings), 3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
 	)
 
 	n, err = putRequestAttribute(b[:], "undefined", UndefinedValue)
@@ -1586,6 +1661,32 @@ func TestPutRequestAttributeSetOfDomains(t *testing.T) {
 		makeTestDomain("example.gov"),
 		makeTestDomain("www.example.com"),
 	))
+	if err == nil {
+		t.Errorf("expected no data put to small buffer but got %d", n)
+	} else if _, ok := err.(*requestBufferOverflowError); !ok {
+		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestPutRequestAttributeListOfStrings(t *testing.T) {
+	var b [28]byte
+
+	n, err := putRequestAttributeListOfStrings(b[:], "strings", []string{"one", "two", "three"})
+	assertRequestBytesBuffer(t, "putRequestAttributeListOfStrings", err, b[:], n,
+		7, 's', 't', 'r', 'i', 'n', 'g', 's', byte(requestWireTypeListOfStrings), 3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
+	)
+
+	n, err = putRequestAttributeListOfStrings(b[:5], "strings", []string{"one", "two", "three"})
+	if err == nil {
+		t.Errorf("expected no data put to small buffer but got %d", n)
+	} else if _, ok := err.(*requestBufferOverflowError); !ok {
+		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
+	}
+
+	n, err = putRequestAttributeListOfStrings(b[:13], "strings", []string{"one", "two", "three"})
 	if err == nil {
 		t.Errorf("expected no data put to small buffer but got %d", n)
 	} else if _, ok := err.(*requestBufferOverflowError); !ok {
@@ -1891,6 +1992,47 @@ func TestPutRequestSetOfDomainsValue(t *testing.T) {
 		t.Errorf("expected no data put from too big set but got %d", n)
 	} else if _, ok := err.(*requestTooLongCollectionValueError); !ok {
 		t.Errorf("expected *requestTooLongCollectionValueError but got %T (%s)", err, err)
+	}
+}
+
+func TestPutRequestListOfStringsValue(t *testing.T) {
+	var b [20]byte
+
+	n, err := putRequestListOfStringsValue(b[:], []string{"one", "two", "three"})
+	assertRequestBytesBuffer(t, "putRequestListOfStringsValue", err, b[:], n,
+		byte(requestWireTypeListOfStrings), 3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
+	)
+
+	n, err = putRequestListOfStringsValue(nil, []string{"one", "two", "three"})
+	assertRequestBufferOverflow(t, "putRequestListOfStringsValue", err, n)
+
+	n, err = putRequestListOfStringsValue(b[:10], []string{"one", "two", "three"})
+	if err == nil {
+		t.Errorf("expected no data put to small buffer but got %d", n)
+	} else if _, ok := err.(*requestBufferOverflowError); !ok {
+		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
+	}
+
+	ls := make([]string, math.MaxUint16+1)
+	for i := range ls {
+		ls[i] = strconv.Itoa(i)
+	}
+
+	n, err = putRequestListOfStringsValue(b[:], ls)
+	if err == nil {
+		t.Errorf("expected no data put from too big list but got %d", n)
+	} else if _, ok := err.(*requestTooLongCollectionValueError); !ok {
+		t.Errorf("expected *requestTooLongCollectionValueError but got %T (%s)", err, err)
+	}
+
+	n, err = putRequestListOfStringsValue(b[:], []string{"one", "two", string(make([]byte, math.MaxUint16+1))})
+	if err == nil {
+		t.Errorf("expected no data put with too big list of strings element but got %d", n)
+	} else if _, ok := err.(*requestTooLongStringValueError); !ok {
+		t.Errorf("expected *requestTooLongStringValueError but got %T (%s)", err, err)
 	}
 }
 

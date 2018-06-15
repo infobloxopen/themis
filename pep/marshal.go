@@ -54,6 +54,7 @@ var (
 	strtreeType     = reflect.TypeOf((*strtree.Tree)(nil))
 	iptreeType      = reflect.TypeOf((*iptree.Tree)(nil))
 	domaintreeType  = reflect.TypeOf((*domaintree.Node)(nil))
+	stringsType     = reflect.TypeOf([]string(nil))
 
 	attrTypeByType = map[reflect.Type]pdp.Type{
 		boolType:        pdp.TypeBoolean,
@@ -77,6 +78,7 @@ var (
 		strtreeType:     pdp.TypeSetOfStrings,
 		iptreeType:      pdp.TypeSetOfNetworks,
 		domaintreeType:  pdp.TypeSetOfDomains,
+		stringsType:     pdp.TypeListOfStrings,
 	}
 
 	attrTypeByTag = map[string]pdp.Type{
@@ -90,6 +92,7 @@ var (
 		pdp.TypeSetOfStrings.GetKey():  pdp.TypeSetOfStrings,
 		pdp.TypeSetOfNetworks.GetKey(): pdp.TypeSetOfNetworks,
 		pdp.TypeSetOfDomains.GetKey():  pdp.TypeSetOfDomains,
+		pdp.TypeListOfStrings.GetKey(): pdp.TypeListOfStrings,
 	}
 
 	typeByAttrType = map[pdp.Type]map[reflect.Type]struct{}{
@@ -134,6 +137,9 @@ var (
 		},
 		pdp.TypeSetOfDomains: {
 			domaintreeType: {},
+		},
+		pdp.TypeListOfStrings: {
+			stringsType: {},
 		},
 	}
 

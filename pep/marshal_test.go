@@ -35,6 +35,7 @@ type TestStruct struct {
 	Strings  *strtree.Tree
 	Networks *iptree.Tree
 	Domains  *domaintree.Node
+	StrList  []string
 }
 
 type TestTaggedStruct struct {
@@ -50,6 +51,7 @@ type TestTaggedStruct struct {
 	strings  *strtree.Tree    `pdp:"ss,set of strings"`
 	networks *iptree.Tree     `pdp:"sn,set of networks"`
 	domains  *domaintree.Node `pdp:"sd,set of domains"`
+	strlist  []string         `pdp:"ls,list of strings"`
 }
 
 type TestInvalidStruct1 struct {
@@ -84,11 +86,12 @@ var (
 			makeTestDomain("example.gov"),
 			makeTestDomain("www.example.com"),
 		),
+		StrList: []string{"one", "two", "three"},
 	}
 
 	testRequestBuffer = []byte{
 		1, 0,
-		10, 0,
+		11, 0,
 		4, 'B', 'o', 'o', 'l', 1,
 		3, 'I', 'n', 't', 3, 5, 0, 0, 0, 0, 0, 0, 0,
 		5, 'F', 'l', 'o', 'a', 't', 4, 0, 0, 0, 0, 0, 92, 129, 64,
@@ -106,18 +109,22 @@ var (
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
 		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+		7, 'S', 't', 'r', 'L', 'i', 's', 't', 13, 3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
 	}
 )
 
 func TestMarshalUntaggedStruct(t *testing.T) {
-	var b [221]byte
+	var b [249]byte
 
 	n, err := marshalValue(reflect.ValueOf(testStruct), b[:])
 	assertBytesBuffer(t, "marshalValue(TestStruct)", err, b[:], n, testRequestBuffer...)
 }
 
 func TestMarshalTaggedStruct(t *testing.T) {
-	var b [192]byte
+	var b [215]byte
 
 	v := TestTaggedStruct{
 		bool1:   true,
@@ -140,12 +147,13 @@ func TestMarshalTaggedStruct(t *testing.T) {
 			makeTestDomain("example.gov"),
 			makeTestDomain("www.example.com"),
 		),
+		strlist: []string{"one", "two", "three"},
 	}
 
 	n, err := marshalValue(reflect.ValueOf(v), b[:])
 	assertBytesBuffer(t, "marshalValue(TestTaggedStruct)", err, b[:], n,
 		1, 0,
-		11, 0,
+		12, 0,
 		5, 'B', 'o', 'o', 'l', '2', 0,
 		4, 'f', 'l', 'a', 'g', 1,
 		1, 's', 2, 4, 0, 't', 'e', 's', 't',
@@ -163,6 +171,10 @@ func TestMarshalTaggedStruct(t *testing.T) {
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
 		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+		2, 'l', 's', 13, 3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
 	)
 }
 
@@ -185,7 +197,7 @@ func TestMarshalInvalidStructs(t *testing.T) {
 }
 
 func TestMakeRequest(t *testing.T) {
-	var b [221]byte
+	var b [249]byte
 
 	m, err := makeRequest(pb.Msg{Body: testRequestBuffer}, b[:])
 	assertBytesBuffer(t, "makeRequest(pb.Msg)", err, m.Body, len(m.Body), testRequestBuffer...)
@@ -218,6 +230,7 @@ func TestMakeRequest(t *testing.T) {
 			makeTestDomain("example.gov"),
 			makeTestDomain("www.example.com"),
 		)),
+		pdp.MakeListOfStringsAssignment("StrList", []string{"one", "two", "three"}),
 	}, b[:])
 	assertBytesBuffer(t, "makeRequest(assignments)", err, m.Body, len(m.Body), testRequestBuffer...)
 }

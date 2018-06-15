@@ -163,7 +163,8 @@ func UnmarshalResponse(b []byte, out []AttributeAssignment) (int, int, error) {
 // github.com/infobloxopen/go-trees/strtree package, TypeSetOfNetworks -
 // *iptree.Tree from github.com/infobloxopen/go-trees/iptree package,
 // TypeSetOfDomains - *domaintree.Node from
-// github.com/infobloxopen/go-trees/domaintree package.
+// github.com/infobloxopen/go-trees/domaintree package, TypeListOfStrings -
+// []string.
 func UnmarshalResponseToReflection(b []byte, f func(string, Type) (reflect.Value, error)) error {
 	off, err := checkRequestVersion(b)
 	if err != nil {
@@ -368,6 +369,9 @@ func putAttributesFromReflection(b []byte, c int, f func(i int) (string, Type, r
 
 		case TypeSetOfDomains:
 			n, err = putRequestAttributeSetOfDomains(b[off:], id, getSetOfDomains(v))
+
+		case TypeListOfStrings:
+			n, err = putRequestAttributeListOfStrings(b[off:], id, getListOfStrings(v))
 		}
 
 		if err != nil {
@@ -422,10 +426,6 @@ func getAttributesToReflection(b []byte, f func(string, Type) (reflect.Value, er
 			return bindError(err, id)
 		}
 		b = b[n:]
-
-		if t == requestWireTypeListOfStrings {
-			return bindError(newRequestAttributeUnmarshallingNotImplemented(t), id)
-		}
 
 		if t < 0 || t >= len(builtinTypeByWire) {
 			return bindError(newRequestAttributeUnmarshallingTypeError(t), id)
@@ -552,6 +552,16 @@ func getAttributesToReflection(b []byte, f func(string, Type) (reflect.Value, er
 			b = b[n:]
 
 			err = setSetOfDomains(v, sd)
+
+		case requestWireTypeListOfStrings:
+			var ls []string
+			ls, n, err = getRequestListOfStringsValue(b)
+			if err != nil {
+				return bindError(err, id)
+			}
+			b = b[n:]
+
+			err = setListOfStrings(v, ls)
 		}
 
 		if err != nil {
