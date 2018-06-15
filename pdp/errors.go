@@ -173,10 +173,12 @@ const (
 	requestUnmarshalSetOfNetworksTypeErrorID      = 156
 	requestUnmarshalSetOfDomainsConstErrorID      = 157
 	requestUnmarshalSetOfDomainsTypeErrorID       = 158
-	responseEffectErrorID                         = 159
-	ResponseServerErrorID                         = 160
-	policyCalculationErrorID                      = 161
-	obligationCalculationErrorID                  = 162
+	requestUnmarshalListOfStringsConstErrorID     = 159
+	requestUnmarshalListOfStringsTypeErrorID      = 160
+	responseEffectErrorID                         = 161
+	ResponseServerErrorID                         = 162
+	policyCalculationErrorID                      = 163
+	obligationCalculationErrorID                  = 164
 )
 
 type externalError struct {
@@ -2657,6 +2659,36 @@ func newRequestUnmarshalSetOfDomainsTypeError(v reflect.Value) *requestUnmarshal
 
 func (e *requestUnmarshalSetOfDomainsTypeError) Error() string {
 	return e.errorf("Can't unmarshal set of domains to %s", e.v.Type())
+}
+
+type requestUnmarshalListOfStringsConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalListOfStringsConstError(v reflect.Value) *requestUnmarshalListOfStringsConstError {
+	return &requestUnmarshalListOfStringsConstError{
+		errorLink: errorLink{id: requestUnmarshalListOfStringsConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalListOfStringsConstError) Error() string {
+	return e.errorf("Can't unmarshal list of strings to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalListOfStringsTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalListOfStringsTypeError(v reflect.Value) *requestUnmarshalListOfStringsTypeError {
+	return &requestUnmarshalListOfStringsTypeError{
+		errorLink: errorLink{id: requestUnmarshalListOfStringsTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalListOfStringsTypeError) Error() string {
+	return e.errorf("Can't unmarshal list of strings to %s", e.v.Type())
 }
 
 type responseEffectError struct {

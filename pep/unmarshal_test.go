@@ -68,6 +68,7 @@ type TestTaggedAllTypesResponseStruct struct {
 	Strings    *strtree.Tree    `pdp:"ssa,set of strings"`
 	Networks   *iptree.Tree     `pdp:"sna,set of networks"`
 	Domains    *domaintree.Node `pdp:"sda,set of domains"`
+	StrList    []string         `pdp:"lsa,list of strings"`
 }
 
 type TestInvalidResponseStruct1 struct {
@@ -117,7 +118,7 @@ var (
 	TestTaggedAllTypesResponse = []byte{
 		1, 0, 3,
 		11, 0, 'T', 'e', 's', 't', ' ', 'E', 'r', 'r', 'o', 'r', '!',
-		23, 0,
+		26, 0,
 		3, 'b', 'a', 'f', 0,
 		3, 'b', 'a', 't', 1,
 		2, 's', 'a', 2, 4, 0, 't', 'e', 's', 't',
@@ -141,6 +142,15 @@ var (
 		3, 'd', 'a', 's', 9, 11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
 		3, 'd', 'a', 'd', 9, 11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
 		3, 's', 's', 'a', 10, 3, 0, 3, 0, 'o', 'n', 'e', 3, 0, 't', 'w', 'o', 5, 0, 't', 'h', 'r', 'e', 'e',
+		3, 's', 'n', 'a', 11, 3, 0,
+		216, 192, 0, 2, 0,
+		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		220, 192, 0, 2, 16,
+		3, 's', 'd', 'a', 12, 3, 0,
+		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
+		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+		3, 'l', 's', 'a', 13, 3, 0, 3, 0, 'o', 'n', 'e', 3, 0, 't', 'w', 'o', 5, 0, 't', 'h', 'r', 'e', 'e',
 	}
 )
 
@@ -221,6 +231,17 @@ func TestUnmarshalTaggedStruct(t *testing.T) {
 				DomainS:    "example.com",
 				DomainD:    makeTestDomain("example.com"),
 				Strings:    newStrTree("one", "two", "three"),
+				Networks: newIPTree(
+					makeTestNetwork("192.0.2.0/24"),
+					makeTestNetwork("2001:db8::/32"),
+					makeTestNetwork("192.0.2.16/28"),
+				),
+				Domains: newDomainTree(
+					makeTestDomain("example.com"),
+					makeTestDomain("example.gov"),
+					makeTestDomain("www.example.com"),
+				),
+				StrList: []string{"one", "two", "three"},
 			},
 		)
 	}
@@ -444,7 +465,8 @@ func assertTestTaggedAllTypesStruct(t *testing.T, v, e TestTaggedAllTypesRespons
 		v.DomainD.String() != e.DomainD.String() ||
 		!setOfStringsEqual(v.Strings, e.Strings) ||
 		!setOfNetworksEqual(v.Networks, e.Networks) ||
-		!setOfDomainsEqual(v.Domains, e.Domains) {
+		!setOfDomainsEqual(v.Domains, e.Domains) ||
+		!listOfStringsEqual(v.StrList, e.StrList) {
 		t.Errorf("expected:\n%v\nbut got:\n%v\n",
 			SprintfTestTaggedAllTypesStruct(e),
 			SprintfTestTaggedAllTypesStruct(v),
@@ -513,7 +535,8 @@ func SprintfTestTaggedAllTypesStruct(v TestTaggedAllTypesResponseStruct) string 
 			"\tDomainD...: %q\n"+
 			"\tStrings...: %v\n"+
 			"\tNetworks..: %v\n"+
-			"\tDomains...: %v\n",
+			"\tDomains...: %v\n"+
+			"\tStrList...: %v\n",
 		v.Effect, v.Reason, v.BoolFalse, v.BoolTrue, v.String,
 		v.Int, v.Int8, v.Int16, v.Int32, v.Int64,
 		v.Uint, v.Uint8, v.Uint16, v.Uint32, v.Uint64,
@@ -523,6 +546,7 @@ func SprintfTestTaggedAllTypesStruct(v TestTaggedAllTypesResponseStruct) string 
 		pdp.SortSetOfStrings(v.Strings),
 		makeStringFromNetworks(v.Networks),
 		pdp.SortSetOfDomains(v.Domains),
+		v.StrList,
 	)
 }
 
@@ -581,6 +605,20 @@ func setOfDomainsEqual(v, e *domaintree.Node) bool {
 
 	for i, d := range sd {
 		if d != se[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func listOfStringsEqual(v, e []string) bool {
+	if len(v) != len(e) {
+		return false
+	}
+
+	for i, s := range v {
+		if s != e[i] {
 			return false
 		}
 	}

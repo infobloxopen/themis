@@ -638,6 +638,51 @@ func TestSetSetOfDomains(t *testing.T) {
 	}
 }
 
+func TestGetListOfStrings(t *testing.T) {
+	eLs := []string{"one", "two", "three"}
+
+	ls := getListOfStrings(reflect.ValueOf(eLs))
+	assertStrings(ls, eLs, "getListOfStrings", t)
+
+	ls = getListOfStrings(reflect.ValueOf(nil))
+	if ls != nil {
+		t.Errorf("expected nil but got %#v", ls)
+	}
+
+	assertPanicWithError(t, func() {
+		ls = getListOfStrings(reflect.ValueOf(true))
+	}, "can't marshal %s as list of strings value", reflect.TypeOf(true))
+}
+
+func TestSetListOfStrings(t *testing.T) {
+	eLs := []string{"one", "two", "three"}
+	var ls []string
+	if err := setListOfStrings(reflect.Indirect(reflect.ValueOf(&ls)), eLs); err != nil {
+		t.Error(err)
+	} else {
+		assertStrings(ls, eLs, "setListOfStrings", t)
+	}
+
+	if err := setListOfStrings(reflect.ValueOf(nil), eLs); err != nil {
+		t.Error(err)
+	}
+
+	err := setListOfStrings(reflect.ValueOf(ls), eLs)
+	if err == nil {
+		t.Errorf("expected *requestUnmarshalListOfStringsConstError but got %#v", ls)
+	} else if _, ok := err.(*requestUnmarshalListOfStringsConstError); !ok {
+		t.Errorf("expected *requestUnmarshalListOfStringsConstError but got %T (%s)", err, err)
+	}
+
+	var n int64
+	err = setListOfStrings(reflect.Indirect(reflect.ValueOf(&n)), eLs)
+	if err == nil {
+		t.Errorf("expected *requestUnmarshalListOfStringsTypeError but got %d", n)
+	} else if _, ok := err.(*requestUnmarshalListOfStringsTypeError); !ok {
+		t.Errorf("expected *requestUnmarshalListOfStringsTypeError but got %T (%s)", err, err)
+	}
+}
+
 func assertUnmarshalIntegerOverflowError(t *testing.T, err error, v reflect.Value) {
 	if err == nil {
 		t.Errorf("expected *requestUnmarshalIntegerOverflowError but got value %#v", v)

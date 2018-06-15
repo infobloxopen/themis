@@ -65,6 +65,7 @@ var (
 		TypeSetOfStrings,
 		TypeSetOfNetworks,
 		TypeSetOfDomains,
+		TypeListOfStrings,
 	}
 )
 
@@ -100,8 +101,9 @@ func MarshalRequestAssignments(b []byte, in []AttributeAssignment) (int, error) 
 // *strtree.Tree from github.com/infobloxopen/go-trees/strtree package,
 // TypeSetOfNetworks - *iptree.Node from
 // github.com/infobloxopen/go-trees/iptree, TypeSetOfDomains - *domaintree.Node
-// from github.com/infobloxopen/go-trees/domaintree. The function fills given
-// buffer and returns number of bytes written.
+// from github.com/infobloxopen/go-trees/domaintree, TypeListOfStrings -
+// []string. The function fills given buffer and returns number of bytes
+// written.
 func MarshalRequestReflection(b []byte, c int, f func(i int) (string, Type, reflect.Value, error)) (int, error) {
 	off, err := putRequestVersion(b)
 	if err != nil {
@@ -232,6 +234,10 @@ func putRequestAttribute(b []byte, name string, value AttributeValue) (int, erro
 	case TypeSetOfDomains:
 		v, _ := value.setOfDomains()
 		return putRequestAttributeSetOfDomains(b, name, v)
+
+	case TypeListOfStrings:
+		v, _ := value.listOfStrings()
+		return putRequestAttributeListOfStrings(b, name, v)
 	}
 
 	return 0, newRequestAttributeMarshallingNotImplemented(t)
@@ -251,9 +257,6 @@ func getRequestAttribute(b []byte) (string, AttributeValue, int, error) {
 	off += n
 
 	switch t {
-	case requestWireTypeListOfStrings:
-		return "", UndefinedValue, 0, bindError(newRequestAttributeUnmarshallingNotImplemented(t), name)
-
 	case requestWireTypeBooleanFalse:
 		return name, MakeBooleanValue(false), off, nil
 
@@ -347,6 +350,14 @@ func getRequestAttribute(b []byte) (string, AttributeValue, int, error) {
 		}
 
 		return name, MakeSetOfDomainsValue(sd), off + n, nil
+
+	case requestWireTypeListOfStrings:
+		ls, n, err := getRequestListOfStringsValue(b[off:])
+		if err != nil {
+			return "", UndefinedValue, 0, bindError(bindError(err, "value"), name)
+		}
+
+		return name, MakeListOfStringsValue(ls), off + n, nil
 	}
 
 	return "", UndefinedValue, 0, bindError(newRequestAttributeUnmarshallingTypeError(t), name)
@@ -1002,4 +1013,79 @@ func getRequestSetOfDomainsValue(b []byte) (*domaintree.Node, int, error) {
 	}
 
 	return sd, off, nil
+}
+
+func putRequestAttributeListOfStrings(b []byte, name string, value []string) (int, error) {
+	off, err := putRequestAttributeName(b, name)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestListOfStringsValue(b[off:], value)
+	if err != nil {
+		return 0, err
+	}
+
+	return off + n, err
+}
+
+func putRequestListOfStringsValue(b []byte, value []string) (int, error) {
+	off, err := putRequestAttributeType(b, requestWireTypeListOfStrings)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(value) > math.MaxUint16 {
+		return 0, newRequestTooLongCollectionValueError(TypeListOfStrings, len(value))
+	}
+
+	total := 2 * (len(value) + 1)
+	for i, s := range value {
+		if len(s) > math.MaxUint16 {
+			return 0, bindErrorf(newRequestTooLongStringValueError(s), "%d", i+1)
+		}
+
+		total += len(s)
+	}
+
+	if len(b[off:]) < total {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	binary.LittleEndian.PutUint16(b[off:], uint16(len(value)))
+	off += 2
+
+	for _, s := range value {
+		binary.LittleEndian.PutUint16(b[off:], uint16(len(s)))
+		off += 2
+
+		copy(b[off:], s)
+		off += len(s)
+	}
+
+	return off, nil
+}
+
+func getRequestListOfStringsValue(b []byte) ([]string, int, error) {
+	if len(b) < 2 {
+		return nil, 0, newRequestBufferUnderflowError()
+	}
+
+	count := int(binary.LittleEndian.Uint16(b))
+	off := 2
+
+	ls := make([]string, count)
+
+	for i := 0; i < count; i++ {
+		s, n, err := getRequestStringValue(b[off:])
+		if err != nil {
+			return nil, 0, bindErrorf(err, "%d", i+1)
+		}
+
+		off += n
+
+		ls[i] = s
+	}
+
+	return ls, off, nil
 }

@@ -24,6 +24,7 @@ var (
 	reflectTypeStrtree    = reflect.TypeOf((*strtree.Tree)(nil))
 	reflectTypeIPTree     = reflect.TypeOf((*iptree.Tree)(nil))
 	reflectTypeDomaintree = reflect.TypeOf((*domaintree.Node)(nil))
+	reflectTypeStrings    = reflect.TypeOf([]string(nil))
 )
 
 func setEffect(v reflect.Value, effect int) error {
@@ -404,5 +405,40 @@ func setSetOfDomains(v reflect.Value, sd *domaintree.Node) error {
 	}
 
 	v.Set(reflect.ValueOf(sd))
+	return nil
+}
+
+func getListOfStrings(v reflect.Value) []string {
+	if v == reflectValueNil {
+		return nil
+	}
+
+	t := v.Type()
+	if t == reflectTypeStrings {
+		out := make([]string, v.Len())
+		for i := range out {
+			out[i] = v.Index(i).String()
+		}
+
+		return out
+	}
+
+	panic(fmt.Errorf("can't marshal %s as list of strings value", t))
+}
+
+func setListOfStrings(v reflect.Value, ls []string) error {
+	if v == reflectValueNil {
+		return nil
+	}
+
+	if !v.CanSet() {
+		return newRequestUnmarshalListOfStringsConstError(v)
+	}
+
+	if v.Type() != reflectTypeStrings {
+		return newRequestUnmarshalListOfStringsTypeError(v)
+	}
+
+	v.Set(reflect.ValueOf(ls))
 	return nil
 }

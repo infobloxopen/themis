@@ -1354,6 +1354,22 @@ errors:
   args:
   - field: v.Type()
 
+- id: requestUnmarshalListOfStringsConstError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal list of strings to unchengeable %s"
+  args:
+  - field: v.Type()
+
+- id: requestUnmarshalListOfStringsTypeError
+  fields:
+  - id: v
+    type: reflect.Value
+  msg: "Can't unmarshal list of strings to %s"
+  args:
+  - field: v.Type()
+
 - id: responseEffectError
   fields:
   - id: effect

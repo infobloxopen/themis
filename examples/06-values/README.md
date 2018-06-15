@@ -60,6 +60,18 @@ $ pepcli -i values.requests.yaml test
       type: "set of networks"
       value: "\"192.0.2.0/28\",\"192.0.2.16/28\""
 
+- effect: Permit
+  obligation:
+    - id: "s"
+      type: "string"
+      value: "first-rule"
+
+- effect: Permit
+  obligation:
+    - id: "s"
+      type: "string"
+      value: "second-rule"
+
 ```
 
 PDP logs:
@@ -102,5 +114,19 @@ DEBU[0003] Request context                               context="attributes:
 - s.(String): \"third\""
 DEBU[0003] Response                                      effect=Permit obligations="attributes:
 - sn.(set of networks): \"\\\"192.0.2.0/28\\\",\\\"192.0.2.16/28\\\"\"" reason="<nil>"
+DEBU[0003] Request context                               context="attributes:
+- d.(Domain): domain(example.net)
+- s.(String): \"first-rule\"
+- c.(Network): 192.0.2.2/31
+- a.(Address): 192.0.2.33"
+DEBU[0003] Response                                      effect=Permit obligations="attributes:
+- s.(string): \"first-rule\"" reason="<nil>"
+DEBU[0003] Request context                               context="attributes:
+- s.(String): \"second-rule\"
+- c.(Network): 192.0.2.2/31
+- a.(Address): 192.0.2.33
+- d.(Domain): domain(example.net)"
+DEBU[0003] Response                                      effect=Permit obligations="attributes:
+- s.(string): \"second-rule\"" reason="<nil>"
 ...
 ```

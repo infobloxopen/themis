@@ -36,13 +36,13 @@ requests:
   d: example.net
 
 # Goes to mapper by list of strings (and matches first rule)
-# - s: first-rule
-#   c: 192.0.2.2/31
-#   a: 192.0.2.33
-#   d: example.net
+- s: first-rule
+  c: 192.0.2.2/31
+  a: 192.0.2.33
+  d: example.net
 
 # Goes to mapper by list of strings (and matches second rule)
-# - s: second-rule
-#   c: 192.0.2.2/31
-#   a: 192.0.2.33
-#   d: example.net
+- s: second-rule
+  c: 192.0.2.2/31
+  a: 192.0.2.33
+  d: example.net
