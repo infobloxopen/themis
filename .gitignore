@@ -27,3 +27,6 @@ _testmain.go
 # Coverage files
 coverage.txt
 cover.out
+
+# Ignore above patterns for /vendor folder. The pattern must be the last one in the file
+!/vendor/**
