@@ -1,6 +1,9 @@
 package pdp
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestFunctionConcat(t *testing.T) {
 	ss := MakeSetOfStringsValue(newStrTree(
@@ -110,4 +113,87 @@ func TestFunctionConcat(t *testing.T) {
 	if m != nil {
 		t.Errorf("expected nothing but got %#v", m)
 	}
+}
+
+func TestFunctionConcatWithMissingValues(t *testing.T) {
+	ctx, err := NewContext(nil, 0, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ls1 := MakeListOfStringsValue([]string{"1", "2", "3"})
+	ls2 := MakeListOfStringsValue([]string{"A", "B", "C"})
+	mve := failListOfStringsExpr{err: newMissingValueError()}
+	fe := failListOfStringsExpr{err: fmt.Errorf("test error")}
+
+	v, err := makeFunctionConcat([]Expression{ls1, ls2}).Calculate(ctx)
+	if err != nil {
+		t.Error(err)
+	} else {
+		s, err := v.Serialize()
+		if err != nil {
+			t.Errorf("Expected no error but got: %s", err)
+		} else {
+			e := "\"1\",\"2\",\"3\",\"A\",\"B\",\"C\""
+			if e != s {
+				t.Errorf("Expected list of strings %q but got %q", e, s)
+			}
+		}
+	}
+
+	v, err = makeFunctionConcat([]Expression{mve, ls2}).Calculate(ctx)
+	if err != nil {
+		t.Error(err)
+	} else {
+		s, err := v.Serialize()
+		if err != nil {
+			t.Errorf("Expected no error but got: %s", err)
+		} else {
+			e := "\"A\",\"B\",\"C\""
+			if e != s {
+				t.Errorf("Expected list of strings %q but got %q", e, s)
+			}
+		}
+	}
+
+	v, err = makeFunctionConcat([]Expression{ls1, mve}).Calculate(ctx)
+	if err != nil {
+		t.Error(err)
+	} else {
+		s, err := v.Serialize()
+		if err != nil {
+			t.Errorf("Expected no error but got: %s", err)
+		} else {
+			e := "\"1\",\"2\",\"3\""
+			if e != s {
+				t.Errorf("Expected list of strings %q but got %q", e, s)
+			}
+		}
+	}
+
+	v, err = makeFunctionConcat([]Expression{mve, mve}).Calculate(ctx)
+	if err == nil {
+		t.Errorf("Expected *MissingValueError but got value %s", v.describe())
+	} else if _, ok := err.(*MissingValueError); !ok {
+		t.Errorf("Expected *MissingValueError but got %T: %s", err, err)
+	}
+
+	v, err = makeFunctionConcat([]Expression{ls1, fe}).Calculate(ctx)
+	if err == nil {
+		t.Errorf("Expected *externalError but got value %s", v.describe())
+	} else if _, ok := err.(*externalError); !ok {
+		t.Errorf("Expected *externalError but got %T: %s", err, err)
+	}
+}
+
+type failListOfStringsExpr struct {
+	err error
+}
+
+func (f failListOfStringsExpr) GetResultType() Type {
+	return TypeListOfStrings
+}
+
+func (f failListOfStringsExpr) Calculate(ctx *Context) (AttributeValue, error) {
+	return UndefinedValue, f.err
 }

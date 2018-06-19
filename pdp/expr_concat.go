@@ -22,12 +22,21 @@ func (f functionConcat) describe() string {
 func (f functionConcat) Calculate(ctx *Context) (AttributeValue, error) {
 	var err error
 	out := []string{}
+	missCount := 0
 
 	for i, arg := range f.args {
 		out, err = appendConcatArg(out, arg, ctx)
 		if err != nil {
-			return UndefinedValue, bindError(bindErrorf(err, "%d", i+1), f.describe())
+			if _, ok := err.(*MissingValueError); !ok {
+				return UndefinedValue, bindError(bindErrorf(err, "%d", i+1), f.describe())
+			}
+
+			missCount++
 		}
+	}
+
+	if missCount >= len(f.args) {
+		return UndefinedValue, bindError(newMissingValueError(), f.describe())
 	}
 
 	return MakeListOfStringsValue(out), nil
