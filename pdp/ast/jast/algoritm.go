@@ -60,13 +60,19 @@ func buildMapperPolicyCombiningAlgParams(ctx context, alg *caParams, policies []
 
 	var subAlg pdp.PolicyCombiningAlg
 	t := alg.arg.GetResultType()
-	if alg.subAlg != nil && (t == pdp.TypeSetOfStrings || t == pdp.TypeListOfStrings) {
-		maker, params, err := ctx.buildPolicyCombiningAlg(alg.subAlg, policies)
-		if err != nil {
-			return nil, err
+	if _, ok := t.(*pdp.FlagsType); ok || t == pdp.TypeSetOfStrings || t == pdp.TypeListOfStrings {
+		if alg.subAlg != nil {
+			maker, params, err := ctx.buildPolicyCombiningAlg(alg.subAlg, policies)
+			if err != nil {
+				return nil, err
+			}
+
+			subAlg = maker(nil, params)
 		}
 
-		subAlg = maker(nil, params)
+		if subAlg == nil {
+			return nil, newMissingPCAError()
+		}
 	}
 
 	return pdp.MapperPCAParams{
@@ -104,13 +110,19 @@ func buildMapperRuleCombiningAlgParams(ctx context, alg *caParams, rules []*pdp.
 
 	var subAlg pdp.RuleCombiningAlg
 	t := alg.arg.GetResultType()
-	if alg.subAlg != nil && (t == pdp.TypeSetOfStrings || t == pdp.TypeListOfStrings) {
-		maker, params, err := ctx.buildRuleCombiningAlg(alg.subAlg, rules)
-		if err != nil {
-			return nil, err
+	if _, ok := t.(*pdp.FlagsType); ok || t == pdp.TypeSetOfStrings || t == pdp.TypeListOfStrings {
+		if alg.subAlg != nil {
+			maker, params, err := ctx.buildRuleCombiningAlg(alg.subAlg, rules)
+			if err != nil {
+				return nil, err
+			}
+
+			subAlg = maker(nil, params)
 		}
 
-		subAlg = maker(nil, params)
+		if subAlg == nil {
+			return nil, newMissingRCAError()
+		}
 	}
 
 	return pdp.MapperRCAParams{
