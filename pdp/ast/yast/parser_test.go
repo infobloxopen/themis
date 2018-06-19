@@ -779,6 +779,58 @@ policies:
               type: flags64
               content: [f00, f76]
 `
+
+	missingSubAlgPCAPolicy = `# Policies YAML with missing mapper subalgorithm
+types:
+  flags:
+    meta: flags
+    flags: ["Deny", "Permit"]
+
+attributes:
+  s: string
+
+policies:
+  alg:
+    id: mapper
+    map:
+      selector:
+        uri: local:content/map
+        type: flags
+        path:
+        - attr: s
+  policies:
+  - id: Deny
+    alg: FirstApplicableEffect
+    rules:
+    - effect: Deny
+  - id: Permit
+    alg: FirstApplicableEffect
+    rules:
+    - effect: Permit
+`
+
+	missingSubAlgRCAPolicy = `# Policies YAML with missing mapper subalgorithm
+types:
+  flags:
+    meta: flags
+    flags: ["Deny", "Permit"]
+
+attributes:
+  s: string
+
+policies:
+  alg:
+    id: mapper
+    map:
+      selector:
+        uri: local:content/map
+        type: flags
+        path:
+        - attr: s
+  rules:
+  - effect: Deny
+  - effect: Permit
+`
 )
 
 func TestUnmarshal(t *testing.T) {
@@ -896,6 +948,24 @@ func TestUnmarshal(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func TestMissingSubAlg(t *testing.T) {
+	p := Parser{}
+	_, err := p.Unmarshal(strings.NewReader(missingSubAlgPCAPolicy), nil)
+	if err == nil {
+		t.Errorf("expected *missingPCAError but got no error")
+	} else if _, ok := err.(*missingPCAError); !ok {
+		t.Errorf("expected *missingPCAError but got %T: %s", err, err)
+	}
+
+	p = Parser{}
+	_, err = p.Unmarshal(strings.NewReader(missingSubAlgRCAPolicy), nil)
+	if err == nil {
+		t.Errorf("expected *missingRCAError but got no error")
+	} else if _, ok := err.(*missingRCAError); !ok {
+		t.Errorf("expected *missingRCAError but got %T: %s", err, err)
 	}
 }
 
