@@ -15,7 +15,6 @@ import (
 	_ "github.com/infobloxopen/themis/pdp/selector"
 	"github.com/infobloxopen/themis/pdpserver/server"
 	"github.com/miekg/dns"
-	lr "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )
 
@@ -39,8 +38,8 @@ func BenchmarkPlugin(b *testing.B) {
 	ps := newParStat()
 	if b.Run("100-streams", func(b *testing.B) {
 		p := newTestPolicyPlugin(endpoint)
-		p.streams = 100
-		p.hotSpot = true
+		p.conf.streams = 100
+		p.conf.hotSpot = true
 
 		benchParallel(b, p, ps)
 	}) {
@@ -117,13 +116,12 @@ policies:
 
 func newTestPolicyPlugin(endpoints ...string) *policyPlugin {
 	p := newPolicyPlugin()
-	p.endpoints = endpoints
-	p.connTimeout = time.Second
-	p.streams = 1
+	p.conf.endpoints = endpoints
+	p.conf.connTimeout = time.Second
+	p.conf.streams = 1
 
 	mp := &mockPlugin{
 		ip: net.ParseIP("192.0.2.53"),
-		rc: dns.RcodeSuccess,
 	}
 	p.next = mp
 
@@ -190,45 +188,6 @@ func startPDPServerForBenchmark(b *testing.B, p, endpoint string) *loggedServer 
 	return s
 }
 
-func waitForPortOpened(address string) error {
-	var (
-		c   net.Conn
-		err error
-	)
-
-	for i := 0; i < 20; i++ {
-		after := time.After(500 * time.Millisecond)
-		c, err = net.DialTimeout("tcp", address, 500*time.Millisecond)
-		if err == nil {
-			return c.Close()
-		}
-
-		<-after
-	}
-
-	return err
-}
-
-func waitForPortClosed(address string) error {
-	var (
-		c   net.Conn
-		err error
-	)
-
-	for i := 0; i < 20; i++ {
-		after := time.After(500 * time.Millisecond)
-		c, err = net.DialTimeout("tcp", address, 500*time.Millisecond)
-		if err != nil {
-			return nil
-		}
-
-		c.Close()
-		<-after
-	}
-
-	return fmt.Errorf("port at %s hasn't been closed yet", address)
-}
-
 type logGrabber struct {
 	b *bytes.Buffer
 }
@@ -246,161 +205,4 @@ func (g *logGrabber) Release() string {
 	log.SetOutput(os.Stderr)
 
 	return g.b.String()
-}
-
-type mockPlugin struct {
-	ip  net.IP
-	err error
-	rc  int
-}
-
-// Name implements the plugin.Handler interface.
-func (p *mockPlugin) Name() string {
-	return "mockPlugin"
-}
-
-// ServeDNS implements the plugin.Handler interface.
-func (p *mockPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
-	if p.err != nil {
-		return dns.RcodeServerFailure, p.err
-	}
-
-	if r == nil || len(r.Question) <= 0 {
-		return dns.RcodeServerFailure, nil
-	}
-
-	q := r.Question[0]
-	hdr := dns.RR_Header{
-		Name:   q.Name,
-		Rrtype: q.Qtype,
-		Class:  q.Qclass,
-	}
-
-	if ipv4 := p.ip.To4(); ipv4 != nil {
-		if q.Qtype != dns.TypeA {
-			return dns.RcodeSuccess, nil
-		}
-
-		m := new(dns.Msg)
-		m.SetReply(r)
-		m.Authoritative = true
-		m.Rcode = p.rc
-
-		if m.Rcode == dns.RcodeSuccess {
-			m.Answer = append(m.Answer,
-				&dns.A{
-					Hdr: hdr,
-					A:   ipv4,
-				},
-			)
-		}
-
-		w.WriteMsg(m)
-	} else if ipv6 := p.ip.To16(); ipv6 != nil {
-		if q.Qtype != dns.TypeAAAA {
-			return dns.RcodeSuccess, nil
-		}
-
-		m := new(dns.Msg)
-		m.SetReply(r)
-		m.Authoritative = true
-		m.Rcode = p.rc
-
-		if m.Rcode == dns.RcodeSuccess {
-			m.Answer = append(m.Answer,
-				&dns.AAAA{
-					Hdr:  hdr,
-					AAAA: ipv6,
-				},
-			)
-		}
-
-		w.WriteMsg(m)
-	}
-
-	return p.rc, nil
-}
-
-type loggedServer struct {
-	s *server.Server
-	b *bytes.Buffer
-}
-
-func newServer(opts ...server.Option) *loggedServer {
-	s := &loggedServer{
-		b: new(bytes.Buffer),
-	}
-
-	logger := lr.New()
-	logger.Out = s.b
-	logger.Level = lr.ErrorLevel
-	opts = append(opts,
-		server.WithLogger(logger),
-	)
-
-	s.s = server.NewServer(opts...)
-	return s
-}
-
-func (s *loggedServer) Stop() string {
-	s.s.Stop()
-	return s.b.String()
-}
-
-func makeTestDNSMsg(n string, t uint16, c uint16) *dns.Msg {
-	out := new(dns.Msg)
-	out.Question = make([]dns.Question, 1)
-	out.Question[0] = dns.Question{
-		Name:   dns.Fqdn(n),
-		Qtype:  t,
-		Qclass: c,
-	}
-	return out
-}
-
-type testAddressedNonwriter struct {
-	dns.ResponseWriter
-	ra  net.Addr
-	Msg *dns.Msg
-}
-
-type testUDPAddr struct {
-	addr string
-}
-
-func newTestAddressedNonwriter(ra string) *testAddressedNonwriter {
-	return &testAddressedNonwriter{
-		ResponseWriter: nil,
-		ra:             newUDPAddr(ra),
-	}
-}
-
-func newTestAddressedNonwriterWithAddr(ra net.Addr) *testAddressedNonwriter {
-	return &testAddressedNonwriter{
-		ResponseWriter: nil,
-		ra:             ra,
-	}
-}
-
-func (w *testAddressedNonwriter) RemoteAddr() net.Addr {
-	return w.ra
-}
-
-func (w *testAddressedNonwriter) WriteMsg(res *dns.Msg) error {
-	w.Msg = res
-	return nil
-}
-
-func newUDPAddr(addr string) *testUDPAddr {
-	return &testUDPAddr{
-		addr: addr,
-	}
-}
-
-func (a *testUDPAddr) String() string {
-	return a.addr
-}
-
-func (a *testUDPAddr) Network() string {
-	return "udp"
 }

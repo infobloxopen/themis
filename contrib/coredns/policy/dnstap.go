@@ -2,6 +2,7 @@ package policy
 
 import (
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/coredns/coredns/plugin/dnstap"
@@ -11,11 +12,25 @@ import (
 	"github.com/golang/protobuf/proto"
 	pb "github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 	"github.com/miekg/dns"
-	context "golang.org/x/net/context"
+	"golang.org/x/net/context"
+
+	"github.com/infobloxopen/themis/pdp"
 )
+
+var dnstapActionValues [actionsTotal]string
 
 type dnstapSender interface {
 	sendCRExtraMsg(w dns.ResponseWriter, msg *dns.Msg, ah *attrHolder)
+}
+
+func init() {
+	dnstapActionValues[actionInvalid] = strconv.Itoa(int(pb.PolicyAction_INVALID))
+	dnstapActionValues[actionRefuse] = strconv.Itoa(int(pb.PolicyAction_REFUSE))
+	dnstapActionValues[actionAllow] = strconv.Itoa(int(pb.PolicyAction_PASSTHROUGH))
+	dnstapActionValues[actionRedirect] = strconv.Itoa(int(pb.PolicyAction_REDIRECT))
+	dnstapActionValues[actionBlock] = strconv.Itoa(int(pb.PolicyAction_NXDOMAIN))
+	dnstapActionValues[actionLog] = strconv.Itoa(int(pb.PolicyAction_PASSTHROUGH))
+	dnstapActionValues[actionDrop] = strconv.Itoa(int(pb.PolicyAction_DENY))
 }
 
 type policyDnstapSender struct {
@@ -50,7 +65,7 @@ func (s *policyDnstapSender) sendCRExtraMsg(w dns.ResponseWriter, msg *dns.Msg, 
 
 	var extra []byte
 	if ah != nil {
-		extra, err = proto.Marshal(&pb.Extra{Attrs: ah.convertAttrs()})
+		extra, err = proto.Marshal(&pb.Extra{Attrs: ah.makeDnstapReport()})
 		if err != nil {
 			log.Printf("[ERROR] Failed to create extra data for dnstap CR message (%v)", err)
 		}
@@ -66,4 +81,39 @@ func resetCqCr(ctx context.Context) {
 			so.Cr = false
 		}
 	}
+}
+
+func newDnstapAttribute(a pdp.AttributeAssignment) *pb.DnstapAttribute {
+	return &pb.DnstapAttribute{
+		Id:    a.GetID(),
+		Value: serializeOrPanic(a),
+	}
+}
+
+func newDnstapAttributeFromAction(a byte) *pb.DnstapAttribute {
+	return &pb.DnstapAttribute{
+		Id:    attrNamePolicyAction,
+		Value: dnstapActionValues[a],
+	}
+}
+
+func newDnstapAttributeFromReqType(ipReq bool) *pb.DnstapAttribute {
+	out := &pb.DnstapAttribute{
+		Id:    attrNameType,
+		Value: typeValueQuery,
+	}
+
+	if ipReq {
+		out.Value = typeValueResponse
+	}
+
+	return out
+}
+
+func putAttrsToDnstap(attrs []pdp.AttributeAssignment, out []*pb.DnstapAttribute) int {
+	for i, a := range attrs {
+		out[i] = newDnstapAttribute(a)
+	}
+
+	return len(attrs)
 }
