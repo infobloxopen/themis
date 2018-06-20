@@ -137,7 +137,7 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		respMsg = nw.Msg
 		if respMsg == nil {
 			r = nil
-			return dns.RcodeSuccess, err
+			return dns.RcodeSuccess, nil
 		}
 
 		status = respMsg.Rcode

@@ -120,6 +120,15 @@ func TestStreamingClientInteraction(t *testing.T) {
 		t.Fatalf("can't connect to PDP server: %s", err)
 	}
 
+	ok := true
+	g := newLogGrabber()
+	defer func() {
+		logs := g.Release()
+		if !ok {
+			t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
+		}
+	}()
+
 	p := newPolicyPlugin()
 	p.conf.endpoints = []string{endpoint}
 	p.conf.connTimeout = time.Second
@@ -137,6 +146,7 @@ func TestStreamingClientInteraction(t *testing.T) {
 	ah := newAttrHolderWithDnReq(w, m, p.conf.options, nil)
 	if err := p.validate(ah); err != nil {
 		t.Error(err)
+		ok = false
 	}
 
 	if ah.action != actionAllow {
@@ -145,6 +155,7 @@ func TestStreamingClientInteraction(t *testing.T) {
 			aName = actionNames[ah.action]
 		}
 		t.Errorf("expected %q action but got %q", actionNames[actionAllow], aName)
+		ok = false
 	}
 
 	pdp.AssertAttributeAssignments(t, "p.validate(domain request)", ah.dnRes,
@@ -155,6 +166,7 @@ func TestStreamingClientInteraction(t *testing.T) {
 
 	if err := p.validate(ah); err != nil {
 		t.Error(err)
+		ok = false
 	}
 
 	if ah.action != actionLog {
@@ -163,6 +175,7 @@ func TestStreamingClientInteraction(t *testing.T) {
 			aName = actionNames[ah.action]
 		}
 		t.Errorf("expected %q action but got %q", actionNames[actionLog], aName)
+		ok = false
 	}
 
 	pdp.AssertAttributeAssignments(t, "p.validate(domain request)", ah.ipRes,
@@ -184,6 +197,15 @@ func TestStreamingClientInteractionWithObligationsOverflow(t *testing.T) {
 		t.Fatalf("can't connect to PDP server: %s", err)
 	}
 
+	ok := true
+	g := newLogGrabber()
+	defer func() {
+		logs := g.Release()
+		if !ok {
+			t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
+		}
+	}()
+
 	p := newPolicyPlugin()
 	p.conf.endpoints = []string{endpoint}
 	p.conf.connTimeout = time.Second
@@ -193,6 +215,7 @@ func TestStreamingClientInteractionWithObligationsOverflow(t *testing.T) {
 
 	if err := p.connect(); err != nil {
 		t.Fatal(err)
+		ok = false
 	}
 	defer p.closeConn()
 
@@ -208,6 +231,7 @@ func TestStreamingClientInteractionWithObligationsOverflow(t *testing.T) {
 		}
 
 		t.Errorf("expected response overflow error but got %q response:\n:%+v", aName, ah.dnRes)
+		ok = false
 	}
 }
 

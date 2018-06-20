@@ -175,6 +175,7 @@ func TestSetRedirectQueryAnswer(t *testing.T) {
 
 	mp := &mockPlugin{
 		ip: net.ParseIP("192.0.2.153"),
+		rc: dns.RcodeSuccess,
 	}
 	p.next = mp
 
