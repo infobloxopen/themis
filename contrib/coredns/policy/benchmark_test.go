@@ -1,12 +1,9 @@
 package policy
 
 import (
-	"bytes"
 	"fmt"
-	"log"
 	"math"
 	"net"
-	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -186,23 +183,4 @@ func startPDPServerForBenchmark(b *testing.B, p, endpoint string) *loggedServer 
 	}()
 
 	return s
-}
-
-type logGrabber struct {
-	b *bytes.Buffer
-}
-
-func newLogGrabber() *logGrabber {
-	b := new(bytes.Buffer)
-	log.SetOutput(b)
-
-	return &logGrabber{
-		b: b,
-	}
-}
-
-func (g *logGrabber) Release() string {
-	log.SetOutput(os.Stderr)
-
-	return g.b.String()
 }

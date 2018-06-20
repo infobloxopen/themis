@@ -220,12 +220,18 @@ func TestActionDomainResponse(t *testing.T) {
 	for i, test := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			ah := newAttrHolderWithDnReq(w, r, nil, nil)
+
+			g := newLogGrabber()
 			ah.addDnRes(test.res, nil)
+			logs := g.Release()
+
 			if ah.action != test.action {
 				t.Errorf("unexpected action in TC #%d: expected=%d, actual=%d", i, test.action, ah.action)
+				t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
 			}
 			if ah.dst != test.dst {
 				t.Errorf("unexpected redirect destination in TC #%d: expected=%q, actual=%q", i, test.dst, ah.dst)
+				t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
 			}
 		})
 	}
@@ -316,12 +322,18 @@ func TestActionIpResponse(t *testing.T) {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			ah := newAttrHolderWithDnReq(w, r, nil, nil)
 			ah.action = test.initAction
+
+			g := newLogGrabber()
 			ah.addIPRes(test.res)
+			logs := g.Release()
+
 			if ah.action != test.action {
 				t.Errorf("unexpected action in TC #%d: expected=%d, actual=%d", i, test.action, ah.action)
+				t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
 			}
 			if ah.dst != test.dst {
 				t.Errorf("unexpected redirect destination in TC #%d: expected=%q, actual=%q", i, test.dst, ah.dst)
+				t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
 			}
 		})
 	}

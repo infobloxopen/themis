@@ -21,6 +21,15 @@ import (
 )
 
 func TestSendCRExtraNoMsg(t *testing.T) {
+	ok := false
+	g := newLogGrabber()
+	defer func() {
+		logs := g.Release()
+		if ok {
+			t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
+		}
+	}()
+
 	trapper := dtest.TrapTapper{Full: true}
 	tapRW := &taprw.ResponseWriter{
 		Query:          new(dns.Msg),
@@ -31,14 +40,22 @@ func TestSendCRExtraNoMsg(t *testing.T) {
 	io := newIORoutine(100 * time.Millisecond)
 	tapIO := newPolicyDnstapSender(io)
 	tapIO.sendCRExtraMsg(tapRW, nil, nil)
-	_, ok := <-io.dnstapChan
+	_, ok = <-io.dnstapChan
 	if ok {
 		t.Errorf("Unexpected msg received")
-		return
 	}
 }
 
 func TestSendCRExtraInvalidMsg(t *testing.T) {
+	ok := false
+	g := newLogGrabber()
+	defer func() {
+		logs := g.Release()
+		if ok {
+			t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
+		}
+	}()
+
 	msg := dns.Msg{}
 	msg.SetQuestion("test.com.", dns.TypeA)
 	msg.Answer = []dns.RR{
@@ -57,14 +74,22 @@ func TestSendCRExtraInvalidMsg(t *testing.T) {
 	io := newIORoutine(100 * time.Millisecond)
 	tapIO := newPolicyDnstapSender(io)
 	tapIO.sendCRExtraMsg(tapRW, &msg, nil)
-	_, ok := <-io.dnstapChan
+	_, ok = <-io.dnstapChan
 	if ok {
 		t.Errorf("Unexpected msg received")
-		return
 	}
 }
 
 func TestSendCRExtraMsg(t *testing.T) {
+	ok := true
+	g := newLogGrabber()
+	defer func() {
+		logs := g.Release()
+		if !ok {
+			t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
+		}
+	}()
+
 	msg := dns.Msg{}
 	msg.SetQuestion("test.com.", dns.TypeA)
 	msg.Answer = []dns.RR{
@@ -99,7 +124,7 @@ func TestSendCRExtraMsg(t *testing.T) {
 
 	tapIO.sendCRExtraMsg(tapRW, &msg, testAttrHolder)
 
-	assertCRExtraResult(t, "sendCRExtraMsg(actionAllow)", io, &msg,
+	ok = assertCRExtraResult(t, "sendCRExtraMsg(actionAllow)", io, &msg,
 		&pb.DnstapAttribute{Id: attrNameSourceIP, Value: "10.0.0.7"},
 		&pb.DnstapAttribute{Id: "option", Value: "option"},
 		&pb.DnstapAttribute{Id: "dnstap", Value: "val"},
@@ -107,23 +132,25 @@ func TestSendCRExtraMsg(t *testing.T) {
 
 	if l := len(trapper.Trap); l != 0 {
 		t.Fatalf("Dnstap unexpectedly sent %d messages", l)
+		ok = false
 	}
 
 	testAttrHolder.action = actionBlock
 
 	tapIO.sendCRExtraMsg(tapRW, &msg, testAttrHolder)
 
-	assertCRExtraResult(t, "sendCRExtraMsg(actionBlock)", io, &msg,
+	ok = assertCRExtraResult(t, "sendCRExtraMsg(actionBlock)", io, &msg,
 		&pb.DnstapAttribute{Id: attrNameDomainName, Value: "test.com"},
 		&pb.DnstapAttribute{Id: attrNameDNSQtype, Value: "1"},
 		&pb.DnstapAttribute{Id: attrNameSourceIP, Value: "10.0.0.7"},
 		&pb.DnstapAttribute{Id: "option", Value: "option"},
 		&pb.DnstapAttribute{Id: attrNamePolicyAction, Value: "3"},
 		&pb.DnstapAttribute{Id: attrNameType, Value: typeValueQuery},
-	)
+	) && ok
 
 	if l := len(trapper.Trap); l != 0 {
 		t.Fatalf("Dnstap unexpectedly sent %d messages", l)
+		ok = false
 	}
 }
 
@@ -155,34 +182,35 @@ func (tapIO testIORoutine) Dnstap(msg tap.Dnstap) {
 	tapIO.dnstapChan <- msg
 }
 
-func assertCRExtraResult(t *testing.T, desc string, io testIORoutine, eMsg *dns.Msg, e ...*pb.DnstapAttribute) {
+func assertCRExtraResult(t *testing.T, desc string, io testIORoutine, eMsg *dns.Msg, e ...*pb.DnstapAttribute) bool {
 	dnstapMsg, ok := <-io.dnstapChan
 	if !ok {
 		t.Errorf("Receiving Dnstap for %q message was timed out", desc)
-		return
+		return false
 	}
 
 	extra := &pb.Extra{}
 	err := proto.Unmarshal(dnstapMsg.Extra, extra)
 	if err != nil {
 		t.Errorf("Failed to unmarshal Extra for %q (%v)", desc, err)
-		return
+		return false
 	}
 
-	assertDnstapAttributes(t, desc, extra.GetAttrs(), e...)
-	assertCRMessage(t, desc, dnstapMsg.Message, eMsg)
+	ok = assertDnstapAttributes(t, desc, extra.GetAttrs(), e...)
+	ok = assertCRMessage(t, desc, dnstapMsg.Message, eMsg) && ok
+	return ok
 }
 
-func assertCRMessage(t *testing.T, desc string, msg *tap.Message, e *dns.Msg) {
+func assertCRMessage(t *testing.T, desc string, msg *tap.Message, e *dns.Msg) bool {
 	if msg == nil {
 		t.Errorf("CR message for %q not found", desc)
-		return
+		return false
 	}
 
 	bin, err := e.Pack()
 	if err != nil {
 		t.Errorf("Failed to pack message for %q (%v)", desc, err)
-		return
+		return false
 	}
 
 	d := dtest.TestingData()
@@ -190,7 +218,10 @@ func assertCRMessage(t *testing.T, desc string, msg *tap.Message, e *dns.Msg) {
 	eMsg, _ := d.ToClientResponse()
 	if !dtest.MsgEqual(eMsg, msg) {
 		t.Errorf("Unexpected message for %q: expected:\n%v\nactual:\n%v", desc, eMsg, msg)
+		return false
 	}
+
+	return true
 }
 
 func serializeDnstapAttributesForAssert(a []*pb.DnstapAttribute) []string {
@@ -202,7 +233,7 @@ func serializeDnstapAttributesForAssert(a []*pb.DnstapAttribute) []string {
 	return out
 }
 
-func assertDnstapAttributes(t *testing.T, desc string, a []*pb.DnstapAttribute, e ...*pb.DnstapAttribute) {
+func assertDnstapAttributes(t *testing.T, desc string, a []*pb.DnstapAttribute, e ...*pb.DnstapAttribute) bool {
 	ctx := difflib.ContextDiff{
 		A:        serializeDnstapAttributesForAssert(a),
 		B:        serializeDnstapAttributesForAssert(e),
@@ -216,6 +247,8 @@ func assertDnstapAttributes(t *testing.T, desc string, a []*pb.DnstapAttribute, 
 
 	if len(diff) > 0 {
 		t.Errorf("\"%s\" doesn't match:\n%s", desc, diff)
+		return false
 	}
 
+	return true
 }
