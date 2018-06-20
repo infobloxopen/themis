@@ -40,7 +40,7 @@ build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-eg
 test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-local-selector test-pep test-plugin
 
 .PHONY: bench
-bench: bench-pep bench-pdpserver-pkg
+bench: bench-pep bench-pdpserver-pkg bench-plugin
 
 .PHONY: cover-out
 cover-out:
@@ -194,3 +194,7 @@ bench-pep: build-pdpserver
 .PHONY: bench-pdpserver-pkg
 bench-pdpserver-pkg:
 	$(AT)/pdpserver/server && $(GOBENCHALL)
+
+.PHONY: bench-plugin
+bench-plugin:
+	$(AT)/contrib/coredns/policy && $(GOBENCHALL)
