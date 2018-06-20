@@ -11,23 +11,25 @@ import (
 
 func TestPolicyConfigParse(t *testing.T) {
 	tests := []struct {
-		input       string
+		input string
+		err   error
+
 		endpoints   []string
-		errContent  error
-		options     map[uint16][]*edns0Map
+		options     map[uint16][]*edns0Opt
 		debugSuffix *string
 		streams     *int
 		hotSpot     *bool
-		confAttrs   map[string]confAttrType
-		ident       *string
+		custAttrs   map[string]custAttr
+		debugID     *string
 		passthrough []string
 		connTimeout *time.Duration
+		maxReqSize  *int
 	}{
 		{
 			input: `.:53 {
 						log stdout
 					}`,
-			errContent: errors.New("Policy setup called without keyword 'policy' in Corefile"),
+			err: errors.New("Policy setup called without keyword 'policy' in Corefile"),
 		},
 		{
 			input: `.:53 {
@@ -35,7 +37,7 @@ func TestPolicyConfigParse(t *testing.T) {
 							error option
 						}
 					}`,
-			errContent: errors.New("invalid policy plugin option"),
+			err: errors.New("invalid policy plugin option"),
 		},
 		{
 			input: `.:53 {
@@ -43,7 +45,7 @@ func TestPolicyConfigParse(t *testing.T) {
 							endpoint
 						}
 					}`,
-			errContent: errors.New("Wrong argument count or unexpected line ending"),
+			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
 			input: `.:53 {
@@ -65,108 +67,105 @@ func TestPolicyConfigParse(t *testing.T) {
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							edns0 0xfff0 uid hex string wrong_size 0 32
+							edns0 0xfff0 uid hex wrong_size 0 32
 						}
 					}`,
-			errContent: errors.New("Could not parse EDNS0 data size"),
+			err: errors.New("Could not parse EDNS0 data size"),
 		},
 		{
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							edns0 0xfff0 uid hex string 32 0 32
+							edns0 0xfff0 uid hex 32 0 32
 						}
 					}`,
-			options: map[uint16][]*edns0Map{
+			options: map[uint16][]*edns0Opt{
 				0xfff0: {
-					&edns0Map{
+					&edns0Opt{
 						name:     "uid",
 						dataType: typeEDNS0Hex,
-						destType: "string",
 						size:     32,
 						start:    0,
 						end:      32},
 				},
 			},
-			confAttrs: map[string]confAttrType{
-				"uid": confAttrEdns,
+			custAttrs: map[string]custAttr{
+				"uid": custAttrEdns,
 			},
 		},
 		{
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							edns0 wrong_hex uid hex string
+							edns0 wrong_hex uid hex
 						}
 					}`,
-			errContent: errors.New("Could not parse EDNS0 code"),
+			err: errors.New("Could not parse EDNS0 code"),
 		},
 		{
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							edns0 0xfff0 uid hex string 32 wrong_offset 32
+							edns0 0xfff0 uid hex 32 wrong_offset 32
 						}
 					}`,
-			errContent: errors.New("Could not parse EDNS0 start index"),
+			err: errors.New("Could not parse EDNS0 start index"),
 		},
 		{
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							edns0 0xfff0 uid hex string 32 0 wrong_size
+							edns0 0xfff0 uid hex 32 0 wrong_size
 						}
 					}`,
-			errContent: errors.New("Could not parse EDNS0 end index"),
+			err: errors.New("Could not parse EDNS0 end index"),
 		},
 		{
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							edns0 0xfff0 uid hex string 32 0 16
-							edns0 0xfff0 id hex string 32 16 32
+							edns0 0xfff0 uid hex 32 0 16
+							edns0 0xfff0 id hex 32 16 32
 						}
 					}`,
-			options: map[uint16][]*edns0Map{
+			options: map[uint16][]*edns0Opt{
 				0xfff0: {
-					&edns0Map{
+					&edns0Opt{
 						name:     "uid",
 						dataType: typeEDNS0Hex,
-						destType: "string",
 						size:     32,
 						start:    0,
 						end:      16},
-					&edns0Map{
+					&edns0Opt{
 						name:     "id",
 						dataType: typeEDNS0Hex,
-						destType: "string",
 						size:     32,
 						start:    16,
 						end:      32},
 				},
 			},
-			confAttrs: map[string]confAttrType{
-				"uid": confAttrEdns,
-				"id":  confAttrEdns,
+			custAttrs: map[string]custAttr{
+				"uid": custAttrEdns,
+				"id":  custAttrEdns,
 			},
 		},
 		{
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							edns0 0xfff0 uid hex string 32 16 15
+							edns0 0xfff0 uid hex 32 16 15
 						}
 					}`,
-			errContent: errors.New("End index should be > start index"),
+			err: errors.New("End index should be > start index"),
 		},
 		{
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							edns0 0xfff0 uid hex string 32 0 33
+							edns0 0xfff0 uid hex 32 0 33
 						}
 					}`,
-			errContent: errors.New("End index should be <= size"),
+			err: errors.New("End index should be <= size"),
 		},
 		{
 			input: `.:53 {
@@ -175,16 +174,16 @@ func TestPolicyConfigParse(t *testing.T) {
 							edns0 0xfff1
 						}
 					}`,
-			errContent: errors.New("Invalid edns0 directive"),
+			err: errors.New("Invalid edns0 directive"),
 		},
 		{
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							edns0 0xfff1 guid bin bin
+							edns0 0xfff1 guid bin
 						}
 					}`,
-			errContent: errors.New("Could not add EDNS0 map"),
+			err: errors.New("Could not add EDNS0"),
 		},
 		{
 			input: `.:53 {
@@ -193,7 +192,7 @@ func TestPolicyConfigParse(t *testing.T) {
 							debug_query_suffix
 						}
 					}`,
-			errContent: errors.New("Wrong argument count or unexpected line ending"),
+			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
 			input: `.:53 {
@@ -220,7 +219,7 @@ func TestPolicyConfigParse(t *testing.T) {
 							streams Ten
 						}
 					}`,
-			errContent: errors.New("Could not parse number of streams"),
+			err: errors.New("Could not parse number of streams"),
 		},
 		{
 			input: `.:53 {
@@ -229,7 +228,7 @@ func TestPolicyConfigParse(t *testing.T) {
 							streams
 						}
 					}`,
-			errContent: errors.New("Wrong argument count or unexpected line ending"),
+			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
 			input: `.:53 {
@@ -238,7 +237,7 @@ func TestPolicyConfigParse(t *testing.T) {
 							streams -1
 						}
 					}`,
-			errContent: errors.New("Expected at least one stream got -1"),
+			err: errors.New("Expected at least one stream got -1"),
 		},
 		{
 			input: `.:53 {
@@ -267,7 +266,7 @@ func TestPolicyConfigParse(t *testing.T) {
 							streams 10 Unknown-Balancer
 						}
 					}`,
-			errContent: errors.New("Expected round-robin or hot-spot balancing but got Unknown-Balancer"),
+			err: errors.New("Expected round-robin or hot-spot balancing but got Unknown-Balancer"),
 		},
 		{
 			input: `.:53 {
@@ -276,45 +275,43 @@ func TestPolicyConfigParse(t *testing.T) {
 							transfer policy_id
 						}
 					}`,
-			confAttrs: map[string]confAttrType{
-				"policy_id": confAttrTransfer,
+			custAttrs: map[string]custAttr{
+				"policy_id": custAttrTransfer,
 			},
 		},
 		{
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							edns0 0xfff0 uid hex string 32 0 16
+							edns0 0xfff0 uid hex 32 0 16
 							edns0 0xfff1 id
 							transfer policy_id id
 							dnstap policy_id query_id
 						}
 					}`,
-			options: map[uint16][]*edns0Map{
+			options: map[uint16][]*edns0Opt{
 				0xfff0: {
-					&edns0Map{
+					&edns0Opt{
 						name:     "uid",
 						dataType: typeEDNS0Hex,
-						destType: "string",
 						size:     32,
 						start:    0,
 						end:      16},
 				},
 				0xfff1: {
-					&edns0Map{
+					&edns0Opt{
 						name:     "id",
 						dataType: typeEDNS0Hex,
-						destType: "string",
 						size:     0,
 						start:    0,
 						end:      0},
 				},
 			},
-			confAttrs: map[string]confAttrType{
-				"policy_id": confAttrTransfer | confAttrDnstap,
-				"id":        confAttrEdns | confAttrTransfer,
-				"uid":       confAttrEdns,
-				"query_id":  confAttrDnstap,
+			custAttrs: map[string]custAttr{
+				"policy_id": custAttrTransfer | custAttrDnstap,
+				"id":        custAttrEdns | custAttrTransfer,
+				"uid":       custAttrEdns,
+				"query_id":  custAttrDnstap,
 			},
 		},
 		{
@@ -324,7 +321,7 @@ func TestPolicyConfigParse(t *testing.T) {
 							dnstap
 						}
 					}`,
-			errContent: errors.New("Wrong argument count or unexpected line ending"),
+			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
 			input: `.:53 {
@@ -333,7 +330,7 @@ func TestPolicyConfigParse(t *testing.T) {
 							transfer
 						}
 					}`,
-			errContent: errors.New("Wrong argument count or unexpected line ending"),
+			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
 			input: `.:53 {
@@ -342,23 +339,22 @@ func TestPolicyConfigParse(t *testing.T) {
 							metrics
 						}
 					}`,
-			errContent: errors.New("Wrong argument count or unexpected line ending"),
+			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							edns0 0xfff0 uid hex string 32 0 16
+							edns0 0xfff0 uid hex 32 0 16
 							edns0 0xfff1 id
 							metrics uid query_id
 						}
 					}`,
-			options: map[uint16][]*edns0Map{
+			options: map[uint16][]*edns0Opt{
 				0xfff0: {
-					&edns0Map{
+					&edns0Opt{
 						name:     "uid",
 						dataType: typeEDNS0Hex,
-						destType: "string",
 						size:     32,
 						start:    0,
 						end:      16,
@@ -366,19 +362,18 @@ func TestPolicyConfigParse(t *testing.T) {
 					},
 				},
 				0xfff1: {
-					&edns0Map{
+					&edns0Opt{
 						name:     "id",
 						dataType: typeEDNS0Hex,
-						destType: "string",
 						size:     0,
 						start:    0,
 						end:      0},
 				},
 			},
-			confAttrs: map[string]confAttrType{
-				"id":       confAttrEdns,
-				"uid":      confAttrEdns | confAttrMetrics,
-				"query_id": confAttrMetrics,
+			custAttrs: map[string]custAttr{
+				"id":       custAttrEdns,
+				"uid":      custAttrEdns | custAttrMetrics,
+				"query_id": custAttrMetrics,
 			},
 		},
 		{
@@ -388,7 +383,7 @@ func TestPolicyConfigParse(t *testing.T) {
 							debug_id corednsinstance
 						}
 					}`,
-			ident: newStringPtr("corednsinstance"),
+			debugID: newStringPtr("corednsinstance"),
 		},
 		{
 			input: `.:53 {
@@ -397,7 +392,7 @@ func TestPolicyConfigParse(t *testing.T) {
 							debug_id
 						}
 					}`,
-			errContent: errors.New("Wrong argument count or unexpected line ending"),
+			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
 			input: `.:53 {
@@ -418,7 +413,15 @@ func TestPolicyConfigParse(t *testing.T) {
 							passthrough
 						}
 					}`,
-			errContent: errors.New("Wrong argument count or unexpected line ending"),
+			err: errors.New("Wrong argument count or unexpected line ending"),
+		},
+		{
+			input: `.:53 {
+						policy {
+							connection_timeout
+						}
+					}`,
+			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
 			input: `.:53 {
@@ -445,7 +448,7 @@ func TestPolicyConfigParse(t *testing.T) {
 							connection_timeout invalid
 						}
 					}`,
-			errContent: errors.New("Could not parse timeout: time: invalid duration invalid"),
+			err: errors.New("Could not parse timeout: time: invalid duration invalid"),
 		},
 		{
 			input: `.:53 {
@@ -462,7 +465,43 @@ func TestPolicyConfigParse(t *testing.T) {
 							log stdout
 						}
 					}`,
-			errContent: errors.New("Wrong argument count or unexpected line ending"),
+			err: errors.New("Wrong argument count or unexpected line ending"),
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							max_request_size 128
+						}
+					}`,
+			maxReqSize: newIntPtr(128),
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							max_request_size
+						}
+					}`,
+			err: errors.New("Wrong argument count or unexpected line ending"),
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							max_request_size test
+						}
+					}`,
+			err: errors.New("Could not parse PDP request size limit"),
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							max_request_size 2147483648
+						}
+					}`,
+			err: errors.New("Size limit 2147483648 (> 2147483647) for PDP request is too high"),
 		},
 	}
 
@@ -470,24 +509,24 @@ func TestPolicyConfigParse(t *testing.T) {
 		c := caddy.NewTestController("dns", test.input)
 		mw, err := policyParse(c)
 		if err != nil {
-			if test.errContent != nil {
-				if !strings.Contains(err.Error(), test.errContent.Error()) {
-					t.Errorf("Expected error '%v' but got '%v'\n", test.errContent, err)
+			if test.err != nil {
+				if !strings.Contains(err.Error(), test.err.Error()) {
+					t.Errorf("Expected error '%v' but got '%v'\n", test.err, err)
 				}
 			} else {
 				t.Errorf("Expected no error but got '%v'\n", err)
 			}
 		} else {
-			if test.errContent != nil {
-				t.Errorf("Expected error '%v' but got 'nil'\n", test.errContent)
+			if test.err != nil {
+				t.Errorf("Expected error '%v' but got 'nil'\n", test.err)
 			} else {
 				if test.endpoints != nil {
-					if len(test.endpoints) != len(mw.endpoints) {
-						t.Errorf("Expected endpoints %v but got %v\n", test.endpoints, mw.endpoints)
+					if len(test.endpoints) != len(mw.conf.endpoints) {
+						t.Errorf("Expected endpoints %v but got %v\n", test.endpoints, mw.conf.endpoints)
 					} else {
 						for i := 0; i < len(test.endpoints); i++ {
-							if test.endpoints[i] != mw.endpoints[i] {
-								t.Errorf("Expected endpoint '%s' but got '%s'\n", test.endpoints[i], mw.endpoints[i])
+							if test.endpoints[i] != mw.conf.endpoints[i] {
+								t.Errorf("Expected endpoint '%s' but got '%s'\n", test.endpoints[i], mw.conf.endpoints[i])
 							}
 						}
 					}
@@ -495,7 +534,7 @@ func TestPolicyConfigParse(t *testing.T) {
 
 				if test.options != nil {
 					for k, testOpts := range test.options {
-						if mwOpts, ok := mw.options[k]; ok {
+						if mwOpts, ok := mw.conf.options[k]; ok {
 							if len(testOpts) != len(mwOpts) {
 								t.Errorf("Expected %d EDNS0 options for 0x%04x but got %d",
 									len(testOpts), k, len(mwOpts))
@@ -504,7 +543,6 @@ func TestPolicyConfigParse(t *testing.T) {
 									mwOpt := mwOpts[i]
 									if testOpt.name != mwOpt.name ||
 										testOpt.dataType != mwOpt.dataType ||
-										testOpt.destType != mwOpt.destType ||
 										testOpt.size != mwOpt.size ||
 										testOpt.start != mwOpt.start ||
 										testOpt.end != mwOpt.end {
@@ -519,28 +557,28 @@ func TestPolicyConfigParse(t *testing.T) {
 						}
 					}
 
-					for k := range mw.options {
+					for k := range mw.conf.options {
 						if _, ok := test.options[k]; !ok {
 							t.Errorf("Got unexpected options 0x%04x", k)
 						}
 					}
 				}
 
-				if test.debugSuffix != nil && *test.debugSuffix != mw.debugSuffix {
-					t.Errorf("Expected debug suffix %q but got %q", *test.debugSuffix, mw.debugSuffix)
+				if test.debugSuffix != nil && *test.debugSuffix != mw.conf.debugSuffix {
+					t.Errorf("Expected debug suffix %q but got %q", *test.debugSuffix, mw.conf.debugSuffix)
 				}
 
-				if test.streams != nil && *test.streams != mw.streams {
-					t.Errorf("Expected %d streams but got %d", *test.streams, mw.streams)
+				if test.streams != nil && *test.streams != mw.conf.streams {
+					t.Errorf("Expected %d streams but got %d", *test.streams, mw.conf.streams)
 				}
 
-				if test.hotSpot != nil && *test.hotSpot != mw.hotSpot {
-					t.Errorf("Expected hotSpot=%v but got %v", *test.hotSpot, mw.hotSpot)
+				if test.hotSpot != nil && *test.hotSpot != mw.conf.hotSpot {
+					t.Errorf("Expected hotSpot=%v but got %v", *test.hotSpot, mw.conf.hotSpot)
 				}
 
-				if test.confAttrs != nil {
-					for k, et := range test.confAttrs {
-						at, ok := mw.confAttrs[k]
+				if test.custAttrs != nil {
+					for k, et := range test.custAttrs {
+						at, ok := mw.conf.custAttrs[k]
 						if !ok {
 							t.Errorf("Missing conf attribute %q", k)
 						} else if et != at {
@@ -548,33 +586,33 @@ func TestPolicyConfigParse(t *testing.T) {
 						}
 					}
 
-					for k, at := range mw.confAttrs {
-						if _, ok := test.confAttrs[k]; !ok {
+					for k, at := range mw.conf.custAttrs {
+						if _, ok := test.custAttrs[k]; !ok {
 							t.Errorf("Unexpected conf attribute %q=%d", k, at)
 						}
 					}
 				}
 
-				if test.ident != nil && *test.ident != mw.ident {
-					t.Errorf("Expected debug id %q but got %q", *test.ident, mw.ident)
+				if test.debugID != nil && *test.debugID != mw.conf.debugID {
+					t.Errorf("Expected debug id %q but got %q", *test.debugID, mw.conf.debugID)
 				}
 
 				if test.passthrough != nil {
-					if len(test.passthrough) != len(mw.passthrough) {
+					if len(test.passthrough) != len(mw.conf.passthrough) {
 						t.Errorf("Expected %d passthrough suffixes but got %d",
-							len(test.passthrough), len(mw.passthrough))
+							len(test.passthrough), len(mw.conf.passthrough))
 					} else {
 						for i, s := range test.passthrough {
-							if s != mw.passthrough[i] {
+							if s != mw.conf.passthrough[i] {
 								t.Errorf("Expected %q passthrough suffix at %d but got %q",
-									s, i, mw.passthrough[i])
+									s, i, mw.conf.passthrough[i])
 							}
 						}
 					}
 				}
 
-				if test.connTimeout != nil && *test.connTimeout != mw.connTimeout {
-					t.Errorf("Expected connection timeout %s but got %s", *test.connTimeout, mw.connTimeout)
+				if test.connTimeout != nil && *test.connTimeout != mw.conf.connTimeout {
+					t.Errorf("Expected connection timeout %s but got %s", *test.connTimeout, mw.conf.connTimeout)
 				}
 			}
 		}

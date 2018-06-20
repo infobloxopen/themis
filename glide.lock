@@ -1,5 +1,5 @@
-hash: a62f354aef3ece716e854df398243e547d2318f520eca8a4fd806b2c5923a2bb
-updated: 2018-06-12T20:51:24.754215+03:00
+hash: a4a66e499f1440ef993567fb449663af4d7300bc0436545f4a4f740e852dd42a
+updated: 2018-06-12T20:55:37.964774+03:00
 imports:
 - name: github.com/apache/thrift
   version: d907cc92db5b93e699a4282e979d097ea863215a
@@ -22,7 +22,6 @@ imports:
   - plugin/dnstap/test
   - plugin/etcd/msg
   - plugin/metrics/vars
-  - plugin/pkg/dnstest
   - plugin/pkg/dnsutil
   - plugin/pkg/edns
   - plugin/pkg/nonwriter
@@ -127,6 +126,10 @@ imports:
   version: a0006b13c722f7f12368c00a3d3c2ae8a999a0c6
   subpackages:
   - xxHash32
+- name: github.com/pmezard/go-difflib
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  subpackages:
+  - difflib
 - name: github.com/prometheus/client_golang
   version: c3324c1198cf3374996e9d3098edd46a6b55afc9
   subpackages:
@@ -222,8 +225,4 @@ imports:
   - transport
 - name: gopkg.in/yaml.v2
   version: 7f97868eec74b32b0982dd158a51a446d1da7eb5
-testImports:
-- name: github.com/pmezard/go-difflib
-  version: 792786c7400a136282c1664665ae0a8db921c6c2
-  subpackages:
-  - difflib
+testImports: []

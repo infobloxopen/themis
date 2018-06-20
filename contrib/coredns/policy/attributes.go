@@ -1,43 +1,61 @@
 package policy
 
+import "github.com/infobloxopen/themis/pdp"
+
 const (
-	attrNameType       = "type"
-	attrNameSourceIP   = "source_ip"
-	attrNameDomainName = "domain_name"
-	attrNameRedirectTo = "redirect_to"
-	attrNameAddress    = "address"
-	attrNameRefuse     = "refuse"
-	attrNameLog        = "log"
-	attrNameDrop       = "drop"
+	attrNameType         = "type"
+	attrNameDomainName   = "domain_name"
+	attrNameDNSQtype     = "dns_qtype"
+	attrNameSourceIP     = "source_ip"
+	attrNameAddress      = "address"
+	attrNameLog          = "log"
+	attrNameRedirectTo   = "redirect_to"
+	attrNameRefuse       = "refuse"
+	attrNameDrop         = "drop"
+	attrNamePolicyAction = "policy_action"
 
 	typeValueQuery    = "query"
 	typeValueResponse = "response"
 
-	attrNameDNSQtype     = "dns_qtype"
-	attrNamePolicyAction = "policy_action"
+	ednsAttrsStart = 3
+	ipReqAddrPos   = 1
 )
 
-type confAttrType byte
+func serializeOrPanic(a pdp.AttributeAssignment) string {
+	v, err := a.GetValue()
+	if err != nil {
+		panic(err)
+	}
+
+	s, err := v.Serialize()
+	if err != nil {
+		panic(err)
+	}
+
+	return s
+}
+
+type custAttr byte
 
 const (
-	confAttrEdns = 1 << iota
-	confAttrTransfer
-	confAttrDnstap
-	confAttrMetrics
+	custAttrEdns = 1 << iota
+	custAttrTransfer
+	custAttrDnstap
+	custAttrMetrics
 )
 
-func (a confAttrType) isEnds() bool {
-	return a&confAttrEdns != 0
+func (a custAttr) isEdns() bool {
+	return a&custAttrEdns != 0
 }
 
-func (a confAttrType) isTransfer() bool {
-	return a&confAttrTransfer != 0
+func (a custAttr) isTransfer() bool {
+	return a&custAttrTransfer != 0
 }
 
-func (a confAttrType) isDnstap() bool {
-	return a&confAttrDnstap != 0
+func (a custAttr) isDnstap() bool {
+	return a&custAttrDnstap != 0
 }
 
-func (a confAttrType) isMetrics() bool {
-	return a&confAttrMetrics != 0
+func (a custAttr) isMetrics() bool {
+	return a&custAttrMetrics != 0
 }

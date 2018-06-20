@@ -1,12 +1,15 @@
 package pdp
 
 import (
+	"fmt"
 	"net"
+	"testing"
 
 	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
+	"github.com/pmezard/go-difflib/difflib"
 )
 
 // AttributeAssignment represents assignment of arbitrary result to
@@ -171,6 +174,15 @@ func (a AttributeAssignment) calculate(ctx *Context) (AttributeValue, error) {
 	v, err := a.e.Calculate(ctx)
 	if err != nil {
 		return UndefinedValue, a.bindError(err)
+	}
+
+	return v, nil
+}
+
+func (a AttributeAssignment) GetValue() (AttributeValue, error) {
+	v, ok := a.e.(AttributeValue)
+	if !ok {
+		return UndefinedValue, a.bindError(newRequestInvalidExpressionError(a))
 	}
 
 	return v, nil
@@ -443,4 +455,54 @@ func (a AttributeAssignment) Serialize(ctx *Context) (string, string, string, er
 
 func (a AttributeAssignment) bindError(err error) error {
 	return bindErrorf(err, "assignment to %q", a.GetID())
+}
+
+func serializeAssignmentsForAssert(desc string, expected bool, a []AttributeAssignment) ([]string, error) {
+	ctx, _ := NewContext(nil, 0, nil)
+
+	out := make([]string, len(a))
+	for i, a := range a {
+		id, tName, s, err := a.Serialize(ctx)
+		if err != nil {
+			attr := "attribute"
+			if expected {
+				attr = "expected " + attr
+			}
+
+			return out, fmt.Errorf("can't serialize %s %d %q for %s: %s", attr, i+1, id, desc, err)
+		}
+
+		out[i] = fmt.Sprintf("%q.(%q) = %q\n", id, tName, s)
+	}
+
+	return out, nil
+}
+
+func AssertAttributeAssignments(t *testing.T, desc string, a []AttributeAssignment, e ...AttributeAssignment) {
+	sa, err := serializeAssignmentsForAssert(desc, false, a)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	se, err := serializeAssignmentsForAssert(desc, true, e)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	ctx := difflib.ContextDiff{
+		A:        se,
+		B:        sa,
+		FromFile: "Expected",
+		ToFile:   "Got"}
+
+	diff, err := difflib.GetContextDiffString(ctx)
+	if err != nil {
+		panic(fmt.Errorf("can't compare \"%s\": %s", desc, err))
+	}
+
+	if len(diff) > 0 {
+		t.Errorf("\"%s\" doesn't match:\n%s", desc, diff)
+	}
 }

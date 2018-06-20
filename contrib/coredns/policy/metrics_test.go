@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	pdp "github.com/infobloxopen/themis/pdp-service"
+	"github.com/infobloxopen/themis/pdp"
 	dto "github.com/prometheus/client_model/go"
 )
 
@@ -317,10 +317,10 @@ func TestAttrGaugeAddAttributes(t *testing.T) {
 	// Just make sure the test doesn't panic
 
 	ag.AddAttributes("test_attr1")
-	ag.Inc(&pdp.Attribute{Id: "test_attr1", Value: "test_value1"})
+	ag.Inc(pdp.MakeStringAssignment("test_attr1", "test_value1"))
 
 	ag.AddAttributes("test_attr2")
-	ag.Inc(&pdp.Attribute{Id: "test_attr2", Value: "test_value2"})
+	ag.Inc(pdp.MakeStringAssignment("test_attr2", "test_value2"))
 
 	ag.Stop()
 }
@@ -371,8 +371,8 @@ func checkTotal(t *testing.T, sc *SlicedCounter) {
 	}
 }
 
-func testAttr() *pdp.Attribute {
-	return &pdp.Attribute{Id: "test_attr", Value: "test_value"}
+func testAttr() pdp.AttributeAssignment {
+	return pdp.MakeStringAssignment("test_attr", "test_value")
 }
 
 var utime uint32
@@ -392,17 +392,17 @@ func newTestAttrGauge() *AttrGauge {
 	return ag
 }
 
-func totalVal(t *testing.T, ag *AttrGauge, attr *pdp.Attribute) uint32 {
-	if vMap, ok := ag.perAttr[attr.Id]; ok {
-		if sc, ok := vMap[attr.Value]; ok {
+func totalVal(t *testing.T, ag *AttrGauge, attr pdp.AttributeAssignment) uint32 {
+	if vMap, ok := ag.perAttr[attr.GetID()]; ok {
+		if sc, ok := vMap[serializeOrPanic(attr)]; ok {
 			return sc.Total()
 		}
 	}
 	return 0
 }
 
-func gaugeVal(t *testing.T, ag *AttrGauge, attr *pdp.Attribute) (uint32, error) {
-	g, e := ag.pgv.GetMetricWithLabelValues(attr.Id, attr.Value)
+func gaugeVal(t *testing.T, ag *AttrGauge, attr pdp.AttributeAssignment) (uint32, error) {
+	g, e := ag.pgv.GetMetricWithLabelValues(attr.GetID(), serializeOrPanic(attr))
 	if e != nil {
 		return 0, e
 	}
