@@ -26,6 +26,8 @@ type config struct {
 	maxReqSize  int
 	maxResAttrs int
 	log         bool
+	cacheTTL    time.Duration
+	cacheLimit  int
 }
 
 func policyParse(c *caddy.Controller) (*policyPlugin, error) {

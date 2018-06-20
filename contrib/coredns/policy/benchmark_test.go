@@ -32,11 +32,32 @@ func BenchmarkPlugin(b *testing.B) {
 		benchSerial(b, newTestPolicyPlugin(endpoint))
 	})
 
+	b.Run("1-stream-cache", func(b *testing.B) {
+		p := newTestPolicyPlugin(endpoint)
+		p.conf.cacheTTL = 10 * time.Minute
+		p.conf.cacheLimit = 128
+
+		benchSerial(b, p)
+	})
+
 	ps := newParStat()
 	if b.Run("100-streams", func(b *testing.B) {
 		p := newTestPolicyPlugin(endpoint)
 		p.conf.streams = 100
 		p.conf.hotSpot = true
+
+		benchParallel(b, p, ps)
+	}) {
+		b.Logf("Parallel stats:\n%s", ps)
+	}
+
+	ps = newParStat()
+	if b.Run("100-streams-cache", func(b *testing.B) {
+		p := newTestPolicyPlugin(endpoint)
+		p.conf.streams = 100
+		p.conf.hotSpot = true
+		p.conf.cacheTTL = 10 * time.Minute
+		p.conf.cacheLimit = 128
 
 		benchParallel(b, p, ps)
 	}) {
@@ -116,9 +137,11 @@ func newTestPolicyPlugin(endpoints ...string) *policyPlugin {
 	p.conf.endpoints = endpoints
 	p.conf.connTimeout = time.Second
 	p.conf.streams = 1
+	p.conf.maxReqSize = 256
 
 	mp := &mockPlugin{
 		ip: net.ParseIP("192.0.2.53"),
+		rc: dns.RcodeSuccess,
 	}
 	p.next = mp
 

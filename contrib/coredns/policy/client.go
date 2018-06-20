@@ -21,6 +21,15 @@ func (p *policyPlugin) connect() error {
 		pep.WithConnectionTimeout(p.conf.connTimeout),
 		pep.WithConnectionStateNotification(p.connStateCb),
 	}
+
+	if p.conf.cacheTTL > 0 {
+		if p.conf.cacheLimit > 0 {
+			opts = append(opts, pep.WithCacheTTLAndMaxSize(p.conf.cacheTTL, p.conf.cacheLimit))
+		} else {
+			opts = append(opts, pep.WithCacheTTL(p.conf.cacheTTL))
+		}
+	}
+
 	if p.conf.streams <= 0 || !p.conf.hotSpot {
 		opts = append(opts, pep.WithRoundRobinBalancer(p.conf.endpoints...))
 	}
@@ -30,6 +39,10 @@ func (p *policyPlugin) connect() error {
 		if p.conf.hotSpot {
 			opts = append(opts, pep.WithHotSpotBalancer(p.conf.endpoints...))
 		}
+	}
+
+	if p.conf.maxReqSize > 0 {
+		opts = append(opts, pep.WithMaxRequestSize(uint32(p.conf.maxReqSize)))
 	}
 
 	p.attrPool = makeAttrPool(p.conf.maxResAttrs, false)
