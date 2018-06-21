@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -29,11 +30,11 @@ func BenchmarkPlugin(b *testing.B) {
 	}
 
 	b.Run("1-stream", func(b *testing.B) {
-		benchSerial(b, newTestPolicyPlugin(endpoint))
+		benchSerial(b, newTestPolicyPlugin(mpModeConst, endpoint))
 	})
 
 	b.Run("1-stream-cache", func(b *testing.B) {
-		p := newTestPolicyPlugin(endpoint)
+		p := newTestPolicyPlugin(mpModeConst, endpoint)
 		p.conf.cacheTTL = 10 * time.Minute
 		p.conf.cacheLimit = 128
 
@@ -42,7 +43,7 @@ func BenchmarkPlugin(b *testing.B) {
 
 	ps := newParStat()
 	if b.Run("100-streams", func(b *testing.B) {
-		p := newTestPolicyPlugin(endpoint)
+		p := newTestPolicyPlugin(mpModeConst, endpoint)
 		p.conf.streams = 100
 		p.conf.hotSpot = true
 
@@ -52,14 +53,40 @@ func BenchmarkPlugin(b *testing.B) {
 	}
 
 	ps = newParStat()
-	if b.Run("100-streams-cache", func(b *testing.B) {
-		p := newTestPolicyPlugin(endpoint)
+	if b.Run("100-streams-cache-100%-hit", func(b *testing.B) {
+		p := newTestPolicyPlugin(mpModeConst, endpoint)
 		p.conf.streams = 100
 		p.conf.hotSpot = true
 		p.conf.cacheTTL = 10 * time.Minute
 		p.conf.cacheLimit = 128
 
 		benchParallel(b, p, ps)
+	}) {
+		b.Logf("Parallel stats:\n%s", ps)
+	}
+
+	ps = newParStat()
+	if b.Run("100-streams-cache-50%-hit", func(b *testing.B) {
+		p := newTestPolicyPlugin(mpModeHalfInc, endpoint)
+		p.conf.streams = 100
+		p.conf.hotSpot = true
+		p.conf.cacheTTL = 10 * time.Minute
+		p.conf.cacheLimit = 128
+
+		benchParallelHalfHits(b, p, ps)
+	}) {
+		b.Logf("Parallel stats:\n%s", ps)
+	}
+
+	ps = newParStat()
+	if b.Run("100-streams-cache-0%-hit", func(b *testing.B) {
+		p := newTestPolicyPlugin(mpModeInc, endpoint)
+		p.conf.streams = 100
+		p.conf.hotSpot = true
+		p.conf.cacheTTL = 10 * time.Minute
+		p.conf.cacheLimit = 128
+
+		benchParallelNoHits(b, p, ps)
 	}) {
 		b.Logf("Parallel stats:\n%s", ps)
 	}
@@ -125,6 +152,95 @@ func benchParallel(b *testing.B, p *policyPlugin, ps *parStat) {
 	ps.update(pCnt)
 }
 
+func benchParallelNoHits(b *testing.B, p *policyPlugin, ps *parStat) {
+	g := newLogGrabber()
+	if err := p.connect(); err != nil {
+		b.Fatalf("can't connect to PDP: %s\n=== plugin logs ===\n%s--- plugin logs ---", err, g.Release())
+	}
+	defer p.closeConn()
+	g.Release()
+
+	var errCnt uint32
+	errCntPtr := &errCnt
+
+	var pCnt uint32
+	pCntPtr := &pCnt
+
+	g = newLogGrabber()
+	b.SetParallelism(25)
+	b.RunParallel(func(pb *testing.PB) {
+		i := int(atomic.AddUint32(pCntPtr, 1))
+		w := newTestAddressedNonwriter("192.0.2.1")
+
+		j := 0
+		for pb.Next() {
+			j++
+
+			m := makeTestDNSMsg(strconv.Itoa(i)+"."+strconv.Itoa(j)+".example.com", dns.TypeA, dns.ClassINET)
+			w.Msg = nil
+			rc, err := p.ServeDNS(context.TODO(), w, m)
+			if rc != dns.RcodeSuccess || err != nil {
+				atomic.AddUint32(errCntPtr, 1)
+				return
+			}
+		}
+	})
+
+	logs := g.Release()
+	if errCnt > 0 {
+		b.Fatalf("parallel failed %d times\n=== plugin logs ===\n%s--- plugin logs ---", errCnt, logs)
+	}
+
+	ps.update(pCnt)
+}
+
+func benchParallelHalfHits(b *testing.B, p *policyPlugin, ps *parStat) {
+	g := newLogGrabber()
+	if err := p.connect(); err != nil {
+		b.Fatalf("can't connect to PDP: %s\n=== plugin logs ===\n%s--- plugin logs ---", err, g.Release())
+	}
+	defer p.closeConn()
+	g.Release()
+
+	var errCnt uint32
+	errCntPtr := &errCnt
+
+	var pCnt uint32
+	pCntPtr := &pCnt
+
+	g = newLogGrabber()
+	b.SetParallelism(25)
+	b.RunParallel(func(pb *testing.PB) {
+		i := int(atomic.AddUint32(pCntPtr, 1))
+		w := newTestAddressedNonwriter("192.0.2.1")
+
+		j := 0
+		for pb.Next() {
+			j++
+
+			dn := "example.com"
+			if j&1 == 0 {
+				dn = strconv.Itoa(i) + "." + strconv.Itoa(j) + "." + dn
+			}
+
+			m := makeTestDNSMsg(dn, dns.TypeA, dns.ClassINET)
+			w.Msg = nil
+			rc, err := p.ServeDNS(context.TODO(), w, m)
+			if rc != dns.RcodeSuccess || err != nil {
+				atomic.AddUint32(errCntPtr, 1)
+				return
+			}
+		}
+	})
+
+	logs := g.Release()
+	if errCnt > 0 {
+		b.Fatalf("parallel failed %d times\n=== plugin logs ===\n%s--- plugin logs ---", errCnt, logs)
+	}
+
+	ps.update(pCnt)
+}
+
 const allPermitTestPolicy = `# All Permit Policy
 policies:
   alg: FirstApplicableEffect
@@ -132,7 +248,7 @@ policies:
   - effect: Permit
 `
 
-func newTestPolicyPlugin(endpoints ...string) *policyPlugin {
+func newTestPolicyPlugin(mpMode int, endpoints ...string) *policyPlugin {
 	p := newPolicyPlugin()
 	p.conf.endpoints = endpoints
 	p.conf.connTimeout = time.Second
@@ -143,6 +259,13 @@ func newTestPolicyPlugin(endpoints ...string) *policyPlugin {
 		ip: net.ParseIP("192.0.2.53"),
 		rc: dns.RcodeSuccess,
 	}
+
+	mp.mode = mpMode
+	if mp.mode != mpModeConst {
+		var cnt uint32
+		mp.cnt = &cnt
+	}
+
 	p.next = mp
 
 	return p
