@@ -120,68 +120,146 @@ func TestStreamingClientInteraction(t *testing.T) {
 		t.Fatalf("can't connect to PDP server: %s", err)
 	}
 
-	ok := true
 	g := newLogGrabber()
-	defer func() {
-		logs := g.Release()
-		if !ok {
-			t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
+	ok := t.Run("noCache", func(t *testing.T) {
+		p := newPolicyPlugin()
+		p.conf.endpoints = []string{endpoint}
+		p.conf.connTimeout = time.Second
+		p.conf.streams = 1
+		p.conf.log = true
+
+		if err := p.connect(); err != nil {
+			t.Fatal(err)
 		}
-	}()
+		defer p.closeConn()
 
-	p := newPolicyPlugin()
-	p.conf.endpoints = []string{endpoint}
-	p.conf.connTimeout = time.Second
-	p.conf.streams = 1
-	p.conf.log = true
+		m := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+		w := newTestAddressedNonwriter("192.0.2.1")
 
-	if err := p.connect(); err != nil {
-		t.Fatal(err)
-	}
-	defer p.closeConn()
-
-	m := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-	w := newTestAddressedNonwriter("192.0.2.1")
-
-	ah := newAttrHolderWithDnReq(w, m, p.conf.options, nil)
-	if err := p.validate(ah); err != nil {
-		t.Error(err)
-		ok = false
-	}
-
-	if ah.action != actionAllow {
-		aName := fmt.Sprintf("unknown action %d", ah.action)
-		if ah.action >= 0 && int(ah.action) < len(actionNames) {
-			aName = actionNames[ah.action]
+		ah := newAttrHolderWithDnReq(w, m, p.conf.options, nil)
+		if err := p.validate(ah); err != nil {
+			t.Error(err)
 		}
-		t.Errorf("expected %q action but got %q", actionNames[actionAllow], aName)
-		ok = false
-	}
 
-	pdp.AssertAttributeAssignments(t, "p.validate(domain request)", ah.dnRes,
-		pdp.MakeStringAssignment("rule", "Query rule for example.com"),
-	)
-
-	ah.addIPReq(net.ParseIP("192.0.2.1"))
-
-	if err := p.validate(ah); err != nil {
-		t.Error(err)
-		ok = false
-	}
-
-	if ah.action != actionLog {
-		aName := fmt.Sprintf("unknown action %d", ah.action)
-		if ah.action >= 0 && int(ah.action) < len(actionNames) {
-			aName = actionNames[ah.action]
+		if ah.action != actionAllow {
+			aName := fmt.Sprintf("unknown action %d", ah.action)
+			if ah.action >= 0 && int(ah.action) < len(actionNames) {
+				aName = actionNames[ah.action]
+			}
+			t.Errorf("expected %q action but got %q", actionNames[actionAllow], aName)
 		}
-		t.Errorf("expected %q action but got %q", actionNames[actionLog], aName)
-		ok = false
+
+		pdp.AssertAttributeAssignments(t, "p.validate(domain request)", ah.dnRes,
+			pdp.MakeStringAssignment("rule", "Query rule for example.com"),
+		)
+
+		ah.addIPReq(net.ParseIP("192.0.2.1"))
+
+		if err := p.validate(ah); err != nil {
+			t.Error(err)
+		}
+
+		if ah.action != actionLog {
+			aName := fmt.Sprintf("unknown action %d", ah.action)
+			if ah.action >= 0 && int(ah.action) < len(actionNames) {
+				aName = actionNames[ah.action]
+			}
+			t.Errorf("expected %q action but got %q", actionNames[actionLog], aName)
+		}
+
+		pdp.AssertAttributeAssignments(t, "p.validate(domain request)", ah.ipRes,
+			pdp.MakeStringAssignment("rule", "Response rule for 192.0.2.0/28"),
+			pdp.MakeStringAssignment("log", ""),
+		)
+	})
+
+	logs := g.Release()
+	if !ok {
+		t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
 	}
 
-	pdp.AssertAttributeAssignments(t, "p.validate(domain request)", ah.ipRes,
-		pdp.MakeStringAssignment("rule", "Response rule for 192.0.2.0/28"),
-		pdp.MakeStringAssignment("log", ""),
-	)
+	g = newLogGrabber()
+	ok = t.Run("cacheTTL", func(t *testing.T) {
+		p := newPolicyPlugin()
+		p.conf.endpoints = []string{endpoint}
+		p.conf.connTimeout = time.Second
+		p.conf.streams = 1
+		p.conf.log = true
+		p.conf.maxReqSize = 128
+		p.conf.cacheTTL = 10 * time.Minute
+
+		if err := p.connect(); err != nil {
+			t.Fatal(err)
+		}
+		defer p.closeConn()
+
+		m := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+		w := newTestAddressedNonwriter("192.0.2.1")
+
+		ah := newAttrHolderWithDnReq(w, m, p.conf.options, nil)
+		if err := p.validate(ah); err != nil {
+			t.Error(err)
+		}
+
+		if ah.action != actionAllow {
+			aName := fmt.Sprintf("unknown action %d", ah.action)
+			if ah.action >= 0 && int(ah.action) < len(actionNames) {
+				aName = actionNames[ah.action]
+			}
+			t.Errorf("expected %q action but got %q", actionNames[actionAllow], aName)
+		}
+
+		pdp.AssertAttributeAssignments(t, "p.validate(domain request)", ah.dnRes,
+			pdp.MakeStringAssignment("rule", "Query rule for example.com"),
+		)
+	})
+
+	logs = g.Release()
+	if !ok {
+		t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
+	}
+
+	g = newLogGrabber()
+	ok = t.Run("cacheTTLAndLimit", func(t *testing.T) {
+		p := newPolicyPlugin()
+		p.conf.endpoints = []string{endpoint}
+		p.conf.connTimeout = time.Second
+		p.conf.streams = 1
+		p.conf.log = true
+		p.conf.maxReqSize = 128
+		p.conf.cacheTTL = 10 * time.Minute
+		p.conf.cacheLimit = 128
+
+		if err := p.connect(); err != nil {
+			t.Fatal(err)
+		}
+		defer p.closeConn()
+
+		m := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+		w := newTestAddressedNonwriter("192.0.2.1")
+
+		ah := newAttrHolderWithDnReq(w, m, p.conf.options, nil)
+		if err := p.validate(ah); err != nil {
+			t.Error(err)
+		}
+
+		if ah.action != actionAllow {
+			aName := fmt.Sprintf("unknown action %d", ah.action)
+			if ah.action >= 0 && int(ah.action) < len(actionNames) {
+				aName = actionNames[ah.action]
+			}
+			t.Errorf("expected %q action but got %q", actionNames[actionAllow], aName)
+		}
+
+		pdp.AssertAttributeAssignments(t, "p.validate(domain request)", ah.dnRes,
+			pdp.MakeStringAssignment("rule", "Query rule for example.com"),
+		)
+	})
+
+	logs = g.Release()
+	if !ok {
+		t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
+	}
 }
 
 func TestStreamingClientInteractionWithObligationsOverflow(t *testing.T) {

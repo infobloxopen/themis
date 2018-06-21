@@ -26,6 +26,8 @@ func TestPolicyConfigParse(t *testing.T) {
 		connTimeout *time.Duration
 		maxReqSize  *int
 		maxResAttrs *int
+		cacheTTL    *time.Duration
+		cacheLimit  *int
 	}{
 		{
 			desc: "MissingPolicySection",
@@ -587,6 +589,98 @@ func TestPolicyConfigParse(t *testing.T) {
 					}`,
 			err: errors.New("Attributes limit 2147483648 (> 2147483647) for PDP response is too high"),
 		},
+		{
+			desc: "NoDecisionCache",
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+						}
+					}`,
+			cacheTTL: newDurationPtr(0),
+		},
+		{
+			desc: "DecisionCache",
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							cache
+						}
+					}`,
+			cacheTTL:   newDurationPtr(10 * time.Minute),
+			cacheLimit: newIntPtr(0),
+		},
+		{
+			desc: "DecisionCacheWithTTL",
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							cache 15s
+						}
+					}`,
+			cacheTTL:   newDurationPtr(15 * time.Second),
+			cacheLimit: newIntPtr(0),
+		},
+		{
+			desc: "DecisionCacheWithTTLAndLimit",
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							cache 15s 128
+						}
+					}`,
+			cacheTTL:   newDurationPtr(15 * time.Second),
+			cacheLimit: newIntPtr(128),
+		},
+		{
+			desc: "TooManyCacheArguments",
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							cache too many of them
+						}
+					}`,
+			err: errors.New("Wrong argument count or unexpected line ending"),
+		},
+		{
+			desc: "InvalidCacheTTL",
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							cache invalid
+						}
+					}`,
+			err: errors.New("Could not parse decision cache TTL"),
+		},
+		{
+			desc: "WrongCacheTTL",
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							cache -15s
+						}
+					}`,
+			err: errors.New("Can't set decision cache TTL to"),
+		},
+		{
+			desc: "InvalidCacheLimit",
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							cache 15s invalid
+						}
+					}`,
+			err: errors.New("Could not parse decision cache limit"),
+		},
+		{
+			desc: "OverflowCacheLimit",
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							cache 15s 2147483648
+						}
+					}`,
+			err: errors.New("Cache limit 2147483648 (> 2147483647) is too high"),
+		},
 	}
 
 	for _, test := range tests {
@@ -708,6 +802,14 @@ func TestPolicyConfigParse(t *testing.T) {
 					if test.maxResAttrs != nil && *test.maxResAttrs != mw.conf.maxResAttrs {
 						t.Errorf("Expected response attributes limit %d but got %d",
 							*test.maxResAttrs, mw.conf.maxResAttrs)
+					}
+
+					if test.cacheTTL != nil && *test.cacheTTL != mw.conf.cacheTTL {
+						t.Errorf("Expected cache TTL %s but got %s", *test.cacheTTL, mw.conf.cacheTTL)
+					}
+
+					if test.cacheLimit != nil && *test.cacheLimit != mw.conf.cacheLimit {
+						t.Errorf("Expected cache limit %d but got %d", *test.cacheLimit, mw.conf.cacheLimit)
 					}
 				}
 			}

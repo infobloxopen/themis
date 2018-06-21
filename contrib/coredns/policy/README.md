@@ -16,6 +16,9 @@ policy {
     dnstap ATTR_1, ATTR_2, ... ATTR_N
     passthrough SUFFIX_1, SUFFIX_2, ... SUFFIX_N
     log
+    max_request_size SIZE
+    max_response_attributes COUNT
+    cache [TTL [SIZE]]
 }
 ~~~
 
@@ -48,6 +51,12 @@ Option passthrough defines set of domain name suffixes, domain that contains one
 Option connection_timeout sets timeout for query validation when no PDP server are available. Negative value or "no" keyword means wait forever. This is default behavior. With zero timeout validation fails instantly if there is no PDP servers. The option works only if gRPC streams are greater than 0.
 
 Option log enables log PDP request and response
+
+Option max_request_size sets maximum buffer size in bytes for serialized request. Too high limit makes the plugin to allocate too much memory while too small can lead to buffer overflow errors on validation.
+
+Option max_response_attributes sets maximum number of attributes expected from PDP.
+
+Option cache enables decision cache. TTL default value is 10 minutes. SIZE limits memory cache takes to given number of megabytes. If it isn't provided cache can grow until application crashes due to out of memory.
 
 ## Example
 

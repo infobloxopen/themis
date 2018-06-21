@@ -87,6 +87,9 @@ func (conf *config) parseOption(c *caddy.Controller) error {
 
 	case "max_response_attributes":
 		return conf.parseMaxResponseAttributes(c)
+
+	case "cache":
+		return conf.parseCache(c)
 	}
 
 	return errInvalidOption
@@ -284,5 +287,42 @@ func (conf *config) parseMaxResponseAttributes(c *caddy.Controller) error {
 	}
 
 	conf.maxResAttrs = int(n)
+	return nil
+}
+
+func (conf *config) parseCache(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) > 2 {
+		return c.ArgErr()
+	}
+
+	if len(args) > 0 {
+		ttl, err := time.ParseDuration(args[0])
+		if err != nil {
+			return fmt.Errorf("Could not parse decision cache TTL: %s", err)
+		}
+
+		if ttl <= 0 {
+			return fmt.Errorf("Can't set decision cache TTL to %s", ttl)
+		}
+
+		conf.cacheTTL = ttl
+	} else {
+		conf.cacheTTL = 10 * time.Minute
+	}
+
+	if len(args) > 1 {
+		n, err := strconv.ParseUint(args[1], 10, 0)
+		if err != nil {
+			return fmt.Errorf("Could not parse decision cache limit: %s", err)
+		}
+
+		if n > math.MaxInt32 {
+			return fmt.Errorf("Cache limit %d (> %d) is too high", n, math.MaxInt32)
+		}
+
+		conf.cacheLimit = int(n)
+	}
+
 	return nil
 }
