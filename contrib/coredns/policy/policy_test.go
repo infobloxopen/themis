@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -816,10 +817,18 @@ func (g *logGrabber) Release() string {
 	return g.b.String()
 }
 
+const (
+	mpModeConst = iota
+	mpModeInc
+	mpModeHalfInc
+)
+
 type mockPlugin struct {
-	ip  net.IP
-	err error
-	rc  int
+	ip   net.IP
+	err  error
+	rc   int
+	mode int
+	cnt  *uint32
 }
 
 // Name implements the plugin.Handler interface.
@@ -837,6 +846,15 @@ func (p *mockPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.
 		return dns.RcodeServerFailure, nil
 	}
 
+	ip := p.ip
+	if p.mode != mpModeConst && p.cnt != nil {
+		i := atomic.AddUint32(p.cnt, 1)
+
+		if p.mode != mpModeHalfInc || i&1 == 0 {
+			ip = addToIP(ip, i)
+		}
+	}
+
 	q := r.Question[0]
 	hdr := dns.RR_Header{
 		Name:   q.Name,
@@ -844,7 +862,7 @@ func (p *mockPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.
 		Class:  q.Qclass,
 	}
 
-	if ipv4 := p.ip.To4(); ipv4 != nil {
+	if ipv4 := ip.To4(); ipv4 != nil {
 		if q.Qtype != dns.TypeA {
 			return dns.RcodeSuccess, nil
 		}
@@ -864,7 +882,7 @@ func (p *mockPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.
 		}
 
 		w.WriteMsg(m)
-	} else if ipv6 := p.ip.To16(); ipv6 != nil {
+	} else if ipv6 := ip.To16(); ipv6 != nil {
 		if q.Qtype != dns.TypeAAAA {
 			return dns.RcodeSuccess, nil
 		}
@@ -887,6 +905,56 @@ func (p *mockPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.
 	}
 
 	return p.rc, nil
+}
+
+func addToIP(ip net.IP, n uint32) net.IP {
+	if n == 0 {
+		return ip
+	}
+
+	out := net.IP(make([]byte, len(ip)))
+	copy(out, ip)
+
+	d := uint(n % 256)
+	n /= 256
+
+	c := uint(n % 256)
+	n /= 256
+
+	b := uint(n % 256)
+	n /= 256
+
+	a := uint(n)
+
+	t := uint(out[len(out)-1])
+	t += d
+	out[len(out)-1] = byte(t % 256)
+
+	z := uint(out[len(out)-2])
+	if t > 255 {
+		z++
+	}
+
+	z += c
+	out[len(out)-2] = byte(z % 256)
+
+	y := uint(out[len(out)-3])
+	if z > 255 {
+		y++
+	}
+
+	y += b
+	out[len(out)-3] = byte(y % 256)
+
+	x := uint(out[len(out)-4])
+	if y > 255 {
+		x++
+	}
+
+	x += a
+	out[len(out)-4] = byte(x % 256)
+
+	return out
 }
 
 type erraticPep struct {
