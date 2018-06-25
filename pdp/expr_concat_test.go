@@ -125,8 +125,9 @@ func TestFunctionConcatWithMissingValues(t *testing.T) {
 
 	ls1 := MakeListOfStringsValue([]string{"1", "2", "3"})
 	ls2 := MakeListOfStringsValue([]string{"A", "B", "C"})
-	mve := failListOfStringsExpr{err: newMissingValueError()}
-	fe := failListOfStringsExpr{err: fmt.Errorf("test error")}
+	mlose := failExpr{t: TypeListOfStrings, err: newMissingValueError()}
+	mse := failExpr{t: TypeString, err: newMissingValueError()}
+	fsose := failExpr{t: TypeSetOfStrings, err: fmt.Errorf("test error")}
 
 	v, err := makeFunctionConcat([]Expression{ls1, ls2}).Calculate(ctx)
 	if err != nil {
@@ -143,7 +144,7 @@ func TestFunctionConcatWithMissingValues(t *testing.T) {
 		}
 	}
 
-	v, err = makeFunctionConcat([]Expression{mve, ls2}).Calculate(ctx)
+	v, err = makeFunctionConcat([]Expression{mlose, ls2}).Calculate(ctx)
 	if err != nil {
 		t.Error(err)
 	} else {
@@ -158,7 +159,7 @@ func TestFunctionConcatWithMissingValues(t *testing.T) {
 		}
 	}
 
-	v, err = makeFunctionConcat([]Expression{ls1, mve}).Calculate(ctx)
+	v, err = makeFunctionConcat([]Expression{ls1, mse}).Calculate(ctx)
 	if err != nil {
 		t.Error(err)
 	} else {
@@ -173,14 +174,14 @@ func TestFunctionConcatWithMissingValues(t *testing.T) {
 		}
 	}
 
-	v, err = makeFunctionConcat([]Expression{mve, mve}).Calculate(ctx)
+	v, err = makeFunctionConcat([]Expression{mse, mlose}).Calculate(ctx)
 	if err == nil {
 		t.Errorf("Expected *MissingValueError but got value %s", v.describe())
 	} else if _, ok := err.(*MissingValueError); !ok {
 		t.Errorf("Expected *MissingValueError but got %T: %s", err, err)
 	}
 
-	v, err = makeFunctionConcat([]Expression{ls1, fe}).Calculate(ctx)
+	v, err = makeFunctionConcat([]Expression{ls1, fsose}).Calculate(ctx)
 	if err == nil {
 		t.Errorf("Expected *externalError but got value %s", v.describe())
 	} else if _, ok := err.(*externalError); !ok {
@@ -188,14 +189,15 @@ func TestFunctionConcatWithMissingValues(t *testing.T) {
 	}
 }
 
-type failListOfStringsExpr struct {
+type failExpr struct {
+	t   Type
 	err error
 }
 
-func (f failListOfStringsExpr) GetResultType() Type {
-	return TypeListOfStrings
+func (f failExpr) GetResultType() Type {
+	return f.t
 }
 
-func (f failListOfStringsExpr) Calculate(ctx *Context) (AttributeValue, error) {
+func (f failExpr) Calculate(ctx *Context) (AttributeValue, error) {
 	return UndefinedValue, f.err
 }
