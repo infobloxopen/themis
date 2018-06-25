@@ -6,6 +6,8 @@ import (
 )
 
 func TestFunctionConcat(t *testing.T) {
+	s := MakeStringValue("teststring")
+
 	ss := MakeSetOfStringsValue(newStrTree(
 		"set-first",
 		"set-second",
@@ -61,7 +63,7 @@ func TestFunctionConcat(t *testing.T) {
 	}
 	f64 := MakeFlagsValue64(0x500000000, ft64)
 
-	f := makeFunctionConcat([]Expression{ss, ls, f8, f16, f32, f64})
+	f := makeFunctionConcat([]Expression{s, ss, ls, f8, f16, f32, f64})
 	if f, ok := f.(functionConcat); ok {
 		e := "concat"
 		desc := f.describe()
@@ -84,7 +86,7 @@ func TestFunctionConcat(t *testing.T) {
 			if err != nil {
 				t.Errorf("Expected no error but got: %s", err)
 			} else {
-				e := "\"set-first\",\"set-second\",\"set-third\"," +
+				e := "\"teststring\",\"set-first\",\"set-second\",\"set-third\"," +
 					"\"list-first\",\"list-second\",\"list-third\"," +
 					"\"f00\",\"f02\",\"f10\",\"f12\",\"f20\",\"f22\",\"f40\",\"f42\""
 				if e != s {
@@ -94,17 +96,17 @@ func TestFunctionConcat(t *testing.T) {
 		}
 	}
 
-	m := findValidator("concat", ss, ls, f8, f16, f32, f64)
+	m := findValidator("concat", s, ss, ls, f8, f16, f32, f64)
 	if m == nil {
 		t.Errorf("expected makeFunctionConcat but got %#v", m)
 	} else {
-		f := m([]Expression{ss, ls, f8, f16, f32, f64})
+		f := m([]Expression{s, ss, ls, f8, f16, f32, f64})
 		if _, ok := f.(functionConcat); !ok {
 			t.Errorf("expected functionConcat but got %T (%#v)", f, f)
 		}
 	}
 
-	m = findValidator("concat", ss, ls, f8, f16, f32, f64, MakeStringValue("test"))
+	m = findValidator("concat", s, ss, ls, f8, f16, f32, f64, MakeIntegerValue(5))
 	if m != nil {
 		t.Errorf("expected nothing but got %#v", m)
 	}
