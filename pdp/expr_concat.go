@@ -49,7 +49,7 @@ func functionConcatValidator(args []Expression) functionMaker {
 
 	for _, arg := range args {
 		t := arg.GetResultType()
-		if t != TypeSetOfStrings && t != TypeListOfStrings {
+		if t != TypeString && t != TypeSetOfStrings && t != TypeListOfStrings {
 			if _, ok := t.(*FlagsType); !ok {
 				return nil
 			}
@@ -62,6 +62,14 @@ func functionConcatValidator(args []Expression) functionMaker {
 func appendConcatArg(s []string, arg Expression, ctx *Context) ([]string, error) {
 	t := arg.GetResultType()
 	switch t {
+	case TypeString:
+		v, err := ctx.calculateStringExpression(arg)
+		if err != nil {
+			return s, err
+		}
+
+		return append(s, v), nil
+
 	case TypeSetOfStrings:
 		v, err := ctx.calculateSetOfStringsExpression(arg)
 		if err != nil {
