@@ -6,6 +6,8 @@ import (
 )
 
 func TestFunctionConcat(t *testing.T) {
+	s := MakeStringValue("teststring")
+
 	ss := MakeSetOfStringsValue(newStrTree(
 		"set-first",
 		"set-second",
@@ -61,7 +63,7 @@ func TestFunctionConcat(t *testing.T) {
 	}
 	f64 := MakeFlagsValue64(0x500000000, ft64)
 
-	f := makeFunctionConcat([]Expression{ss, ls, f8, f16, f32, f64})
+	f := makeFunctionConcat([]Expression{s, ss, ls, f8, f16, f32, f64})
 	if f, ok := f.(functionConcat); ok {
 		e := "concat"
 		desc := f.describe()
@@ -84,7 +86,7 @@ func TestFunctionConcat(t *testing.T) {
 			if err != nil {
 				t.Errorf("Expected no error but got: %s", err)
 			} else {
-				e := "\"set-first\",\"set-second\",\"set-third\"," +
+				e := "\"teststring\",\"set-first\",\"set-second\",\"set-third\"," +
 					"\"list-first\",\"list-second\",\"list-third\"," +
 					"\"f00\",\"f02\",\"f10\",\"f12\",\"f20\",\"f22\",\"f40\",\"f42\""
 				if e != s {
@@ -94,17 +96,17 @@ func TestFunctionConcat(t *testing.T) {
 		}
 	}
 
-	m := findValidator("concat", ss, ls, f8, f16, f32, f64)
+	m := findValidator("concat", s, ss, ls, f8, f16, f32, f64)
 	if m == nil {
 		t.Errorf("expected makeFunctionConcat but got %#v", m)
 	} else {
-		f := m([]Expression{ss, ls, f8, f16, f32, f64})
+		f := m([]Expression{s, ss, ls, f8, f16, f32, f64})
 		if _, ok := f.(functionConcat); !ok {
 			t.Errorf("expected functionConcat but got %T (%#v)", f, f)
 		}
 	}
 
-	m = findValidator("concat", ss, ls, f8, f16, f32, f64, MakeStringValue("test"))
+	m = findValidator("concat", s, ss, ls, f8, f16, f32, f64, MakeIntegerValue(5))
 	if m != nil {
 		t.Errorf("expected nothing but got %#v", m)
 	}
@@ -123,8 +125,9 @@ func TestFunctionConcatWithMissingValues(t *testing.T) {
 
 	ls1 := MakeListOfStringsValue([]string{"1", "2", "3"})
 	ls2 := MakeListOfStringsValue([]string{"A", "B", "C"})
-	mve := failListOfStringsExpr{err: newMissingValueError()}
-	fe := failListOfStringsExpr{err: fmt.Errorf("test error")}
+	mlose := failExpr{t: TypeListOfStrings, err: newMissingValueError()}
+	mse := failExpr{t: TypeString, err: newMissingValueError()}
+	fsose := failExpr{t: TypeSetOfStrings, err: fmt.Errorf("test error")}
 
 	v, err := makeFunctionConcat([]Expression{ls1, ls2}).Calculate(ctx)
 	if err != nil {
@@ -141,7 +144,7 @@ func TestFunctionConcatWithMissingValues(t *testing.T) {
 		}
 	}
 
-	v, err = makeFunctionConcat([]Expression{mve, ls2}).Calculate(ctx)
+	v, err = makeFunctionConcat([]Expression{mlose, ls2}).Calculate(ctx)
 	if err != nil {
 		t.Error(err)
 	} else {
@@ -156,7 +159,7 @@ func TestFunctionConcatWithMissingValues(t *testing.T) {
 		}
 	}
 
-	v, err = makeFunctionConcat([]Expression{ls1, mve}).Calculate(ctx)
+	v, err = makeFunctionConcat([]Expression{ls1, mse}).Calculate(ctx)
 	if err != nil {
 		t.Error(err)
 	} else {
@@ -171,14 +174,14 @@ func TestFunctionConcatWithMissingValues(t *testing.T) {
 		}
 	}
 
-	v, err = makeFunctionConcat([]Expression{mve, mve}).Calculate(ctx)
+	v, err = makeFunctionConcat([]Expression{mse, mlose}).Calculate(ctx)
 	if err == nil {
 		t.Errorf("Expected *MissingValueError but got value %s", v.describe())
 	} else if _, ok := err.(*MissingValueError); !ok {
 		t.Errorf("Expected *MissingValueError but got %T: %s", err, err)
 	}
 
-	v, err = makeFunctionConcat([]Expression{ls1, fe}).Calculate(ctx)
+	v, err = makeFunctionConcat([]Expression{ls1, fsose}).Calculate(ctx)
 	if err == nil {
 		t.Errorf("Expected *externalError but got value %s", v.describe())
 	} else if _, ok := err.(*externalError); !ok {
@@ -186,14 +189,15 @@ func TestFunctionConcatWithMissingValues(t *testing.T) {
 	}
 }
 
-type failListOfStringsExpr struct {
+type failExpr struct {
+	t   Type
 	err error
 }
 
-func (f failListOfStringsExpr) GetResultType() Type {
-	return TypeListOfStrings
+func (f failExpr) GetResultType() Type {
+	return f.t
 }
 
-func (f failListOfStringsExpr) Calculate(ctx *Context) (AttributeValue, error) {
+func (f failExpr) Calculate(ctx *Context) (AttributeValue, error) {
 	return UndefinedValue, f.err
 }

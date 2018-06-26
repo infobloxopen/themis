@@ -605,7 +605,7 @@ Each of the above numerical functions performs the respective numerical operatio
 ### Other functions
 There are several other functions available:
 - **list of strings** - converts its argument to list of strings. It accepts set of strings, list of strings and flags. In case of set of strings the function returns list of strings sorted in order maintained by set (set keeps order of initial value definition). List of strings returned by the function as is. And for flags it returns list of names for flags which are set (keeping order of names from flags type definition).
-- **concat** - concatenates all given arguments to single list of strings. The function treats MissingValueError in special way. If at least one argument returns some data, any MissingValueError is ignored. But when all arguments return the error, **concat** returns the error as well. It accepts lists of strings, sets of strings and flags as arguments similarly to **list of strings**.
+- **concat** - concatenates all given arguments to single list of strings. The function treats MissingValueError in special way. If at least one argument returns some data, any MissingValueError is ignored. But when all arguments return the error, **concat** returns the error as well. It accepts strings, lists of strings, sets of strings and flags as arguments. **concat** handles lists of strings, sets of strings and flags the same way as function **list of strings**.
 - **try** - returns result of first expression which calculated with no error. If all arguments calculated with error it throws the last one. It accepts expressions of any types but all of them must be of the same type (which becomes type of function result).
 
 ### Local Content
