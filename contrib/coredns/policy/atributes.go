@@ -23,6 +23,7 @@ const (
 	confAttrEdns = 1 << iota
 	confAttrTransfer
 	confAttrDnstap
+	confAttrMetrics
 )
 
 func (a confAttrType) isEnds() bool {
@@ -35,4 +36,8 @@ func (a confAttrType) isTransfer() bool {
 
 func (a confAttrType) isDnstap() bool {
 	return a&confAttrDnstap != 0
+}
+
+func (a confAttrType) isMetrics() bool {
+	return a&confAttrMetrics != 0
 }

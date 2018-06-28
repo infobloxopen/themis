@@ -339,6 +339,52 @@ func TestPolicyConfigParse(t *testing.T) {
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
+							metrics
+						}
+					}`,
+			errContent: errors.New("Wrong argument count or unexpected line ending"),
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							edns0 0xfff0 uid hex string 32 0 16
+							edns0 0xfff1 id
+							metrics uid query_id
+						}
+					}`,
+			options: map[uint16][]*edns0Map{
+				0xfff0: {
+					&edns0Map{
+						name:     "uid",
+						dataType: typeEDNS0Hex,
+						destType: "string",
+						size:     32,
+						start:    0,
+						end:      16,
+						metrics:  true,
+					},
+				},
+				0xfff1: {
+					&edns0Map{
+						name:     "id",
+						dataType: typeEDNS0Hex,
+						destType: "string",
+						size:     0,
+						start:    0,
+						end:      0},
+				},
+			},
+			confAttrs: map[string]confAttrType{
+				"id":       confAttrEdns,
+				"uid":      confAttrEdns | confAttrMetrics,
+				"query_id": confAttrMetrics,
+			},
+		},
+		{
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
 							debug_id corednsinstance
 						}
 					}`,
