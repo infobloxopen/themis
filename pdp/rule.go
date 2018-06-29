@@ -81,9 +81,11 @@ func (r Rule) MarshalWithDepth(out io.Writer, depth int) error {
 	if depth < 0 {
 		return newMarshalInvalidDepthError(depth)
 	}
-	rjson, err := json.Marshal(storageNodeFmt{
-		Ord: r.ord,
-		ID:  r.id,
+	rjson, err := json.Marshal(storageRuleFmt{
+		Ord:         r.ord,
+		ID:          r.id,
+		Target:      r.target,
+		Obligations: r.obligations,
 	})
 	if err != nil {
 		return bindErrorf(err, "rid=\"%s\"", r.id)

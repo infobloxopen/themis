@@ -1,8 +1,10 @@
 package pdp
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/infobloxopen/go-trees/strtree"
@@ -206,6 +208,15 @@ func makeMapperRCA(rules []*Rule, params interface{}) RuleCombiningAlg {
 		order:     mapperParams.Order,
 		algorithm: mapperParams.Algorithm,
 	}
+}
+
+func (a mapperRCA) MarshalJSON() ([]byte, error) {
+	return json.Marshal(mapperAlgFmt{
+		Type:      "mapperRCA",
+		Default:   strconv.Quote(a.def.id),
+		Error:     strconv.Quote(a.err.id),
+		Algorithm: a.algorithm,
+	})
 }
 
 func (a mapperRCA) describe() string {

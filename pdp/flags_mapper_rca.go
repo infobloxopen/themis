@@ -1,7 +1,9 @@
 package pdp
 
 import (
+	"encoding/json"
 	"sort"
+	"strconv"
 )
 
 type flagsMapperRCA struct {
@@ -58,6 +60,15 @@ func (a flagsMapperRCA) execute(rules []*Rule, ctx *Context) Response {
 	}
 
 	return a.calculateErrorRule(ctx, newFlagsMapperRCAArgumentTypeError(t))
+}
+
+func (a flagsMapperRCA) MarshalJSON() ([]byte, error) {
+	return json.Marshal(mapperAlgFmt{
+		Type:      "flagsMapperRCA",
+		Default:   strconv.Quote(a.def.id),
+		Error:     strconv.Quote(a.err.id),
+		Algorithm: a.algorithm,
+	})
 }
 
 func (a flagsMapperRCA) add(ID string, child, old *Rule) RuleCombiningAlg {
