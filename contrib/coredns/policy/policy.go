@@ -75,6 +75,7 @@ type edns0Map struct {
 	size     uint
 	start    uint
 	end      uint
+	metrics  bool
 }
 
 // policyPlugin represents a plugin instance that can validate DNS
@@ -97,6 +98,7 @@ type policyPlugin struct {
 	unkConnAttempts *uint32
 	wg              sync.WaitGroup
 	log             bool
+	attrGauges      *AttrGauge
 }
 
 func newPolicyPlugin() *policyPlugin {
@@ -167,10 +169,13 @@ func (p *policyPlugin) parseOption(c *caddy.Controller) error {
 		return p.parseStreams(c)
 
 	case "transfer":
-		return p.parseTransfer(c)
+		return p.parseAttributes(c, confAttrTransfer)
 
 	case "dnstap":
-		return p.parseDnstap(c)
+		return p.parseAttributes(c, confAttrDnstap)
+
+	case "metrics":
+		return p.parseAttributes(c, confAttrMetrics)
 
 	case "debug_id":
 		return p.parseDebugID(c)
@@ -277,27 +282,14 @@ func (p *policyPlugin) parseStreams(c *caddy.Controller) error {
 	return nil
 }
 
-func (p *policyPlugin) parseTransfer(c *caddy.Controller) error {
+func (p *policyPlugin) parseAttributes(c *caddy.Controller, attrType confAttrType) error {
 	args := c.RemainingArgs()
 	if len(args) <= 0 {
 		return c.ArgErr()
 	}
 
 	for _, item := range args {
-		p.confAttrs[item] = p.confAttrs[item] | confAttrTransfer
-	}
-
-	return nil
-}
-
-func (p *policyPlugin) parseDnstap(c *caddy.Controller) error {
-	args := c.RemainingArgs()
-	if len(args) <= 0 {
-		return c.ArgErr()
-	}
-
-	for _, item := range args {
-		p.confAttrs[item] = p.confAttrs[item] | confAttrDnstap
+		p.confAttrs[item] = p.confAttrs[item] | attrType
 	}
 
 	return nil
@@ -332,7 +324,7 @@ func (p *policyPlugin) addEDNS0Map(code, name, dataType, destType,
 		return fmt.Errorf("Invalid dataType for EDNS0 map: %s", dataType)
 	}
 	ecode := uint16(c)
-	p.options[ecode] = append(p.options[ecode], &edns0Map{name, ednsType, destType, uint(size), uint(start), uint(end)})
+	p.options[ecode] = append(p.options[ecode], &edns0Map{name, ednsType, destType, uint(size), uint(start), uint(end), false})
 	p.confAttrs[name] = p.confAttrs[name] | confAttrEdns
 	return nil
 }
@@ -368,7 +360,7 @@ func parseHex(data []byte, option *edns0Map) string {
 	return hex.EncodeToString(data[start:end])
 }
 
-func parseOptionGroup(ah *attrHolder, data []byte, options []*edns0Map) {
+func (p *policyPlugin) parseOptionGroup(ah *attrHolder, data []byte, options []*edns0Map) {
 	for _, option := range options {
 		var value string
 		switch option.dataType {
@@ -389,7 +381,11 @@ func parseOptionGroup(ah *attrHolder, data []byte, options []*edns0Map) {
 			ah.sourceIP.Value = value
 			continue
 		}
-		ah.attrsReqDomain = append(ah.attrsReqDomain, &pdp.Attribute{Id: option.name, Type: option.destType, Value: value})
+		attr := &pdp.Attribute{Id: option.name, Type: option.destType, Value: value}
+		ah.attrsReqDomain = append(ah.attrsReqDomain, attr)
+		if option.metrics {
+			p.attrGauges.Inc(attr)
+		}
 	}
 }
 
@@ -510,7 +506,7 @@ func (p *policyPlugin) getAttrsFromEDNS0(ah *attrHolder, r *dns.Msg) {
 			option = append(option, opt)
 			continue
 		}
-		parseOptionGroup(ah, optLocal.Data, options)
+		p.parseOptionGroup(ah, optLocal.Data, options)
 	}
 	o.Option = option
 	return
