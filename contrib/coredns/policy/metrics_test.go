@@ -161,11 +161,9 @@ func TestIncVsPartiallyStale(t *testing.T) {
 // ============= AttrGauge tests ==============
 
 func TestStartStop(t *testing.T) {
-	initClobalGauge()
 	ag := newTestAttrGauge()
-	interval := 10 * time.Millisecond
 
-	ag.Start(interval, 20)
+	ag.Start(10*time.Millisecond, 20)
 	time.Sleep(100 * time.Millisecond)
 	if atomic.LoadUint32(&ag.state) != AttrGaugeStarted {
 		t.Errorf("AttrGauge has not started")
@@ -179,13 +177,18 @@ func TestStartStop(t *testing.T) {
 }
 
 func TestNegativeStop(t *testing.T) {
-	initClobalGauge()
 	ag := newTestAttrGauge()
-	ag.state = AttrGaugeStopped
 
+	ag.state = AttrGaugeStopped
 	ag.Stop()
 	if atomic.LoadUint32(&ag.state) == AttrGaugeStopping {
 		t.Errorf("AttrGauge is unexpectedly stopping")
+	}
+
+	ag.state = AttrGaugeStopping
+	ag.Stop()
+	if atomic.LoadUint32(&ag.state) != AttrGaugeStopping {
+		t.Errorf("AttrGauge is unexpectedly stopped")
 	}
 }
 
@@ -197,13 +200,12 @@ func TestAttrGaugeNil(t *testing.T) {
 }
 
 func TestAttrGaugeInc(t *testing.T) {
-	initClobalGauge()
 	ag := newTestAttrGauge()
 	attr := testAttr()
 
 	setTestTime(100)
 	ag.synchInc(attr)
-	ag.Tick()
+	ag.tick()
 	scVal := totalVal(t, ag, attr)
 	gVal, err := gaugeVal(t, ag, attr)
 	if err := checkVal(err, gVal, scVal, 1); err != nil {
@@ -212,7 +214,7 @@ func TestAttrGaugeInc(t *testing.T) {
 
 	setTestTime(101)
 	ag.synchInc(attr)
-	ag.Tick()
+	ag.tick()
 	scVal = totalVal(t, ag, attr)
 	gVal, err = gaugeVal(t, ag, attr)
 	if err := checkVal(err, gVal, scVal, 2); err != nil {
@@ -221,7 +223,6 @@ func TestAttrGaugeInc(t *testing.T) {
 }
 
 func TestAttrGaugeTick(t *testing.T) {
-	initClobalGauge()
 	ag := newTestAttrGauge()
 	attr := testAttr()
 
@@ -235,7 +236,7 @@ func TestAttrGaugeTick(t *testing.T) {
 	}
 
 	setTestTime(120)
-	eCnt := ag.Tick()
+	eCnt := ag.tick()
 	if eCnt != 4 {
 		t.Errorf("unexpected error count, expected %d, got %d", 4, eCnt)
 	}
@@ -247,14 +248,13 @@ func TestAttrGaugeTick(t *testing.T) {
 }
 
 func TestAttrGaugeEraseValue(t *testing.T) {
-	initClobalGauge()
 	ag := newTestAttrGauge()
 	attr := testAttr()
 
 	setTestTime(100)
 	ag.Inc(attr)
 	setTestTime(120)
-	ag.Tick()
+	ag.tick()
 	scVal := totalVal(t, ag, attr)
 	gVal, err := gaugeVal(t, ag, attr)
 	if err := checkVal(err, gVal, scVal, 0); err != nil {
@@ -263,7 +263,6 @@ func TestAttrGaugeEraseValue(t *testing.T) {
 }
 
 func TestAttrGaugeSubsequentTicks(t *testing.T) {
-	initClobalGauge()
 	ag := newTestAttrGauge()
 	ag.Start(10*time.Millisecond, 20)
 	attr := testAttr()
@@ -297,7 +296,6 @@ func TestAttrGaugeSubsequentTicks(t *testing.T) {
 }
 
 func TestAttrGaugeErrorInc(t *testing.T) {
-	initClobalGauge()
 	ag := newTestAttrGauge()
 	attr := testAttr()
 
@@ -312,54 +310,36 @@ func TestAttrGaugeErrorInc(t *testing.T) {
 }
 
 func TestAttrGaugeAddAttributes(t *testing.T) {
-	initClobalGauge()
 	ag := newTestAttrGauge()
-	ag.AddAttributes("test_attr2")
-	attr := &pdp.Attribute{Id: "test_attr2", Value: "test_value2"}
-
 	setTestTime(100)
-	ag.synchInc(attr)
-	ag.Tick()
-	scVal := totalVal(t, ag, attr)
-	gVal, err := gaugeVal(t, ag, attr)
-	if err := checkVal(err, gVal, scVal, 1); err != nil {
-		t.Error(err)
-	}
+
+	ag.Start(10*time.Millisecond, DefaultQueryChanSize)
+	// Just make sure the test doesn't panic
 
 	ag.AddAttributes("test_attr1")
-	attr = testAttr()
+	ag.Inc(&pdp.Attribute{Id: "test_attr1", Value: "test_value1"})
 
-	setTestTime(100)
-	ag.synchInc(attr)
-	ag.Tick()
-	scVal = totalVal(t, ag, attr)
-	gVal, err = gaugeVal(t, ag, attr)
-	if err := checkVal(err, gVal, scVal, 1); err != nil {
-		t.Error(err)
-	}
+	ag.AddAttributes("test_attr2")
+	ag.Inc(&pdp.Attribute{Id: "test_attr2", Value: "test_value2"})
+
+	ag.Stop()
 }
 
 func TestAttrGaugeAddAttributeAgain(t *testing.T) {
-	initClobalGauge()
 	ag := newTestAttrGauge()
+	setTestTime(100)
+
+	ag.Start(10*time.Millisecond, DefaultQueryChanSize)
 	attr := testAttr()
 
-	setTestTime(100)
-	ag.synchInc(attr)
-	ag.Tick()
-	scVal := totalVal(t, ag, attr)
-	gVal, err := gaugeVal(t, ag, attr)
-	if err := checkVal(err, gVal, scVal, 1); err != nil {
-		t.Error(err)
-	}
-
+	ag.Inc(attr)
 	ag.AddAttributes("test_attr")
-	setTestTime(101)
-	ag.synchInc(attr)
-	ag.Tick()
-	scVal = totalVal(t, ag, attr)
-	gVal, err = gaugeVal(t, ag, attr)
-	if err := checkVal(err, gVal, scVal, 2); err != nil {
+	ag.Inc(attr)
+
+	time.Sleep(100 * time.Millisecond)
+	ag.Stop()
+	gVal, err := gaugeVal(t, ag, attr)
+	if err = checkVal(err, gVal, gVal, 2); err != nil {
 		t.Error(err)
 	}
 }
@@ -406,7 +386,8 @@ func setTestTime(t uint32) {
 }
 
 func newTestAttrGauge() *AttrGauge {
-	ag := NewAttrGauge("test_attr")
+	ag := NewAttrGauge()
+	ag.addAttribute("test_attr")
 	ag.timeFunc = testTime
 	return ag
 }
