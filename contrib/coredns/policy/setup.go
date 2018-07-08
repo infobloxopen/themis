@@ -6,7 +6,6 @@ import (
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/dnstap"
-	"github.com/coredns/coredns/plugin/metrics"
 
 	"github.com/mholt/caddy"
 )
@@ -38,19 +37,11 @@ func setup(c *caddy.Controller) error {
 			return plugin.Error("policy", err)
 		}
 
-		if mh := dnsserver.GetConfig(c).Handler("prometheus"); mh != nil {
-			if m, ok := mh.(*metrics.Metrics); ok && policyPlugin.SetupMetrics() {
-				metricsOnce.Do(func() {
-					m.MustRegister(policyPlugin.attrGauges.pgv)
-				})
-			}
-		}
-		return nil
+		return policyPlugin.SetupMetrics(c)
 	})
 
 	c.OnShutdown(func() error {
 		policyPlugin.closeConn()
-		policyPlugin.attrGauges.Stop()
 		return nil
 	})
 

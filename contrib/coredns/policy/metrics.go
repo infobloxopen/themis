@@ -1,13 +1,17 @@
 package policy
 
 import (
+	"errors"
 	"log"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
+	"github.com/coredns/coredns/plugin/metrics"
 	pdp "github.com/infobloxopen/themis/pdp-service"
+	"github.com/mholt/caddy"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -72,27 +76,8 @@ const (
 )
 
 const (
-	DefaultEraseInterval   = 500 * time.Millisecond
-	DefaultMetricsChanSize = 1000
-)
-
-func init() {
-	initClobalGauge()
-}
-
-func initClobalGauge() {
-	globalGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Namespace: plugin.Namespace,
-		Subsystem: "policy",
-		Name:      "recent_queries",
-		Help:      "Gauge of recent queries per Attrubute value.",
-	}, []string{"attribute", "value"})
-	globalPerAttr = make(map[string]map[string]*SlicedCounter)
-}
-
-var (
-	globalGauge   *prometheus.GaugeVec
-	globalPerAttr map[string]map[string]*SlicedCounter
+	DefaultEraseInterval = 500 * time.Millisecond
+	DefaultQueryChanSize = 1000
 )
 
 // AttrGauge manages GaugeVec for attributes. GaugeVec holds the
@@ -102,30 +87,34 @@ type AttrGauge struct {
 	perAttr  map[string]map[string]*SlicedCounter
 	pgv      *prometheus.GaugeVec
 	qChan    chan *pdp.Attribute
+	nameChan chan string
 	timeFunc func() uint32
 	errCnt   uint32
 	state    uint32
 }
 
-func NewAttrGauge(attrs ...string) *AttrGauge {
-	g := &AttrGauge{
-		perAttr:  globalPerAttr,
-		pgv:      globalGauge,
+// NewAttrGauge constructs new AttrGauge object
+func NewAttrGauge() *AttrGauge {
+	return &AttrGauge{
+		perAttr: make(map[string]map[string]*SlicedCounter),
+		pgv: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: plugin.Namespace,
+			Subsystem: "policy",
+			Name:      "recent_queries",
+			Help:      "Gauge of recent queries per Attrubute value.",
+		}, []string{"attribute", "value"}),
 		qChan:    make(chan *pdp.Attribute),
+		nameChan: make(chan string),
 		timeFunc: unixTime,
 	}
-	g.AddAttributes(attrs...)
-	return g
 }
 
-func (g *AttrGauge) AddAttributes(attrNames ...string) {
-	for _, attr := range attrNames {
-		if g.perAttr[attr] == nil {
-			g.perAttr[attr] = make(map[string]*SlicedCounter)
-		}
-	}
-}
+// globalAttrGauge object is used across all policy plugin instances
+// including instances from different corefile blocks and
+// new/old instances during graceful restart
+var globalAttrGauge = NewAttrGauge()
 
+// Start starts goroutine which reads and handles data from channels
 func (g *AttrGauge) Start(tickInt time.Duration, chSize int) {
 	if atomic.CompareAndSwapUint32(&g.state, AttrGaugeStopped, AttrGaugeStarted) {
 		ch := make(chan *pdp.Attribute, chSize)
@@ -137,10 +126,12 @@ func (g *AttrGauge) Start(tickInt time.Duration, chSize int) {
 					break
 				}
 				select {
+				case name := <-g.nameChan:
+					g.addAttribute(name)
 				case attr := <-ch:
 					g.synchInc(attr)
 				case <-timer.C:
-					eCnt := g.Tick()
+					eCnt := g.tick()
 					if eCnt != 0 {
 						log.Printf("[WARN] Policy metrics: %d queries was skipped", eCnt)
 					}
@@ -151,12 +142,37 @@ func (g *AttrGauge) Start(tickInt time.Duration, chSize int) {
 	}
 }
 
+// Stop stops goroutine which reads and handles data from channels
 func (g *AttrGauge) Stop() {
-	if g != nil {
-		atomic.CompareAndSwapUint32(&g.state, AttrGaugeStarted, AttrGaugeStopping)
+	if g == nil {
+		return
+	}
+	if !atomic.CompareAndSwapUint32(&g.state, AttrGaugeStarted, AttrGaugeStopping) {
+		return
+	}
+	for atomic.LoadUint32(&g.state) != AttrGaugeStopped {
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 
+// AddAttribute adds new attribute names to gauge. It's safe to call it from
+// any goroutine. The AttrGauge should be started before calling AddAttributes
+func (g *AttrGauge) AddAttributes(attrNames ...string) {
+	for _, name := range attrNames {
+		g.nameChan <- name
+	}
+}
+
+// addAttribute adds new attribute name to gauge. Should be called synchronously
+func (g *AttrGauge) addAttribute(attrName string) {
+	if g.perAttr[attrName] == nil {
+		g.perAttr[attrName] = make(map[string]*SlicedCounter)
+	}
+}
+
+// Inc increments the counter corresponding to the attr. It's safe
+// to call it from any goroutine. The AttrGauge should be started before
+// calling Inc
 func (g *AttrGauge) Inc(attr *pdp.Attribute) {
 	if g == nil {
 		return
@@ -169,6 +185,9 @@ func (g *AttrGauge) Inc(attr *pdp.Attribute) {
 	}
 }
 
+// synchInc increments internal counter corresponding to the attr.
+// The actual prometheus value is not updated in this method.
+// Should be called synchronously
 func (g *AttrGauge) synchInc(attr *pdp.Attribute) {
 	ut := g.timeFunc()
 	sc := g.perAttr[attr.Id][attr.Value]
@@ -182,7 +201,9 @@ func (g *AttrGauge) synchInc(attr *pdp.Attribute) {
 	g.ErrorInc()
 }
 
-func (g *AttrGauge) Tick() uint32 {
+// tick synchronises prometheus gauge with internal counters.
+// Should be called synchronously
+func (g *AttrGauge) tick() uint32 {
 	ut := g.timeFunc()
 	for attr, amap := range g.perAttr {
 		for val, sc := range amap {
@@ -200,15 +221,19 @@ func (g *AttrGauge) Tick() uint32 {
 	return atomic.SwapUint32(&g.errCnt, 0)
 }
 
+// ErrorInc increments error counter
 func (g *AttrGauge) ErrorInc() {
 	atomic.AddUint32(&g.errCnt, 1)
 }
 
+// unixTime returns number of seconds since Unix epoch
 func unixTime() uint32 {
 	return uint32(time.Now().Unix())
 }
 
-func (pp *policyPlugin) SetupMetrics() bool {
+// SetupMetrics checks for configured metrics attributes and starts and
+// configures globalAttrGauge as needed
+func (pp *policyPlugin) SetupMetrics(c *caddy.Controller) error {
 	attrNames := []string{}
 	for attr, t := range pp.confAttrs {
 		if !t.isMetrics() {
@@ -226,11 +251,20 @@ func (pp *policyPlugin) SetupMetrics() bool {
 		}
 	}
 	if len(attrNames) > 0 {
-		pp.attrGauges = NewAttrGauge(attrNames...)
-		pp.attrGauges.Start(DefaultEraseInterval, DefaultMetricsChanSize)
-		return true
+		if mh := dnsserver.GetConfig(c).Handler("prometheus"); mh != nil {
+			if m, ok := mh.(*metrics.Metrics); ok {
+				metricsOnce.Do(func() {
+					m.MustRegister(globalAttrGauge.pgv)
+					globalAttrGauge.Start(DefaultEraseInterval, DefaultQueryChanSize)
+				})
+				globalAttrGauge.AddAttributes(attrNames...)
+				pp.attrGauges = globalAttrGauge
+				return nil
+			}
+		}
+		return errors.New("can't find prometheus plugin")
 	}
-	return false
+	return nil
 }
 
 var metricsOnce sync.Once
