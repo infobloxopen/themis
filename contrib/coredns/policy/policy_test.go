@@ -133,14 +133,7 @@ func TestPolicy(t *testing.T) {
 			status:     dns.RcodeSuccess,
 			err:        nil,
 			attrs: []*pdp.Attribute{
-				{Id: attrNameDomainName, Value: "test.com"},
-				{Id: attrNameDNSQtype, Value: "1"},
 				{Id: attrNameSourceIP, Value: "10.240.0.1"},
-				{Id: attrNameAddress, Value: "10.240.0.1"},
-				{Id: AttrNamePolicyID, Value: "cafecafe"},
-				{Id: attrNameLog, Value: "true"},
-				{Id: attrNamePolicyAction, Value: "2"},
-				{Id: attrNameType, Value: typeValueResponse},
 			},
 		},
 		{

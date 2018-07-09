@@ -83,10 +83,7 @@ func (ah *attrHolder) addResponse(r *pdp.Response, respip bool) {
 	l := len(r.Obligation)
 	switch r.Effect {
 	case pdp.Response_PERMIT:
-		// don't overwrite "Log" action from previous validation
-		if ah.action != typeLog {
-			ah.action = typeAllow
-		}
+		ah.action = typeAllow
 		for i < l {
 			item := r.Obligation[i]
 			if item.Id == attrNameLog {
