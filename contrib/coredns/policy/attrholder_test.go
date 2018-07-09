@@ -392,8 +392,8 @@ func TestAllowActionAfterLogAction(t *testing.T) {
 	ah.addResponse(&pdp.Response{Effect: pdp.Response_PERMIT,
 		Obligation: []*pdp.Attribute{{Id: "log"}}}, false)
 	ah.addResponse(&pdp.Response{Effect: pdp.Response_PERMIT}, true)
-	if ah.action != typeLog {
-		t.Errorf("Unexpected action: expected=%d, actual=%d", typeLog, ah.action)
+	if ah.action != typeAllow {
+		t.Errorf("Unexpected action: expected=%d, actual=%d", typeAllow, ah.action)
 	}
 }
 

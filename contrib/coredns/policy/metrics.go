@@ -255,6 +255,8 @@ func (pp *policyPlugin) SetupMetrics(c *caddy.Controller) error {
 			if m, ok := mh.(*metrics.Metrics); ok {
 				metricsOnce.Do(func() {
 					m.MustRegister(globalAttrGauge.pgv)
+					// The globalAttrGauge is started once and is not stopped
+					// until process termination
 					globalAttrGauge.Start(DefaultEraseInterval, DefaultQueryChanSize)
 				})
 				globalAttrGauge.AddAttributes(attrNames...)
