@@ -253,7 +253,7 @@ func (t *LocalContentStorageTransaction) Commit(s *LocalContentStorage) (*LocalC
 		return nil, newFailedContentTransactionError(t.ID, t.tag, t.err)
 	}
 
-	c := &LocalContent{id: t.ID, tag: &t.tag, items: t.items}
+	c := &LocalContent{id: t.ID, tag: &t.tag, items: t.items, symbols: t.symbols}
 	if s == nil {
 		return NewLocalContentStorage([]*LocalContent{c}), nil
 	}
