@@ -547,6 +547,13 @@ func TestLocalContentStorage(t *testing.T) {
 		t.Fatalf("Expected no error but got %T (%s)", err, err)
 	}
 
+	lc, err := s.GetLocalContent("first", &newTag)
+	if err != nil {
+		t.Errorf("Expected no error but got %T (%s)", err, err)
+	} else {
+		checkSymbolsForTypes(t, lc.symbols, ft8, ft16, ft32, ft64)
+	}
+
 	c, err := s.Get("first", "str-str-map")
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
@@ -1020,4 +1027,15 @@ func makeTestDN(t *testing.T, s string) domain.Name {
 	}
 
 	return d
+}
+
+func checkSymbolsForTypes(t *testing.T, symbols Symbols, types ...Type) {
+	for _, typ := range types {
+		gotTyp := symbols.GetType(typ.GetKey())
+		if gotTyp == nil {
+			t.Errorf("Expect valid Type returned but got nil")
+		} else if gotTyp != typ {
+			t.Errorf("Expected got type to match %v, but got %v", typ, gotTyp)
+		}
+	}
 }
