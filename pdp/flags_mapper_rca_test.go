@@ -1,6 +1,9 @@
 package pdp
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestFlagsMapperRCAOrdering(t *testing.T) {
 	ft, err := NewFlagsType("flags", "third", "first", "second")
@@ -92,5 +95,60 @@ func TestFlagsMapperRCAOrdering(t *testing.T) {
 		if ID != eID || ot != eot.GetKey() || s != es {
 			t.Errorf("Expected %q = %q.(%s) obligation but got %q = %q.(%s)", eID, es, eot, ID, s, ot)
 		}
+	}
+}
+
+const (
+	expectEmptyFlagMapperRCAJSON = `{"type":"flagsMapperRCA","def":"\"\"","err":"\"\"","alg":{"type":"firstApplicableEffectRCA"}}`
+	expectFlagMapperRCAJSON      = `{"type":"flagsMapperRCA","def":"\"first\"","err":"\"second\"","alg":{"type":"firstApplicableEffectRCA"}}`
+)
+
+func TestFlagsMapperRCAMarshal(t *testing.T) {
+	ft, err := NewFlagsType("flags", "third", "first", "second")
+	if err != nil {
+		t.Fatalf("Expected no error but got: %s", err)
+	}
+	rules := []*Rule{
+		makeSimplePermitRuleWithObligations(
+			"first",
+			makeSingleStringObligation("order", "first"),
+		),
+		makeSimplePermitRuleWithObligations(
+			"second",
+			makeSingleStringObligation("order", "second"),
+		),
+		makeSimplePermitRuleWithObligations(
+			"third",
+			makeSingleStringObligation("order", "third"),
+		),
+	}
+	algParam := MapperRCAParams{
+		Argument:  AttributeDesignator{a: Attribute{id: "f", t: ft}},
+		Order:     MapperRCAExternalOrder,
+		Algorithm: firstApplicableEffectRCA{},
+	}
+	alg := makeMapperRCA(rules, algParam)
+	b, err := json.Marshal(alg)
+	if err != nil {
+		t.Fatalf("Expected no marshaling error but got: %s", err)
+	} else if expectEmptyFlagMapperRCAJSON != string(b) {
+		t.Errorf("Expected marshalled %s\nGot %s", expectEmptyFlagMapperRCAJSON, string(b))
+	}
+
+	algParam2 := MapperRCAParams{
+		Argument:  AttributeDesignator{a: Attribute{id: "f", t: ft}},
+		Order:     MapperRCAExternalOrder,
+		Algorithm: firstApplicableEffectRCA{},
+		Def:       "first",
+		DefOk:     true,
+		Err:       "second",
+		ErrOk:     true,
+	}
+	alg = makeMapperRCA(rules, algParam2)
+	b, err = json.Marshal(alg)
+	if err != nil {
+		t.Fatalf("Expected no marshaling error but got: %s", err)
+	} else if expectFlagMapperRCAJSON != string(b) {
+		t.Errorf("Expected marshalled %s\nGot %s", expectFlagMapperRCAJSON, string(b))
 	}
 }

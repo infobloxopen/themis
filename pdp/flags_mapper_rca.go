@@ -63,10 +63,17 @@ func (a flagsMapperRCA) execute(rules []*Rule, ctx *Context) Response {
 }
 
 func (a flagsMapperRCA) MarshalJSON() ([]byte, error) {
+	var defID, errID string
+	if a.def != nil {
+		defID = a.def.id
+	}
+	if a.err != nil {
+		errID = a.err.id
+	}
 	return json.Marshal(mapperAlgFmt{
 		Type:      "flagsMapperRCA",
-		Default:   strconv.Quote(a.def.id),
-		Error:     strconv.Quote(a.err.id),
+		Default:   strconv.Quote(defID),
+		Error:     strconv.Quote(errID),
 		Algorithm: a.algorithm,
 	})
 }

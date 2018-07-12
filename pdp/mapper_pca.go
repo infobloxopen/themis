@@ -180,8 +180,13 @@ func makeMapperPCA(policies []Evaluable, params interface{}) PolicyCombiningAlg 
 }
 
 func (a mapperPCA) MarshalJSON() ([]byte, error) {
-	defID, _ := a.def.GetID()
-	errID, _ := a.err.GetID()
+	var defID, errID string
+	if a.def != nil {
+		defID, _ = a.def.GetID()
+	}
+	if a.err != nil {
+		errID, _ = a.err.GetID()
+	}
 	return json.Marshal(mapperAlgFmt{
 		Type:      "mapperPCA",
 		Default:   strconv.Quote(defID),

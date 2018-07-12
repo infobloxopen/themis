@@ -211,10 +211,17 @@ func makeMapperRCA(rules []*Rule, params interface{}) RuleCombiningAlg {
 }
 
 func (a mapperRCA) MarshalJSON() ([]byte, error) {
+	var defID, errID string
+	if a.def != nil {
+		defID = a.def.id
+	}
+	if a.err != nil {
+		errID = a.err.id
+	}
 	return json.Marshal(mapperAlgFmt{
 		Type:      "mapperRCA",
-		Default:   strconv.Quote(a.def.id),
-		Error:     strconv.Quote(a.err.id),
+		Default:   strconv.Quote(defID),
+		Error:     strconv.Quote(errID),
 		Algorithm: a.algorithm,
 	})
 }

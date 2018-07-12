@@ -63,8 +63,13 @@ func (a flagsMapperPCA) execute(policies []Evaluable, ctx *Context) Response {
 }
 
 func (a flagsMapperPCA) MarshalJSON() ([]byte, error) {
-	defID, _ := a.def.GetID()
-	errID, _ := a.err.GetID()
+	var defID, errID string
+	if a.def != nil {
+		defID, _ = a.def.GetID()
+	}
+	if a.err != nil {
+		errID, _ = a.err.GetID()
+	}
 	return json.Marshal(mapperAlgFmt{
 		Type:      "flagsMapperPCA",
 		Default:   strconv.Quote(defID),
