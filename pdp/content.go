@@ -384,7 +384,7 @@ func (t *LocalContentStorageTransaction) del(rawPath []string) error {
 }
 
 // LocalContent represents content object which can be accessed by its id and
-// independently taged and updated. It holds content items which represent
+// independently tagged and updated. It holds content items which represent
 // mapping objects (or immediate values) of different type.
 type LocalContent struct {
 	id      string
