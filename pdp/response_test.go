@@ -569,8 +569,8 @@ func TestPutAttributesFromReflection(t *testing.T) {
 	})
 	if err == nil {
 		t.Errorf("expected no data put to buffer for undefined value but got %d", n)
-	} else if _, ok := err.(*requestAttributeMarshallingNotImplemented); !ok {
-		t.Errorf("expected *requestAttributeMarshallingNotImplemented but got %T (%s)", err, err)
+	} else if _, ok := err.(*requestAttributeMarshallingNotImplementedError); !ok {
+		t.Errorf("expected *requestAttributeMarshallingNotImplementedError but got %T (%s)", err, err)
 	}
 
 	n, err = putAttributesFromReflection(b[:10], 1, f)
@@ -964,5 +964,50 @@ func TestGetAttributesToReflection(t *testing.T) {
 		t.Errorf("expected *requestBufferUnderflowError but got %s", MakeListOfStringsValue(ls).describe())
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestCalcAssignmentExpressionsSize(t *testing.T) {
+	s, err := calcAssignmentExpressionsSize(testRequestAssignments)
+	if err != nil {
+		t.Error(err)
+	} else if s != len(testWireAttributes) {
+		t.Errorf("expected %d bytes in response but got %d", len(testWireAttributes), s)
+	}
+
+	s, err = calcAssignmentExpressionsSize([]AttributeAssignment{
+		MakeExpressionAssignment(
+			"test",
+			makeFunctionBooleanNot([]Expression{MakeBooleanValue(true)}),
+		),
+	})
+	if err == nil {
+		t.Errorf("expected *requestInvalidExpressionError but got %d bytes in response", s)
+	} else if _, ok := err.(*requestInvalidExpressionError); !ok {
+		t.Errorf("expected *requestInvalidExpressionError but got %T (%s)", err, err)
+	}
+
+	s, err = calcAssignmentExpressionsSize([]AttributeAssignment{
+		MakeStringAssignment(
+			"01234567890123456789012345678901234567890123456789012345678901234567890123456789"+
+				"01234567890123456789012345678901234567890123456789012345678901234567890123456789"+
+				"01234567890123456789012345678901234567890123456789012345678901234567890123456789"+
+				"0123456789012345",
+			"test",
+		),
+	})
+	if err == nil {
+		t.Errorf("expected *requestTooLongAttributeNameError but got %d bytes in response", s)
+	} else if _, ok := err.(*requestTooLongAttributeNameError); !ok {
+		t.Errorf("expected *requestTooLongAttributeNameError but got %T (%s)", err, err)
+	}
+
+	s, err = calcAssignmentExpressionsSize([]AttributeAssignment{
+		MakeExpressionAssignment("test", UndefinedValue),
+	})
+	if err == nil {
+		t.Errorf("expected *requestAttributeMarshallingNotImplementedError but got %d bytes in response", s)
+	} else if _, ok := err.(*requestAttributeMarshallingNotImplementedError); !ok {
+		t.Errorf("expected *requestAttributeMarshallingNotImplementedError but got %T (%s)", err, err)
 	}
 }

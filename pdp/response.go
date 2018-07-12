@@ -338,7 +338,7 @@ func putAttributesFromReflection(b []byte, c int, f func(i int) (string, Type, r
 		var n int
 		switch t {
 		default:
-			return off, bindError(newRequestAttributeMarshallingNotImplemented(t), id)
+			return off, bindError(newRequestAttributeMarshallingNotImplementedError(t), id)
 
 		case TypeBoolean:
 			n, err = putRequestAttributeBoolean(b[off:], id, v.Bool())
@@ -570,4 +570,31 @@ func getAttributesToReflection(b []byte, f func(string, Type) (reflect.Value, er
 	}
 
 	return nil
+}
+
+func calcAssignmentExpressionsSize(in []AttributeAssignment) (int, error) {
+	s := reqBigCounterSize
+
+	for _, a := range in {
+		id := a.a.id
+		v, ok := a.e.(AttributeValue)
+		if !ok {
+			return 0, newRequestInvalidExpressionError(a)
+		}
+
+		n, err := calcRequestAttributeNameSize(id)
+		if err != nil {
+			return 0, bindError(err, id)
+		}
+		s += n
+
+		n, err = calcRequestAttributeSize(v)
+		if err != nil {
+			return 0, bindError(err, id)
+		}
+
+		s += n
+	}
+
+	return s, nil
 }
