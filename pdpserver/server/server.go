@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -196,6 +197,49 @@ func NewServer(opts ...Option) *Server {
 		c:                   pdp.NewLocalContentStorage(nil),
 		memProfBaseDumpDone: memProfBaseDumpDone,
 	}
+}
+
+// NewBuiltinServer returns new Builtin Server instance
+func NewBuiltinServer(policyFile string, contentFiles []string) *Server {
+	o := options{
+		logger:              log.StandardLogger(),
+		service:             ":5555",
+		memStatsLogInterval: -1 * time.Second,
+	}
+
+	ext := filepath.Ext(policyFile)
+	switch ext {
+	case ".json":
+		o.parser = ast.NewJSONParser()
+	case ".yaml":
+		o.parser = ast.NewYAMLParser()
+	}
+
+	if o.parser == nil {
+		o.parser = ast.NewYAMLParser()
+	}
+
+	s := &Server{
+		opts:  o,
+		errCh: make(chan error, 100),
+		q:     newQueue(),
+		c:     pdp.NewLocalContentStorage(nil),
+		//memProfBaseDumpDone: memProfBaseDumpDone,
+	}
+
+	err := s.LoadPolicies(policyFile)
+	if err != nil {
+		return nil
+	}
+
+	if contentFiles != nil && len(contentFiles) > 0 {
+		err = s.LoadContent(contentFiles)
+		if err != nil {
+			return nil
+		}
+	}
+
+	return s
 }
 
 // LoadPolicies loads policies from file
