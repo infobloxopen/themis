@@ -35,14 +35,14 @@ func TestRequestWireTypesTotal(t *testing.T) {
 
 func TestMarshalRequestAssignments(t *testing.T) {
 	var b [44]byte
-	n, err := MarshalRequestAssignments(b[:], testRequestAssignments)
-	assertRequestBytesBuffer(t, "MarshalRequestAssignments", err, b[:], n, testWireRequest...)
+	n, err := MarshalRequestAssignmentsToBuffer(b[:], testRequestAssignments)
+	assertRequestBytesBuffer(t, "MarshalRequestAssignmentsToBuffer", err, b[:], n, testWireRequest...)
 
-	n, err = MarshalRequestAssignments([]byte{}, testRequestAssignments)
-	assertRequestBufferOverflow(t, "MarshalRequestAssignments(count)", err, n)
+	n, err = MarshalRequestAssignmentsToBuffer([]byte{}, testRequestAssignments)
+	assertRequestBufferOverflow(t, "MarshalRequestAssignmentsToBuffer(count)", err, n)
 
-	n, err = MarshalRequestAssignments(b[:2], testRequestAssignments)
-	assertRequestBufferOverflow(t, "MarshalRequestAssignments(first value)", err, n)
+	n, err = MarshalRequestAssignmentsToBuffer(b[:2], testRequestAssignments)
+	assertRequestBufferOverflow(t, "MarshalRequestAssignmentsToBuffer(first value)", err, n)
 }
 
 func TestMarshalRequestReflection(t *testing.T) {
@@ -51,33 +51,33 @@ func TestMarshalRequestReflection(t *testing.T) {
 	f := func(i int) (string, Type, reflect.Value, error) {
 		return "boolean", TypeBoolean, reflect.ValueOf(true), nil
 	}
-	n, err := MarshalRequestReflection(b[:], 1, f)
-	assertRequestBytesBuffer(t, "MarshalRequestReflection", err, b[:], n,
+	n, err := MarshalRequestReflectionToBuffer(b[:], 1, f)
+	assertRequestBytesBuffer(t, "MarshalRequestReflectionToBuffer", err, b[:], n,
 		1, 0, 1, 0,
 		7, 'b', 'o', 'o', 'l', 'e', 'a', 'n', byte(requestWireTypeBooleanTrue),
 	)
 
-	n, err = MarshalRequestReflection([]byte{}, 1, f)
-	assertRequestBufferOverflow(t, "MarshalRequestReflection(version)", err, n)
+	n, err = MarshalRequestReflectionToBuffer([]byte{}, 1, f)
+	assertRequestBufferOverflow(t, "MarshalRequestReflectionToBuffer(version)", err, n)
 
-	n, err = MarshalRequestReflection(b[:2], 1, f)
-	assertRequestBufferOverflow(t, "MarshalRequestReflection(collection)", err, n)
+	n, err = MarshalRequestReflectionToBuffer(b[:2], 1, f)
+	assertRequestBufferOverflow(t, "MarshalRequestReflectionToBuffer(collection)", err, n)
 }
 
-func TestUnmarshalRequestAssignments(t *testing.T) {
+func TestUnmarshalRequestToAssignmentsArray(t *testing.T) {
 	var a [3]AttributeAssignment
 
-	n, err := UnmarshalRequestAssignments(testWireRequest, a[:])
-	assertRequestAssignmentExpressions(t, "UnmarshalRequestAssignments", err, a[:], n, testRequestAssignments...)
+	n, err := UnmarshalRequestToAssignmentsArray(testWireRequest, a[:])
+	assertRequestAssignmentExpressions(t, "UnmarshalRequestToAssignmentsArray", err, a[:], n, testRequestAssignments...)
 
-	n, err = UnmarshalRequestAssignments([]byte{}, a[:])
+	n, err = UnmarshalRequestToAssignmentsArray([]byte{}, a[:])
 	if err == nil {
 		t.Errorf("expected *requestBufferUnderflowError but got %d bytes", n)
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
 
-	n, err = UnmarshalRequestAssignments([]byte{1, 0}, a[:])
+	n, err = UnmarshalRequestToAssignmentsArray([]byte{1, 0}, a[:])
 	if err == nil {
 		t.Errorf("expected *requestBufferUnderflowError but got %d bytes", n)
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {

@@ -85,12 +85,12 @@ const (
 	reqNetworkCIDRSize      = 1
 )
 
-// MarshalRequestAssignments marshals list of assignments to sequence of bytes.
-// It requires each assignment to have immediate value as an expression (which
-// can be created with MakeStringValue or similar functions). Caller should
-// provide large enough buffer. Function fills the buffer and returns
-// number of bytes written.
-func MarshalRequestAssignments(b []byte, in []AttributeAssignment) (int, error) {
+// MarshalRequestAssignmentsToBuffer marshals list of assignments
+// to sequence of bytes. It requires each assignment to have immediate value
+// as an expression (which can be created with MakeStringValue or similar
+// functions). Caller should provide large enough buffer. Function fills
+// the buffer and returns number of bytes written.
+func MarshalRequestAssignmentsToBuffer(b []byte, in []AttributeAssignment) (int, error) {
 	off, err := putRequestVersion(b)
 	if err != nil {
 		return off, err
@@ -104,23 +104,23 @@ func MarshalRequestAssignments(b []byte, in []AttributeAssignment) (int, error) 
 	return off + n, nil
 }
 
-// MarshalRequestReflection marshals set of attributes wrapped with
+// MarshalRequestReflectionToBuffer marshals set of attributes wrapped with
 // reflect.Value to sequence of bytes. Caller should provide large enough
 // buffer. Also caller put attribute count to marshal. For each attribute
-// MarshalRequestReflection calls f function with index of the attribute.
-// It expects the function to return attribute id, type and value.
-// For TypeBoolean MarshalRequestReflection expects bool value, for TypeString
-// - string, for TypeInteger - intX, uintX (internally converting to int64),
-// TypeFloat - float32 or float64, TypeAddress - net.IP, TypeNetwork - net.IPNet
-// or *net.IPNet, TypeDomain - string or domain.Name from
-// github.com/infobloxopen/go-trees/domain package, TypeSetOfStrings -
-// *strtree.Tree from github.com/infobloxopen/go-trees/strtree package,
-// TypeSetOfNetworks - *iptree.Node from
-// github.com/infobloxopen/go-trees/iptree, TypeSetOfDomains - *domaintree.Node
-// from github.com/infobloxopen/go-trees/domaintree, TypeListOfStrings -
-// []string. The function fills given buffer and returns number of bytes
-// written.
-func MarshalRequestReflection(b []byte, c int, f func(i int) (string, Type, reflect.Value, error)) (int, error) {
+// MarshalRequestReflectionToBuffer calls f function with
+// index of the attribute. It expects the function to return attribute id,
+// type and value. For TypeBoolean MarshalRequestReflectionToBuffer expects
+// bool value, for TypeString - string, for TypeInteger - intX, uintX
+// (internally converting to int64), TypeFloat - float32 or float64,
+// TypeAddress - net.IP, TypeNetwork - net.IPNet or *net.IPNet, TypeDomain -
+// string or domain.Name from github.com/infobloxopen/go-trees/domain package,
+// TypeSetOfStrings - *strtree.Tree from
+// github.com/infobloxopen/go-trees/strtree package, TypeSetOfNetworks -
+// *iptree.Node from github.com/infobloxopen/go-trees/iptree,
+// TypeSetOfDomains - *domaintree.Node from
+// github.com/infobloxopen/go-trees/domaintree, TypeListOfStrings - []string.
+// The function fills given buffer and returns number of bytes written.
+func MarshalRequestReflectionToBuffer(b []byte, c int, f func(i int) (string, Type, reflect.Value, error)) (int, error) {
 	off, err := putRequestVersion(b)
 	if err != nil {
 		return off, err
@@ -134,10 +134,10 @@ func MarshalRequestReflection(b []byte, c int, f func(i int) (string, Type, refl
 	return off + n, nil
 }
 
-// UnmarshalRequestAssignments parses given sequence of bytes as a list of
-// assignments. Caller should provide large enough out slice. The function
-// returns number of assignments written.
-func UnmarshalRequestAssignments(b []byte, out []AttributeAssignment) (int, error) {
+// UnmarshalRequestToAssignmentsArray parses given sequence of bytes as
+// a list of assignments. Caller should provide large enough out slice.
+// The function returns number of assignments written.
+func UnmarshalRequestToAssignmentsArray(b []byte, out []AttributeAssignment) (int, error) {
 	n, err := checkRequestVersion(b)
 	if err != nil {
 		return 0, err

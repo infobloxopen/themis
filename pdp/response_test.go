@@ -60,11 +60,11 @@ var (
 func TestMarshalResponse(t *testing.T) {
 	var b [90]byte
 
-	n, err := marshalResponse(b[:], EffectIndeterminate, testRequestAssignments,
+	n, err := marshalResponseToBuffer(b[:], EffectIndeterminate, testRequestAssignments,
 		fmt.Errorf("testError1"),
 		fmt.Errorf("testError2"),
 	)
-	assertRequestBytesBuffer(t, "marshalResponse", err, b[:], n, append(
+	assertRequestBytesBuffer(t, "marshalResponseToBuffer", err, b[:], n, append(
 		[]byte{
 			1, 0, 3,
 			43, 0, 'm', 'u', 'l', 't', 'i', 'p', 'l', 'e', ' ', 'e', 'r', 'r', 'o', 'r', 's', ':', ' ',
@@ -74,56 +74,56 @@ func TestMarshalResponse(t *testing.T) {
 		testWireAttributes...)...,
 	)
 
-	n, err = marshalResponse([]byte{}, EffectIndeterminate, testRequestAssignments,
+	n, err = marshalResponseToBuffer([]byte{}, EffectIndeterminate, testRequestAssignments,
 		fmt.Errorf("testError1"),
 		fmt.Errorf("testError2"),
 	)
-	assertRequestBufferOverflow(t, "marshalResponse(version)", err, n)
+	assertRequestBufferOverflow(t, "marshalResponseToBuffer(version)", err, n)
 
-	n, err = marshalResponse(b[:2], EffectIndeterminate, testRequestAssignments,
+	n, err = marshalResponseToBuffer(b[:2], EffectIndeterminate, testRequestAssignments,
 		fmt.Errorf("testError1"),
 		fmt.Errorf("testError2"),
 	)
-	assertRequestBufferOverflow(t, "marshalResponse(effect)", err, n)
+	assertRequestBufferOverflow(t, "marshalResponseToBuffer(effect)", err, n)
 
-	n, err = marshalResponse(b[:5], EffectIndeterminate, testRequestAssignments,
+	n, err = marshalResponseToBuffer(b[:5], EffectIndeterminate, testRequestAssignments,
 		fmt.Errorf("testError1"),
 		fmt.Errorf("testError2"),
 	)
-	assertRequestBufferOverflow(t, "marshalResponse(status)", err, n)
+	assertRequestBufferOverflow(t, "marshalResponseToBuffer(status)", err, n)
 
-	n, err = marshalResponse(b[:22], EffectIndeterminate, testRequestAssignments,
+	n, err = marshalResponseToBuffer(b[:22], EffectIndeterminate, testRequestAssignments,
 		fmt.Errorf("testError1"),
 		fmt.Errorf("testError2"),
 	)
-	assertRequestBytesBuffer(t, "marshalResponse(longStatus)", err, b[:22], n,
+	assertRequestBytesBuffer(t, "marshalResponseToBuffer(longStatus)", err, b[:22], n,
 		1, 0, 3,
 		15, 0, 's', 't', 'a', 't', 'u', 's', ' ', 't', 'o', 'o', ' ', 'l', 'o', 'n', 'g',
 		0, 0,
 	)
 
-	n, err = marshalResponse(b[:27], EffectIndeterminate, testRequestAssignments, fmt.Errorf("testError"))
-	assertRequestBytesBuffer(t, "marshalResponse(longObligation)", err, b[:27], n,
+	n, err = marshalResponseToBuffer(b[:27], EffectIndeterminate, testRequestAssignments, fmt.Errorf("testError"))
+	assertRequestBytesBuffer(t, "marshalResponseToBuffer(longObligation)", err, b[:27], n,
 		1, 0, 3,
 		20, 0, 'o', 'b', 'l', 'i', 'g', 'a', 't', 'i', 'o', 'n', 's', ' ', 't', 'o', 'o', ' ', 'l', 'o', 'n', 'g',
 		0, 0,
 	)
 
-	n, err = marshalResponse(b[:14], EffectIndeterminate, testRequestAssignments,
+	n, err = marshalResponseToBuffer(b[:14], EffectIndeterminate, testRequestAssignments,
 		fmt.Errorf("testError"),
 	)
-	assertRequestBufferOverflow(t, "marshalResponse(error)", err, n)
+	assertRequestBufferOverflow(t, "marshalResponseToBuffer(error)", err, n)
 
-	n, err = marshalResponse(b[:20], EffectIndeterminate, testRequestAssignments,
+	n, err = marshalResponseToBuffer(b[:20], EffectIndeterminate, testRequestAssignments,
 		fmt.Errorf("testError1"),
 		fmt.Errorf("testError2"),
 	)
-	assertRequestBufferOverflow(t, "marshalResponse(multi-error)", err, n)
+	assertRequestBufferOverflow(t, "marshalResponseToBuffer(multi-error)", err, n)
 
-	n, err = marshalResponse(b[:25], EffectIndeterminate, testRequestAssignments, fmt.Errorf("testError"))
-	assertRequestBufferOverflow(t, "marshalResponse(longObligation)", err, n)
+	n, err = marshalResponseToBuffer(b[:25], EffectIndeterminate, testRequestAssignments, fmt.Errorf("testError"))
+	assertRequestBufferOverflow(t, "marshalResponseToBuffer(longObligation)", err, n)
 
-	n, err = marshalResponse(b[:], EffectIndeterminate, []AttributeAssignment{
+	n, err = marshalResponseToBuffer(b[:], EffectIndeterminate, []AttributeAssignment{
 		MakeAddressAssignment("address", net.IP{1, 2, 3, 4, 5, 6}),
 	})
 	if err == nil {
@@ -147,13 +147,13 @@ func TestMakeIndeterminateResponse(t *testing.T) {
 func TestUnmarshalResponse(t *testing.T) {
 	var a [3]AttributeAssignment
 
-	effect, n, err := UnmarshalResponse(append([]byte{1, 0, 1, 0, 0}, testWireAttributes...), a[:])
-	assertRequestAssignmentExpressions(t, "UnmarshalResponse", err, a[:], n, testRequestAssignments...)
+	effect, n, err := UnmarshalResponseToAssignmentsArray(append([]byte{1, 0, 1, 0, 0}, testWireAttributes...), a[:])
+	assertRequestAssignmentExpressions(t, "UnmarshalResponseToAssignmentsArray", err, a[:], n, testRequestAssignments...)
 	if effect != EffectPermit {
 		t.Errorf("expected %q effect but got %q", EffectNameFromEnum(EffectPermit), EffectNameFromEnum(effect))
 	}
 
-	effect, n, err = UnmarshalResponse(append([]byte{
+	effect, n, err = UnmarshalResponseToAssignmentsArray(append([]byte{
 		1, 0, 3,
 		9, 0, 't', 'e', 's', 't', 'E', 'r', 'r', 'o', 'r',
 	}, testWireAttributes...), a[:])
@@ -163,12 +163,12 @@ func TestUnmarshalResponse(t *testing.T) {
 		t.Errorf("expected *ResponseServerError but got %T (%s)", err, err)
 	}
 
-	assertRequestAssignmentExpressions(t, "UnmarshalResponse", nil, a[:], n, testRequestAssignments...)
+	assertRequestAssignmentExpressions(t, "UnmarshalResponseToAssignmentsArray", nil, a[:], n, testRequestAssignments...)
 	if effect != EffectIndeterminate {
 		t.Errorf("expected %q effect but got %q", EffectNameFromEnum(EffectIndeterminate), EffectNameFromEnum(effect))
 	}
 
-	effect, n, err = UnmarshalResponse([]byte{}, a[:])
+	effect, n, err = UnmarshalResponseToAssignmentsArray([]byte{}, a[:])
 	if err == nil {
 		t.Errorf("expected *requestBufferUnderflowError but got effect %q and %d attributes",
 			EffectNameFromEnum(effect), n)
@@ -176,7 +176,7 @@ func TestUnmarshalResponse(t *testing.T) {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
 
-	effect, n, err = UnmarshalResponse([]byte{
+	effect, n, err = UnmarshalResponseToAssignmentsArray([]byte{
 		1, 0,
 	}, a[:])
 	if err == nil {
@@ -186,7 +186,7 @@ func TestUnmarshalResponse(t *testing.T) {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
 
-	effect, n, err = UnmarshalResponse([]byte{
+	effect, n, err = UnmarshalResponseToAssignmentsArray([]byte{
 		1, 0, 3,
 	}, a[:])
 	if err == nil {
@@ -196,7 +196,7 @@ func TestUnmarshalResponse(t *testing.T) {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
 
-	effect, n, err = UnmarshalResponse([]byte{
+	effect, n, err = UnmarshalResponseToAssignmentsArray([]byte{
 		1, 0, 3, 0, 0,
 	}, a[:])
 	if err == nil {

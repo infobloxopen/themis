@@ -44,7 +44,7 @@ func fillResponse(res pb.Msg, v interface{}) error {
 		return nil
 
 	case *pdp.Response:
-		effect, n, err := pdp.UnmarshalResponse(res.Body, v.Obligations)
+		effect, n, err := pdp.UnmarshalResponseToAssignmentsArray(res.Body, v.Obligations)
 		if err != nil {
 			if _, ok := err.(*pdp.ResponseServerError); !ok {
 				return err

@@ -40,7 +40,7 @@ func init() {
 	MinResponseSize = 7 + uint(n)
 }
 
-func marshalResponse(b []byte, effect int, obligations []AttributeAssignment, errs ...error) (int, error) {
+func marshalResponseToBuffer(b []byte, effect int, obligations []AttributeAssignment, errs ...error) (int, error) {
 	off, err := putRequestVersion(b)
 	if err != nil {
 		return off, err
@@ -103,16 +103,16 @@ func marshalResponse(b []byte, effect int, obligations []AttributeAssignment, er
 // isn't long enough. The function returns number of bytes written to
 // the buffer.
 func MakeIndeterminateResponse(b []byte, err error) (int, error) {
-	return marshalResponse(b, EffectIndeterminate, nil, err)
+	return marshalResponseToBuffer(b, EffectIndeterminate, nil, err)
 }
 
-// UnmarshalResponse unmarshals response from given sequence of bytes.
-// Effect is returned as the first result value. The second returned value gives
-// number of obligations put to out parameter. Finally, the third value is
-// an error occured during unmarshalling or response status if it has type
-// *ResponseServerError. Caller need to allocate and pass big enough array to
-// out argument.
-func UnmarshalResponse(b []byte, out []AttributeAssignment) (int, int, error) {
+// UnmarshalResponseToAssignmentsArray unmarshals response from given
+// sequence of bytes. Effect is returned as the first result value. The second
+// returned value gives number of obligations put to out parameter. Finally,
+// the third value is an error occured during unmarshalling or response status
+// if it has type *ResponseServerError. Caller need to allocate and pass big
+// enough array to out argument.
+func UnmarshalResponseToAssignmentsArray(b []byte, out []AttributeAssignment) (int, int, error) {
 	off, err := checkRequestVersion(b)
 	if err != nil {
 		return EffectIndeterminate, 0, err

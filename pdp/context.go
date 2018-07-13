@@ -392,9 +392,9 @@ type Response struct {
 	Obligations []AttributeAssignment
 }
 
-// Marshal fills given byte array with marshalled representation of
-// the response. The method returns number of bytes filled or error.
-func (r Response) Marshal(b []byte, ctx *Context) (int, error) {
+// MarshalToBuffer fills given byte array with marshalled representation
+// of the response. The method returns number of bytes filled or error.
+func (r Response) MarshalToBuffer(b []byte, ctx *Context) (int, error) {
 	var errs [2]error
 
 	nErr := 0
@@ -418,7 +418,7 @@ func (r Response) Marshal(b []byte, ctx *Context) (int, error) {
 		a[i] = MakeAttributeAssignment(e.a, v)
 	}
 
-	return marshalResponse(b, r.Effect, a, errs[:nErr]...)
+	return marshalResponseToBuffer(b, r.Effect, a, errs[:nErr]...)
 }
 
 // Evaluable interface defines abstract PDP's entity which can be evaluated

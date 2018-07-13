@@ -248,7 +248,7 @@ func makeRequest(v interface{}, b []byte) (pb.Msg, error) {
 	)
 
 	if a, ok := v.([]pdp.AttributeAssignment); ok {
-		n, err = pdp.MarshalRequestAssignments(b, a)
+		n, err = pdp.MarshalRequestAssignmentsToBuffer(b, a)
 	} else {
 		n, err = marshalValue(reflect.ValueOf(v), b)
 	}
@@ -327,7 +327,7 @@ func marshalStruct(v reflect.Value, info reqFieldsInfo, b []byte) (int, error) {
 		return 0, info.err
 	}
 
-	return pdp.MarshalRequestReflection(b, len(info.fields), func(i int) (string, pdp.Type, reflect.Value, error) {
+	return pdp.MarshalRequestReflectionToBuffer(b, len(info.fields), func(i int) (string, pdp.Type, reflect.Value, error) {
 		f := info.fields[i]
 		return f.tag, f.at, v.Field(f.idx), nil
 	})

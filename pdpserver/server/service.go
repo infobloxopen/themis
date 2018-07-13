@@ -60,7 +60,7 @@ func (s *Server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, i
 		}).Debug("Response")
 	}
 
-	n, err := r.Marshal(out, ctx)
+	n, err := r.MarshalToBuffer(out, ctx)
 	if err != nil {
 		panic(err)
 	}

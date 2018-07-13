@@ -807,7 +807,7 @@ func init() {
 			panic(fmt.Errorf("failed to make domain for request %d: %s", i+1, err))
 		}
 
-		n, err := pdp.MarshalRequestAssignments(b, []pdp.AttributeAssignment{
+		n, err := pdp.MarshalRequestAssignmentsToBuffer(b, []pdp.AttributeAssignment{
 			pdp.MakeStringAssignment("k1", directionOpts[rand.Intn(len(directionOpts))]),
 			pdp.MakeStringAssignment("k2", policySetOpts[rand.Intn(len(policySetOpts))]),
 			pdp.MakeDomainAssignment("k3", dn),
@@ -833,7 +833,7 @@ func benchmarkPolicySet(p *pdp.PolicyStorage, b *testing.B) {
 			b.Fatalf("Expected no error while evaluating policies at %d iteration but got: %s", n+1, err)
 		}
 
-		effect, n, err := pdp.UnmarshalResponse(r.Body, a[:])
+		effect, n, err := pdp.UnmarshalResponseToAssignmentsArray(r.Body, a[:])
 		if err != nil {
 			b.Fatalf("Expected no error while unmarshalling response at %d iteration but got: %s", n+1, err)
 		}
@@ -873,7 +873,7 @@ func benchmarkRawPolicySet(p *pdp.PolicyStorage, b *testing.B) {
 
 		r := s.rawValidate(p, c, benchmarkRequests[n%len(benchmarkRequests)].Body, buf[:])
 
-		effect, n, err := pdp.UnmarshalResponse(r, a[:])
+		effect, n, err := pdp.UnmarshalResponseToAssignmentsArray(r, a[:])
 		if err != nil {
 			b.Fatalf("Expected no error while unmarshalling response at %d iteration but got: %s", n+1, err)
 		}
