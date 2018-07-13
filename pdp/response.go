@@ -598,3 +598,65 @@ func calcAssignmentExpressionsSize(in []AttributeAssignment) (int, error) {
 
 	return s, nil
 }
+
+func calcAttributesSizeFromReflection(c int, f func(i int) (string, Type, reflect.Value, error)) (int, error) {
+	s := reqBigCounterSize
+
+	for i := 0; i < c; i++ {
+		id, t, v, err := f(i)
+		if err != nil {
+			return 0, err
+		}
+
+		n, err := calcRequestAttributeNameSize(id)
+		if err != nil {
+			return 0, bindError(err, id)
+		}
+		s += n
+
+		switch t {
+		default:
+			return 0, bindError(newRequestAttributeMarshallingNotImplementedError(t), id)
+
+		case TypeBoolean:
+			n = reqBooleanValueSize
+
+		case TypeString:
+			n, err = calcRequestAttributeStringSize(v.String())
+
+		case TypeInteger:
+			n, err = calcRequestAttributeIntegerSize(v.Int())
+
+		case TypeFloat:
+			n, err = calcRequestAttributeFloatSize(v.Float())
+
+		case TypeAddress:
+			n, err = calcRequestAttributeAddressSize(net.IP(v.Bytes()))
+
+		case TypeNetwork:
+			n, err = calcRequestAttributeNetworkSize(getNetwork(v))
+
+		case TypeDomain:
+			n, err = calcRequestAttributeDomainSize(domain.MakeNameFromReflection(v))
+
+		case TypeSetOfStrings:
+			n, err = calcRequestAttributeSetOfStringsSize(getSetOfStrings(v))
+
+		case TypeSetOfNetworks:
+			n, err = calcRequestAttributeSetOfNetworksSize(getSetOfNetworks(v))
+
+		case TypeSetOfDomains:
+			n, err = calcRequestAttributeSetOfDomainsSize(getSetOfDomains(v))
+
+		case TypeListOfStrings:
+			n, err = calcRequestAttributeListOfStringsSize(getListOfStrings(v))
+		}
+
+		if err != nil {
+			return 0, bindError(err, id)
+		}
+		s += reqTypeSize + n
+	}
+
+	return s, nil
+}

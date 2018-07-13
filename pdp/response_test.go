@@ -22,6 +22,39 @@ var (
 		7, 'i', 'n', 't', 'e', 'g', 'e', 'r', byte(requestWireTypeInteger),
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f,
 	}
+
+	testWireReflectAttributes = []byte{
+		11, 0,
+		7, 'b', 'o', 'o', 'l', 'e', 'a', 'n', byte(requestWireTypeBooleanTrue),
+		6, 's', 't', 'r', 'i', 'n', 'g', byte(requestWireTypeString), 4, 0, 't', 'e', 's', 't',
+		7, 'i', 'n', 't', 'e', 'g', 'e', 'r', byte(requestWireTypeInteger),
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f,
+		5, 'f', 'l', 'o', 'a', 't', byte(requestWireTypeFloat), 24, 45, 68, 84, 251, 33, 9, 64,
+		7, 'a', 'd', 'd', 'r', 'e', 's', 's', byte(requestWireTypeIPv4Address), 192, 0, 2, 1,
+		7, 'n', 'e', 't', 'w', 'o', 'r', 'k', byte(requestWireTypeIPv4Network), 24, 192, 0, 2, 0,
+		6, 'd', 'o', 'm', 'a', 'i', 'n', byte(requestWireTypeDomain),
+		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+		14, 's', 'e', 't', ' ', 'o', 'f', ' ', 's', 't', 'r', 'i', 'n', 'g', 's', byte(requestWireTypeSetOfStrings),
+		3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
+		15, 's', 'e', 't', ' ', 'o', 'f', ' ', 'n', 'e', 't', 'w', 'o', 'r', 'k', 's',
+		byte(requestWireTypeSetOfNetworks), 3, 0,
+		216, 192, 0, 2, 0,
+		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		220, 192, 0, 2, 16,
+		14, 's', 'e', 't', ' ', 'o', 'f', ' ', 'd', 'o', 'm', 'a', 'i', 'n', 's', byte(requestWireTypeSetOfDomains),
+		3, 0,
+		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
+		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+		15, 'l', 'i', 's', 't', ' ', 'o', 'f', ' ', 's', 't', 'r', 'i', 'n', 'g', 's',
+		byte(requestWireTypeListOfStrings), 3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
+	}
 )
 
 func TestMarshalResponse(t *testing.T) {
@@ -471,87 +504,10 @@ func TestPutAssignmentExpressions(t *testing.T) {
 func TestPutAttributesFromReflection(t *testing.T) {
 	var b [287]byte
 
-	f := func(i int) (string, Type, reflect.Value, error) {
-		switch i {
-		case 0:
-			return "boolean", TypeBoolean, reflect.ValueOf(true), nil
+	n, err := putAttributesFromReflection(b[:], 11, testReflectAttributes)
+	assertRequestBytesBuffer(t, "putAttributesFromReflection", err, b[:], n, testWireReflectAttributes...)
 
-		case 1:
-			return "string", TypeString, reflect.ValueOf("test"), nil
-
-		case 2:
-			return "integer", TypeInteger, reflect.ValueOf(int64(9223372036854775807)), nil
-
-		case 3:
-			return "float", TypeFloat, reflect.ValueOf(float64(math.Pi)), nil
-
-		case 4:
-			return "address", TypeAddress, reflect.ValueOf(net.ParseIP("192.0.2.1")), nil
-
-		case 5:
-			return "network", TypeNetwork, reflect.ValueOf(makeTestNetwork("192.0.2.0/24")), nil
-
-		case 6:
-			return "domain", TypeDomain, reflect.ValueOf(makeTestDomain("www.example.com")), nil
-
-		case 7:
-			return "set of strings", TypeSetOfStrings, reflect.ValueOf(newStrTree("one", "two", "three")), nil
-
-		case 8:
-			return "set of networks", TypeSetOfNetworks, reflect.ValueOf(newIPTree(
-				makeTestNetwork("192.0.2.0/24"),
-				makeTestNetwork("2001:db8::/32"),
-				makeTestNetwork("192.0.2.16/28"),
-			)), nil
-
-		case 9:
-			return "set of domains", TypeSetOfDomains, reflect.ValueOf(newDomainTree(
-				makeTestDomain("example.com"),
-				makeTestDomain("example.gov"),
-				makeTestDomain("www.example.com"),
-			)), nil
-
-		case 10:
-			return "list of strings", TypeListOfStrings, reflect.ValueOf([]string{"one", "two", "three"}), nil
-		}
-
-		return "", TypeUndefined, reflectValueNil, fmt.Errorf("unexpected intex %d", i)
-	}
-	n, err := putAttributesFromReflection(b[:], 11, f)
-	assertRequestBytesBuffer(t, "putAttributesFromReflection", err, b[:], n,
-		11, 0,
-		7, 'b', 'o', 'o', 'l', 'e', 'a', 'n', byte(requestWireTypeBooleanTrue),
-		6, 's', 't', 'r', 'i', 'n', 'g', byte(requestWireTypeString), 4, 0, 't', 'e', 's', 't',
-		7, 'i', 'n', 't', 'e', 'g', 'e', 'r', byte(requestWireTypeInteger),
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f,
-		5, 'f', 'l', 'o', 'a', 't', byte(requestWireTypeFloat), 24, 45, 68, 84, 251, 33, 9, 64,
-		7, 'a', 'd', 'd', 'r', 'e', 's', 's', byte(requestWireTypeIPv4Address), 192, 0, 2, 1,
-		7, 'n', 'e', 't', 'w', 'o', 'r', 'k', byte(requestWireTypeIPv4Network), 24, 192, 0, 2, 0,
-		6, 'd', 'o', 'm', 'a', 'i', 'n', byte(requestWireTypeDomain),
-		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
-		14, 's', 'e', 't', ' ', 'o', 'f', ' ', 's', 't', 'r', 'i', 'n', 'g', 's', byte(requestWireTypeSetOfStrings),
-		3, 0,
-		3, 0, 'o', 'n', 'e',
-		3, 0, 't', 'w', 'o',
-		5, 0, 't', 'h', 'r', 'e', 'e',
-		15, 's', 'e', 't', ' ', 'o', 'f', ' ', 'n', 'e', 't', 'w', 'o', 'r', 'k', 's',
-		byte(requestWireTypeSetOfNetworks), 3, 0,
-		216, 192, 0, 2, 0,
-		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		220, 192, 0, 2, 16,
-		14, 's', 'e', 't', ' ', 'o', 'f', ' ', 'd', 'o', 'm', 'a', 'i', 'n', 's', byte(requestWireTypeSetOfDomains),
-		3, 0,
-		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
-		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
-		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
-		15, 'l', 'i', 's', 't', ' ', 'o', 'f', ' ', 's', 't', 'r', 'i', 'n', 'g', 's',
-		byte(requestWireTypeListOfStrings), 3, 0,
-		3, 0, 'o', 'n', 'e',
-		3, 0, 't', 'w', 'o',
-		5, 0, 't', 'h', 'r', 'e', 'e',
-	)
-
-	n, err = putAttributesFromReflection([]byte{}, 1, f)
+	n, err = putAttributesFromReflection([]byte{}, 1, testReflectAttributes)
 	assertRequestBufferOverflow(t, "putAttributesFromReflection", err, n)
 
 	testFuncErr := errors.New("test function error")
@@ -573,7 +529,7 @@ func TestPutAttributesFromReflection(t *testing.T) {
 		t.Errorf("expected *requestAttributeMarshallingNotImplementedError but got %T (%s)", err, err)
 	}
 
-	n, err = putAttributesFromReflection(b[:10], 1, f)
+	n, err = putAttributesFromReflection(b[:10], 1, testReflectAttributes)
 	assertRequestBufferOverflow(t, "putAttributesFromReflection(values)", err, n)
 }
 
@@ -1010,4 +966,100 @@ func TestCalcAssignmentExpressionsSize(t *testing.T) {
 	} else if _, ok := err.(*requestAttributeMarshallingNotImplementedError); !ok {
 		t.Errorf("expected *requestAttributeMarshallingNotImplementedError but got %T (%s)", err, err)
 	}
+}
+
+func TestCalcAttributesSizeFromReflectionSize(t *testing.T) {
+	s, err := calcAttributesSizeFromReflection(11, testReflectAttributes)
+	if err != nil {
+		t.Error(err)
+	} else if s != len(testWireReflectAttributes) {
+		t.Errorf("expected %d bytes in response but got %d", len(testWireReflectAttributes), s)
+	}
+
+	testFuncErr := errors.New("test function error")
+	s, err = calcAttributesSizeFromReflection(1, func(i int) (string, Type, reflect.Value, error) {
+		return "", TypeUndefined, reflectValueNil, testFuncErr
+	})
+	if err == nil {
+		t.Errorf("expected testFuncErr but got %d bytes in respons", s)
+	} else if err != testFuncErr {
+		t.Errorf("expected testFuncErr but got %T (%s)", err, err)
+	}
+
+	s, err = calcAttributesSizeFromReflection(1, func(i int) (string, Type, reflect.Value, error) {
+		return "01234567890123456789012345678901234567890123456789012345678901234567890123456789" +
+			"01234567890123456789012345678901234567890123456789012345678901234567890123456789" +
+			"01234567890123456789012345678901234567890123456789012345678901234567890123456789" +
+			"0123456789012345", TypeBoolean, reflect.ValueOf(true), nil
+	})
+	if err == nil {
+		t.Errorf("expected *requestTooLongAttributeNameError but got %d bytes in respons", s)
+	} else if _, ok := err.(*requestTooLongAttributeNameError); !ok {
+		t.Errorf("expected *requestTooLongAttributeNameError but got %T (%s)", err, err)
+	}
+
+	s, err = calcAttributesSizeFromReflection(1, func(i int) (string, Type, reflect.Value, error) {
+		return "undefined", TypeUndefined, reflect.ValueOf(true), nil
+	})
+	if err == nil {
+		t.Errorf("expected *requestAttributeMarshallingNotImplementedError but got %d bytes in respons", s)
+	} else if _, ok := err.(*requestAttributeMarshallingNotImplementedError); !ok {
+		t.Errorf("expected *requestAttributeMarshallingNotImplementedError but got %T (%s)", err, err)
+	}
+
+	s, err = calcAttributesSizeFromReflection(1, func(i int) (string, Type, reflect.Value, error) {
+		return "address", TypeAddress, reflect.ValueOf(net.IP([]byte{0, 1, 2, 3, 4, 5, 6, 7})), nil
+	})
+	if err == nil {
+		t.Errorf("expected *requestAddressValueError but got %d bytes in respons", s)
+	} else if _, ok := err.(*requestAddressValueError); !ok {
+		t.Errorf("expected *requestAddressValueError but got %T (%s)", err, err)
+	}
+}
+
+func testReflectAttributes(i int) (string, Type, reflect.Value, error) {
+	switch i {
+	case 0:
+		return "boolean", TypeBoolean, reflect.ValueOf(true), nil
+
+	case 1:
+		return "string", TypeString, reflect.ValueOf("test"), nil
+
+	case 2:
+		return "integer", TypeInteger, reflect.ValueOf(int64(9223372036854775807)), nil
+
+	case 3:
+		return "float", TypeFloat, reflect.ValueOf(float64(math.Pi)), nil
+
+	case 4:
+		return "address", TypeAddress, reflect.ValueOf(net.ParseIP("192.0.2.1")), nil
+
+	case 5:
+		return "network", TypeNetwork, reflect.ValueOf(makeTestNetwork("192.0.2.0/24")), nil
+
+	case 6:
+		return "domain", TypeDomain, reflect.ValueOf(makeTestDomain("www.example.com")), nil
+
+	case 7:
+		return "set of strings", TypeSetOfStrings, reflect.ValueOf(newStrTree("one", "two", "three")), nil
+
+	case 8:
+		return "set of networks", TypeSetOfNetworks, reflect.ValueOf(newIPTree(
+			makeTestNetwork("192.0.2.0/24"),
+			makeTestNetwork("2001:db8::/32"),
+			makeTestNetwork("192.0.2.16/28"),
+		)), nil
+
+	case 9:
+		return "set of domains", TypeSetOfDomains, reflect.ValueOf(newDomainTree(
+			makeTestDomain("example.com"),
+			makeTestDomain("example.gov"),
+			makeTestDomain("www.example.com"),
+		)), nil
+
+	case 10:
+		return "list of strings", TypeListOfStrings, reflect.ValueOf([]string{"one", "two", "three"}), nil
+	}
+
+	return "", TypeUndefined, reflectValueNil, fmt.Errorf("unexpected intex %d", i)
 }

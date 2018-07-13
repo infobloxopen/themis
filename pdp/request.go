@@ -77,6 +77,7 @@ const (
 
 	reqTypeSize = 1
 
+	reqBooleanValueSize     = 0
 	reqIntegerValueSize     = 8
 	reqFloatValueSize       = 8
 	reqIPv4AddressValueSize = 4
