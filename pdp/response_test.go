@@ -45,27 +45,19 @@ func TestMarshalResponse(t *testing.T) {
 		fmt.Errorf("testError1"),
 		fmt.Errorf("testError2"),
 	)
-	assertRequestBufferOverflow(t, "marshalResponse", err, n)
+	assertRequestBufferOverflow(t, "marshalResponse(version)", err, n)
 
 	n, err = marshalResponse(b[:2], EffectIndeterminate, testRequestAssignments,
 		fmt.Errorf("testError1"),
 		fmt.Errorf("testError2"),
 	)
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "marshalResponse(effect)", err, n)
 
 	n, err = marshalResponse(b[:5], EffectIndeterminate, testRequestAssignments,
 		fmt.Errorf("testError1"),
 		fmt.Errorf("testError2"),
 	)
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "marshalResponse(status)", err, n)
 
 	n, err = marshalResponse(b[:22], EffectIndeterminate, testRequestAssignments,
 		fmt.Errorf("testError1"),
@@ -87,28 +79,16 @@ func TestMarshalResponse(t *testing.T) {
 	n, err = marshalResponse(b[:14], EffectIndeterminate, testRequestAssignments,
 		fmt.Errorf("testError"),
 	)
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "marshalResponse(error)", err, n)
 
 	n, err = marshalResponse(b[:20], EffectIndeterminate, testRequestAssignments,
 		fmt.Errorf("testError1"),
 		fmt.Errorf("testError2"),
 	)
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "marshalResponse(multi-error)", err, n)
 
 	n, err = marshalResponse(b[:25], EffectIndeterminate, testRequestAssignments, fmt.Errorf("testError"))
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "marshalResponse(longObligation)", err, n)
 
 	n, err = marshalResponse(b[:], EffectIndeterminate, []AttributeAssignment{
 		MakeAddressAssignment("address", net.IP{1, 2, 3, 4, 5, 6}),
@@ -485,11 +465,7 @@ func TestPutAssignmentExpressions(t *testing.T) {
 	}
 
 	n, err = putAssignmentExpressions(b[:12], testRequestAssignments)
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putAssignmentExpressions(expressions)", err, n)
 }
 
 func TestPutAttributesFromReflection(t *testing.T) {
@@ -598,11 +574,7 @@ func TestPutAttributesFromReflection(t *testing.T) {
 	}
 
 	n, err = putAttributesFromReflection(b[:10], 1, f)
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putAttributesFromReflection(values)", err, n)
 }
 
 func TestGetAssignmentExpressions(t *testing.T) {

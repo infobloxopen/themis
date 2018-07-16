@@ -39,14 +39,10 @@ func TestMarshalRequestAssignments(t *testing.T) {
 	assertRequestBytesBuffer(t, "MarshalRequestAssignments", err, b[:], n, testWireRequest...)
 
 	n, err = MarshalRequestAssignments([]byte{}, testRequestAssignments)
-	assertRequestBufferOverflow(t, "MarshalRequestAssignments", err, n)
+	assertRequestBufferOverflow(t, "MarshalRequestAssignments(count)", err, n)
 
 	n, err = MarshalRequestAssignments(b[:2], testRequestAssignments)
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "MarshalRequestAssignments(first value)", err, n)
 }
 
 func TestMarshalRequestReflection(t *testing.T) {
@@ -62,14 +58,10 @@ func TestMarshalRequestReflection(t *testing.T) {
 	)
 
 	n, err = MarshalRequestReflection([]byte{}, 1, f)
-	assertRequestBufferOverflow(t, "MarshalRequestReflection", err, n)
+	assertRequestBufferOverflow(t, "MarshalRequestReflection(version)", err, n)
 
 	n, err = MarshalRequestReflection(b[:2], 1, f)
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "MarshalRequestReflection(collection)", err, n)
 }
 
 func TestUnmarshalRequestAssignments(t *testing.T) {
@@ -1413,18 +1405,10 @@ func TestPutRequestAttributeBoolean(t *testing.T) {
 	)
 
 	n, err = putRequestAttributeBoolean(b[:5], "boolean", true)
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeBoolean(name)", err, n)
 
 	n, err = putRequestAttributeBoolean(b[:8], "boolean", true)
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeBoolean(value)", err, n)
 }
 
 func TestPutRequestAttributeString(t *testing.T) {
@@ -1436,18 +1420,10 @@ func TestPutRequestAttributeString(t *testing.T) {
 	)
 
 	n, err = putRequestAttributeString(b[:5], "string", "test")
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeString(name)", err, n)
 
 	n, err = putRequestAttributeString(b[:9], "string", "test")
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeString(value)", err, n)
 }
 
 func TestPutRequestAttributeInteger(t *testing.T) {
@@ -1459,18 +1435,10 @@ func TestPutRequestAttributeInteger(t *testing.T) {
 	)
 
 	n, err = putRequestAttributeInteger(b[:5], "integer", 0)
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeInteger(name)", err, n)
 
 	n, err = putRequestAttributeInteger(b[:9], "integer", 0)
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeInteger(value)", err, n)
 }
 
 func TestPutRequestAttributeFloat(t *testing.T) {
@@ -1482,18 +1450,10 @@ func TestPutRequestAttributeFloat(t *testing.T) {
 	)
 
 	n, err = putRequestAttributeFloat(b[:4], "float", 0)
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeFloat(name)", err, n)
 
 	n, err = putRequestAttributeFloat(b[:7], "float", 0)
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeFloat(value)", err, n)
 }
 
 func TestPutRequestAttributeAddress(t *testing.T) {
@@ -1505,18 +1465,10 @@ func TestPutRequestAttributeAddress(t *testing.T) {
 	)
 
 	n, err = putRequestAttributeAddress(b[:4], "address", net.ParseIP("192.0.2.1"))
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeAddress(name)", err, n)
 
 	n, err = putRequestAttributeAddress(b[:9], "address", net.ParseIP("192.0.2.1"))
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeAddress(value)", err, n)
 }
 
 func TestPutRequestAttributeNetwork(t *testing.T) {
@@ -1528,18 +1480,10 @@ func TestPutRequestAttributeNetwork(t *testing.T) {
 	)
 
 	n, err = putRequestAttributeNetwork(b[:4], "network", makeTestNetwork("192.0.2.0/24"))
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeNetwork(name)", err, n)
 
 	n, err = putRequestAttributeNetwork(b[:10], "network", makeTestNetwork("192.0.2.0/24"))
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeNetwork(value)", err, n)
 }
 
 func TestPutRequestAttributeDomain(t *testing.T) {
@@ -1552,18 +1496,10 @@ func TestPutRequestAttributeDomain(t *testing.T) {
 	)
 
 	n, err = putRequestAttributeDomain(b[:4], "domain", makeTestDomain("www.example.com"))
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeDomain(name)", err, n)
 
 	n, err = putRequestAttributeDomain(b[:10], "domain", makeTestDomain("www.example.com"))
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeDomain(value)", err, n)
 }
 
 func TestPutRequestAttributeSetOfStrings(t *testing.T) {
@@ -1578,18 +1514,10 @@ func TestPutRequestAttributeSetOfStrings(t *testing.T) {
 	)
 
 	n, err = putRequestAttributeSetOfStrings(b[:5], "strings", newStrTree("one", "two", "three"))
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeSetOfStrings(name)", err, n)
 
 	n, err = putRequestAttributeSetOfStrings(b[:13], "strings", newStrTree("one", "two", "three"))
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeSetOfStrings(value)", err, n)
 }
 
 func TestPutRequestAttributeSetOfNetworks(t *testing.T) {
@@ -1612,22 +1540,14 @@ func TestPutRequestAttributeSetOfNetworks(t *testing.T) {
 		makeTestNetwork("2001:db8::/32"),
 		makeTestNetwork("192.0.2.16/28"),
 	))
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeSetOfNetworks(name)", err, n)
 
 	n, err = putRequestAttributeSetOfNetworks(b[:15], "networks", newIPTree(
 		makeTestNetwork("192.0.2.0/24"),
 		makeTestNetwork("2001:db8::/32"),
 		makeTestNetwork("192.0.2.16/28"),
 	))
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeSetOfNetworks(value)", err, n)
 }
 
 func TestPutRequestAttributeSetOfDomains(t *testing.T) {
@@ -1650,22 +1570,14 @@ func TestPutRequestAttributeSetOfDomains(t *testing.T) {
 		makeTestDomain("example.gov"),
 		makeTestDomain("www.example.com"),
 	))
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeSetOfDomains(name)", err, n)
 
 	n, err = putRequestAttributeSetOfDomains(b[:13], "domains", newDomainTree(
 		makeTestDomain("example.com"),
 		makeTestDomain("example.gov"),
 		makeTestDomain("www.example.com"),
 	))
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeSetOfDomains(value)", err, n)
 }
 
 func TestPutRequestAttributeListOfStrings(t *testing.T) {
@@ -1680,18 +1592,10 @@ func TestPutRequestAttributeListOfStrings(t *testing.T) {
 	)
 
 	n, err = putRequestAttributeListOfStrings(b[:5], "strings", []string{"one", "two", "three"})
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeListOfStrings(name)", err, n)
 
 	n, err = putRequestAttributeListOfStrings(b[:13], "strings", []string{"one", "two", "three"})
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAttributeListOfStrings(value)", err, n)
 }
 
 func TestPutRequestBooleanValue(t *testing.T) {
@@ -1723,11 +1627,7 @@ func TestPutRequestStringValue(t *testing.T) {
 	}
 
 	n, err = putRequestStringValue(b[:3], "test")
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestStringValue(buffer)", err, n)
 }
 
 func TestPutRequestIntegerValue(t *testing.T) {
@@ -1742,11 +1642,7 @@ func TestPutRequestIntegerValue(t *testing.T) {
 	assertRequestBufferOverflow(t, "putRequestIntegerValue", err, n)
 
 	n, err = putRequestIntegerValue(b[:5], 0)
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestIntegerValue(buffer)", err, n)
 }
 
 func TestPutRequestFloatValue(t *testing.T) {
@@ -1761,11 +1657,7 @@ func TestPutRequestFloatValue(t *testing.T) {
 	assertRequestBufferOverflow(t, "putRequestFloatValue", err, n)
 
 	n, err = putRequestFloatValue(b[:5], 0)
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestFloatValue(buffer)", err, n)
 }
 
 func TestPutRequestAddressValue(t *testing.T) {
@@ -1792,11 +1684,7 @@ func TestPutRequestAddressValue(t *testing.T) {
 	assertRequestBufferOverflow(t, "putRequestAddressValue", err, n)
 
 	n, err = putRequestAddressValue(b[:3], net.ParseIP("192.0.2.1"))
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestAddressValue(buffer)", err, n)
 }
 
 func TestPutRequestNetworkValue(t *testing.T) {
@@ -1837,11 +1725,7 @@ func TestPutRequestNetworkValue(t *testing.T) {
 	assertRequestBufferOverflow(t, "putRequestNetworkValue", err, n)
 
 	n, err = putRequestNetworkValue(b[:4], makeTestNetwork("192.0.2.0/24"))
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestNetworkValue(buffer)", err, n)
 }
 
 func TestPutRequestDomainValue(t *testing.T) {
@@ -1856,11 +1740,7 @@ func TestPutRequestDomainValue(t *testing.T) {
 	assertRequestBufferOverflow(t, "putRequestDomainValue", err, n)
 
 	n, err = putRequestDomainValue(b[:7], makeTestDomain("www.example.com"))
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestDomainValue(buffer)", err, n)
 }
 
 func TestPutRequestSetOfStringsValue(t *testing.T) {
@@ -1878,11 +1758,7 @@ func TestPutRequestSetOfStringsValue(t *testing.T) {
 	assertRequestBufferOverflow(t, "putRequestSetOfStringsValue", err, n)
 
 	n, err = putRequestSetOfStringsValue(b[:10], newStrTree("one", "two", "three"))
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestSetOfStringsValue(buffer)", err, n)
 
 	ss := strtree.NewTree()
 	for i := 0; i < math.MaxUint16+1; i++ {
@@ -1976,11 +1852,7 @@ func TestPutRequestSetOfDomainsValue(t *testing.T) {
 		makeTestDomain("example.gov"),
 		makeTestDomain("www.example.com"),
 	))
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestSetOfDomainsValue(buffer)", err, n)
 
 	sd := new(domaintree.Node)
 	for i := 0; i < math.MaxUint16+1; i++ {
@@ -2010,11 +1882,7 @@ func TestPutRequestListOfStringsValue(t *testing.T) {
 	assertRequestBufferOverflow(t, "putRequestListOfStringsValue", err, n)
 
 	n, err = putRequestListOfStringsValue(b[:10], []string{"one", "two", "three"})
-	if err == nil {
-		t.Errorf("expected no data put to small buffer but got %d", n)
-	} else if _, ok := err.(*requestBufferOverflowError); !ok {
-		t.Errorf("expected *requestBufferOverflowError but got %T (%s)", err, err)
-	}
+	assertRequestBufferOverflow(t, "putRequestListOfStringsValue(buffer)", err, n)
 
 	ls := make([]string, math.MaxUint16+1)
 	for i := range ls {
