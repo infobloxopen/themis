@@ -101,12 +101,12 @@ func TestMapperPCAOrdering(t *testing.T) {
 	}
 }
 
-const (
-	expectEmptyMapperPCAJSON = `{"type":"mapperPCA","def":"\"\"","err":"\"\"","alg":{"type":"firstApplicableEffectPCA"}}`
-	expectMapperPCAJSON      = `{"type":"mapperPCA","def":"\"first\"","err":"\"second\"","alg":{"type":"firstApplicableEffectPCA"}}`
-)
-
 func TestMapperPCAMarshal(t *testing.T) {
+	const (
+		expectEmptyMapperPCAJSON = `{"type":"mapperPCA","def":"\"\"","err":"\"\"","alg":{"type":"firstApplicableEffectPCA"}}`
+		expectMapperPCAJSON      = `{"type":"mapperPCA","def":"\"first\"","err":"\"second\"","alg":{"type":"firstApplicableEffectPCA"}}`
+	)
+
 	policies := []Evaluable{
 		makeSimplePermitPolicyWithObligations(
 			"first",
@@ -127,10 +127,8 @@ func TestMapperPCAMarshal(t *testing.T) {
 		Algorithm: firstApplicableEffectPCA{},
 	}
 	alg := makeMapperPCA(policies, algParam)
-	b, err := json.Marshal(alg)
-	if err != nil {
-		t.Fatalf("Expected no marshaling error but got: %s", err)
-	} else if expectEmptyMapperPCAJSON != string(b) {
+	b, _ := json.Marshal(alg)
+	if expectEmptyMapperPCAJSON != string(b) {
 		t.Errorf("Expected marshalled %s\nGot %s", expectEmptyMapperPCAJSON, string(b))
 	}
 
@@ -144,10 +142,8 @@ func TestMapperPCAMarshal(t *testing.T) {
 		ErrOk:     true,
 	}
 	alg = makeMapperPCA(policies, algParam2)
-	b, err = json.Marshal(alg)
-	if err != nil {
-		t.Fatalf("Expected no marshaling error but got: %s", err)
-	} else if expectMapperPCAJSON != string(b) {
+	b, _ = json.Marshal(alg)
+	if expectMapperPCAJSON != string(b) {
 		t.Errorf("Expected marshalled %s\nGot %s", expectMapperPCAJSON, string(b))
 	}
 }

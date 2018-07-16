@@ -98,12 +98,12 @@ func TestFlagsMapperPCAOrdering(t *testing.T) {
 	}
 }
 
-const (
-	expectEmptyFlagMapperPCAJSON = `{"type":"flagsMapperPCA","def":"\"\"","err":"\"\"","alg":{"type":"firstApplicableEffectPCA"}}`
-	expectFlagMapperPCAJSON      = `{"type":"flagsMapperPCA","def":"\"first\"","err":"\"second\"","alg":{"type":"firstApplicableEffectPCA"}}`
-)
-
 func TestFlagsMapperPCAMarshal(t *testing.T) {
+	const (
+		expectEmptyFlagMapperPCAJSON = `{"type":"flagsMapperPCA","def":"\"\"","err":"\"\"","alg":{"type":"firstApplicableEffectPCA"}}`
+		expectFlagMapperPCAJSON      = `{"type":"flagsMapperPCA","def":"\"first\"","err":"\"second\"","alg":{"type":"firstApplicableEffectPCA"}}`
+	)
+
 	ft, err := NewFlagsType("flags", "third", "first", "second")
 	if err != nil {
 		t.Fatalf("Expected no error but got: %s", err)
@@ -128,10 +128,8 @@ func TestFlagsMapperPCAMarshal(t *testing.T) {
 		Algorithm: firstApplicableEffectPCA{},
 	}
 	alg := makeMapperPCA(policies, algParam)
-	b, err := json.Marshal(alg)
-	if err != nil {
-		t.Fatalf("Expected no marshaling error but got: %s", err)
-	} else if expectEmptyFlagMapperPCAJSON != string(b) {
+	b, _ := json.Marshal(alg)
+	if expectEmptyFlagMapperPCAJSON != string(b) {
 		t.Errorf("Expected marshalled %s\nGot %s", expectEmptyFlagMapperPCAJSON, string(b))
 	}
 
@@ -145,10 +143,8 @@ func TestFlagsMapperPCAMarshal(t *testing.T) {
 		ErrOk:     true,
 	}
 	alg = makeMapperPCA(policies, algParam2)
-	b, err = json.Marshal(alg)
-	if err != nil {
-		t.Fatalf("Expected no marshaling error but got: %s", err)
-	} else if expectFlagMapperPCAJSON != string(b) {
+	b, _ = json.Marshal(alg)
+	if expectFlagMapperPCAJSON != string(b) {
 		t.Errorf("Expected marshalled %s\nGot %s", expectFlagMapperPCAJSON, string(b))
 	}
 }

@@ -101,12 +101,12 @@ func TestMapperRCAOrdering(t *testing.T) {
 	}
 }
 
-const (
-	expectEmptyMapperRCAJSON = `{"type":"mapperRCA","def":"\"\"","err":"\"\"","alg":{"type":"firstApplicableEffectRCA"}}`
-	expectMapperRCAJSON      = `{"type":"mapperRCA","def":"\"first\"","err":"\"second\"","alg":{"type":"firstApplicableEffectRCA"}}`
-)
-
 func TestMapperRCAMarshal(t *testing.T) {
+	const (
+		expectEmptyMapperRCAJSON = `{"type":"mapperRCA","def":"\"\"","err":"\"\"","alg":{"type":"firstApplicableEffectRCA"}}`
+		expectMapperRCAJSON      = `{"type":"mapperRCA","def":"\"first\"","err":"\"second\"","alg":{"type":"firstApplicableEffectRCA"}}`
+	)
+
 	rules := []*Rule{
 		makeSimplePermitRuleWithObligations(
 			"first",
@@ -127,10 +127,8 @@ func TestMapperRCAMarshal(t *testing.T) {
 		Algorithm: firstApplicableEffectRCA{},
 	}
 	alg := makeMapperRCA(rules, algParam)
-	b, err := json.Marshal(alg)
-	if err != nil {
-		t.Fatalf("Expected no marshaling error but got: %s", err)
-	} else if expectEmptyMapperRCAJSON != string(b) {
+	b, _ := json.Marshal(alg)
+	if expectEmptyMapperRCAJSON != string(b) {
 		t.Errorf("Expected marshalled %s\nGot %s", expectEmptyMapperRCAJSON, string(b))
 	}
 
@@ -144,10 +142,8 @@ func TestMapperRCAMarshal(t *testing.T) {
 		ErrOk:     true,
 	}
 	alg = makeMapperRCA(rules, algParam2)
-	b, err = json.Marshal(alg)
-	if err != nil {
-		t.Fatalf("Expected no marshaling error but got: %s", err)
-	} else if expectMapperRCAJSON != string(b) {
+	b, _ = json.Marshal(alg)
+	if expectMapperRCAJSON != string(b) {
 		t.Errorf("Expected marshalled %s\nGot %s", expectMapperRCAJSON, string(b))
 	}
 }

@@ -98,12 +98,12 @@ func TestFlagsMapperRCAOrdering(t *testing.T) {
 	}
 }
 
-const (
-	expectEmptyFlagMapperRCAJSON = `{"type":"flagsMapperRCA","def":"\"\"","err":"\"\"","alg":{"type":"firstApplicableEffectRCA"}}`
-	expectFlagMapperRCAJSON      = `{"type":"flagsMapperRCA","def":"\"first\"","err":"\"second\"","alg":{"type":"firstApplicableEffectRCA"}}`
-)
-
 func TestFlagsMapperRCAMarshal(t *testing.T) {
+	const (
+		expectEmptyFlagMapperRCAJSON = `{"type":"flagsMapperRCA","def":"\"\"","err":"\"\"","alg":{"type":"firstApplicableEffectRCA"}}`
+		expectFlagMapperRCAJSON      = `{"type":"flagsMapperRCA","def":"\"first\"","err":"\"second\"","alg":{"type":"firstApplicableEffectRCA"}}`
+	)
+
 	ft, err := NewFlagsType("flags", "third", "first", "second")
 	if err != nil {
 		t.Fatalf("Expected no error but got: %s", err)
@@ -128,10 +128,8 @@ func TestFlagsMapperRCAMarshal(t *testing.T) {
 		Algorithm: firstApplicableEffectRCA{},
 	}
 	alg := makeMapperRCA(rules, algParam)
-	b, err := json.Marshal(alg)
-	if err != nil {
-		t.Fatalf("Expected no marshaling error but got: %s", err)
-	} else if expectEmptyFlagMapperRCAJSON != string(b) {
+	b, _ := json.Marshal(alg)
+	if expectEmptyFlagMapperRCAJSON != string(b) {
 		t.Errorf("Expected marshalled %s\nGot %s", expectEmptyFlagMapperRCAJSON, string(b))
 	}
 
@@ -145,10 +143,8 @@ func TestFlagsMapperRCAMarshal(t *testing.T) {
 		ErrOk:     true,
 	}
 	alg = makeMapperRCA(rules, algParam2)
-	b, err = json.Marshal(alg)
-	if err != nil {
-		t.Fatalf("Expected no marshaling error but got: %s", err)
-	} else if expectFlagMapperRCAJSON != string(b) {
+	b, _ = json.Marshal(alg)
+	if expectFlagMapperRCAJSON != string(b) {
 		t.Errorf("Expected marshalled %s\nGot %s", expectFlagMapperRCAJSON, string(b))
 	}
 }
