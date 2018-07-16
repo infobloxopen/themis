@@ -2,6 +2,8 @@ package domain
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -99,6 +101,80 @@ func TestNameMakeNameFromStringWithTooLongLabel(t *testing.T) {
 	if err != ErrLabelTooLong {
 		t.Fatalf("expected ErrLabelTooLong but got %q (%T)", err, err)
 	}
+}
+
+func TestNameMakeNameFromReflection(t *testing.T) {
+	n, err := MakeNameFromString("www.example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nr := MakeNameFromReflection(reflect.ValueOf(n))
+	if nr.h != n.h || nr.c != n.c {
+		t.Errorf("expected %q (%q) but got %q (%q)", n, n.c, nr, nr.c)
+	}
+
+	nr = MakeNameFromReflection(reflect.ValueOf("www.example.com"))
+	if nr.String() != "www.example.com" {
+		t.Errorf("expected %q but got %q", "www.example.com", nr)
+	}
+}
+
+func TestNameMakeNameFromReflectionPtr(t *testing.T) {
+	n, err := MakeNameFromString("www.example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nr := MakeNameFromReflection(reflect.ValueOf(&n))
+	if nr.h != n.h || nr.c != n.c {
+		t.Errorf("expected %q (%q) but got %q (%q)", n, n.c, nr, nr.c)
+	}
+}
+
+func TestNameMakeNameFromReflectionPanicWrongType(t *testing.T) {
+	var (
+		i int
+		n Name
+	)
+
+	defer func() {
+		if r := recover(); r != nil {
+			if err, ok := r.(error); ok {
+				name := reflect.TypeOf(i).Name()
+				if !strings.Contains(err.Error(), name) {
+					t.Errorf("expected %q in error message but got %s", name, err)
+				}
+			} else {
+				t.Errorf("expected panic on error but got %T (%#v)", r, r)
+			}
+		} else {
+			t.Fatalf("expected panic but got name %q", n)
+		}
+	}()
+
+	n = MakeNameFromReflection(reflect.ValueOf(&i))
+}
+
+func TestNameMakeNameFromReflectionPanicWrongString(t *testing.T) {
+	s := "empty..label"
+	var n Name
+
+	defer func() {
+		if r := recover(); r != nil {
+			if err, ok := r.(error); ok {
+				if !strings.Contains(err.Error(), s) {
+					t.Errorf("expected %q in error message but got %s", s, err)
+				}
+			} else {
+				t.Errorf("expected panic on error but got %T (%#v)", r, r)
+			}
+		} else {
+			t.Fatalf("expected panic but got name %q", n)
+		}
+	}()
+
+	n = MakeNameFromReflection(reflect.ValueOf(s))
 }
 
 func TestNameString(t *testing.T) {

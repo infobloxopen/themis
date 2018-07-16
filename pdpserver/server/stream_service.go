@@ -20,6 +20,8 @@ func (s *Server) NewValidationStream(stream pb.PDP_NewValidationStreamServer) er
 	sID := atomic.AddUint64(&streamAutoIncrement, 1)
 	s.opts.logger.WithField("id", sID).Debug("Got new stream")
 
+	buffer := make([]byte, s.opts.maxResponseSize)
+
 	for {
 		in, err := stream.Recv()
 		if err == io.EOF {
@@ -39,15 +41,12 @@ func (s *Server) NewValidationStream(stream pb.PDP_NewValidationStreamServer) er
 			return err
 		}
 
-		out, err := s.Validate(context.Background(), in)
-		if err != nil {
-			s.opts.logger.WithFields(log.Fields{
-				"id":  sID,
-				"err": err,
-			}).Panic("Failed to validate request")
-		}
+		s.RLock()
+		p := s.p
+		c := s.c
+		s.RUnlock()
 
-		err = stream.Send(out)
+		err = stream.Send(&pb.Msg{Body: s.rawValidate(p, c, in.Body, buffer)})
 		if err != nil {
 			s.opts.logger.WithFields(log.Fields{
 				"id":  sID,

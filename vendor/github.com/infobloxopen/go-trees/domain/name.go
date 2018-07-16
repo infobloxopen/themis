@@ -1,7 +1,11 @@
 // Package domain provide functions to parse and handle domain names and labels.
 package domain
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"reflect"
+)
 
 var (
 	// ErrTooManyLabels is returned for domain name with more than 127 labels.
@@ -77,6 +81,35 @@ func MakeNameFromString(s string) (Name, error) {
 	out.c = string(name[:j])
 
 	return out, nil
+}
+
+var (
+	reflectStringType = reflect.TypeOf("")
+	reflectNameType   = reflect.TypeOf(Name{})
+)
+
+// MakeNameFromReflection extracts domain name from value. The value should wrap Name or *Name otherwise MakeNameFromReflection panics.
+func MakeNameFromReflection(v reflect.Value) Name {
+	t := v.Type()
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+	switch v.Type() {
+	case reflectStringType:
+		s := v.String()
+		n, err := MakeNameFromString(s)
+		if err != nil {
+			panic(fmt.Errorf("can't make %q from %q (%s): %s", reflectNameType, t, s, err))
+		}
+
+		return n
+
+	case reflectNameType:
+		return Name{v.Field(0).String(), v.Field(1).String()}
+	}
+
+	panic(fmt.Errorf("can't make %q from %q", reflectNameType, t))
 }
 
 // String method returns domain name in human-readable format.

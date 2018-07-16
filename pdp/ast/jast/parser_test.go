@@ -1698,7 +1698,7 @@ func TestUnmarshal(t *testing.T) {
 			t.Errorf("Expected no error but got %T (%s)", err, err)
 		} else {
 			r := s.Root().Calculate(ctx)
-			effect, o, err := r.Status()
+			effect, o, err := r.Effect, r.Obligations, r.Status
 			if effect != pdp.EffectDeny {
 				if err != nil {
 					t.Errorf("Expected deny as a response for Simple All Permit Policy but got %d (%s)", effect, err)
@@ -1805,12 +1805,13 @@ func assertPolicy(s *pdp.PolicyStorage, attrs map[string]string, e, desc string,
 		return
 	}
 
-	_, o, err := s.Root().Calculate(ctx).Status()
-	if err != nil {
-		t.Errorf("Expected no error for %s but got %T (%s)", desc, err, err)
+	r := s.Root().Calculate(ctx)
+	if r.Status != nil {
+		t.Errorf("Expected no error for %s but got %T (%s)", desc, r.Status, r.Status)
 		return
 	}
 
+	o := r.Obligations
 	if len(o) < 1 {
 		t.Errorf("Expected at least one obligation for %s but got nothing", desc)
 		return

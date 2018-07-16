@@ -8,6 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/infobloxopen/themis/pdp"
 	"github.com/infobloxopen/themis/pdp/ast"
 	"github.com/infobloxopen/themis/pdpserver/server"
 )
@@ -34,6 +35,7 @@ type config struct {
 	storageEP           string
 	mem                 server.MemLimits
 	maxStreams          uint
+	maxResponseSize     uint
 	memStatsLogPath     string
 	memStatsLogInterval time.Duration
 	memProfDumpPath     string
@@ -67,6 +69,7 @@ func init() {
 	flag.StringVar(&conf.storageEP, "storage", ":5552", "storage control endpoint")
 	limit := flag.Uint64("mem-limit", 0, "memory limit in megabytes")
 	flag.UintVar(&conf.maxStreams, "max-streams", 0, "maximum number of parallel gRPC streams (0 - use gRPC default)")
+	flag.UintVar(&conf.maxResponseSize, "max-response", 10240, "maximal response size")
 
 	flag.StringVar(&conf.memStatsLogPath, "mem-stats-log", "mem-stats.log", "file to log memory allocator statistics")
 	flag.DurationVar(&conf.memStatsLogInterval, "mem-stats-interval", -1,
@@ -100,6 +103,20 @@ func init() {
 			"max-streams": conf.maxStreams,
 			"limit":       math.MaxUint32,
 		}).Fatal("too big maximum number of parallel gRPC streams")
+	}
+
+	if conf.maxResponseSize > math.MaxUint32 {
+		log.WithFields(log.Fields{
+			"max-response": conf.maxResponseSize,
+			"limit":        math.MaxUint32,
+		}).Fatal("too big maximal response size")
+	}
+
+	if conf.maxResponseSize < pdp.MinResponseSize {
+		log.WithFields(log.Fields{
+			"max-response": conf.maxResponseSize,
+			"limit":        pdp.MinResponseSize,
+		}).Fatal("too tight response size limit")
 	}
 
 	if conf.memProfNumGC > math.MaxUint32 {

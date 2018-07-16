@@ -4,128 +4,181 @@ package pdp
 
 import (
 	"github.com/google/uuid"
+	"math"
+	"net"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 )
 
 // Numeric identifiers of errors.
 const (
-	externalErrorID                             = 0
-	multiErrorID                                = 1
-	missingAttributeErrorID                     = 2
-	MissingValueErrorID                         = 3
-	unknownTypeStringCastErrorID                = 4
-	invalidTypeStringCastErrorID                = 5
-	notImplementedStringCastErrorID             = 6
-	invalidBooleanStringCastErrorID             = 7
-	invalidIntegerStringCastErrorID             = 8
-	invalidFloatStringCastErrorID               = 9
-	invalidAddressStringCastErrorID             = 10
-	invalidNetworkStringCastErrorID             = 11
-	invalidAddressNetworkStringCastErrorID      = 12
-	invalidDomainNameStringCastErrorID          = 13
-	attributeValueTypeErrorID                   = 14
-	attributeValueFlagsTypeErrorID              = 15
-	attributeValueFlagsBitsErrorID              = 16
-	duplicateAttributeValueErrorID              = 17
-	unknownTypeSerializationErrorID             = 18
-	invalidTypeSerializationErrorID             = 19
-	notMatchingTypeRebindErrorID                = 20
-	unknownMetaTypeID                           = 21
-	assignmentTypeMismatchID                    = 22
-	mapperArgumentTypeErrorID                   = 23
-	flagsMapperRCAArgumentTypeErrorID           = 24
-	UntaggedPolicyModificationErrorID           = 25
-	MissingPolicyTagErrorID                     = 26
-	PolicyTagsNotMatchErrorID                   = 27
-	emptyPathModificationErrorID                = 28
-	invalidRootPolicyItemTypeErrorID            = 29
-	hiddenRootPolicyAppendErrorID               = 30
-	invalidRootPolicyErrorID                    = 31
-	hiddenPolicySetModificationErrorID          = 32
-	invalidPolicySetItemTypeErrorID             = 33
-	tooShortPathPolicySetModificationErrorID    = 34
-	missingPolicySetChildErrorID                = 35
-	hiddenPolicyAppendErrorID                   = 36
-	policyTransactionTagsNotMatchErrorID        = 37
-	failedPolicyTransactionErrorID              = 38
-	unknownPolicyUpdateOperationErrorID         = 39
-	hiddenPolicyModificationErrorID             = 40
-	tooLongPathPolicyModificationErrorID        = 41
-	tooShortPathPolicyModificationErrorID       = 42
-	invalidPolicyItemTypeErrorID                = 43
-	hiddenRuleAppendErrorID                     = 44
-	missingPolicyChildErrorID                   = 45
-	MissingContentErrorID                       = 46
-	invalidContentStorageItemID                 = 47
-	MissingContentItemErrorID                   = 48
-	invalidContentItemErrorID                   = 49
-	invalidContentItemTypeErrorID               = 50
-	invalidSelectorPathErrorID                  = 51
-	networkMapKeyValueTypeErrorID               = 52
-	mapContentSubitemErrorID                    = 53
-	invalidContentModificationErrorID           = 54
-	missingPathContentModificationErrorID       = 55
-	tooLongPathContentModificationErrorID       = 56
-	invalidContentValueModificationErrorID      = 57
-	UntaggedContentModificationErrorID          = 58
-	MissingContentTagErrorID                    = 59
-	ContentTagsNotMatchErrorID                  = 60
-	unknownContentUpdateOperationErrorID        = 61
-	failedContentTransactionErrorID             = 62
-	contentTransactionIDNotMatchErrorID         = 63
-	contentTransactionTagsNotMatchErrorID       = 64
-	tooShortRawPathContentModificationErrorID   = 65
-	tooLongRawPathContentModificationErrorID    = 66
-	invalidContentUpdateDataErrorID             = 67
-	invalidContentUpdateResultTypeErrorID       = 68
-	invalidContentUpdateKeysErrorID             = 69
-	unknownContentItemResultTypeErrorID         = 70
-	invalidContentItemResultTypeErrorID         = 71
-	invalidContentKeyTypeErrorID                = 72
-	invalidContentStringMapErrorID              = 73
-	invalidContentNetworkMapErrorID             = 74
-	invalidContentDomainMapErrorID              = 75
-	invalidContentValueErrorID                  = 76
-	invalidContentValueTypeErrorID              = 77
-	invalidContentStringFlags8MapValueErrorID   = 78
-	invalidContentStringFlags16MapValueErrorID  = 79
-	invalidContentStringFlags32MapValueErrorID  = 80
-	invalidContentStringFlags64MapValueErrorID  = 81
-	invalidContentNetworkFlags8MapValueErrorID  = 82
-	invalidContentNetworkFlags16MapValueErrorID = 83
-	invalidContentNetworkFlags32MapValueErrorID = 84
-	invalidContentNetworkFlags64MapValueErrorID = 85
-	invalidContentDomainFlags8MapValueErrorID   = 86
-	invalidContentDomainFlags16MapValueErrorID  = 87
-	invalidContentDomainFlags32MapValueErrorID  = 88
-	invalidContentDomainFlags64MapValueErrorID  = 89
-	integerDivideByZeroErrorID                  = 90
-	floatDivideByZeroErrorID                    = 91
-	floatNanErrorID                             = 92
-	floatInfErrorID                             = 93
-	ReadOnlySymbolsChangeErrorID                = 94
-	nilTypeErrorID                              = 95
-	builtinCustomTypeErrorID                    = 96
-	duplicateCustomTypeErrorID                  = 97
-	duplicatesBuiltinTypeErrorID                = 98
-	duplicateFlagNameID                         = 99
-	noTypedAttributeErrorID                     = 100
-	undefinedAttributeTypeErrorID               = 101
-	unknownAttributeTypeErrorID                 = 102
-	duplicateAttributeErrorID                   = 103
-	noFlagsDefinedErrorID                       = 104
-	tooManyFlagsDefinedErrorID                  = 105
-	listOfStringsTypeErrorID                    = 106
-	concatTypeErrorID                           = 107
-	unsupportedSelectorSchemeErrorID            = 108
-	disabledSelectorErrorID                     = 109
-	marshalInvalidDepthErrorID                  = 110
-	invalidHeaderErrorID                        = 111
-	nonMarshableErrorID                         = 112
-	nilRootErrorID                              = 113
-	PathNotFoundErrorID                         = 114
+	externalErrorID                               = 0
+	multiErrorID                                  = 1
+	missingAttributeErrorID                       = 2
+	MissingValueErrorID                           = 3
+	unknownTypeStringCastErrorID                  = 4
+	invalidTypeStringCastErrorID                  = 5
+	notImplementedStringCastErrorID               = 6
+	invalidBooleanStringCastErrorID               = 7
+	invalidIntegerStringCastErrorID               = 8
+	invalidFloatStringCastErrorID                 = 9
+	invalidAddressStringCastErrorID               = 10
+	invalidNetworkStringCastErrorID               = 11
+	invalidAddressNetworkStringCastErrorID        = 12
+	invalidDomainNameStringCastErrorID            = 13
+	attributeValueTypeErrorID                     = 14
+	attributeValueFlagsTypeErrorID                = 15
+	attributeValueFlagsBitsErrorID                = 16
+	duplicateAttributeValueErrorID                = 17
+	unknownTypeSerializationErrorID               = 18
+	invalidTypeSerializationErrorID               = 19
+	notMatchingTypeRebindErrorID                  = 20
+	unknownMetaTypeID                             = 21
+	assignmentTypeMismatchID                      = 22
+	mapperArgumentTypeErrorID                     = 23
+	flagsMapperRCAArgumentTypeErrorID             = 24
+	UntaggedPolicyModificationErrorID             = 25
+	MissingPolicyTagErrorID                       = 26
+	PolicyTagsNotMatchErrorID                     = 27
+	emptyPathModificationErrorID                  = 28
+	invalidRootPolicyItemTypeErrorID              = 29
+	hiddenRootPolicyAppendErrorID                 = 30
+	invalidRootPolicyErrorID                      = 31
+	hiddenPolicySetModificationErrorID            = 32
+	invalidPolicySetItemTypeErrorID               = 33
+	tooShortPathPolicySetModificationErrorID      = 34
+	missingPolicySetChildErrorID                  = 35
+	hiddenPolicyAppendErrorID                     = 36
+	policyTransactionTagsNotMatchErrorID          = 37
+	failedPolicyTransactionErrorID                = 38
+	unknownPolicyUpdateOperationErrorID           = 39
+	hiddenPolicyModificationErrorID               = 40
+	tooLongPathPolicyModificationErrorID          = 41
+	tooShortPathPolicyModificationErrorID         = 42
+	invalidPolicyItemTypeErrorID                  = 43
+	hiddenRuleAppendErrorID                       = 44
+	missingPolicyChildErrorID                     = 45
+	MissingContentErrorID                         = 46
+	invalidContentStorageItemID                   = 47
+	MissingContentItemErrorID                     = 48
+	invalidContentItemErrorID                     = 49
+	invalidContentItemTypeErrorID                 = 50
+	invalidSelectorPathErrorID                    = 51
+	networkMapKeyValueTypeErrorID                 = 52
+	mapContentSubitemErrorID                      = 53
+	invalidContentModificationErrorID             = 54
+	missingPathContentModificationErrorID         = 55
+	tooLongPathContentModificationErrorID         = 56
+	invalidContentValueModificationErrorID        = 57
+	UntaggedContentModificationErrorID            = 58
+	MissingContentTagErrorID                      = 59
+	ContentTagsNotMatchErrorID                    = 60
+	unknownContentUpdateOperationErrorID          = 61
+	failedContentTransactionErrorID               = 62
+	contentTransactionIDNotMatchErrorID           = 63
+	contentTransactionTagsNotMatchErrorID         = 64
+	tooShortRawPathContentModificationErrorID     = 65
+	tooLongRawPathContentModificationErrorID      = 66
+	invalidContentUpdateDataErrorID               = 67
+	invalidContentUpdateResultTypeErrorID         = 68
+	invalidContentUpdateKeysErrorID               = 69
+	unknownContentItemResultTypeErrorID           = 70
+	invalidContentItemResultTypeErrorID           = 71
+	invalidContentKeyTypeErrorID                  = 72
+	invalidContentStringMapErrorID                = 73
+	invalidContentNetworkMapErrorID               = 74
+	invalidContentDomainMapErrorID                = 75
+	invalidContentValueErrorID                    = 76
+	invalidContentValueTypeErrorID                = 77
+	invalidContentStringFlags8MapValueErrorID     = 78
+	invalidContentStringFlags16MapValueErrorID    = 79
+	invalidContentStringFlags32MapValueErrorID    = 80
+	invalidContentStringFlags64MapValueErrorID    = 81
+	invalidContentNetworkFlags8MapValueErrorID    = 82
+	invalidContentNetworkFlags16MapValueErrorID   = 83
+	invalidContentNetworkFlags32MapValueErrorID   = 84
+	invalidContentNetworkFlags64MapValueErrorID   = 85
+	invalidContentDomainFlags8MapValueErrorID     = 86
+	invalidContentDomainFlags16MapValueErrorID    = 87
+	invalidContentDomainFlags32MapValueErrorID    = 88
+	invalidContentDomainFlags64MapValueErrorID    = 89
+	integerDivideByZeroErrorID                    = 90
+	floatDivideByZeroErrorID                      = 91
+	floatNanErrorID                               = 92
+	floatInfErrorID                               = 93
+	ReadOnlySymbolsChangeErrorID                  = 94
+	nilTypeErrorID                                = 95
+	builtinCustomTypeErrorID                      = 96
+	duplicateCustomTypeErrorID                    = 97
+	duplicatesBuiltinTypeErrorID                  = 98
+	duplicateFlagNameID                           = 99
+	noTypedAttributeErrorID                       = 100
+	undefinedAttributeTypeErrorID                 = 101
+	unknownAttributeTypeErrorID                   = 102
+	duplicateAttributeErrorID                     = 103
+	noFlagsDefinedErrorID                         = 104
+	tooManyFlagsDefinedErrorID                    = 105
+	listOfStringsTypeErrorID                      = 106
+	concatTypeErrorID                             = 107
+	unsupportedSelectorSchemeErrorID              = 108
+	disabledSelectorErrorID                       = 109
+	marshalInvalidDepthErrorID                    = 110
+	invalidHeaderErrorID                          = 111
+	nonMarshableErrorID                           = 112
+	nilRootErrorID                                = 113
+	PathNotFoundErrorID                           = 114
+	requestBufferOverflowErrorID                  = 115
+	requestBufferUnderflowErrorID                 = 116
+	requestVersionErrorID                         = 117
+	requestInvalidAttributeCountErrorID           = 118
+	requestTooManyAttributesErrorID               = 119
+	requestAttributeMarshallingTypeErrorID        = 120
+	requestAttributeUnmarshallingTypeErrorID      = 121
+	requestAttributeMarshallingNotImplementedID   = 122
+	requestAttributeUnmarshallingNotImplementedID = 123
+	requestTooLongAttributeNameErrorID            = 124
+	requestTooLongStringValueErrorID              = 125
+	requestAddressValueErrorID                    = 126
+	requestInvalidNetworkValueErrorID             = 127
+	requestIPv4InvalidMaskErrorID                 = 128
+	requestIPv6InvalidMaskErrorID                 = 129
+	requestTooLongCollectionValueErrorID          = 130
+	requestInvalidExpressionErrorID               = 131
+	requestAssignmentsOverflowErrorID             = 132
+	requestUnmarshalEffectConstErrorID            = 133
+	requestUnmarshalEffectTypeErrorID             = 134
+	requestUnmarshalStatusConstErrorID            = 135
+	requestUnmarshalStatusTypeErrorID             = 136
+	requestUnmarshalBooleanConstErrorID           = 137
+	requestUnmarshalBooleanTypeErrorID            = 138
+	requestUnmarshalStringConstErrorID            = 139
+	requestUnmarshalStringTypeErrorID             = 140
+	requestUnmarshalIntegerConstErrorID           = 141
+	requestUnmarshalIntegerTypeErrorID            = 142
+	requestUnmarshalIntegerOverflowErrorID        = 143
+	requestUnmarshalIntegerUnderflowErrorID       = 144
+	requestUnmarshalFloatConstErrorID             = 145
+	requestUnmarshalFloatTypeErrorID              = 146
+	requestUnmarshalAddressConstErrorID           = 147
+	requestUnmarshalAddressTypeErrorID            = 148
+	requestUnmarshalNetworkConstErrorID           = 149
+	requestUnmarshalNetworkTypeErrorID            = 150
+	requestUnmarshalDomainConstErrorID            = 151
+	requestUnmarshalDomainTypeErrorID             = 152
+	requestUnmarshalSetOfStringsConstErrorID      = 153
+	requestUnmarshalSetOfStringsTypeErrorID       = 154
+	requestUnmarshalSetOfNetworksConstErrorID     = 155
+	requestUnmarshalSetOfNetworksTypeErrorID      = 156
+	requestUnmarshalSetOfDomainsConstErrorID      = 157
+	requestUnmarshalSetOfDomainsTypeErrorID       = 158
+	requestUnmarshalListOfStringsConstErrorID     = 159
+	requestUnmarshalListOfStringsTypeErrorID      = 160
+	responseEffectErrorID                         = 161
+	ResponseServerErrorID                         = 162
+	policyCalculationErrorID                      = 163
+	obligationCalculationErrorID                  = 164
 )
 
 type externalError struct {
@@ -1940,4 +1993,764 @@ func newPathNotFoundError(path []string) *PathNotFoundError {
 // Error implements error interface.
 func (e *PathNotFoundError) Error() string {
 	return e.errorf("Path %v not found", e.path)
+}
+
+type requestBufferOverflowError struct {
+	errorLink
+}
+
+func newRequestBufferOverflowError() *requestBufferOverflowError {
+	return &requestBufferOverflowError{
+		errorLink: errorLink{id: requestBufferOverflowErrorID}}
+}
+
+func (e *requestBufferOverflowError) Error() string {
+	return e.errorf("Reached end of buffer while marshalling request")
+}
+
+type requestBufferUnderflowError struct {
+	errorLink
+}
+
+func newRequestBufferUnderflowError() *requestBufferUnderflowError {
+	return &requestBufferUnderflowError{
+		errorLink: errorLink{id: requestBufferUnderflowErrorID}}
+}
+
+func (e *requestBufferUnderflowError) Error() string {
+	return e.errorf("Reached end of buffer while unmarshalling request")
+}
+
+type requestVersionError struct {
+	errorLink
+	actual   uint16
+	expected uint16
+}
+
+func newRequestVersionError(actual, expected uint16) *requestVersionError {
+	return &requestVersionError{
+		errorLink: errorLink{id: requestVersionErrorID},
+		actual:    actual,
+		expected:  expected}
+}
+
+func (e *requestVersionError) Error() string {
+	return e.errorf("Got request of version %d while expected %d", e.actual, e.expected)
+}
+
+type requestInvalidAttributeCountError struct {
+	errorLink
+	n int
+}
+
+func newRequestInvalidAttributeCountError(n int) *requestInvalidAttributeCountError {
+	return &requestInvalidAttributeCountError{
+		errorLink: errorLink{id: requestInvalidAttributeCountErrorID},
+		n:         n}
+}
+
+func (e *requestInvalidAttributeCountError) Error() string {
+	return e.errorf("Invalid count of attributes %d", e.n)
+}
+
+type requestTooManyAttributesError struct {
+	errorLink
+	n int
+}
+
+func newRequestTooManyAttributesError(n int) *requestTooManyAttributesError {
+	return &requestTooManyAttributesError{
+		errorLink: errorLink{id: requestTooManyAttributesErrorID},
+		n:         n}
+}
+
+func (e *requestTooManyAttributesError) Error() string {
+	return e.errorf("Expected no more than %d attributes but got %d", math.MaxUint16, e.n)
+}
+
+type requestAttributeMarshallingTypeError struct {
+	errorLink
+	t int
+}
+
+func newRequestAttributeMarshallingTypeError(t int) *requestAttributeMarshallingTypeError {
+	return &requestAttributeMarshallingTypeError{
+		errorLink: errorLink{id: requestAttributeMarshallingTypeErrorID},
+		t:         t}
+}
+
+func (e *requestAttributeMarshallingTypeError) Error() string {
+	return e.errorf("Unknown attribute type for request %d", e.t)
+}
+
+type requestAttributeUnmarshallingTypeError struct {
+	errorLink
+	t int
+}
+
+func newRequestAttributeUnmarshallingTypeError(t int) *requestAttributeUnmarshallingTypeError {
+	return &requestAttributeUnmarshallingTypeError{
+		errorLink: errorLink{id: requestAttributeUnmarshallingTypeErrorID},
+		t:         t}
+}
+
+func (e *requestAttributeUnmarshallingTypeError) Error() string {
+	return e.errorf("Unknown attribute type in request %d", e.t)
+}
+
+type requestAttributeMarshallingNotImplemented struct {
+	errorLink
+	t Type
+}
+
+func newRequestAttributeMarshallingNotImplemented(t Type) *requestAttributeMarshallingNotImplemented {
+	return &requestAttributeMarshallingNotImplemented{
+		errorLink: errorLink{id: requestAttributeMarshallingNotImplementedID},
+		t:         t}
+}
+
+func (e *requestAttributeMarshallingNotImplemented) Error() string {
+	return e.errorf("Marshalling for type %q hasn't been implemented yet", e.t)
+}
+
+type requestAttributeUnmarshallingNotImplemented struct {
+	errorLink
+	t int
+}
+
+func newRequestAttributeUnmarshallingNotImplemented(t int) *requestAttributeUnmarshallingNotImplemented {
+	return &requestAttributeUnmarshallingNotImplemented{
+		errorLink: errorLink{id: requestAttributeUnmarshallingNotImplementedID},
+		t:         t}
+}
+
+func (e *requestAttributeUnmarshallingNotImplemented) Error() string {
+	return e.errorf("Unmarshalling for type %q hasn't been implemented yet", requestWireTypeNames[e.t])
+}
+
+type requestTooLongAttributeNameError struct {
+	errorLink
+	name string
+}
+
+func newRequestTooLongAttributeNameError(name string) *requestTooLongAttributeNameError {
+	return &requestTooLongAttributeNameError{
+		errorLink: errorLink{id: requestTooLongAttributeNameErrorID},
+		name:      name}
+}
+
+func (e *requestTooLongAttributeNameError) Error() string {
+	return e.errorf("Attribute name is too long %d (expected no more than %d bytes)", len(e.name), math.MaxUint8)
+}
+
+type requestTooLongStringValueError struct {
+	errorLink
+	s string
+}
+
+func newRequestTooLongStringValueError(s string) *requestTooLongStringValueError {
+	return &requestTooLongStringValueError{
+		errorLink: errorLink{id: requestTooLongStringValueErrorID},
+		s:         s}
+}
+
+func (e *requestTooLongStringValueError) Error() string {
+	return e.errorf("String value is too long %d (expected no more than %d bytes)", len(e.s), math.MaxUint16)
+}
+
+type requestAddressValueError struct {
+	errorLink
+	a []byte
+}
+
+func newRequestAddressValueError(a []byte) *requestAddressValueError {
+	return &requestAddressValueError{
+		errorLink: errorLink{id: requestAddressValueErrorID},
+		a:         a}
+}
+
+func (e *requestAddressValueError) Error() string {
+	return e.errorf("Can't treat [% x] as IPv4 or IPv6 address", e.a)
+}
+
+type requestInvalidNetworkValueError struct {
+	errorLink
+	n *net.IPNet
+}
+
+func newRequestInvalidNetworkValueError(n *net.IPNet) *requestInvalidNetworkValueError {
+	return &requestInvalidNetworkValueError{
+		errorLink: errorLink{id: requestInvalidNetworkValueErrorID},
+		n:         n}
+}
+
+func (e *requestInvalidNetworkValueError) Error() string {
+	return e.errorf("Can't treat %s as IPv4 or IPv6 network", e.n)
+}
+
+type requestIPv4InvalidMaskError struct {
+	errorLink
+	b byte
+}
+
+func newRequestIPv4InvalidMaskError(b byte) *requestIPv4InvalidMaskError {
+	return &requestIPv4InvalidMaskError{
+		errorLink: errorLink{id: requestIPv4InvalidMaskErrorID},
+		b:         b}
+}
+
+func (e *requestIPv4InvalidMaskError) Error() string {
+	return e.errorf("Invalid IPv4 CIDR: %d", e.b)
+}
+
+type requestIPv6InvalidMaskError struct {
+	errorLink
+	b byte
+}
+
+func newRequestIPv6InvalidMaskError(b byte) *requestIPv6InvalidMaskError {
+	return &requestIPv6InvalidMaskError{
+		errorLink: errorLink{id: requestIPv6InvalidMaskErrorID},
+		b:         b}
+}
+
+func (e *requestIPv6InvalidMaskError) Error() string {
+	return e.errorf("Invalid IPv6 CIDR: %d", e.b)
+}
+
+type requestTooLongCollectionValueError struct {
+	errorLink
+	t Type
+	n int
+}
+
+func newRequestTooLongCollectionValueError(t Type, n int) *requestTooLongCollectionValueError {
+	return &requestTooLongCollectionValueError{
+		errorLink: errorLink{id: requestTooLongCollectionValueErrorID},
+		t:         t,
+		n:         n}
+}
+
+func (e *requestTooLongCollectionValueError) Error() string {
+	return e.errorf("Number of elements in %s value is too big %d (expected no more than %d)", e.t, e.n, math.MaxUint16)
+}
+
+type requestInvalidExpressionError struct {
+	errorLink
+	a AttributeAssignment
+}
+
+func newRequestInvalidExpressionError(a AttributeAssignment) *requestInvalidExpressionError {
+	return &requestInvalidExpressionError{
+		errorLink: errorLink{id: requestInvalidExpressionErrorID},
+		a:         a}
+}
+
+func (e *requestInvalidExpressionError) Error() string {
+	return e.errorf("Expected value as right part of assignment expression for %s but got %T", e.a.a.describe(), e.a.e)
+}
+
+type requestAssignmentsOverflowError struct {
+	errorLink
+	actual   int
+	expected int
+}
+
+func newRequestAssignmentsOverflowError(actual, expected int) *requestAssignmentsOverflowError {
+	return &requestAssignmentsOverflowError{
+		errorLink: errorLink{id: requestAssignmentsOverflowErrorID},
+		actual:    actual,
+		expected:  expected}
+}
+
+func (e *requestAssignmentsOverflowError) Error() string {
+	return e.errorf("Expected buffer for at least %d assignments but got %d", e.expected, e.actual)
+}
+
+type requestUnmarshalEffectConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalEffectConstError(v reflect.Value) *requestUnmarshalEffectConstError {
+	return &requestUnmarshalEffectConstError{
+		errorLink: errorLink{id: requestUnmarshalEffectConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalEffectConstError) Error() string {
+	return e.errorf("Can't unmarshal effect to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalEffectTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalEffectTypeError(v reflect.Value) *requestUnmarshalEffectTypeError {
+	return &requestUnmarshalEffectTypeError{
+		errorLink: errorLink{id: requestUnmarshalEffectTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalEffectTypeError) Error() string {
+	return e.errorf("Can't unmarshal effect to %s", e.v.Type())
+}
+
+type requestUnmarshalStatusConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalStatusConstError(v reflect.Value) *requestUnmarshalStatusConstError {
+	return &requestUnmarshalStatusConstError{
+		errorLink: errorLink{id: requestUnmarshalStatusConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalStatusConstError) Error() string {
+	return e.errorf("Can't unmarshal status to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalStatusTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalStatusTypeError(v reflect.Value) *requestUnmarshalStatusTypeError {
+	return &requestUnmarshalStatusTypeError{
+		errorLink: errorLink{id: requestUnmarshalStatusTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalStatusTypeError) Error() string {
+	return e.errorf("Can't unmarshal status to %s", e.v.Type())
+}
+
+type requestUnmarshalBooleanConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalBooleanConstError(v reflect.Value) *requestUnmarshalBooleanConstError {
+	return &requestUnmarshalBooleanConstError{
+		errorLink: errorLink{id: requestUnmarshalBooleanConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalBooleanConstError) Error() string {
+	return e.errorf("Can't unmarshal boolean to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalBooleanTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalBooleanTypeError(v reflect.Value) *requestUnmarshalBooleanTypeError {
+	return &requestUnmarshalBooleanTypeError{
+		errorLink: errorLink{id: requestUnmarshalBooleanTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalBooleanTypeError) Error() string {
+	return e.errorf("Can't unmarshal boolean to %s", e.v.Type())
+}
+
+type requestUnmarshalStringConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalStringConstError(v reflect.Value) *requestUnmarshalStringConstError {
+	return &requestUnmarshalStringConstError{
+		errorLink: errorLink{id: requestUnmarshalStringConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalStringConstError) Error() string {
+	return e.errorf("Can't unmarshal string to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalStringTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalStringTypeError(v reflect.Value) *requestUnmarshalStringTypeError {
+	return &requestUnmarshalStringTypeError{
+		errorLink: errorLink{id: requestUnmarshalStringTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalStringTypeError) Error() string {
+	return e.errorf("Can't unmarshal string to %s", e.v.Type())
+}
+
+type requestUnmarshalIntegerConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalIntegerConstError(v reflect.Value) *requestUnmarshalIntegerConstError {
+	return &requestUnmarshalIntegerConstError{
+		errorLink: errorLink{id: requestUnmarshalIntegerConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalIntegerConstError) Error() string {
+	return e.errorf("Can't unmarshal integer to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalIntegerTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalIntegerTypeError(v reflect.Value) *requestUnmarshalIntegerTypeError {
+	return &requestUnmarshalIntegerTypeError{
+		errorLink: errorLink{id: requestUnmarshalIntegerTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalIntegerTypeError) Error() string {
+	return e.errorf("Can't unmarshal integer to %s", e.v.Type())
+}
+
+type requestUnmarshalIntegerOverflowError struct {
+	errorLink
+	n int64
+	v reflect.Value
+}
+
+func newRequestUnmarshalIntegerOverflowError(n int64, v reflect.Value) *requestUnmarshalIntegerOverflowError {
+	return &requestUnmarshalIntegerOverflowError{
+		errorLink: errorLink{id: requestUnmarshalIntegerOverflowErrorID},
+		n:         n,
+		v:         v}
+}
+
+func (e *requestUnmarshalIntegerOverflowError) Error() string {
+	return e.errorf("Integer value %d overflows %s", e.n, e.v.Type())
+}
+
+type requestUnmarshalIntegerUnderflowError struct {
+	errorLink
+	n int64
+	v reflect.Value
+}
+
+func newRequestUnmarshalIntegerUnderflowError(n int64, v reflect.Value) *requestUnmarshalIntegerUnderflowError {
+	return &requestUnmarshalIntegerUnderflowError{
+		errorLink: errorLink{id: requestUnmarshalIntegerUnderflowErrorID},
+		n:         n,
+		v:         v}
+}
+
+func (e *requestUnmarshalIntegerUnderflowError) Error() string {
+	return e.errorf("Negative integer value %d underflows %s", e.n, e.v.Type())
+}
+
+type requestUnmarshalFloatConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalFloatConstError(v reflect.Value) *requestUnmarshalFloatConstError {
+	return &requestUnmarshalFloatConstError{
+		errorLink: errorLink{id: requestUnmarshalFloatConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalFloatConstError) Error() string {
+	return e.errorf("Can't unmarshal float to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalFloatTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalFloatTypeError(v reflect.Value) *requestUnmarshalFloatTypeError {
+	return &requestUnmarshalFloatTypeError{
+		errorLink: errorLink{id: requestUnmarshalFloatTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalFloatTypeError) Error() string {
+	return e.errorf("Can't unmarshal float to %s", e.v.Type())
+}
+
+type requestUnmarshalAddressConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalAddressConstError(v reflect.Value) *requestUnmarshalAddressConstError {
+	return &requestUnmarshalAddressConstError{
+		errorLink: errorLink{id: requestUnmarshalAddressConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalAddressConstError) Error() string {
+	return e.errorf("Can't unmarshal address to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalAddressTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalAddressTypeError(v reflect.Value) *requestUnmarshalAddressTypeError {
+	return &requestUnmarshalAddressTypeError{
+		errorLink: errorLink{id: requestUnmarshalAddressTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalAddressTypeError) Error() string {
+	return e.errorf("Can't unmarshal address to %s", e.v.Type())
+}
+
+type requestUnmarshalNetworkConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalNetworkConstError(v reflect.Value) *requestUnmarshalNetworkConstError {
+	return &requestUnmarshalNetworkConstError{
+		errorLink: errorLink{id: requestUnmarshalNetworkConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalNetworkConstError) Error() string {
+	return e.errorf("Can't unmarshal network to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalNetworkTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalNetworkTypeError(v reflect.Value) *requestUnmarshalNetworkTypeError {
+	return &requestUnmarshalNetworkTypeError{
+		errorLink: errorLink{id: requestUnmarshalNetworkTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalNetworkTypeError) Error() string {
+	return e.errorf("Can't unmarshal network to %s", e.v.Type())
+}
+
+type requestUnmarshalDomainConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalDomainConstError(v reflect.Value) *requestUnmarshalDomainConstError {
+	return &requestUnmarshalDomainConstError{
+		errorLink: errorLink{id: requestUnmarshalDomainConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalDomainConstError) Error() string {
+	return e.errorf("Can't unmarshal domain to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalDomainTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalDomainTypeError(v reflect.Value) *requestUnmarshalDomainTypeError {
+	return &requestUnmarshalDomainTypeError{
+		errorLink: errorLink{id: requestUnmarshalDomainTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalDomainTypeError) Error() string {
+	return e.errorf("Can't unmarshal domain to %s", e.v.Type())
+}
+
+type requestUnmarshalSetOfStringsConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalSetOfStringsConstError(v reflect.Value) *requestUnmarshalSetOfStringsConstError {
+	return &requestUnmarshalSetOfStringsConstError{
+		errorLink: errorLink{id: requestUnmarshalSetOfStringsConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalSetOfStringsConstError) Error() string {
+	return e.errorf("Can't unmarshal set of strings to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalSetOfStringsTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalSetOfStringsTypeError(v reflect.Value) *requestUnmarshalSetOfStringsTypeError {
+	return &requestUnmarshalSetOfStringsTypeError{
+		errorLink: errorLink{id: requestUnmarshalSetOfStringsTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalSetOfStringsTypeError) Error() string {
+	return e.errorf("Can't unmarshal set of strings to %s", e.v.Type())
+}
+
+type requestUnmarshalSetOfNetworksConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalSetOfNetworksConstError(v reflect.Value) *requestUnmarshalSetOfNetworksConstError {
+	return &requestUnmarshalSetOfNetworksConstError{
+		errorLink: errorLink{id: requestUnmarshalSetOfNetworksConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalSetOfNetworksConstError) Error() string {
+	return e.errorf("Can't unmarshal set of networks to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalSetOfNetworksTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalSetOfNetworksTypeError(v reflect.Value) *requestUnmarshalSetOfNetworksTypeError {
+	return &requestUnmarshalSetOfNetworksTypeError{
+		errorLink: errorLink{id: requestUnmarshalSetOfNetworksTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalSetOfNetworksTypeError) Error() string {
+	return e.errorf("Can't unmarshal set of networks to %s", e.v.Type())
+}
+
+type requestUnmarshalSetOfDomainsConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalSetOfDomainsConstError(v reflect.Value) *requestUnmarshalSetOfDomainsConstError {
+	return &requestUnmarshalSetOfDomainsConstError{
+		errorLink: errorLink{id: requestUnmarshalSetOfDomainsConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalSetOfDomainsConstError) Error() string {
+	return e.errorf("Can't unmarshal set of domains to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalSetOfDomainsTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalSetOfDomainsTypeError(v reflect.Value) *requestUnmarshalSetOfDomainsTypeError {
+	return &requestUnmarshalSetOfDomainsTypeError{
+		errorLink: errorLink{id: requestUnmarshalSetOfDomainsTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalSetOfDomainsTypeError) Error() string {
+	return e.errorf("Can't unmarshal set of domains to %s", e.v.Type())
+}
+
+type requestUnmarshalListOfStringsConstError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalListOfStringsConstError(v reflect.Value) *requestUnmarshalListOfStringsConstError {
+	return &requestUnmarshalListOfStringsConstError{
+		errorLink: errorLink{id: requestUnmarshalListOfStringsConstErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalListOfStringsConstError) Error() string {
+	return e.errorf("Can't unmarshal list of strings to unchengeable %s", e.v.Type())
+}
+
+type requestUnmarshalListOfStringsTypeError struct {
+	errorLink
+	v reflect.Value
+}
+
+func newRequestUnmarshalListOfStringsTypeError(v reflect.Value) *requestUnmarshalListOfStringsTypeError {
+	return &requestUnmarshalListOfStringsTypeError{
+		errorLink: errorLink{id: requestUnmarshalListOfStringsTypeErrorID},
+		v:         v}
+}
+
+func (e *requestUnmarshalListOfStringsTypeError) Error() string {
+	return e.errorf("Can't unmarshal list of strings to %s", e.v.Type())
+}
+
+type responseEffectError struct {
+	errorLink
+	effect int
+}
+
+func newResponseEffectError(effect int) *responseEffectError {
+	return &responseEffectError{
+		errorLink: errorLink{id: responseEffectErrorID},
+		effect:    effect}
+}
+
+func (e *responseEffectError) Error() string {
+	return e.errorf("Unknown effect %d", e.effect)
+}
+
+// ResponseServerError indicates that server returned an error message.
+type ResponseServerError struct {
+	errorLink
+	msg string
+}
+
+func newResponseServerError(msg string) *ResponseServerError {
+	return &ResponseServerError{
+		errorLink: errorLink{id: ResponseServerErrorID},
+		msg:       msg}
+}
+
+// Error implements error interface.
+func (e *ResponseServerError) Error() string {
+	return e.errorf("%s", e.msg)
+}
+
+type policyCalculationError struct {
+	errorLink
+	err error
+}
+
+func newPolicyCalculationError(err error) *policyCalculationError {
+	return &policyCalculationError{
+		errorLink: errorLink{id: policyCalculationErrorID},
+		err:       err}
+}
+
+func (e *policyCalculationError) Error() string {
+	return e.errorf("Failed to process request: %s", e.err)
+}
+
+type obligationCalculationError struct {
+	errorLink
+	a   Attribute
+	err error
+}
+
+func newObligationCalculationError(a Attribute, err error) *obligationCalculationError {
+	return &obligationCalculationError{
+		errorLink: errorLink{id: obligationCalculationErrorID},
+		a:         a,
+		err:       err}
+}
+
+func (e *obligationCalculationError) Error() string {
+	return e.errorf("Failed to calculate obligation for %s: %s", e.a.describe(), e.err)
 }

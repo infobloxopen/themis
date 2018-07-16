@@ -11,6 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
 	_ "github.com/infobloxopen/themis/pdp/selector"
 	"github.com/infobloxopen/themis/pdpserver/server"
@@ -736,9 +737,21 @@ type decisionRequest struct {
 }
 
 type decisionResponse struct {
-	Effect string `pdp:"Effect"`
-	Reason string `pdp:"Reason"`
+	Effect int    `pdp:"Effect"`
+	Reason error  `pdp:"Reason"`
 	X      string `pdp:"x"`
+}
+
+func (r decisionResponse) String() string {
+	if r.Reason != nil {
+		return fmt.Sprintf("Effect: %q, Reason: %q, X: %q",
+			pdp.EffectNameFromEnum(r.Effect),
+			r.Reason,
+			r.X,
+		)
+	}
+
+	return fmt.Sprintf("Effect: %q, X: %q", pdp.EffectNameFromEnum(r.Effect), r.X)
 }
 
 var (
@@ -773,11 +786,17 @@ var (
 	}
 
 	decisionRequests []decisionRequest
-	rawRequests      []pb.Request
+	rawRequests      []pb.Msg
 )
 
+type testRequest3Keys struct {
+	k1 string `pdp:"k1"`
+	k2 string `pdp:"k2"`
+	k3 string `pdp:"k3,domain"`
+}
+
 func init() {
-	decisionRequests = make([]decisionRequest, 2000000)
+	decisionRequests = make([]decisionRequest, 0x40000)
 	for i := range decisionRequests {
 		decisionRequests[i] = decisionRequest{
 			Direction: directionOpts[rand.Intn(len(directionOpts))],
@@ -786,36 +805,29 @@ func init() {
 		}
 	}
 
-	rawRequests = make([]pb.Request, 2000000)
+	rawRequests = make([]pb.Msg, len(decisionRequests))
 	for i := range rawRequests {
-		rawRequests[i] = pb.Request{
-			Attributes: []*pb.Attribute{
-				{
-					Id:    "k1",
-					Type:  "string",
-					Value: directionOpts[rand.Intn(len(directionOpts))],
-				},
-				{
-					Id:    "k2",
-					Type:  "string",
-					Value: policySetOpts[rand.Intn(len(policySetOpts))],
-				},
-				{
-					Id:    "k3",
-					Type:  "domain",
-					Value: domainOpts[rand.Intn(len(domainOpts))],
-				},
-			},
+		b := make([]byte, 128)
+
+		m, err := makeRequest(testRequest3Keys{
+			k1: directionOpts[rand.Intn(len(directionOpts))],
+			k2: policySetOpts[rand.Intn(len(policySetOpts))],
+			k3: domainOpts[rand.Intn(len(domainOpts))],
+		}, b)
+		if err != nil {
+			panic(fmt.Errorf("failed to create %d raw request: %s", i+1, err))
 		}
+
+		rawRequests[i] = m
 	}
 
 }
 
 func benchmarkPolicySet(name, p string, b *testing.B) {
-	pdp, _, c := startPDPServer(p, nil, b)
+	pdpServer, _, c := startPDPServer(p, nil, b)
 	defer func() {
 		c.Close()
-		if logs := pdp.Stop(); len(logs) > 0 {
+		if logs := pdpServer.Stop(); len(logs) > 0 {
 			b.Logf("server logs:\n%s", logs)
 		}
 	}()
@@ -827,47 +839,103 @@ func benchmarkPolicySet(name, p string, b *testing.B) {
 			var out decisionResponse
 			c.Validate(in, &out)
 
-			if (out.Effect != "DENY" && out.Effect != "PERMIT" && out.Effect != "NOTAPPLICABLE") ||
-				out.Reason != "Ok" {
-				b.Fatalf("unexpected response: %#v", out)
+			if (out.Effect != pdp.EffectDeny &&
+				out.Effect != pdp.EffectPermit &&
+				out.Effect != pdp.EffectNotApplicable) ||
+				out.Reason != nil {
+				b.Fatalf("unexpected response: %s", out)
 			}
 		}
 	})
 }
 
 func BenchmarkOneStagePolicySet(b *testing.B) {
-	benchmarkPolicySet("BenchmarkOneStagePolicySet", oneStageBenchmarkPolicySet, b)
+	benchmarkPolicySet("OneStagePolicySet", oneStageBenchmarkPolicySet, b)
 }
 
 func BenchmarkTwoStagePolicySet(b *testing.B) {
-	benchmarkPolicySet("BenchmarkTwoStagePolicySet", twoStageBenchmarkPolicySet, b)
+	benchmarkPolicySet("TwoStagePolicySet", twoStageBenchmarkPolicySet, b)
 }
 
 func BenchmarkThreeStagePolicySet(b *testing.B) {
-	benchmarkPolicySet("BenchmarkThreeStagePolicySet", threeStageBenchmarkPolicySet, b)
+	benchmarkPolicySet("ThreeStagePolicySet", threeStageBenchmarkPolicySet, b)
 }
 
-func BenchmarkThreeStagePolicySetRaw(b *testing.B) {
-	pdp, _, c := startPDPServer(threeStageBenchmarkPolicySet, nil, b)
+func BenchmarkUnaryRaw(b *testing.B) {
+	pdpServer, _, c := startPDPServer(threeStageBenchmarkPolicySet, nil, b)
 	defer func() {
 		c.Close()
-		if logs := pdp.Stop(); len(logs) > 0 {
+		if logs := pdpServer.Stop(); len(logs) > 0 {
 			b.Logf("server logs:\n%s", logs)
 		}
 	}()
 
-	b.Run("BenchmarkThreeStagePolicySetRaw", func(b *testing.B) {
-		var out pb.Response
+	name := "UnaryRaw"
+
+	b.Run(name, func(b *testing.B) {
+		var (
+			out        pdp.Response
+			assignment [16]pdp.AttributeAssignment
+		)
 		for n := 0; n < b.N; n++ {
 			in := rawRequests[n%len(rawRequests)]
 
+			out.Obligations = assignment[:]
 			c.Validate(in, &out)
 
-			if (out.Effect != pb.Response_DENY &&
-				out.Effect != pb.Response_PERMIT &&
-				out.Effect != pb.Response_NOTAPPLICABLE) ||
-				out.Reason != "Ok" {
-				b.Fatalf("unexpected response: %#v", out)
+			err := assertBenchMsg(&out, "%q request %d", name, n)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+}
+
+func BenchmarkUnaryWithCache(b *testing.B) {
+	pdpServer, _, c := startPDPServer(threeStageBenchmarkPolicySet, nil, b,
+		WithMaxRequestSize(128),
+		WithCacheTTL(15*time.Minute),
+	)
+	defer func() {
+		c.Close()
+		if logs := pdpServer.Stop(); len(logs) > 0 {
+			b.Logf("server logs:\n%s", logs)
+		}
+	}()
+
+	name := "UnaryWithCache"
+
+	cc := 10
+	var (
+		out        pdp.Response
+		assignment [16]pdp.AttributeAssignment
+	)
+	for n := 0; n < cc; n++ {
+		in := rawRequests[n%cc]
+
+		out.Obligations = assignment[:]
+		c.Validate(in, &out)
+
+		err := assertBenchMsg(&out, "%q request %d", name, n)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+
+	b.Run(name, func(b *testing.B) {
+		var (
+			out        pdp.Response
+			assignment [16]pdp.AttributeAssignment
+		)
+		for n := 0; n < b.N; n++ {
+			in := rawRequests[n%cc]
+
+			out.Obligations = assignment[:]
+			c.Validate(in, &out)
+
+			err := assertBenchMsg(&out, "%q request %d", name, n)
+			if err != nil {
+				b.Fatal(err)
 			}
 		}
 	})
@@ -883,21 +951,24 @@ func benchmarkStreamingClient(name string, ports []uint16, b *testing.B, opts ..
 	opts = append(opts,
 		WithStreams(streams),
 	)
-	pdp, pdpAlt, c := startPDPServer(threeStageBenchmarkPolicySet, ports, b, opts...)
+	pdpSrv, pdpSrvAlt, c := startPDPServer(threeStageBenchmarkPolicySet, ports, b, opts...)
 	defer func() {
 		c.Close()
-		if logs := pdp.Stop(); len(logs) > 0 {
+		if logs := pdpSrv.Stop(); len(logs) > 0 {
 			b.Logf("primary server logs:\n%s", logs)
 		}
-		if pdpAlt != nil {
-			if logs := pdpAlt.Stop(); len(logs) > 0 {
+		if pdpSrvAlt != nil {
+			if logs := pdpSrvAlt.Stop(); len(logs) > 0 {
 				b.Logf("secondary server logs:\n%s", logs)
 			}
 		}
 	}()
 
 	b.Run(name, func(b *testing.B) {
-		errs := make([]error, b.N)
+		assignments := make(chan []pdp.AttributeAssignment, streams)
+		for i := 0; i < cap(assignments); i++ {
+			assignments <- make([]pdp.AttributeAssignment, 16)
+		}
 
 		th := make(chan int, streams)
 		for n := 0; n < b.N; n++ {
@@ -905,32 +976,27 @@ func benchmarkStreamingClient(name string, ports []uint16, b *testing.B, opts ..
 			go func(i int) {
 				defer func() { <-th }()
 
-				var out pb.Response
-				c.Validate(rawRequests[i%len(rawRequests)], &out)
+				var out pdp.Response
 
-				if (out.Effect != pb.Response_DENY &&
-					out.Effect != pb.Response_PERMIT &&
-					out.Effect != pb.Response_NOTAPPLICABLE) ||
-					out.Reason != "Ok" {
-					errs[i] = fmt.Errorf("unexpected response: %#v", out)
+				assignment := <-assignments
+				defer func() { assignments <- assignment }()
+				out.Obligations = assignment
+
+				c.Validate(rawRequests[i%len(rawRequests)], &out)
+				if err := assertBenchMsg(&out, "%q request %d", name, i); err != nil {
+					panic(err)
 				}
 			}(n)
-		}
-
-		for i, err := range errs {
-			if err != nil {
-				b.Fatalf("request %d failed: %s", i, err)
-			}
 		}
 	})
 }
 
 func BenchmarkStreamingClient(b *testing.B) {
-	benchmarkStreamingClient("BenchmarkStreamingClient", nil, b)
+	benchmarkStreamingClient("StreamingClient", nil, b)
 }
 
 func BenchmarkRoundRobinStreamingClient(b *testing.B) {
-	benchmarkStreamingClient("BenchmarkRoundRobinStreamingClient",
+	benchmarkStreamingClient("RoundRobinStreamingClient",
 		[]uint16{
 			5555,
 			5556,
@@ -941,7 +1007,7 @@ func BenchmarkRoundRobinStreamingClient(b *testing.B) {
 }
 
 func BenchmarkHotSpotStreamingClient(b *testing.B) {
-	benchmarkStreamingClient("BenchmarkHotSpotStreamingClient",
+	benchmarkStreamingClient("HotSpotStreamingClient",
 		[]uint16{
 			5555,
 			5556,
@@ -949,6 +1015,67 @@ func BenchmarkHotSpotStreamingClient(b *testing.B) {
 		b,
 		WithHotSpotBalancer("127.0.0.1:5555", "127.0.0.1:5556"),
 	)
+}
+
+func BenchmarkStreamingClientWithCache(b *testing.B) {
+	streams := 96
+
+	pdpServer, _, c := startPDPServer(threeStageBenchmarkPolicySet, nil, b,
+		WithStreams(streams),
+		WithMaxRequestSize(128),
+		WithCacheTTL(15*time.Minute),
+	)
+	defer func() {
+		c.Close()
+		if logs := pdpServer.Stop(); len(logs) > 0 {
+			b.Logf("server logs:\n%s", logs)
+		}
+	}()
+
+	name := "StreamingClientWithCache"
+
+	cc := 10 * streams
+	var (
+		out        pdp.Response
+		assignment [16]pdp.AttributeAssignment
+	)
+	for n := 0; n < cc; n++ {
+		in := rawRequests[n%cc]
+
+		out.Obligations = assignment[:]
+		c.Validate(in, &out)
+
+		err := assertBenchMsg(&out, "%q request %d", name, n)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+
+	b.Run(name, func(b *testing.B) {
+		assignments := make(chan []pdp.AttributeAssignment, streams)
+		for i := 0; i < cap(assignments); i++ {
+			assignments <- make([]pdp.AttributeAssignment, 16)
+		}
+
+		th := make(chan int, streams)
+		for n := 0; n < b.N; n++ {
+			th <- 0
+			go func(i int) {
+				defer func() { <-th }()
+
+				var out pdp.Response
+
+				assignment := <-assignments
+				defer func() { assignments <- assignment }()
+				out.Obligations = assignment
+
+				c.Validate(rawRequests[i%cc], &out)
+				if err := assertBenchMsg(&out, "%q request %d", name, i); err != nil {
+					panic(err)
+				}
+			}(n)
+		}
+	})
 }
 
 func waitForPortOpened(address string) error {
@@ -1112,4 +1239,18 @@ func startPDPServer(p string, ports []uint16, b *testing.B, opts ...Option) (*lo
 	}
 
 	return primary, secondary, c
+}
+
+func assertBenchMsg(r *pdp.Response, s string, args ...interface{}) error {
+	if r.Effect != pdp.EffectDeny && r.Effect != pdp.EffectPermit && r.Effect != pdp.EffectNotApplicable {
+		desc := fmt.Sprintf(s, args...)
+		return fmt.Errorf("unexpected response effect for %s: %s", desc, pdp.EffectNameFromEnum(r.Effect))
+	}
+
+	if r.Status != nil {
+		desc := fmt.Sprintf(s, args...)
+		return fmt.Errorf("unexpected response status for %s: %s", desc, r.Status)
+	}
+
+	return nil
 }

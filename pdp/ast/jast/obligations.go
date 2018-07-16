@@ -7,7 +7,7 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 )
 
-func (ctx context) unmarshalObligationItem(d *json.Decoder) (pdp.AttributeAssignmentExpression, error) {
+func (ctx context) unmarshalObligationItem(d *json.Decoder) (pdp.AttributeAssignment, error) {
 	var (
 		a pdp.Attribute
 		e pdp.Expression
@@ -34,18 +34,18 @@ func (ctx context) unmarshalObligationItem(d *json.Decoder) (pdp.AttributeAssign
 		}
 		return nil
 	}, "obligation"); err != nil {
-		return pdp.AttributeAssignmentExpression{}, err
+		return pdp.AttributeAssignment{}, err
 	}
 
-	return pdp.MakeAttributeAssignmentExpression(a, e), nil
+	return pdp.MakeAttributeAssignment(a, e), nil
 }
 
-func (ctx *context) unmarshalObligations(d *json.Decoder) ([]pdp.AttributeAssignmentExpression, error) {
+func (ctx *context) unmarshalObligations(d *json.Decoder) ([]pdp.AttributeAssignment, error) {
 	if err := jparser.CheckArrayStart(d, "obligations"); err != nil {
 		return nil, err
 	}
 
-	var r []pdp.AttributeAssignmentExpression
+	var r []pdp.AttributeAssignment
 	if err := jparser.UnmarshalObjectArray(d, func(idx int, d *json.Decoder) error {
 		o, err := ctx.unmarshalObligationItem(d)
 		if err != nil {

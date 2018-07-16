@@ -290,19 +290,18 @@ func TestStorageTransactionalUpdate(t *testing.T) {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
 		r := s.Root().Calculate(ctx)
-		effect, o, err := r.Status()
-		if err != nil {
+		if r.Status != nil {
 			t.Errorf("Expected no error but got %T (%s)", err, err)
 		}
 
-		if effect != EffectDeny {
-			t.Errorf("Expected deny effect but got %d", effect)
+		if r.Effect != EffectDeny {
+			t.Errorf("Expected deny effect but got %d", r.Effect)
 		}
 
-		if len(o) < 1 {
+		if len(r.Obligations) < 1 {
 			t.Error("Expected at least one obligation")
 		} else {
-			_, _, v, err := o[0].Serialize(ctx)
+			_, _, v, err := r.Obligations[0].Serialize(ctx)
 			if err != nil {
 				t.Errorf("Expected no error but got %T (%s)", err, err)
 			} else {
@@ -321,13 +320,12 @@ func TestStorageTransactionalUpdate(t *testing.T) {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
 		r := s.Root().Calculate(ctx)
-		effect, _, err := r.Status()
-		if err != nil {
+		if r.Status != nil {
 			t.Errorf("Expected no error but got %T (%s)", err, err)
 		}
 
-		if effect != EffectNotApplicable {
-			t.Errorf("Expected \"not applicable\" effect but got %d", effect)
+		if r.Effect != EffectNotApplicable {
+			t.Errorf("Expected \"not applicable\" effect but got %d", r.Effect)
 		}
 	}
 }

@@ -103,6 +103,13 @@ func WithMemLimits(limits MemLimits) Option {
 	}
 }
 
+// WithMaxResponseSize creates an option which limits response size in bytes. Default is 10KB. In case if a response doesn't fit the constraint, PDP puts error message to response which indicates this fact. Buffer should be at least pdp.MinResponseSize long to accept the error.
+func WithMaxResponseSize(size uint32) Option {
+	return func(o *options) {
+		o.maxResponseSize = size
+	}
+}
+
 // WithMemStatsLogging returns a Option which enables regular runtime.MemStats logging. Path points to file where stats are logged as sequence of JSON objects splitted by new line. Each JSON object contains timestamp and output of runtime.ReadMemStats taken with given interval. Zero interval logs MemStats with minimum and maximum Alloc value between NumGC changes but not more than once a 100 ms. Negative interval disables logging.
 func WithMemStatsLogging(path string, interval time.Duration) Option {
 	return func(o *options) {
@@ -133,6 +140,8 @@ type options struct {
 	tracing   string
 	memLimits *MemLimits
 	streams   uint32
+
+	maxResponseSize uint32
 
 	memStatsLogPath     string
 	memStatsLogInterval time.Duration
@@ -174,6 +183,7 @@ func NewServer(opts ...Option) *Server {
 		logger:              log.StandardLogger(),
 		service:             ":5555",
 		memStatsLogInterval: -1 * time.Second,
+		maxResponseSize:     10240,
 	}
 
 	for _, opt := range opts {

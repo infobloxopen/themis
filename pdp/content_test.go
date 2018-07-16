@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/go-trees/domaintree"
 	"github.com/infobloxopen/go-trees/iptree"
 	"github.com/infobloxopen/go-trees/strtree"
@@ -54,21 +53,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	nTree := iptree.NewTree()
-	_, n1, err := net.ParseCIDR("192.0.2.16/28")
-	if err != nil {
-		t.Fatalf("Expected no error but got %s", err)
-	}
-	nTree.InplaceInsertNet(n1, "first")
-	_, n2, err := net.ParseCIDR("192.0.2.32/28")
-	if err != nil {
-		t.Fatalf("Expected no error but got %s", err)
-	}
-	nTree.InplaceInsertNet(n2, "second")
-	_, n3, err := net.ParseCIDR("2001:db8::/33")
-	if err != nil {
-		t.Fatalf("Expected no error but got %s", err)
-	}
-	nTree.InplaceInsertNet(n3, "third")
+	nTree.InplaceInsertNet(makeTestNetwork("192.0.2.16/28"), "first")
+	nTree.InplaceInsertNet(makeTestNetwork("192.0.2.32/28"), "second")
+	nTree.InplaceInsertNet(makeTestNetwork("2001:db8::/33"), "third")
 
 	knm := MakeContentMappingItem(
 		"key-net-map",
@@ -85,9 +72,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	dTree := new(domaintree.Node)
-	dTree.InplaceInsert(makeTestDN(t, "example.com"), "first")
-	dTree.InplaceInsert(makeTestDN(t, "example.net"), "second")
-	dTree.InplaceInsert(makeTestDN(t, "example.org"), "third")
+	dTree.InplaceInsert(makeTestDomain("example.com"), "first")
+	dTree.InplaceInsert(makeTestDomain("example.net"), "second")
+	dTree.InplaceInsert(makeTestDomain("example.org"), "third")
 
 	kdm := MakeContentMappingItem(
 		"key-dom-map",
@@ -109,9 +96,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	nTree = iptree.NewTree()
-	nTree.InplaceInsertNet(n1, "first")
-	nTree.InplaceInsertNet(n2, "second")
-	nTree.InplaceInsertNet(n3, "third")
+	nTree.InplaceInsertNet(makeTestNetwork("192.0.2.16/28"), "first")
+	nTree.InplaceInsertNet(makeTestNetwork("192.0.2.32/28"), "second")
+	nTree.InplaceInsertNet(makeTestNetwork("2001:db8::/33"), "third")
 
 	nmc := MakeContentMappingItem(
 		"net-map",
@@ -121,9 +108,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	dTree = new(domaintree.Node)
-	dTree.InplaceInsert(makeTestDN(t, "example.com"), "first")
-	dTree.InplaceInsert(makeTestDN(t, "example.net"), "second")
-	dTree.InplaceInsert(makeTestDN(t, "example.org"), "third")
+	dTree.InplaceInsert(makeTestDomain("example.com"), "first")
+	dTree.InplaceInsert(makeTestDomain("example.net"), "second")
+	dTree.InplaceInsert(makeTestDomain("example.org"), "third")
 
 	dmc := MakeContentMappingItem(
 		"dom-map",
@@ -133,9 +120,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	dTree = &domaintree.Node{}
-	dTree.InplaceInsert(makeTestDN(t, "example.com"), "first")
-	dTree.InplaceInsert(makeTestDN(t, "example.net"), "second")
-	dTree.InplaceInsert(makeTestDN(t, "example.org"), "third")
+	dTree.InplaceInsert(makeTestDomain("example.com"), "first")
+	dTree.InplaceInsert(makeTestDomain("example.net"), "second")
+	dTree.InplaceInsert(makeTestDomain("example.org"), "third")
 
 	dmcAdd := MakeContentMappingItem(
 		"dom-map-add",
@@ -145,9 +132,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	dTree = new(domaintree.Node)
-	dTree.InplaceInsert(makeTestDN(t, "example.com"), "first")
-	dTree.InplaceInsert(makeTestDN(t, "example.net"), "second")
-	dTree.InplaceInsert(makeTestDN(t, "example.org"), "third")
+	dTree.InplaceInsert(makeTestDomain("example.com"), "first")
+	dTree.InplaceInsert(makeTestDomain("example.net"), "second")
+	dTree.InplaceInsert(makeTestDomain("example.org"), "third")
 
 	dmcDel := MakeContentMappingItem(
 		"dom-map-del",
@@ -268,9 +255,9 @@ func TestLocalContentStorage(t *testing.T) {
 	}
 
 	nTree8 := iptree8.NewTree()
-	nTree8.InplaceInsertNet(n1, 1)
-	nTree8.InplaceInsertNet(n2, 3)
-	nTree8.InplaceInsertNet(n3, 5)
+	nTree8.InplaceInsertNet(makeTestNetwork("192.0.2.16/28"), 1)
+	nTree8.InplaceInsertNet(makeTestNetwork("192.0.2.32/28"), 3)
+	nTree8.InplaceInsertNet(makeTestNetwork("2001:db8::/33"), 5)
 	nTree8.InplaceInsertIP(a1, 7)
 
 	nm8c := MakeContentMappingItem(
@@ -281,9 +268,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	nTree16 := iptree16.NewTree()
-	nTree16.InplaceInsertNet(n1, 1)
-	nTree16.InplaceInsertNet(n2, 3)
-	nTree16.InplaceInsertNet(n3, 5)
+	nTree16.InplaceInsertNet(makeTestNetwork("192.0.2.16/28"), 1)
+	nTree16.InplaceInsertNet(makeTestNetwork("192.0.2.32/28"), 3)
+	nTree16.InplaceInsertNet(makeTestNetwork("2001:db8::/33"), 5)
 	nTree16.InplaceInsertIP(a1, 7)
 
 	nm16c := MakeContentMappingItem(
@@ -294,9 +281,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	nTree32 := iptree32.NewTree()
-	nTree32.InplaceInsertNet(n1, 1)
-	nTree32.InplaceInsertNet(n2, 3)
-	nTree32.InplaceInsertNet(n3, 5)
+	nTree32.InplaceInsertNet(makeTestNetwork("192.0.2.16/28"), 1)
+	nTree32.InplaceInsertNet(makeTestNetwork("192.0.2.32/28"), 3)
+	nTree32.InplaceInsertNet(makeTestNetwork("2001:db8::/33"), 5)
 	nTree32.InplaceInsertIP(a1, 7)
 
 	nm32c := MakeContentMappingItem(
@@ -307,9 +294,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	nTree64 := iptree64.NewTree()
-	nTree64.InplaceInsertNet(n1, 1)
-	nTree64.InplaceInsertNet(n2, 3)
-	nTree64.InplaceInsertNet(n3, 5)
+	nTree64.InplaceInsertNet(makeTestNetwork("192.0.2.16/28"), 1)
+	nTree64.InplaceInsertNet(makeTestNetwork("192.0.2.32/28"), 3)
+	nTree64.InplaceInsertNet(makeTestNetwork("2001:db8::/33"), 5)
 	nTree64.InplaceInsertIP(a1, 7)
 
 	nm64c := MakeContentMappingItem(
@@ -320,9 +307,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	dTree8 := &domaintree8.Node{}
-	dTree8.InplaceInsert(makeTestDN(t, "example.com"), 1)
-	dTree8.InplaceInsert(makeTestDN(t, "example.net"), 3)
-	dTree8.InplaceInsert(makeTestDN(t, "example.org"), 5)
+	dTree8.InplaceInsert(makeTestDomain("example.com"), 1)
+	dTree8.InplaceInsert(makeTestDomain("example.net"), 3)
+	dTree8.InplaceInsert(makeTestDomain("example.org"), 5)
 
 	dm8c := MakeContentMappingItem(
 		"dom8-map",
@@ -332,9 +319,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	dTree16 := &domaintree16.Node{}
-	dTree16.InplaceInsert(makeTestDN(t, "example.com"), 1)
-	dTree16.InplaceInsert(makeTestDN(t, "example.net"), 3)
-	dTree16.InplaceInsert(makeTestDN(t, "example.org"), 5)
+	dTree16.InplaceInsert(makeTestDomain("example.com"), 1)
+	dTree16.InplaceInsert(makeTestDomain("example.net"), 3)
+	dTree16.InplaceInsert(makeTestDomain("example.org"), 5)
 
 	dm16c := MakeContentMappingItem(
 		"dom16-map",
@@ -344,9 +331,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	dTree32 := &domaintree32.Node{}
-	dTree32.InplaceInsert(makeTestDN(t, "example.com"), 1)
-	dTree32.InplaceInsert(makeTestDN(t, "example.net"), 3)
-	dTree32.InplaceInsert(makeTestDN(t, "example.org"), 5)
+	dTree32.InplaceInsert(makeTestDomain("example.com"), 1)
+	dTree32.InplaceInsert(makeTestDomain("example.net"), 3)
+	dTree32.InplaceInsert(makeTestDomain("example.org"), 5)
 
 	dm32c := MakeContentMappingItem(
 		"dom32-map",
@@ -356,9 +343,9 @@ func TestLocalContentStorage(t *testing.T) {
 	)
 
 	dTree64 := &domaintree64.Node{}
-	dTree64.InplaceInsert(makeTestDN(t, "example.com"), 1)
-	dTree64.InplaceInsert(makeTestDN(t, "example.net"), 3)
-	dTree64.InplaceInsert(makeTestDN(t, "example.org"), 5)
+	dTree64.InplaceInsert(makeTestDomain("example.com"), 1)
+	dTree64.InplaceInsert(makeTestDomain("example.net"), 3)
+	dTree64.InplaceInsert(makeTestDomain("example.org"), 5)
 
 	dm64c := MakeContentMappingItem(
 		"dom64-map",
@@ -378,9 +365,9 @@ func TestLocalContentStorage(t *testing.T) {
 	st = MakeSymbols()
 
 	dTree = &domaintree.Node{}
-	dTree.InplaceInsert(makeTestDN(t, "example.com"), "first")
-	dTree.InplaceInsert(makeTestDN(t, "example.net"), "second")
-	dTree.InplaceInsert(makeTestDN(t, "example.org"), "third")
+	dTree.InplaceInsert(makeTestDomain("example.com"), "first")
+	dTree.InplaceInsert(makeTestDomain("example.net"), "second")
+	dTree.InplaceInsert(makeTestDomain("example.org"), "third")
 
 	dmc = MakeContentMappingItem(
 		"dom-map",
@@ -624,7 +611,7 @@ func TestLocalContentStorage(t *testing.T) {
 	} else {
 		path := []Expression{
 			MakeStringValue("key"),
-			MakeDomainValue(makeTestDN(t, "example.gov"))}
+			MakeDomainValue(makeTestDomain("example.gov"))}
 		v, err := c.Get(path, nil)
 		if err != nil {
 			t.Errorf("Expected no error but got %T (%s)", err, err)
@@ -727,24 +714,19 @@ func TestLocalContentStorage(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
-		_, n, err := net.ParseCIDR("192.0.2.56/29")
+		path := []Expression{
+			MakeNetworkValue(makeTestNetwork("192.0.2.56/29")),
+		}
+		v, err := c.Get(path, nil)
 		if err != nil {
-			t.Errorf("Expected no error but got %s", err)
+			t.Errorf("Expected no error but got %T (%s)", err, err)
 		} else {
-			path := []Expression{
-				MakeNetworkValue(n),
-			}
-			v, err := c.Get(path, nil)
+			e := "\"f01\",\"f03\""
+			s, err := v.Serialize()
 			if err != nil {
 				t.Errorf("Expected no error but got %T (%s)", err, err)
-			} else {
-				e := "\"f01\",\"f03\""
-				s, err := v.Serialize()
-				if err != nil {
-					t.Errorf("Expected no error but got %T (%s)", err, err)
-				} else if s != e {
-					t.Errorf("Expected %q but got %q", e, s)
-				}
+			} else if s != e {
+				t.Errorf("Expected %q but got %q", e, s)
 			}
 		}
 	}
@@ -780,24 +762,19 @@ func TestLocalContentStorage(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
-		_, n, err := net.ParseCIDR("192.0.2.56/29")
+		path := []Expression{
+			MakeNetworkValue(makeTestNetwork("192.0.2.56/29")),
+		}
+		v, err := c.Get(path, nil)
 		if err != nil {
-			t.Errorf("Expected no error but got %s", err)
+			t.Errorf("Expected no error but got %T (%s)", err, err)
 		} else {
-			path := []Expression{
-				MakeNetworkValue(n),
-			}
-			v, err := c.Get(path, nil)
+			e := "\"f01\",\"f03\""
+			s, err := v.Serialize()
 			if err != nil {
 				t.Errorf("Expected no error but got %T (%s)", err, err)
-			} else {
-				e := "\"f01\",\"f03\""
-				s, err := v.Serialize()
-				if err != nil {
-					t.Errorf("Expected no error but got %T (%s)", err, err)
-				} else if s != e {
-					t.Errorf("Expected %q but got %q", e, s)
-				}
+			} else if s != e {
+				t.Errorf("Expected %q but got %q", e, s)
 			}
 		}
 	}
@@ -833,24 +810,19 @@ func TestLocalContentStorage(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
-		_, n, err := net.ParseCIDR("192.0.2.56/29")
+		path := []Expression{
+			MakeNetworkValue(makeTestNetwork("192.0.2.56/29")),
+		}
+		v, err := c.Get(path, nil)
 		if err != nil {
-			t.Errorf("Expected no error but got %s", err)
+			t.Errorf("Expected no error but got %T (%s)", err, err)
 		} else {
-			path := []Expression{
-				MakeNetworkValue(n),
-			}
-			v, err := c.Get(path, nil)
+			e := "\"f01\",\"f03\""
+			s, err := v.Serialize()
 			if err != nil {
 				t.Errorf("Expected no error but got %T (%s)", err, err)
-			} else {
-				e := "\"f01\",\"f03\""
-				s, err := v.Serialize()
-				if err != nil {
-					t.Errorf("Expected no error but got %T (%s)", err, err)
-				} else if s != e {
-					t.Errorf("Expected %q but got %q", e, s)
-				}
+			} else if s != e {
+				t.Errorf("Expected %q but got %q", e, s)
 			}
 		}
 	}
@@ -886,24 +858,19 @@ func TestLocalContentStorage(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
-		_, n, err := net.ParseCIDR("192.0.2.56/29")
+		path := []Expression{
+			MakeNetworkValue(makeTestNetwork("192.0.2.56/29")),
+		}
+		v, err := c.Get(path, nil)
 		if err != nil {
-			t.Errorf("Expected no error but got %s", err)
+			t.Errorf("Expected no error but got %T (%s)", err, err)
 		} else {
-			path := []Expression{
-				MakeNetworkValue(n),
-			}
-			v, err := c.Get(path, nil)
+			e := "\"f01\",\"f03\""
+			s, err := v.Serialize()
 			if err != nil {
 				t.Errorf("Expected no error but got %T (%s)", err, err)
-			} else {
-				e := "\"f01\",\"f03\""
-				s, err := v.Serialize()
-				if err != nil {
-					t.Errorf("Expected no error but got %T (%s)", err, err)
-				} else if s != e {
-					t.Errorf("Expected %q but got %q", e, s)
-				}
+			} else if s != e {
+				t.Errorf("Expected %q but got %q", e, s)
 			}
 		}
 	}
@@ -940,7 +907,7 @@ func TestLocalContentStorage(t *testing.T) {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
 		path := []Expression{
-			MakeDomainValue(makeTestDN(t, "example.gov")),
+			MakeDomainValue(makeTestDomain("example.gov")),
 		}
 		v, err := c.Get(path, nil)
 		if err != nil {
@@ -961,7 +928,7 @@ func TestLocalContentStorage(t *testing.T) {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
 		path := []Expression{
-			MakeDomainValue(makeTestDN(t, "example.gov")),
+			MakeDomainValue(makeTestDomain("example.gov")),
 		}
 		v, err := c.Get(path, nil)
 		if err != nil {
@@ -982,7 +949,7 @@ func TestLocalContentStorage(t *testing.T) {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
 		path := []Expression{
-			MakeDomainValue(makeTestDN(t, "example.gov")),
+			MakeDomainValue(makeTestDomain("example.gov")),
 		}
 		v, err := c.Get(path, nil)
 		if err != nil {
@@ -1003,7 +970,7 @@ func TestLocalContentStorage(t *testing.T) {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
 		path := []Expression{
-			MakeDomainValue(makeTestDN(t, "example.gov")),
+			MakeDomainValue(makeTestDomain("example.gov")),
 		}
 		v, err := c.Get(path, nil)
 		if err != nil {
@@ -1018,15 +985,6 @@ func TestLocalContentStorage(t *testing.T) {
 			}
 		}
 	}
-}
-
-func makeTestDN(t *testing.T, s string) domain.Name {
-	d, err := domain.MakeNameFromString(s)
-	if err != nil {
-		t.Fatalf("can't create domain name from string %q: %s", s, err)
-	}
-
-	return d
 }
 
 func checkSymbolsForTypes(t *testing.T, symbols Symbols, types ...Type) {

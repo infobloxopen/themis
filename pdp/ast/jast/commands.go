@@ -25,7 +25,7 @@ func (ctx *context) unmarshalEntity(d *json.Decoder) (interface{}, error) {
 		rules    []*pdp.Rule
 		target   pdp.Target
 		cond     pdp.Expression
-		obligs   []pdp.AttributeAssignmentExpression
+		obligs   []pdp.AttributeAssignment
 		alg      interface{}
 	)
 

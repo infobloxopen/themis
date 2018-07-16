@@ -1,6 +1,10 @@
-hash: 9843abb4e39f4928d629e0b0d39773f2760f62899b9d88dfac30bd74c121d6c4
-updated: 2018-05-17T13:06:46.676001+03:00
+hash: a4a66e499f1440ef993567fb449663af4d7300bc0436545f4a4f740e852dd42a
+updated: 2018-06-12T20:59:36.134332+03:00
 imports:
+- name: github.com/allegro/bigcache
+  version: ca9a59ef2ad95442436b6a0ed9f061e6a47e376a
+  subpackages:
+  - queue
 - name: github.com/apache/thrift
   version: d907cc92db5b93e699a4282e979d097ea863215a
   subpackages:
@@ -22,7 +26,6 @@ imports:
   - plugin/dnstap/test
   - plugin/etcd/msg
   - plugin/metrics/vars
-  - plugin/pkg/dnstest
   - plugin/pkg/dnsutil
   - plugin/pkg/edns
   - plugin/pkg/nonwriter
@@ -72,7 +75,7 @@ imports:
   subpackages:
   - go/otgrpc
 - name: github.com/infobloxopen/go-trees
-  version: fb9cddb08aeb183077bdb083c0a35f8f2bbf80b1
+  version: a1e500cde93cdca91ae6c7366e0cb9f477c63603
   subpackages:
   - dltree
   - domain
@@ -127,6 +130,10 @@ imports:
   version: a0006b13c722f7f12368c00a3d3c2ae8a999a0c6
   subpackages:
   - xxHash32
+- name: github.com/pmezard/go-difflib
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  subpackages:
+  - difflib
 - name: github.com/prometheus/client_golang
   version: c3324c1198cf3374996e9d3098edd46a6b55afc9
   subpackages:
@@ -222,8 +229,4 @@ imports:
   - transport
 - name: gopkg.in/yaml.v2
   version: 7f97868eec74b32b0982dd158a51a446d1da7eb5
-testImports:
-- name: github.com/pmezard/go-difflib
-  version: 792786c7400a136282c1664665ae0a8db921c6c2
-  subpackages:
-  - difflib
+testImports: []

@@ -103,7 +103,7 @@ func getSetOfIDs(v AttributeValue) ([]string, error) {
 			panic(err)
 		}
 
-		return sortSetOfStrings(setIDs), nil
+		return SortSetOfStrings(setIDs), nil
 
 	case TypeListOfStrings:
 		listIDs, err := v.listOfStrings()

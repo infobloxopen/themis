@@ -27,9 +27,17 @@ func main() {
 		}
 	}
 
+	if conf.cacheTTL > 0 {
+		opts = append(opts,
+			pep.WithCacheTTL(conf.cacheTTL),
+		)
+	}
+
 	err := conf.cmd(
 		conf.servers[0],
 		opts,
+		uint32(conf.maxRequestSize),
+		uint32(conf.maxResponseObligations),
 		conf.input,
 		conf.output,
 		conf.count,

@@ -43,7 +43,7 @@ type PolicySet struct {
 	hidden      bool
 	target      Target
 	policies    []Evaluable
-	obligations []AttributeAssignmentExpression
+	obligations []AttributeAssignment
 	algorithm   PolicyCombiningAlg
 }
 
@@ -51,7 +51,7 @@ type PolicySet struct {
 // target, set of policy sets or policies, algorithm and obligations. To make
 // instance of algorithm it uses one of makers from PolicyCombiningAlgs or
 // PolicyCombiningParamAlgs and its parameters if it requires any.
-func NewPolicySet(ID string, hidden bool, target Target, policies []Evaluable, makePCA PolicyCombiningAlgMaker, params interface{}, obligations []AttributeAssignmentExpression) *PolicySet {
+func NewPolicySet(ID string, hidden bool, target Target, policies []Evaluable, makePCA PolicyCombiningAlgMaker, params interface{}, obligations []AttributeAssignment) *PolicySet {
 	for i, p := range policies {
 		p.setOrder(i)
 	}
@@ -85,8 +85,8 @@ func (p *PolicySet) Calculate(ctx *Context) Response {
 	match, err := p.target.calculate(ctx)
 	if err != nil {
 		r := combineEffectAndStatus(err, p.algorithm.execute(p.policies, ctx))
-		if r.status != nil {
-			r.status = bindError(err, p.describe())
+		if r.Status != nil {
+			r.Status = bindError(err, p.describe())
 		}
 		return r
 	}
@@ -97,11 +97,11 @@ func (p *PolicySet) Calculate(ctx *Context) Response {
 
 	r := p.algorithm.execute(p.policies, ctx)
 	if r.Effect == EffectDeny || r.Effect == EffectPermit {
-		r.obligations = append(r.obligations, p.obligations...)
+		r.Obligations = append(r.Obligations, p.obligations...)
 	}
 
-	if r.status != nil {
-		r.status = bindError(r.status, p.describe())
+	if r.Status != nil {
+		r.Status = bindError(r.Status, p.describe())
 	}
 
 	return r
@@ -372,7 +372,7 @@ func (a denyOverridesPCA) describe() string {
 
 func (a denyOverridesPCA) execute(policies []Evaluable, ctx *Context) Response {
 	errs := []error{}
-	obligations := make([]AttributeAssignmentExpression, 0)
+	obligations := make([]AttributeAssignment, 0)
 
 	indetD := 0
 	indetP := 0
@@ -388,7 +388,7 @@ func (a denyOverridesPCA) execute(policies []Evaluable, ctx *Context) Response {
 
 		if r.Effect == EffectPermit {
 			permits++
-			obligations = append(obligations, r.obligations...)
+			obligations = append(obligations, r.Obligations...)
 			continue
 		}
 
@@ -407,7 +407,7 @@ func (a denyOverridesPCA) execute(policies []Evaluable, ctx *Context) Response {
 
 		}
 
-		errs = append(errs, r.status)
+		errs = append(errs, r.Status)
 	}
 
 	var err boundError

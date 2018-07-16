@@ -464,13 +464,13 @@ func (c *streamConn) putStream(s boundStream) error {
 	return nil
 }
 
-func (c *streamConn) validate(in, out interface{}) error {
+func (c *streamConn) validate(m *pb.Msg) (pb.Msg, error) {
 	s, err := c.getStream()
 	if err != nil {
-		return err
+		return pb.Msg{}, err
 	}
 
-	err = s.s.validate(in, out)
+	r, err := s.s.validate(m)
 	if err != nil {
 		c.lock.RLock()
 		defer c.lock.RUnlock()
@@ -478,24 +478,24 @@ func (c *streamConn) validate(in, out interface{}) error {
 			s.retry <- s
 		}
 
-		return err
+		return pb.Msg{}, err
 	}
 
 	c.putStream(s)
-	return nil
+	return r, nil
 }
 
-func (c *streamConn) tryValidate(in, out interface{}) (bool, error) {
+func (c *streamConn) tryValidate(m *pb.Msg) (pb.Msg, bool, error) {
 	s, ok, err := c.tryGetStream()
 	if err != nil {
-		return false, err
+		return pb.Msg{}, false, err
 	}
 
 	if !ok {
-		return false, nil
+		return pb.Msg{}, false, nil
 	}
 
-	err = s.s.validate(in, out)
+	r, err := s.s.validate(m)
 	if err != nil {
 		c.lock.RLock()
 		defer c.lock.RUnlock()
@@ -503,11 +503,11 @@ func (c *streamConn) tryValidate(in, out interface{}) (bool, error) {
 			s.retry <- s
 		}
 
-		return true, err
+		return r, true, err
 	}
 
 	c.putStream(s)
-	return true, nil
+	return r, true, nil
 }
 
 func (c *streamConn) retryWorker(retry chan boundStream) {

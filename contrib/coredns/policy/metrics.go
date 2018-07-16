@@ -10,7 +10,7 @@ import (
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/metrics"
-	pdp "github.com/infobloxopen/themis/pdp-service"
+	"github.com/infobloxopen/themis/pdp"
 	"github.com/mholt/caddy"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -86,7 +86,7 @@ const (
 type AttrGauge struct {
 	perAttr  map[string]map[string]*SlicedCounter
 	pgv      *prometheus.GaugeVec
-	qChan    chan *pdp.Attribute
+	qChan    chan pdp.AttributeAssignment
 	nameChan chan string
 	timeFunc func() uint32
 	errCnt   uint32
@@ -103,7 +103,7 @@ func NewAttrGauge() *AttrGauge {
 			Name:      "recent_queries",
 			Help:      "Gauge of recent queries per Attrubute value.",
 		}, []string{"attribute", "value"}),
-		qChan:    make(chan *pdp.Attribute),
+		qChan:    make(chan pdp.AttributeAssignment),
 		nameChan: make(chan string),
 		timeFunc: unixTime,
 	}
@@ -117,7 +117,7 @@ var globalAttrGauge = NewAttrGauge()
 // Start starts goroutine which reads and handles data from channels
 func (g *AttrGauge) Start(tickInt time.Duration, chSize int) {
 	if atomic.CompareAndSwapUint32(&g.state, AttrGaugeStopped, AttrGaugeStarted) {
-		ch := make(chan *pdp.Attribute, chSize)
+		ch := make(chan pdp.AttributeAssignment, chSize)
 		g.qChan = ch
 		go func() {
 			timer := time.NewTimer(tickInt)
@@ -173,7 +173,7 @@ func (g *AttrGauge) addAttribute(attrName string) {
 // Inc increments the counter corresponding to the attr. It's safe
 // to call it from any goroutine. The AttrGauge should be started before
 // calling Inc
-func (g *AttrGauge) Inc(attr *pdp.Attribute) {
+func (g *AttrGauge) Inc(attr pdp.AttributeAssignment) {
 	if g == nil {
 		return
 	}
@@ -188,12 +188,14 @@ func (g *AttrGauge) Inc(attr *pdp.Attribute) {
 // synchInc increments internal counter corresponding to the attr.
 // The actual prometheus value is not updated in this method.
 // Should be called synchronously
-func (g *AttrGauge) synchInc(attr *pdp.Attribute) {
+func (g *AttrGauge) synchInc(attr pdp.AttributeAssignment) {
 	ut := g.timeFunc()
-	sc := g.perAttr[attr.Id][attr.Value]
+	id := attr.GetID()
+	v := serializeOrPanic(attr)
+	sc := g.perAttr[id][v]
 	if sc == nil {
 		sc = NewSlicedCounter(ut)
-		g.perAttr[attr.Id][attr.Value] = sc
+		g.perAttr[id][v] = sc
 	}
 	if sc.Inc(ut) {
 		return
@@ -235,14 +237,14 @@ func unixTime() uint32 {
 // configures globalAttrGauge as needed
 func (pp *policyPlugin) SetupMetrics(c *caddy.Controller) error {
 	attrNames := []string{}
-	for attr, t := range pp.confAttrs {
+	for attr, t := range pp.conf.custAttrs {
 		if !t.isMetrics() {
 			continue
 		}
 
 		attrNames = append(attrNames, attr)
 
-		for _, list := range pp.options {
+		for _, list := range pp.conf.options {
 			for _, opt := range list {
 				if opt.name == attr {
 					opt.metrics = true

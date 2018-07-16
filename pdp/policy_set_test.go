@@ -41,10 +41,10 @@ func TestPolicySet(t *testing.T) {
 			effectNames[EffectNotApplicable], effectNames[r.Effect])
 	}
 
-	_, ok = r.status.(*missingAttributeError)
+	_, ok = r.Status.(*missingAttributeError)
 	if !ok {
 		t.Errorf("Expected missing attribute status for policy set with FirstApplicableEffectPCA and "+
-			"not found attribute but got %T (%s)", r.status, r.status)
+			"not found attribute but got %T (%s)", r.Status, r.Status)
 	}
 
 	p = &PolicySet{
@@ -58,10 +58,10 @@ func TestPolicySet(t *testing.T) {
 			effectNames[EffectNotApplicable], effectNames[r.Effect])
 	}
 
-	_, ok = r.status.(*missingAttributeError)
+	_, ok = r.Status.(*missingAttributeError)
 	if !ok {
 		t.Errorf("Expected missing attribute status for policy with FirstApplicableEffectPCA and "+
-			"attribute with wrong type but got %T (%s)", r.status, r.status)
+			"attribute with wrong type but got %T (%s)", r.Status, r.Status)
 	}
 
 	p = &PolicySet{
@@ -76,9 +76,9 @@ func TestPolicySet(t *testing.T) {
 			effectNames[EffectNotApplicable], effectNames[r.Effect])
 	}
 
-	if r.status != nil {
+	if r.Status != nil {
 		t.Errorf("Expected no error status for policy set with FirstApplicableEffectPCA and "+
-			"attribute with not maching value but got %T (%s)", r.status, r.status)
+			"attribute with not maching value but got %T (%s)", r.Status, r.Status)
 	}
 
 	p = &PolicySet{
@@ -96,9 +96,9 @@ func TestPolicySet(t *testing.T) {
 			effectNames[EffectPermit], effectNames[r.Effect])
 	}
 
-	if r.status != nil {
+	if r.Status != nil {
 		t.Errorf("Expected no error status for policy rule and obligations but got %T (%s)",
-			r.status, r.status)
+			r.Status, r.Status)
 	}
 
 	defaultPolicy := makeSimplePolicy("Default", makeSimpleHiddenRule(EffectDeny))
@@ -110,7 +110,7 @@ func TestPolicySet(t *testing.T) {
 		algorithm: makeMapperPCA(
 			[]Evaluable{defaultPolicy, errorPolicy, permitPolicy},
 			MapperPCAParams{
-				Argument: AttributeDesignator{a: Attribute{id: "x", t: TypeSetOfStrings}},
+				Argument: MakeSetOfStringsDesignator("x"),
 				DefOk:    true,
 				Def:      "Default",
 				ErrOk:    true,
@@ -118,7 +118,7 @@ func TestPolicySet(t *testing.T) {
 				Algorithm: makeMapperPCA(
 					nil,
 					MapperPCAParams{
-						Argument: AttributeDesignator{a: Attribute{id: "y", t: TypeString}}})})}
+						Argument: MakeStringDesignator("y")})})}
 
 	c = &Context{
 		a: map[string]interface{}{
@@ -131,9 +131,9 @@ func TestPolicySet(t *testing.T) {
 			effectNames[EffectPermit], effectNames[r.Effect])
 	}
 
-	if r.status != nil {
+	if r.Status != nil {
 		t.Errorf("Expected no error status for policy rule and obligations but got %T (%s)",
-			r.status, r.status)
+			r.Status, r.Status)
 	}
 
 	c = &Context{
@@ -147,10 +147,10 @@ func TestPolicySet(t *testing.T) {
 			effectNames[EffectIndeterminate], effectNames[r.Effect])
 	}
 
-	_, ok = r.status.(*missingAttributeError)
+	_, ok = r.Status.(*missingAttributeError)
 	if !ok {
 		t.Errorf("Expected missing attribute status for policy with rule and obligations but got %T (%s)",
-			r.status, r.status)
+			r.Status, r.Status)
 	}
 }
 
@@ -384,7 +384,7 @@ func TestPolicySetAppend(t *testing.T) {
 			makeSimplePolicy("third", makeSimpleRule("permit", EffectPermit)),
 		},
 		makeMapperPCA, MapperPCAParams{
-			Argument: AttributeDesignator{a: Attribute{id: "k", t: TypeString}},
+			Argument: MakeStringDesignator("k"),
 			DefOk:    true,
 			Def:      "first",
 			ErrOk:    true,
@@ -468,7 +468,7 @@ func TestPolicySetAppend(t *testing.T) {
 			makeSimplePolicy("third", makeSimpleRule("permit", EffectPermit)),
 		},
 		makeMapperPCA, MapperPCAParams{
-			Argument: AttributeDesignator{a: Attribute{id: "f", t: ft}},
+			Argument: MakeDesignator("f", ft),
 			DefOk:    true,
 			Def:      "first",
 			ErrOk:    true,
@@ -746,7 +746,7 @@ func TestPolicySetDelete(t *testing.T) {
 			makeSimplePolicy("third", makeSimpleRule("permit", EffectPermit)),
 		},
 		makeMapperPCA, MapperPCAParams{
-			Argument: AttributeDesignator{a: Attribute{id: "k", t: TypeString}},
+			Argument: MakeStringDesignator("k"),
 			DefOk:    true,
 			Def:      "first",
 			ErrOk:    true,
@@ -801,7 +801,7 @@ func TestPolicySetDelete(t *testing.T) {
 			makeSimplePolicy("fifth", makeSimpleRule("permit", EffectPermit)),
 		},
 		makeMapperPCA, MapperPCAParams{
-			Argument: AttributeDesignator{a: Attribute{id: "f", t: ft}},
+			Argument: MakeDesignator("f", ft),
 			DefOk:    true,
 			Def:      "first",
 			ErrOk:    true,

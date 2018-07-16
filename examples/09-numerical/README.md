@@ -19,22 +19,19 @@ INFO[0000] Serving decision requests
 In other terminal run pepcli:
 ```
 $ pepcli -i numerical.requests.yaml test
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "r"
       type: "float"
       value: "2"
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "r"
       type: "float"
       value: "10"
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "r"
       type: "float"
@@ -48,17 +45,17 @@ PDP logs:
 DEBU[0014] Request context                               context="attributes:
 - actualVal.(Float): 5
 - targetVal.(Float): 5"
-DEBU[0014] Response                                      effect=PERMIT obligation="attributes:
-- r.(float): \"2\"" reason=Ok
+DEBU[0014] Response                                      effect=Permit obligations="attributes:
+- r.(float): \"2\"" reason="<nil>"
 DEBU[0014] Request context                               context="attributes:
 - actualVal.(Float): 100
 - targetVal.(Float): 5"
-DEBU[0014] Response                                      effect=PERMIT obligation="attributes:
-- r.(float): \"10\"" reason=Ok
+DEBU[0014] Response                                      effect=Permit obligations="attributes:
+- r.(float): \"10\"" reason="<nil>"
 DEBU[0014] Request context                               context="attributes:
 - actualVal.(Float): 16
 - targetVal.(Float): 5"
-DEBU[0014] Response                                      effect=PERMIT obligation="attributes:
-- r.(float): \"3.2\"" reason=Ok
+DEBU[0014] Response                                      effect=Permit obligations="attributes:
+- r.(float): \"3.2\"" reason="<nil>"
 ...
 ```

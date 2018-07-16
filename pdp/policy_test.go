@@ -3,6 +3,7 @@ package pdp
 import (
 	"bytes"
 	"fmt"
+	"net"
 	"strings"
 	"testing"
 
@@ -43,10 +44,10 @@ func TestPolicy(t *testing.T) {
 			effectNames[EffectNotApplicable], effectNames[r.Effect])
 	}
 
-	_, ok = r.status.(*missingAttributeError)
+	_, ok = r.Status.(*missingAttributeError)
 	if !ok {
 		t.Errorf("Expected missing attribute status for policy with FirstApplicableEffectRCA and "+
-			"not found attribute but got %T (%s)", r.status, r.status)
+			"not found attribute but got %T (%s)", r.Status, r.Status)
 	}
 
 	p = &Policy{
@@ -60,10 +61,10 @@ func TestPolicy(t *testing.T) {
 			effectNames[EffectNotApplicable], effectNames[r.Effect])
 	}
 
-	_, ok = r.status.(*missingAttributeError)
+	_, ok = r.Status.(*missingAttributeError)
 	if !ok {
 		t.Errorf("Expected missing attribute status for policy with FirstApplicableEffectRCA and "+
-			"attribute with wrong type but got %T (%s)", r.status, r.status)
+			"attribute with wrong type but got %T (%s)", r.Status, r.Status)
 	}
 
 	p = &Policy{
@@ -77,9 +78,9 @@ func TestPolicy(t *testing.T) {
 			effectNames[EffectNotApplicable], effectNames[r.Effect])
 	}
 
-	if r.status != nil {
+	if r.Status != nil {
 		t.Errorf("Expected no error status for policy with FirstApplicableEffectRCA and "+
-			"attribute with not maching value but got %T (%s)", r.status, r.status)
+			"attribute with not maching value but got %T (%s)", r.Status, r.Status)
 	}
 
 	p = &Policy{
@@ -95,13 +96,13 @@ func TestPolicy(t *testing.T) {
 			effectNames[EffectPermit], effectNames[r.Effect])
 	}
 
-	if r.status != nil {
+	if r.Status != nil {
 		t.Errorf("Expected no error status for policy with rule and obligations but got %T (%s)",
-			r.status, r.status)
+			r.Status, r.Status)
 	}
 
-	if len(r.obligations) != 1 {
-		t.Errorf("Expected single obligation for with rule and obligations but got %#v", r.obligations)
+	if len(r.Obligations) != 1 {
+		t.Errorf("Expected single obligation for with rule and obligations but got %#v", r.Obligations)
 	}
 
 	defaultRule := makeSimpleRule("Default", EffectDeny)
@@ -113,14 +114,14 @@ func TestPolicy(t *testing.T) {
 		algorithm: makeMapperRCA(
 			[]*Rule{defaultRule, errorRule, permitRule},
 			MapperRCAParams{
-				Argument: AttributeDesignator{a: Attribute{id: "x", t: TypeSetOfStrings}},
+				Argument: MakeSetOfStringsDesignator("x"),
 				DefOk:    true,
 				Def:      "Default",
 				ErrOk:    true,
 				Err:      "Error",
 				Algorithm: makeMapperRCA(
 					nil,
-					MapperRCAParams{Argument: AttributeDesignator{a: Attribute{id: "y", t: TypeString}}})})}
+					MapperRCAParams{Argument: MakeStringDesignator("y")})})}
 
 	c = &Context{
 		a: map[string]interface{}{
@@ -133,9 +134,9 @@ func TestPolicy(t *testing.T) {
 			effectNames[EffectPermit], effectNames[r.Effect])
 	}
 
-	if r.status != nil {
+	if r.Status != nil {
 		t.Errorf("Expected no error status for policy rule and obligations but got %T (%s)",
-			r.status, r.status)
+			r.Status, r.Status)
 	}
 
 	c = &Context{
@@ -149,10 +150,10 @@ func TestPolicy(t *testing.T) {
 			effectNames[EffectIndeterminate], effectNames[r.Effect])
 	}
 
-	_, ok = r.status.(*missingAttributeError)
+	_, ok = r.Status.(*missingAttributeError)
 	if !ok {
 		t.Errorf("Expected missing attribute status for policy with rule and obligations but got %T (%s)",
-			r.status, r.status)
+			r.Status, r.Status)
 	}
 }
 
@@ -315,7 +316,7 @@ func TestPolicyAppend(t *testing.T) {
 			makeSimpleRule("third", EffectPermit),
 		},
 		makeMapperRCA, MapperRCAParams{
-			Argument: AttributeDesignator{a: Attribute{id: "k", t: TypeString}},
+			Argument: MakeStringDesignator("k"),
 			DefOk:    true,
 			Def:      "first",
 			ErrOk:    true,
@@ -396,7 +397,7 @@ func TestPolicyAppend(t *testing.T) {
 			makeSimpleRule("third", EffectPermit),
 		},
 		makeMapperRCA, MapperRCAParams{
-			Argument: AttributeDesignator{a: Attribute{id: "f", t: ft}},
+			Argument: MakeDesignator("f", ft),
 			DefOk:    true,
 			Def:      "first",
 			ErrOk:    true,
@@ -603,7 +604,7 @@ func TestPolicyDelete(t *testing.T) {
 			makeSimpleRule("third", EffectPermit),
 		},
 		makeMapperRCA, MapperRCAParams{
-			Argument: AttributeDesignator{a: Attribute{id: "k", t: TypeString}},
+			Argument: MakeStringDesignator("k"),
 			DefOk:    true,
 			Def:      "first",
 			ErrOk:    true,
@@ -661,7 +662,7 @@ func TestPolicyDelete(t *testing.T) {
 			makeSimpleRule("fifth", EffectPermit),
 		},
 		makeMapperRCA, MapperRCAParams{
-			Argument: AttributeDesignator{a: Attribute{id: "f", t: ft}},
+			Argument: MakeDesignator("f", ft),
 			DefOk:    true,
 			Def:      "first",
 			ErrOk:    true,
@@ -823,7 +824,7 @@ func makeSimpleHiddenPolicy(rules ...*Rule) *Policy {
 	)
 }
 
-func makeSimplePermitPolicyWithObligations(ID string, obligations []AttributeAssignmentExpression) *Policy {
+func makeSimplePermitPolicyWithObligations(ID string, obligations []AttributeAssignment) *Policy {
 	return NewPolicy(
 		ID, false,
 		Target{},
@@ -854,7 +855,7 @@ func makeSimpleHiddenRule(effect int) *Rule {
 	)
 }
 
-func makeSimplePermitRuleWithObligations(ID string, obligations []AttributeAssignmentExpression) *Rule {
+func makeSimplePermitRuleWithObligations(ID string, obligations []AttributeAssignment) *Rule {
 	return NewRule(
 		ID, false,
 		Target{},
@@ -867,15 +868,12 @@ func makeSimplePermitRuleWithObligations(ID string, obligations []AttributeAssig
 func makeSimpleStringTarget(ID, value string) Target {
 	return Target{a: []AnyOf{{a: []AllOf{{m: []Match{{
 		m: functionStringEqual{
-			first:  AttributeDesignator{a: Attribute{id: ID, t: TypeString}},
+			first:  MakeStringDesignator(ID),
 			second: MakeStringValue(value)}}}}}}}}
 }
 
-func makeSingleStringObligation(ID, value string) []AttributeAssignmentExpression {
-	return []AttributeAssignmentExpression{
-		{
-			a: Attribute{id: ID, t: TypeString},
-			e: MakeStringValue(value)}}
+func makeSingleStringObligation(ID, value string) []AttributeAssignment {
+	return []AttributeAssignment{MakeStringAssignment(ID, value)}
 }
 
 func assertMapperRCAMapKeys(a RuleCombiningAlg, desc string, t *testing.T, expected ...string) {
@@ -904,6 +902,20 @@ func assertFlagsMapperRCAMapKeys(a RuleCombiningAlg, desc string, t *testing.T, 
 	} else {
 		t.Errorf("Expected flags mapper as rule combining algorithm but got %T for %s", a, desc)
 	}
+}
+
+func assertNetworks(v, e []*net.IPNet, desc string, t *testing.T) {
+	sv := make([]string, len(v))
+	for i, n := range v {
+		sv[i] = n.String()
+	}
+
+	se := make([]string, len(e))
+	for i, n := range e {
+		se[i] = n.String()
+	}
+
+	assertStrings(sv, se, desc, t)
 }
 
 func assertStrings(v, e []string, desc string, t *testing.T) {

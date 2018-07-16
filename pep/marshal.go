@@ -3,13 +3,17 @@ package pep
 import (
 	"errors"
 	"fmt"
-	"math"
 	"net"
 	"reflect"
-	"strconv"
 	"strings"
 	"sync"
 
+	"github.com/infobloxopen/go-trees/domain"
+	"github.com/infobloxopen/go-trees/domaintree"
+	"github.com/infobloxopen/go-trees/iptree"
+	"github.com/infobloxopen/go-trees/strtree"
+
+	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
@@ -28,58 +32,135 @@ var (
 	ErrorIntegerOverflow = errors.New("integer overflow")
 )
 
-type fieldMarshaller func(v reflect.Value) (string, string, error)
-
 var (
-	marshallersByKind = map[reflect.Kind]fieldMarshaller{
-		reflect.Bool:    boolMarshaller,
-		reflect.String:  stringMarshaller,
-		reflect.Int:     intMarshaller,
-		reflect.Int8:    intMarshaller,
-		reflect.Int16:   intMarshaller,
-		reflect.Int32:   intMarshaller,
-		reflect.Int64:   intMarshaller,
-		reflect.Uint:    intMarshaller,
-		reflect.Uint8:   intMarshaller,
-		reflect.Uint16:  intMarshaller,
-		reflect.Uint32:  intMarshaller,
-		reflect.Uint64:  intMarshaller,
-		reflect.Float32: floatMarshaller,
-		reflect.Float64: floatMarshaller,
-		reflect.Slice:   sliceMarshaller,
-		reflect.Struct:  structMarshaller}
+	boolType        = reflect.TypeOf(false)
+	stringType      = reflect.TypeOf("")
+	intType         = reflect.TypeOf(0)
+	int8Type        = reflect.TypeOf(int8(0))
+	int16Type       = reflect.TypeOf(int16(0))
+	int32Type       = reflect.TypeOf(int32(0))
+	int64Type       = reflect.TypeOf(int64(0))
+	uintType        = reflect.TypeOf(uint(0))
+	uint8Type       = reflect.TypeOf(uint8(0))
+	uint16Type      = reflect.TypeOf(uint16(0))
+	uint32Type      = reflect.TypeOf(uint32(0))
+	uint64Type      = reflect.TypeOf(uint64(0))
+	float32Type     = reflect.TypeOf(float32(0))
+	float64Type     = reflect.TypeOf(float64(0))
+	netIPType       = reflect.TypeOf(net.IP{})
+	netIPNetType    = reflect.TypeOf(net.IPNet{})
+	ptrNetIPNetType = reflect.TypeOf((*net.IPNet)(nil))
+	domainType      = reflect.TypeOf(domain.Name{})
+	strtreeType     = reflect.TypeOf((*strtree.Tree)(nil))
+	iptreeType      = reflect.TypeOf((*iptree.Tree)(nil))
+	domaintreeType  = reflect.TypeOf((*domaintree.Node)(nil))
+	stringsType     = reflect.TypeOf([]string(nil))
 
-	marshallersByTag = map[string]fieldMarshaller{
-		"boolean": boolMarshaller,
-		"string":  stringMarshaller,
-		"integer": intMarshaller,
-		"float":   floatMarshaller,
-		"address": addressMarshaller,
-		"network": networkMarshaller,
-		"domain":  domainMarshaller}
+	attrTypeByType = map[reflect.Type]pdp.Type{
+		boolType:        pdp.TypeBoolean,
+		stringType:      pdp.TypeString,
+		intType:         pdp.TypeInteger,
+		int8Type:        pdp.TypeInteger,
+		int16Type:       pdp.TypeInteger,
+		int32Type:       pdp.TypeInteger,
+		int64Type:       pdp.TypeInteger,
+		uintType:        pdp.TypeInteger,
+		uint8Type:       pdp.TypeInteger,
+		uint16Type:      pdp.TypeInteger,
+		uint32Type:      pdp.TypeInteger,
+		uint64Type:      pdp.TypeInteger,
+		float32Type:     pdp.TypeFloat,
+		float64Type:     pdp.TypeFloat,
+		netIPType:       pdp.TypeAddress,
+		netIPNetType:    pdp.TypeNetwork,
+		ptrNetIPNetType: pdp.TypeNetwork,
+		domainType:      pdp.TypeDomain,
+		strtreeType:     pdp.TypeSetOfStrings,
+		iptreeType:      pdp.TypeSetOfNetworks,
+		domaintreeType:  pdp.TypeSetOfDomains,
+		stringsType:     pdp.TypeListOfStrings,
+	}
 
-	netIPType    = reflect.TypeOf(net.IP{})
-	netIPNetType = reflect.TypeOf(net.IPNet{})
+	attrTypeByTag = map[string]pdp.Type{
+		pdp.TypeBoolean.GetKey():       pdp.TypeBoolean,
+		pdp.TypeString.GetKey():        pdp.TypeString,
+		pdp.TypeInteger.GetKey():       pdp.TypeInteger,
+		pdp.TypeFloat.GetKey():         pdp.TypeFloat,
+		pdp.TypeAddress.GetKey():       pdp.TypeAddress,
+		pdp.TypeNetwork.GetKey():       pdp.TypeNetwork,
+		pdp.TypeDomain.GetKey():        pdp.TypeDomain,
+		pdp.TypeSetOfStrings.GetKey():  pdp.TypeSetOfStrings,
+		pdp.TypeSetOfNetworks.GetKey(): pdp.TypeSetOfNetworks,
+		pdp.TypeSetOfDomains.GetKey():  pdp.TypeSetOfDomains,
+		pdp.TypeListOfStrings.GetKey(): pdp.TypeListOfStrings,
+	}
 
-	typeByTag = map[string]reflect.Type{
-		"boolean": reflect.TypeOf(true),
-		"string":  reflect.TypeOf("string"),
-		"integer": reflect.TypeOf(0),
-		"float":   reflect.TypeOf(0.),
-		"address": netIPType,
-		"network": netIPNetType,
-		"domain":  reflect.TypeOf("string")}
+	typeByAttrType = map[pdp.Type]map[reflect.Type]struct{}{
+		pdp.TypeBoolean: {
+			boolType: {},
+		},
+		pdp.TypeString: {
+			stringType: {},
+		},
+		pdp.TypeInteger: {
+			intType:    {},
+			int8Type:   {},
+			int16Type:  {},
+			int32Type:  {},
+			int64Type:  {},
+			uintType:   {},
+			uint8Type:  {},
+			uint16Type: {},
+			uint32Type: {},
+			uint64Type: {},
+		},
+		pdp.TypeFloat: {
+			float32Type: {},
+			float64Type: {},
+		},
+		pdp.TypeAddress: {
+			netIPType: {},
+		},
+		pdp.TypeNetwork: {
+			netIPNetType:    {},
+			ptrNetIPNetType: {},
+		},
+		pdp.TypeDomain: {
+			stringType: {},
+			domainType: {},
+		},
+		pdp.TypeSetOfStrings: {
+			strtreeType: {},
+		},
+		pdp.TypeSetOfNetworks: {
+			iptreeType: {},
+		},
+		pdp.TypeSetOfDomains: {
+			domaintreeType: {},
+		},
+		pdp.TypeListOfStrings: {
+			stringsType: {},
+		},
+	}
+
+	typeByTag = map[string]map[reflect.Type]struct{}{}
 )
 
 type reqFieldInfo struct {
-	idx        int
-	tag        string
-	marshaller fieldMarshaller
+	idx int
+	tag string
+	at  pdp.Type
 }
 
 type reqFieldsInfo struct {
 	fields []reqFieldInfo
 	err    error
+}
+
+func init() {
+	for k, v := range typeByAttrType {
+		typeByTag[k.GetKey()] = v
+	}
 }
 
 func makeTaggedFieldsInfo(fields []reflect.StructField, typeName string) reqFieldsInfo {
@@ -90,27 +171,25 @@ func makeTaggedFieldsInfo(fields []reflect.StructField, typeName string) reqFiel
 			continue
 		}
 
-		var marshaller fieldMarshaller
+		var at pdp.Type
 		items := strings.Split(tag, ",")
 		if len(items) > 1 {
 			tag = items[0]
 			t := items[1]
 
-			marshaller, ok = marshallersByTag[strings.ToLower(t)]
+			at, ok = attrTypeByTag[strings.ToLower(t)]
 			if !ok {
-				return reqFieldsInfo{err: fmt.Errorf("unknown type \"%s\" (%s.%s)", t, typeName, f.Name)}
+				return makeReqsFieldsInfoErr("unknown type %q (%s.%s)", t, typeName, f.Name)
 			}
 
-			if typeByTag[strings.ToLower(t)] != f.Type {
-				return reqFieldsInfo{
-					err: fmt.Errorf("can't marshal \"%s\" as \"%s\" (%s.%s)", f.Type.String(), t, typeName, f.Name),
-				}
+			if _, ok := typeByAttrType[at][f.Type]; !ok {
+				return makeReqsFieldsInfoErr("can't marshal %q as %q (%s.%s)", f.Type, t, typeName, f.Name)
 			}
 
 		} else {
-			marshaller, ok = marshallersByKind[f.Type.Kind()]
+			at, ok = attrTypeByType[f.Type]
 			if !ok {
-				return reqFieldsInfo{err: fmt.Errorf("can't marshal \"%s\" (%s.%s)", f.Type.String(), typeName, f.Name)}
+				return makeReqsFieldsInfoErr("can't marshal %q (%s.%s)", f.Type, typeName, f.Name)
 			}
 		}
 
@@ -121,11 +200,7 @@ func makeTaggedFieldsInfo(fields []reflect.StructField, typeName string) reqFiel
 			}
 		}
 
-		out = append(out, reqFieldInfo{
-			idx:        i,
-			tag:        tag,
-			marshaller: marshaller,
-		})
+		out = append(out, reqFieldInfo{i, tag, at})
 	}
 
 	return reqFieldsInfo{fields: out}
@@ -139,16 +214,12 @@ func makeUntaggedFieldsInfo(fields []reflect.StructField) reqFieldsInfo {
 			continue
 		}
 
-		marshaller, ok := marshallersByKind[f.Type.Kind()]
+		t, ok := attrTypeByType[f.Type]
 		if !ok {
 			continue
 		}
 
-		out = append(out, reqFieldInfo{
-			idx:        i,
-			tag:        name,
-			marshaller: marshaller,
-		})
+		out = append(out, reqFieldInfo{i, name, t})
 	}
 
 	return reqFieldsInfo{fields: out}
@@ -159,24 +230,41 @@ var (
 	typeCacheLock = sync.RWMutex{}
 )
 
-func makeRequest(v interface{}) (pb.Request, error) {
-	if req, ok := v.(pb.Request); ok {
-		return req, nil
-	}
-	attrs, err := marshalValue(reflect.ValueOf(v))
-	if err != nil {
-		return pb.Request{}, err
+func makeRequest(v interface{}, b []byte) (pb.Msg, error) {
+	switch v := v.(type) {
+	case []byte:
+		return pb.Msg{Body: v}, nil
+
+	case pb.Msg:
+		return v, nil
+
+	case *pb.Msg:
+		return *v, nil
 	}
 
-	return pb.Request{Attributes: attrs}, nil
+	var (
+		n   int
+		err error
+	)
+
+	if a, ok := v.([]pdp.AttributeAssignment); ok {
+		n, err = pdp.MarshalRequestAssignments(b, a)
+	} else {
+		n, err = marshalValue(reflect.ValueOf(v), b)
+	}
+	if err != nil {
+		return pb.Msg{}, err
+	}
+
+	return pb.Msg{Body: b[:n]}, nil
 }
 
-func marshalValue(v reflect.Value) ([]*pb.Attribute, error) {
+func marshalValue(v reflect.Value, b []byte) (int, error) {
 	if v.Kind() != reflect.Struct {
-		return nil, ErrorInvalidSource
+		return 0, ErrorInvalidSource
 	}
 
-	return marshalStruct(v, getFields(v.Type()))
+	return marshalStruct(v, getFields(v.Type()), b)
 }
 
 func getFields(t reflect.Type) reqFieldsInfo {
@@ -218,7 +306,7 @@ func getName(f reflect.StructField) (string, bool) {
 		return "", false
 	}
 
-	c := name[0:1]
+	c := name[:1]
 	if c != strings.ToUpper(c) {
 		return "", false
 	}
@@ -234,96 +322,19 @@ func getTag(f reflect.StructField) (string, bool) {
 	return f.Tag.Lookup("pdp")
 }
 
-func marshalStruct(v reflect.Value, info reqFieldsInfo) ([]*pb.Attribute, error) {
+func marshalStruct(v reflect.Value, info reqFieldsInfo, b []byte) (int, error) {
 	if info.err != nil {
-		return nil, info.err
+		return 0, info.err
 	}
 
-	attrs := make([]*pb.Attribute, len(info.fields))
-	i := 0
-	for _, f := range info.fields {
-		s, t, err := f.marshaller(v.Field(f.idx))
-		if err != nil {
-			if err == ErrorInvalidStruct || err == ErrorInvalidSlice {
-				continue
-			}
+	return pdp.MarshalRequestReflection(b, len(info.fields), func(i int) (string, pdp.Type, reflect.Value, error) {
+		f := info.fields[i]
+		return f.tag, f.at, v.Field(f.idx), nil
+	})
+}
 
-			return nil, err
-		}
-
-		attrs[i] = &pb.Attribute{Id: f.tag, Type: t, Value: s}
-		i++
+func makeReqsFieldsInfoErr(s string, args ...interface{}) reqFieldsInfo {
+	return reqFieldsInfo{
+		err: fmt.Errorf(s, args...),
 	}
-
-	return attrs[:i], nil
-}
-
-func boolMarshaller(v reflect.Value) (string, string, error) {
-	return strconv.FormatBool(v.Bool()), "boolean", nil
-}
-
-func stringMarshaller(v reflect.Value) (string, string, error) {
-	return v.String(), "string", nil
-}
-
-func intMarshaller(v reflect.Value) (string, string, error) {
-	var s string
-	switch v.Kind() {
-	default:
-		panic(fmt.Errorf("expected any integer value but got %q (%s)", v.Type().Name(), v.String()))
-
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		s = strconv.FormatInt(v.Int(), 10)
-
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		n := v.Uint()
-		if n > math.MaxInt64 {
-			return "", "", ErrorIntegerOverflow
-		}
-
-		s = strconv.FormatUint(n, 10)
-	}
-
-	return s, "integer", nil
-}
-
-func floatMarshaller(v reflect.Value) (string, string, error) {
-	var s string
-	switch v.Kind() {
-	default:
-		panic(fmt.Errorf("expected any float value but got %q (%s)", v.Type().Name(), v.String()))
-
-	case reflect.Float32, reflect.Float64:
-		s = strconv.FormatFloat(v.Float(), 'g', -1, 64)
-	}
-
-	return s, "float", nil
-}
-
-func sliceMarshaller(v reflect.Value) (string, string, error) {
-	if v.Type() != netIPType {
-		return "", "", ErrorInvalidSlice
-	}
-
-	return addressMarshaller(v)
-}
-
-func structMarshaller(v reflect.Value) (string, string, error) {
-	if v.Type() != netIPNetType {
-		return "", "", ErrorInvalidStruct
-	}
-
-	return networkMarshaller(v)
-}
-
-func addressMarshaller(v reflect.Value) (string, string, error) {
-	return net.IP(v.Bytes()).String(), "address", nil
-}
-
-func networkMarshaller(v reflect.Value) (string, string, error) {
-	return (&net.IPNet{IP: v.Field(0).Bytes(), Mask: v.Field(1).Bytes()}).String(), "network", nil
-}
-
-func domainMarshaller(v reflect.Value) (string, string, error) {
-	return v.String(), "domain", nil
 }

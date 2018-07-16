@@ -19,15 +19,14 @@ INFO[0000] Serving decision requests
 In other terminal run pepcli:
 ```
 $ pepcli -i policy.requests.yaml test
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "a"
       type: "address"
       value: "192.0.2.1"
 
-- effect: NOTAPPLICABLE
-  reason: "Ok"
+- effect: NotApplicable
+
 ```
 
 PDP logs:
@@ -35,10 +34,10 @@ PDP logs:
 ...
 DEBU[0097] Request context                               context="attributes:
 - x.(String): \"test\""
-DEBU[0097] Response                                      effect=PERMIT obligation="attributes:
-- a.(address): \"192.0.2.1\"" reason=Ok
+DEBU[0097] Response                                      effect=Permit obligations="attributes:
+- a.(address): \"192.0.2.1\"" reason="<nil>"
 DEBU[0097] Request context                               context="attributes:
 - x.(String): \"example\""
-DEBU[0097] Response                                      effect=NOTAPPLICABLE obligation="no attributes" reason=Ok
+DEBU[0097] Response                                      effect=NotApplicable obligations="no attributes" reason="<nil>"
 ...
 ```

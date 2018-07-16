@@ -21,23 +21,17 @@ INFO[0000] Serving decision requests
 In other terminal run pepcli to make some requests to pdpserver:
 ```
 $ pepcli -i all-permit.requests.yaml test
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
 
 ```
 
@@ -47,22 +41,22 @@ In terminal with pdpserver you can see how pdpserver processed the requests:
 ```
 ...
 DEBU[0884] Request context                               context=
-DEBU[0884] Response                                      effect=PERMIT obligation="no attributes" reason=Ok
+DEBU[0884] Response                                      effect=Permit obligations="no attributes" reason="<nil>"
 DEBU[0884] Request context                               context="attributes:
 - b.(Boolean): true"
-DEBU[0884] Response                                      effect=PERMIT obligation="no attributes" reason=Ok
+DEBU[0884] Response                                      effect=Permit obligations="no attributes" reason="<nil>"
 DEBU[0884] Request context                               context="attributes:
 - s.(String): \"test\""
-DEBU[0884] Response                                      effect=PERMIT obligation="no attributes" reason=Ok
+DEBU[0884] Response                                      effect=Permit obligations="no attributes" reason="<nil>"
 DEBU[0884] Request context                               context="attributes:
 - a.(Address): 192.0.2.1"
-DEBU[0884] Response                                      effect=PERMIT obligation="no attributes" reason=Ok
+DEBU[0884] Response                                      effect=Permit obligations="no attributes" reason="<nil>"
 DEBU[0884] Request context                               context="attributes:
 - d.(Domain): domain(example.com)"
-DEBU[0884] Response                                      effect=PERMIT obligation="no attributes" reason=Ok
+DEBU[0884] Response                                      effect=Permit obligations="no attributes" reason="<nil>"
 DEBU[0884] Request context                               context="attributes:
 - c.(Network): 192.0.2.0/24"
-DEBU[0884] Response                                      effect=PERMIT obligation="no attributes" reason=Ok
+DEBU[0884] Response                                      effect=Permit obligations="no attributes" reason="<nil>"
 ...
 ```
 
@@ -85,11 +79,10 @@ INFO[0000] Serving decision requests
 And run requests for the policy:
 ```
 $ pepcli -i permit-x-test.requests.yaml test
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
 
-- effect: NOTAPPLICABLE
-  reason: "Ok"
+- effect: NotApplicable
+
 ```
 
 PDP logs:
@@ -97,9 +90,9 @@ PDP logs:
 ...
 DEBU[0236] Request context                               context="attributes:
 - x.(String): \"test\""
-DEBU[0236] Response                                      effect=PERMIT obligation="no attributes" reason=Ok
+DEBU[0236] Response                                      effect=Permit obligations="no attributes" reason="<nil>"
 DEBU[0236] Request context                               context="attributes:
 - x.(String): \"example\""
-DEBU[0236] Response                                      effect=NOTAPPLICABLE obligation="no attributes" reason=Ok
+DEBU[0236] Response                                      effect=NotApplicable obligations="no attributes" reason="<nil>"
 ...
 ```

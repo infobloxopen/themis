@@ -19,21 +19,17 @@ INFO[0000] Serving decision requests
 In other terminal run pepcli:
 ```
 $ pepcli -i rule.requests.yaml test
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "a"
       type: "address"
       value: "192.0.2.1"
 
-- effect: NOTAPPLICABLE
-  reason: "Ok"
+- effect: NotApplicable
 
-- effect: NOTAPPLICABLE
-  reason: "Ok"
+- effect: NotApplicable
 
-- effect: NOTAPPLICABLE
-  reason: "Ok"
+- effect: NotApplicable
 
 ```
 
@@ -41,23 +37,23 @@ PDP logs:
 ```
 ...
 DEBU[0034] Request context                               context="attributes:
-- b.(Boolean): false
 - x.(String): \"test\"
-- c.(Network): 192.0.2.16/28"
-DEBU[0034] Response                                      effect=PERMIT obligation="attributes:
-- a.(address): \"192.0.2.1\"" reason=Ok
+- c.(Network): 192.0.2.16/28
+- b.(Boolean): false"
+DEBU[0034] Response                                      effect=Permit obligations="attributes:
+- a.(address): \"192.0.2.1\"" reason="<nil>"
 DEBU[0034] Request context                               context="attributes:
 - x.(String): \"test\"
 - c.(Network): 192.0.2.16/28
 - b.(Boolean): true"
-DEBU[0034] Response                                      effect=NOTAPPLICABLE obligation="no attributes" reason=Ok
+DEBU[0034] Response                                      effect=NotApplicable obligations="no attributes" reason="<nil>"
 DEBU[0034] Request context                               context="attributes:
 - x.(String): \"test\"
 - c.(Network): 192.0.2.0/24
 - b.(Boolean): false"
-DEBU[0034] Response                                      effect=NOTAPPLICABLE obligation="no attributes" reason=Ok
+DEBU[0034] Response                                      effect=NotApplicable obligations="no attributes" reason="<nil>"
 DEBU[0034] Request context                               context="attributes:
 - x.(String): \"example\""
-DEBU[0034] Response                                      effect=NOTAPPLICABLE obligation="no attributes" reason=Ok
+DEBU[0034] Response                                      effect=NotApplicable obligations="no attributes" reason="<nil>"
 ...
 ```

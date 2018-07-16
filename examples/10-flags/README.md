@@ -13,6 +13,7 @@ INFO[0000] Parsing policy                                policy=flags.yaml
 INFO[0000] Opening content                               content=content.json
 INFO[0000] Parsing content                               content=content.json
 INFO[0000] Opening control port                          address=":5554"
+INFO[0000] Opening storage port                          address=":5552"
 INFO[0000] Creating service protocol handler
 INFO[0000] Creating control protocol handler
 INFO[0000] Serving control requests
@@ -23,8 +24,7 @@ INFO[0000] Serving decision requests
 In other terminal run pepcli:
 ```
 $ pepcli -i flags.requests.yaml test
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "r"
       type: "string"
@@ -34,8 +34,7 @@ $ pepcli -i flags.requests.yaml test
       type: "list of strings"
       value: "\"red\",\"yellow\",\"indigo\""
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "r"
       type: "string"
@@ -45,8 +44,7 @@ $ pepcli -i flags.requests.yaml test
       type: "list of strings"
       value: "\"orange\",\"green\",\"blue\""
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "r"
       type: "string"
@@ -56,8 +54,7 @@ $ pepcli -i flags.requests.yaml test
       type: "list of strings"
       value: "\"yellow\",\"green\",\"violet\""
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "r"
       type: "string"
@@ -67,8 +64,7 @@ $ pepcli -i flags.requests.yaml test
       type: "list of strings"
       value: "\"green\",\"blue\",\"violet\""
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "r"
       type: "string"
@@ -78,8 +74,7 @@ $ pepcli -i flags.requests.yaml test
       type: "list of strings"
       value: "\"blue\",\"indigo\",\"violet\""
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "r"
       type: "string"
@@ -89,8 +84,7 @@ $ pepcli -i flags.requests.yaml test
       type: "list of strings"
       value: "\"indigo\",\"violet\""
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "r"
       type: "string"
@@ -100,8 +94,7 @@ $ pepcli -i flags.requests.yaml test
       type: "list of strings"
       value: "\"violet\""
 
-- effect: DENY
-  reason: "Ok"
+- effect: Deny
 
 ```
 
@@ -113,63 +106,63 @@ DEBU[0005] Request context                               context="content:
 
 attributes:
 - d.(Domain): domain(example.red)"
-DEBU[0005] Response                                      effect=PERMIT obligation="attributes:
+DEBU[0005] Response                                      effect=Permit obligations="attributes:
 - r.(string): \"red\"
-- t.(list of strings): \"\\\"red\\\",\\\"yellow\\\",\\\"indigo\\\"\"" reason=Ok
+- t.(list of strings): \"\\\"red\\\",\\\"yellow\\\",\\\"indigo\\\"\"" reason="<nil>"
 DEBU[0005] Request context                               context="content:
 - content: no tag
 
 attributes:
 - d.(Domain): domain(example.orange)"
-DEBU[0005] Response                                      effect=PERMIT obligation="attributes:
+DEBU[0005] Response                                      effect=Permit obligations="attributes:
 - r.(string): \"orange\"
-- t.(list of strings): \"\\\"orange\\\",\\\"green\\\",\\\"blue\\\"\"" reason=Ok
+- t.(list of strings): \"\\\"orange\\\",\\\"green\\\",\\\"blue\\\"\"" reason="<nil>"
 DEBU[0005] Request context                               context="content:
 - content: no tag
 
 attributes:
 - d.(Domain): domain(example.yellow)"
-DEBU[0005] Response                                      effect=PERMIT obligation="attributes:
+DEBU[0005] Response                                      effect=Permit obligations="attributes:
 - r.(string): \"yellow\"
-- t.(list of strings): \"\\\"yellow\\\",\\\"green\\\",\\\"violet\\\"\"" reason=Ok
+- t.(list of strings): \"\\\"yellow\\\",\\\"green\\\",\\\"violet\\\"\"" reason="<nil>"
 DEBU[0005] Request context                               context="content:
 - content: no tag
 
 attributes:
 - d.(Domain): domain(example.green)"
-DEBU[0005] Response                                      effect=PERMIT obligation="attributes:
+DEBU[0005] Response                                      effect=Permit obligations="attributes:
 - r.(string): \"green\"
-- t.(list of strings): \"\\\"green\\\",\\\"blue\\\",\\\"violet\\\"\"" reason=Ok
+- t.(list of strings): \"\\\"green\\\",\\\"blue\\\",\\\"violet\\\"\"" reason="<nil>"
 DEBU[0005] Request context                               context="content:
 - content: no tag
 
 attributes:
 - d.(Domain): domain(example.blue)"
-DEBU[0005] Response                                      effect=PERMIT obligation="attributes:
+DEBU[0005] Response                                      effect=Permit obligations="attributes:
 - r.(string): \"blue\"
-- t.(list of strings): \"\\\"blue\\\",\\\"indigo\\\",\\\"violet\\\"\"" reason=Ok
+- t.(list of strings): \"\\\"blue\\\",\\\"indigo\\\",\\\"violet\\\"\"" reason="<nil>"
 DEBU[0005] Request context                               context="content:
 - content: no tag
 
 attributes:
 - d.(Domain): domain(example.indigo)"
-DEBU[0005] Response                                      effect=PERMIT obligation="attributes:
+DEBU[0005] Response                                      effect=Permit obligations="attributes:
 - r.(string): \"indigo\"
-- t.(list of strings): \"\\\"indigo\\\",\\\"violet\\\"\"" reason=Ok
+- t.(list of strings): \"\\\"indigo\\\",\\\"violet\\\"\"" reason="<nil>"
 DEBU[0005] Request context                               context="content:
 - content: no tag
 
 attributes:
 - d.(Domain): domain(example.violet)"
-DEBU[0005] Response                                      effect=PERMIT obligation="attributes:
+DEBU[0005] Response                                      effect=Permit obligations="attributes:
 - r.(string): \"violet\"
-- t.(list of strings): \"\\\"violet\\\"\"" reason=Ok
+- t.(list of strings): \"\\\"violet\\\"\"" reason="<nil>"
 DEBU[0005] Request context                               context="content:
 - content: no tag
 
 attributes:
 - d.(Domain): domain(example.black)"
-DEBU[0005] Response                                      effect=DENY obligation="no attributes" reason=Ok
+DEBU[0005] Response                                      effect=Deny obligations="no attributes" reason="<nil>"
 ...
 ```
 
@@ -182,6 +175,7 @@ INFO[0000] Starting PDP server
 INFO[0000] Loading policy                                policy=flags.yaml
 INFO[0000] Parsing policy                                policy=flags.yaml
 INFO[0000] Opening control port                          address=":5554"
+INFO[0000] Opening storage port                          address=":5552"
 INFO[0000] Creating service protocol handler
 INFO[0000] Creating control protocol handler
 INFO[0000] Serving control requests
@@ -192,11 +186,11 @@ INFO[0000] Serving decision requests
 Any request to the server now returns an error:
 ```
 $ pepcli -i update-flags.requests.yaml test
-- effect: INDETERMINATE
-  reason: "#07: Failed to process request: #2e (hidden policy>mapper): Missing content content"
+- effect: Indeterminate
+  reason: "#a2: #a3: Failed to process request: #2e (hidden policy>mapper): Missing content content"
 
-- effect: INDETERMINATE
-  reason: "#07: Failed to process request: #2e (hidden policy>mapper): Missing content content"
+- effect: Indeterminate
+  reason: "#a2: #a3: Failed to process request: #2e (hidden policy>mapper): Missing content content"
 
 ```
 
@@ -204,10 +198,10 @@ PDP logs:
 ```
 DEBU[0141] Request context                               context="attributes:
 - d.(Domain): domain(example.red)"
-DEBU[0141] Response                                      effect=INDETERMINATE obligation="no attributes" reason="#07: Failed to process request: #2e (hidden policy>mapper): Missing content content"
+DEBU[0141] Response                                      effect=Indeterminate obligations="no attributes" reason="#2e (hidden policy>mapper): Missing content content"
 DEBU[0141] Request context                               context="attributes:
 - d.(Domain): domain(test.red)"
-DEBU[0141] Response                                      effect=INDETERMINATE obligation="no attributes" reason="#07: Failed to process request: #2e (hidden policy>mapper): Missing content content"
+DEBU[0141] Response                                      effect=Indeterminate obligations="no attributes" reason="#2e (hidden policy>mapper): Missing content content"
 ```
 
 Upload content using papcli:
@@ -231,8 +225,7 @@ INFO[0313] Got notified about readiness
 With the content PDP returns some data:
 ```
 $ pepcli -i update-flags.requests.yaml test
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "r"
       type: "string"
@@ -242,8 +235,7 @@ $ pepcli -i update-flags.requests.yaml test
       type: "list of strings"
       value: "\"red\",\"yellow\",\"indigo\""
 
-- effect: DENY
-  reason: "Ok"
+- effect: Deny
 
 ```
 
@@ -254,15 +246,15 @@ DEBU[0355] Request context                               context="content:
 
 attributes:
 - d.(Domain): domain(example.red)"
-DEBU[0355] Response                                      effect=PERMIT obligation="attributes:
+DEBU[0355] Response                                      effect=Permit obligations="attributes:
 - r.(string): \"red\"
-- t.(list of strings): \"\\\"red\\\",\\\"yellow\\\",\\\"indigo\\\"\"" reason=Ok
+- t.(list of strings): \"\\\"red\\\",\\\"yellow\\\",\\\"indigo\\\"\"" reason="<nil>"
 DEBU[0355] Request context                               context="content:
 - content: 823f79f2-0001-4eb2-9ba0-2a8c1b284443
 
 attributes:
 - d.(Domain): domain(test.red)"
-DEBU[0355] Response                                      effect=DENY obligation="no attributes" reason=Ok
+DEBU[0355] Response                                      effect=Deny obligations="no attributes" reason="<nil>"
 ```
 
 Let's put some tags for "test.red" and remove some from "example.red":
@@ -292,8 +284,7 @@ INFO[0897] Got notified about readiness
 Now PDP respose changed:
 ```
 $ pepcli -i update-flags.requests.yaml test
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "r"
       type: "string"
@@ -303,8 +294,7 @@ $ pepcli -i update-flags.requests.yaml test
       type: "list of strings"
       value: "\"yellow\",\"indigo\""
 
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "r"
       type: "string"
@@ -323,15 +313,15 @@ DEBU[1132] Request context                               context="content:
 
 attributes:
 - d.(Domain): domain(example.red)"
-DEBU[1132] Response                                      effect=PERMIT obligation="attributes:
+DEBU[1132] Response                                      effect=Permit obligations="attributes:
 - r.(string): \"yellow\"
-- t.(list of strings): \"\\\"yellow\\\",\\\"indigo\\\"\"" reason=Ok
+- t.(list of strings): \"\\\"yellow\\\",\\\"indigo\\\"\"" reason="<nil>"
 DEBU[1132] Request context                               context="content:
 - content: 93a17ce2-788d-476f-bd11-a5580a2f35f3
 
 attributes:
 - d.(Domain): domain(test.red)"
-DEBU[1132] Response                                      effect=PERMIT obligation="attributes:
+DEBU[1132] Response                                      effect=Permit obligations="attributes:
 - r.(string): \"red\"
-- t.(list of strings): \"\\\"red\\\"\"" reason=Ok
+- t.(list of strings): \"\\\"red\\\"\"" reason="<nil>"
 ```

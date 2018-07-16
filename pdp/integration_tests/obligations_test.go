@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/infobloxopen/themis/pdp"
-	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
 func TestExpression(t *testing.T) {
@@ -71,17 +70,9 @@ policies:
 		},
 		testSet: []testCase{
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeIntegerAssignment("b", 1),
 				},
 				expected:           pdp.EffectPermit,
 				expectedObligation: "All Good",

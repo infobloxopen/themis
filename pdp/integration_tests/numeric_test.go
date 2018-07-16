@@ -8,7 +8,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/infobloxopen/themis/pdp"
-	pb "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pdp/ast"
 )
 
@@ -29,7 +28,7 @@ func (f policyFormat) String() string {
 }
 
 type testCase struct {
-	attrs              []*pb.Attribute
+	attrs              []pdp.AttributeAssignment
 	expected           int
 	expectedObligation string
 	expectedError      string
@@ -60,27 +59,16 @@ func loadPolicy(pf policyFormat, ps string) *pdp.PolicyStorage {
 	return policyStorage
 }
 
-func createRequest(tc testCase) *pb.Request {
-	return &pb.Request{
-		Attributes: tc.attrs,
-	}
-}
+func createContext(req []pdp.AttributeAssignment) (*pdp.Context, error) {
+	ctx, err := pdp.NewContext(nil, len(req), func(i int) (string, pdp.AttributeValue, error) {
+		a := req[i]
 
-func createContext(req *pb.Request) (*pdp.Context, error) {
-	ctx, err := pdp.NewContext(nil, len(req.Attributes), func(i int) (string, pdp.AttributeValue, error) {
-		a := req.Attributes[i]
-
-		t, ok := pdp.BuiltinTypes[strings.ToLower(a.Type)]
-		if !ok {
-			return "", pdp.UndefinedValue, fmt.Errorf("unknown Attribute Type: %s", a.Type)
-		}
-
-		v, err := pdp.MakeValueFromString(t, a.Value)
+		v, err := a.GetValue()
 		if err != nil {
-			return "", pdp.UndefinedValue, fmt.Errorf("error making value from string: %s", err)
+			return "", pdp.UndefinedValue, fmt.Errorf("error getting attribute value: %s", err)
 		}
 
-		return a.Id, v, nil
+		return a.GetID(), v, nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cannot create context: %s", err)
@@ -89,11 +77,35 @@ func createContext(req *pb.Request) (*pdp.Context, error) {
 	return ctx, nil
 }
 
+func serializeAssignments(attrs []pdp.AttributeAssignment) (string, error) {
+	s := make([]string, len(attrs))
+
+	ctx, err := pdp.NewContext(nil, 0, nil)
+	if err != nil {
+		return "", fmt.Errorf("can't create empty context")
+	}
+
+	for i, a := range attrs {
+		id, t, v, err := a.Serialize(ctx)
+		if err != nil {
+			return "", fmt.Errorf("can't serialize attribute %q (%d): %s", id, i, err)
+		}
+
+		s[i] = fmt.Sprintf("%s.(%s)=%q", id, t, v)
+	}
+
+	return strings.Join(s, ","), nil
+}
+
 func validateTestSuite(ts testSuite, t *testing.T) {
-	for _, tc := range ts.testSet {
-		t.Run(fmt.Sprintf("%v", tc.attrs), func(t *testing.T) {
-			req := createRequest(tc)
-			ctx, err := createContext(req)
+	for i, tc := range ts.testSet {
+		desc, err := serializeAssignments(tc.attrs)
+		if err != nil {
+			t.Fatalf("can't create descripiton for case %d: %s", i, err)
+		}
+
+		t.Run(desc, func(t *testing.T) {
+			ctx, err := createContext(tc.attrs)
 			if err != nil {
 				t.Fatalf("Expected no error while creating context but got: %s", err)
 			}
@@ -102,7 +114,7 @@ func validateTestSuite(ts testSuite, t *testing.T) {
 				t.Run(fmt.Sprintf("Policy Format: %s", pf), func(t *testing.T) {
 					p := loadPolicy(pf, ps)
 					r := p.Root().Calculate(ctx)
-					effect, obligations, err := r.Status()
+					err := r.Status
 					if err != nil {
 						if tc.expectedError == "" {
 							t.Fatalf("Expected no error while evaluating policy but got: %s", err)
@@ -111,16 +123,16 @@ func validateTestSuite(ts testSuite, t *testing.T) {
 						}
 					}
 
-					if effect != tc.expected {
+					if r.Effect != tc.expected {
 						t.Fatalf("Expected result of policy evaluation %s, but got %s",
-							pdp.EffectNameFromEnum(tc.expected), pdp.EffectNameFromEnum(effect))
+							pdp.EffectNameFromEnum(tc.expected), pdp.EffectNameFromEnum(r.Effect))
 					}
 					if tc.expectedObligation != "" {
-						obLen := len(obligations)
+						obLen := len(r.Obligations)
 						if obLen != 1 {
 							t.Fatalf("Expected result of policy evaluation include 1 obligation, but got %d", obLen)
 						}
-						_, _, obligationRes, err := obligations[0].Serialize(ctx)
+						_, _, obligationRes, err := r.Obligations[0].Serialize(ctx)
 						if err != nil {
 							t.Fatalf("Expected when serializing obligation, but got %s", err)
 						}
@@ -181,92 +193,45 @@ policies:
 		},
 		testSet: []testCase{
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeIntegerAssignment("b", 1),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeIntegerAssignment("b", 0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "-1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", -1),
+					pdp.MakeIntegerAssignment("b", -1),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeIntegerAssignment("b", 0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeIntegerAssignment("b", 1),
+
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "-2",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeIntegerAssignment("b", -2),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
@@ -323,77 +288,37 @@ policies:
 		},
 		testSet: []testCase{
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeIntegerAssignment("b", 0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "-1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeIntegerAssignment("b", -1),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "-1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeIntegerAssignment("b", -1),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeIntegerAssignment("b", 0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", -1),
+					pdp.MakeIntegerAssignment("b", 1),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
@@ -461,122 +386,50 @@ policies:
 		},
 		testSet: []testCase{
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "2",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeIntegerAssignment("b", 1),
+					pdp.MakeIntegerAssignment("c", 2),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeIntegerAssignment("b", 0),
+					pdp.MakeIntegerAssignment("c", 0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "-2",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", -1),
+					pdp.MakeIntegerAssignment("b", -1),
+					pdp.MakeIntegerAssignment("c", -2),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "2",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeIntegerAssignment("b", 0),
+					pdp.MakeIntegerAssignment("c", 2),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "2",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeIntegerAssignment("b", 1),
+					pdp.MakeIntegerAssignment("c", 2),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "2",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeIntegerAssignment("b", -1),
+					pdp.MakeIntegerAssignment("c", 2),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
@@ -644,122 +497,50 @@ policies:
 		},
 		testSet: []testCase{
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeIntegerAssignment("b", 1),
+					pdp.MakeIntegerAssignment("c", 0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeIntegerAssignment("b", 0),
+					pdp.MakeIntegerAssignment("c", 0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", -1),
+					pdp.MakeIntegerAssignment("b", -1),
+					pdp.MakeIntegerAssignment("c", 0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeIntegerAssignment("b", 0),
+					pdp.MakeIntegerAssignment("c", 0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeIntegerAssignment("b", 1),
+					pdp.MakeIntegerAssignment("c", 0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeIntegerAssignment("b", -1),
+					pdp.MakeIntegerAssignment("c", 0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
@@ -827,162 +608,66 @@ policies:
 		},
 		testSet: []testCase{
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeIntegerAssignment("b", 1),
+					pdp.MakeIntegerAssignment("c", 1),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeIntegerAssignment("b", 0),
+					pdp.MakeIntegerAssignment("c", 0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeIntegerAssignment("b", 1),
+					pdp.MakeIntegerAssignment("c", 0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", -1),
+					pdp.MakeIntegerAssignment("b", -1),
+					pdp.MakeIntegerAssignment("c", 1),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "-1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", -1),
+					pdp.MakeIntegerAssignment("b", 1),
+					pdp.MakeIntegerAssignment("c", -1),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeIntegerAssignment("b", 0),
+					pdp.MakeIntegerAssignment("c", 1),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", -1),
+					pdp.MakeIntegerAssignment("b", 1),
+					pdp.MakeIntegerAssignment("c", 1),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeIntegerAssignment("b", 1),
+					pdp.MakeIntegerAssignment("c", 1),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
@@ -1050,202 +735,82 @@ policies:
 		},
 		testSet: []testCase{
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeIntegerAssignment("b", 1),
+					pdp.MakeIntegerAssignment("c", 1),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeIntegerAssignment("b", 1),
+					pdp.MakeIntegerAssignment("c", 0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "4",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "2",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "2",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 4),
+					pdp.MakeIntegerAssignment("b", 2),
+					pdp.MakeIntegerAssignment("c", 2),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "7",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "2",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "3",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 7),
+					pdp.MakeIntegerAssignment("b", 2),
+					pdp.MakeIntegerAssignment("c", 3),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "-1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", -1),
+					pdp.MakeIntegerAssignment("b", 1),
+					pdp.MakeIntegerAssignment("c", -1),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "-1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeIntegerAssignment("b", -1),
+					pdp.MakeIntegerAssignment("c", -1),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "2",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 2),
+					pdp.MakeIntegerAssignment("b", 1),
+					pdp.MakeIntegerAssignment("c", 1),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", -1),
+					pdp.MakeIntegerAssignment("b", 1),
+					pdp.MakeIntegerAssignment("c", 1),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeIntegerAssignment("b", 1),
+					pdp.MakeIntegerAssignment("c", 1),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "c",
-						Type:  "Integer",
-						Value: "1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeIntegerAssignment("b", 0),
+					pdp.MakeIntegerAssignment("c", 1),
 				},
 				expected:      pdp.EffectIndeterminateP,
 				expectedError: "Integer divisor has a value of 0",
@@ -1303,92 +868,44 @@ policies:
 		},
 		testSet: []testCase{
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "1.0",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "0.9",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 1.0),
+					pdp.MakeFloatAssignment("b", 0.9),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "1.0",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "-1.0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 1.0),
+					pdp.MakeFloatAssignment("b", -1.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "0.0",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "-1.0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 0.0),
+					pdp.MakeFloatAssignment("b", -1.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "0.8",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "0.9",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 0.8),
+					pdp.MakeFloatAssignment("b", 0.9),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "-2.0",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", -2.0),
+					pdp.MakeFloatAssignment("b", 1.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "-1.0",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "0.0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", -1.0),
+					pdp.MakeFloatAssignment("b", 0.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
@@ -1456,122 +973,50 @@ policies:
 		},
 		testSet: []testCase{
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "float",
-						Value: "1.",
-					},
-					{
-						Id:    "b",
-						Type:  "float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "float",
-						Value: "2.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 1.0),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 2.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "float",
-						Value: "0.",
-					},
-					{
-						Id:    "b",
-						Type:  "float",
-						Value: "0.",
-					},
-					{
-						Id:    "c",
-						Type:  "float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 0.0),
+					pdp.MakeFloatAssignment("b", 0.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "float",
-						Value: "-1.",
-					},
-					{
-						Id:    "b",
-						Type:  "float",
-						Value: "-1.",
-					},
-					{
-						Id:    "c",
-						Type:  "float",
-						Value: "-2.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", -1.0),
+					pdp.MakeFloatAssignment("b", -1.0),
+					pdp.MakeFloatAssignment("c", -2.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "float",
-						Value: "1.",
-					},
-					{
-						Id:    "b",
-						Type:  "float",
-						Value: "0.",
-					},
-					{
-						Id:    "c",
-						Type:  "float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 1.0),
+					pdp.MakeFloatAssignment("b", 0.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "float",
-						Value: "0.",
-					},
-					{
-						Id:    "b",
-						Type:  "float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "float",
-						Value: "2.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 0.0),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 2.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "float",
-						Value: "1.",
-					},
-					{
-						Id:    "b",
-						Type:  "float",
-						Value: "-1.",
-					},
-					{
-						Id:    "c",
-						Type:  "float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 1.0),
+					pdp.MakeFloatAssignment("b", -1.0),
+					pdp.MakeFloatAssignment("c", 1.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
@@ -1639,122 +1084,50 @@ policies:
 		},
 		testSet: []testCase{
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 1.0),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "0.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "0.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 0.0),
+					pdp.MakeFloatAssignment("b", 0.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "-1.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "-1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", -1.0),
+					pdp.MakeFloatAssignment("b", -1.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "0.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 1.0),
+					pdp.MakeFloatAssignment("b", 0.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "0.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 0.0),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "-1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 1.0),
+					pdp.MakeFloatAssignment("b", -1.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
@@ -1824,162 +1197,66 @@ policies:
 		},
 		testSet: []testCase{
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 1.0),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 1.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "0.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 1.0),
+					pdp.MakeFloatAssignment("b", 0.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "0.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 0.0),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "-1.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "-1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", -1.0),
+					pdp.MakeFloatAssignment("b", -1.0),
+					pdp.MakeFloatAssignment("c", 1.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "-1.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "-1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", -1.0),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", -1.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "0.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 1.0),
+					pdp.MakeFloatAssignment("b", 0.0),
+					pdp.MakeFloatAssignment("c", 1.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "-1.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", -1.0),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 1.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "1.9e+200",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.9e+233",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 1.9e+200),
+					pdp.MakeFloatAssignment("b", 1.9e+233),
+					pdp.MakeFloatAssignment("c", 1.0),
 				},
 				expected:      pdp.EffectIndeterminateP,
 				expectedError: "Float result has a value of Inf",
@@ -2050,182 +1327,74 @@ policies:
 		},
 		testSet: []testCase{
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 1.0),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 1.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "0.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 0.0),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "4.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "2.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "2.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 4.0),
+					pdp.MakeFloatAssignment("b", 2.0),
+					pdp.MakeFloatAssignment("c", 2.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "7.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "2.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "3.5",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 7.0),
+					pdp.MakeFloatAssignment("b", 2.0),
+					pdp.MakeFloatAssignment("c", 3.5),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "-1.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "-1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", -1.0),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", -1.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "-1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "-1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 1.0),
+					pdp.MakeFloatAssignment("b", -1.0),
+					pdp.MakeFloatAssignment("c", -1.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "2.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 2.0),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 1.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "-1.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", -1.0),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 1.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "0.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 1.0),
+					pdp.MakeFloatAssignment("b", 0.0),
+					pdp.MakeFloatAssignment("c", 1.0),
 				},
 				expected:      pdp.EffectIndeterminateP,
 				expectedError: "Float divisor has a value of 0",
@@ -2283,92 +1452,44 @@ policies:
 		},
 		testSet: []testCase{
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeFloatAssignment("b", 1.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeFloatAssignment("b", 0.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "-1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", -1),
+					pdp.MakeFloatAssignment("b", -1.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeFloatAssignment("b", 0.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeFloatAssignment("b", 1.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "-2.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeFloatAssignment("b", -2.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
@@ -2425,77 +1546,37 @@ policies:
 		},
 		testSet: []testCase{
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeFloatAssignment("b", 0.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "-1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeFloatAssignment("b", -1.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "-1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeFloatAssignment("b", -1.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeFloatAssignment("b", 0.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", -1),
+					pdp.MakeFloatAssignment("b", 1.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
@@ -2563,123 +1644,51 @@ policies:
 		},
 		testSet: []testCase{
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "float",
-						Value: "1.3",
-					},
-					{
-						Id:    "c",
-						Type:  "float",
-						Value: "2.3",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeFloatAssignment("b", 1.3),
+					pdp.MakeFloatAssignment("c", 2.3),
 				},
 				expected: pdp.EffectPermit,
 			},
 
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "float",
-						Value: "0.",
-					},
-					{
-						Id:    "c",
-						Type:  "float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeFloatAssignment("b", 0.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "b",
-						Type:  "float",
-						Value: "-1.1",
-					},
-					{
-						Id:    "c",
-						Type:  "float",
-						Value: "-2.1",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", -1),
+					pdp.MakeFloatAssignment("b", -1.1),
+					pdp.MakeFloatAssignment("c", -2.1),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "float",
-						Value: "0.",
-					},
-					{
-						Id:    "c",
-						Type:  "float",
-						Value: "2.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeFloatAssignment("b", 0.0),
+					pdp.MakeFloatAssignment("c", 2.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "float",
-						Value: "2.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 2.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "float",
-						Value: "-1.",
-					},
-					{
-						Id:    "c",
-						Type:  "float",
-						Value: "2.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeFloatAssignment("b", -1.0),
+					pdp.MakeFloatAssignment("c", 2.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
@@ -2746,122 +1755,50 @@ policies:
 		},
 		testSet: []testCase{
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "0.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeFloatAssignment("b", 0.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "-1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", -1),
+					pdp.MakeFloatAssignment("b", -1.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "0.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeFloatAssignment("b", 0.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "-1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "0",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeFloatAssignment("b", -1.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
@@ -2929,162 +1866,66 @@ policies:
 		},
 		testSet: []testCase{
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 1.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "0.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeFloatAssignment("b", 0.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "-1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", -1),
+					pdp.MakeFloatAssignment("b", -1.0),
+					pdp.MakeFloatAssignment("c", 1.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "-1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", -1),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", -1.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "0.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeFloatAssignment("b", 0.0),
+					pdp.MakeFloatAssignment("c", 1.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", -1),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 1.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 1.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
@@ -3152,182 +1993,74 @@ policies:
 		},
 		testSet: []testCase{
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 1.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "4",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "2.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "2.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 4),
+					pdp.MakeFloatAssignment("b", 2.0),
+					pdp.MakeFloatAssignment("c", 2.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "7",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "2.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "3.5",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 7),
+					pdp.MakeFloatAssignment("b", 2.0),
+					pdp.MakeFloatAssignment("c", 3.5),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "-1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", -1),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", -1.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "-1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "-1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 1),
+					pdp.MakeFloatAssignment("b", -1.0),
+					pdp.MakeFloatAssignment("c", -1.0),
 				},
 				expected: pdp.EffectPermit,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "2",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 2),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 1.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "-1",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", -1),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 1.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Integer",
-						Value: "0",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "1.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeIntegerAssignment("a", 0),
+					pdp.MakeFloatAssignment("b", 1.0),
+					pdp.MakeFloatAssignment("c", 1.0),
 				},
 				expected: pdp.EffectNotApplicable,
 			},
@@ -3455,64 +2188,28 @@ policies:
 		},
 		testSet: []testCase{
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "5.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "0.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 1.0),
+					pdp.MakeFloatAssignment("b", 5.0),
+					pdp.MakeFloatAssignment("c", 0.0),
 				},
 				expected:           pdp.EffectPermit,
 				expectedObligation: "Below",
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "5.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "10.",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 1.0),
+					pdp.MakeFloatAssignment("b", 5.0),
+					pdp.MakeFloatAssignment("c", 10.0),
 				},
 				expected:           pdp.EffectPermit,
 				expectedObligation: "Above",
 			},
 			{
-				attrs: []*pb.Attribute{
-					{
-						Id:    "a",
-						Type:  "Float",
-						Value: "1.",
-					},
-					{
-						Id:    "b",
-						Type:  "Float",
-						Value: "5.",
-					},
-					{
-						Id:    "c",
-						Type:  "Float",
-						Value: "3.3",
-					},
+				attrs: []pdp.AttributeAssignment{
+					pdp.MakeFloatAssignment("a", 1.0),
+					pdp.MakeFloatAssignment("b", 5.0),
+					pdp.MakeFloatAssignment("c", 3.3),
 				},
 				expected:           pdp.EffectPermit,
 				expectedObligation: "Within",

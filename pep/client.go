@@ -135,6 +135,43 @@ func WithConnectionStateNotification(callback ConnectionStateNotificationCallbac
 	}
 }
 
+// WithMaxRequestSize returns an Option which limits request size in bytes
+// to given value. Default 10KB.
+func WithMaxRequestSize(size uint32) Option {
+	return func(o *options) {
+		o.maxRequestSize = size
+	}
+}
+
+// WithNoRequestBufferPool returns an Option which makes client allocate new
+// buffer for each request.
+func WithNoRequestBufferPool() Option {
+	return func(o *options) {
+		o.noPool = true
+	}
+}
+
+// WithCacheTTL returns an Option which adds cache with given TTL for cached
+// requests. Cache size isn't limited in the case and can consume all available
+// memory on machine.
+func WithCacheTTL(ttl time.Duration) Option {
+	return func(o *options) {
+		o.cache = true
+		o.cacheTTL = ttl
+	}
+}
+
+// WithCacheTTLAndMaxSize returns an Option which adds cache with given TTL
+// and size limit for entire cache in MB. When the limit is reached then new
+// requests override the oldest ones.
+func WithCacheTTLAndMaxSize(ttl time.Duration, size int) Option {
+	return func(o *options) {
+		o.cache = true
+		o.cacheTTL = ttl
+		o.cacheMaxSize = size
+	}
+}
+
 const (
 	noBalancer = iota
 	roundRobinBalancer
@@ -142,18 +179,24 @@ const (
 )
 
 type options struct {
-	addresses   []string
-	balancer    int
-	tracer      ot.Tracer
-	maxStreams  int
-	connTimeout time.Duration
-	connStateCb ConnectionStateNotificationCallback
+	addresses      []string
+	balancer       int
+	tracer         ot.Tracer
+	maxStreams     int
+	connTimeout    time.Duration
+	connStateCb    ConnectionStateNotificationCallback
+	maxRequestSize uint32
+	noPool         bool
+	cache          bool
+	cacheTTL       time.Duration
+	cacheMaxSize   int
 }
 
 // NewClient creates client instance using given options.
 func NewClient(opts ...Option) Client {
 	o := options{
-		connTimeout: -1,
+		connTimeout:    -1,
+		maxRequestSize: 10240,
 	}
 	for _, opt := range opts {
 		opt(&o)

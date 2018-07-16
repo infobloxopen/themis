@@ -19,46 +19,44 @@ INFO[0000] Serving decision requests
 In other terminal run pepcli:
 ```
 $ pepcli -i policy-set.requests.yaml test
-- effect: PERMIT
-  reason: "Ok"
+- effect: Permit
   obligation:
     - id: "a"
       type: "address"
       value: "192.0.2.1"
 
-- effect: DENY
-  reason: "Ok"
+- effect: Deny
   obligation:
     - id: "a"
       type: "address"
       value: "192.0.2.1"
 
-- effect: NOTAPPLICABLE
-  reason: "Ok"
+- effect: NotApplicable
 
-- effect: INDETERMINATEP
-  reason: "#07: Failed to process request: #02 (policy set \"Test Policy Set\">hidden policy set>target>any>all>match>equal>first argument>attr(z.String)): Missing attribute"
+- effect: Indeterminate{P}
+  reason: "#99: #9a: Failed to process request: #02 (policy set \"Test Policy Set\">hidden policy set>target>any>all>match>equal>first argument>attr(z.String)): Missing attribute"
+
 ```
 
 PDP logs:
 ```
 ...
 DEBU[0243] Request context                               context="attributes:
-- z.(String): \"example\"
-- x.(String): \"test\""
-DEBU[0243] Response                                      effect=PERMIT obligation="attributes:
-- a.(address): \"192.0.2.1\"" reason=Ok
+- x.(String): \"test\"
+- z.(String): \"example\""
+DEBU[0243] Response                                      effect=Permit obligations="attributes:
+- a.(address): \"192.0.2.1\"" reason="<nil>"
 DEBU[0243] Request context                               context="attributes:
 - x.(String): \"test\"
 - z.(String): \"test\""
-DEBU[0243] Response                                      effect=DENY obligation="attributes:
-- a.(address): \"192.0.2.1\"" reason=Ok
+DEBU[0243] Response                                      effect=Deny obligations="attributes:
+- a.(address): \"192.0.2.1\"" reason="<nil>"
 DEBU[0243] Request context                               context="attributes:
 - x.(String): \"example\"
 - z.(String): \"test\""
-DEBU[0243] Response                                      effect=NOTAPPLICABLE obligation="no attributes" reason=Ok
+DEBU[0243] Response                                      effect=NotApplicable obligations="no attributes" reason="<nil>"
 DEBU[0243] Request context                               context="attributes:
 - x.(String): \"test\""
-DEBU[0243] Response                                      effect=INDETERMINATEP obligation="no attributes" reason="#07: Failed to process request: #02 (policy set \"Test Policy Set\">hidden policy set>target>any>all>match>equal>first argument>attr(z.String)): Missing attribute"
+DEBU[0243] Response                                      effect="Indeterminate{P}" obligations="no attributes" reason="#02 (policy set \"Test Policy Set\">hidden policy set>target>any>all>match>equal>first argument>attr(z.String)): Missing attribute"
 ...
 ```

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/infobloxopen/go-trees/domain"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/infobloxopen/themis/pdp"
@@ -768,7 +769,7 @@ var (
 	twoStageBenchmarkPolicyStorage   *pdp.PolicyStorage
 	threeStageBenchmarkPolicyStorage *pdp.PolicyStorage
 
-	benchmarkRequests []*pb.Request
+	benchmarkRequests []*pb.Msg
 )
 
 func init() {
@@ -776,7 +777,7 @@ func init() {
 
 	c, err := jcon.Unmarshal(strings.NewReader(benchmarkContent), nil)
 	if err != nil {
-		panic(fmt.Errorf("expected no error while parsing content but got: %s", err))
+		panic(err)
 	}
 
 	benchmarkContentStorage = pdp.NewLocalContentStorage([]*pdp.LocalContent{c})
@@ -784,40 +785,38 @@ func init() {
 
 	oneStageBenchmarkPolicyStorage, err = parser.Unmarshal(strings.NewReader(oneStageBenchmarkPolicySet), nil)
 	if err != nil {
-		panic(fmt.Errorf("expected no error while parsing policies but got: %s", err))
+		panic(err)
 	}
 
 	twoStageBenchmarkPolicyStorage, err = parser.Unmarshal(strings.NewReader(twoStageBenchmarkPolicySet), nil)
 	if err != nil {
-		panic(fmt.Errorf("expected no error while parsing policies but got: %s", err))
+		panic(err)
 	}
 
 	threeStageBenchmarkPolicyStorage, err = parser.Unmarshal(strings.NewReader(threeStageBenchmarkPolicySet), nil)
 	if err != nil {
-		panic(fmt.Errorf("expected no error while parsing policies but got: %s", err))
+		panic(err)
 	}
 
-	benchmarkRequests = make([]*pb.Request, 2000000)
+	benchmarkRequests = make([]*pb.Msg, 0x40000)
 	for i := range benchmarkRequests {
-		benchmarkRequests[i] = &pb.Request{
-			Attributes: []*pb.Attribute{
-				{
-					Id:    "k1",
-					Type:  "string",
-					Value: directionOpts[rand.Intn(len(directionOpts))],
-				},
-				{
-					Id:    "k2",
-					Type:  "string",
-					Value: policySetOpts[rand.Intn(len(policySetOpts))],
-				},
-				{
-					Id:    "k3",
-					Type:  "domain",
-					Value: domainOpts[rand.Intn(len(domainOpts))],
-				},
-			},
+		b := make([]byte, 128)
+
+		dn, err := domain.MakeNameFromString(domainOpts[rand.Intn(len(domainOpts))])
+		if err != nil {
+			panic(fmt.Errorf("failed to make domain for request %d: %s", i+1, err))
 		}
+
+		n, err := pdp.MarshalRequestAssignments(b, []pdp.AttributeAssignment{
+			pdp.MakeStringAssignment("k1", directionOpts[rand.Intn(len(directionOpts))]),
+			pdp.MakeStringAssignment("k2", policySetOpts[rand.Intn(len(policySetOpts))]),
+			pdp.MakeDomainAssignment("k3", dn),
+		})
+		if err != nil {
+			panic(fmt.Errorf("failed to marshal request %d: %s", i+1, err))
+		}
+
+		benchmarkRequests[i] = &pb.Msg{Body: b[:n]}
 	}
 }
 
@@ -826,15 +825,22 @@ func benchmarkPolicySet(p *pdp.PolicyStorage, b *testing.B) {
 	s.p = p
 	s.c = benchmarkContentStorage
 
+	var a [1]pdp.AttributeAssignment
+
 	for n := 0; n < b.N; n++ {
 		r, err := s.Validate(nil, benchmarkRequests[n%len(benchmarkRequests)])
 		if err != nil {
 			b.Fatalf("Expected no error while evaluating policies at %d iteration but got: %s", n+1, err)
 		}
 
-		if r.Effect >= pb.Response_INDETERMINATE {
-			b.Fatalf("Expected specific result of policy evaluation at %d iteration but got %s (%s)",
-				n+1, pb.Response_Effect_name[int32(r.Effect)], r.Reason)
+		effect, n, err := pdp.UnmarshalResponse(r.Body, a[:])
+		if err != nil {
+			b.Fatalf("Expected no error while unmarshalling response at %d iteration but got: %s", n+1, err)
+		}
+
+		if effect >= pdp.EffectIndeterminate {
+			b.Fatalf("Expected specific result of policy evaluation at %d iteration but got %s",
+				n+1, pdp.EffectNameFromEnum(effect))
 		}
 	}
 }
@@ -849,4 +855,44 @@ func BenchmarkTwoStagePolicySet(b *testing.B) {
 
 func BenchmarkThreeStagePolicySet(b *testing.B) {
 	benchmarkPolicySet(threeStageBenchmarkPolicyStorage, b)
+}
+
+func benchmarkRawPolicySet(p *pdp.PolicyStorage, b *testing.B) {
+	s := NewServer()
+	s.p = p
+	s.c = benchmarkContentStorage
+
+	var a [1]pdp.AttributeAssignment
+	var buf [1024]byte
+
+	for n := 0; n < b.N; n++ {
+		s.RLock()
+		p := s.p
+		c := s.c
+		s.RUnlock()
+
+		r := s.rawValidate(p, c, benchmarkRequests[n%len(benchmarkRequests)].Body, buf[:])
+
+		effect, n, err := pdp.UnmarshalResponse(r, a[:])
+		if err != nil {
+			b.Fatalf("Expected no error while unmarshalling response at %d iteration but got: %s", n+1, err)
+		}
+
+		if effect >= pdp.EffectIndeterminate {
+			b.Fatalf("Expected specific result of policy evaluation at %d iteration but got %s",
+				n+1, pdp.EffectNameFromEnum(effect))
+		}
+	}
+}
+
+func BenchmarkRawOneStagePolicySet(b *testing.B) {
+	benchmarkRawPolicySet(oneStageBenchmarkPolicyStorage, b)
+}
+
+func BenchmarkRawTwoStagePolicySet(b *testing.B) {
+	benchmarkRawPolicySet(twoStageBenchmarkPolicyStorage, b)
+}
+
+func BenchmarkRawThreeStagePolicySet(b *testing.B) {
+	benchmarkRawPolicySet(threeStageBenchmarkPolicyStorage, b)
 }

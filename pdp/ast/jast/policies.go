@@ -48,7 +48,7 @@ func (ctx *context) unmarshalEvaluable(d *json.Decoder) (pdp.Evaluable, error) {
 		policies []pdp.Evaluable
 		rules    []*pdp.Rule
 		target   pdp.Target
-		obligs   []pdp.AttributeAssignmentExpression
+		obligs   []pdp.AttributeAssignment
 		alg      interface{}
 	)
 

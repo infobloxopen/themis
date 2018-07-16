@@ -17,8 +17,8 @@ const (
 
 // Exec runs performance test for given server with requests from input and
 // dumps timings in JSON format to given file or standard output if file name is empty.
-func Exec(addr string, opts []pep.Option, in, out string, n int, v interface{}) error {
-	reqs, err := requests.Load(in)
+func Exec(addr string, opts []pep.Option, maxRequestSize, maxResponseObligations uint32, in, out string, n int, v interface{}) error {
+	reqs, err := requests.Load(in, maxRequestSize)
 	if err != nil {
 		return fmt.Errorf("can't load requests from \"%s\": %s", in, err)
 	}
@@ -34,7 +34,7 @@ func Exec(addr string, opts []pep.Option, in, out string, n int, v interface{}) 
 	}
 	defer c.Close()
 
-	recs, err := measurement(c, n, v.(config).parallel, v.(config).limit, reqs)
+	recs, err := measurement(c, n, v.(config).parallel, v.(config).limit, reqs, maxResponseObligations)
 	if err != nil {
 		return err
 	}

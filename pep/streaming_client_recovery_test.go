@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
@@ -51,26 +52,19 @@ func singleClientRecovery(streams int, t *testing.T) {
 			}
 		}),
 	)
+
 	err = c.Connect(fakeServerAddress)
 	if err != nil {
 		t.Fatalf("can't connect to fake server: %s", err)
 	}
 	defer c.Close()
 
-	in := pb.Request{
-		Attributes: []*pb.Attribute{
-			{
-				Id:    IDID,
-				Value: "1",
-			},
-			{
-				Id:    failID,
-				Value: thisRequest,
-			},
-		},
+	in := []pdp.AttributeAssignment{
+		pdp.MakeIntegerAssignment(IDID, 1),
+		pdp.MakeStringAssignment(failID, thisRequest),
 	}
 
-	var out pb.Request
+	var out pb.Msg
 	err = c.Validate(in, &out)
 	if err != nil {
 		t.Fatalf("can't send first request: %s", err)
@@ -125,26 +119,19 @@ func hotSotBalancedClientRecovery(streams int, t *testing.T) {
 			}
 		}),
 	)
+
 	err = c.Connect(fakeServerAddress)
 	if err != nil {
 		t.Fatalf("can't connect to fake server: %s", err)
 	}
 	defer c.Close()
 
-	in := pb.Request{
-		Attributes: []*pb.Attribute{
-			{
-				Id:    IDID,
-				Value: "1",
-			},
-			{
-				Id:    failID,
-				Value: thisRequest,
-			},
-		},
+	in := []pdp.AttributeAssignment{
+		pdp.MakeIntegerAssignment(IDID, 1),
+		pdp.MakeStringAssignment(failID, thisRequest),
 	}
 
-	var out pb.Request
+	var out pb.Msg
 	err = c.Validate(in, &out)
 	if err != nil {
 		t.Fatalf("can't send first request: %s", err)

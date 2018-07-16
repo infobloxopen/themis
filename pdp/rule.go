@@ -14,7 +14,7 @@ type Rule struct {
 	target      Target
 	condition   Expression
 	effect      int
-	obligations []AttributeAssignmentExpression
+	obligations []AttributeAssignment
 }
 
 func makeConditionStatus(err boundError, effect int) Response {
@@ -27,7 +27,7 @@ func makeConditionStatus(err boundError, effect int) Response {
 
 // NewRule creates new instance of rule with given id (or hidden), target,
 // condition, effect and obligations.
-func NewRule(ID string, hidden bool, target Target, condition Expression, effect int, obligations []AttributeAssignmentExpression) *Rule {
+func NewRule(ID string, hidden bool, target Target, condition Expression, effect int, obligations []AttributeAssignment) *Rule {
 	return &Rule{
 		id:          ID,
 		hidden:      hidden,

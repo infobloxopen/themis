@@ -41,7 +41,7 @@ type Policy struct {
 	hidden      bool
 	target      Target
 	rules       []*Rule
-	obligations []AttributeAssignmentExpression
+	obligations []AttributeAssignment
 	algorithm   RuleCombiningAlg
 }
 
@@ -49,7 +49,7 @@ type Policy struct {
 // set of rules, algorithm and obligations. To make instance of algorithm it
 // uses one of makers from RuleCombiningAlgs or RuleCombiningParamAlgs and its
 // parameters if it requires any.
-func NewPolicy(ID string, hidden bool, target Target, rules []*Rule, makeRCA RuleCombiningAlgMaker, params interface{}, obligations []AttributeAssignmentExpression) *Policy {
+func NewPolicy(ID string, hidden bool, target Target, rules []*Rule, makeRCA RuleCombiningAlgMaker, params interface{}, obligations []AttributeAssignment) *Policy {
 	for i, r := range rules {
 		r.ord = i
 	}
@@ -83,8 +83,8 @@ func (p *Policy) Calculate(ctx *Context) Response {
 	match, err := p.target.calculate(ctx)
 	if err != nil {
 		r := combineEffectAndStatus(err, p.algorithm.execute(p.rules, ctx))
-		if r.status != nil {
-			r.status = bindError(r.status, p.describe())
+		if r.Status != nil {
+			r.Status = bindError(r.Status, p.describe())
 		}
 		return r
 	}
@@ -95,11 +95,11 @@ func (p *Policy) Calculate(ctx *Context) Response {
 
 	r := p.algorithm.execute(p.rules, ctx)
 	if r.Effect == EffectDeny || r.Effect == EffectPermit {
-		r.obligations = append(r.obligations, p.obligations...)
+		r.Obligations = append(r.Obligations, p.obligations...)
 	}
 
-	if r.status != nil {
-		r.status = bindError(r.status, p.describe())
+	if r.Status != nil {
+		r.Status = bindError(r.Status, p.describe())
 	}
 
 	return r
@@ -334,7 +334,7 @@ func (a denyOverridesRCA) describe() string {
 
 func (a denyOverridesRCA) execute(rules []*Rule, ctx *Context) Response {
 	errs := []error{}
-	obligations := make([]AttributeAssignmentExpression, 0)
+	obligations := make([]AttributeAssignment, 0)
 
 	indetD := 0
 	indetP := 0
@@ -345,13 +345,13 @@ func (a denyOverridesRCA) execute(rules []*Rule, ctx *Context) Response {
 	for _, rule := range rules {
 		r := rule.calculate(ctx)
 		if r.Effect == EffectDeny {
-			obligations = append(obligations, r.obligations...)
+			obligations = append(obligations, r.Obligations...)
 			return r
 		}
 
 		if r.Effect == EffectPermit {
 			permits++
-			obligations = append(obligations, r.obligations...)
+			obligations = append(obligations, r.Obligations...)
 			continue
 		}
 
@@ -370,7 +370,7 @@ func (a denyOverridesRCA) execute(rules []*Rule, ctx *Context) Response {
 
 		}
 
-		errs = append(errs, r.status)
+		errs = append(errs, r.Status)
 	}
 
 	var err boundError

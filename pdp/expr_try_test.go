@@ -3,7 +3,7 @@ package pdp
 import "testing"
 
 func TestFunctionTry(t *testing.T) {
-	sAttr := AttributeDesignator{a: Attribute{id: "x", t: TypeString}}
+	sAttr := MakeStringDesignator("x")
 	sVal := MakeStringValue("test")
 
 	f := makeFunctionTry([]Expression{sAttr, sVal})
