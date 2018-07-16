@@ -27,6 +27,7 @@ type storageRuleFmt struct {
 	ID          string                          `json:"id"`
 	Target      Target                          `json:"target"`
 	Obligations []AttributeAssignmentExpression `json:"obligations"`
+	Effect      string                          `json:"effect"`
 }
 
 func marshalHeader(v interface{}, out io.Writer) error {
