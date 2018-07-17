@@ -58,6 +58,80 @@ var (
 )
 
 func TestMarshalResponse(t *testing.T) {
+	b, err := marshalResponse(EffectIndeterminate, testRequestAssignments,
+		fmt.Errorf("testError1"),
+		fmt.Errorf("testError2"),
+	)
+	assertRequestBytesBuffer(t, "marshalResponse", err, b, len(b), append(
+		[]byte{
+			1, 0, 3,
+			43, 0, 'm', 'u', 'l', 't', 'i', 'p', 'l', 'e', ' ', 'e', 'r', 'r', 'o', 'r', 's', ':', ' ',
+			'"', 't', 'e', 's', 't', 'E', 'r', 'r', 'o', 'r', '1', '"', ',', ' ',
+			'"', 't', 'e', 's', 't', 'E', 'r', 'r', 'o', 'r', '2', '"',
+		},
+		testWireAttributes...)...,
+	)
+
+	b, err = marshalResponse(EffectIndeterminate, []AttributeAssignment{
+		MakeExpressionAssignment("test", UndefinedValue),
+	})
+	if err == nil {
+		t.Errorf("expected *requestAttributeMarshallingNotImplementedError but got %d bytes in response", len(b))
+	} else if _, ok := err.(*requestAttributeMarshallingNotImplementedError); !ok {
+		t.Errorf("expected *requestAttributeMarshallingNotImplementedError but got %T (%s)", err, err)
+	}
+}
+
+func TestMarshalResponseWithAllocator(t *testing.T) {
+	f := func(n int) ([]byte, error) {
+		return make([]byte, n), nil
+	}
+	b, err := marshalResponseWithAllocator(f, EffectIndeterminate, testRequestAssignments,
+		fmt.Errorf("testError1"),
+		fmt.Errorf("testError2"),
+	)
+	assertRequestBytesBuffer(t, "marshalResponse", err, b, len(b), append(
+		[]byte{
+			1, 0, 3,
+			43, 0, 'm', 'u', 'l', 't', 'i', 'p', 'l', 'e', ' ', 'e', 'r', 'r', 'o', 'r', 's', ':', ' ',
+			'"', 't', 'e', 's', 't', 'E', 'r', 'r', 'o', 'r', '1', '"', ',', ' ',
+			'"', 't', 'e', 's', 't', 'E', 'r', 'r', 'o', 'r', '2', '"',
+		},
+		testWireAttributes...)...,
+	)
+
+	testFuncErr := errors.New("test function error")
+	b, err = marshalResponseWithAllocator(func(n int) ([]byte, error) {
+		return nil, testFuncErr
+	}, EffectIndeterminate, testRequestAssignments,
+		fmt.Errorf("testError1"),
+		fmt.Errorf("testError2"),
+	)
+	if err == nil {
+		t.Errorf("expected testFuncErr got %d bytes in response", len(b))
+	} else if err != testFuncErr {
+		t.Errorf("expected testFuncErr but got %T (%s)", err, err)
+	}
+
+	b, err = marshalResponseWithAllocator(func(n int) ([]byte, error) {
+		return make([]byte, 5), nil
+	}, EffectIndeterminate, testRequestAssignments,
+		fmt.Errorf("testError1"),
+		fmt.Errorf("testError2"),
+	)
+	assertRequestBufferOverflow(t, "marshalResponse", err, len(b))
+
+	b, err = marshalResponseWithAllocator(f, EffectIndeterminate, []AttributeAssignment{
+		MakeExpressionAssignment("test", UndefinedValue),
+	})
+	if err == nil {
+		t.Errorf("expected *requestAttributeMarshallingNotImplementedError but got %d bytes in response", len(b))
+	} else if _, ok := err.(*requestAttributeMarshallingNotImplementedError); !ok {
+		t.Errorf("expected *requestAttributeMarshallingNotImplementedError but got %T (%s)", err, err)
+	}
+}
+
+func TestMarshalResponseToBuffer(t *testing.T) {
 	var b [90]byte
 
 	n, err := marshalResponseToBuffer(b[:], EffectIndeterminate, testRequestAssignments,
@@ -144,11 +218,143 @@ func TestMakeIndeterminateResponse(t *testing.T) {
 	)
 }
 
-func TestUnmarshalResponse(t *testing.T) {
+func TestUnmarshalResponseAssignments(t *testing.T) {
+	effect, a, err := UnmarshalResponseAssignments(append([]byte{1, 0, 1, 0, 0}, testWireAttributes...))
+	assertRequestAssignmentExpressions(t, "UnmarshalResponseAssignments", err, a, len(a), testRequestAssignments...)
+
+	if effect != EffectPermit {
+		t.Errorf("expected %q effect but got %q", EffectNameFromEnum(EffectPermit), EffectNameFromEnum(effect))
+	}
+
+	effect, a, err = UnmarshalResponseAssignments(append([]byte{
+		1, 0, 3,
+		9, 0, 't', 'e', 's', 't', 'E', 'r', 'r', 'o', 'r',
+	}, testWireAttributes...))
+	if err == nil {
+		t.Errorf("expected *ResponseServerError but got no error")
+	} else if _, ok := err.(*ResponseServerError); !ok {
+		t.Errorf("expected *ResponseServerError but got %T (%s)", err, err)
+	}
+
+	assertRequestAssignmentExpressions(t, "UnmarshalResponseAssignments(ServerError)", nil, a, len(a),
+		testRequestAssignments...)
+	if effect != EffectIndeterminate {
+		t.Errorf("expected %q effect but got %q", EffectNameFromEnum(EffectIndeterminate), EffectNameFromEnum(effect))
+	}
+
+	effect, a, err = UnmarshalResponseAssignments([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got effect %q and %d attributes",
+			EffectNameFromEnum(effect), len(a))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	effect, a, err = UnmarshalResponseAssignments([]byte{
+		1, 0,
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got effect %q and %d attributes",
+			EffectNameFromEnum(effect), len(a))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	effect, a, err = UnmarshalResponseAssignments([]byte{
+		1, 0, 3,
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got effect %q and %d attributes",
+			EffectNameFromEnum(effect), len(a))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	effect, a, err = UnmarshalResponseAssignments([]byte{
+		1, 0, 3, 0, 0,
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got effect %q and %d attributes",
+			EffectNameFromEnum(effect), len(a))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestUnmarshalResponseAssignmentsWithAllocator(t *testing.T) {
+	f := func(n int) ([]AttributeAssignment, error) {
+		return make([]AttributeAssignment, n), nil
+	}
+
+	effect, a, err := UnmarshalResponseAssignmentsWithAllocator(append([]byte{1, 0, 1, 0, 0}, testWireAttributes...), f)
+	assertRequestAssignmentExpressions(t, "UnmarshalResponseAssignmentsWithAllocator", err, a, len(a),
+		testRequestAssignments...)
+
+	if effect != EffectPermit {
+		t.Errorf("expected %q effect but got %q", EffectNameFromEnum(EffectPermit), EffectNameFromEnum(effect))
+	}
+
+	effect, a, err = UnmarshalResponseAssignmentsWithAllocator(append([]byte{
+		1, 0, 3,
+		9, 0, 't', 'e', 's', 't', 'E', 'r', 'r', 'o', 'r',
+	}, testWireAttributes...), f)
+	if err == nil {
+		t.Errorf("expected *ResponseServerError but got no error")
+	} else if _, ok := err.(*ResponseServerError); !ok {
+		t.Errorf("expected *ResponseServerError but got %T (%s)", err, err)
+	}
+
+	assertRequestAssignmentExpressions(t, "UnmarshalResponseAssignmentsWithAllocator(ServerError)", nil, a, len(a),
+		testRequestAssignments...)
+	if effect != EffectIndeterminate {
+		t.Errorf("expected %q effect but got %q", EffectNameFromEnum(EffectIndeterminate), EffectNameFromEnum(effect))
+	}
+
+	effect, a, err = UnmarshalResponseAssignmentsWithAllocator([]byte{}, f)
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got effect %q and %d attributes",
+			EffectNameFromEnum(effect), len(a))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	effect, a, err = UnmarshalResponseAssignmentsWithAllocator([]byte{
+		1, 0,
+	}, f)
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got effect %q and %d attributes",
+			EffectNameFromEnum(effect), len(a))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	effect, a, err = UnmarshalResponseAssignmentsWithAllocator([]byte{
+		1, 0, 3,
+	}, f)
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got effect %q and %d attributes",
+			EffectNameFromEnum(effect), len(a))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	effect, a, err = UnmarshalResponseAssignmentsWithAllocator([]byte{
+		1, 0, 3, 0, 0,
+	}, f)
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got effect %q and %d attributes",
+			EffectNameFromEnum(effect), len(a))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestUnmarshalResponseToAssignmentsArray(t *testing.T) {
 	var a [3]AttributeAssignment
 
 	effect, n, err := UnmarshalResponseToAssignmentsArray(append([]byte{1, 0, 1, 0, 0}, testWireAttributes...), a[:])
-	assertRequestAssignmentExpressions(t, "UnmarshalResponseToAssignmentsArray", err, a[:], n, testRequestAssignments...)
+	assertRequestAssignmentExpressions(t, "UnmarshalResponseToAssignmentsArray", err, a[:], n,
+		testRequestAssignments...)
 	if effect != EffectPermit {
 		t.Errorf("expected %q effect but got %q", EffectNameFromEnum(EffectPermit), EffectNameFromEnum(effect))
 	}
@@ -163,7 +369,8 @@ func TestUnmarshalResponse(t *testing.T) {
 		t.Errorf("expected *ResponseServerError but got %T (%s)", err, err)
 	}
 
-	assertRequestAssignmentExpressions(t, "UnmarshalResponseToAssignmentsArray", nil, a[:], n, testRequestAssignments...)
+	assertRequestAssignmentExpressions(t, "UnmarshalResponseToAssignmentsArray(ServerError)", nil, a[:], n,
+		testRequestAssignments...)
 	if effect != EffectIndeterminate {
 		t.Errorf("expected %q effect but got %q", EffectNameFromEnum(EffectIndeterminate), EffectNameFromEnum(effect))
 	}
@@ -534,28 +741,90 @@ func TestPutAttributesFromReflection(t *testing.T) {
 }
 
 func TestGetAssignmentExpressions(t *testing.T) {
-	var a [3]AttributeAssignment
+	a, err := getAssignmentExpressions(testWireAttributes)
+	assertRequestAssignmentExpressions(t, "getAssignmentExpressions", err, a, len(a), testRequestAssignments...)
 
-	n, err := getAssignmentExpressions(testWireAttributes, a[:])
-	assertRequestAssignmentExpressions(t, "getAssignmentExpressions", err, a[:], n, testRequestAssignments...)
-
-	n, err = getAssignmentExpressions([]byte{}, a[:])
+	a, err = getAssignmentExpressions([]byte{})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got %d bytes", n)
+		t.Errorf("expected *requestBufferUnderflowError but got %d attributes", len(a))
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
 
-	n, err = getAssignmentExpressions([]byte{255, 255}, a[:])
+	a, err = getAssignmentExpressions([]byte{255, 255})
 	if err == nil {
-		t.Errorf("expected *requestAssignmentsOverflowError but got %d bytes", n)
+		t.Errorf("expected *requestBufferUnderflowError but got %d attributes", len(a))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetAssignmentExpressionsWithAllocator(t *testing.T) {
+	f := func(n int) ([]AttributeAssignment, error) {
+		return make([]AttributeAssignment, n), nil
+	}
+
+	a, err := getAssignmentExpressionsWithAllocator(testWireAttributes, f)
+	assertRequestAssignmentExpressions(t, "getAssignmentExpressionsWithAllocator", err, a, len(a),
+		testRequestAssignments...)
+
+	testFuncErr := errors.New("test function error")
+	a, err = getAssignmentExpressionsWithAllocator(testWireAttributes, func(n int) ([]AttributeAssignment, error) {
+		return nil, testFuncErr
+	})
+	if err == nil {
+		t.Errorf("expected testFuncErr but got %d attributes", len(a))
+	} else if err != testFuncErr {
+		t.Errorf("expected testFuncErr but got %T (%s)", err, err)
+	}
+
+	a, err = getAssignmentExpressionsWithAllocator(testWireAttributes, func(n int) ([]AttributeAssignment, error) {
+		return []AttributeAssignment{}, nil
+	})
+	if err == nil {
+		t.Errorf("expected *requestAssignmentsOverflowError but got %d attributes", len(a))
 	} else if _, ok := err.(*requestAssignmentsOverflowError); !ok {
 		t.Errorf("expected *requestAssignmentsOverflowError but got %T (%s)", err, err)
 	}
 
-	n, err = getAssignmentExpressions([]byte{1, 0}, a[:])
+	a, err = getAssignmentExpressionsWithAllocator([]byte{}, f)
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got got %d bytes", n)
+		t.Errorf("expected *requestBufferUnderflowError but got %d attributes", len(a))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	a, err = getAssignmentExpressionsWithAllocator([]byte{255, 255}, f)
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %d attributes", len(a))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetAssignmentExpressionsToArray(t *testing.T) {
+	var a [3]AttributeAssignment
+
+	n, err := getAssignmentExpressionsToArray(testWireAttributes, a[:])
+	assertRequestAssignmentExpressions(t, "getAssignmentExpressionsToArray", err, a[:], n, testRequestAssignments...)
+
+	n, err = getAssignmentExpressionsToArray([]byte{}, a[:])
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %d attributes", n)
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	n, err = getAssignmentExpressionsToArray([]byte{255, 255}, a[:])
+	if err == nil {
+		t.Errorf("expected *requestAssignmentsOverflowError but got %d attributes", n)
+	} else if _, ok := err.(*requestAssignmentsOverflowError); !ok {
+		t.Errorf("expected *requestAssignmentsOverflowError but got %T (%s)", err, err)
+	}
+
+	n, err = getAssignmentExpressionsToArray([]byte{1, 0}, a[:])
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got got %d attributes", n)
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
@@ -920,6 +1189,54 @@ func TestGetAttributesToReflection(t *testing.T) {
 		t.Errorf("expected *requestBufferUnderflowError but got %s", MakeListOfStringsValue(ls).describe())
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestCalcResponseSize(t *testing.T) {
+	s, err := calcResponseSize(testRequestAssignments, errors.New("testError"))
+	if err != nil {
+		t.Error(err)
+	} else if s != 56 {
+		t.Errorf("expected %d bytes in response but got %d", 56, s)
+	}
+
+	s, err = calcResponseSize([]AttributeAssignment{
+		MakeExpressionAssignment("test", UndefinedValue),
+	}, errors.New("testError"))
+	if err == nil {
+		t.Errorf("expected *requestAttributeMarshallingNotImplementedError but got %d bytes in response", s)
+	} else if _, ok := err.(*requestAttributeMarshallingNotImplementedError); !ok {
+		t.Errorf("expected *requestAttributeMarshallingNotImplementedError but got %T (%s)", err, err)
+	}
+}
+
+func TestCalcResponseStatus(t *testing.T) {
+	s := calcResponseStatus(errors.New("testError"))
+	if s != reqBigCounterSize+len("testError") {
+		t.Errorf("expected %d bytes in response but got %d", reqBigCounterSize+len("testError"), s)
+	}
+
+	s = calcResponseStatus(
+		errors.New("testError1"),
+		errors.New("testError2"),
+	)
+	if s != reqBigCounterSize+43 {
+		t.Errorf("expected %d bytes in response but got %d", reqBigCounterSize+43, s)
+	}
+
+	s = calcResponseStatus()
+	if s != reqBigCounterSize {
+		t.Errorf("expected %d bytes in response but got %d", reqBigCounterSize, s)
+	}
+
+	errs := make([]error, math.MaxUint16/10)
+	for i := range errs {
+		errs[i] = fmt.Errorf("testError%d", i)
+	}
+
+	s = calcResponseStatus(errs...)
+	if s != reqBigCounterSize+math.MaxUint16 {
+		t.Errorf("expected %d bytes in response but got %d", reqBigCounterSize+math.MaxUint16, s)
 	}
 }
 

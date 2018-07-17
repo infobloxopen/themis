@@ -3,6 +3,7 @@ package pdp
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -34,6 +35,53 @@ func TestRequestWireTypesTotal(t *testing.T) {
 }
 
 func TestMarshalRequestAssignments(t *testing.T) {
+	b, err := MarshalRequestAssignments(testRequestAssignments)
+	assertRequestBytesBuffer(t, "MarshalRequestAssignments", err, b, len(b), testWireRequest...)
+
+	b, err = MarshalRequestAssignments([]AttributeAssignment{
+		MakeExpressionAssignment("test", UndefinedValue),
+	})
+	if err == nil {
+		t.Errorf("expected requestAttributeMarshallingNotImplementedError but got %d bytes in request", len(b))
+	} else if _, ok := err.(*requestAttributeMarshallingNotImplementedError); !ok {
+		t.Errorf("expected *requestAttributeMarshallingNotImplementedError but got %T (%s)", err, err)
+	}
+}
+
+func TestMarshalRequestAssignmentsWithAllocator(t *testing.T) {
+	b, err := MarshalRequestAssignmentsWithAllocator(testRequestAssignments, func(n int) ([]byte, error) {
+		return make([]byte, n), nil
+	})
+	assertRequestBytesBuffer(t, "MarshalRequestAssignments", err, b, len(b), testWireRequest...)
+
+	testFuncErr := errors.New("test function error")
+	b, err = MarshalRequestAssignmentsWithAllocator(testRequestAssignments, func(n int) ([]byte, error) {
+		return nil, testFuncErr
+	})
+	if err == nil {
+		t.Errorf("expected testFuncErr but got %d bytes in request", len(b))
+	} else if err != testFuncErr {
+		t.Errorf("expected testFuncErr but got %T (%s)", err, err)
+	}
+
+	b, err = MarshalRequestAssignmentsWithAllocator([]AttributeAssignment{
+		MakeExpressionAssignment("test", UndefinedValue),
+	}, func(n int) ([]byte, error) {
+		return make([]byte, n), nil
+	})
+	if err == nil {
+		t.Errorf("expected requestAttributeMarshallingNotImplementedError but got %d bytes in request", len(b))
+	} else if _, ok := err.(*requestAttributeMarshallingNotImplementedError); !ok {
+		t.Errorf("expected *requestAttributeMarshallingNotImplementedError but got %T (%s)", err, err)
+	}
+
+	b, err = MarshalRequestAssignmentsWithAllocator(testRequestAssignments, func(n int) ([]byte, error) {
+		return make([]byte, 2), nil
+	})
+	assertRequestBufferOverflow(t, "MarshalRequestAssignmentsWithAllocator", err, len(b))
+}
+
+func TestMarshalRequestAssignmentsToBuffer(t *testing.T) {
 	var b [44]byte
 	n, err := MarshalRequestAssignmentsToBuffer(b[:], testRequestAssignments)
 	assertRequestBytesBuffer(t, "MarshalRequestAssignmentsToBuffer", err, b[:], n, testWireRequest...)
@@ -46,6 +94,68 @@ func TestMarshalRequestAssignments(t *testing.T) {
 }
 
 func TestMarshalRequestReflection(t *testing.T) {
+	b, err := MarshalRequestReflection(1, func(i int) (string, Type, reflect.Value, error) {
+		return "boolean", TypeBoolean, reflect.ValueOf(true), nil
+	})
+	assertRequestBytesBuffer(t, "MarshalRequestReflectionToBuffer", err, b, len(b),
+		1, 0, 1, 0,
+		7, 'b', 'o', 'o', 'l', 'e', 'a', 'n', byte(requestWireTypeBooleanTrue),
+	)
+
+	testFuncErr := errors.New("test function error")
+	b, err = MarshalRequestReflection(1, func(i int) (string, Type, reflect.Value, error) {
+		return "", TypeUndefined, reflectValueNil, testFuncErr
+	})
+	if err == nil {
+		t.Errorf("expected testFuncErr but got %d bytes in request", len(b))
+	} else if err != testFuncErr {
+		t.Errorf("expected testFuncErr but got %T (%s)", err, err)
+	}
+}
+
+func TestMarshalRequestReflectionWithAllocator(t *testing.T) {
+	b, err := MarshalRequestReflectionWithAllocator(1, func(i int) (string, Type, reflect.Value, error) {
+		return "boolean", TypeBoolean, reflect.ValueOf(true), nil
+	}, func(n int) ([]byte, error) {
+		return make([]byte, n), nil
+	})
+	assertRequestBytesBuffer(t, "MarshalRequestReflectionToBuffer", err, b, len(b),
+		1, 0, 1, 0,
+		7, 'b', 'o', 'o', 'l', 'e', 'a', 'n', byte(requestWireTypeBooleanTrue),
+	)
+
+	testFuncErr := errors.New("test function error")
+	b, err = MarshalRequestReflectionWithAllocator(1, func(i int) (string, Type, reflect.Value, error) {
+		return "", TypeUndefined, reflectValueNil, testFuncErr
+	}, func(n int) ([]byte, error) {
+		return make([]byte, n), nil
+	})
+	if err == nil {
+		t.Errorf("expected testFuncErr but got %d bytes in request", len(b))
+	} else if err != testFuncErr {
+		t.Errorf("expected testFuncErr but got %T (%s)", err, err)
+	}
+
+	b, err = MarshalRequestReflectionWithAllocator(1, func(i int) (string, Type, reflect.Value, error) {
+		return "boolean", TypeBoolean, reflect.ValueOf(true), nil
+	}, func(n int) ([]byte, error) {
+		return nil, testFuncErr
+	})
+	if err == nil {
+		t.Errorf("expected testFuncErr but got %d bytes in request", len(b))
+	} else if err != testFuncErr {
+		t.Errorf("expected testFuncErr but got %T (%s)", err, err)
+	}
+
+	b, err = MarshalRequestReflectionWithAllocator(1, func(i int) (string, Type, reflect.Value, error) {
+		return "boolean", TypeBoolean, reflect.ValueOf(true), nil
+	}, func(n int) ([]byte, error) {
+		return make([]byte, 2), nil
+	})
+	assertRequestBufferOverflow(t, "MarshalRequestReflectionWithAllocator", err, len(b))
+}
+
+func TestMarshalRequestReflectionToBuffer(t *testing.T) {
 	var b [13]byte
 
 	f := func(i int) (string, Type, reflect.Value, error) {
@@ -64,6 +174,35 @@ func TestMarshalRequestReflection(t *testing.T) {
 	assertRequestBufferOverflow(t, "MarshalRequestReflectionToBuffer(collection)", err, n)
 }
 
+func TestUnmarshalRequestAssignments(t *testing.T) {
+	a, err := UnmarshalRequestAssignments(testWireRequest)
+	assertRequestAssignmentExpressions(t, "UnmarshalRequestAssignments", err, a, len(a), testRequestAssignments...)
+
+	a, err = UnmarshalRequestAssignments([]byte{0, 0, 0, 0})
+	if err == nil {
+		t.Errorf("expected *requestVersionError but got %d attributes", len(a))
+	} else if _, ok := err.(*requestVersionError); !ok {
+		t.Errorf("expected *requestVersionError but got %T (%s)", err, err)
+	}
+}
+
+func TestUnmarshalRequestAssignmentsWithAllocator(t *testing.T) {
+	a, err := UnmarshalRequestAssignmentsWithAllocator(testWireRequest, func(n int) ([]AttributeAssignment, error) {
+		return make([]AttributeAssignment, n), nil
+	})
+	assertRequestAssignmentExpressions(t, "UnmarshalRequestAssignmentsWithAllocator", err, a, len(a),
+		testRequestAssignments...)
+
+	a, err = UnmarshalRequestAssignmentsWithAllocator([]byte{0, 0, 0, 0}, func(n int) ([]AttributeAssignment, error) {
+		return make([]AttributeAssignment, n), nil
+	})
+	if err == nil {
+		t.Errorf("expected *requestVersionError but got %d attributes", len(a))
+	} else if _, ok := err.(*requestVersionError); !ok {
+		t.Errorf("expected *requestVersionError but got %T (%s)", err, err)
+	}
+}
+
 func TestUnmarshalRequestToAssignmentsArray(t *testing.T) {
 	var a [3]AttributeAssignment
 
@@ -72,14 +211,14 @@ func TestUnmarshalRequestToAssignmentsArray(t *testing.T) {
 
 	n, err = UnmarshalRequestToAssignmentsArray([]byte{}, a[:])
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got %d bytes", n)
+		t.Errorf("expected *requestBufferUnderflowError but got %d attributes", n)
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
 
 	n, err = UnmarshalRequestToAssignmentsArray([]byte{1, 0}, a[:])
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got %d bytes", n)
+		t.Errorf("expected *requestBufferUnderflowError but got %d attributes", n)
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
@@ -1919,6 +2058,25 @@ func TestCalcRequestSize(t *testing.T) {
 		t.Errorf("expected requestAttributeMarshallingNotImplementedError but got %d bytes in request", s)
 	} else if _, ok := err.(*requestAttributeMarshallingNotImplementedError); !ok {
 		t.Errorf("expected *requestAttributeMarshallingNotImplementedError but got %T (%s)", err, err)
+	}
+}
+
+func TestCalcRequestSizeFromReflection(t *testing.T) {
+	s, err := calcRequestSizeFromReflection(11, testReflectAttributes)
+	if err != nil {
+		t.Error(err)
+	} else if s != len(testWireReflectAttributes)+reqVersionSize {
+		t.Errorf("expected %d bytes in request but got %d", len(testWireReflectAttributes)+reqVersionSize, s)
+	}
+
+	testFuncErr := errors.New("test function error")
+	s, err = calcRequestSizeFromReflection(1, func(i int) (string, Type, reflect.Value, error) {
+		return "", TypeUndefined, reflectValueNil, testFuncErr
+	})
+	if err == nil {
+		t.Errorf("expected testFuncErr but got %d bytes in request", s)
+	} else if err != testFuncErr {
+		t.Errorf("expected testFuncErr but got %T (%s)", err, err)
 	}
 }
 

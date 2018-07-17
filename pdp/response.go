@@ -31,6 +31,10 @@ const (
 // error that real error message or set of obligations are too long.
 var MinResponseSize uint
 
+const (
+	resEffectSize = 1
+)
+
 func init() {
 	n := len(responseStatusTooLong)
 	if len(responseStatusObligationsTooLong) > n {
@@ -38,6 +42,36 @@ func init() {
 	}
 
 	MinResponseSize = 7 + uint(n)
+}
+
+func marshalResponse(effect int, obligations []AttributeAssignment, errs ...error) ([]byte, error) {
+	n, err := calcResponseSize(obligations, errs...)
+	if err != nil {
+		return nil, err
+	}
+
+	b := make([]byte, n)
+	_, err = marshalResponseToBuffer(b, effect, obligations, errs...)
+	return b, err
+}
+
+func marshalResponseWithAllocator(f func(n int) ([]byte, error), effect int, obligations []AttributeAssignment, errs ...error) ([]byte, error) {
+	n, err := calcResponseSize(obligations, errs...)
+	if err != nil {
+		return nil, err
+	}
+
+	b, err := f(n)
+	if err != nil {
+		return nil, err
+	}
+
+	n, err = marshalResponseToBuffer(b, effect, obligations, errs...)
+	if err != nil {
+		return nil, err
+	}
+
+	return b[:n], nil
 }
 
 func marshalResponseToBuffer(b []byte, effect int, obligations []AttributeAssignment, errs ...error) (int, error) {
@@ -106,6 +140,75 @@ func MakeIndeterminateResponse(b []byte, err error) (int, error) {
 	return marshalResponseToBuffer(b, EffectIndeterminate, nil, err)
 }
 
+// UnmarshalResponseAssignments unmarshals response from given sequence of
+// bytes. Effect is returned as the first result value. The second returned
+// value is an array of obligations. Finally, the third value is an error
+// occured during unmarshalling or response status if it has type
+// *ResponseServerError.
+func UnmarshalResponseAssignments(b []byte) (int, []AttributeAssignment, error) {
+	off, err := checkRequestVersion(b)
+	if err != nil {
+		return EffectIndeterminate, nil, err
+	}
+
+	effect, n, err := getResponseEffect(b[off:])
+	if err != nil {
+		return EffectIndeterminate, nil, err
+	}
+	off += n
+
+	s, n, err := getRequestStringValue(b[off:])
+	if err != nil {
+		return EffectIndeterminate, nil, err
+	}
+	off += n
+
+	out, err := getAssignmentExpressions(b[off:])
+	if err != nil {
+		return EffectIndeterminate, nil, err
+	}
+
+	if len(s) > 0 {
+		return effect, out, newResponseServerError(s)
+	}
+
+	return effect, out, nil
+}
+
+// UnmarshalResponseAssignmentsWithAllocator works similarly to
+// UnmarshalResponseAssignments but requires custom allocator for obligations.
+// The allocator is expected to take number of obligations and return slice of
+// assignments of that length.
+func UnmarshalResponseAssignmentsWithAllocator(b []byte, f func(n int) ([]AttributeAssignment, error)) (int, []AttributeAssignment, error) {
+	off, err := checkRequestVersion(b)
+	if err != nil {
+		return EffectIndeterminate, nil, err
+	}
+
+	effect, n, err := getResponseEffect(b[off:])
+	if err != nil {
+		return EffectIndeterminate, nil, err
+	}
+	off += n
+
+	s, n, err := getRequestStringValue(b[off:])
+	if err != nil {
+		return EffectIndeterminate, nil, err
+	}
+	off += n
+
+	out, err := getAssignmentExpressionsWithAllocator(b[off:], f)
+	if err != nil {
+		return EffectIndeterminate, nil, err
+	}
+
+	if len(s) > 0 {
+		return effect, out, newResponseServerError(s)
+	}
+
+	return effect, out, nil
+}
+
 // UnmarshalResponseToAssignmentsArray unmarshals response from given
 // sequence of bytes. Effect is returned as the first result value. The second
 // returned value gives number of obligations put to out parameter. Finally,
@@ -130,7 +233,7 @@ func UnmarshalResponseToAssignmentsArray(b []byte, out []AttributeAssignment) (i
 	}
 	off += n
 
-	n, err = getAssignmentExpressions(b[off:], out)
+	n, err = getAssignmentExpressionsToArray(b[off:], out)
 	if err != nil {
 		return EffectIndeterminate, 0, err
 	}
@@ -383,7 +486,58 @@ func putAttributesFromReflection(b []byte, c int, f func(i int) (string, Type, r
 	return off, nil
 }
 
-func getAssignmentExpressions(b []byte, out []AttributeAssignment) (int, error) {
+func getAssignmentExpressions(b []byte) ([]AttributeAssignment, error) {
+	c, n, err := getRequestAttributeCount(b)
+	if err != nil {
+		return nil, err
+	}
+	b = b[n:]
+
+	out := make([]AttributeAssignment, c)
+	for i := range out {
+		id, v, n, err := getRequestAttribute(b)
+		if err != nil {
+			return nil, bindErrorf(err, "%d", i+1)
+		}
+		b = b[n:]
+
+		out[i] = MakeExpressionAssignment(id, v)
+	}
+
+	return out, nil
+}
+
+func getAssignmentExpressionsWithAllocator(b []byte, f func(n int) ([]AttributeAssignment, error)) ([]AttributeAssignment, error) {
+	c, n, err := getRequestAttributeCount(b)
+	if err != nil {
+		return nil, err
+	}
+	b = b[n:]
+
+	out, err := f(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(out) < c {
+		return nil, newRequestAssignmentsOverflowError(c, len(out))
+	}
+	out = out[:c]
+
+	for i := range out {
+		id, v, n, err := getRequestAttribute(b)
+		if err != nil {
+			return nil, bindErrorf(err, "%d", i+1)
+		}
+		b = b[n:]
+
+		out[i] = MakeExpressionAssignment(id, v)
+	}
+
+	return out, nil
+}
+
+func getAssignmentExpressionsToArray(b []byte, out []AttributeAssignment) (int, error) {
 	c, n, err := getRequestAttributeCount(b)
 	if err != nil {
 		return 0, err
@@ -572,6 +726,47 @@ func getAttributesToReflection(b []byte, f func(string, Type) (reflect.Value, er
 	return nil
 }
 
+func calcResponseSize(obligations []AttributeAssignment, errs ...error) (int, error) {
+	s, err := calcAssignmentExpressionsSize(obligations)
+	if err != nil {
+		return 0, err
+	}
+
+	return reqVersionSize + resEffectSize + calcResponseStatus(errs...) + s, nil
+}
+
+func calcResponseStatus(err ...error) int {
+	if len(err) < 1 || len(err) == 1 && err[0] == nil {
+		return reqBigCounterSize
+	}
+
+	var msg string
+	if len(err) == 1 {
+		msg = err[0].Error()
+	} else {
+		msgs := make([]string, len(err))
+		for i, err := range err {
+			msgs[i] = strconv.Quote(err.Error())
+		}
+
+		msg = "multiple errors: " + strings.Join(msgs, ", ")
+	}
+
+	if len(msg) > math.MaxUint16 {
+		i := 0
+		for j := range msg {
+			if j > math.MaxUint16 {
+				break
+			}
+
+			i = j
+		}
+
+		msg = msg[:i]
+	}
+
+	return len(msg) + reqBigCounterSize
+}
 func calcAssignmentExpressionsSize(in []AttributeAssignment) (int, error) {
 	s := reqBigCounterSize
 
