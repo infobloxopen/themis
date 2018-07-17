@@ -954,7 +954,7 @@ func TestPolicySetMarshalWithDepth(t *testing.T) {
 
 	// show children, visible policy
 	policyExtra := `"target":{},"obligations":null,"algorithm":{"type":"firstApplicableEffectRCA"}`
-	cRule := `,"rules":[{"ord":0,"id":"permit","target":{},"obligations":null}]}`
+	cRule := `,"rules":[{"ord":0,"id":"permit","target":{},"obligations":null,"effect":"Permit"}]}`
 	expectChildren := `{"ord":0,"id":"first",` + policyExtra + cRule +
 		`,{"ord":1,"id":"second",` + policyExtra + cRule +
 		`,{"ord":2,"id":"third",` + policyExtra + cRule

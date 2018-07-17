@@ -86,7 +86,7 @@ func (r Rule) MarshalWithDepth(out io.Writer, depth int) error {
 		ID:          r.id,
 		Target:      r.target,
 		Obligations: r.obligations,
-		Effect:      effectName[r.effect],
+		Effect:      effectNames[r.effect],
 	})
 	if err != nil {
 		return bindErrorf(err, "rid=\"%s\"", r.id)

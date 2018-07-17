@@ -14,20 +14,20 @@ type StorageMarshal interface {
 
 // PolicySet/Policy representation for marshaling
 type storageEvalFmt struct {
-	Ord         int                             `json:"ord"`
-	ID          string                          `json:"id"`
-	Target      Target                          `json:"target"`
-	Obligations []AttributeAssignmentExpression `json:"obligations"`
-	Algorithm   json.Marshaler                  `json:"algorithm"`
+	Ord         int                   `json:"ord"`
+	ID          string                `json:"id"`
+	Target      Target                `json:"target"`
+	Obligations []AttributeAssignment `json:"obligations"`
+	Algorithm   json.Marshaler        `json:"algorithm"`
 }
 
 // Rule representation for marshaling
 type storageRuleFmt struct {
-	Ord         int                             `json:"ord"`
-	ID          string                          `json:"id"`
-	Target      Target                          `json:"target"`
-	Obligations []AttributeAssignmentExpression `json:"obligations"`
-	Effect      string                          `json:"effect"`
+	Ord         int                   `json:"ord"`
+	ID          string                `json:"id"`
+	Target      Target                `json:"target"`
+	Obligations []AttributeAssignment `json:"obligations"`
+	Effect      string                `json:"effect"`
 }
 
 func marshalHeader(v interface{}, out io.Writer) error {

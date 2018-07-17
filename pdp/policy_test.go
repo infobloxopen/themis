@@ -776,7 +776,8 @@ func TestPolicyMarshalWithDepth(t *testing.T) {
 	}
 
 	// show children, visible policy
-	expectChildren := `{"ord":0,"id":"first","target":{},"obligations":null},{"ord":1,"id":"second","target":{},"obligations":null},{"ord":2,"id":"third","target":{},"obligations":null}`
+	expectChild := `{"ord":%d,"id":"%s","target":{},"obligations":null,"effect":"Permit"}`
+	expectChildren := fmt.Sprintf(expectChild, 0, "first") + "," + fmt.Sprintf(expectChild, 1, "second") + "," + fmt.Sprintf(expectChild, 2, "third")
 	expectWithC := `{"ord":0,"id":"test","target":{},"obligations":null,"algorithm":{"type":"firstApplicableEffectRCA"},"rules":[` + expectChildren + `]}`
 	err = p.MarshalWithDepth(&buf2, 1)
 	if err != nil {
