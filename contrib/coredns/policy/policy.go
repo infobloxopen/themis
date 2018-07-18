@@ -111,8 +111,10 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		}
 	}
 
+	attrsRequest := p.attrPool.Get()
+	defer p.attrPool.Put(attrsRequest)
 	// validate domain name (validation #1)
-	if err := p.validate(ah); err != nil {
+	if err := p.validate(ah, attrsRequest); err != nil {
 		status = dns.RcodeServerFailure
 		return dns.RcodeSuccess, err
 	}
@@ -152,8 +154,10 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		if address != nil {
 			ah.addIPReq(address)
 
+			attrsResponse := p.attrPool.Get()
+			defer p.attrPool.Put(attrsResponse)
 			// validate response IP (validation #2)
-			if err := p.validate(ah); err != nil {
+			if err := p.validate(ah, attrsResponse); err != nil {
 				status = dns.RcodeServerFailure
 				return dns.RcodeSuccess, err
 			}
