@@ -137,7 +137,8 @@ func TestStreamingClientInteraction(t *testing.T) {
 		w := newTestAddressedNonwriter("192.0.2.1")
 
 		ah := newAttrHolderWithDnReq(w, m, p.conf.options, nil)
-		if err := p.validate(ah); err != nil {
+		attrs := make([]pdp.AttributeAssignment, p.conf.maxResAttrs)
+		if err := p.validate(ah, attrs); err != nil {
 			t.Error(err)
 		}
 
@@ -155,7 +156,8 @@ func TestStreamingClientInteraction(t *testing.T) {
 
 		ah.addIPReq(net.ParseIP("192.0.2.1"))
 
-		if err := p.validate(ah); err != nil {
+		attrs = make([]pdp.AttributeAssignment, p.conf.maxResAttrs)
+		if err := p.validate(ah, attrs); err != nil {
 			t.Error(err)
 		}
 
@@ -197,7 +199,8 @@ func TestStreamingClientInteraction(t *testing.T) {
 		w := newTestAddressedNonwriter("192.0.2.1")
 
 		ah := newAttrHolderWithDnReq(w, m, p.conf.options, nil)
-		if err := p.validate(ah); err != nil {
+		attrs := make([]pdp.AttributeAssignment, p.conf.maxResAttrs)
+		if err := p.validate(ah, attrs); err != nil {
 			t.Error(err)
 		}
 
@@ -239,7 +242,8 @@ func TestStreamingClientInteraction(t *testing.T) {
 		w := newTestAddressedNonwriter("192.0.2.1")
 
 		ah := newAttrHolderWithDnReq(w, m, p.conf.options, nil)
-		if err := p.validate(ah); err != nil {
+		attrs := make([]pdp.AttributeAssignment, p.conf.maxResAttrs)
+		if err := p.validate(ah, attrs); err != nil {
 			t.Error(err)
 		}
 
@@ -301,7 +305,8 @@ func TestStreamingClientInteractionWithObligationsOverflow(t *testing.T) {
 	w := newTestAddressedNonwriter("192.0.2.1")
 
 	ah := newAttrHolderWithDnReq(w, m, p.conf.options, nil)
-	err := p.validate(ah)
+	attrs := make([]pdp.AttributeAssignment, p.conf.maxResAttrs)
+	err := p.validate(ah, attrs)
 	if err == nil {
 		aName := fmt.Sprintf("unknown action %d", ah.action)
 		if ah.action >= 0 && int(ah.action) < len(actionNames) {

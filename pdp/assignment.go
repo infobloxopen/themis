@@ -453,6 +453,14 @@ func (a AttributeAssignment) Serialize(ctx *Context) (string, string, string, er
 	return ID, k, s, nil
 }
 
+func (a AttributeAssignment) String() string {
+	name, valueType, value, err := a.Serialize(nil)
+	if err != nil {
+		return err.Error()
+	}
+	return fmt.Sprintf("(%s)%s:%s", valueType, name, value)
+}
+
 func (a AttributeAssignment) bindError(err error) error {
 	return bindErrorf(err, "assignment to %q", a.GetID())
 }

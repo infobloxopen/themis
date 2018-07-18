@@ -67,7 +67,7 @@ func (p *policyPlugin) closeConn() {
 	}
 }
 
-func (p *policyPlugin) validate(ah *attrHolder) error {
+func (p *policyPlugin) validate(ah *attrHolder, a []pdp.AttributeAssignment) error {
 	var req []pdp.AttributeAssignment
 	if len(ah.ipReq) > 0 {
 		req = ah.ipReq
@@ -78,9 +78,6 @@ func (p *policyPlugin) validate(ah *attrHolder) error {
 	if p.conf.log {
 		log.Printf("[INFO] PDP request: %+v", req)
 	}
-
-	a := p.attrPool.Get()
-	defer p.attrPool.Put(a)
 
 	res := pdp.Response{Obligations: a}
 	err := p.pdp.Validate(req, &res)
