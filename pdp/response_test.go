@@ -208,9 +208,29 @@ func TestMarshalResponseToBuffer(t *testing.T) {
 }
 
 func TestMakeIndeterminateResponse(t *testing.T) {
+	b, err := MakeIndeterminateResponse(fmt.Errorf("test error"))
+	assertRequestBytesBuffer(t, "MakeIndeterminateResponse", err, b, len(b),
+		1, 0, 3,
+		10, 0, 't', 'e', 's', 't', ' ', 'e', 'r', 'r', 'o', 'r',
+		0, 0,
+	)
+}
+
+func TestMakeIndeterminateResponseWithAllocator(t *testing.T) {
+	b, err := MakeIndeterminateResponseWithAllocator(func(n int) ([]byte, error) {
+		return make([]byte, n), nil
+	}, fmt.Errorf("test error"))
+	assertRequestBytesBuffer(t, "MakeIndeterminateResponse", err, b, len(b),
+		1, 0, 3,
+		10, 0, 't', 'e', 's', 't', ' ', 'e', 'r', 'r', 'o', 'r',
+		0, 0,
+	)
+}
+
+func TestMakeIndeterminateResponseWithBuffer(t *testing.T) {
 	var b [17]byte
 
-	n, err := MakeIndeterminateResponse(b[:], fmt.Errorf("test error"))
+	n, err := MakeIndeterminateResponseWithBuffer(b[:], fmt.Errorf("test error"))
 	assertRequestBytesBuffer(t, "MakeIndeterminateResponse", err, b[:], n,
 		1, 0, 3,
 		10, 0, 't', 'e', 's', 't', ' ', 'e', 'r', 'r', 'o', 'r',
@@ -744,6 +764,13 @@ func TestGetAssignmentExpressions(t *testing.T) {
 	a, err := getAssignmentExpressions(testWireAttributes)
 	assertRequestAssignmentExpressions(t, "getAssignmentExpressions", err, a, len(a), testRequestAssignments...)
 
+	a, err = getAssignmentExpressions([]byte{0, 0})
+	if err != nil {
+		t.Error(err)
+	} else if a != nil {
+		t.Errorf("expected nil but got %d attributes", len(a))
+	}
+
 	a, err = getAssignmentExpressions([]byte{})
 	if err == nil {
 		t.Errorf("expected *requestBufferUnderflowError but got %d attributes", len(a))
@@ -767,6 +794,13 @@ func TestGetAssignmentExpressionsWithAllocator(t *testing.T) {
 	a, err := getAssignmentExpressionsWithAllocator(testWireAttributes, f)
 	assertRequestAssignmentExpressions(t, "getAssignmentExpressionsWithAllocator", err, a, len(a),
 		testRequestAssignments...)
+
+	a, err = getAssignmentExpressionsWithAllocator([]byte{0, 0}, f)
+	if err != nil {
+		t.Error(err)
+	} else if a != nil {
+		t.Errorf("expected nil but got %d attributes", len(a))
+	}
 
 	testFuncErr := errors.New("test function error")
 	a, err = getAssignmentExpressionsWithAllocator(testWireAttributes, func(n int) ([]AttributeAssignment, error) {

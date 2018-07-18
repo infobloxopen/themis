@@ -103,6 +103,13 @@ func WithMemLimits(limits MemLimits) Option {
 	}
 }
 
+// WithAutoResponseSize creates an options which makes server automatically allocate response buffer. If the options isn't set server uses default fixed buffer size which is 10KB.
+func WithAutoResponseSize(b bool) Option {
+	return func(o *options) {
+		o.autoResponseSize = b
+	}
+}
+
 // WithMaxResponseSize creates an option which limits response size in bytes. Default is 10KB. In case if a response doesn't fit the constraint, PDP puts error message to response which indicates this fact. Buffer should be at least pdp.MinResponseSize long to accept the error.
 func WithMaxResponseSize(size uint32) Option {
 	return func(o *options) {
@@ -141,7 +148,8 @@ type options struct {
 	memLimits *MemLimits
 	streams   uint32
 
-	maxResponseSize uint32
+	autoResponseSize bool
+	maxResponseSize  uint32
 
 	memStatsLogPath     string
 	memStatsLogInterval time.Duration
@@ -175,6 +183,8 @@ type Server struct {
 	fragMemWarn *time.Time
 
 	memProfBaseDumpDone chan uint32
+
+	pool bytePool
 }
 
 // NewServer returns new Server instance
@@ -199,12 +209,18 @@ func NewServer(opts ...Option) *Server {
 		memProfBaseDumpDone = make(chan uint32)
 	}
 
+	var pool bytePool
+	if !o.autoResponseSize {
+		pool = makeBytePool(int(o.maxResponseSize), false)
+	}
+
 	return &Server{
 		opts:                o,
 		errCh:               make(chan error, 100),
 		q:                   newQueue(),
 		c:                   pdp.NewLocalContentStorage(nil),
 		memProfBaseDumpDone: memProfBaseDumpDone,
+		pool:                pool,
 	}
 }
 

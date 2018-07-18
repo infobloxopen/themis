@@ -132,11 +132,24 @@ func marshalResponseToBuffer(b []byte, effect int, obligations []AttributeAssign
 }
 
 // MakeIndeterminateResponse marshals given error as indenterminate response
-// with no obligations to given buffer. Caller need to allocate big enough
-// buffer. It should be at least MinResponseSize to put message that buffer
-// isn't long enough. The function returns number of bytes written to
+// with no obligations as a sequebce of bytes.
+func MakeIndeterminateResponse(err error) ([]byte, error) {
+	return marshalResponse(EffectIndeterminate, nil, err)
+}
+
+// MakeIndeterminateResponseWithAllocator marshals given error as indenterminate
+// response with no obligations as a sequebce of bytes. The allocator is
+// expected to take number of bytes required and return slice of that length.
+func MakeIndeterminateResponseWithAllocator(f func(n int) ([]byte, error), err error) ([]byte, error) {
+	return marshalResponseWithAllocator(f, EffectIndeterminate, nil, err)
+}
+
+// MakeIndeterminateResponseWithBuffer marshals given error as indenterminate
+// response with no obligations to given buffer. Caller need to allocate big
+// enough buffer. It should be at least MinResponseSize to put message that
+// buffer isn't long enough. The function returns number of bytes written to
 // the buffer.
-func MakeIndeterminateResponse(b []byte, err error) (int, error) {
+func MakeIndeterminateResponseWithBuffer(b []byte, err error) (int, error) {
 	return marshalResponseToBuffer(b, EffectIndeterminate, nil, err)
 }
 
@@ -491,20 +504,25 @@ func getAssignmentExpressions(b []byte) ([]AttributeAssignment, error) {
 	if err != nil {
 		return nil, err
 	}
-	b = b[n:]
 
-	out := make([]AttributeAssignment, c)
-	for i := range out {
-		id, v, n, err := getRequestAttribute(b)
-		if err != nil {
-			return nil, bindErrorf(err, "%d", i+1)
-		}
+	if c > 0 {
 		b = b[n:]
 
-		out[i] = MakeExpressionAssignment(id, v)
+		out := make([]AttributeAssignment, c)
+		for i := range out {
+			id, v, n, err := getRequestAttribute(b)
+			if err != nil {
+				return nil, bindErrorf(err, "%d", i+1)
+			}
+			b = b[n:]
+
+			out[i] = MakeExpressionAssignment(id, v)
+		}
+
+		return out, nil
 	}
 
-	return out, nil
+	return nil, nil
 }
 
 func getAssignmentExpressionsWithAllocator(b []byte, f func(n int) ([]AttributeAssignment, error)) ([]AttributeAssignment, error) {
@@ -512,29 +530,34 @@ func getAssignmentExpressionsWithAllocator(b []byte, f func(n int) ([]AttributeA
 	if err != nil {
 		return nil, err
 	}
-	b = b[n:]
 
-	out, err := f(c)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(out) < c {
-		return nil, newRequestAssignmentsOverflowError(c, len(out))
-	}
-	out = out[:c]
-
-	for i := range out {
-		id, v, n, err := getRequestAttribute(b)
-		if err != nil {
-			return nil, bindErrorf(err, "%d", i+1)
-		}
+	if c > 0 {
 		b = b[n:]
 
-		out[i] = MakeExpressionAssignment(id, v)
+		out, err := f(c)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(out) < c {
+			return nil, newRequestAssignmentsOverflowError(c, len(out))
+		}
+		out = out[:c]
+
+		for i := range out {
+			id, v, n, err := getRequestAttribute(b)
+			if err != nil {
+				return nil, bindErrorf(err, "%d", i+1)
+			}
+			b = b[n:]
+
+			out[i] = MakeExpressionAssignment(id, v)
+		}
+
+		return out, nil
 	}
 
-	return out, nil
+	return nil, nil
 }
 
 func getAssignmentExpressionsToArray(b []byte, out []AttributeAssignment) (int, error) {
