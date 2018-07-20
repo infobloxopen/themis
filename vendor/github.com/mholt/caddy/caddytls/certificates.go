@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mholt/caddy/telemetry"
 	"golang.org/x/crypto/ocsp"
 )
 
@@ -165,6 +166,7 @@ func (cfg *Config) CacheManagedCertificate(domain string) (Certificate, error) {
 	if err != nil {
 		return cert, err
 	}
+	telemetry.Increment("tls_managed_cert_count")
 	return cfg.cacheCertificate(cert), nil
 }
 
@@ -179,6 +181,7 @@ func (cfg *Config) cacheUnmanagedCertificatePEMFile(certFile, keyFile string) er
 		return err
 	}
 	cfg.cacheCertificate(cert)
+	telemetry.Increment("tls_manual_cert_count")
 	return nil
 }
 
@@ -192,6 +195,7 @@ func (cfg *Config) cacheUnmanagedCertificatePEMBytes(certBytes, keyBytes []byte)
 		return err
 	}
 	cfg.cacheCertificate(cert)
+	telemetry.Increment("tls_manual_cert_count")
 	return nil
 }
 
@@ -261,21 +265,21 @@ func fillCertFromLeaf(cert *Certificate, tlsCert tls.Certificate) error {
 		return err
 	}
 
-	if leaf.Subject.CommonName != "" {
+	if leaf.Subject.CommonName != "" { // TODO: CommonName is deprecated
 		cert.Names = []string{strings.ToLower(leaf.Subject.CommonName)}
 	}
 	for _, name := range leaf.DNSNames {
-		if name != leaf.Subject.CommonName {
+		if name != leaf.Subject.CommonName { // TODO: CommonName is deprecated
 			cert.Names = append(cert.Names, strings.ToLower(name))
 		}
 	}
 	for _, ip := range leaf.IPAddresses {
-		if ipStr := ip.String(); ipStr != leaf.Subject.CommonName {
+		if ipStr := ip.String(); ipStr != leaf.Subject.CommonName { // TODO: CommonName is deprecated
 			cert.Names = append(cert.Names, strings.ToLower(ipStr))
 		}
 	}
 	for _, email := range leaf.EmailAddresses {
-		if email != leaf.Subject.CommonName {
+		if email != leaf.Subject.CommonName { // TODO: CommonName is deprecated
 			cert.Names = append(cert.Names, strings.ToLower(email))
 		}
 	}

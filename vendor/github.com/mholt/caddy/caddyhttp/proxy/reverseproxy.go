@@ -85,7 +85,6 @@ type ReverseProxy struct {
 	Director func(*http.Request)
 
 	// The transport used to perform proxy requests.
-	// If nil, http.DefaultTransport is used.
 	Transport http.RoundTripper
 
 	// FlushInterval specifies the flush interval
@@ -93,6 +92,10 @@ type ReverseProxy struct {
 	// response body.
 	// If zero, no periodic flushing is done.
 	FlushInterval time.Duration
+
+	// dialer is used when values from the
+	// defaultDialer need to be overridden per Proxy
+	dialer *net.Dialer
 
 	srvResolver srvResolver
 }
@@ -103,13 +106,13 @@ type ReverseProxy struct {
 // What we need is just the path, so if "unix:/var/run/www.socket"
 // was the proxy directive, the parsed hostName would be
 // "unix:///var/run/www.socket", hence the ambiguous trimming.
-func socketDial(hostName string) func(network, addr string) (conn net.Conn, err error) {
+func socketDial(hostName string, timeout time.Duration) func(network, addr string) (conn net.Conn, err error) {
 	return func(network, addr string) (conn net.Conn, err error) {
-		return net.Dial("unix", hostName[len("unix://"):])
+		return net.DialTimeout("unix", hostName[len("unix://"):], timeout)
 	}
 }
 
-func (rp *ReverseProxy) srvDialerFunc(locator string) func(network, addr string) (conn net.Conn, err error) {
+func (rp *ReverseProxy) srvDialerFunc(locator string, timeout time.Duration) func(network, addr string) (conn net.Conn, err error) {
 	service := locator
 	if strings.HasPrefix(locator, "srv://") {
 		service = locator[6:]
@@ -122,7 +125,7 @@ func (rp *ReverseProxy) srvDialerFunc(locator string) func(network, addr string)
 		if err != nil {
 			return nil, err
 		}
-		return net.Dial("tcp", fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port))
+		return net.DialTimeout("tcp", fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port), timeout)
 	}
 }
 
@@ -144,7 +147,7 @@ func singleJoiningSlash(a, b string) string {
 // the target request will be for /base/dir.
 // Without logic: target's path is "/", incoming is "/api/messages",
 // without is "/api", then the target request will be for /messages.
-func NewSingleHostReverseProxy(target *url.URL, without string, keepalive int) *ReverseProxy {
+func NewSingleHostReverseProxy(target *url.URL, without string, keepalive int, timeout time.Duration) *ReverseProxy {
 	targetQuery := target.RawQuery
 	director := func(req *http.Request) {
 		if target.Scheme == "unix" {
@@ -226,15 +229,21 @@ func NewSingleHostReverseProxy(target *url.URL, without string, keepalive int) *
 		}
 	}
 
+	dialer := *defaultDialer
+	if timeout != defaultDialer.Timeout {
+		dialer.Timeout = timeout
+	}
+
 	rp := &ReverseProxy{
 		Director:      director,
 		FlushInterval: 250 * time.Millisecond, // flushing good for streaming & server-sent events
 		srvResolver:   net.DefaultResolver,
+		dialer:        &dialer,
 	}
 
 	if target.Scheme == "unix" {
 		rp.Transport = &http.Transport{
-			Dial: socketDial(target.String()),
+			Dial: socketDial(target.String(), timeout),
 		}
 	} else if target.Scheme == "quic" {
 		rp.Transport = &h2quic.RoundTripper{
@@ -244,9 +253,9 @@ func NewSingleHostReverseProxy(target *url.URL, without string, keepalive int) *
 			},
 		}
 	} else if keepalive != http.DefaultMaxIdleConnsPerHost || strings.HasPrefix(target.Scheme, "srv") {
-		dialFunc := defaultDialer.Dial
+		dialFunc := rp.dialer.Dial
 		if strings.HasPrefix(target.Scheme, "srv") {
-			dialFunc = rp.srvDialerFunc(target.String())
+			dialFunc = rp.srvDialerFunc(target.String(), timeout)
 		}
 
 		transport := &http.Transport{
@@ -264,6 +273,15 @@ func NewSingleHostReverseProxy(target *url.URL, without string, keepalive int) *
 			http2.ConfigureTransport(transport)
 		}
 		rp.Transport = transport
+	} else {
+		transport := &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			Dial:  rp.dialer.Dial,
+		}
+		if httpserver.HTTP2 {
+			http2.ConfigureTransport(transport)
+		}
+		rp.Transport = transport
 	}
 	return rp
 }
@@ -272,18 +290,7 @@ func NewSingleHostReverseProxy(target *url.URL, without string, keepalive int) *
 // when it is OK for upstream to be using a bad certificate,
 // since this transport skips verification.
 func (rp *ReverseProxy) UseInsecureTransport() {
-	if rp.Transport == nil {
-		transport := &http.Transport{
-			Proxy:               http.ProxyFromEnvironment,
-			Dial:                defaultDialer.Dial,
-			TLSHandshakeTimeout: defaultCryptoHandshakeTimeout,
-			TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
-		}
-		if httpserver.HTTP2 {
-			http2.ConfigureTransport(transport)
-		}
-		rp.Transport = transport
-	} else if transport, ok := rp.Transport.(*http.Transport); ok {
+	if transport, ok := rp.Transport.(*http.Transport); ok {
 		if transport.TLSClientConfig == nil {
 			transport.TLSClientConfig = &tls.Config{}
 		}
@@ -305,8 +312,6 @@ func (rp *ReverseProxy) ServeHTTP(rw http.ResponseWriter, outreq *http.Request, 
 	transport := rp.Transport
 	if requestIsWebsocket(outreq) {
 		transport = newConnHijackerTransport(transport)
-	} else if transport == nil {
-		transport = http.DefaultTransport
 	}
 
 	rp.Director(outreq)
@@ -361,7 +366,7 @@ func (rp *ReverseProxy) ServeHTTP(rw http.ResponseWriter, outreq *http.Request, 
 			}
 			bufferPool.Put(hj.Replay)
 		} else {
-			backendConn, err = net.Dial("tcp", outreq.URL.Host)
+			backendConn, err = net.DialTimeout("tcp", outreq.URL.Host, rp.dialer.Timeout)
 			if err != nil {
 				return err
 			}

@@ -39,6 +39,7 @@ uses
     {$ENDIF}
   {$ENDIF}
   Thrift.Collections,
+  Thrift.Exception,
   Thrift.Utils,
   Thrift.Stream;
 
@@ -79,7 +80,7 @@ type
     procedure Flush; virtual;
   end;
 
-  TTransportException = class( Exception )
+  TTransportException = class( TException)
   public
     type
       TExceptionType = (
@@ -117,14 +118,21 @@ type
   TTransportExceptionInterrupted = class (TTransportExceptionSpecialized);
 
   IHTTPClient = interface( ITransport )
-    ['{0F5DB8AB-710D-4338-AAC9-46B5734C5057}']
+    ['{BA142D12-8AE6-4B50-9E33-6B7843B21D73}']
+    procedure SetDnsResolveTimeout(const Value: Integer);
+    function GetDnsResolveTimeout: Integer;
     procedure SetConnectionTimeout(const Value: Integer);
     function GetConnectionTimeout: Integer;
+    procedure SetSendTimeout(const Value: Integer);
+    function GetSendTimeout: Integer;
     procedure SetReadTimeout(const Value: Integer);
     function GetReadTimeout: Integer;
     function GetCustomHeaders: IThriftDictionary<string,string>;
     procedure SendRequest;
+
+    property DnsResolveTimeout: Integer read GetDnsResolveTimeout write SetDnsResolveTimeout;
     property ConnectionTimeout: Integer read GetConnectionTimeout write SetConnectionTimeout;
+    property SendTimeout: Integer read GetSendTimeout write SetSendTimeout;
     property ReadTimeout: Integer read GetReadTimeout write SetReadTimeout;
     property CustomHeaders: IThriftDictionary<string,string> read GetCustomHeaders;
   end;
@@ -134,7 +142,9 @@ type
     FUri : string;
     FInputStream : IThriftStream;
     FOutputStream : IThriftStream;
+    FDnsResolveTimeout : Integer;
     FConnectionTimeout : Integer;
+    FSendTimeout : Integer;
     FReadTimeout : Integer;
     FCustomHeaders : IThriftDictionary<string,string>;
 
@@ -147,13 +157,20 @@ type
     procedure Write( const pBuf : Pointer; off, len : Integer); override;
     procedure Flush; override;
 
+    procedure SetDnsResolveTimeout(const Value: Integer);
+    function GetDnsResolveTimeout: Integer;
     procedure SetConnectionTimeout(const Value: Integer);
     function GetConnectionTimeout: Integer;
+    procedure SetSendTimeout(const Value: Integer);
+    function GetSendTimeout: Integer;
     procedure SetReadTimeout(const Value: Integer);
     function GetReadTimeout: Integer;
+
     function GetCustomHeaders: IThriftDictionary<string,string>;
     procedure SendRequest;
+    property DnsResolveTimeout: Integer read GetDnsResolveTimeout write SetDnsResolveTimeout;
     property ConnectionTimeout: Integer read GetConnectionTimeout write SetConnectionTimeout;
+    property SendTimeout: Integer read GetSendTimeout write SetSendTimeout;
     property ReadTimeout: Integer read GetReadTimeout write SetReadTimeout;
     property CustomHeaders: IThriftDictionary<string,string> read GetCustomHeaders;
   public
@@ -457,16 +474,17 @@ end;
 
 { THTTPClientImpl }
 
-procedure THTTPClientImpl.Close;
-begin
-  FInputStream := nil;
-  FOutputStream := nil;
-end;
-
 constructor THTTPClientImpl.Create(const AUri: string);
 begin
   inherited Create;
   FUri := AUri;
+
+  // defaults according to MSDN
+  FDnsResolveTimeout := 0; // no timeout
+  FConnectionTimeout := 60 * 1000;
+  FSendTimeout       := 30 * 1000;
+  FReadTimeout       := 30 * 1000;
+
   FCustomHeaders := TThriftDictionaryImpl<string,string>.Create;
   FOutputStream := TThriftStreamAdapterDelphi.Create( TMemoryStream.Create, True);
 end;
@@ -474,12 +492,17 @@ end;
 function THTTPClientImpl.CreateRequest: IXMLHTTPRequest;
 var
   pair : TPair<string,string>;
+  srvHttp : IServerXMLHTTPRequest;
 begin
   {$IF CompilerVersion >= 21.0}
-  Result := CoXMLHTTP.Create;
+  Result := CoServerXMLHTTP.Create;
   {$ELSE}
   Result := CoXMLHTTPRequest.Create;
   {$IFEND}
+
+  // setting a timeout value to 0 (zero) means "no timeout" for that setting
+  if Supports( result, IServerXMLHTTPRequest, srvHttp)
+  then srvHttp.setTimeouts( DnsResolveTimeout, ConnectionTimeout, SendTimeout, ReadTimeout);
 
   Result.open('POST', FUri, False, '', '');
   Result.setRequestHeader( 'Content-Type', 'application/x-thrift');
@@ -497,19 +520,44 @@ begin
   inherited;
 end;
 
-procedure THTTPClientImpl.Flush;
+function THTTPClientImpl.GetDnsResolveTimeout: Integer;
 begin
-  try
-    SendRequest;
-  finally
-    FOutputStream := nil;
-    FOutputStream := TThriftStreamAdapterDelphi.Create( TMemoryStream.Create, True);
-  end;
+  Result := FDnsResolveTimeout;
+end;
+
+procedure THTTPClientImpl.SetDnsResolveTimeout(const Value: Integer);
+begin
+  FDnsResolveTimeout := Value;
 end;
 
 function THTTPClientImpl.GetConnectionTimeout: Integer;
 begin
   Result := FConnectionTimeout;
+end;
+
+procedure THTTPClientImpl.SetConnectionTimeout(const Value: Integer);
+begin
+  FConnectionTimeout := Value;
+end;
+
+function THTTPClientImpl.GetSendTimeout: Integer;
+begin
+  Result := FSendTimeout;
+end;
+
+procedure THTTPClientImpl.SetSendTimeout(const Value: Integer);
+begin
+  FSendTimeout := Value;
+end;
+
+function THTTPClientImpl.GetReadTimeout: Integer;
+begin
+  Result := FReadTimeout;
+end;
+
+procedure THTTPClientImpl.SetReadTimeout(const Value: Integer);
+begin
+  FReadTimeout := Value;
 end;
 
 function THTTPClientImpl.GetCustomHeaders: IThriftDictionary<string,string>;
@@ -522,14 +570,26 @@ begin
   Result := True;
 end;
 
-function THTTPClientImpl.GetReadTimeout: Integer;
-begin
-  Result := FReadTimeout;
-end;
-
 procedure THTTPClientImpl.Open;
 begin
-  // nothing to do
+  FOutputStream := TThriftStreamAdapterDelphi.Create( TMemoryStream.Create, True);
+end;
+
+procedure THTTPClientImpl.Close;
+begin
+  FInputStream := nil;
+  FOutputStream := nil;
+end;
+
+procedure THTTPClientImpl.Flush;
+begin
+  try
+    SendRequest;
+  finally
+    FOutputStream := nil;
+    FOutputStream := TThriftStreamAdapterDelphi.Create( TMemoryStream.Create, True);
+    ASSERT( FOutputStream <> nil);
+  end;
 end;
 
 function THTTPClientImpl.Read( const pBuf : Pointer; const buflen : Integer; off: Integer; len: Integer): Integer;
@@ -569,16 +629,6 @@ begin
   finally
     ms.Free;
   end;
-end;
-
-procedure THTTPClientImpl.SetConnectionTimeout(const Value: Integer);
-begin
-  FConnectionTimeout := Value;
-end;
-
-procedure THTTPClientImpl.SetReadTimeout(const Value: Integer);
-begin
-  FReadTimeout := Value
 end;
 
 procedure THTTPClientImpl.Write( const pBuf : Pointer; off, len : Integer);
@@ -842,8 +892,13 @@ end;
 procedure TSocketImpl.Close;
 begin
   inherited Close;
+
+  FInputStream := nil;
+  FOutputStream := nil;
+
   if FOwnsClient
-  then FreeAndNil( FClient);
+  then FreeAndNil( FClient)
+  else FClient := nil;
 end;
 
 function TSocketImpl.GetIsOpen: Boolean;
@@ -954,12 +1009,13 @@ function TBufferedStreamImpl.IsOpen: Boolean;
 begin
   Result := (FWriteBuffer <> nil)
         and (FReadBuffer <> nil)
-        and (FStream <> nil);
+        and (FStream <> nil)
+        and FStream.IsOpen;
 end;
 
 procedure TBufferedStreamImpl.Open;
 begin
-  // nothing to do
+  FStream.Open;
 end;
 
 function TBufferedStreamImpl.Read( const pBuf : Pointer; const buflen : Integer; offset: Integer; count: Integer): Integer;
@@ -1031,12 +1087,6 @@ end;
 
 { TStreamTransportImpl }
 
-procedure TStreamTransportImpl.Close;
-begin
-  FInputStream := nil;
-  FOutputStream := nil;
-end;
-
 constructor TStreamTransportImpl.Create( const AInputStream : IThriftStream; const AOutputStream : IThriftStream);
 begin
   inherited Create;
@@ -1049,6 +1099,12 @@ begin
   FInputStream := nil;
   FOutputStream := nil;
   inherited;
+end;
+
+procedure TStreamTransportImpl.Close;
+begin
+  FInputStream := nil;
+  FOutputStream := nil;
 end;
 
 procedure TStreamTransportImpl.Flush;
@@ -1072,7 +1128,7 @@ end;
 
 function TStreamTransportImpl.GetOutputStream: IThriftStream;
 begin
-  Result := FInputStream;
+  Result := FOutputStream;
 end;
 
 procedure TStreamTransportImpl.Open;
@@ -1106,17 +1162,19 @@ begin
   Create( ATransport, 1024 );
 end;
 
-procedure TBufferedTransportImpl.Close;
-begin
-  FTransport.Close;
-end;
-
 constructor TBufferedTransportImpl.Create( const ATransport: IStreamTransport;  ABufSize: Integer);
 begin
   inherited Create;
   FTransport := ATransport;
   FBufSize := ABufSize;
   InitBuffers;
+end;
+
+procedure TBufferedTransportImpl.Close;
+begin
+  FTransport.Close;
+  FInputBuffer := nil;
+  FOutputBuffer := nil;  
 end;
 
 procedure TBufferedTransportImpl.Flush;
@@ -1148,7 +1206,8 @@ end;
 
 procedure TBufferedTransportImpl.Open;
 begin
-  FTransport.Open
+  FTransport.Open;
+  InitBuffers;  // we need to get the buffers to match FTransport substreams again
 end;
 
 function TBufferedTransportImpl.Read( const pBuf : Pointer; const buflen : Integer; off: Integer; len: Integer): Integer;

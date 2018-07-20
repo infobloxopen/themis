@@ -1258,7 +1258,12 @@ Thrift.Protocol.prototype = {
 
     /** Deserializes the end of a list. */
     readListEnd: function() {
-        this.readFieldEnd();
+        var pos = this.rpos.pop() - 2;
+        var st = this.rstack;
+        st.pop();
+        if (st instanceof Array && st.length > pos && st[pos].length > 0) {
+          st.push(st[pos].shift());
+        }
     },
 
     /**
@@ -1314,7 +1319,11 @@ Thrift.Protocol.prototype = {
             if (f.length === 0) {
                 r.value = undefined;
             } else {
-                r.value = f.shift();
+                if (!f.isReversed) {
+                    f.reverse();
+                    f.isReversed = true;
+                }
+                r.value = f.pop();
             }
         } else if (f instanceof Object) {
            for (var i in f) {
@@ -1433,6 +1442,9 @@ Thrift.Protocol.prototype = {
                 }
                 this.readListEnd();
                 return null;
+
+            default:
+                throw new Thrift.TProtocolException(Thrift.TProtocolExceptionType.INVALID_DATA);
         }
     }
 };
