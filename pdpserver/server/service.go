@@ -2,16 +2,67 @@ package server
 
 import (
 	"fmt"
-	"strings"
-
-	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
-
 	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
+	"github.com/infobloxopen/themis/pdp/ast"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/net/context"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
 )
 
-func (s *Server) newContext(c *pdp.LocalContentStorage, in []byte) (*pdp.Context, error) {
+type PDPService struct {
+	sync.RWMutex
+	opts options
+
+	p *pdp.PolicyStorage
+	c *pdp.LocalContentStorage
+}
+
+func NewBuiltinPDPService(policyFile string, contentFiles []string) *PDPService {
+	o := options{
+		logger:              log.StandardLogger(),
+		service:             ":5555",
+		memStatsLogInterval: -1 * time.Second,
+		maxResponseSize:     10240,
+	}
+
+	ext := filepath.Ext(policyFile)
+	switch ext {
+	case ".json":
+		o.parser = ast.NewJSONParser()
+	case ".yaml":
+		o.parser = ast.NewYAMLParser()
+	}
+
+	if o.parser == nil {
+		o.parser = ast.NewYAMLParser()
+	}
+
+	s := &PDPService{
+		c:    pdp.NewLocalContentStorage(nil),
+		opts: o,
+	}
+
+	log.SetLevel(log.DebugLevel)
+	err := s.LoadPolicies(policyFile)
+	if err != nil {
+		return nil
+	}
+
+	if contentFiles != nil && len(contentFiles) > 0 {
+		err = s.LoadContent(contentFiles)
+		if err != nil {
+			return nil
+		}
+	}
+
+	return s
+}
+
+func (s *PDPService) newContext(c *pdp.LocalContentStorage, in []byte) (*pdp.Context, error) {
 	ctx, err := pdp.NewContextFromBytes(c, in)
 	if err != nil {
 		return nil, newContextCreationError(err)
@@ -47,7 +98,7 @@ func makeFailureResponseWithBuffer(b []byte, err error) []byte {
 	return b[:n]
 }
 
-func (s *Server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in []byte) []byte {
+func (s *PDPService) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in []byte) []byte {
 	if p == nil {
 		return makeFailureResponse(newMissingPolicyError())
 	}
@@ -154,7 +205,7 @@ func (s *Server) rawValidateToBuffer(p *pdp.PolicyStorage, c *pdp.LocalContentSt
 
 // Validate is a server handler for gRPC call
 // It handles PDP decision requests
-func (s *Server) Validate(ctx context.Context, in *pb.Msg) (*pb.Msg, error) {
+func (s *PDPService) Validate(ctx context.Context, in *pb.Msg) (*pb.Msg, error) {
 	s.RLock()
 	p := s.p
 	c := s.c
