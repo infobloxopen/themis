@@ -20,8 +20,26 @@ func (s *Server) newContext(c *pdp.LocalContentStorage, in []byte) (*pdp.Context
 	return ctx, nil
 }
 
-func makeFailureResponse(b []byte, err error) []byte {
-	n, err := pdp.MakeIndeterminateResponse(b, err)
+func makeFailureResponse(err error) []byte {
+	b, err := pdp.MakeIndeterminateResponse(err)
+	if err != nil {
+		panic(err)
+	}
+
+	return b
+}
+
+func makeFailureResponseWithAllocator(f func(n int) ([]byte, error), err error) []byte {
+	b, err := pdp.MakeIndeterminateResponseWithAllocator(f, err)
+	if err != nil {
+		panic(err)
+	}
+
+	return b
+}
+
+func makeFailureResponseWithBuffer(b []byte, err error) []byte {
+	n, err := pdp.MakeIndeterminateResponseWithBuffer(b, err)
 	if err != nil {
 		panic(err)
 	}
@@ -29,18 +47,14 @@ func makeFailureResponse(b []byte, err error) []byte {
 	return b[:n]
 }
 
-func (s *Server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in []byte, out []byte) []byte {
-	if out == nil {
-		out = make([]byte, s.opts.maxResponseSize)
-	}
-
+func (s *Server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in []byte) []byte {
 	if p == nil {
-		return makeFailureResponse(out, newMissingPolicyError())
+		return makeFailureResponse(newMissingPolicyError())
 	}
 
 	ctx, err := s.newContext(c, in)
 	if err != nil {
-		return makeFailureResponse(out, err)
+		return makeFailureResponse(err)
 	}
 
 	if s.opts.logger.Level >= log.DebugLevel {
@@ -60,7 +74,77 @@ func (s *Server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, i
 		}).Debug("Response")
 	}
 
-	n, err := r.Marshal(out, ctx)
+	out, err := r.Marshal(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	return out
+}
+
+func (s *Server) rawValidateWithAllocator(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in []byte, f func(n int) ([]byte, error)) []byte {
+	if p == nil {
+		return makeFailureResponseWithAllocator(f, newMissingPolicyError())
+	}
+
+	ctx, err := s.newContext(c, in)
+	if err != nil {
+		return makeFailureResponseWithAllocator(f, err)
+	}
+
+	if s.opts.logger.Level >= log.DebugLevel {
+		s.opts.logger.WithField("context", ctx).Debug("Request context")
+	}
+
+	r := p.Root().Calculate(ctx)
+
+	if s.opts.logger.Level >= log.DebugLevel {
+		s.opts.logger.WithFields(log.Fields{
+			"effect": pdp.EffectNameFromEnum(r.Effect),
+			"reason": r.Status,
+			"obligations": obligations{
+				ctx: ctx,
+				o:   r.Obligations,
+			},
+		}).Debug("Response")
+	}
+
+	out, err := r.MarshalWithAllocator(f, ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	return out
+}
+
+func (s *Server) rawValidateToBuffer(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in []byte, out []byte) []byte {
+	if p == nil {
+		return makeFailureResponseWithBuffer(out, newMissingPolicyError())
+	}
+
+	ctx, err := s.newContext(c, in)
+	if err != nil {
+		return makeFailureResponseWithBuffer(out, err)
+	}
+
+	if s.opts.logger.Level >= log.DebugLevel {
+		s.opts.logger.WithField("context", ctx).Debug("Request context")
+	}
+
+	r := p.Root().Calculate(ctx)
+
+	if s.opts.logger.Level >= log.DebugLevel {
+		s.opts.logger.WithFields(log.Fields{
+			"effect": pdp.EffectNameFromEnum(r.Effect),
+			"reason": r.Status,
+			"obligations": obligations{
+				ctx: ctx,
+				o:   r.Obligations,
+			},
+		}).Debug("Response")
+	}
+
+	n, err := r.MarshalToBuffer(out, ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -76,8 +160,17 @@ func (s *Server) Validate(ctx context.Context, in *pb.Msg) (*pb.Msg, error) {
 	c := s.c
 	s.RUnlock()
 
+	if s.opts.autoResponseSize {
+		return &pb.Msg{
+			Body: s.rawValidate(p, c, in.Body),
+		}, nil
+	}
+
+	b := s.pool.Get()
+	defer s.pool.Put(b)
+
 	return &pb.Msg{
-		Body: s.rawValidate(p, c, in.Body, nil),
+		Body: s.rawValidateToBuffer(p, c, in.Body, b),
 	}, nil
 }
 
