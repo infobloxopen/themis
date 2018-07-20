@@ -35,7 +35,6 @@ install:
   - if [[ `uname` == "Linux" ]]; then build/docker/refresh.sh; fi
 
 stages:
-# - osx       # up front for now (for testing)
   - docker    # docker images
   - thrift    # thrift build jobs
 
@@ -44,7 +43,7 @@ env:
     - SCRIPT="cmake.sh"
     - BUILD_ARG=""
     - BUILD_ENV="-e CC=gcc -e CXX=g++ -e THRIFT_CROSSTEST_CONCURRENCY=4"
-    - DISTRO=ubuntu-xenial
+    - DISTRO=ubuntu-bionic
     - BUILD_LIBS="CPP C_GLIB HASKELL JAVA PYTHON TESTING TUTORIALS"  # only meaningful for CMake builds
     - TRAVIS_BUILD_STAGE=test
     # DOCKER_REPO (this works for all builds as a source for docker images - you can override for fork builds in your Travis settings)
@@ -54,28 +53,17 @@ env:
 
 jobs:
   include:
-    # ------------------------- phase: osx --------------------------
-    # - stage: osx
-    #   os: osx
-    #   osx_image: xcode9
-    #   script: build/docker/scripts/autotools.sh
-
     # ========================= stage: docker =========================
     - stage: docker
       script: true
       env:
-        - JOB="Docker Build ubuntu-trusty 14.04"
-        - DISTRO=ubuntu-trusty
-        - TRAVIS_BUILD_STAGE=docker
-    - script: true
-      env:
-        - JOB="Docker Build ubuntu-xenial 16.04"
+        - JOB="Docker Build ubuntu-xenial 16.04 LTS"
         - DISTRO=ubuntu-xenial
         - TRAVIS_BUILD_STAGE=docker
     - script: true
       env:
-        - JOB="Docker Build ubuntu-artful 17.10"
-        - DISTRO=ubuntu-artful
+        - JOB="Docker Build ubuntu-bionic 18.04 LTS"
+        - DISTRO=ubuntu-bionic
         - TRAVIS_BUILD_STAGE=docker
 
     # ========================= stage: thrift =======================
@@ -120,7 +108,6 @@ jobs:
       env:
         - JOB="Static Code Analysis"
         - SCRIPT="sca.sh"
-        - DISTRO=ubuntu-artful
 
     # C and C++ undefined behavior.
     # A binary crashes if undefined behavior occurs and produces a stack trace.
@@ -129,13 +116,25 @@ jobs:
       env:
         - JOB="UBSan"
         - SCRIPT="ubsan.sh"
-        - DISTRO=ubuntu-artful
         - BUILD_ARG="--without-python --without-py3"
+
+    # ------------------------- phase: autotools --------------------
+    # TODO: Remove them once migrated to CMake
+    - script: build/docker/run.sh
+      env:
+        - JOB="Autotools (Ubuntu Bionic)"
+        - SCRIPT="autotools.sh"
+
+    - script: build/docker/run.sh
+      env:
+        - JOB="Autotools (Ubuntu Xenial)"
+        - DISTRO=ubuntu-xenial
+        - SCRIPT="autotools.sh"
 
     # ------------------------- phase: cmake ------------------------
     - script: build/docker/run.sh
       env:
-        - JOB="CMake (Ubuntu Xenial)"
+        - JOB="CMake"
 
     # C++ specific options: compiler plug-in, threading model
     - script: build/docker/run.sh
@@ -154,26 +153,6 @@ jobs:
         - BUILD_ARG="-DWITH_PLUGIN=ON -DWITH_STDTHREADS=ON -DWITH_PYTHON=OFF -DWITH_C_GLIB=OFF -DWITH_JAVA=OFF -DWITH_HASKELL=OFF"
         - BUILD_ENV="-e CC=clang -e CXX=clang++"
 
-    # ------------------------- phase: autotools --------------------
-    # TODO: Remove them once migrated to CMake
-    - script: build/docker/run.sh
-      env:
-        - JOB="Autotools (Ubuntu Artful)"
-        - DISTRO=ubuntu-artful
-        - SCRIPT="autotools.sh"
-
-    - script: build/docker/run.sh
-      env:
-        - JOB="Autotools (Ubuntu Xenial)"
-        - DISTRO=ubuntu-xenial
-        - SCRIPT="autotools.sh"
-
-    - script: build/docker/run.sh
-      env:
-        - JOB="Autotools (Ubuntu Trusty)"
-        - DISTRO=ubuntu-trusty
-        - SCRIPT="autotools.sh"
-
     # ------------------------- phase: dist -------------------------
     - script: build/docker/run.sh
       env:
@@ -184,4 +163,19 @@ jobs:
       env:
         - JOB="Debian Packages"
         - SCRIPT="dpkg.sh"
+
+    # ------------------------- phase: coverity ---------------------
+    # We build the coverity scan build once monthly using a travis cron job
+    - if: (env(COVERITY_SCAN_NOTIFICATION_EMAIL) IS present) AND (branch IN (master)) AND (type IN (cron))
+      script: build/docker/run.sh
+      env:
+        - JOB="Coverity Scan"
+        - SCRIPT="covscan.sh"
+     
+
+  ### ------------------------- phase: osx --------------------------
+  # disabled due to the time delays it imposes on build jobs
+  # - os: osx
+  #   osx_image: xcode9
+  #   script: build/docker/scripts/autotools.sh
 
