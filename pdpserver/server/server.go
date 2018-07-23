@@ -9,7 +9,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 
@@ -177,9 +176,6 @@ type Server struct {
 
 	q *queue
 
-	//	p *pdp.PolicyStorage
-	//	c *pdp.LocalContentStorage
-
 	softMemWarn *time.Time
 	backMemWarn *time.Time
 	fragMemWarn *time.Time
@@ -223,34 +219,9 @@ func NewServer(opts ...Option) *Server {
 		memProfBaseDumpDone: memProfBaseDumpDone,
 		pool:                pool,
 	}
-	s.PDPService.opts = o
+	s.PDPService.logger = s.opts.logger
 	s.c = pdp.NewLocalContentStorage(nil)
 	return s
-}
-
-// LoadPolicies loads policies from file
-func (s *PDPService) LoadPolicies(path string) error {
-	if len(path) <= 0 {
-		return nil
-	}
-
-	s.opts.logger.WithField("policy", path).Info("Loading policy")
-	pf, err := os.Open(path)
-	if err != nil {
-		s.opts.logger.WithFields(log.Fields{"policy": path, "error": err}).Error("Failed load policy")
-		return err
-	}
-
-	s.opts.logger.WithField("policy", path).Info("Parsing policy")
-	p, err := s.opts.parser.Unmarshal(pf, nil)
-	if err != nil {
-		s.opts.logger.WithFields(log.Fields{"policy": path, "error": err}).Error("Failed parse policy")
-		return err
-	}
-
-	s.p = p
-
-	return nil
 }
 
 // ReadPolicies reads policies with using io.Reader instance
@@ -267,38 +238,6 @@ func (s *Server) ReadPolicies(r io.Reader) error {
 	}
 
 	s.p = p
-
-	return nil
-}
-
-// LoadContent loads content from files
-func (s *PDPService) LoadContent(paths []string) error {
-	items := []*pdp.LocalContent{}
-	for _, path := range paths {
-		err := func() error {
-			s.opts.logger.WithField("content", path).Info("Opening content")
-			f, err := os.Open(path)
-			if err != nil {
-				return err
-			}
-
-			defer f.Close()
-
-			s.opts.logger.WithField("content", path).Info("Parsing content")
-			item, err := jcon.Unmarshal(f, nil)
-			if err != nil {
-				return err
-			}
-
-			items = append(items, item)
-			return nil
-		}()
-		if err != nil {
-			return err
-		}
-	}
-
-	s.c = pdp.NewLocalContentStorage(items)
 
 	return nil
 }

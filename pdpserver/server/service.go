@@ -5,45 +5,41 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pdp/ast"
+	"github.com/infobloxopen/themis/pdp/jcon"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 )
 
 type PDPService struct {
 	sync.RWMutex
-	opts options
+
+	parser ast.Parser
+	logger *log.Logger
 
 	p *pdp.PolicyStorage
 	c *pdp.LocalContentStorage
 }
 
-func NewBuiltinPDPService(policyFile string, contentFiles []string) *PDPService {
-	o := options{
-		logger:              log.StandardLogger(),
-		service:             ":5555",
-		memStatsLogInterval: -1 * time.Second,
-		maxResponseSize:     10240,
+func NewBuiltinPDPService(policyFile string, contentFiles []string, logger *log.Logger) *PDPService {
+	s := &PDPService{
+		logger: logger,
+		c:      pdp.NewLocalContentStorage(nil),
 	}
 
 	ext := filepath.Ext(policyFile)
 	switch ext {
 	case ".json":
-		o.parser = ast.NewJSONParser()
+		s.parser = ast.NewJSONParser()
 	case ".yaml":
-		o.parser = ast.NewYAMLParser()
+		s.parser = ast.NewYAMLParser()
 	}
 
-	if o.parser == nil {
-		o.parser = ast.NewYAMLParser()
-	}
-
-	s := &PDPService{
-		c:    pdp.NewLocalContentStorage(nil),
-		opts: o,
+	if s.parser == nil {
+		s.parser = ast.NewYAMLParser()
 	}
 
 	log.SetLevel(log.DebugLevel)
@@ -60,6 +56,63 @@ func NewBuiltinPDPService(policyFile string, contentFiles []string) *PDPService 
 	}
 
 	return s
+}
+
+// LoadPolicies loads policies from file
+func (s *PDPService) LoadPolicies(path string) error {
+	if len(path) <= 0 {
+		return nil
+	}
+
+	s.logger.WithField("policy", path).Info("Loading policy")
+	pf, err := os.Open(path)
+	if err != nil {
+		s.logger.WithFields(log.Fields{"policy": path, "error": err}).Error("Failed load policy")
+		return err
+	}
+
+	s.logger.WithField("policy", path).Info("Parsing policy")
+	p, err := s.parser.Unmarshal(pf, nil)
+	if err != nil {
+		s.logger.WithFields(log.Fields{"policy": path, "error": err}).Error("Failed parse policy")
+		return err
+	}
+
+	s.p = p
+
+	return nil
+}
+
+// LoadContent loads content from files
+func (s *PDPService) LoadContent(paths []string) error {
+	items := []*pdp.LocalContent{}
+	for _, path := range paths {
+		err := func() error {
+			s.logger.WithField("content", path).Info("Opening content")
+			f, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+
+			defer f.Close()
+
+			s.logger.WithField("content", path).Info("Parsing content")
+			item, err := jcon.Unmarshal(f, nil)
+			if err != nil {
+				return err
+			}
+
+			items = append(items, item)
+			return nil
+		}()
+		if err != nil {
+			return err
+		}
+	}
+
+	s.c = pdp.NewLocalContentStorage(items)
+
+	return nil
 }
 
 func (s *PDPService) newContext(c *pdp.LocalContentStorage, in []byte) (*pdp.Context, error) {
@@ -178,14 +231,14 @@ func (s *Server) rawValidateToBuffer(p *pdp.PolicyStorage, c *pdp.LocalContentSt
 		return makeFailureResponseWithBuffer(out, err)
 	}
 
-	if s.opts.logger.Level >= log.DebugLevel {
-		s.opts.logger.WithField("context", ctx).Debug("Request context")
+	if s.logger.Level >= log.DebugLevel {
+		s.logger.WithField("context", ctx).Debug("Request context")
 	}
 
 	r := p.Root().Calculate(ctx)
 
-	if s.opts.logger.Level >= log.DebugLevel {
-		s.opts.logger.WithFields(log.Fields{
+	if s.logger.Level >= log.DebugLevel {
+		s.logger.WithFields(log.Fields{
 			"effect": pdp.EffectNameFromEnum(r.Effect),
 			"reason": r.Status,
 			"obligations": obligations{

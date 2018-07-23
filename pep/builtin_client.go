@@ -6,6 +6,7 @@ import (
 
 	pb "github.com/infobloxopen/themis/pdp-service"
 	ps "github.com/infobloxopen/themis/pdpserver/server"
+	log "github.com/sirupsen/logrus"
 )
 
 type builtinClient struct {
@@ -13,9 +14,9 @@ type builtinClient struct {
 	pool bytePool
 }
 
-func NewBuiltinClient(policyFile string, contentFiles []string) *builtinClient {
+func NewBuiltinClient(policyFile string, contentFiles []string, logger *log.Logger) *builtinClient {
 	fmt.Printf("pep client NewBuiltinClient() called..........\n")
-	s := ps.NewBuiltinPDPService(policyFile, contentFiles)
+	s := ps.NewBuiltinPDPService(policyFile, contentFiles, logger)
 	return &builtinClient{
 		s:    s,
 		pool: makeBytePool(10240, true),
