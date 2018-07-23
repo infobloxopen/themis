@@ -13,6 +13,7 @@ const (
 	attrNameRefuse       = "refuse"
 	attrNameDrop         = "drop"
 	attrNamePolicyAction = "policy_action"
+	attrNameRuleOrd      = "rule_ord"
 
 	typeValueQuery    = "query"
 	typeValueResponse = "response"

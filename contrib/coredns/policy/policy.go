@@ -163,10 +163,30 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 				attrsResponse = p.attrPool.Get()
 				defer p.attrPool.Put(attrsResponse)
 			}
+			queryAction, queryRedirect := ah.action, ah.dst
 			// validate response IP (validation #2)
 			if err := p.validate(ah, attrsResponse); err != nil {
 				status = dns.RcodeServerFailure
 				return dns.RcodeSuccess, err
+			}
+			var qOrder, rOrder string
+			for _, qattr := range ah.dnRes {
+				id, _, value, err := qattr.Serialize(emptyCtx)
+				if err != nil && id == attrNameRuleOrd {
+					qOrder = value
+					break
+				}
+			}
+			for _, rattr := range ah.ipRes {
+				id, _, value, err := rattr.Serialize(emptyCtx)
+				if err != nil && id == attrNameRuleOrd {
+					rOrder = value
+					break
+				}
+			}
+			if len(qOrder) > 0 && (len(rOrder) <= 0 || qOrder < rOrder) {
+				// query has ordered before response, take query's actions
+				ah.action, ah.dst = queryAction, queryRedirect
 			}
 		}
 	}
