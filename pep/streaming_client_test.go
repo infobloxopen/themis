@@ -40,24 +40,22 @@ func (ch *testPepCacheHitHandler) Handle(req interface{}, resp interface{}, err 
 }
 
 func TestStreamingClientValidation(t *testing.T) {
-	pdpServer := startTestPDPServer(allPermitPolicy, 5555, t)
-	defer func() {
-		if logs := pdpServer.Stop(); len(logs) > 0 {
-			t.Logf("server logs:\n%s", logs)
-		}
-	}()
+	s, err := newAllPermitServer("127.0.0.1:5555")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Stop()
 
 	t.Run("fixed-buffer", testSingleRequest(WithStreams(1)))
 	t.Run("auto-buffer", testSingleRequest(WithStreams(1), WithAutoRequestSize(true)))
 }
 
 func TestStreamingClientValidationWithCache(t *testing.T) {
-	pdpServer := startTestPDPServer(allPermitPolicy, 5555, t)
-	defer func() {
-		if logs := pdpServer.Stop(); len(logs) > 0 {
-			t.Logf("server logs:\n%s", logs)
-		}
-	}()
+	s, err := newAllPermitServer("127.0.0.1:5555")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Stop()
 
 	ph := testPepCacheHitHandler{t: t}
 	c := NewClient(
@@ -66,8 +64,7 @@ func TestStreamingClientValidationWithCache(t *testing.T) {
 		WithCacheTTL(15*time.Minute),
 		WithOnCacheHitHandler(&ph),
 	)
-	err := c.Connect("127.0.0.1:5555")
-	if err != nil {
+	if err := c.Connect("127.0.0.1:5555"); err != nil {
 		t.Fatalf("expected no error but got %s", err)
 	}
 	defer c.Close()
@@ -87,8 +84,7 @@ func TestStreamingClientValidationWithCache(t *testing.T) {
 		Domain:    "example.com",
 	}
 	var out decisionResponse
-	err = c.Validate(in, &out)
-	if err != nil {
+	if err := c.Validate(in, &out); err != nil {
 		t.Errorf("expected no error but got %s", err)
 	}
 
@@ -113,8 +109,7 @@ func TestStreamingClientValidationWithCache(t *testing.T) {
 		t.Errorf("expected the only record in cache but got %d", bc.Len())
 	}
 
-	err = c.Validate(in, &out)
-	if err != nil {
+	if err := c.Validate(in, &out); err != nil {
 		t.Errorf("expected no error but got %s", err)
 	}
 
@@ -128,19 +123,17 @@ func TestStreamingClientValidationWithCache(t *testing.T) {
 }
 
 func TestStreamingClientValidationWithRoundRobingBalancer(t *testing.T) {
-	firstPDP := startTestPDPServer(allPermitPolicy, 5555, t)
-	defer func() {
-		if logs := firstPDP.Stop(); len(logs) > 0 {
-			t.Logf("primary server logs:\n%s", logs)
-		}
-	}()
+	firstPDP, err := newAllPermitServer("127.0.0.1:5555")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer firstPDP.Stop()
 
-	secondPDP := startTestPDPServer(allPermitPolicy, 5556, t)
-	defer func() {
-		if logs := secondPDP.Stop(); len(logs) > 0 {
-			t.Logf("secondary server logs:\n%s", logs)
-		}
-	}()
+	secondPDP, err := newAllPermitServer("127.0.0.1:5556")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer secondPDP.Stop()
 
 	c := NewClient(
 		WithStreams(2),
@@ -148,8 +141,7 @@ func TestStreamingClientValidationWithRoundRobingBalancer(t *testing.T) {
 			"127.0.0.1:5555",
 			"127.0.0.1:5556",
 		))
-	err := c.Connect("")
-	if err != nil {
+	if err := c.Connect(""); err != nil {
 		t.Fatalf("expected no error but got %s", err)
 	}
 	defer c.Close()
@@ -160,8 +152,7 @@ func TestStreamingClientValidationWithRoundRobingBalancer(t *testing.T) {
 		Domain:    "example.com",
 	}
 	var out decisionResponse
-	err = c.Validate(in, &out)
-	if err != nil {
+	if err := c.Validate(in, &out); err != nil {
 		t.Errorf("expected no error but got %s", err)
 	}
 
@@ -171,19 +162,17 @@ func TestStreamingClientValidationWithRoundRobingBalancer(t *testing.T) {
 }
 
 func TestStreamingClientValidationWithHotSpotBalancer(t *testing.T) {
-	firstPDP := startTestPDPServer(allPermitPolicy, 5555, t)
-	defer func() {
-		if logs := firstPDP.Stop(); len(logs) > 0 {
-			t.Logf("primary server logs:\n%s", logs)
-		}
-	}()
+	firstPDP, err := newAllPermitServer("127.0.0.1:5555")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer firstPDP.Stop()
 
-	secondPDP := startTestPDPServer(allPermitPolicy, 5556, t)
-	defer func() {
-		if logs := secondPDP.Stop(); len(logs) > 0 {
-			t.Logf("secondary server logs:\n%s", logs)
-		}
-	}()
+	secondPDP, err := newAllPermitServer("127.0.0.1:5556")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer secondPDP.Stop()
 
 	c := NewClient(
 		WithStreams(2),
@@ -191,8 +180,7 @@ func TestStreamingClientValidationWithHotSpotBalancer(t *testing.T) {
 			"127.0.0.1:5555",
 			"127.0.0.1:5556",
 		))
-	err := c.Connect("")
-	if err != nil {
+	if err := c.Connect(""); err != nil {
 		t.Fatalf("expected no error but got %s", err)
 	}
 	defer c.Close()
@@ -211,8 +199,7 @@ func TestStreamingClientValidationWithHotSpotBalancer(t *testing.T) {
 			defer wg.Done()
 
 			var out decisionResponse
-			err := c.Validate(in, &out)
-			if err != nil {
+			if err := c.Validate(in, &out); err != nil {
 				errs[i] = err
 			} else if out.Effect != pdp.EffectPermit || out.Reason != nil || out.X != "AllPermitRule" {
 				errs[i] = fmt.Errorf("got unexpected response: %#v", out)

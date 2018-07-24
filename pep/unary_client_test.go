@@ -2,37 +2,64 @@ package pep
 
 import (
 	"fmt"
-	"strings"
+	"io"
+	"net"
 	"testing"
 	"time"
 
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+
 	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
-	"github.com/infobloxopen/themis/pdpserver/server"
 )
 
-const allPermitPolicy = `# Policy for client tests
-attributes:
-  x: string
+var allPermitResponse = new(pb.Msg)
 
-policies:
-  alg: FirstApplicableEffect
-  rules:
-  - effect: Permit
-    obligations:
-    - x:
-       val:
-         type: string
-         content: AllPermitRule
-`
+func init() {
+	b, err := pdp.Response{
+		Effect: pdp.EffectPermit,
+		Obligations: []pdp.AttributeAssignment{
+			pdp.MakeStringAssignment("x", "AllPermitRule"),
+		},
+	}.Marshal(nil)
+	if err != nil {
+		panic(err)
+	}
+
+	allPermitResponse.Body = b
+}
+
+type decisionRequest struct {
+	Direction string `pdp:"k1"`
+	Policy    string `pdp:"k2"`
+	Domain    string `pdp:"k3,domain"`
+}
+
+type decisionResponse struct {
+	Effect int    `pdp:"Effect"`
+	Reason error  `pdp:"Reason"`
+	X      string `pdp:"x"`
+}
+
+func (r decisionResponse) String() string {
+	if r.Reason != nil {
+		return fmt.Sprintf("Effect: %q, Reason: %q, X: %q",
+			pdp.EffectNameFromEnum(r.Effect),
+			r.Reason,
+			r.X,
+		)
+	}
+
+	return fmt.Sprintf("Effect: %q, X: %q", pdp.EffectNameFromEnum(r.Effect), r.X)
+}
 
 func TestUnaryClientValidation(t *testing.T) {
-	pdpServer := startTestPDPServer(allPermitPolicy, 5555, t)
-	defer func() {
-		if logs := pdpServer.Stop(); len(logs) > 0 {
-			t.Logf("server logs:\n%s", logs)
-		}
-	}()
+	s, err := newAllPermitServer("127.0.0.1:5555")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Stop()
 
 	t.Run("fixed-buffer", testSingleRequest())
 	t.Run("auto-buffer", testSingleRequest(WithAutoRequestSize(true)))
@@ -65,12 +92,11 @@ func testSingleRequest(opt ...Option) func(t *testing.T) {
 }
 
 func TestUnaryClientValidationWithCache(t *testing.T) {
-	pdpServer := startTestPDPServer(allPermitPolicy, 5555, t)
-	defer func() {
-		if logs := pdpServer.Stop(); len(logs) > 0 {
-			t.Logf("server logs:\n%s", logs)
-		}
-	}()
+	s, err := newAllPermitServer("127.0.0.1:5555")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Stop()
 
 	ph := testPepCacheHitHandler{t: t}
 	c := NewClient(
@@ -78,8 +104,7 @@ func TestUnaryClientValidationWithCache(t *testing.T) {
 		WithCacheTTL(15*time.Minute),
 		WithOnCacheHitHandler(&ph),
 	)
-	err := c.Connect("127.0.0.1:5555")
-	if err != nil {
+	if err := c.Connect("127.0.0.1:5555"); err != nil {
 		t.Fatalf("expected no error but got %s", err)
 	}
 	defer c.Close()
@@ -99,8 +124,7 @@ func TestUnaryClientValidationWithCache(t *testing.T) {
 		Domain:    "example.com",
 	}
 	var out decisionResponse
-	err = c.Validate(in, &out)
-	if err != nil {
+	if err := c.Validate(in, &out); err != nil {
 		t.Errorf("expected no error but got %s", err)
 	}
 
@@ -125,8 +149,7 @@ func TestUnaryClientValidationWithCache(t *testing.T) {
 		t.Errorf("expected the only record in cache but got %d", bc.Len())
 	}
 
-	err = c.Validate(in, &out)
-	if err != nil {
+	if err := c.Validate(in, &out); err != nil {
 		t.Errorf("expected no error but got %s", err)
 	}
 
@@ -139,31 +162,95 @@ func TestUnaryClientValidationWithCache(t *testing.T) {
 	}
 }
 
-func startTestPDPServer(p string, s uint16, t *testing.T) *loggedServer {
-	service := fmt.Sprintf("127.0.0.1:%d", s)
-	primary := newServer(
-		server.WithServiceAt(service),
+type allPermitServer struct {
+	s *grpc.Server
+}
+
+func newAllPermitServer(addr string) (*allPermitServer, error) {
+	if err := waitForPortClosed(addr); err != nil {
+		return nil, err
+	}
+
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+
+	s := &allPermitServer{s: grpc.NewServer()}
+	pb.RegisterPDPServer(s.s, s)
+	go s.s.Serve(ln)
+
+	if err := waitForPortOpened(addr); err != nil {
+		s.Stop()
+		return nil, err
+	}
+
+	return s, nil
+}
+
+func (s *allPermitServer) Stop() {
+	s.s.Stop()
+}
+
+func (s *allPermitServer) Validate(ctx context.Context, in *pb.Msg) (*pb.Msg, error) {
+	return allPermitResponse, nil
+}
+
+func (s *allPermitServer) NewValidationStream(stream pb.PDP_NewValidationStreamServer) error {
+	for {
+		_, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			return err
+		}
+
+		err = stream.Send(allPermitResponse)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func waitForPortOpened(address string) error {
+	var (
+		c   net.Conn
+		err error
 	)
 
-	if err := primary.s.ReadPolicies(strings.NewReader(p)); err != nil {
-		t.Fatalf("can't read policies: %s", err)
-	}
-
-	if err := waitForPortClosed(service); err != nil {
-		t.Fatalf("port still in use: %s", err)
-	}
-	go func() {
-		if err := primary.s.Serve(); err != nil {
-			t.Fatalf("server failed: %s", err)
-		}
-	}()
-
-	if err := waitForPortOpened(service); err != nil {
-		if logs := primary.Stop(); len(logs) > 0 {
-			t.Logf("server logs:\n%s", logs)
+	for i := 0; i < 20; i++ {
+		after := time.After(500 * time.Millisecond)
+		c, err = net.DialTimeout("tcp", address, 500*time.Millisecond)
+		if err == nil {
+			return c.Close()
 		}
 
-		t.Fatalf("can't connect to PDP server: %s", err)
+		<-after
 	}
-	return primary
+
+	return err
+}
+
+func waitForPortClosed(address string) error {
+	var (
+		c   net.Conn
+		err error
+	)
+
+	for i := 0; i < 20; i++ {
+		after := time.After(500 * time.Millisecond)
+		c, err = net.DialTimeout("tcp", address, 500*time.Millisecond)
+		if err != nil {
+			return nil
+		}
+
+		c.Close()
+		<-after
+	}
+
+	return fmt.Errorf("port at %s hasn't been closed yet", address)
 }
