@@ -991,3 +991,7 @@ func (c *erraticPep) Validate(in, out interface{}) error {
 
 	return c.client.Validate(in, out)
 }
+
+func (c *erraticPep) GetCustomData() interface{} {
+	return nil
+}

@@ -75,12 +75,22 @@ type Client interface {
 
 	// Validate sends decision request to PDP server and fills out response.
 	Validate(in, out interface{}) error
+
+	// GetCustomData returns data bound to client using WithCustomData option.
+	GetCustomData() interface{}
 }
 
 // An Option sets such options as balancer, tracer and number of streams.
 type Option func(*options)
 
 const virtualServerAddress = "pdp"
+
+// WithCustomData returns an Option which binds given value to a client.
+func WithCustomData(data interface{}) Option {
+	return func(o *options) {
+		o.customData = data
+	}
+}
 
 // WithRoundRobinBalancer returns an Option which sets round-robin balancer with given set of servers.
 func WithRoundRobinBalancer(addresses ...string) Option {
@@ -213,6 +223,7 @@ type options struct {
 	cacheTTL          time.Duration
 	cacheMaxSize      int
 	onCacheHitHandler OnCacheHitHandler
+	customData        interface{}
 }
 
 // NewClient creates client instance using given options.
