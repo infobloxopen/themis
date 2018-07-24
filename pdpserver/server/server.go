@@ -133,6 +133,20 @@ func WithMemProfDumping(path string, numGC uint32, delay time.Duration) Option {
 	}
 }
 
+// WithPolicyFile returns a Option which sets policy file
+func WithPolicyFile(policyFile string) Option {
+	return func(o *options) {
+		o.policyFile = policyFile
+	}
+}
+
+// WithContentFiles returns a Option which sets list of content files
+func WithContentFiles(contentFiles []string) Option {
+	return func(o *options) {
+		o.contentFiles = contentFiles
+	}
+}
+
 const memStatsCheckInterval = 100 * time.Millisecond
 
 type options struct {
@@ -155,11 +169,14 @@ type options struct {
 	memProfDumpPath     string
 	memProfNumGC        uint32
 	memProfDelay        time.Duration
+
+	policyFile   string
+	contentFiles []string
 }
 
 // Server structure is PDP server object
 type Server struct {
-	PDPService
+	*PDPService
 
 	sync.RWMutex
 
@@ -181,8 +198,6 @@ type Server struct {
 	fragMemWarn *time.Time
 
 	memProfBaseDumpDone chan uint32
-
-	pool bytePool
 }
 
 // NewServer returns new Server instance
@@ -207,20 +222,14 @@ func NewServer(opts ...Option) *Server {
 		memProfBaseDumpDone = make(chan uint32)
 	}
 
-	var pool bytePool
-	if !o.autoResponseSize {
-		pool = makeBytePool(int(o.maxResponseSize), false)
-	}
-
 	s := &Server{
 		opts:                o,
 		errCh:               make(chan error, 100),
 		q:                   newQueue(),
 		memProfBaseDumpDone: memProfBaseDumpDone,
-		pool:                pool,
 	}
-	s.PDPService.logger = s.opts.logger
-	s.c = pdp.NewLocalContentStorage(nil)
+
+	s.PDPService = NewPDPService(o)
 	return s
 }
 

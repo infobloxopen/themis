@@ -17,42 +17,65 @@ import (
 type PDPService struct {
 	sync.RWMutex
 
-	parser ast.Parser
-	logger *log.Logger
+	opts options
 
 	p *pdp.PolicyStorage
 	c *pdp.LocalContentStorage
+
+	pool bytePool
 }
 
-func NewBuiltinPDPService(policyFile string, contentFiles []string, logger *log.Logger) *PDPService {
+func NewBuiltinPDPService(policyFile string, contentFiles []string) *PDPService {
+	var opts options
+	return NewPDPService(opts,
+		WithPolicyFile(policyFile),
+		WithContentFiles(contentFiles),
+		WithLogger(log.StandardLogger()),
+		WithMaxResponseSize(10240))
+}
+
+//func NewBuiltinPDPService(policyFile string, contentFiles []string, logger *log.Logger) *PDPService {
+func NewPDPService(options options, addOpts ...Option) *PDPService {
 	s := &PDPService{
-		logger: logger,
-		c:      pdp.NewLocalContentStorage(nil),
+		opts: options,
+		c:    pdp.NewLocalContentStorage(nil),
 	}
 
-	ext := filepath.Ext(policyFile)
-	switch ext {
-	case ".json":
-		s.parser = ast.NewJSONParser()
-	case ".yaml":
-		s.parser = ast.NewYAMLParser()
+	for _, opt := range addOpts {
+		opt(&s.opts)
 	}
 
-	if s.parser == nil {
-		s.parser = ast.NewYAMLParser()
+	if s.opts.policyFile != "" {
+		ext := filepath.Ext(s.opts.policyFile)
+		switch ext {
+		case ".json":
+			s.opts.parser = ast.NewJSONParser()
+		case ".yaml":
+			s.opts.parser = ast.NewYAMLParser()
+		}
+	}
+
+	if s.opts.parser == nil {
+		s.opts.parser = ast.NewYAMLParser()
 	}
 
 	log.SetLevel(log.DebugLevel)
-	err := s.LoadPolicies(policyFile)
+	err := s.LoadPolicies(s.opts.policyFile)
 	if err != nil {
 		return nil
 	}
 
-	if contentFiles != nil && len(contentFiles) > 0 {
-		err = s.LoadContent(contentFiles)
+	if s.opts.contentFiles != nil && len(s.opts.contentFiles) > 0 {
+		err = s.LoadContent(s.opts.contentFiles)
 		if err != nil {
 			return nil
 		}
+	} else {
+		s.c = pdp.NewLocalContentStorage(nil)
+	}
+
+	if !s.opts.autoResponseSize {
+		s.pool = makeBytePool(int(s.opts.maxResponseSize), false)
 	}
 
 	return s
@@ -64,17 +87,17 @@ func (s *PDPService) LoadPolicies(path string) error {
 		return nil
 	}
 
-	s.logger.WithField("policy", path).Info("Loading policy")
+	s.opts.logger.WithField("policy", path).Info("Loading policy")
 	pf, err := os.Open(path)
 	if err != nil {
-		s.logger.WithFields(log.Fields{"policy": path, "error": err}).Error("Failed load policy")
+		s.opts.logger.WithFields(log.Fields{"policy": path, "error": err}).Error("Failed load policy")
 		return err
 	}
 
-	s.logger.WithField("policy", path).Info("Parsing policy")
-	p, err := s.parser.Unmarshal(pf, nil)
+	s.opts.logger.WithField("policy", path).Info("Parsing policy")
+	p, err := s.opts.parser.Unmarshal(pf, nil)
 	if err != nil {
-		s.logger.WithFields(log.Fields{"policy": path, "error": err}).Error("Failed parse policy")
+		s.opts.logger.WithFields(log.Fields{"policy": path, "error": err}).Error("Failed parse policy")
 		return err
 	}
 
@@ -88,7 +111,7 @@ func (s *PDPService) LoadContent(paths []string) error {
 	items := []*pdp.LocalContent{}
 	for _, path := range paths {
 		err := func() error {
-			s.logger.WithField("content", path).Info("Opening content")
+			s.opts.logger.WithField("content", path).Info("Opening content")
 			f, err := os.Open(path)
 			if err != nil {
 				return err
@@ -96,7 +119,7 @@ func (s *PDPService) LoadContent(paths []string) error {
 
 			defer f.Close()
 
-			s.logger.WithField("content", path).Info("Parsing content")
+			s.opts.logger.WithField("content", path).Info("Parsing content")
 			item, err := jcon.Unmarshal(f, nil)
 			if err != nil {
 				return err
@@ -186,7 +209,7 @@ func (s *PDPService) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorag
 	return out
 }
 
-func (s *Server) rawValidateWithAllocator(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in []byte, f func(n int) ([]byte, error)) []byte {
+func (s *PDPService) rawValidateWithAllocator(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in []byte, f func(n int) ([]byte, error)) []byte {
 	if p == nil {
 		return makeFailureResponseWithAllocator(f, newMissingPolicyError())
 	}
@@ -221,7 +244,7 @@ func (s *Server) rawValidateWithAllocator(p *pdp.PolicyStorage, c *pdp.LocalCont
 	return out
 }
 
-func (s *Server) rawValidateToBuffer(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in []byte, out []byte) []byte {
+func (s *PDPService) rawValidateToBuffer(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in []byte, out []byte) []byte {
 	if p == nil {
 		return makeFailureResponseWithBuffer(out, newMissingPolicyError())
 	}
@@ -231,14 +254,14 @@ func (s *Server) rawValidateToBuffer(p *pdp.PolicyStorage, c *pdp.LocalContentSt
 		return makeFailureResponseWithBuffer(out, err)
 	}
 
-	if s.logger.Level >= log.DebugLevel {
-		s.logger.WithField("context", ctx).Debug("Request context")
+	if s.opts.logger.Level >= log.DebugLevel {
+		s.opts.logger.WithField("context", ctx).Debug("Request context")
 	}
 
 	r := p.Root().Calculate(ctx)
 
-	if s.logger.Level >= log.DebugLevel {
-		s.logger.WithFields(log.Fields{
+	if s.opts.logger.Level >= log.DebugLevel {
+		s.opts.logger.WithFields(log.Fields{
 			"effect": pdp.EffectNameFromEnum(r.Effect),
 			"reason": r.Status,
 			"obligations": obligations{
