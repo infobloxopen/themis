@@ -22,6 +22,8 @@ func (s *Server) NewValidationStream(stream pb.PDP_NewValidationStreamServer) er
 
 	buffer := make([]byte, s.opts.maxResponseSize)
 
+	var out pb.Msg
+
 	for {
 		in, err := stream.Recv()
 		if err == io.EOF {
@@ -41,23 +43,41 @@ func (s *Server) NewValidationStream(stream pb.PDP_NewValidationStreamServer) er
 			return err
 		}
 
-		s.RLock()
-		p := s.p
-		c := s.c
-		s.RUnlock()
-
-		if s.opts.autoResponseSize {
-			err = stream.Send(&pb.Msg{Body: s.rawValidateWithAllocator(p, c, in.Body, func(n int) ([]byte, error) {
-				if len(buffer) < n {
-					buffer = make([]byte, n)
+		if sc := s.getShard(); sc != nil {
+			if err := sc.Validate(in, &out); err != nil {
+				name := "unknown"
+				data := sc.GetCustomData()
+				if s, ok := data.(string); ok {
+					name = s
 				}
 
-				return buffer, nil
-			})})
+				s.opts.logger.WithFields(log.Fields{
+					"id":    sID,
+					"err":   err,
+					"shard": name,
+				}).Error("Failed to redirect request to a shard. Dropping stream...")
+				return err
+			}
 		} else {
-			err = stream.Send(&pb.Msg{Body: s.rawValidateToBuffer(p, c, in.Body, buffer)})
+			s.RLock()
+			p := s.p
+			c := s.c
+			s.RUnlock()
+
+			if s.opts.autoResponseSize {
+				out.Body = s.rawValidateWithAllocator(p, c, in.Body, func(n int) ([]byte, error) {
+					if len(buffer) < n {
+						buffer = make([]byte, n)
+					}
+
+					return buffer, nil
+				})
+			} else {
+				out.Body = s.rawValidateToBuffer(p, c, in.Body, buffer)
+			}
 		}
-		if err != nil {
+
+		if err = stream.Send(&out); err != nil {
 			s.opts.logger.WithFields(log.Fields{
 				"id":  sID,
 				"err": err,
