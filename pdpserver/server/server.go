@@ -18,6 +18,7 @@ import (
 	pbs "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pdp/ast"
 	"github.com/infobloxopen/themis/pdp/jcon"
+	"github.com/infobloxopen/themis/pep"
 
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	ot "github.com/opentracing/opentracing-go"
@@ -134,6 +135,18 @@ func WithMemProfDumping(path string, numGC uint32, delay time.Duration) Option {
 	}
 }
 
+type Shard struct {
+	Name      string
+	Streams   int
+	Addresses []string
+}
+
+func WithShards(shards ...Shard) Option {
+	return func(o *options) {
+		o.shards = shards
+	}
+}
+
 const memStatsCheckInterval = 100 * time.Millisecond
 
 type options struct {
@@ -156,6 +169,8 @@ type options struct {
 	memProfDumpPath     string
 	memProfNumGC        uint32
 	memProfDelay        time.Duration
+
+	shards []Shard
 }
 
 // Server structure is PDP server object
@@ -183,6 +198,8 @@ type Server struct {
 	fragMemWarn *time.Time
 
 	memProfBaseDumpDone chan uint32
+
+	shardClients []pep.Client
 
 	pool bytePool
 }
@@ -214,12 +231,35 @@ func NewServer(opts ...Option) *Server {
 		pool = makeBytePool(int(o.maxResponseSize), false)
 	}
 
+	var sc []pep.Client
+	if len(o.shards) > 0 {
+		sc = make([]pep.Client, len(o.shards))
+		for i, s := range o.shards {
+			opts := []pep.Option{
+				pep.WithCustomData(s.Name),
+			}
+			if s.Streams > 0 {
+				opts = append(opts,
+					pep.WithStreams(s.Streams),
+					pep.WithHotSpotBalancer(s.Addresses...),
+				)
+			} else {
+				opts = append(opts,
+					pep.WithRoundRobinBalancer(s.Addresses...),
+				)
+			}
+
+			sc[i] = pep.NewClient(opts...)
+		}
+	}
+
 	return &Server{
 		opts:                o,
 		errCh:               make(chan error, 100),
 		q:                   newQueue(),
 		c:                   pdp.NewLocalContentStorage(nil),
 		memProfBaseDumpDone: memProfBaseDumpDone,
+		shardClients:        sc,
 		pool:                pool,
 	}
 }
@@ -509,6 +549,12 @@ func (s *Server) Serve() error {
 		go func(l net.Listener) {
 			s.errCh <- storageServer.Serve(l)
 		}(s.storageCtrl)
+	}
+
+	for _, sc := range s.shardClients {
+		if err := sc.Connect(""); err != nil {
+			return err
+		}
 	}
 
 	s.opts.logger.Info("Creating service protocol handler")

@@ -230,7 +230,7 @@ var (
 	typeCacheLock = sync.RWMutex{}
 )
 
-func makeRequest(v interface{}) (pb.Msg, error) {
+func MakeRequest(v interface{}) (pb.Msg, error) {
 	switch v := v.(type) {
 	case []byte:
 		return pb.Msg{Body: v}, nil
@@ -260,7 +260,7 @@ func makeRequest(v interface{}) (pb.Msg, error) {
 	return pb.Msg{Body: b}, nil
 }
 
-func makeRequestWithBuffer(v interface{}, b []byte) (pb.Msg, error) {
+func MakeRequestWithBuffer(v interface{}, b []byte) (pb.Msg, error) {
 	switch v := v.(type) {
 	case []byte:
 		return pb.Msg{Body: v}, nil

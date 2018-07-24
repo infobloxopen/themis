@@ -130,7 +130,7 @@ func (c *unaryClient) Validate(in, out interface{}) error {
 	)
 
 	if c.opts.autoRequestSize {
-		req, err = makeRequest(in)
+		req, err = MakeRequest(in)
 	} else {
 		var b []byte
 		switch in.(type) {
@@ -141,7 +141,7 @@ func (c *unaryClient) Validate(in, out interface{}) error {
 		case []byte, pb.Msg, *pb.Msg:
 		}
 
-		req, err = makeRequestWithBuffer(in, b)
+		req, err = MakeRequestWithBuffer(in, b)
 	}
 	if err != nil {
 		return err

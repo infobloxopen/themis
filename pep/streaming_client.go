@@ -116,7 +116,7 @@ func (c *streamingClient) Validate(in, out interface{}) error {
 	)
 
 	if c.opts.autoRequestSize {
-		m, err = makeRequest(in)
+		m, err = MakeRequest(in)
 	} else {
 		var b []byte
 		switch in.(type) {
@@ -127,7 +127,7 @@ func (c *streamingClient) Validate(in, out interface{}) error {
 		case []byte, pb.Msg, *pb.Msg:
 		}
 
-		m, err = makeRequestWithBuffer(in, b)
+		m, err = MakeRequestWithBuffer(in, b)
 	}
 	if err != nil {
 		return err

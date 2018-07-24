@@ -155,6 +155,25 @@ func (s *Server) rawValidateToBuffer(p *pdp.PolicyStorage, c *pdp.LocalContentSt
 // Validate is a server handler for gRPC call
 // It handles PDP decision requests
 func (s *Server) Validate(ctx context.Context, in *pb.Msg) (*pb.Msg, error) {
+	if sc := s.getShard(); sc != nil {
+		var out pb.Msg
+		if err := sc.Validate(in, &out); err != nil {
+			name := "unknown"
+			data := sc.GetCustomData()
+			if s, ok := data.(string); ok {
+				name = s
+			}
+
+			s.opts.logger.WithFields(log.Fields{
+				"err":   err,
+				"shard": name,
+			}).Error("Failed to redirect request to a shard.")
+			return nil, err
+		}
+
+		return &out, nil
+	}
+
 	s.RLock()
 	p := s.p
 	c := s.c

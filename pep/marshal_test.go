@@ -213,16 +213,16 @@ func TestMarshalInvalidStructsToBuffer(t *testing.T) {
 }
 
 func TestMakeRequest(t *testing.T) {
-	m, err := makeRequest(pb.Msg{Body: testRequestBuffer})
-	assertBytesBuffer(t, "makeRequestWithBuffer(pb.Msg)", err, m.Body, len(m.Body), testRequestBuffer...)
+	m, err := MakeRequest(pb.Msg{Body: testRequestBuffer})
+	assertBytesBuffer(t, "MakeRequest(pb.Msg)", err, m.Body, len(m.Body), testRequestBuffer...)
 
-	m, err = makeRequest(&pb.Msg{Body: testRequestBuffer})
-	assertBytesBuffer(t, "makeRequestWithBuffer(&pb.Msg)", err, m.Body, len(m.Body), testRequestBuffer...)
+	m, err = MakeRequest(&pb.Msg{Body: testRequestBuffer})
+	assertBytesBuffer(t, "MakeRequest(&pb.Msg)", err, m.Body, len(m.Body), testRequestBuffer...)
 
-	m, err = makeRequest(testRequestBuffer)
-	assertBytesBuffer(t, "makeRequestWithBuffer(testRequestBuffer)", err, m.Body, len(m.Body), testRequestBuffer...)
+	m, err = MakeRequest(testRequestBuffer)
+	assertBytesBuffer(t, "MakeRequest(testRequestBuffer)", err, m.Body, len(m.Body), testRequestBuffer...)
 
-	m, err = makeRequest([]pdp.AttributeAssignment{
+	m, err = MakeRequest([]pdp.AttributeAssignment{
 		pdp.MakeBooleanAssignment("Bool", true),
 		pdp.MakeIntegerAssignment("Int", 5),
 		pdp.MakeFloatAssignment("Float", 555.5),
@@ -243,25 +243,25 @@ func TestMakeRequest(t *testing.T) {
 		)),
 		pdp.MakeListOfStringsAssignment("StrList", []string{"one", "two", "three"}),
 	})
-	assertBytesBuffer(t, "makeRequestWithBuffer(assignments)", err, m.Body, len(m.Body), testRequestBuffer...)
+	assertBytesBuffer(t, "MakeRequest(assignments)", err, m.Body, len(m.Body), testRequestBuffer...)
 }
 
 func TestMakeRequestWithBuffer(t *testing.T) {
 	var b [249]byte
 
-	m, err := makeRequestWithBuffer(pb.Msg{Body: testRequestBuffer}, b[:])
-	assertBytesBuffer(t, "makeRequestWithBuffer(pb.Msg)", err, m.Body, len(m.Body), testRequestBuffer...)
+	m, err := MakeRequestWithBuffer(pb.Msg{Body: testRequestBuffer}, b[:])
+	assertBytesBuffer(t, "MakeRequestWithBuffer(pb.Msg)", err, m.Body, len(m.Body), testRequestBuffer...)
 
-	m, err = makeRequestWithBuffer(&pb.Msg{Body: testRequestBuffer}, b[:])
-	assertBytesBuffer(t, "makeRequestWithBuffer(&pb.Msg)", err, m.Body, len(m.Body), testRequestBuffer...)
+	m, err = MakeRequestWithBuffer(&pb.Msg{Body: testRequestBuffer}, b[:])
+	assertBytesBuffer(t, "MakeRequestWithBuffer(&pb.Msg)", err, m.Body, len(m.Body), testRequestBuffer...)
 
-	m, err = makeRequestWithBuffer(testRequestBuffer, b[:])
-	assertBytesBuffer(t, "makeRequestWithBuffer(testRequestBuffer)", err, m.Body, len(m.Body), testRequestBuffer...)
+	m, err = MakeRequestWithBuffer(testRequestBuffer, b[:])
+	assertBytesBuffer(t, "MakeRequestWithBuffer(testRequestBuffer)", err, m.Body, len(m.Body), testRequestBuffer...)
 
-	m, err = makeRequestWithBuffer(testStruct, b[:])
-	assertBytesBuffer(t, "makeRequestWithBuffer(testStruct)", err, m.Body, len(m.Body), testRequestBuffer...)
+	m, err = MakeRequestWithBuffer(testStruct, b[:])
+	assertBytesBuffer(t, "MakeRequestWithBuffer(testStruct)", err, m.Body, len(m.Body), testRequestBuffer...)
 
-	m, err = makeRequestWithBuffer([]pdp.AttributeAssignment{
+	m, err = MakeRequestWithBuffer([]pdp.AttributeAssignment{
 		pdp.MakeBooleanAssignment("Bool", true),
 		pdp.MakeIntegerAssignment("Int", 5),
 		pdp.MakeFloatAssignment("Float", 555.5),
@@ -282,7 +282,7 @@ func TestMakeRequestWithBuffer(t *testing.T) {
 		)),
 		pdp.MakeListOfStringsAssignment("StrList", []string{"one", "two", "three"}),
 	}, b[:])
-	assertBytesBuffer(t, "makeRequestWithBuffer(assignments)", err, m.Body, len(m.Body), testRequestBuffer...)
+	assertBytesBuffer(t, "MakeRequestWithBuffer(assignments)", err, m.Body, len(m.Body), testRequestBuffer...)
 }
 
 func makeTestNetwork(s string) *net.IPNet {
