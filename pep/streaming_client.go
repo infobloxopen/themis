@@ -236,3 +236,7 @@ func (c *streamingClient) makeHotSpotValidator() validator {
 		return r, err
 	}
 }
+
+func (c *streamingClient) GetCustomData() interface{} {
+	return c.opts.customData
+}

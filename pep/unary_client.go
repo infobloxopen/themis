@@ -173,3 +173,7 @@ func (c *unaryClient) Validate(in, out interface{}) error {
 
 	return fillResponse(*res, out)
 }
+
+func (c *unaryClient) GetCustomData() interface{} {
+	return c.opts.customData
+}
