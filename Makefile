@@ -31,13 +31,13 @@ clean:
 	@$(RM) $(BUILDPATH)
 
 .PHONY: fmt
-fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-local-selector fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-plugin fmt-egen
+fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-local-selector fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pipclient fmt-pdpserver-pkg fmt-pdpserver fmt-plugin fmt-egen
 
 .PHONY: build
 build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-egen
 
 .PHONY: test
-test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-local-selector test-pep test-plugin
+test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-local-selector test-pep test-pipclient test-plugin
 
 .PHONY: bench
 bench: bench-pdpserver-pkg bench-plugin
@@ -106,6 +106,11 @@ fmt-pepcli-test:
 fmt-pepcli-perf:
 	@echo "Checking PEP CLI perf package format..."
 	@$(AT)/pepcli/perf && $(GOFMTCHECK)
+
+.PHONY: fmt-pipclient
+fmt-pipclient:
+	@echo "Checking PIPClient package format..."
+	@$(AT)/pipclient && $(GOFMTCHECK)
 
 .PHONY: fmt-pdpserver-pkg
 fmt-pdpserver-pkg:
@@ -182,6 +187,10 @@ test-local-selector: cover-out
 .PHONY: test-pep
 test-pep: build-pdpserver cover-out
 	$(AT)/pep && $(GOTESTRACE)
+
+.PHONY: test-pipclient
+test-pipclient: cover-out
+	$(AT)/pipclient && $(GOTESTRACE)
 
 .PHONY: test-plugin
 test-plugin: cover-out

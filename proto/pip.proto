@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package service;
+
+service PIP {
+  rpc Map (Msg) returns (Msg) {}
+  rpc NewMappingStream (stream Msg) returns (stream Msg) {}
+}
+
+message Msg {
+  bytes body = 1;
+}
