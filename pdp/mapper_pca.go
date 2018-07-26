@@ -17,6 +17,7 @@ type mapperPCA struct {
 	err       Evaluable
 	order     int
 	algorithm PolicyCombiningAlg
+	shards    Shards
 }
 
 // MapperPCAParams gathers all parameters of mapper policy combining algorithm.
@@ -47,6 +48,8 @@ type MapperPCAParams struct {
 	// Algorithm is additional policy combining algorithm which is used when
 	// argument can return several ids.
 	Algorithm PolicyCombiningAlg
+
+	Shards Shards
 }
 
 // MapperPCA*Order constants represents all possible values suitable for Order
@@ -176,7 +179,9 @@ func makeMapperPCA(policies []Evaluable, params interface{}) PolicyCombiningAlg 
 		def:       def,
 		err:       err,
 		order:     mapperParams.Order,
-		algorithm: mapperParams.Algorithm}
+		algorithm: mapperParams.Algorithm,
+		shards:    mapperParams.Shards,
+	}
 }
 
 func (a mapperPCA) MarshalJSON() ([]byte, error) {
@@ -323,6 +328,10 @@ func (a mapperPCA) execute(policies []Evaluable, ctx *Context) Response {
 				return policy.Calculate(ctx)
 			}
 		}
+	}
+
+	if shard, ok := a.shards.get(ID); ok {
+		return Response{EffectIndeterminate, newShardingError(shard), nil}
 	}
 
 	if a.def != nil {

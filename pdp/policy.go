@@ -158,6 +158,16 @@ func (p *Policy) Delete(path []string) (Evaluable, error) {
 	return r, nil
 }
 
+func (p *Policy) GetShards() Shards {
+	out := NewShards()
+
+	if m, ok := p.algorithm.(mapperRCA); ok {
+		out = out.appendShards(m.shards)
+	}
+
+	return out
+}
+
 func (p *Policy) getOrder() int {
 	return p.ord
 }
