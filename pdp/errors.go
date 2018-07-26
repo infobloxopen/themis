@@ -179,6 +179,7 @@ const (
 	ResponseServerErrorID                              = 162
 	policyCalculationErrorID                           = 163
 	obligationCalculationErrorID                       = 164
+	ShardingErrorID                                    = 165
 )
 
 type externalError struct {
@@ -2753,4 +2754,21 @@ func newObligationCalculationError(a Attribute, err error) *obligationCalculatio
 
 func (e *obligationCalculationError) Error() string {
 	return e.errorf("Failed to calculate obligation for %s: %s", e.a.describe(), e.err)
+}
+
+// ShardingError indicates that request should be redirected to another shard.
+type ShardingError struct {
+	errorLink
+	Shard string
+}
+
+func newShardingError(Shard string) *ShardingError {
+	return &ShardingError{
+		errorLink: errorLink{id: ShardingErrorID},
+		Shard:     Shard}
+}
+
+// Error implements error interface.
+func (e *ShardingError) Error() string {
+	return e.errorf("Can't evaluate request here. Go to shard %q", e.Shard)
 }

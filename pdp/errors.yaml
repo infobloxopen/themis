@@ -1405,3 +1405,12 @@ errors:
   args:
   - field: a.describe()
   - field: err
+
+- id: ShardingError
+  desc: "indicates that request should be redirected to another shard"
+  fields:
+  - id: Shard
+    type: string
+  msg: "Can't evaluate request here. Go to shard %q"
+  args:
+  - field: Shard

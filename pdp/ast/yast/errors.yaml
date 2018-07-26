@@ -502,3 +502,22 @@ errors:
   args:
   - field: t
   - field: name
+
+- id: shardRangeSizeError
+  fields:
+  - id: rng
+    type: "[]interface{}"
+  msg: "Sharding range should have exactly two boundaries but got %d"
+  args:
+  - expr: len(e.rng)
+
+- id: invalidShardRangeError
+  fields:
+  - id: min
+    type: string
+  - id: max
+    type: string
+  msg: "Lower boundary %q of sharding range is higher than upper one %q"
+  args:
+  - field: min
+  - field: max

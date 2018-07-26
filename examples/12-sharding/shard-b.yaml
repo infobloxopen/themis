@@ -1,0 +1,69 @@
+attributes:
+  x: string
+  "y": string
+
+policies:
+  id: root
+  alg:
+    id: mapper
+    map:
+      attr: x
+    default: DefaultRule
+    error: ErrorRule
+    sharding:
+      A:
+        servers:
+        - 127.0.0.1:5555
+        - 127.0.0.1:5556
+        - 127.0.0.1:5557
+        range:
+        - "0000"
+        - "0002"
+      B:
+        range:
+        - "0003"
+        - "0005"
+      C:
+        servers:
+        - 127.0.0.1:5575
+        - 127.0.0.1:5576
+        - 127.0.0.1:5577
+        range:
+        - "0006"
+        - "0008"
+  rules:
+  - id: DefaultRule
+    effect: Deny
+    obligations:
+    - "y":
+        val:
+          type: string
+          content: DefaultRule
+  - id: ErrorRule
+    effect: Deny
+    obligations:
+    - "y":
+        val:
+          type: string
+          content: DefaultRule
+  - id: "0003"
+    effect: Deny
+    obligations:
+    - "y":
+        val:
+          type: string
+          content: "0003"
+  - id: "0004"
+    effect: Deny
+    obligations:
+    - "y":
+        val:
+          type: string
+          content: "0004"
+  - id: "0005"
+    effect: Deny
+    obligations:
+    - "y":
+        val:
+          type: string
+          content: "0005"
