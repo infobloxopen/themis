@@ -187,6 +187,20 @@ func (p *PolicySet) Delete(path []string) (Evaluable, error) {
 	return r, nil
 }
 
+func (p *PolicySet) GetShards() Shards {
+	out := NewShards()
+
+	if m, ok := p.algorithm.(mapperPCA); ok {
+		out = out.appendShards(m.shards)
+	}
+
+	for _, p := range p.policies {
+		out = out.appendShards(p.GetShards())
+	}
+
+	return out
+}
+
 func (p *PolicySet) getOrder() int {
 	return p.ord
 }
