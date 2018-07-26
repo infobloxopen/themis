@@ -1,0 +1,17 @@
+attributes:
+  x: string
+  y: string
+
+requests:
+- x: Unknown
+- y: Error
+
+- x: "0000"
+- x: "0001"
+- x: "0002"
+- x: "0003"
+- x: "0004"
+- x: "0005"
+- x: "0006"
+- x: "0007"
+- x: "0008"

@@ -39,6 +39,9 @@ const (
 	yastTagPath       = "path"
 	yastTagOp         = "op"
 	yastTagEntity     = "entity"
+	yastTagSharding   = "sharding"
+	yastTagRange      = "range"
+	yastTagServers    = "servers"
 )
 
 // Parser is a YAST parser implementation.

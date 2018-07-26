@@ -17,6 +17,7 @@ type mapperRCA struct {
 	err       *Rule
 	order     int
 	algorithm RuleCombiningAlg
+	shards    Shards
 }
 
 // MapperRCAParams gathers all parameters of mapper rule combining algorithm.
@@ -47,6 +48,8 @@ type MapperRCAParams struct {
 	// Algorithm is additional rule combining algorithm which is used when
 	// argument can return several ids.
 	Algorithm RuleCombiningAlg
+
+	Shards Shards
 }
 
 // MapperRCA*Order constants represents all possible values suitable for Order
@@ -207,6 +210,7 @@ func makeMapperRCA(rules []*Rule, params interface{}) RuleCombiningAlg {
 		err:       err,
 		order:     mapperParams.Order,
 		algorithm: mapperParams.Algorithm,
+		shards:    mapperParams.Shards,
 	}
 }
 
@@ -354,6 +358,10 @@ func (a mapperRCA) execute(rules []*Rule, ctx *Context) Response {
 				return rule.calculate(ctx)
 			}
 		}
+	}
+
+	if shard, ok := a.shards.get(ID); ok {
+		return Response{EffectIndeterminate, newShardingError(shard), nil}
 	}
 
 	if a.def != nil {

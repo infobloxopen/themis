@@ -68,6 +68,8 @@ const (
 	unknownPolicyUpdateOperationErrorID   = 55
 	invalidPolicyUpdatePathElementErrorID = 56
 	unknownFlagNameErrorID                = 57
+	shardRangeSizeErrorID                 = 58
+	invalidShardRangeErrorID              = 59
 )
 
 type externalError struct {
@@ -977,4 +979,36 @@ func newUnknownFlagNameError(name string, t *pdp.FlagsType) *unknownFlagNameErro
 
 func (e *unknownFlagNameError) Error() string {
 	return e.errorf("Type %q doesn't have flag %q", e.t, e.name)
+}
+
+type shardRangeSizeError struct {
+	errorLink
+	rng []interface{}
+}
+
+func newShardRangeSizeError(rng []interface{}) *shardRangeSizeError {
+	return &shardRangeSizeError{
+		errorLink: errorLink{id: shardRangeSizeErrorID},
+		rng:       rng}
+}
+
+func (e *shardRangeSizeError) Error() string {
+	return e.errorf("Sharding range should have exactly two boundaries but got %d", len(e.rng))
+}
+
+type invalidShardRangeError struct {
+	errorLink
+	min string
+	max string
+}
+
+func newInvalidShardRangeError(min, max string) *invalidShardRangeError {
+	return &invalidShardRangeError{
+		errorLink: errorLink{id: invalidShardRangeErrorID},
+		min:       min,
+		max:       max}
+}
+
+func (e *invalidShardRangeError) Error() string {
+	return e.errorf("Lower boundary %q of sharding range is higher than upper one %q", e.min, e.max)
 }

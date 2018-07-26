@@ -93,6 +93,11 @@ func unmarshalMapperRuleCombiningAlgParams(ctx context, m map[interface{}]interf
 		subAlg = maker(nil, params)
 	}
 
+	shards, err := ctx.unmarshalSharding(m)
+	if err != nil {
+		return nil, err
+	}
+
 	return pdp.MapperRCAParams{
 		Argument:  arg,
 		DefOk:     defOk,
@@ -100,7 +105,9 @@ func unmarshalMapperRuleCombiningAlgParams(ctx context, m map[interface{}]interf
 		ErrOk:     errOk,
 		Err:       errID,
 		Order:     order,
-		Algorithm: subAlg}, nil
+		Algorithm: subAlg,
+		Shards:    shards,
+	}, nil
 }
 
 func (ctx context) unmarshalRuleCombiningAlgObj(m map[interface{}]interface{}, rules []*pdp.Rule) (pdp.RuleCombiningAlgMaker, interface{}, boundError) {
