@@ -45,7 +45,7 @@ policies:
     - "y":
         val:
           type: string
-          content: DefaultRule
+          content: ErrorRule
   - id: "0000"
     effect: Deny
     obligations:

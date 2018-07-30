@@ -43,38 +43,21 @@ func (s *Server) NewValidationStream(stream pb.PDP_NewValidationStreamServer) er
 			return err
 		}
 
-		if sc := s.getShard(); sc != nil {
-			if err := sc.Validate(in, &out); err != nil {
-				name := "unknown"
-				data := sc.GetCustomData()
-				if s, ok := data.(string); ok {
-					name = s
+		s.RLock()
+		p := s.p
+		c := s.c
+		s.RUnlock()
+
+		if s.opts.autoResponseSize {
+			out.Body = s.rawValidateWithAllocator(p, c, in.Body, func(n int) ([]byte, error) {
+				if len(buffer) < n {
+					buffer = make([]byte, n)
 				}
 
-				s.opts.logger.WithFields(log.Fields{
-					"id":    sID,
-					"err":   err,
-					"shard": name,
-				}).Error("Failed to redirect request to a shard. Dropping stream...")
-				return err
-			}
+				return buffer, nil
+			})
 		} else {
-			s.RLock()
-			p := s.p
-			c := s.c
-			s.RUnlock()
-
-			if s.opts.autoResponseSize {
-				out.Body = s.rawValidateWithAllocator(p, c, in.Body, func(n int) ([]byte, error) {
-					if len(buffer) < n {
-						buffer = make([]byte, n)
-					}
-
-					return buffer, nil
-				})
-			} else {
-				out.Body = s.rawValidateToBuffer(p, c, in.Body, buffer)
-			}
+			out.Body = s.rawValidateToBuffer(p, c, in.Body, buffer)
 		}
 
 		if err = stream.Send(&out); err != nil {

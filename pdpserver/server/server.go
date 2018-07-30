@@ -135,15 +135,9 @@ func WithMemProfDumping(path string, numGC uint32, delay time.Duration) Option {
 	}
 }
 
-type Shard struct {
-	Name      string
-	Streams   int
-	Addresses []string
-}
-
-func WithShards(shards ...Shard) Option {
+func WithShardingStreams(streams int) Option {
 	return func(o *options) {
-		o.shards = shards
+		o.shardingStreams = streams
 	}
 }
 
@@ -170,7 +164,8 @@ type options struct {
 	memProfNumGC        uint32
 	memProfDelay        time.Duration
 
-	shards []Shard
+	shards          pdp.Shards
+	shardingStreams int
 }
 
 // Server structure is PDP server object
@@ -199,7 +194,7 @@ type Server struct {
 
 	memProfBaseDumpDone chan uint32
 
-	shardClients []pep.Client
+	shardClients map[string]pep.Client
 
 	pool bytePool
 }
@@ -231,35 +226,12 @@ func NewServer(opts ...Option) *Server {
 		pool = makeBytePool(int(o.maxResponseSize), false)
 	}
 
-	var sc []pep.Client
-	if len(o.shards) > 0 {
-		sc = make([]pep.Client, len(o.shards))
-		for i, s := range o.shards {
-			opts := []pep.Option{
-				pep.WithCustomData(s.Name),
-			}
-			if s.Streams > 0 {
-				opts = append(opts,
-					pep.WithStreams(s.Streams),
-					pep.WithHotSpotBalancer(s.Addresses...),
-				)
-			} else {
-				opts = append(opts,
-					pep.WithRoundRobinBalancer(s.Addresses...),
-				)
-			}
-
-			sc[i] = pep.NewClient(opts...)
-		}
-	}
-
 	return &Server{
 		opts:                o,
 		errCh:               make(chan error, 100),
 		q:                   newQueue(),
 		c:                   pdp.NewLocalContentStorage(nil),
 		memProfBaseDumpDone: memProfBaseDumpDone,
-		shardClients:        sc,
 		pool:                pool,
 	}
 }
@@ -285,6 +257,7 @@ func (s *Server) LoadPolicies(path string) error {
 	}
 
 	s.p = p
+	s.updateShardClients()
 
 	return nil
 }
@@ -303,6 +276,7 @@ func (s *Server) ReadPolicies(r io.Reader) error {
 	}
 
 	s.p = p
+	s.updateShardClients()
 
 	return nil
 }

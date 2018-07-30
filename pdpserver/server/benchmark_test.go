@@ -689,6 +689,41 @@ policies:
            type: string
            content: Root Deny
 `
+	routingBenchmarkPolicySet = `# Policy set for benchmark 2-level nesting policy with routing
+attributes:
+  k2: string
+  k3: domain
+  x: string
+
+policies:
+  alg:
+    id: mapper
+    map:
+      selector:
+        uri: "local:content/first"
+        path:
+        - attr: k2
+        type: string
+    sharding:
+      A:
+        range:
+        - P1
+        - P7
+        servers:
+        - 127.0.0.1:5556
+    default: DefaultPolicy
+
+  policies:
+  - id: DefaultPolicy
+    alg: FirstApplicableEffect
+    rules:
+    - effect: Deny
+      obligations:
+      - x:
+         val:
+           type: string
+           content: DefaultPolicy
+`
 
 	benchmarkContent = `{
 	"id": "content",
