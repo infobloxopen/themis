@@ -254,6 +254,11 @@ func unmarshalMapperPolicyCombiningAlgParams(ctx context, m map[interface{}]inte
 		subAlg = maker(nil, params)
 	}
 
+	shards, err := ctx.unmarshalSharding(m)
+	if err != nil {
+		return nil, err
+	}
+
 	return pdp.MapperPCAParams{
 		Argument:  arg,
 		DefOk:     defOk,
@@ -261,7 +266,9 @@ func unmarshalMapperPolicyCombiningAlgParams(ctx context, m map[interface{}]inte
 		ErrOk:     errOk,
 		Err:       errID,
 		Order:     order,
-		Algorithm: subAlg}, nil
+		Algorithm: subAlg,
+		Shards:    shards,
+	}, nil
 }
 
 func (ctx context) unmarshalPolicyCombiningAlgObj(m map[interface{}]interface{}, policies []pdp.Evaluable) (pdp.PolicyCombiningAlgMaker, interface{}, boundError) {

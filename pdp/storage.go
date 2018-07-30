@@ -107,6 +107,10 @@ PathNotFound:
 	return nil, newPathNotFoundError(path)
 }
 
+func (s PolicyStorage) GetShards() Shards {
+	return s.policies.GetShards()
+}
+
 // Here set of supported update operations is defined.
 const (
 	// UOAdd stands for add operation (add or append item to a collection).

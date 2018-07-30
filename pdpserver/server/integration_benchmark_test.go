@@ -774,16 +774,10 @@ func startPDPServer(p string, ports []uint16, b *testing.B, opts ...pep.Option) 
 func startRoutingPDPServers(b *testing.B, streams int, opts ...pep.Option) (*loggedServer, *loggedServer, pep.Client) {
 	router := newServer(
 		WithServiceAt("127.0.0.1:5555"),
-		WithShards(
-			Shard{
-				Name:      "A",
-				Streams:   streams,
-				Addresses: []string{"127.0.0.1:5556"},
-			},
-		),
+		WithShardingStreams(streams),
 	)
 
-	if err := router.s.ReadPolicies(strings.NewReader(oneStageBenchmarkPolicySet)); err != nil {
+	if err := router.s.ReadPolicies(strings.NewReader(routingBenchmarkPolicySet)); err != nil {
 		b.Fatalf("can't read policies: %s", err)
 	}
 
@@ -812,7 +806,7 @@ func startRoutingPDPServers(b *testing.B, streams int, opts ...pep.Option) (*log
 		WithServiceAt("127.0.0.1:5556"),
 	)
 
-	if err := primary.s.ReadPolicies(strings.NewReader(oneStageBenchmarkPolicySet)); err != nil {
+	if err := primary.s.ReadPolicies(strings.NewReader(twoStageBenchmarkPolicySet)); err != nil {
 		if logs := router.Stop(); len(logs) > 0 {
 			b.Logf("router server logs:\n%s", logs)
 		}

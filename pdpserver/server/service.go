@@ -47,6 +47,90 @@ func makeFailureResponseWithBuffer(b []byte, err error) []byte {
 	return b[:n]
 }
 
+func (s *Server) shardingRedirect(r pdp.Response, in []byte) []byte {
+	if shardErr, ok := r.Status.(*pdp.ShardingError); ok {
+		name := shardErr.Shard
+		if s.opts.logger.Level >= log.DebugLevel {
+			s.opts.logger.WithField("name", name).Debug("Sharding redirect")
+		}
+
+		if sc := s.getShard(shardErr.Shard); sc != nil {
+			var outMsg pb.Msg
+			if err := sc.Validate(pb.Msg{Body: in}, &outMsg); err != nil {
+				if s.opts.logger.Level >= log.DebugLevel {
+					s.opts.logger.WithFields(log.Fields{
+						"name": name,
+						"err":  err,
+					}).Debug("Sharding redirect failure")
+				}
+				return makeFailureResponse(err)
+			}
+
+			return outMsg.Body
+		} else if s.opts.logger.Level >= log.DebugLevel {
+			s.opts.logger.WithField("name", name).Debug("Shard not found")
+		}
+	}
+
+	return nil
+}
+
+func (s *Server) shardingRedirectWithAllocator(r pdp.Response, in []byte, f func(n int) ([]byte, error)) []byte {
+	if shardErr, ok := r.Status.(*pdp.ShardingError); ok {
+		name := shardErr.Shard
+		if s.opts.logger.Level >= log.DebugLevel {
+			s.opts.logger.WithField("name", name).Debug("Sharding redirect")
+		}
+
+		if sc := s.getShard(shardErr.Shard); sc != nil {
+			var outMsg pb.Msg
+			if err := sc.Validate(pb.Msg{Body: in}, &outMsg); err != nil {
+				if s.opts.logger.Level >= log.DebugLevel {
+					s.opts.logger.WithFields(log.Fields{
+						"name": name,
+						"err":  err,
+					}).Debug("Sharding redirect failure")
+				}
+				return makeFailureResponseWithAllocator(f, err)
+			}
+
+			return outMsg.Body
+		} else if s.opts.logger.Level >= log.DebugLevel {
+			s.opts.logger.WithField("name", name).Debug("Shard not found")
+		}
+	}
+
+	return nil
+}
+
+func (s *Server) shardingRedirectWithBuffer(r pdp.Response, in, out []byte) []byte {
+	if shardErr, ok := r.Status.(*pdp.ShardingError); ok {
+		name := shardErr.Shard
+		if s.opts.logger.Level >= log.DebugLevel {
+			s.opts.logger.WithField("name", name).Debug("Sharding redirect")
+		}
+
+		if sc := s.getShard(shardErr.Shard); sc != nil {
+			var outMsg pb.Msg
+			if err := sc.Validate(pb.Msg{Body: in}, &outMsg); err != nil {
+				if s.opts.logger.Level >= log.DebugLevel {
+					s.opts.logger.WithFields(log.Fields{
+						"name": name,
+						"err":  err,
+					}).Debug("Sharding redirect failure")
+				}
+				return makeFailureResponseWithBuffer(out, err)
+			}
+
+			return outMsg.Body
+		} else if s.opts.logger.Level >= log.DebugLevel {
+			s.opts.logger.WithField("name", name).Debug("Shard not found")
+		}
+	}
+
+	return nil
+}
+
 func (s *Server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, in []byte) []byte {
 	if p == nil {
 		return makeFailureResponse(newMissingPolicyError())
@@ -62,6 +146,9 @@ func (s *Server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, i
 	}
 
 	r := p.Root().Calculate(ctx)
+	if out := s.shardingRedirect(r, in); out != nil {
+		return out
+	}
 
 	if s.opts.logger.Level >= log.DebugLevel {
 		s.opts.logger.WithFields(log.Fields{
@@ -97,6 +184,9 @@ func (s *Server) rawValidateWithAllocator(p *pdp.PolicyStorage, c *pdp.LocalCont
 	}
 
 	r := p.Root().Calculate(ctx)
+	if out := s.shardingRedirectWithAllocator(r, in, f); out != nil {
+		return out
+	}
 
 	if s.opts.logger.Level >= log.DebugLevel {
 		s.opts.logger.WithFields(log.Fields{
@@ -132,6 +222,9 @@ func (s *Server) rawValidateToBuffer(p *pdp.PolicyStorage, c *pdp.LocalContentSt
 	}
 
 	r := p.Root().Calculate(ctx)
+	if out := s.shardingRedirectWithBuffer(r, in, out); out != nil {
+		return out
+	}
 
 	if s.opts.logger.Level >= log.DebugLevel {
 		s.opts.logger.WithFields(log.Fields{
@@ -155,25 +248,6 @@ func (s *Server) rawValidateToBuffer(p *pdp.PolicyStorage, c *pdp.LocalContentSt
 // Validate is a server handler for gRPC call
 // It handles PDP decision requests
 func (s *Server) Validate(ctx context.Context, in *pb.Msg) (*pb.Msg, error) {
-	if sc := s.getShard(); sc != nil {
-		var out pb.Msg
-		if err := sc.Validate(in, &out); err != nil {
-			name := "unknown"
-			data := sc.GetCustomData()
-			if s, ok := data.(string); ok {
-				name = s
-			}
-
-			s.opts.logger.WithFields(log.Fields{
-				"err":   err,
-				"shard": name,
-			}).Error("Failed to redirect request to a shard.")
-			return nil, err
-		}
-
-		return &out, nil
-	}
-
 	s.RLock()
 	p := s.p
 	c := s.c
