@@ -60,6 +60,23 @@ func MakeAddressValue(v net.IP) AttributeValue {
 		v: v}
 }
 
+// MakeAddressValue creates instance of IP address attribute value.
+func MakeMacAddressValue(mac []byte) AttributeValue {
+
+	value := make([]byte, 0, len(mac)*3-1)
+	for i := 0; i < len(mac); i += 2 {
+		if i > 0 {
+			value = append(value, ':')
+		}
+		value = append(value, mac[i])
+		value = append(value, mac[i+1])
+	}
+
+	return AttributeValue{
+		t: TypeMacAddress,
+		v: string(value)}
+}
+
 // MakeNetworkValue creates instance of IP network address attribute value.
 // Argument should not be nil. Caller is responsible for the validation.
 func MakeNetworkValue(v *net.IPNet) AttributeValue {

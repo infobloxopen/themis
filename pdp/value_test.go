@@ -108,6 +108,18 @@ func TestAttributeValue(t *testing.T) {
 		t.Errorf("Expected %q as value description but got %q", expDesc, d)
 	}
 
+	v = MakeMacAddressValue([]byte("0cc47a507753"))
+	vt = v.GetResultType()
+	if vt != TypeMacAddress {
+		t.Errorf("Expected %q as value type but got %q", TypeMacAddress, vt)
+	}
+
+	expDesc = "0c:c4:7a:50:77:53"
+	d = v.describe()
+	if d != expDesc {
+		t.Errorf("Expected %q as value description but got %q", expDesc, d)
+	}
+
 	v = MakeNetworkValue(makeTestNetwork("192.0.2.0/24"))
 	vt = v.GetResultType()
 	if vt != TypeNetwork {

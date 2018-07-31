@@ -76,6 +76,14 @@ func MakeAddressAssignment(id string, v net.IP) AttributeAssignment {
 	)
 }
 
+// MakeMacAddressAssignment creates attribute assignment for mac address value
+func MakeMacAddressAssignment(id string, v []byte) AttributeAssignment {
+	return MakeAttributeAssignment(
+		MakeAttribute(id, TypeMacAddress),
+		MakeMacAddressValue(v),
+	)
+}
+
 // MakeNetworkAssignment creates attribute assignment for network value.
 func MakeNetworkAssignment(id string, v *net.IPNet) AttributeAssignment {
 	return MakeAttributeAssignment(

@@ -124,6 +124,9 @@ func makeAssignmentByType(o *edns0Opt, b []byte) (pdp.AttributeAssignment, bool)
 
 	case typeEDNS0IP:
 		return pdp.MakeAddressAssignment(o.name, net.IP(b)), true
+
+	case typeEDNS0Mac:
+		return pdp.MakeMacAddressAssignment(o.name, b), true
 	}
 
 	panic(fmt.Errorf("unknown attribute type %d", o.dataType))

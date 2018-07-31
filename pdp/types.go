@@ -34,6 +34,8 @@ var (
 	TypeSetOfDomains = newBuiltinType("Set of Domains")
 	// TypeListOfStrings is list of strings data type.
 	TypeListOfStrings = newBuiltinType("List of Strings")
+	// TypeMacAddress is mac address data type
+	TypeMacAddress = newBuiltinType("Mac Address")
 
 	// BuiltinTypeIDs maps type keys to Type* constants.
 	BuiltinTypes = make(map[string]Type)
