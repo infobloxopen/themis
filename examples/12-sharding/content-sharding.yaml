@@ -13,8 +13,8 @@ policies:
         path:
         - attr: x
         type: string
-    default: DefaultRule
-    error: ErrorRule
+    # default: DefaultRule
+    # error: ErrorRule
   rules:
   - id: DefaultRule
     effect: Deny

@@ -443,11 +443,12 @@ func (c *LocalContent) String() string {
 // with defined set of keys to access value of particular type or immediate
 // value of defined type.
 type ContentItem struct {
-	id string
-	r  ContentSubItem
-	t  Type
-	k  []Type
-	s  Shards
+	id  string
+	r   ContentSubItem
+	t   Type
+	k   []Type
+	s   Shards
+	sOk bool
 }
 
 // MakeContentValueItem creates content item which represents immediate value
@@ -731,7 +732,7 @@ func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, erro
 	if d > 0 {
 		m := c.r
 		loc := []string{""}
-		for _, e := range path[:d-1] {
+		for i, e := range path[:d-1] {
 			key, err := e.Calculate(ctx)
 			if err != nil {
 				return UndefinedValue, bindError(err, strings.Join(loc, "/"))
@@ -741,6 +742,19 @@ func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, erro
 
 			m, err = m.next(key)
 			if err != nil {
+				if i == 0 && key.GetResultType() == TypeString {
+					if _, ok := err.(*MissingValueError); ok {
+						s, err := key.str()
+						if err != nil {
+							return UndefinedValue, bindError(err, strings.Join(loc, "/"))
+						}
+
+						if name, ok := c.s.get(s); ok {
+							return UndefinedValue, newShardingError(name)
+						}
+					}
+				}
+
 				return UndefinedValue, bindError(err, strings.Join(loc, "/"))
 			}
 		}
@@ -752,6 +766,19 @@ func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, erro
 
 		v, err := m.getValue(key, c.t)
 		if err != nil {
+			if d == 1 && key.GetResultType() == TypeString {
+				if _, ok := err.(*MissingValueError); ok {
+					s, err := key.str()
+					if err != nil {
+						return UndefinedValue, bindError(err, strings.Join(loc, "/"))
+					}
+
+					if name, ok := c.s.get(s); ok {
+						return UndefinedValue, newShardingError(name)
+					}
+				}
+			}
+
 			return UndefinedValue, bindError(err, strings.Join(append(loc, key.describe()), "/"))
 		}
 
