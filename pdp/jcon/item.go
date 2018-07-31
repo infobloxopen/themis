@@ -18,6 +18,9 @@ type contentItem struct {
 	id string
 	s  pdp.Symbols
 
+	shards   pdp.Shards
+	shardsOk bool
+
 	k      pdp.Signature
 	keysOk bool
 
@@ -150,6 +153,110 @@ func (c *contentItem) unmarshalTypeDeclaration(d *json.Decoder) error {
 	}
 
 	return nil
+}
+
+func (c *contentItem) unmarshalShardingField(d *json.Decoder) error {
+	if c.shardsOk {
+		return newDuplicateContentItemFieldError("sharding")
+	}
+
+	if err := jparser.CheckObjectStart(d, "sharding"); err != nil {
+		return err
+	}
+
+	shards := pdp.NewShards()
+
+	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+		min, max, servers, err := c.unmarshalShardObject(d)
+		if err != nil {
+			return bindError(err, k)
+		}
+
+		shards = shards.AppendShard(k, min, max, servers...)
+
+		return nil
+	}, "sharding"); err != nil {
+		return err
+	}
+
+	c.shards = shards
+	c.shardsOk = true
+
+	return nil
+}
+
+func (c *contentItem) unmarshalShardObject(d *json.Decoder) (string, string, []string, error) {
+	if err := jparser.CheckObjectStart(d, "shard"); err != nil {
+		return "", "", nil, err
+	}
+
+	var (
+		min     string
+		minOk   bool
+		max     string
+		maxOk   bool
+		servers []string
+	)
+
+	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+		switch k {
+		default:
+			return newUnknownShardFieldError(k)
+
+		case "min":
+			if minOk {
+				return newDuplicateMinShardFieldError(min)
+			}
+
+			s, err := jparser.GetString(d, "lower bound of shard")
+			if err != nil {
+				return err
+			}
+
+			min = s
+			minOk = true
+
+		case "max":
+			if maxOk {
+				return newDuplicateMaxShardFieldError(max)
+			}
+
+			s, err := jparser.GetString(d, "upper bound of shard")
+			if err != nil {
+				return err
+			}
+
+			max = s
+			maxOk = true
+
+		case "servers":
+			if servers != nil {
+				return newDuplicateServersShardFieldError(servers)
+			}
+
+			servers = []string{}
+			if err := jparser.GetStringSequence(d, func(i int, s string) error {
+				servers = append(servers, s)
+				return nil
+			}, "servers"); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}, "sharding"); err != nil {
+		return "", "", nil, err
+	}
+
+	if !minOk {
+		return "", "", nil, newMissingMinShardFieldError()
+	}
+
+	if !maxOk {
+		return "", "", nil, newMissingMaxShardFieldError()
+	}
+
+	return min, max, servers, nil
 }
 
 func (c *contentItem) unmarshalKeysField(d *json.Decoder) error {
@@ -536,6 +643,9 @@ func (c *contentItem) unmarshal(k string, d *json.Decoder) error {
 	case "type":
 		return c.unmarshalTypeField(d)
 
+	case "sharding":
+		return c.unmarshalShardingField(d)
+
 	case "keys":
 		return c.unmarshalKeysField(d)
 
@@ -565,7 +675,7 @@ func (c *contentItem) get() (*pdp.ContentItem, error) {
 	}
 
 	if c.vReady {
-		return pdp.MakeContentMappingItem(c.id, c.t, c.k, c.adjustValue(c.v)), nil
+		return pdp.MakeContentMappingItem(c.id, c.t, c.k, c.shards, c.adjustValue(c.v)), nil
 	}
 
 	v, err := c.postProcess(c.v, 0)
@@ -577,7 +687,7 @@ func (c *contentItem) get() (*pdp.ContentItem, error) {
 		return pdp.MakeContentValueItem(c.id, c.t, v), nil
 	}
 
-	return pdp.MakeContentMappingItem(c.id, c.t, c.k, c.adjustValue(v)), nil
+	return pdp.MakeContentMappingItem(c.id, c.t, c.k, c.shards, c.adjustValue(v)), nil
 }
 
 func unmarshalContentItem(id string, s pdp.Symbols, d *json.Decoder) (*pdp.ContentItem, error) {

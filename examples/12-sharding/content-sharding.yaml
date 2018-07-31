@@ -1,0 +1,95 @@
+# Content sharding exmaple
+attributes:
+  x: string
+  "y": string
+
+policies:
+  id: root
+  alg:
+    id: Mapper
+    map:
+      selector:
+        uri: "local:content/string-policies"
+        path:
+        - attr: x
+        type: string
+    default: DefaultRule
+    error: ErrorRule
+  rules:
+  - id: DefaultRule
+    effect: Deny
+    obligations:
+    - "y":
+        val:
+          type: string
+          content: DefaultRule
+  - id: ErrorRule
+    effect: Deny
+    obligations:
+    - "y":
+        val:
+          type: string
+          content: ErrorRule
+  - id: First
+    effect: Deny
+    obligations:
+    - "y":
+        val:
+          type: string
+          content: First
+  - id: Second
+    effect: Deny
+    obligations:
+    - "y":
+        val:
+          type: string
+          content: Second
+  - id: Third
+    effect: Deny
+    obligations:
+    - "y":
+        val:
+          type: string
+          content: Third
+  - id: Fourth
+    effect: Deny
+    obligations:
+    - "y":
+        val:
+          type: string
+          content: Fourth
+  - id: Fifth
+    effect: Deny
+    obligations:
+    - "y":
+        val:
+          type: string
+          content: Fifth
+  - id: Sixth
+    effect: Deny
+    obligations:
+    - "y":
+        val:
+          type: string
+          content: Sixth
+  - id: Seventh
+    effect: Deny
+    obligations:
+    - "y":
+        val:
+          type: string
+          content: Seventh
+  - id: Eighth
+    effect: Deny
+    obligations:
+    - "y":
+        val:
+          type: string
+          content: Eighth
+  - id: Ninth
+    effect: Deny
+    obligations:
+    - "y":
+        val:
+          type: string
+          content: Ninth

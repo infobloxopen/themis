@@ -5,6 +5,8 @@ package jcon
 import (
 	"encoding/json"
 	"github.com/infobloxopen/themis/pdp"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -30,17 +32,24 @@ const (
 	newTypeOnUpdateErrorID                = 19
 	invalidTypeFormatErrorID              = 20
 	unknownTypeFieldErrorID               = 21
-	missingContentDataErrorID             = 22
-	missingContentTypeErrorID             = 23
-	invalidSequenceContentItemNodeErrorID = 24
-	invalidMapContentItemNodeErrorID      = 25
-	unknownCommadFieldErrorID             = 26
-	duplicateCommandFieldErrorID          = 27
-	missingCommandOpErrorID               = 28
-	missingCommandPathErrorID             = 29
-	missingCommandEntityErrorID           = 30
-	unknownContentUpdateOperationErrorID  = 31
-	arrayEndDelimiterErrorID              = 32
+	unknownShardFieldErrorID              = 22
+	duplicateMinShardFieldErrorID         = 23
+	duplicateMaxShardFieldErrorID         = 24
+	duplicateServersShardFieldErrorID     = 25
+	missingMinShardFieldErrorID           = 26
+	missingMaxShardFieldErrorID           = 27
+	missingContentDataErrorID             = 28
+	missingContentTypeErrorID             = 29
+	invalidSequenceContentItemNodeErrorID = 30
+	invalidMapContentItemNodeErrorID      = 31
+	unknownCommadFieldErrorID             = 32
+	duplicateCommandFieldErrorID          = 33
+	missingCommandOpErrorID               = 34
+	missingCommandPathErrorID             = 35
+	missingCommandEntityErrorID           = 36
+	unknownContentUpdateOperationErrorID  = 37
+	objectEndDelimiterErrorID             = 38
+	arrayEndDelimiterErrorID              = 39
 )
 
 type externalError struct {
@@ -381,6 +390,98 @@ func (e *unknownTypeFieldError) Error() string {
 	return e.errorf("Unknown field %q in type definition", e.name)
 }
 
+type unknownShardFieldError struct {
+	errorLink
+	name string
+}
+
+func newUnknownShardFieldError(name string) *unknownShardFieldError {
+	return &unknownShardFieldError{
+		errorLink: errorLink{id: unknownShardFieldErrorID},
+		name:      name}
+}
+
+func (e *unknownShardFieldError) Error() string {
+	return e.errorf("Unknown field %q in shard definition", e.name)
+}
+
+type duplicateMinShardFieldError struct {
+	errorLink
+	min string
+}
+
+func newDuplicateMinShardFieldError(min string) *duplicateMinShardFieldError {
+	return &duplicateMinShardFieldError{
+		errorLink: errorLink{id: duplicateMinShardFieldErrorID},
+		min:       min}
+}
+
+func (e *duplicateMinShardFieldError) Error() string {
+	return e.errorf("Duplicate min field in shard definition. Previous has %q value", e.min)
+}
+
+type duplicateMaxShardFieldError struct {
+	errorLink
+	max string
+}
+
+func newDuplicateMaxShardFieldError(max string) *duplicateMaxShardFieldError {
+	return &duplicateMaxShardFieldError{
+		errorLink: errorLink{id: duplicateMaxShardFieldErrorID},
+		max:       max}
+}
+
+func (e *duplicateMaxShardFieldError) Error() string {
+	return e.errorf("Duplicate min field in shard definition. Previous has %q value", e.max)
+}
+
+type duplicateServersShardFieldError struct {
+	errorLink
+	servers []string
+}
+
+func newDuplicateServersShardFieldError(servers []string) *duplicateServersShardFieldError {
+	return &duplicateServersShardFieldError{
+		errorLink: errorLink{id: duplicateServersShardFieldErrorID},
+		servers:   servers}
+}
+
+func (e *duplicateServersShardFieldError) Error() string {
+	s := make([]string, len(e.servers))
+	for i, srv := range e.servers {
+		s[i] = strconv.QuoteToASCII(srv)
+	}
+	q := strings.Join(s, ", ")
+
+	return e.errorf("Duplicate servers field in shard definition. Previous are %s", q)
+}
+
+type missingMinShardFieldError struct {
+	errorLink
+}
+
+func newMissingMinShardFieldError() *missingMinShardFieldError {
+	return &missingMinShardFieldError{
+		errorLink: errorLink{id: missingMinShardFieldErrorID}}
+}
+
+func (e *missingMinShardFieldError) Error() string {
+	return e.errorf("Missing min")
+}
+
+type missingMaxShardFieldError struct {
+	errorLink
+}
+
+func newMissingMaxShardFieldError() *missingMaxShardFieldError {
+	return &missingMaxShardFieldError{
+		errorLink: errorLink{id: missingMaxShardFieldErrorID}}
+}
+
+func (e *missingMaxShardFieldError) Error() string {
+	return e.errorf("Missing max")
+}
+
 type missingContentDataError struct {
 	errorLink
 }
@@ -523,6 +624,25 @@ func newUnknownContentUpdateOperationError(op string) *unknownContentUpdateOpera
 
 func (e *unknownContentUpdateOperationError) Error() string {
 	return e.errorf("Unknown content update operation %q", e.op)
+}
+
+type objectEndDelimiterError struct {
+	errorLink
+	actual   json.Delim
+	expected string
+	desc     string
+}
+
+func newObjectEndDelimiterError(actual json.Delim, expected, desc string) *objectEndDelimiterError {
+	return &objectEndDelimiterError{
+		errorLink: errorLink{id: objectEndDelimiterErrorID},
+		actual:    actual,
+		expected:  expected,
+		desc:      desc}
+}
+
+func (e *objectEndDelimiterError) Error() string {
+	return e.errorf("Expected %s JSON object end %q but got delimiter %q", e.desc, e.expected, e.actual)
 }
 
 type arrayEndDelimiterError struct {

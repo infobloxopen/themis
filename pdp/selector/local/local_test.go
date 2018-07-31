@@ -99,6 +99,7 @@ func TestSelectorCalculate(t *testing.T) {
 					"test-item",
 					cft,
 					pdp.MakeSignature(pdp.TypeDomain),
+					pdp.NewShards(),
 					pdp.MakeContentDomainFlags8Map(dTree8),
 				),
 			},

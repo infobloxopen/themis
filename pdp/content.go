@@ -447,6 +447,7 @@ type ContentItem struct {
 	r  ContentSubItem
 	t  Type
 	k  []Type
+	s  Shards
 }
 
 // MakeContentValueItem creates content item which represents immediate value
@@ -461,12 +462,14 @@ func MakeContentValueItem(id string, t Type, v interface{}) *ContentItem {
 // MakeContentMappingItem creates mapping content item. Argument t is type
 // of final value while k list is a list of types from ContentKeyTypes and
 // defines which maps the item consists from.
-func MakeContentMappingItem(id string, t Type, k []Type, v ContentSubItem) *ContentItem {
+func MakeContentMappingItem(id string, t Type, k []Type, s Shards, v ContentSubItem) *ContentItem {
 	return &ContentItem{
 		id: id,
 		r:  v,
 		t:  t,
-		k:  k}
+		k:  k,
+		s:  s,
+	}
 }
 
 // GetType returns content item type
@@ -665,7 +668,7 @@ func (c *ContentItem) add(ID string, path []AttributeValue, v interface{}) (*Con
 		}
 	}
 
-	return MakeContentMappingItem(ID, c.t, c.k, m), nil
+	return MakeContentMappingItem(ID, c.t, c.k, c.s, m), nil
 }
 
 func (c *ContentItem) del(ID string, path []AttributeValue) (*ContentItem, error) {
@@ -714,7 +717,7 @@ func (c *ContentItem) del(ID string, path []AttributeValue) (*ContentItem, error
 		}
 	}
 
-	return MakeContentMappingItem(ID, c.t, c.k, m), nil
+	return MakeContentMappingItem(ID, c.t, c.k, c.s, m), nil
 }
 
 // Get returns value from content item by given path. It sequentially evaluates
