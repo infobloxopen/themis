@@ -30,6 +30,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"str-str-map",
 		TypeString,
 		MakeSignature(TypeString, TypeString),
+		NewShards(),
 		MakeContentStringMap(strtree.NewTree()),
 	)
 
@@ -42,6 +43,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"key-str-map",
 		TypeString,
 		MakeSignature(TypeString),
+		NewShards(),
 		MakeContentStringMap(sTree),
 	)
 
@@ -49,6 +51,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"str-net-map",
 		TypeString,
 		MakeSignature(TypeString, TypeNetwork),
+		NewShards(),
 		MakeContentStringMap(strtree.NewTree()),
 	)
 
@@ -61,6 +64,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"key-net-map",
 		TypeString,
 		MakeSignature(TypeNetwork),
+		NewShards(),
 		MakeContentNetworkMap(nTree),
 	)
 
@@ -68,6 +72,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"str-dom-map",
 		TypeString,
 		MakeSignature(TypeString, TypeDomain),
+		NewShards(),
 		MakeContentStringMap(strtree.NewTree()),
 	)
 
@@ -80,6 +85,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"key-dom-map",
 		TypeString,
 		MakeSignature(TypeDomain),
+		NewShards(),
 		MakeContentDomainMap(dTree),
 	)
 
@@ -92,6 +98,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"str-map",
 		TypeString,
 		MakeSignature(TypeString),
+		NewShards(),
 		MakeContentStringMap(sTree),
 	)
 
@@ -104,6 +111,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"net-map",
 		TypeString,
 		MakeSignature(TypeNetwork),
+		NewShards(),
 		MakeContentNetworkMap(nTree),
 	)
 
@@ -116,6 +124,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"dom-map",
 		TypeString,
 		MakeSignature(TypeDomain),
+		NewShards(),
 		MakeContentDomainMap(dTree),
 	)
 
@@ -128,6 +137,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"dom-map-add",
 		TypeString,
 		MakeSignature(TypeDomain),
+		NewShards(),
 		MakeContentDomainMap(dTree),
 	)
 
@@ -140,6 +150,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"dom-map-del",
 		TypeString,
 		MakeSignature(TypeDomain),
+		NewShards(),
 		MakeContentDomainMap(dTree),
 	)
 
@@ -209,6 +220,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"str8-map",
 		ft8,
 		MakeSignature(TypeString),
+		NewShards(),
 		MakeContentStringFlags8Map(sTree8),
 	)
 
@@ -221,6 +233,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"str16-map",
 		ft16,
 		MakeSignature(TypeString),
+		NewShards(),
 		MakeContentStringFlags16Map(sTree16),
 	)
 
@@ -233,6 +246,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"str32-map",
 		ft32,
 		MakeSignature(TypeString),
+		NewShards(),
 		MakeContentStringFlags32Map(sTree32),
 	)
 
@@ -245,6 +259,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"str64-map",
 		ft64,
 		MakeSignature(TypeString),
+		NewShards(),
 		MakeContentStringFlags64Map(sTree64),
 	)
 
@@ -264,6 +279,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"net8-map",
 		ft8,
 		MakeSignature(TypeNetwork),
+		NewShards(),
 		MakeContentNetworkFlags8Map(nTree8),
 	)
 
@@ -277,6 +293,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"net16-map",
 		ft16,
 		MakeSignature(TypeNetwork),
+		NewShards(),
 		MakeContentNetworkFlags16Map(nTree16),
 	)
 
@@ -290,6 +307,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"net32-map",
 		ft32,
 		MakeSignature(TypeNetwork),
+		NewShards(),
 		MakeContentNetworkFlags32Map(nTree32),
 	)
 
@@ -303,6 +321,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"net64-map",
 		ft64,
 		MakeSignature(TypeNetwork),
+		NewShards(),
 		MakeContentNetworkFlags64Map(nTree64),
 	)
 
@@ -315,6 +334,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"dom8-map",
 		ft8,
 		MakeSignature(TypeDomain),
+		NewShards(),
 		MakeContentDomainFlags8Map(dTree8),
 	)
 
@@ -327,6 +347,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"dom16-map",
 		ft16,
 		MakeSignature(TypeDomain),
+		NewShards(),
 		MakeContentDomainFlags16Map(dTree16),
 	)
 
@@ -339,6 +360,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"dom32-map",
 		ft32,
 		MakeSignature(TypeDomain),
+		NewShards(),
 		MakeContentDomainFlags32Map(dTree32),
 	)
 
@@ -351,6 +373,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"dom64-map",
 		ft64,
 		MakeSignature(TypeDomain),
+		NewShards(),
 		MakeContentDomainFlags64Map(dTree64),
 	)
 
@@ -373,6 +396,7 @@ func TestLocalContentStorage(t *testing.T) {
 		"dom-map",
 		TypeString,
 		MakeSignature(TypeDomain),
+		NewShards(),
 		MakeContentDomainMap(dTree),
 	)
 	s = s.Add(NewLocalContent("second", &tag, st, []*ContentItem{dmc}))

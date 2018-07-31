@@ -1,6 +1,8 @@
 package: jcon
 
 import:
+- strconv
+- strings
 - encoding/json
 - github.com/infobloxopen/themis/pdp
 
@@ -190,6 +192,51 @@ errors:
   args:
   - field: name
 
+- id: unknownShardFieldError
+  fields:
+  - id: name
+    type: string
+  msg: "Unknown field %q in shard definition"
+  args:
+  - field: name
+
+- id: duplicateMinShardFieldError
+  fields:
+  - id: min
+    type: string
+  msg: "Duplicate min field in shard definition. Previous has %q value"
+  args:
+  - field: min
+
+- id: duplicateMaxShardFieldError
+  fields:
+  - id: max
+    type: string
+  msg: "Duplicate min field in shard definition. Previous has %q value"
+  args:
+  - field: max
+
+- id: duplicateServersShardFieldError
+  fields:
+  - id: servers
+    type: "[]string"
+  msg: "Duplicate servers field in shard definition. Previous are %s"
+  args:
+  - snippet:
+      result: q
+      code: |
+        s := make([]string, len(e.servers))
+        for i, srv := range e.servers {
+        	s[i] = strconv.QuoteToASCII(srv)
+        }
+        q := strings.Join(s, ", ")
+
+- id: missingMinShardFieldError
+  msg: "Missing min"
+
+- id: missingMaxShardFieldError
+  msg: "Missing max"
+
 - id: missingContentDataError
   msg: "Missing data"
 
@@ -250,6 +297,20 @@ errors:
   msg: "Unknown content update operation %q"
   args:
   - field: op
+
+- id: objectEndDelimiterError
+  fields:
+  - id: actual
+    type: json.Delim
+  - id: expected
+    type: string
+  - id: desc
+    type: string
+  msg: "Expected %s JSON object end %q but got delimiter %q"
+  args:
+  - field: desc
+  - field: expected
+  - field: actual
 
 - id: arrayEndDelimiterError
   fields:
