@@ -231,6 +231,9 @@ func MakeValueFromString(t Type, s string) (AttributeValue, error) {
 
 		return MakeAddressValue(a), nil
 
+	case TypeMacAddress:
+		return MakeMacAddressValue([]byte(s)), nil
+
 	case TypeNetwork:
 		_, n, err := net.ParseCIDR(s)
 		if err != nil {
@@ -306,6 +309,9 @@ func (v AttributeValue) describe() string {
 
 	case TypeAddress:
 		return v.v.(net.IP).String()
+
+	case TypeMacAddress:
+		return v.v.(string)
 
 	case TypeNetwork:
 		return v.v.(*net.IPNet).String()
@@ -437,6 +443,15 @@ func (v AttributeValue) address() (net.IP, error) {
 	}
 
 	return v.v.(net.IP), nil
+}
+
+func (v AttributeValue) mac() (string, error) {
+	err := v.typeCheck(TypeMacAddress)
+	if err != nil {
+		return "", err
+	}
+
+	return v.v.(string), nil
 }
 
 func (v AttributeValue) network() (*net.IPNet, error) {
