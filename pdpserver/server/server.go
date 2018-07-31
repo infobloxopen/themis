@@ -19,6 +19,7 @@ import (
 	"github.com/infobloxopen/themis/pdp/ast"
 	"github.com/infobloxopen/themis/pdp/jcon"
 	"github.com/infobloxopen/themis/pep"
+	"github.com/infobloxopen/themis/pipclient"
 
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	ot "github.com/opentracing/opentracing-go"
@@ -164,7 +165,6 @@ type options struct {
 	memProfNumGC        uint32
 	memProfDelay        time.Duration
 
-	shards          pdp.Shards
 	shardingStreams int
 }
 
@@ -194,7 +194,8 @@ type Server struct {
 
 	memProfBaseDumpDone chan uint32
 
-	shardClients map[string]pep.Client
+	shardClients    map[string]pep.Client
+	pipShardClients map[string]pipclient.Client
 
 	pool bytePool
 }
@@ -309,6 +310,7 @@ func (s *Server) LoadContent(paths []string) error {
 	}
 
 	s.c = pdp.NewLocalContentStorage(items)
+	s.updatePIPShardClients()
 
 	return nil
 }
@@ -332,6 +334,7 @@ func (s *Server) ReadContent(readers ...io.Reader) error {
 	}
 
 	s.c = pdp.NewLocalContentStorage(items)
+	s.updatePIPShardClients()
 
 	return nil
 }
@@ -526,6 +529,12 @@ func (s *Server) Serve() error {
 	}
 
 	for _, sc := range s.shardClients {
+		if err := sc.Connect(""); err != nil {
+			return err
+		}
+	}
+
+	for _, sc := range s.pipShardClients {
 		if err := sc.Connect(""); err != nil {
 			return err
 		}

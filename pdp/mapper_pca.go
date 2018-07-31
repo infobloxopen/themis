@@ -331,7 +331,7 @@ func (a mapperPCA) execute(policies []Evaluable, ctx *Context) Response {
 	}
 
 	if shard, ok := a.shards.get(ID); ok {
-		return Response{EffectIndeterminate, newShardingError(shard), nil}
+		return Response{EffectIndeterminate, newPolicyShardingError(shard), nil}
 	}
 
 	if a.def != nil {

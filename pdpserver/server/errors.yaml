@@ -397,3 +397,11 @@ errors:
   msg: "The %s policy format is unsupported. Must be YAML or JSON"
   args:
   - field: format
+
+- id: missingContentShardError
+  fields:
+  - id: name
+    type: string
+  msg: "Can't find content shard %q"
+  args:
+  - field: name
