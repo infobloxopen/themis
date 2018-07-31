@@ -48,7 +48,7 @@ func makeFailureResponseWithBuffer(b []byte, err error) []byte {
 }
 
 func (s *Server) shardingRedirect(r pdp.Response, in []byte) []byte {
-	if shardErr, ok := r.Status.(*pdp.ShardingError); ok {
+	if shardErr, ok := r.Status.(*pdp.PolicyShardingError); ok {
 		name := shardErr.Shard
 		if s.opts.logger.Level >= log.DebugLevel {
 			s.opts.logger.WithField("name", name).Debug("Sharding redirect")
@@ -76,7 +76,7 @@ func (s *Server) shardingRedirect(r pdp.Response, in []byte) []byte {
 }
 
 func (s *Server) shardingRedirectWithAllocator(r pdp.Response, in []byte, f func(n int) ([]byte, error)) []byte {
-	if shardErr, ok := r.Status.(*pdp.ShardingError); ok {
+	if shardErr, ok := r.Status.(*pdp.PolicyShardingError); ok {
 		name := shardErr.Shard
 		if s.opts.logger.Level >= log.DebugLevel {
 			s.opts.logger.WithField("name", name).Debug("Sharding redirect")
@@ -104,7 +104,7 @@ func (s *Server) shardingRedirectWithAllocator(r pdp.Response, in []byte, f func
 }
 
 func (s *Server) shardingRedirectWithBuffer(r pdp.Response, in, out []byte) []byte {
-	if shardErr, ok := r.Status.(*pdp.ShardingError); ok {
+	if shardErr, ok := r.Status.(*pdp.PolicyShardingError); ok {
 		name := shardErr.Shard
 		if s.opts.logger.Level >= log.DebugLevel {
 			s.opts.logger.WithField("name", name).Debug("Sharding redirect")

@@ -70,6 +70,20 @@ func (s *LocalContentStorage) Get(cID, iID string) (*ContentItem, error) {
 	return item, nil
 }
 
+func (s *LocalContentStorage) GetShards() Shards {
+	out := NewShards()
+	for p := range s.r.Enumerate() {
+		item, ok := p.Value.(*LocalContent)
+		if !ok {
+			panic(newInvalidContentStorageItem(p.Key, p.Value))
+		}
+
+		out = out.appendShards(item.GetShards())
+	}
+
+	return out
+}
+
 // Add puts new content to storage. It returns copy of existing storage with
 // new content in it. Existing storage isn't affected by the operation.
 func (s *LocalContentStorage) Add(c *LocalContent) *LocalContentStorage {
@@ -426,6 +440,20 @@ func (c *LocalContent) Get(ID string) (*ContentItem, error) {
 	return item, nil
 }
 
+func (c *LocalContent) GetShards() Shards {
+	out := NewShards()
+	for p := range c.items.Enumerate() {
+		item, ok := p.Value.(*ContentItem)
+		if !ok {
+			panic(bindError(newInvalidContentItemError(p.Value), p.Key))
+		}
+
+		out = out.appendShards(item.GetShards())
+	}
+
+	return out
+}
+
 // String implements Stringer interface.
 func (c *LocalContent) String() string {
 	if c == nil {
@@ -476,6 +504,10 @@ func MakeContentMappingItem(id string, t Type, k []Type, s Shards, v ContentSubI
 // GetType returns content item type
 func (c *ContentItem) GetType() Type {
 	return c.t
+}
+
+func (c *ContentItem) GetShards() Shards {
+	return c.s
 }
 
 func (c *ContentItem) typeCheck(path []AttributeValue, v interface{}) (ContentSubItem, error) {
@@ -732,7 +764,7 @@ func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, erro
 	if d > 0 {
 		m := c.r
 		loc := []string{""}
-		for i, e := range path[:d-1] {
+		for _, e := range path[:d-1] {
 			key, err := e.Calculate(ctx)
 			if err != nil {
 				return UndefinedValue, bindError(err, strings.Join(loc, "/"))
@@ -742,19 +774,6 @@ func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, erro
 
 			m, err = m.next(key)
 			if err != nil {
-				if i == 0 && key.GetResultType() == TypeString {
-					if _, ok := err.(*MissingValueError); ok {
-						s, err := key.str()
-						if err != nil {
-							return UndefinedValue, bindError(err, strings.Join(loc, "/"))
-						}
-
-						if name, ok := c.s.get(s); ok {
-							return UndefinedValue, newShardingError(name)
-						}
-					}
-				}
-
 				return UndefinedValue, bindError(err, strings.Join(loc, "/"))
 			}
 		}
@@ -774,7 +793,7 @@ func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, erro
 					}
 
 					if name, ok := c.s.get(s); ok {
-						return UndefinedValue, newShardingError(name)
+						return UndefinedValue, newContentShardingError(name, s)
 					}
 				}
 			}

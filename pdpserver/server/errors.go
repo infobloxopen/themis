@@ -47,6 +47,7 @@ const (
 	contentTransactionCommitErrorID   = 35
 	unknownUploadedRequestErrorID     = 36
 	unsupportedPolicyFromatErrorID    = 37
+	missingContentShardErrorID        = 38
 )
 
 type externalError struct {
@@ -671,4 +672,19 @@ func newUnsupportedPolicyFromatError(format string) *unsupportedPolicyFromatErro
 
 func (e *unsupportedPolicyFromatError) Error() string {
 	return e.errorf("The %s policy format is unsupported. Must be YAML or JSON", e.format)
+}
+
+type missingContentShardError struct {
+	errorLink
+	name string
+}
+
+func newMissingContentShardError(name string) *missingContentShardError {
+	return &missingContentShardError{
+		errorLink: errorLink{id: missingContentShardErrorID},
+		name:      name}
+}
+
+func (e *missingContentShardError) Error() string {
+	return e.errorf("Can't find content shard %q", e.name)
 }

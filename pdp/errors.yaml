@@ -1406,11 +1406,23 @@ errors:
   - field: a.describe()
   - field: err
 
-- id: ShardingError
+- id: PolicyShardingError
   desc: "indicates that request should be redirected to another shard"
   fields:
   - id: Shard
     type: string
   msg: "Can't evaluate request here. Go to shard %q"
   args:
+  - field: Shard
+
+- id: ContentShardingError
+  desc: "indicates that mapping request should be redirected to another shard"
+  fields:
+  - id: Shard
+    type: string
+  - id: Key
+    type: string
+  msg: "Can't map %q to value here. Go to shard %q"
+  args:
+  - field: Key
   - field: Shard

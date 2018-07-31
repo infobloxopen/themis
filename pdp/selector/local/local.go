@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"sync/atomic"
 
 	"github.com/infobloxopen/themis/pdp"
 )
@@ -34,6 +35,7 @@ type LocalSelector struct {
 	item    string
 	path    []pdp.Expression
 	t       pdp.Type
+	router  *atomic.Value
 }
 
 // MakeLocalSelector creates instance of local selector. Arguments content and
@@ -50,7 +52,9 @@ func MakeLocalSelector(uri *url.URL, path []pdp.Expression, t pdp.Type) (pdp.Exp
 		content: loc[0],
 		item:    loc[1],
 		path:    path,
-		t:       t}, nil
+		t:       t,
+		router:  new(atomic.Value),
+	}, nil
 }
 
 // GetResultType implements Expression interface and returns type of final value
@@ -68,13 +72,21 @@ func (s LocalSelector) Calculate(ctx *pdp.Context) (pdp.AttributeValue, error) {
 
 	r, err := item.Get(s.path, ctx)
 	if err != nil {
+		v := s.router.Load()
+		if v != nil {
+			if router, ok := v.(pdp.Router); ok {
+				if err, ok := err.(*pdp.ContentShardingError); ok {
+					return router.Call(err)
+				}
+			}
+		}
+
 		return pdp.UndefinedValue, err
 	}
 
 	r, err = r.Rebind(s.t)
 	if err != nil {
 		return pdp.UndefinedValue, fmt.Errorf("Expected content with value type %q but got %q", s.t, r.GetResultType())
-
 	}
 
 	return r, nil

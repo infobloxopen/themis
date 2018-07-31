@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package service;
+package pip;
 
 service PIP {
   rpc Map (Msg) returns (Msg) {}

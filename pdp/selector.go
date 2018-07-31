@@ -13,9 +13,14 @@ type Selector interface {
 	// Initialize is called for all registered and enabled selectors
 	// by InitializeSelectors.
 	Initialize()
+
 	// SelectorFunc returns selector expression for given URI,
 	// set of arguments and desired result type.
 	SelectorFunc(*url.URL, []Expression, Type) (Expression, error)
+}
+
+type Router interface {
+	Call(err *ContentShardingError) (AttributeValue, error)
 }
 
 var selectorMap = make(map[string]Selector)

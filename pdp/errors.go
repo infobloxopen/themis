@@ -179,7 +179,8 @@ const (
 	ResponseServerErrorID                              = 162
 	policyCalculationErrorID                           = 163
 	obligationCalculationErrorID                       = 164
-	ShardingErrorID                                    = 165
+	PolicyShardingErrorID                              = 165
+	ContentShardingErrorID                             = 166
 )
 
 type externalError struct {
@@ -2756,19 +2757,38 @@ func (e *obligationCalculationError) Error() string {
 	return e.errorf("Failed to calculate obligation for %s: %s", e.a.describe(), e.err)
 }
 
-// ShardingError indicates that request should be redirected to another shard.
-type ShardingError struct {
+// PolicyShardingError indicates that request should be redirected to another shard.
+type PolicyShardingError struct {
 	errorLink
 	Shard string
 }
 
-func newShardingError(Shard string) *ShardingError {
-	return &ShardingError{
-		errorLink: errorLink{id: ShardingErrorID},
+func newPolicyShardingError(Shard string) *PolicyShardingError {
+	return &PolicyShardingError{
+		errorLink: errorLink{id: PolicyShardingErrorID},
 		Shard:     Shard}
 }
 
 // Error implements error interface.
-func (e *ShardingError) Error() string {
+func (e *PolicyShardingError) Error() string {
 	return e.errorf("Can't evaluate request here. Go to shard %q", e.Shard)
+}
+
+// ContentShardingError indicates that mapping request should be redirected to another shard.
+type ContentShardingError struct {
+	errorLink
+	Shard string
+	Key   string
+}
+
+func newContentShardingError(Shard, Key string) *ContentShardingError {
+	return &ContentShardingError{
+		errorLink: errorLink{id: ContentShardingErrorID},
+		Shard:     Shard,
+		Key:       Key}
+}
+
+// Error implements error interface.
+func (e *ContentShardingError) Error() string {
+	return e.errorf("Can't map %q to value here. Go to shard %q", e.Key, e.Shard)
 }
