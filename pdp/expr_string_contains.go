@@ -47,6 +47,11 @@ func (f functionStringContains) Calculate(ctx *Context) (AttributeValue, error) 
 	return MakeBooleanValue(strings.Contains(str, substr)), nil
 }
 
+func (f functionStringContains) Event(args ...interface{}) {
+	f.str.Event(args...)
+	f.substr.Event(args...)
+}
+
 func functionStringContainsValidator(args []Expression) functionMaker {
 	if len(args) != 2 || args[0].GetResultType() != TypeString || args[1].GetResultType() != TypeString {
 		return nil

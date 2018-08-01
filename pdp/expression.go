@@ -6,6 +6,7 @@ package pdp
 type Expression interface {
 	GetResultType() Type
 	Calculate(ctx *Context) (AttributeValue, error)
+	Event(args ...interface{})
 }
 
 type functionMaker func(args []Expression) Expression

@@ -45,6 +45,11 @@ func (f functionSetOfStringsContains) Calculate(ctx *Context) (AttributeValue, e
 	return MakeBooleanValue(ok), nil
 }
 
+func (f functionSetOfStringsContains) Event(args ...interface{}) {
+	f.set.Event(args...)
+	f.value.Event(args...)
+}
+
 func functionSetOfStringsContainsValidator(args []Expression) functionMaker {
 	if len(args) != 2 || args[0].GetResultType() != TypeSetOfStrings || args[1].GetResultType() != TypeString {
 		return nil

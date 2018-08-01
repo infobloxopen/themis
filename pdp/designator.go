@@ -99,3 +99,6 @@ func (d AttributeDesignator) GetResultType() Type {
 func (d AttributeDesignator) Calculate(ctx *Context) (AttributeValue, error) {
 	return ctx.getAttribute(d.a)
 }
+
+func (d AttributeDesignator) Event(args ...interface{}) {
+}

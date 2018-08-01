@@ -44,6 +44,11 @@ func (f functionIntegerSubtract) Calculate(ctx *Context) (AttributeValue, error)
 	return MakeIntegerValue(first - second), nil
 }
 
+func (f functionIntegerSubtract) Event(args ...interface{}) {
+	f.first.Event(args...)
+	f.second.Event(args...)
+}
+
 func functionIntegerSubtractValidator(args []Expression) functionMaker {
 	if len(args) != 2 || args[0].GetResultType() != TypeInteger || args[1].GetResultType() != TypeInteger {
 		return nil

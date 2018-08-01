@@ -44,6 +44,11 @@ func (f functionFloatGreater) Calculate(ctx *Context) (AttributeValue, error) {
 	return MakeBooleanValue(first > second), nil
 }
 
+func (f functionFloatGreater) Event(args ...interface{}) {
+	f.first.Event(args...)
+	f.second.Event(args...)
+}
+
 func functionFloatGreaterValidator(args []Expression) functionMaker {
 	if len(args) != 2 ||
 		(args[0].GetResultType() != TypeFloat && args[0].GetResultType() != TypeInteger) ||

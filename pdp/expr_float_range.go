@@ -57,6 +57,12 @@ func (f functionFloatRange) Calculate(ctx *Context) (AttributeValue, error) {
 	return MakeStringValue("Within"), nil
 }
 
+func (f functionFloatRange) Event(args ...interface{}) {
+	f.min.Event(args...)
+	f.max.Event(args...)
+	f.val.Event(args...)
+}
+
 func functionFloatRangeValidator(args []Expression) functionMaker {
 	if len(args) != 3 ||
 		(args[0].GetResultType() != TypeFloat && args[0].GetResultType() != TypeInteger) ||

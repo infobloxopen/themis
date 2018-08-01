@@ -111,6 +111,12 @@ func (s PolicyStorage) GetShards() Shards {
 	return s.policies.GetShards()
 }
 
+func (s PolicyStorage) Event(args ...interface{}) {
+	if s.policies != nil {
+		s.policies.Event(args...)
+	}
+}
+
 // Here set of supported update operations is defined.
 const (
 	// UOAdd stands for add operation (add or append item to a collection).

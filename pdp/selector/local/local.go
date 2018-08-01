@@ -91,3 +91,12 @@ func (s LocalSelector) Calculate(ctx *pdp.Context) (pdp.AttributeValue, error) {
 
 	return r, nil
 }
+
+func (s LocalSelector) Event(args ...interface{}) {
+	if len(args) > 0 {
+		arg := args[0]
+		if _, ok := arg.(pdp.Router); ok {
+			s.router.Store(arg)
+		}
+	}
+}

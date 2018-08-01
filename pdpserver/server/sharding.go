@@ -28,16 +28,22 @@ func (s *Server) updateShardClients() {
 	if len(m) > 0 {
 		s.shardClients = make(map[string]pep.Client, len(m))
 		for name, addrs := range m {
-			s.shardClients[name] = pep.NewClient(
+			opts := []pep.Option{
 				pep.WithCustomData(name),
 				pep.WithRoundRobinBalancer(addrs...),
-				pep.WithConnectionTimeout(5*time.Second),
-			)
+				pep.WithConnectionTimeout(5 * time.Second),
+			}
+			if s.opts.shardingStreams > 0 {
+				opts = append(opts,
+					pep.WithStreams(s.opts.shardingStreams),
+				)
+			}
+			s.shardClients[name] = pep.NewClient(opts...)
 		}
 	}
 }
 
-func (s *Server) updatePIPShardClients() {
+func (s *Server) updatePIPShardClients() pdp.Router {
 	for name, c := range s.pipShardClients {
 		s.pipShardClients[name] = nil
 		c.Close()
@@ -47,18 +53,34 @@ func (s *Server) updatePIPShardClients() {
 	if len(m) > 0 {
 		s.pipShardClients = make(map[string]pipclient.Client, len(m))
 		for name, addrs := range m {
-			s.pipShardClients[name] = pipclient.NewClient(
+			s.opts.logger.WithField("name", name).Debug("Creating content sharding client")
+			opts := []pipclient.Option{
 				pipclient.WithCustomData(name),
 				pipclient.WithRoundRobinBalancer(addrs...),
-				pipclient.WithConnectionTimeout(5*time.Second),
-			)
+				pipclient.WithConnectionTimeout(5 * time.Second),
+			}
+			if s.opts.shardingStreams > 0 {
+				opts = append(opts,
+					pipclient.WithStreams(s.opts.shardingStreams),
+				)
+			}
+			s.pipShardClients[name] = pipclient.NewClient(opts...)
 		}
 	}
+
+	return s.newLocalContentRouter()
 }
 
 type localContentRouter struct {
 	c      map[string]pipclient.Client
 	logger *log.Logger
+}
+
+func (s *Server) newLocalContentRouter() pdp.Router {
+	return &localContentRouter{
+		c:      s.pipShardClients,
+		logger: s.opts.logger,
+	}
 }
 
 func (r *localContentRouter) Call(err *pdp.ContentShardingError) (pdp.AttributeValue, error) {

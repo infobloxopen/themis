@@ -78,6 +78,10 @@ func (a flagsMapperRCA) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (a flagsMapperRCA) Event(args ...interface{}) {
+	a.argument.Event(args...)
+}
+
 func (a flagsMapperRCA) add(ID string, child, old *Rule) RuleCombiningAlg {
 	def := a.def
 	if old != nil && old == def {

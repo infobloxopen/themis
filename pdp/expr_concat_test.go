@@ -201,3 +201,6 @@ func (f failExpr) GetResultType() Type {
 func (f failExpr) Calculate(ctx *Context) (AttributeValue, error) {
 	return UndefinedValue, f.err
 }
+
+func (f failExpr) Event(args ...interface{}) {
+}

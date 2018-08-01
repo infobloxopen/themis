@@ -58,6 +58,12 @@ func (f functionIntegerRange) Calculate(ctx *Context) (AttributeValue, error) {
 	return MakeStringValue("Within"), nil
 }
 
+func (f functionIntegerRange) Event(args ...interface{}) {
+	f.min.Event(args...)
+	f.max.Event(args...)
+	f.val.Event(args...)
+}
+
 func functionIntegerRangeValidator(args []Expression) functionMaker {
 	if len(args) != 3 || args[0].GetResultType() != TypeInteger || args[1].GetResultType() != TypeInteger || args[2].GetResultType() != TypeInteger {
 		return nil

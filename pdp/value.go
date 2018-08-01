@@ -537,6 +537,9 @@ func (v AttributeValue) Calculate(ctx *Context) (AttributeValue, error) {
 	return v, nil
 }
 
+func (v AttributeValue) Event(args ...interface{}) {
+}
+
 // Serialize converts attribute value to its string representation.
 // No conversion defined for undefined value.
 func (v AttributeValue) Serialize() (string, error) {

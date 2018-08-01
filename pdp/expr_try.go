@@ -38,6 +38,12 @@ func (f functionTry) Calculate(ctx *Context) (AttributeValue, error) {
 	return UndefinedValue, bindError(err, f.describe())
 }
 
+func (f functionTry) Event(args ...interface{}) {
+	for _, arg := range f.args {
+		arg.Event(args...)
+	}
+}
+
 func functionTryValidator(args []Expression) functionMaker {
 	if len(args) <= 0 {
 		return nil

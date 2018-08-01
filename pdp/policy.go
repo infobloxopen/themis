@@ -11,6 +11,7 @@ import (
 type RuleCombiningAlg interface {
 	execute(rules []*Rule, ctx *Context) Response
 	MarshalJSON() ([]byte, error)
+	Event(args ...interface{})
 }
 
 // RuleCombiningAlgMaker creates instance of rule combining algorithm.
@@ -166,6 +167,10 @@ func (p *Policy) GetShards() Shards {
 	}
 
 	return out
+}
+
+func (p *Policy) Event(args ...interface{}) {
+	p.algorithm.Event(args...)
 }
 
 func (p *Policy) getOrder() int {
@@ -342,6 +347,9 @@ func (firstApplicableEffectRCA) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (firstApplicableEffectRCA) Event(args ...interface{}) {
+}
+
 type denyOverridesRCA struct {
 }
 
@@ -357,6 +365,9 @@ func (denyOverridesRCA) MarshalJSON() ([]byte, error) {
 
 func (a denyOverridesRCA) describe() string {
 	return "deny overrides"
+}
+
+func (denyOverridesRCA) Event(args ...interface{}) {
 }
 
 func (a denyOverridesRCA) execute(rules []*Rule, ctx *Context) Response {

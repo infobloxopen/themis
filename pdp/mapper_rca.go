@@ -230,6 +230,10 @@ func (a mapperRCA) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (a mapperRCA) Event(args ...interface{}) {
+	a.argument.Event(args...)
+}
+
 func (a mapperRCA) describe() string {
 	return "mapper"
 }

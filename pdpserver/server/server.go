@@ -259,6 +259,10 @@ func (s *Server) LoadPolicies(path string) error {
 
 	s.p = p
 	s.updateShardClients()
+	if len(s.pipShardClients) > 0 {
+		s.opts.logger.Debug("Notifying policy on load policies")
+		s.p.Event(s.newLocalContentRouter())
+	}
 
 	return nil
 }
@@ -278,6 +282,10 @@ func (s *Server) ReadPolicies(r io.Reader) error {
 
 	s.p = p
 	s.updateShardClients()
+	if len(s.pipShardClients) > 0 {
+		s.opts.logger.Debug("Notifying policy on read policies")
+		s.p.Event(s.newLocalContentRouter())
+	}
 
 	return nil
 }
@@ -310,7 +318,11 @@ func (s *Server) LoadContent(paths []string) error {
 	}
 
 	s.c = pdp.NewLocalContentStorage(items)
-	s.updatePIPShardClients()
+	r := s.updatePIPShardClients()
+	if s.p != nil {
+		s.opts.logger.Debug("Notifying policy on load content")
+		s.p.Event(r)
+	}
 
 	return nil
 }
@@ -334,7 +346,11 @@ func (s *Server) ReadContent(readers ...io.Reader) error {
 	}
 
 	s.c = pdp.NewLocalContentStorage(items)
-	s.updatePIPShardClients()
+	r := s.updatePIPShardClients()
+	if s.p != nil {
+		s.opts.logger.Debug("Notifying policy on read content")
+		s.p.Event(r)
+	}
 
 	return nil
 }
@@ -534,7 +550,8 @@ func (s *Server) Serve() error {
 		}
 	}
 
-	for _, sc := range s.pipShardClients {
+	for name, sc := range s.pipShardClients {
+		s.opts.logger.WithField("name", name).Debug("Connecting content sharding client")
 		if err := sc.Connect(""); err != nil {
 			return err
 		}
