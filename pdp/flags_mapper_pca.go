@@ -78,6 +78,10 @@ func (a flagsMapperPCA) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (a flagsMapperPCA) Event(args ...interface{}) {
+	a.argument.Event(args...)
+}
+
 func (a flagsMapperPCA) add(ID string, child, old Evaluable) PolicyCombiningAlg {
 	def := a.def
 	if old != nil && old == def {

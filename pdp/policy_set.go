@@ -12,6 +12,7 @@ import (
 type PolicyCombiningAlg interface {
 	execute(rules []Evaluable, ctx *Context) Response
 	MarshalJSON() ([]byte, error)
+	Event(args ...interface{})
 }
 
 // PolicyCombiningAlgMaker creates instance of policy combining algorithm.
@@ -201,6 +202,13 @@ func (p *PolicySet) GetShards() Shards {
 	return out
 }
 
+func (p *PolicySet) Event(args ...interface{}) {
+	p.algorithm.Event(args...)
+	for _, p := range p.policies {
+		p.Event(args...)
+	}
+}
+
 func (p *PolicySet) getOrder() int {
 	return p.ord
 }
@@ -373,6 +381,9 @@ func (firstApplicableEffectPCA) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (firstApplicableEffectPCA) Event(args ...interface{}) {
+}
+
 func (a firstApplicableEffectPCA) execute(policies []Evaluable, ctx *Context) Response {
 	for _, p := range policies {
 		r := p.Calculate(ctx)
@@ -395,6 +406,9 @@ func (denyOverridesPCA) MarshalJSON() ([]byte, error) {
 	return json.Marshal(algFmt{
 		Type: "denyOverridesPCA",
 	})
+}
+
+func (denyOverridesPCA) Event(args ...interface{}) {
 }
 
 func (a denyOverridesPCA) describe() string {

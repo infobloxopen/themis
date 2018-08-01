@@ -99,6 +99,10 @@ func (f functionListOfStrings) Calculate(ctx *Context) (AttributeValue, error) {
 	return UndefinedValue, bindError(newListOfStringsTypeError(t), f.describe())
 }
 
+func (f functionListOfStrings) Event(args ...interface{}) {
+	f.e.Event(args...)
+}
+
 func functionListOfStringsValidator(args []Expression) functionMaker {
 	if len(args) == 1 {
 		t := args[0].GetResultType()

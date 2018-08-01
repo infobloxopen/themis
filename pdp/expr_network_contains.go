@@ -46,6 +46,11 @@ func (f functionNetworkContainsAddress) Calculate(ctx *Context) (AttributeValue,
 	return MakeBooleanValue(n.Contains(a)), nil
 }
 
+func (f functionNetworkContainsAddress) Event(args ...interface{}) {
+	f.network.Event(args...)
+	f.address.Event(args...)
+}
+
 func functionNetworkContainsAddressValidator(args []Expression) functionMaker {
 	if len(args) != 2 || args[0].GetResultType() != TypeNetwork || args[1].GetResultType() != TypeAddress {
 		return nil

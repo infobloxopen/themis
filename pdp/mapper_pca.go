@@ -200,6 +200,10 @@ func (a mapperPCA) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (a mapperPCA) Event(args ...interface{}) {
+	a.argument.Event(args...)
+}
+
 func (a mapperPCA) describe() string {
 	return "mapper"
 }

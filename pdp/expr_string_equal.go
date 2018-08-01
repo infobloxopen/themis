@@ -44,6 +44,11 @@ func (f functionStringEqual) Calculate(ctx *Context) (AttributeValue, error) {
 	return MakeBooleanValue(first == second), nil
 }
 
+func (f functionStringEqual) Event(args ...interface{}) {
+	f.first.Event(args...)
+	f.second.Event(args...)
+}
+
 func functionStringEqualValidator(args []Expression) functionMaker {
 	if len(args) != 2 || args[0].GetResultType() != TypeString || args[1].GetResultType() != TypeString {
 		return nil

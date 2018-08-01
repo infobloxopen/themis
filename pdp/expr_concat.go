@@ -42,6 +42,12 @@ func (f functionConcat) Calculate(ctx *Context) (AttributeValue, error) {
 	return MakeListOfStringsValue(out), nil
 }
 
+func (f functionConcat) Event(args ...interface{}) {
+	for _, arg := range f.args {
+		arg.Event(args...)
+	}
+}
+
 func functionConcatValidator(args []Expression) functionMaker {
 	if len(args) <= 0 {
 		return nil

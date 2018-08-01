@@ -49,6 +49,11 @@ func (f functionFloatMultiply) Calculate(ctx *Context) (AttributeValue, error) {
 	return MakeFloatValue(res), nil
 }
 
+func (f functionFloatMultiply) Event(args ...interface{}) {
+	f.first.Event(args...)
+	f.second.Event(args...)
+}
+
 func functionFloatMultiplyValidator(args []Expression) functionMaker {
 	if len(args) != 2 ||
 		(args[0].GetResultType() != TypeFloat && args[0].GetResultType() != TypeInteger) ||

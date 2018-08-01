@@ -53,6 +53,11 @@ func (f functionFloatDivide) Calculate(ctx *Context) (AttributeValue, error) {
 	return MakeFloatValue(res), nil
 }
 
+func (f functionFloatDivide) Event(args ...interface{}) {
+	f.first.Event(args...)
+	f.second.Event(args...)
+}
+
 func functionFloatDivideValidator(args []Expression) functionMaker {
 	if len(args) != 2 ||
 		(args[0].GetResultType() != TypeFloat && args[0].GetResultType() != TypeInteger) ||

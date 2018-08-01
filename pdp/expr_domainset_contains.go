@@ -44,6 +44,11 @@ func (f functionSetOfDomainsContains) Calculate(ctx *Context) (AttributeValue, e
 	return MakeBooleanValue(ok), nil
 }
 
+func (f functionSetOfDomainsContains) Event(args ...interface{}) {
+	f.set.Event(args...)
+	f.value.Event(args...)
+}
+
 func functionSetOfDomainsContainsValidator(args []Expression) functionMaker {
 	if len(args) != 2 || args[0].GetResultType() != TypeSetOfDomains || args[1].GetResultType() != TypeDomain {
 		return nil

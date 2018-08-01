@@ -39,6 +39,10 @@ func (f functionBooleanNot) Calculate(ctx *Context) (AttributeValue, error) {
 	return MakeBooleanValue(!a), nil
 }
 
+func (f functionBooleanNot) Event(args ...interface{}) {
+	f.arg.Event(args...)
+}
+
 func functionBooleanNotValidator(args []Expression) functionMaker {
 	if len(args) != 1 || args[0].GetResultType() != TypeBoolean {
 		return nil
@@ -76,6 +80,12 @@ func (f functionBooleanOr) Calculate(ctx *Context) (AttributeValue, error) {
 	}
 
 	return MakeBooleanValue(false), nil
+}
+
+func (f functionBooleanOr) Event(args ...interface{}) {
+	for _, arg := range f.args {
+		arg.Event(args...)
+	}
 }
 
 func functionBooleanOrValidator(args []Expression) functionMaker {
@@ -121,6 +131,12 @@ func (f functionBooleanAnd) Calculate(ctx *Context) (AttributeValue, error) {
 	}
 
 	return MakeBooleanValue(true), nil
+}
+
+func (f functionBooleanAnd) Event(args ...interface{}) {
+	for _, arg := range f.args {
+		arg.Event(args...)
+	}
 }
 
 func functionBooleanAndValidator(args []Expression) functionMaker {
