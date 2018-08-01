@@ -8,28 +8,26 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 
-	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pip-service"
 )
 
-func (s *Server) Map(ctx context.Context, in *pb.Msg) (*pb.Msg, error) {
-	b, err := pdp.MakeIndeterminateResponse(fmt.Errorf("not implemented"))
-	if err != nil {
-		panic(err)
-	}
-
+func newFailureMsgf(f string, args ...interface{}) (*pb.Msg, error) {
 	return &pb.Msg{
-		Body: b,
+		Body: makeFailureResponse(fmt.Errorf(f, args...)),
 	}, nil
 }
 
-var streamAutoIncrement uint64
+func (s *Server) Map(ctx context.Context, in *pb.Msg) (*pb.Msg, error) {
+	return newFailureMsgf("not implemented")
+}
+
+var pipStreamAutoIncrement uint64
 
 func (s *Server) NewMappingStream(stream pb.PIP_NewMappingStreamServer) error {
 	ctx := stream.Context()
 
-	sID := atomic.AddUint64(&streamAutoIncrement, 1)
-	s.opts.logger.WithField("id", sID).Debug("Got new stream")
+	sID := atomic.AddUint64(&pipStreamAutoIncrement, 1)
+	s.opts.logger.WithField("id", sID).Debug("Got new content stream")
 
 	var out pb.Msg
 
@@ -47,27 +45,23 @@ func (s *Server) NewMappingStream(stream pb.PIP_NewMappingStreamServer) error {
 			s.opts.logger.WithFields(log.Fields{
 				"id":  sID,
 				"err": err,
-			}).Error("Failed to read next request from stream. Dropping stream...")
+			}).Error("Failed to read next request from content stream. Dropping stream...")
 
 			return err
 		}
 
-		b, err := pdp.MakeIndeterminateResponse(fmt.Errorf("not implemented"))
-		if err != nil {
-			panic(err)
-		}
-		out.Body = b
+		out.Body = makeFailureResponse(fmt.Errorf("not implemented"))
 
 		if err = stream.Send(&out); err != nil {
 			s.opts.logger.WithFields(log.Fields{
 				"id":  sID,
 				"err": err,
-			}).Error("Failed to send response. Dropping stream...")
+			}).Error("Failed to send response to content stream. Dropping stream...")
 
 			return err
 		}
 	}
 
-	s.opts.logger.WithField("id", sID).Debug("Stream deleted")
+	s.opts.logger.WithField("id", sID).Debug("Content stream depleted")
 	return nil
 }

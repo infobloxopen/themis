@@ -2777,14 +2777,18 @@ func (e *PolicyShardingError) Error() string {
 // ContentShardingError indicates that mapping request should be redirected to another shard.
 type ContentShardingError struct {
 	errorLink
-	Shard string
-	Key   string
+	Shard   string
+	Content string
+	Item    string
+	Key     AttributeValue
 }
 
-func newContentShardingError(Shard, Key string) *ContentShardingError {
+func newContentShardingError(Shard, Content, Item string, Key AttributeValue) *ContentShardingError {
 	return &ContentShardingError{
 		errorLink: errorLink{id: ContentShardingErrorID},
 		Shard:     Shard,
+		Content:   Content,
+		Item:      Item,
 		Key:       Key}
 }
 

@@ -1420,8 +1420,12 @@ errors:
   fields:
   - id: Shard
     type: string
-  - id: Key
+  - id: Content
     type: string
+  - id: Item
+    type: string
+  - id: Key
+    type: AttributeValue
   msg: "Can't map %q to value here. Go to shard %q"
   args:
   - field: Key
