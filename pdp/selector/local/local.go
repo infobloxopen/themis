@@ -76,6 +76,8 @@ func (s LocalSelector) Calculate(ctx *pdp.Context) (pdp.AttributeValue, error) {
 		if v != nil {
 			if router, ok := v.(pdp.Router); ok {
 				if err, ok := err.(*pdp.ContentShardingError); ok {
+					err.Content = s.content
+					err.Item = s.item
 					return router.Call(err)
 				}
 			}

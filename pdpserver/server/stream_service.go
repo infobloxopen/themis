@@ -70,6 +70,6 @@ func (s *Server) NewValidationStream(stream pb.PDP_NewValidationStreamServer) er
 		}
 	}
 
-	s.opts.logger.WithField("id", sID).Debug("Stream deleted")
+	s.opts.logger.WithField("id", sID).Debug("Stream depleted")
 	return nil
 }

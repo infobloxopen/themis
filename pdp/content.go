@@ -793,7 +793,7 @@ func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, erro
 					}
 
 					if name, ok := c.s.get(s); ok {
-						return UndefinedValue, newContentShardingError(name, s)
+						return UndefinedValue, newContentShardingError(name, "", "", key)
 					}
 				}
 			}

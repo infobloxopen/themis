@@ -19,6 +19,7 @@ import (
 	"github.com/infobloxopen/themis/pdp/ast"
 	"github.com/infobloxopen/themis/pdp/jcon"
 	"github.com/infobloxopen/themis/pep"
+	pbcs "github.com/infobloxopen/themis/pip-service"
 	"github.com/infobloxopen/themis/pipclient"
 
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
@@ -91,6 +92,12 @@ func WithTracingAt(addr string) Option {
 	}
 }
 
+func WithContentAt(addr string) Option {
+	return func(o *options) {
+		o.content = addr
+	}
+}
+
 // WithMaxGRPCStreams returns a Option which sets maximum gRPC streams count
 func WithMaxGRPCStreams(limit uint32) Option {
 	return func(o *options) {
@@ -153,6 +160,7 @@ type options struct {
 	profiler  string
 	storage   string
 	tracing   string
+	content   string
 	memLimits *MemLimits
 	streams   uint32
 
@@ -180,6 +188,7 @@ type Server struct {
 	requests    transport
 	control     transport
 	health      transport
+	content     transport
 	profiler    net.Listener
 	storageCtrl net.Listener
 
@@ -426,6 +435,21 @@ func (s *Server) listenStorage() error {
 	return nil
 }
 
+func (s *Server) listenContent() error {
+	if len(s.opts.content) <= 0 {
+		return nil
+	}
+
+	s.opts.logger.WithField("address", s.opts.content).Info("Opening content port")
+	ln, err := net.Listen("tcp", s.opts.content)
+	if err != nil {
+		return err
+	}
+
+	s.content.iface = ln
+	return nil
+}
+
 func (s *Server) configureRequests() []grpc.ServerOption {
 	opts := []grpc.ServerOption{}
 	if s.opts.streams > 0 {
@@ -443,6 +467,15 @@ func (s *Server) configureRequests() []grpc.ServerOption {
 			intercept := otgrpc.OpenTracingServerInterceptor(tracer, otgrpc.IncludingSpans(onlyIfParent))
 			opts = append(opts, grpc.UnaryInterceptor(intercept))
 		}
+	}
+
+	return opts
+}
+
+func (s *Server) configureContent() []grpc.ServerOption {
+	opts := []grpc.ServerOption{}
+	if s.opts.streams > 0 {
+		opts = append(opts, grpc.MaxConcurrentStreams(s.opts.streams))
 	}
 
 	return opts
@@ -502,6 +535,10 @@ func (s *Server) Serve() error {
 		return err
 	}
 
+	if err := s.listenContent(); err != nil {
+		return err
+	}
+
 	if s.health.iface != nil {
 		healthMux := http.NewServeMux()
 		healthMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -544,6 +581,13 @@ func (s *Server) Serve() error {
 		}(s.storageCtrl)
 	}
 
+	if s.content.iface != nil {
+		s.opts.logger.Info("Creating content protocol handler")
+		s.content.proto = grpc.NewServer(s.configureContent()...)
+		pbcs.RegisterPIPServer(s.content.proto, s)
+		defer s.content.proto.Stop()
+	}
+
 	for _, sc := range s.shardClients {
 		if err := sc.Connect(""); err != nil {
 			return err
@@ -563,6 +607,14 @@ func (s *Server) Serve() error {
 	defer s.requests.proto.Stop()
 
 	go s.memoryChecker()
+
+	if s.content.iface != nil {
+		go func() {
+			if err := s.content.proto.Serve(s.content.iface); err != nil {
+				s.errCh <- err
+			}
+		}()
+	}
 
 	if s.p != nil {
 		// We already have policy info applied; supplied from local files,

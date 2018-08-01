@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/infobloxopen/themis/pdp"
@@ -83,26 +84,40 @@ func (s *Server) newLocalContentRouter() pdp.Router {
 	}
 }
 
-func (r *localContentRouter) Call(err *pdp.ContentShardingError) (pdp.AttributeValue, error) {
-	name := err.Shard
-	key := err.Key
+func (r *localContentRouter) Call(sErr *pdp.ContentShardingError) (pdp.AttributeValue, error) {
 	if r.logger.Level >= log.DebugLevel {
+		sKey, sKeyErr := sErr.Key.Serialize()
+		if sKeyErr != nil {
+			return pdp.UndefinedValue, fmt.Errorf("can't serialize key for debug message: %s", sKeyErr)
+		}
+
 		r.logger.WithFields(log.Fields{
-			"name": name,
-			"key":  key,
+			"name":    sErr.Shard,
+			"content": sErr.Content,
+			"item":    sErr.Item,
+			"key":     sKey,
 		}).Debug("Content sharding redirect")
 	}
 
-	if sc, ok := r.c[err.Shard]; ok {
+	if sc, ok := r.c[sErr.Shard]; ok {
 		var res pdp.Response
 		if err := sc.Map([]pdp.AttributeAssignment{
-			pdp.MakeStringAssignment("key", err.Key),
+			pdp.MakeStringAssignment("content", sErr.Content),
+			pdp.MakeStringAssignment("item", sErr.Item),
+			pdp.MakeExpressionAssignment("key", sErr.Key),
 		}, &res); err != nil {
 			if r.logger.Level >= log.DebugLevel {
+				sKey, sKeyErr := sErr.Key.Serialize()
+				if sKeyErr != nil {
+					return pdp.UndefinedValue, fmt.Errorf("can't serialize key for debug message: %s", sKeyErr)
+				}
+
 				r.logger.WithFields(log.Fields{
-					"name": name,
-					"key":  key,
-					"err":  err,
+					"name":    sErr.Shard,
+					"content": sErr.Content,
+					"item":    sErr.Item,
+					"key":     sKey,
+					"err":     err,
 				}).Debug("Content sharding redirect failure")
 			}
 
@@ -111,51 +126,79 @@ func (r *localContentRouter) Call(err *pdp.ContentShardingError) (pdp.AttributeV
 
 		if res.Status != nil {
 			if r.logger.Level >= log.DebugLevel {
+				sKey, sKeyErr := sErr.Key.Serialize()
+				if sKeyErr != nil {
+					return pdp.UndefinedValue, fmt.Errorf("can't serialize key for debug message: %s", sKeyErr)
+				}
+
 				r.logger.WithFields(log.Fields{
-					"name":   name,
-					"key":    key,
-					"status": res.Status,
+					"name":    sErr.Shard,
+					"content": sErr.Content,
+					"item":    sErr.Item,
+					"key":     sKey,
+					"status":  res.Status,
 				}).Debug("Content sharding redirect failure")
 			}
 
-			return pdp.UndefinedValue, err
+			return pdp.UndefinedValue, res.Status
 		}
 
 		if len(res.Obligations) != 1 {
 			if r.logger.Level >= log.DebugLevel {
+				sKey, sKeyErr := sErr.Key.Serialize()
+				if sKeyErr != nil {
+					return pdp.UndefinedValue, fmt.Errorf("can't serialize key for debug message: %s", sKeyErr)
+				}
+
 				r.logger.WithFields(log.Fields{
-					"name":        name,
-					"key":         key,
+					"name":        sErr.Shard,
+					"content":     sErr.Content,
+					"item":        sErr.Item,
+					"key":         sKey,
 					"obligations": len(res.Obligations),
 				}).Debug("Invalid response. Expected exactly one value in content sharding response")
 			}
 
-			return pdp.UndefinedValue, err
+			return pdp.UndefinedValue, fmt.Errorf("expected exactly one obligation but got %d", len(res.Obligations))
 		}
 
 		v, err := res.Obligations[0].GetValue()
 		if err != nil {
 			if r.logger.Level >= log.DebugLevel {
+				sKey, sKeyErr := sErr.Key.Serialize()
+				if sKeyErr != nil {
+					return pdp.UndefinedValue, fmt.Errorf("can't serialize key for debug message: %s", sKeyErr)
+				}
+
 				r.logger.WithFields(log.Fields{
-					"name": name,
-					"key":  key,
-					"err":  err,
+					"name":    sErr.Shard,
+					"content": sErr.Content,
+					"item":    sErr.Item,
+					"key":     sKey,
+					"err":     err,
 				}).Debug("Invalid expression in content sharding response")
 			}
 
 			return pdp.UndefinedValue, err
 		}
 
-		return v, err
+		return v, nil
 
 	}
 
 	if r.logger.Level >= log.DebugLevel {
+		sKey, sKeyErr := sErr.Key.Serialize()
+		if sKeyErr != nil {
+			return pdp.UndefinedValue, fmt.Errorf("can't serialize key for debug message: %s", sKeyErr)
+		}
+
 		r.logger.WithFields(log.Fields{
-			"name": name,
-			"key":  key,
+			"name":    sErr.Shard,
+			"content": sErr.Content,
+			"item":    sErr.Item,
+			"key":     sKey,
 		}).Debug("Shard not found")
 	}
 
-	return pdp.UndefinedValue, newMissingContentShardError(name)
+	return pdp.UndefinedValue, newMissingContentShardError(sErr.Shard)
 }
