@@ -38,7 +38,6 @@ func main() {
 			uint32(conf.memProfNumGC),
 			conf.memProfDelay,
 		),
-		server.WithShardingStreams(96),
 	)
 
 	pdp.InitializeSelectors()
