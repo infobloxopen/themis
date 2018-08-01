@@ -488,7 +488,7 @@ func BenchmarkAutoResponseServer(b *testing.B) {
 }
 
 func BenchmarkUnaryRouting(b *testing.B) {
-	router, srv, c := startRoutingPDPServers(b, 0)
+	router, srv, c := startPolicyRoutingPDPServers(b, 0)
 	defer func() {
 		c.Close()
 		if logs := router.Stop(); len(logs) > 0 {
@@ -523,7 +523,83 @@ func BenchmarkUnaryRouting(b *testing.B) {
 func BenchmarkStreamingRouting(b *testing.B) {
 	streams := 96
 
-	router, srv, c := startRoutingPDPServers(b, streams, pep.WithStreams(streams))
+	router, srv, c := startPolicyRoutingPDPServers(b, streams, pep.WithStreams(streams))
+	defer func() {
+		c.Close()
+		if logs := router.Stop(); len(logs) > 0 {
+			b.Logf("router logs:\n%s", logs)
+		}
+		if logs := srv.Stop(); len(logs) > 0 {
+			b.Logf("server logs:\n%s", logs)
+		}
+	}()
+
+	name := "StreamingRaw"
+
+	b.Run(name, func(b *testing.B) {
+		assignments := make(chan []pdp.AttributeAssignment, streams)
+		for i := 0; i < cap(assignments); i++ {
+			assignments <- make([]pdp.AttributeAssignment, 16)
+		}
+
+		th := make(chan int, streams)
+		for n := 0; n < b.N; n++ {
+			th <- 0
+			go func(i int) {
+				defer func() { <-th }()
+
+				var out pdp.Response
+
+				assignment := <-assignments
+				defer func() { assignments <- assignment }()
+				out.Obligations = assignment
+
+				c.Validate(decisionRequests[i%len(decisionRequests)], &out)
+				if err := assertBenchMsg(&out, "%q request %d", name, i); err != nil {
+					panic(err)
+				}
+			}(n)
+		}
+	})
+}
+
+func BenchmarkUnaryContentRouting(b *testing.B) {
+	router, srv, c := startContentRoutingPDPServers(b, 0)
+	defer func() {
+		c.Close()
+		if logs := router.Stop(); len(logs) > 0 {
+			b.Logf("router logs:\n%s", logs)
+		}
+		if logs := srv.Stop(); len(logs) > 0 {
+			b.Logf("server logs:\n%s", logs)
+		}
+	}()
+
+	name := "UnaryRaw"
+
+	b.Run(name, func(b *testing.B) {
+		var (
+			out        pdp.Response
+			assignment [16]pdp.AttributeAssignment
+		)
+		for n := 0; n < b.N; n++ {
+			in := rawRequests[n%len(rawRequests)]
+
+			out.Obligations = assignment[:]
+			c.Validate(in, &out)
+
+			err := assertBenchMsg(&out, "%q request %d", name, n)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+}
+
+func BenchmarkStreamingContentRouting(b *testing.B) {
+	streams := 96
+
+	router, srv, c := startContentRoutingPDPServers(b, streams, pep.WithStreams(streams))
 	defer func() {
 		c.Close()
 		if logs := router.Stop(); len(logs) > 0 {
@@ -771,7 +847,7 @@ func startPDPServer(p string, ports []uint16, b *testing.B, opts ...pep.Option) 
 	return primary, secondary, c
 }
 
-func startRoutingPDPServers(b *testing.B, streams int, opts ...pep.Option) (*loggedServer, *loggedServer, pep.Client) {
+func startPolicyRoutingPDPServers(b *testing.B, streams int, opts ...pep.Option) (*loggedServer, *loggedServer, pep.Client) {
 	router := newServer(
 		WithServiceAt("127.0.0.1:5555"),
 		WithShardingStreams(streams),
@@ -836,6 +912,99 @@ func startRoutingPDPServers(b *testing.B, streams int, opts ...pep.Option) (*log
 	}()
 
 	if err := waitForPortOpened("127.0.0.1:5556"); err != nil {
+		if logs := router.Stop(); len(logs) > 0 {
+			b.Logf("router server logs:\n%s", logs)
+		}
+
+		if logs := primary.Stop(); len(logs) > 0 {
+			b.Logf("primary server logs:\n%s", logs)
+		}
+
+		b.Fatalf("can't connect to PDP server: %s", err)
+	}
+
+	c := pep.NewClient(opts...)
+	if err := c.Connect("127.0.0.1:5555"); err != nil {
+		if logs := router.Stop(); len(logs) > 0 {
+			b.Logf("router server logs:\n%s", logs)
+		}
+
+		if logs := primary.Stop(); len(logs) > 0 {
+			b.Logf("primary server logs:\n%s", logs)
+		}
+
+		b.Fatalf("can't connect to PDP server: %s", err)
+	}
+
+	return router, primary, c
+}
+
+func startContentRoutingPDPServers(b *testing.B, streams int, opts ...pep.Option) (*loggedServer, *loggedServer, pep.Client) {
+	router := newServer(
+		WithServiceAt("127.0.0.1:5555"),
+		WithShardingStreams(streams),
+	)
+
+	if err := router.s.ReadPolicies(strings.NewReader(threeStageBenchmarkPolicySet)); err != nil {
+		b.Fatalf("can't read policies: %s", err)
+	}
+
+	if err := router.s.ReadContent(strings.NewReader(routingBenchmarkContent)); err != nil {
+		b.Fatalf("can't read content: %s", err)
+	}
+
+	if err := waitForPortClosed("127.0.0.1:5555"); err != nil {
+		b.Fatalf("port still in use: %s", err)
+	}
+	go func() {
+		if err := router.s.Serve(); err != nil {
+			b.Fatalf("router server failed: %s", err)
+		}
+	}()
+
+	if err := waitForPortOpened("127.0.0.1:5555"); err != nil {
+		if logs := router.Stop(); len(logs) > 0 {
+			b.Logf("router server logs:\n%s", logs)
+		}
+
+		b.Fatalf("can't connect to PDP server: %s", err)
+	}
+
+	primary := newServer(
+		WithServiceAt("127.0.0.1:5556"),
+		WithContentAt("127.0.0.1:5655"),
+	)
+
+	if err := primary.s.ReadPolicies(strings.NewReader(twoStageBenchmarkPolicySet)); err != nil {
+		if logs := router.Stop(); len(logs) > 0 {
+			b.Logf("router server logs:\n%s", logs)
+		}
+
+		b.Fatalf("can't read policies: %s", err)
+	}
+
+	if err := primary.s.ReadContent(strings.NewReader(benchmarkContent)); err != nil {
+		if logs := router.Stop(); len(logs) > 0 {
+			b.Logf("router server logs:\n%s", logs)
+		}
+
+		b.Fatalf("can't read content: %s", err)
+	}
+
+	if err := waitForPortClosed("127.0.0.1.5655"); err != nil {
+		if logs := router.Stop(); len(logs) > 0 {
+			b.Logf("router server logs:\n%s", logs)
+		}
+
+		b.Fatalf("port still in use: %s", err)
+	}
+	go func() {
+		if err := primary.s.Serve(); err != nil {
+			b.Fatalf("primary server failed: %s", err)
+		}
+	}()
+
+	if err := waitForPortOpened("127.0.0.1:5655"); err != nil {
 		if logs := router.Stop(); len(logs) > 0 {
 			b.Logf("router server logs:\n%s", logs)
 		}

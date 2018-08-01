@@ -761,6 +761,42 @@ policies:
 		}
 	}
 }`
+
+	routingBenchmarkContent = `{
+	"id": "content",
+	"items": {
+		"first": {
+			"keys": ["string"],
+			"type": "string",
+			"sharding": {
+				"A": {
+					"min": "Fifth",
+					"max": "Third",
+					"servers": ["127.0.0.1:5655"]
+				}
+			},
+			"data": {}
+		},
+		"second": {
+			"keys": ["domain"],
+			"type": "list of strings",
+			"data": {
+				"first.example.com": ["First", "Third"],
+				"second.example.com": ["Second", "Fourth"],
+				"third.example.com": ["Third", "Fifth"],
+				"first.test.com": ["Fourth", "Sixth"],
+				"second.test.com": ["Fifth", "Seventh"],
+				"third.test.com": ["Sixth", "First"],
+				"first.example.com": ["Seventh", "Second"],
+				"second.example.com": ["Firth", "Fourth"],
+				"third.example.com": ["Second", "Fifth"],
+				"first.test.com": ["Third", "Sixth"],
+				"second.test.com": ["Fourth", "Seventh"],
+				"third.test.com": ["Fifth", "First"]
+			}
+		}
+	}
+}`
 )
 
 type requestAttributeValue struct {
