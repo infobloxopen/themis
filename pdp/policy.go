@@ -170,7 +170,7 @@ func (p *Policy) GetShards() Shards {
 	return out
 }
 
-func (p *Policy) AppendShard(path []string, min, max string, servers []string) (Evaluable, error) {
+func (p *Policy) AppendShard(path []string, shard Shard) (Evaluable, error) {
 	if len(path) <= 0 {
 		return p, bindError(newTooShortPathPolicyShardModificationError(), p.id)
 	}
@@ -186,7 +186,7 @@ func (p *Policy) AppendShard(path []string, min, max string, servers []string) (
 		return p, bindError(newShardingRCASupportError(p.algorithm), p.id)
 	}
 
-	algorithm, err := mapper.appendShard(name, min, max, servers)
+	algorithm, err := mapper.appendShard(name, shard)
 	if err != nil {
 		return p, bindError(err, p.id)
 	}

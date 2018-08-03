@@ -15,69 +15,76 @@ func (ctx *context) unmarshalSharding(m map[interface{}]interface{}) (pdp.Shards
 	}
 
 	for k, v := range s {
-		name, min, max, servers, err := ctx.unmarshalShard(k, v)
+		name, shard, err := ctx.unmarshalShard(k, v)
 		if err != nil {
 			return out, bindError(err, yastTagSharding)
 		}
 
-		out = out.AppendShard(name, min, max, servers...)
+		out = out.AppendShard(name, shard)
 	}
 
 	return out, nil
 }
 
-func (ctx *context) unmarshalShard(k, v interface{}) (string, string, string, []string, boundError) {
+func (ctx *context) unmarshalShard(k, v interface{}) (string, pdp.Shard, boundError) {
 	name, err := ctx.validateString(k, "shard name")
 	if err != nil {
-		return "", "", "", nil, err
+		return "", pdp.Shard{}, err
 	}
 
 	m, err := ctx.validateMap(v, "shard")
 	if err != nil {
-		return "", "", "", nil, bindError(err, name)
+		return "", pdp.Shard{}, bindError(err, name)
 	}
 
 	rng, err := ctx.extractList(m, yastTagRange, yastTagRange)
 	if err != nil {
-		return "", "", "", nil, bindError(err, name)
+		return "", pdp.Shard{}, bindError(err, name)
 	}
 
 	if len(rng) != 2 {
-		return "", "", "", nil, bindError(newShardRangeSizeError(rng), name)
+		return "", pdp.Shard{}, bindError(newShardRangeSizeError(rng), name)
 	}
 
 	min, err := ctx.validateString(rng[0], "lower boundary")
 	if err != nil {
-		return "", "", "", nil, bindError(err, name)
+		return "", pdp.Shard{}, bindError(err, name)
 	}
 
 	max, err := ctx.validateString(rng[1], "upper boundary")
 	if err != nil {
-		return "", "", "", nil, bindError(err, name)
+		return "", pdp.Shard{}, bindError(err, name)
 	}
 
 	if max < min {
-		return "", "", "", nil, bindError(newInvalidShardRangeError(min, max), name)
+		return "", pdp.Shard{}, bindError(newInvalidShardRangeError(min, max), name)
 	}
 
 	items, ok, err := ctx.extractListOpt(m, yastTagServers, yastTagServers)
 	if err != nil {
-		return "", "", "", nil, bindError(err, name)
+		return "", pdp.Shard{}, bindError(err, name)
 	}
 
 	if !ok {
-		return name, min, max, nil, nil
+		return name, pdp.Shard{
+			Min: min,
+			Max: max,
+		}, nil
 	}
 
 	servers := make([]string, len(items))
 	for i, v := range items {
 		s, err := ctx.validateString(v, "server")
 		if err != nil {
-			return "", "", "", nil, bindError(bindErrorf(err, "%d", i+1), name)
+			return "", pdp.Shard{}, bindError(bindErrorf(err, "%d", i+1), name)
 		}
 
 		servers[i] = s
 	}
 
-	return name, min, max, servers, nil
+	return name, pdp.Shard{
+		Min:     min,
+		Max:     max,
+		Servers: servers,
+	}, nil
 }

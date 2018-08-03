@@ -180,7 +180,7 @@ func NewContentUpdate(cID string, oldTag, newTag uuid.UUID) *ContentUpdate {
 // Append inserts particular change to the end of changes list. Op is an
 // operation (like add or delete), path identifies content part to perform
 // operation and entity item to add (and ignored in case of delete operation).
-func (u *ContentUpdate) Append(op int, path []string, entity *ContentItem) {
+func (u *ContentUpdate) Append(op int, path []string, entity interface{}) {
 	u.cmds = append(u.cmds, &command{op: op, path: path, entity: entity})
 }
 
@@ -230,7 +230,7 @@ func (t *LocalContentStorageTransaction) applyCmd(cmd *command) error {
 		return t.appendShard(cmd.path, cmd.entity)
 
 	case UODeleteShard:
-		return t.del(cmd.path)
+		return t.deleteShard(cmd.path)
 	}
 
 	return newUnknownContentUpdateOperationError(cmd.op)
@@ -421,7 +421,7 @@ func (t *LocalContentStorageTransaction) appendShard(path []string, entity inter
 		return bindError(err, t.ID)
 	}
 
-	c, err = c.appendShard(name, s.min, s.max, s.servers)
+	c, err = c.appendShard(name, s)
 	if err != nil {
 		return bindError(err, t.ID)
 	}
@@ -861,8 +861,8 @@ func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, erro
 	return c.r.getValue(UndefinedValue, c.t)
 }
 
-func (c *ContentItem) appendShard(name, min, max string, servers []string) (*ContentItem, error) {
-	s := c.s.AppendShard(name, min, max, servers...)
+func (c *ContentItem) appendShard(name string, shard Shard) (*ContentItem, error) {
+	s := c.s.AppendShard(name, shard)
 
 	return MakeContentMappingItem(c.id, c.t, c.k, s, c.r), nil
 }

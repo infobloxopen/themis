@@ -2,6 +2,7 @@ package jcon
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/infobloxopen/themis/jparser"
@@ -15,8 +16,8 @@ func unmarshalCommand(d *json.Decoder, s pdp.Symbols, u *pdp.ContentUpdate) erro
 	var path []string
 	pathOk := false
 
-	var entity *pdp.ContentItem
-	entityOk := false
+	var entity interface{}
+	entityType := updateEntityTypeUnknown
 
 	err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
 		switch strings.ToLower(k) {
@@ -54,17 +55,16 @@ func unmarshalCommand(d *json.Decoder, s pdp.Symbols, u *pdp.ContentUpdate) erro
 			return nil
 
 		case "entity":
-			if entityOk {
+			if entityType != updateEntityTypeUnknown {
 				return newDuplicateCommandFieldError(k)
 			}
 
 			var err error
-			entity, err = unmarshalContentItem("", s, d)
+			entityType, entity, err = unmarshalEntity(d, s)
 			if err != nil {
 				return err
 			}
 
-			entityOk = true
 			return nil
 		}
 
@@ -82,8 +82,15 @@ func unmarshalCommand(d *json.Decoder, s pdp.Symbols, u *pdp.ContentUpdate) erro
 		return newMissingCommandPathError()
 	}
 
-	if op == pdp.UOAdd && !entityOk {
-		return newMissingCommandEntityError()
+	if op == pdp.UOAdd || op == pdp.UOAppendShard {
+		if entityType == updateEntityTypeUnknown {
+			return newMissingCommandEntityError()
+		}
+
+		if op == pdp.UOAdd && entityType != updateEntityTypeContentItem ||
+			op == pdp.UOAppendShard && entityType != updateEntityTypeShard {
+			return fmt.Errorf("Entity type %d doesn't match update operation %d", entityType, op)
+		}
 	}
 
 	u.Append(op, path, entity)
@@ -112,4 +119,80 @@ func unmarshalCommands(d *json.Decoder, s pdp.Symbols, u *pdp.ContentUpdate) err
 	}
 
 	return jparser.CheckEOF(d)
+}
+
+const (
+	updateEntityTypeUnknown = iota
+	updateEntityTypeContentItem
+	updateEntityTypeShard
+)
+
+var (
+	contentItemFields = map[string]struct{}{
+		"type":     {},
+		"sharding": {},
+		"keys":     {},
+		"data":     {},
+	}
+
+	shardFields = map[string]struct{}{
+		"min":     {},
+		"max":     {},
+		"servers": {},
+	}
+)
+
+func unmarshalEntity(d *json.Decoder, s pdp.Symbols) (int, interface{}, error) {
+	err := jparser.CheckObjectStart(d, "entity")
+	if err != nil {
+		return updateEntityTypeUnknown, nil, err
+	}
+
+	updateEntityType := updateEntityTypeUnknown
+	item := &contentItem{s: s}
+	shard := new(shardJSON)
+
+	err = jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
+		switch updateEntityType {
+		case updateEntityTypeUnknown:
+			field := strings.ToLower(k)
+
+			if _, ok := contentItemFields[field]; ok {
+				updateEntityType = updateEntityTypeContentItem
+				return item.unmarshal(k, d)
+			}
+
+			if _, ok := shardFields[field]; ok {
+				updateEntityType = updateEntityTypeShard
+				return shard.unmarshal(k, d)
+			}
+
+			return fmt.Errorf("field %q doesn't match to content item or shard entity", k)
+
+		case updateEntityTypeContentItem:
+			return item.unmarshal(k, d)
+
+		case updateEntityTypeShard:
+			return shard.unmarshal(k, d)
+		}
+
+		return fmt.Errorf("invalid entity type %d", updateEntityType)
+	}, "entity")
+	if err != nil {
+		return updateEntityTypeUnknown, nil, err
+	}
+
+	var entity interface{}
+	switch updateEntityType {
+	default:
+		return updateEntityTypeUnknown, nil, fmt.Errorf("invalid entity type %d", updateEntityType)
+
+	case updateEntityTypeContentItem:
+		entity, err = item.get()
+
+	case updateEntityTypeShard:
+		entity, err = shard.get()
+	}
+
+	return updateEntityType, entity, err
 }

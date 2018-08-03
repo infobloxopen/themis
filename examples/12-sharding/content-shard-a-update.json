@@ -1,0 +1,28 @@
+[
+  {
+    "op": "delete-shard",
+    "path": ["string-policies", "B"]
+  },
+  {
+    "op": "delete-shard",
+    "path": ["string-policies", "C"]
+  },
+  {
+    "op": "append-shard",
+    "path": ["string-policies", "B"],
+    "entity": {
+      "min": "0003",
+      "max": "0006",
+      "servers": ["127.0.0.1:5665", "127.0.0.1:5666", "127.0.0.1:5667"]
+    }
+  },
+  {
+    "op": "append-shard",
+    "path": ["string-policies", "C"],
+    "entity": {
+      "min": "0007",
+      "max": "0008",
+      "servers": ["127.0.0.1:5675", "127.0.0.1:5676", "127.0.0.1:5677"]
+    }
+  }
+]

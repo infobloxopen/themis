@@ -214,8 +214,8 @@ func makeMapperRCA(rules []*Rule, params interface{}) RuleCombiningAlg {
 	}
 }
 
-func (a mapperRCA) appendShard(name, min, max string, servers []string) (RuleCombiningAlg, error) {
-	shards := a.shards.AppendShard(name, min, max, servers...)
+func (a mapperRCA) appendShard(name string, shard Shard) (RuleCombiningAlg, error) {
+	shards := a.shards.AppendShard(name, shard)
 
 	return mapperRCA{
 		argument:  a.argument,

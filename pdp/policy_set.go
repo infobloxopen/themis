@@ -189,7 +189,7 @@ func (p *PolicySet) Delete(path []string) (Evaluable, error) {
 	return r, nil
 }
 
-func (p *PolicySet) AppendShard(path []string, min, max string, servers []string) (Evaluable, error) {
+func (p *PolicySet) AppendShard(path []string, shard Shard) (Evaluable, error) {
 	if len(path) <= 0 {
 		return p, bindError(newTooShortPathPolicySetShardModificationError(), p.id)
 	}
@@ -200,7 +200,7 @@ func (p *PolicySet) AppendShard(path []string, min, max string, servers []string
 			return p, bindError(err, p.id)
 		}
 
-		child, err = child.AppendShard(path[1:], min, max, servers)
+		child, err = child.AppendShard(path[1:], shard)
 		if err != nil {
 			return p, bindError(err, p.id)
 		}
@@ -213,7 +213,7 @@ func (p *PolicySet) AppendShard(path []string, min, max string, servers []string
 		return p, bindError(newShardingPCASupportError(p.algorithm), p.id)
 	}
 
-	algorithm, err := mapper.appendShard(path[0], min, max, servers)
+	algorithm, err := mapper.appendShard(path[0], shard)
 	if err != nil {
 		return p, bindError(err, p.id)
 	}
