@@ -225,6 +225,12 @@ func (t *LocalContentStorageTransaction) applyCmd(cmd *command) error {
 
 	case UODelete:
 		return t.del(cmd.path)
+
+	case UOAppendShard:
+		return t.appendShard(cmd.path, cmd.entity)
+
+	case UODeleteShard:
+		return t.del(cmd.path)
 	}
 
 	return newUnknownContentUpdateOperationError(cmd.op)
@@ -397,6 +403,55 @@ func (t *LocalContentStorageTransaction) del(rawPath []string) error {
 	return nil
 }
 
+func (t *LocalContentStorageTransaction) appendShard(path []string, entity interface{}) error {
+	if len(path) != 2 {
+		return bindError(newInvalidPathContentShardModificationError(path), t.ID)
+	}
+
+	ID := path[0]
+	name := path[1]
+
+	s, ok := entity.(Shard)
+	if !ok {
+		return bindError(newInvalidEntityContentShardModificationError(entity), t.ID)
+	}
+
+	c, err := t.getItem(ID)
+	if err != nil {
+		return bindError(err, t.ID)
+	}
+
+	c, err = c.appendShard(name, s.min, s.max, s.servers)
+	if err != nil {
+		return bindError(err, t.ID)
+	}
+
+	t.items = t.items.Insert(ID, c)
+	return nil
+}
+
+func (t *LocalContentStorageTransaction) deleteShard(path []string) error {
+	if len(path) != 2 {
+		return bindError(newInvalidPathContentShardModificationError(path), t.ID)
+	}
+
+	ID := path[0]
+	name := path[1]
+
+	c, err := t.getItem(ID)
+	if err != nil {
+		return bindError(err, t.ID)
+	}
+
+	c, err = c.deleteShard(name)
+	if err != nil {
+		return bindError(err, t.ID)
+	}
+
+	t.items = t.items.Insert(ID, c)
+	return nil
+}
+
 // LocalContent represents content object which can be accessed by its id and
 // independently tagged and updated. It holds content items which represent
 // mapping objects (or immediate values) of different type.
@@ -471,12 +526,11 @@ func (c *LocalContent) String() string {
 // with defined set of keys to access value of particular type or immediate
 // value of defined type.
 type ContentItem struct {
-	id  string
-	r   ContentSubItem
-	t   Type
-	k   []Type
-	s   Shards
-	sOk bool
+	id string
+	r  ContentSubItem
+	t  Type
+	k  []Type
+	s  Shards
 }
 
 // MakeContentValueItem creates content item which represents immediate value
@@ -805,6 +859,21 @@ func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, erro
 	}
 
 	return c.r.getValue(UndefinedValue, c.t)
+}
+
+func (c *ContentItem) appendShard(name, min, max string, servers []string) (*ContentItem, error) {
+	s := c.s.AppendShard(name, min, max, servers...)
+
+	return MakeContentMappingItem(c.id, c.t, c.k, s, c.r), nil
+}
+
+func (c *ContentItem) deleteShard(name string) (*ContentItem, error) {
+	s, err := c.s.RemoveShard(name)
+	if err != nil {
+		return c, err
+	}
+
+	return MakeContentMappingItem(c.id, c.t, c.k, s, c.r), nil
 }
 
 // ContentSubItem interface abstracts all possible mapping objects and immediate

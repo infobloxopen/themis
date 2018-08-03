@@ -123,18 +123,27 @@ const (
 	UOAdd = iota
 	// UODelete is delete operation (remove item from collection).
 	UODelete
+
+	UOAppendShard
+	UODeleteShard
 )
 
 var (
 	// UpdateOpIDs maps operation keys to operation ids.
 	UpdateOpIDs = map[string]int{
-		"add":    UOAdd,
-		"delete": UODelete}
+		"add":          UOAdd,
+		"delete":       UODelete,
+		"append-shard": UOAppendShard,
+		"delete-shard": UODeleteShard,
+	}
 
 	// UpdateOpNames lists operation names in order of operation ids.
 	UpdateOpNames = []string{
 		"Add",
-		"Delete"}
+		"Delete",
+		"Append Shard",
+		"Delete Shard",
+	}
 )
 
 // PolicyUpdate encapsulates list of changes to particular policy storage.
