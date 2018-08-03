@@ -1460,3 +1460,19 @@ errors:
   msg: "Can't find shard %q"
   args:
   - field: name
+
+- id: invalidPathContentShardModificationError
+  fields:
+  - id: path
+    type: "[]string"
+  msg: "Expected <content-item>/<shard> path but got \"%s\""
+  args:
+  - expr: strings.Join(e.path, "/")
+
+- id: invalidEntityContentShardModificationError
+  fields:
+  - id: entity
+    type: "interface{}"
+  msg: "Expected shard information but got %T"
+  args:
+  - field: entity

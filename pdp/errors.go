@@ -186,6 +186,8 @@ const (
 	tooShortPathPolicyShardModificationErrorID       = 169
 	tooShortPathPolicySetShardModificationErrorID    = 170
 	missingShardErrorID                              = 171
+	invalidPathContentShardModificationErrorID       = 172
+	invalidEntityContentShardModificationErrorID     = 173
 )
 
 type externalError struct {
@@ -2871,4 +2873,34 @@ func newMissingShardError(name string) *missingShardError {
 
 func (e *missingShardError) Error() string {
 	return e.errorf("Can't find shard %q", e.name)
+}
+
+type invalidPathContentShardModificationError struct {
+	errorLink
+	path []string
+}
+
+func newInvalidPathContentShardModificationError(path []string) *invalidPathContentShardModificationError {
+	return &invalidPathContentShardModificationError{
+		errorLink: errorLink{id: invalidPathContentShardModificationErrorID},
+		path:      path}
+}
+
+func (e *invalidPathContentShardModificationError) Error() string {
+	return e.errorf("Expected <content-item>/<shard> path but got \"%s\"", strings.Join(e.path, "/"))
+}
+
+type invalidEntityContentShardModificationError struct {
+	errorLink
+	entity interface{}
+}
+
+func newInvalidEntityContentShardModificationError(entity interface{}) *invalidEntityContentShardModificationError {
+	return &invalidEntityContentShardModificationError{
+		errorLink: errorLink{id: invalidEntityContentShardModificationErrorID},
+		entity:    entity}
+}
+
+func (e *invalidEntityContentShardModificationError) Error() string {
+	return e.errorf("Expected shard information but got %T", e.entity)
 }

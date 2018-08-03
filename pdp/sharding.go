@@ -1,5 +1,11 @@
 package pdp
 
+type Shard struct {
+	min     string
+	max     string
+	servers []string
+}
+
 type shard struct {
 	name    string
 	min     string
@@ -29,13 +35,17 @@ func (s Shards) appendShards(shards ...Shards) Shards {
 }
 
 func (s Shards) AppendShard(name, min, max string, servers ...string) Shards {
+	shards := make([]shard, len(s.shards)+1)
+	copy(shards, s.shards)
+	shards[len(s.shards)] = shard{
+		name:    name,
+		min:     min,
+		max:     max,
+		servers: servers,
+	}
+
 	return Shards{
-		shards: append(s.shards, shard{
-			name:    name,
-			min:     min,
-			max:     max,
-			servers: servers,
-		}),
+		shards: shards,
 	}
 }
 
