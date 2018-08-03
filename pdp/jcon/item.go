@@ -167,12 +167,12 @@ func (c *contentItem) unmarshalShardingField(d *json.Decoder) error {
 	shards := pdp.NewShards()
 
 	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
-		min, max, servers, err := c.unmarshalShardObject(d)
+		shard, err := c.unmarshalShardObject(d)
 		if err != nil {
 			return bindError(err, k)
 		}
 
-		shards = shards.AppendShard(k, min, max, servers...)
+		shards = shards.AppendShard(k, shard)
 
 		return nil
 	}, "sharding"); err != nil {
@@ -185,78 +185,17 @@ func (c *contentItem) unmarshalShardingField(d *json.Decoder) error {
 	return nil
 }
 
-func (c *contentItem) unmarshalShardObject(d *json.Decoder) (string, string, []string, error) {
+func (c *contentItem) unmarshalShardObject(d *json.Decoder) (pdp.Shard, error) {
 	if err := jparser.CheckObjectStart(d, "shard"); err != nil {
-		return "", "", nil, err
+		return pdp.Shard{}, err
 	}
 
-	var (
-		min     string
-		minOk   bool
-		max     string
-		maxOk   bool
-		servers []string
-	)
-
-	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
-		switch k {
-		default:
-			return newUnknownShardFieldError(k)
-
-		case "min":
-			if minOk {
-				return newDuplicateMinShardFieldError(min)
-			}
-
-			s, err := jparser.GetString(d, "lower bound of shard")
-			if err != nil {
-				return err
-			}
-
-			min = s
-			minOk = true
-
-		case "max":
-			if maxOk {
-				return newDuplicateMaxShardFieldError(max)
-			}
-
-			s, err := jparser.GetString(d, "upper bound of shard")
-			if err != nil {
-				return err
-			}
-
-			max = s
-			maxOk = true
-
-		case "servers":
-			if servers != nil {
-				return newDuplicateServersShardFieldError(servers)
-			}
-
-			servers = []string{}
-			if err := jparser.GetStringSequence(d, func(i int, s string) error {
-				servers = append(servers, s)
-				return nil
-			}, "servers"); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}, "sharding"); err != nil {
-		return "", "", nil, err
+	shard := new(shardJSON)
+	if err := jparser.UnmarshalObject(d, shard.unmarshal, "sharding"); err != nil {
+		return pdp.Shard{}, err
 	}
 
-	if !minOk {
-		return "", "", nil, newMissingMinShardFieldError()
-	}
-
-	if !maxOk {
-		return "", "", nil, newMissingMaxShardFieldError()
-	}
-
-	return min, max, servers, nil
+	return shard.get()
 }
 
 func (c *contentItem) unmarshalKeysField(d *json.Decoder) error {
@@ -706,4 +645,70 @@ func unmarshalContentItem(id string, s pdp.Symbols, d *json.Decoder) (*pdp.Conte
 	}
 
 	return item.get()
+}
+
+type shardJSON struct {
+	shard pdp.Shard
+	minOk bool
+	maxOk bool
+}
+
+func (shard *shardJSON) unmarshal(k string, d *json.Decoder) error {
+	switch strings.ToLower(k) {
+	default:
+		return newUnknownShardFieldError(k)
+
+	case "min":
+		if shard.minOk {
+			return newDuplicateMinShardFieldError(shard.shard.Min)
+		}
+
+		s, err := jparser.GetString(d, "lower bound of shard")
+		if err != nil {
+			return err
+		}
+
+		shard.shard.Min = s
+		shard.minOk = true
+
+	case "max":
+		if shard.maxOk {
+			return newDuplicateMaxShardFieldError(shard.shard.Max)
+		}
+
+		s, err := jparser.GetString(d, "upper bound of shard")
+		if err != nil {
+			return err
+		}
+
+		shard.shard.Max = s
+		shard.maxOk = true
+
+	case "servers":
+		if shard.shard.Servers != nil {
+			return newDuplicateServersShardFieldError(shard.shard.Servers)
+		}
+
+		shard.shard.Servers = []string{}
+		if err := jparser.GetStringSequence(d, func(i int, s string) error {
+			shard.shard.Servers = append(shard.shard.Servers, s)
+			return nil
+		}, "servers"); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (shard *shardJSON) get() (pdp.Shard, error) {
+	if !shard.minOk {
+		return pdp.Shard{}, newMissingMinShardFieldError()
+	}
+
+	if !shard.maxOk {
+		return pdp.Shard{}, newMissingMaxShardFieldError()
+	}
+
+	return shard.shard, nil
 }

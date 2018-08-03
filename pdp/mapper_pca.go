@@ -184,8 +184,8 @@ func makeMapperPCA(policies []Evaluable, params interface{}) PolicyCombiningAlg 
 	}
 }
 
-func (a mapperPCA) appendShard(name, min, max string, servers []string) (PolicyCombiningAlg, error) {
-	shards := a.shards.AppendShard(name, min, max, servers...)
+func (a mapperPCA) appendShard(name string, shard Shard) (PolicyCombiningAlg, error) {
+	shards := a.shards.AppendShard(name, shard)
 
 	return mapperPCA{
 		argument:  a.argument,
