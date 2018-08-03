@@ -214,6 +214,37 @@ func makeMapperRCA(rules []*Rule, params interface{}) RuleCombiningAlg {
 	}
 }
 
+func (a mapperRCA) appendShard(name, min, max string, servers []string) (RuleCombiningAlg, error) {
+	shards := a.shards.AppendShard(name, min, max, servers...)
+
+	return mapperRCA{
+		argument:  a.argument,
+		rules:     a.rules,
+		def:       a.def,
+		err:       a.err,
+		order:     a.order,
+		algorithm: a.algorithm,
+		shards:    shards,
+	}, nil
+}
+
+func (a mapperRCA) deleteShard(name string) (RuleCombiningAlg, error) {
+	shards, err := a.shards.RemoveShard(name)
+	if err != nil {
+		return a, err
+	}
+
+	return mapperRCA{
+		argument:  a.argument,
+		rules:     a.rules,
+		def:       a.def,
+		err:       a.err,
+		order:     a.order,
+		algorithm: a.algorithm,
+		shards:    shards,
+	}, nil
+}
+
 func (a mapperRCA) MarshalJSON() ([]byte, error) {
 	var defID, errID string
 	if a.def != nil {
@@ -284,7 +315,9 @@ func (a mapperRCA) add(ID string, child, old *Rule) RuleCombiningAlg {
 		def:       def,
 		err:       err,
 		order:     a.order,
-		algorithm: a.algorithm}
+		algorithm: a.algorithm,
+		shards:    a.shards,
+	}
 }
 
 func (a mapperRCA) del(ID string, old *Rule) RuleCombiningAlg {
@@ -312,7 +345,9 @@ func (a mapperRCA) del(ID string, old *Rule) RuleCombiningAlg {
 		def:       def,
 		err:       err,
 		order:     a.order,
-		algorithm: a.algorithm}
+		algorithm: a.algorithm,
+		shards:    a.shards,
+	}
 }
 
 func (a mapperRCA) execute(rules []*Rule, ctx *Context) Response {

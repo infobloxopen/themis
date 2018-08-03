@@ -11,6 +11,7 @@ import (
 // for given policy and how to get paticular result.
 type PolicyCombiningAlg interface {
 	execute(rules []Evaluable, ctx *Context) Response
+	describe() string
 	MarshalJSON() ([]byte, error)
 	Event(args ...interface{})
 }
@@ -186,6 +187,70 @@ func (p *PolicySet) Delete(path []string) (Evaluable, error) {
 	}
 
 	return r, nil
+}
+
+func (p *PolicySet) AppendShard(path []string, min, max string, servers []string) (Evaluable, error) {
+	if len(path) <= 0 {
+		return p, bindError(newTooShortPathPolicySetShardModificationError(), p.id)
+	}
+
+	if len(path) > 1 {
+		_, child, err := p.getChild(path[0])
+		if err != nil {
+			return p, bindError(err, p.id)
+		}
+
+		child, err = child.AppendShard(path[1:], min, max, servers)
+		if err != nil {
+			return p, bindError(err, p.id)
+		}
+
+		return p.putChild(child), nil
+	}
+
+	mapper, ok := p.algorithm.(mapperPCA)
+	if !ok {
+		return p, bindError(newShardingPCASupportError(p.algorithm), p.id)
+	}
+
+	algorithm, err := mapper.appendShard(path[0], min, max, servers)
+	if err != nil {
+		return p, bindError(err, p.id)
+	}
+
+	return p.updatedCopy(p.policies, algorithm), nil
+}
+
+func (p *PolicySet) DeleteShard(path []string) (Evaluable, error) {
+	if len(path) <= 0 {
+		return p, bindError(newTooShortPathPolicySetShardModificationError(), p.id)
+	}
+
+	if len(path) > 1 {
+		_, child, err := p.getChild(path[0])
+		if err != nil {
+			return p, bindError(err, p.id)
+		}
+
+		child, err = child.DeleteShard(path[1:])
+		if err != nil {
+			return p, bindError(err, p.id)
+		}
+
+		return p.putChild(child), nil
+	}
+
+	mapper, ok := p.algorithm.(mapperPCA)
+	if !ok {
+		return p, bindError(newShardingPCASupportError(p.algorithm), p.id)
+	}
+
+	algorithm, err := mapper.deleteShard(path[0])
+	if err != nil {
+		return p, bindError(err, p.id)
+	}
+
+	return p.updatedCopy(p.policies, algorithm), nil
 }
 
 func (p *PolicySet) GetShards() Shards {
@@ -382,6 +447,10 @@ func (firstApplicableEffectPCA) MarshalJSON() ([]byte, error) {
 }
 
 func (firstApplicableEffectPCA) Event(args ...interface{}) {
+}
+
+func (firstApplicableEffectPCA) describe() string {
+	return "first applicable effect"
 }
 
 func (a firstApplicableEffectPCA) execute(policies []Evaluable, ctx *Context) Response {

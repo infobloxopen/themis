@@ -10,6 +10,7 @@ import (
 // defines how to evaluate policy rules and how to get paticular result.
 type RuleCombiningAlg interface {
 	execute(rules []*Rule, ctx *Context) Response
+	describe() string
 	MarshalJSON() ([]byte, error)
 	Event(args ...interface{})
 }
@@ -167,6 +168,54 @@ func (p *Policy) GetShards() Shards {
 	}
 
 	return out
+}
+
+func (p *Policy) AppendShard(path []string, min, max string, servers []string) (Evaluable, error) {
+	if len(path) <= 0 {
+		return p, bindError(newTooShortPathPolicyShardModificationError(), p.id)
+	}
+
+	if len(path) > 1 {
+		return p, bindError(newTooLongPathPolicyShardModificationError(path[1:]), p.id)
+	}
+
+	name := path[0]
+
+	mapper, ok := p.algorithm.(mapperRCA)
+	if !ok {
+		return p, bindError(newShardingRCASupportError(p.algorithm), p.id)
+	}
+
+	algorithm, err := mapper.appendShard(name, min, max, servers)
+	if err != nil {
+		return p, bindError(err, p.id)
+	}
+
+	return p.updatedCopy(p.rules, algorithm), nil
+}
+
+func (p *Policy) DeleteShard(path []string) (Evaluable, error) {
+	if len(path) <= 0 {
+		return p, bindError(newTooShortPathPolicyShardModificationError(), p.id)
+	}
+
+	if len(path) > 1 {
+		return p, bindError(newTooLongPathPolicyShardModificationError(path[1:]), p.id)
+	}
+
+	name := path[0]
+
+	mapper, ok := p.algorithm.(mapperRCA)
+	if !ok {
+		return p, bindError(newShardingRCASupportError(p.algorithm), p.id)
+	}
+
+	algorithm, err := mapper.deleteShard(name)
+	if err != nil {
+		return p, bindError(err, p.id)
+	}
+
+	return p.updatedCopy(p.rules, algorithm), nil
 }
 
 func (p *Policy) Event(args ...interface{}) {
@@ -345,6 +394,10 @@ func (firstApplicableEffectRCA) MarshalJSON() ([]byte, error) {
 	return json.Marshal(algFmt{
 		Type: "firstApplicableEffectRCA",
 	})
+}
+
+func (firstApplicableEffectRCA) describe() string {
+	return "first applicable effect"
 }
 
 func (firstApplicableEffectRCA) Event(args ...interface{}) {

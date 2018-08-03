@@ -39,6 +39,37 @@ func (s Shards) AppendShard(name, min, max string, servers ...string) Shards {
 	}
 }
 
+func (s Shards) RemoveShard(name string) (Shards, error) {
+	if len(s.shards) > 0 {
+		if len(s.shards) == 1 {
+			if s.shards[0].name == name {
+				return NewShards(), nil
+			}
+		} else {
+			for i, item := range s.shards {
+				if item.name == name {
+					last := len(s.shards) - 1
+					shards := make([]shard, last)
+
+					if i > 0 {
+						copy(shards, s.shards[:i])
+					}
+
+					if i < last {
+						copy(shards[i:], s.shards[i+1:])
+					}
+
+					return Shards{
+						shards: shards,
+					}, nil
+				}
+			}
+		}
+	}
+
+	return s, newMissingShardError(name)
+}
+
 func (s Shards) Map() map[string][]string {
 	out := make(map[string][]string, len(s.shards))
 	for _, shard := range s.shards {
