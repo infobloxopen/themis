@@ -1050,14 +1050,6 @@ errors:
   args:
   - field: t
 
-- id: requestAttributeUnmarshallingNotImplementedError
-  fields:
-  - id: t
-    type: int
-  msg: "Unmarshalling for type %q hasn't been implemented yet"
-  args:
-  - expr: requestWireTypeNames[e.t]
-
 - id: requestTooLongAttributeNameError
   fields:
   - id: name
@@ -1430,3 +1422,41 @@ errors:
   args:
   - field: Key
   - field: Shard
+
+- id: shardingPCASupportError
+  fields:
+  - id: alg
+    type: PolicyCombiningAlg
+  msg: "Policy combining algorithm %q doesn't support sharding"
+  args:
+  - field: alg.describe()
+
+- id: shardingRCASupportError
+  fields:
+  - id: alg
+    type: RuleCombiningAlg
+  msg: "Rule combining algorithm %q doesn't support sharding"
+  args:
+  - field: alg.describe()
+
+- id: tooLongPathPolicyShardModificationError
+  fields:
+  - id: path
+    type: "[]string"
+  msg: "Trailing path \"%s\""
+  args:
+  - expr: strings.Join(e.path, "/")
+
+- id: tooShortPathPolicyShardModificationError
+  msg: "Path to shard is too short"
+
+- id: tooShortPathPolicySetShardModificationError
+  msg: "Path to shard is too short"
+
+- id: missingShardError
+  fields:
+  - id: name
+    type: string
+  msg: "Can't find shard %q"
+  args:
+  - field: name

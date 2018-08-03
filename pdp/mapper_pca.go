@@ -184,6 +184,37 @@ func makeMapperPCA(policies []Evaluable, params interface{}) PolicyCombiningAlg 
 	}
 }
 
+func (a mapperPCA) appendShard(name, min, max string, servers []string) (PolicyCombiningAlg, error) {
+	shards := a.shards.AppendShard(name, min, max, servers...)
+
+	return mapperPCA{
+		argument:  a.argument,
+		policies:  a.policies,
+		def:       a.def,
+		err:       a.err,
+		order:     a.order,
+		algorithm: a.algorithm,
+		shards:    shards,
+	}, nil
+}
+
+func (a mapperPCA) deleteShard(name string) (PolicyCombiningAlg, error) {
+	shards, err := a.shards.RemoveShard(name)
+	if err != nil {
+		return a, err
+	}
+
+	return mapperPCA{
+		argument:  a.argument,
+		policies:  a.policies,
+		def:       a.def,
+		err:       a.err,
+		order:     a.order,
+		algorithm: a.algorithm,
+		shards:    shards,
+	}, nil
+}
+
 func (a mapperPCA) MarshalJSON() ([]byte, error) {
 	var defID, errID string
 	if a.def != nil {
@@ -254,7 +285,9 @@ func (a mapperPCA) add(ID string, child, old Evaluable) PolicyCombiningAlg {
 		def:       def,
 		err:       err,
 		order:     a.order,
-		algorithm: a.algorithm}
+		algorithm: a.algorithm,
+		shards:    a.shards,
+	}
 }
 
 func (a mapperPCA) del(ID string, old Evaluable) PolicyCombiningAlg {
@@ -282,7 +315,9 @@ func (a mapperPCA) del(ID string, old Evaluable) PolicyCombiningAlg {
 		def:       def,
 		err:       err,
 		order:     a.order,
-		algorithm: a.algorithm}
+		algorithm: a.algorithm,
+		shards:    a.shards,
+	}
 }
 
 func (a mapperPCA) execute(policies []Evaluable, ctx *Context) Response {
