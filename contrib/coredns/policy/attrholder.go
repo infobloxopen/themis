@@ -174,12 +174,14 @@ func (ah *attrHolder) addDnRes(r *pdp.Response, custAttrs map[string]custAttr) {
 			id := o.GetID()
 			switch id {
 			default:
-				if t, ok := custAttrs[id]; ok && t.isEdns() {
+				if t, ok := custAttrs[id]; ok {
 					ah.putCustomAttr(o, t)
 
-					oCount--
-					r.Obligations[i] = r.Obligations[oCount]
-					continue
+					if t.isEdns() {
+						oCount--
+						r.Obligations[i] = r.Obligations[oCount]
+						continue
+					}
 				}
 
 			case attrNameRefuse:
@@ -245,6 +247,7 @@ func (ah *attrHolder) addIPReq(ip net.IP) {
 }
 
 func (ah *attrHolder) addIPRes(r *pdp.Response) {
+	ah.dst = ""
 	switch r.Effect {
 	default:
 		log.Printf("[ERROR] PDP Effect: %s, Reason: %s", pdp.EffectNameFromEnum(r.Effect), r.Status)
