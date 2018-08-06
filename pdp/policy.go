@@ -170,7 +170,7 @@ func (p *Policy) GetShards() Shards {
 	return out
 }
 
-func (p *Policy) AppendShard(path []string, shard Shard) (Evaluable, error) {
+func (p *Policy) AppendShard(path []string, v interface{}) (Evaluable, error) {
 	if len(path) <= 0 {
 		return p, bindError(newTooShortPathPolicyShardModificationError(), p.id)
 	}
@@ -180,6 +180,11 @@ func (p *Policy) AppendShard(path []string, shard Shard) (Evaluable, error) {
 	}
 
 	name := path[0]
+
+	shard, ok := v.(Shard)
+	if !ok {
+		return p, bindError(newInvalidShardModificationError(v), p.id)
+	}
 
 	mapper, ok := p.algorithm.(mapperRCA)
 	if !ok {
