@@ -7,7 +7,7 @@ import (
 )
 
 func (ctx *context) unmarshalEntity(m map[interface{}]interface{}) (interface{}, error) {
-	m, err := ctx.extractMap(m, yastTagEntity, "policy or set or rule")
+	m, err := ctx.extractMap(m, yastTagEntity, "policy or set or rule or shard")
 	if err != nil {
 		return nil, err
 	}
@@ -22,6 +22,7 @@ func (ctx *context) unmarshalEntity(m map[interface{}]interface{}) (interface{},
 	rules, rOk := m[yastTagRules]
 	policies, pOk := m[yastTagPolicies]
 	effect, eOk := m[yastTagEffect]
+	rng, sOk := m[yastTagRange]
 	if rOk && pOk && eOk || rOk && pOk || rOk && eOk || pOk && eOk {
 		tags := []string{}
 		if rOk {
@@ -49,6 +50,10 @@ func (ctx *context) unmarshalEntity(m map[interface{}]interface{}) (interface{},
 
 	if eOk {
 		return ctx.unmarshalRuleEntity(m, ID, !okID, effect)
+	}
+
+	if sOk {
+		return ctx.unmarshalShardEntity(m, rng)
 	}
 
 	return nil, bindError(newEntityMissingKeyError(), src)
@@ -85,7 +90,7 @@ func (ctx *context) unmarshalCommand(v interface{}, u *pdp.PolicyUpdate) error {
 		path[i] = s
 	}
 
-	if op == pdp.UOAdd {
+	if op == pdp.UOAdd || op == pdp.UOAppendShard {
 		entity, err := ctx.unmarshalEntity(m)
 		if err != nil {
 			return err

@@ -248,6 +248,12 @@ func (t *PolicyStorageTransaction) applyCmd(cmd *command) error {
 
 	case UODelete:
 		return t.del(cmd.path)
+
+	case UOAppendShard:
+		return t.appendShard(cmd.path, cmd.entity)
+
+	case UODeleteShard:
+		return t.delShard(cmd.path)
 	}
 
 	return newUnknownPolicyUpdateOperationError(cmd.op)
@@ -343,5 +349,45 @@ func (t *PolicyStorageTransaction) del(path []string) error {
 	}
 
 	t.policies = nil
+	return nil
+}
+
+func (t *PolicyStorageTransaction) appendShard(path []string, v interface{}) error {
+	if len(path) <= 0 {
+		return newEmptyPathModificationError()
+	}
+
+	ID := path[0]
+
+	if pID, ok := t.policies.GetID(); ok && pID != ID {
+		return newInvalidRootPolicyError(ID, pID)
+	}
+
+	p, err := t.policies.AppendShard(path[1:], v)
+	if err != nil {
+		return err
+	}
+
+	t.policies = p
+	return nil
+}
+
+func (t *PolicyStorageTransaction) delShard(path []string) error {
+	if len(path) <= 0 {
+		return newEmptyPathModificationError()
+	}
+
+	ID := path[0]
+
+	if pID, ok := t.policies.GetID(); ok && pID != ID {
+		return newInvalidRootPolicyError(ID, pID)
+	}
+
+	p, err := t.policies.DeleteShard(path[1:])
+	if err != nil {
+		return err
+	}
+
+	t.policies = p
 	return nil
 }

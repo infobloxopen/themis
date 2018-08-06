@@ -413,7 +413,7 @@ func (t *LocalContentStorageTransaction) appendShard(path []string, entity inter
 
 	s, ok := entity.(Shard)
 	if !ok {
-		return bindError(newInvalidEntityContentShardModificationError(entity), t.ID)
+		return bindError(newInvalidShardModificationError(entity), t.ID)
 	}
 
 	c, err := t.getItem(ID)

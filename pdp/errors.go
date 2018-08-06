@@ -187,7 +187,7 @@ const (
 	tooShortPathPolicySetShardModificationErrorID    = 170
 	missingShardErrorID                              = 171
 	invalidPathContentShardModificationErrorID       = 172
-	invalidEntityContentShardModificationErrorID     = 173
+	invalidShardModificationErrorID                  = 173
 )
 
 type externalError struct {
@@ -2890,17 +2890,17 @@ func (e *invalidPathContentShardModificationError) Error() string {
 	return e.errorf("Expected <content-item>/<shard> path but got \"%s\"", strings.Join(e.path, "/"))
 }
 
-type invalidEntityContentShardModificationError struct {
+type invalidShardModificationError struct {
 	errorLink
 	entity interface{}
 }
 
-func newInvalidEntityContentShardModificationError(entity interface{}) *invalidEntityContentShardModificationError {
-	return &invalidEntityContentShardModificationError{
-		errorLink: errorLink{id: invalidEntityContentShardModificationErrorID},
+func newInvalidShardModificationError(entity interface{}) *invalidShardModificationError {
+	return &invalidShardModificationError{
+		errorLink: errorLink{id: invalidShardModificationErrorID},
 		entity:    entity}
 }
 
-func (e *invalidEntityContentShardModificationError) Error() string {
+func (e *invalidShardModificationError) Error() string {
 	return e.errorf("Expected shard information but got %T", e.entity)
 }

@@ -487,7 +487,7 @@ type Evaluable interface {
 	Append(path []string, v interface{}) (Evaluable, error)
 	Delete(path []string) (Evaluable, error)
 	GetShards() Shards
-	AppendShard(path []string, shard Shard) (Evaluable, error)
+	AppendShard(path []string, v interface{}) (Evaluable, error)
 	DeleteShard(path []string) (Evaluable, error)
 	Event(args ...interface{})
 

@@ -189,9 +189,14 @@ func (p *PolicySet) Delete(path []string) (Evaluable, error) {
 	return r, nil
 }
 
-func (p *PolicySet) AppendShard(path []string, shard Shard) (Evaluable, error) {
+func (p *PolicySet) AppendShard(path []string, v interface{}) (Evaluable, error) {
 	if len(path) <= 0 {
 		return p, bindError(newTooShortPathPolicySetShardModificationError(), p.id)
+	}
+
+	shard, ok := v.(Shard)
+	if !ok {
+		return p, bindError(newInvalidShardModificationError(v), p.id)
 	}
 
 	if len(path) > 1 {

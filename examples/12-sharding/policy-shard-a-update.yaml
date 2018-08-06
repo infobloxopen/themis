@@ -1,0 +1,36 @@
+- op: delete-shard
+  path:
+  - root
+  - B
+
+- op: delete-shard
+  path:
+  - root
+  - C
+
+- op: append-shard
+  path:
+  - root
+  - B
+  entity:
+    range:
+    - "0003"
+    - "0006"
+    servers:
+      - 127.0.0.1:5565
+      - 127.0.0.1:5566
+      - 127.0.0.1:5567
+
+- op: append-shard
+  path:
+  - root
+  - C
+  entity:
+    range:
+    - "0007"
+    - "0008"
+    servers:
+    - 127.0.0.1:5575
+    - 127.0.0.1:5576
+    - 127.0.0.1:5577
+

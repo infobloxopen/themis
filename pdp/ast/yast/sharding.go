@@ -37,36 +37,50 @@ func (ctx *context) unmarshalShard(k, v interface{}) (string, pdp.Shard, boundEr
 		return "", pdp.Shard{}, bindError(err, name)
 	}
 
-	rng, err := ctx.extractList(m, yastTagRange, yastTagRange)
+	rng, ok := m[yastTagRange]
+	if !ok {
+		return "", pdp.Shard{}, bindError(newMissingListError(yastTagRange), name)
+	}
+
+	shard, err := ctx.unmarshalShardEntity(m, rng)
 	if err != nil {
 		return "", pdp.Shard{}, bindError(err, name)
 	}
 
+	return name, shard, nil
+}
+
+func (ctx *context) unmarshalShardEntity(m map[interface{}]interface{}, v interface{}) (pdp.Shard, boundError) {
+	rng, err := ctx.validateList(v, yastTagRange)
+	if err != nil {
+		return pdp.Shard{}, err
+	}
+
 	if len(rng) != 2 {
-		return "", pdp.Shard{}, bindError(newShardRangeSizeError(rng), name)
+		return pdp.Shard{}, newShardRangeSizeError(rng)
 	}
 
 	min, err := ctx.validateString(rng[0], "lower boundary")
 	if err != nil {
-		return "", pdp.Shard{}, bindError(err, name)
+		return pdp.Shard{}, err
 	}
 
 	max, err := ctx.validateString(rng[1], "upper boundary")
 	if err != nil {
-		return "", pdp.Shard{}, bindError(err, name)
+		return pdp.Shard{}, err
 	}
 
 	if max < min {
-		return "", pdp.Shard{}, bindError(newInvalidShardRangeError(min, max), name)
+		return pdp.Shard{}, newInvalidShardRangeError(min, max)
 	}
 
 	items, ok, err := ctx.extractListOpt(m, yastTagServers, yastTagServers)
 	if err != nil {
-		return "", pdp.Shard{}, bindError(err, name)
+		return pdp.Shard{}, err
 	}
 
 	if !ok {
-		return name, pdp.Shard{
+		return pdp.Shard{
 			Min: min,
 			Max: max,
 		}, nil
@@ -76,13 +90,13 @@ func (ctx *context) unmarshalShard(k, v interface{}) (string, pdp.Shard, boundEr
 	for i, v := range items {
 		s, err := ctx.validateString(v, "server")
 		if err != nil {
-			return "", pdp.Shard{}, bindError(bindErrorf(err, "%d", i+1), name)
+			return pdp.Shard{}, bindErrorf(err, "%d", i+1)
 		}
 
 		servers[i] = s
 	}
 
-	return name, pdp.Shard{
+	return pdp.Shard{
 		Min:     min,
 		Max:     max,
 		Servers: servers,

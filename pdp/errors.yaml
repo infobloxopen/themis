@@ -1469,7 +1469,7 @@ errors:
   args:
   - expr: strings.Join(e.path, "/")
 
-- id: invalidEntityContentShardModificationError
+- id: invalidShardModificationError
   fields:
   - id: entity
     type: "interface{}"
