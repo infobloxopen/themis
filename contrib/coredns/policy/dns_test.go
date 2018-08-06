@@ -57,7 +57,7 @@ func TestGetNameAndClass(t *testing.T) {
 	}
 }
 
-func TestGetRemoveIP(t *testing.T) {
+func TestGetRemoteIP(t *testing.T) {
 	w := newTestAddressedNonwriter("192.0.2.1")
 	a := getRemoteIP(w)
 	if !a.Equal(net.ParseIP("192.0.2.1")) {
@@ -167,6 +167,43 @@ func TestClearECS(t *testing.T) {
 			"; EDNS: version 0; flags: ; udp: 0\n"+
 			"; COOKIE: badc0de.\n"+
 			"; LOCAL OPT: 65534:0x0badc0de\n",
+	)
+}
+
+func TestResetTTL(t *testing.T) {
+	in := makeTestDNSMsg("test.com", dns.TypeA, dns.ClassINET)
+
+	out := new(dns.Msg)
+	out.SetReply(in)
+
+	rr, err := dns.NewRR("test.com.\t599\tIN\tA\t10.0.10.11\n")
+	if err != nil {
+		t.Errorf("Failed to create A record")
+	}
+	out.Answer = append(out.Answer, rr)
+
+	rr, err = dns.NewRR("test.com.\t598\tIN\tAAAA\t10::12\n")
+	if err != nil {
+		t.Errorf("Failed to create AAAA record")
+	}
+	out.Answer = append(out.Answer, rr)
+
+	rr, err = dns.NewRR("test.com.\t597\tIN\tNS\tns1.test.com\n")
+	if err != nil {
+		t.Errorf("Failed to create NS record")
+	}
+	out.Answer = append(out.Answer, rr)
+
+	out = resetTTL(out)
+	assertDNSMessage(t, "resetTTL", 0, out, 0,
+		";; opcode: QUERY, status: NOERROR, id: 0\n"+
+			";; flags: qr; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
+			";; QUESTION SECTION:\n"+
+			";test.com.\tIN\t A\n\n"+
+			";; ANSWER SECTION:\n"+
+			"test.com.\t0\tIN\tA\t10.0.10.11\n"+
+			"test.com.\t0\tIN\tAAAA\t10::12\n"+
+			"test.com.\t597\tIN\tNS\tns1.test.com.\n",
 	)
 }
 
