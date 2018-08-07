@@ -18,9 +18,7 @@ import (
 	pbs "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pdp/ast"
 	"github.com/infobloxopen/themis/pdp/jcon"
-	"github.com/infobloxopen/themis/pep"
 	pbcs "github.com/infobloxopen/themis/pip-service"
-	"github.com/infobloxopen/themis/pipclient"
 
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	ot "github.com/opentracing/opentracing-go"
@@ -203,8 +201,8 @@ type Server struct {
 
 	memProfBaseDumpDone chan uint32
 
-	shardClients    map[string]pep.Client
-	pipShardClients map[string]pipclient.Client
+	shardClients    *pepClients
+	pipShardClients *pipClients
 
 	pool bytePool
 }
@@ -243,6 +241,8 @@ func NewServer(opts ...Option) *Server {
 		c:                   pdp.NewLocalContentStorage(nil),
 		memProfBaseDumpDone: memProfBaseDumpDone,
 		pool:                pool,
+		shardClients:        newPepClients(),
+		pipShardClients:     newPipClients(),
 	}
 }
 
@@ -267,11 +267,10 @@ func (s *Server) LoadPolicies(path string) error {
 	}
 
 	s.p = p
-	s.updateShardClients()
-	if len(s.pipShardClients) > 0 {
-		s.opts.logger.Debug("Notifying policy on load policies")
-		s.p.Event(s.newLocalContentRouter())
-	}
+	s.shardClients, _, _ = s.shardClients.update(p.GetShards().Map(), s.opts.shardingStreams)
+
+	s.opts.logger.Debug("Notifying policy on load policies")
+	s.p.Event(s.newLocalContentRouter())
 
 	return nil
 }
@@ -290,11 +289,10 @@ func (s *Server) ReadPolicies(r io.Reader) error {
 	}
 
 	s.p = p
-	s.updateShardClients()
-	if len(s.pipShardClients) > 0 {
-		s.opts.logger.Debug("Notifying policy on read policies")
-		s.p.Event(s.newLocalContentRouter())
-	}
+	s.shardClients, _, _ = s.shardClients.update(p.GetShards().Map(), s.opts.shardingStreams)
+
+	s.opts.logger.Debug("Notifying policy on read policies")
+	s.p.Event(s.newLocalContentRouter())
 
 	return nil
 }
@@ -327,10 +325,11 @@ func (s *Server) LoadContent(paths []string) error {
 	}
 
 	s.c = pdp.NewLocalContentStorage(items)
-	r := s.updatePIPShardClients()
+	s.pipShardClients, _, _ = s.pipShardClients.update(s.c.GetShards().Map(), s.opts.shardingStreams)
+
 	if s.p != nil {
 		s.opts.logger.Debug("Notifying policy on load content")
-		s.p.Event(r)
+		s.p.Event(s.newLocalContentRouter())
 	}
 
 	return nil
@@ -355,10 +354,11 @@ func (s *Server) ReadContent(readers ...io.Reader) error {
 	}
 
 	s.c = pdp.NewLocalContentStorage(items)
-	r := s.updatePIPShardClients()
+	s.pipShardClients, _, _ = s.pipShardClients.update(s.c.GetShards().Map(), s.opts.shardingStreams)
+
 	if s.p != nil {
 		s.opts.logger.Debug("Notifying policy on read content")
-		s.p.Event(r)
+		s.p.Event(s.newLocalContentRouter())
 	}
 
 	return nil
@@ -588,18 +588,27 @@ func (s *Server) Serve() error {
 		defer s.content.proto.Stop()
 	}
 
-	for _, sc := range s.shardClients {
-		if err := sc.Connect(""); err != nil {
-			return err
-		}
+	if err := s.shardClients.connect(); err != nil {
+		return err
 	}
+	defer func() {
+		s.RLock()
+		c := s.shardClients
+		s.RUnlock()
 
-	for name, sc := range s.pipShardClients {
-		s.opts.logger.WithField("name", name).Debug("Connecting content sharding client")
-		if err := sc.Connect(""); err != nil {
-			return err
-		}
+		c.disconnect()
+	}()
+
+	if err := s.pipShardClients.connect(); err != nil {
+		return err
 	}
+	defer func() {
+		s.RLock()
+		c := s.shardClients
+		s.RUnlock()
+
+		c.disconnect()
+	}()
 
 	s.opts.logger.Info("Creating service protocol handler")
 	s.requests.proto = grpc.NewServer(s.configureRequests()...)
