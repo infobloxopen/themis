@@ -54,7 +54,11 @@ func (s *Server) shardingRedirect(r pdp.Response, in []byte) []byte {
 			s.opts.logger.WithField("name", name).Debug("Sharding redirect")
 		}
 
-		if sc := s.getShard(shardErr.Shard); sc != nil {
+		s.RLock()
+		c := s.shardClients
+		s.RUnlock()
+
+		if sc := c.get(shardErr.Shard); sc != nil {
 			var outMsg pb.Msg
 			if err := sc.Validate(pb.Msg{Body: in}, &outMsg); err != nil {
 				if s.opts.logger.Level >= log.DebugLevel {
@@ -82,7 +86,11 @@ func (s *Server) shardingRedirectWithAllocator(r pdp.Response, in []byte, f func
 			s.opts.logger.WithField("name", name).Debug("Sharding redirect")
 		}
 
-		if sc := s.getShard(shardErr.Shard); sc != nil {
+		s.RLock()
+		c := s.shardClients
+		s.RUnlock()
+
+		if sc := c.get(shardErr.Shard); sc != nil {
 			var outMsg pb.Msg
 			if err := sc.Validate(pb.Msg{Body: in}, &outMsg); err != nil {
 				if s.opts.logger.Level >= log.DebugLevel {
@@ -110,7 +118,11 @@ func (s *Server) shardingRedirectWithBuffer(r pdp.Response, in, out []byte) []by
 			s.opts.logger.WithField("name", name).Debug("Sharding redirect")
 		}
 
-		if sc := s.getShard(shardErr.Shard); sc != nil {
+		s.RLock()
+		c := s.shardClients
+		s.RUnlock()
+
+		if sc := c.get(shardErr.Shard); sc != nil {
 			var outMsg pb.Msg
 			if err := sc.Validate(pb.Msg{Body: in}, &outMsg); err != nil {
 				if s.opts.logger.Level >= log.DebugLevel {

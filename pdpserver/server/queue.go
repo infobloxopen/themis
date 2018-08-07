@@ -21,6 +21,9 @@ type item struct {
 
 	c  *pdp.LocalContent
 	ct *pdp.LocalContentStorageTransaction
+
+	spc *pepClients
+	scc *pipClients
 }
 
 type queue struct {

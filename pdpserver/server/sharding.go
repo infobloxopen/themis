@@ -11,67 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (s *Server) getShard(name string) pep.Client {
-	if c, ok := s.shardClients[name]; ok {
-		return c
-	}
-
-	return nil
-}
-
-func (s *Server) updateShardClients() {
-	for name, c := range s.shardClients {
-		s.shardClients[name] = nil
-		c.Close()
-	}
-
-	m := s.p.GetShards().Map()
-	if len(m) > 0 {
-		s.shardClients = make(map[string]pep.Client, len(m))
-		for name, addrs := range m {
-			opts := []pep.Option{
-				pep.WithCustomData(name),
-				pep.WithRoundRobinBalancer(addrs...),
-				pep.WithConnectionTimeout(5 * time.Second),
-			}
-			if s.opts.shardingStreams > 0 {
-				opts = append(opts,
-					pep.WithStreams(s.opts.shardingStreams),
-				)
-			}
-			s.shardClients[name] = pep.NewClient(opts...)
-		}
-	}
-}
-
-func (s *Server) updatePIPShardClients() pdp.Router {
-	for name, c := range s.pipShardClients {
-		s.pipShardClients[name] = nil
-		c.Close()
-	}
-
-	m := s.c.GetShards().Map()
-	if len(m) > 0 {
-		s.pipShardClients = make(map[string]pipclient.Client, len(m))
-		for name, addrs := range m {
-			s.opts.logger.WithField("name", name).Debug("Creating content sharding client")
-			opts := []pipclient.Option{
-				pipclient.WithCustomData(name),
-				pipclient.WithRoundRobinBalancer(addrs...),
-				pipclient.WithConnectionTimeout(5 * time.Second),
-			}
-			if s.opts.shardingStreams > 0 {
-				opts = append(opts,
-					pipclient.WithStreams(s.opts.shardingStreams),
-				)
-			}
-			s.pipShardClients[name] = pipclient.NewClient(opts...)
-		}
-	}
-
-	return s.newLocalContentRouter()
-}
-
 type localContentRouter struct {
 	c      map[string]pipclient.Client
 	logger *log.Logger
@@ -79,7 +18,7 @@ type localContentRouter struct {
 
 func (s *Server) newLocalContentRouter() pdp.Router {
 	return &localContentRouter{
-		c:      s.pipShardClients,
+		c:      s.pipShardClients.getClientMap(),
 		logger: s.opts.logger,
 	}
 }
@@ -201,4 +140,199 @@ func (r *localContentRouter) Call(sErr *pdp.ContentShardingError) (pdp.Attribute
 	}
 
 	return pdp.UndefinedValue, newMissingContentShardError(sErr.Shard)
+}
+
+func cmpAddrs(first []string, second []string) bool {
+	if len(first) != len(second) {
+		return false
+	}
+
+	for i, a := range first {
+		if a != second[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+type pepClient struct {
+	c pep.Client
+	s []string
+}
+
+func makePepClient(addrs []string, streams int) pepClient {
+	opts := []pep.Option{
+		pep.WithRoundRobinBalancer(addrs...),
+		pep.WithConnectionTimeout(5 * time.Second),
+	}
+
+	if streams > 0 {
+		opts = append(opts,
+			pep.WithStreams(streams),
+		)
+	}
+
+	return pepClient{
+		c: pep.NewClient(opts...),
+		s: addrs,
+	}
+}
+
+type pepClients struct {
+	c map[string]pepClient
+}
+
+func newPepClients() *pepClients {
+	return &pepClients{
+		c: make(map[string]pepClient),
+	}
+}
+
+func (c *pepClients) connect() error {
+	for _, cc := range c.c {
+		if err := cc.c.Connect(""); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *pepClients) disconnect() {
+	for _, cc := range c.c {
+		cc.c.Close()
+	}
+}
+
+func (c *pepClients) get(name string) pep.Client {
+	if cc, ok := c.c[name]; ok {
+		return cc.c
+	}
+
+	return nil
+}
+
+func (c *pepClients) update(m map[string][]string, streams int) (*pepClients, []pep.Client, []pep.Client) {
+	out := &pepClients{
+		c: make(map[string]pepClient),
+	}
+
+	newC := []pep.Client{}
+	oldC := []pep.Client{}
+
+	for name, addrs := range m {
+		if cc, ok := c.c[name]; ok {
+			if cmpAddrs(cc.s, addrs) {
+				out.c[name] = cc
+				continue
+			}
+
+			oldC = append(oldC, cc.c)
+		}
+
+		cc := makePepClient(addrs, streams)
+
+		out.c[name] = cc
+		newC = append(newC, cc.c)
+	}
+
+	for name, cc := range c.c {
+		if _, ok := m[name]; !ok {
+			oldC = append(oldC, cc.c)
+		}
+	}
+
+	return out, newC, oldC
+}
+
+type pipClient struct {
+	c pipclient.Client
+	s []string
+}
+
+func makePipClient(addrs []string, streams int) pipClient {
+	opts := []pipclient.Option{
+		pipclient.WithRoundRobinBalancer(addrs...),
+		pipclient.WithConnectionTimeout(5 * time.Second),
+	}
+
+	if streams > 0 {
+		opts = append(opts,
+			pipclient.WithStreams(streams),
+		)
+	}
+
+	return pipClient{
+		c: pipclient.NewClient(opts...),
+		s: addrs,
+	}
+}
+
+type pipClients struct {
+	c map[string]pipClient
+}
+
+func newPipClients() *pipClients {
+	return &pipClients{
+		c: make(map[string]pipClient),
+	}
+}
+
+func (c *pipClients) connect() error {
+	for _, cc := range c.c {
+		if err := cc.c.Connect(""); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *pipClients) disconnect() {
+	for _, cc := range c.c {
+		cc.c.Close()
+	}
+}
+
+func (c *pipClients) getClientMap() map[string]pipclient.Client {
+	out := make(map[string]pipclient.Client, len(c.c))
+	for name, cc := range c.c {
+		out[name] = cc.c
+	}
+
+	return out
+}
+
+func (c *pipClients) update(m map[string][]string, streams int) (*pipClients, []pipclient.Client, []pipclient.Client) {
+	out := &pipClients{
+		c: make(map[string]pipClient),
+	}
+
+	newC := []pipclient.Client{}
+	oldC := []pipclient.Client{}
+
+	for name, addrs := range m {
+		if cc, ok := c.c[name]; ok {
+			if cmpAddrs(cc.s, addrs) {
+				out.c[name] = cc
+				continue
+			}
+
+			oldC = append(oldC, cc.c)
+		}
+
+		cc := makePipClient(addrs, streams)
+
+		out.c[name] = cc
+		newC = append(newC, cc.c)
+	}
+
+	for name, cc := range c.c {
+		if _, ok := m[name]; !ok {
+			oldC = append(oldC, cc.c)
+		}
+	}
+
+	return out, newC, oldC
 }

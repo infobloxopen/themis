@@ -29,6 +29,11 @@ func (s *Server) uploadPolicy(id int32, r *streamReader, req *item, stream pb.PD
 	}
 
 	req.p = p
+
+	s.RLock()
+	req.spc = s.shardClients
+	s.RUnlock()
+
 	nid, err := s.q.push(req)
 	if err != nil {
 		return stream.SendAndClose(controlFail(newPolicyUploadStoreError(id, err)))
@@ -51,6 +56,8 @@ func (s *Server) uploadPolicyUpdate(id int32, r *streamReader, req *item, stream
 		r.skip()
 		return stream.SendAndClose(controlFail(newPolicyTransactionCreationError(id, req, err)))
 	}
+
+	spc := s.shardClients
 	s.RUnlock()
 
 	u, err := s.opts.parser.UnmarshalUpdate(r, t.Symbols(), *req.fromTag, *req.toTag)
@@ -66,6 +73,7 @@ func (s *Server) uploadPolicyUpdate(id int32, r *streamReader, req *item, stream
 	}
 
 	req.pt = t
+	req.spc = spc
 	nid, err := s.q.push(req)
 	if err != nil {
 		return stream.SendAndClose(controlFail(newPolicyUpdateUploadStoreError(id, req, err)))
@@ -76,9 +84,20 @@ func (s *Server) uploadPolicyUpdate(id int32, r *streamReader, req *item, stream
 
 func (s *Server) applyPolicy(id int32, req *item) (*pb.Response, error) {
 	if req.p != nil {
+		spc, newC, oldC := req.spc.update(req.p.GetShards().Map(), s.opts.shardingStreams)
+		for _, c := range newC {
+			c.Connect("")
+		}
+
 		s.Lock()
 		s.p = req.p
+		s.shardClients = spc
+		s.p.Event(s.newLocalContentRouter())
 		s.Unlock()
+
+		for _, c := range oldC {
+			c.Close()
+		}
 
 		if req.toTag == nil {
 			s.opts.logger.WithField("id", id).Info("New policy has been applied")
@@ -97,9 +116,20 @@ func (s *Server) applyPolicy(id int32, req *item) (*pb.Response, error) {
 			return controlFail(newPolicyTransactionCommitError(id, req, err)), nil
 		}
 
+		spc, newC, oldC := req.spc.update(req.p.GetShards().Map(), s.opts.shardingStreams)
+		for _, c := range newC {
+			c.Connect("")
+		}
+
 		s.Lock()
 		s.p = p
+		s.shardClients = spc
+		s.p.Event(s.newLocalContentRouter())
 		s.Unlock()
+
+		for _, c := range oldC {
+			c.Close()
+		}
 
 		s.opts.logger.WithFields(log.Fields{
 			"id":       id,

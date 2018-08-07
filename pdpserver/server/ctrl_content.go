@@ -31,6 +31,11 @@ func (s *Server) uploadContent(id int32, r *streamReader, req *item, stream pb.P
 	}
 
 	req.c = c
+
+	s.RLock()
+	req.scc = s.pipShardClients
+	s.RUnlock()
+
 	nid, err := s.q.push(req)
 	if err != nil {
 		return stream.SendAndClose(controlFail(newContentUploadStoreError(id, err)))
@@ -47,6 +52,7 @@ func (s *Server) uploadContentUpdate(id int32, r *streamReader, req *item, strea
 		r.skip()
 		return stream.SendAndClose(controlFail(newContentTransactionCreationError(id, req, err)))
 	}
+	scc := s.pipShardClients
 	s.RUnlock()
 
 	u, err := jcon.UnmarshalUpdate(r, req.id, *req.fromTag, *req.toTag, t.Symbols())
@@ -63,6 +69,7 @@ func (s *Server) uploadContentUpdate(id int32, r *streamReader, req *item, strea
 	}
 
 	req.ct = t
+	req.scc = scc
 	nid, err := s.q.push(req)
 	if err != nil {
 		return stream.SendAndClose(controlFail(newContentUpdateUploadStoreError(id, req, err)))
@@ -73,9 +80,22 @@ func (s *Server) uploadContentUpdate(id int32, r *streamReader, req *item, strea
 
 func (s *Server) applyContent(id int32, req *item) (*pb.Response, error) {
 	if req.c != nil {
+		scc, newC, oldC := req.scc.update(req.c.GetShards().Map(), s.opts.shardingStreams)
+		for _, c := range newC {
+			c.Connect("")
+		}
+
 		s.Lock()
 		s.c = s.c.Add(req.c)
+		s.pipShardClients = scc
+		if s.p != nil {
+			s.p.Event(s.newLocalContentRouter())
+		}
 		s.Unlock()
+
+		for _, c := range oldC {
+			c.Close()
+		}
 
 		if req.toTag == nil {
 			s.opts.logger.WithField("id", id).Info("New content has been applied")
@@ -89,16 +109,27 @@ func (s *Server) applyContent(id int32, req *item) (*pb.Response, error) {
 	}
 
 	if req.ct != nil {
-		s.Lock()
 		c, err := req.ct.Commit(s.c)
 		if err != nil {
-			s.Unlock()
-
 			return controlFail(newContentTransactionCommitError(id, req, err)), nil
 		}
 
+		scc, newC, oldC := req.scc.update(req.c.GetShards().Map(), s.opts.shardingStreams)
+		for _, c := range newC {
+			c.Connect("")
+		}
+
+		s.Lock()
 		s.c = c
+		s.pipShardClients = scc
+		if s.p != nil {
+			s.p.Event(s.newLocalContentRouter())
+		}
 		s.Unlock()
+
+		for _, c := range oldC {
+			c.Close()
+		}
 
 		s.opts.logger.WithFields(log.Fields{
 			"id":       id,
