@@ -124,9 +124,27 @@ func makeAssignmentByType(o *edns0Opt, b []byte) (pdp.AttributeAssignment, bool)
 
 	case typeEDNS0IP:
 		return pdp.MakeAddressAssignment(o.name, net.IP(b)), true
+
+	case typeEDNS0Mac:
+		s := FormatMacAddress(b)
+		return pdp.MakeStringAssignment(o.name, s), true
 	}
 
 	panic(fmt.Errorf("unknown attribute type %d", o.dataType))
+}
+
+// FormatMacAddress creates instance of Mac address attribute value.
+func FormatMacAddress(mac []byte) string {
+
+	value := ""
+	for i := 0; i < len(mac); i++ {
+		if i > 0 {
+			value += ":"
+		}
+		value += fmt.Sprintf("%02x", mac[i])
+	}
+
+	return value
 }
 
 func (ah *attrHolder) addDnRes(r *pdp.Response, custAttrs map[string]custAttr) {
