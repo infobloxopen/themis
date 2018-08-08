@@ -1,6 +1,7 @@
 package pdp
 
 import (
+	"encoding/hex"
 	"fmt"
 	"net"
 	"strconv"
@@ -231,7 +232,11 @@ func MakeValueFromString(t Type, s string) (AttributeValue, error) {
 		return MakeAddressValue(a), nil
 
 	case TypeMacAddress:
-		return MakeMacAddressValue([]byte(s)), nil
+		macBytes, err := hex.DecodeString(s)
+		if err != nil {
+			return UndefinedValue, err
+		}
+		return MakeMacAddressValue(macBytes), nil
 
 	case TypeNetwork:
 		_, n, err := net.ParseCIDR(s)
