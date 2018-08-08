@@ -96,6 +96,21 @@ func clearECS(r *dns.Msg) {
 	o.Option = option
 }
 
+func resetTTL(r *dns.Msg) *dns.Msg {
+	if r == nil {
+		return nil
+	}
+
+	for _, rr := range r.Answer {
+		// Ttl field in OPT record has different meaning
+		if _, ok := rr.(*dns.OPT); !ok {
+			rr.Header().Ttl = 0
+		}
+	}
+
+	return r
+}
+
 func (p *policyPlugin) setRedirectQueryAnswer(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, dst string) (int, error) {
 	var rr dns.RR
 

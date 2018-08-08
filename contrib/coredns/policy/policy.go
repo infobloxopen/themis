@@ -179,8 +179,12 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	}
 
 	switch ah.action {
-	case actionAllow, actionLog:
+	case actionAllow:
 		r = respMsg
+		return dns.RcodeSuccess, nil
+
+	case actionLog:
+		r = resetTTL(respMsg)
 		return dns.RcodeSuccess, nil
 
 	case actionRedirect:
