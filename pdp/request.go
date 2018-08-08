@@ -2,7 +2,6 @@ package pdp
 
 import (
 	"encoding/binary"
-	"errors"
 	"math"
 	"net"
 	"reflect"
@@ -1319,14 +1318,6 @@ func calcRequestAttributeAddressSize(value net.IP) (int, error) {
 	}
 
 	return 0, newRequestAddressValueError(value)
-}
-
-func calcRequestAttributeMacAddressSize(value string) (int, error) {
-	if value != "" {
-		return len(value), nil
-	}
-
-	return 0, errors.New("Invalid Mac Address with size 0")
 }
 
 func calcRequestAttributeNetworkSize(value *net.IPNet) (int, error) {
