@@ -3,7 +3,6 @@ package pdp
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math"
@@ -1471,14 +1470,6 @@ func TestPutRequestAttribute(t *testing.T) {
 	n, err = putRequestAttribute(b[:13], "address", MakeAddressValue(net.ParseIP("192.0.2.1")))
 	assertRequestBytesBuffer(t, "putRequestAttribute(address)", err, b[:13], n,
 		7, 'a', 'd', 'd', 'r', 'e', 's', 's', byte(requestWireTypeIPv4Address), 192, 0, 2, 1,
-	)
-
-	// 48, 99, 58, 99, 52, 58, 55, 97, 58, 53, 48, 58, 55, 55, 58, 53, 51 is equivalent to 0c:c4:7a:50:77:53
-	macBytes, _ := hex.DecodeString("0cc47a507753")
-	n, err = putRequestAttribute(b[:27], "string", MakeMacAddressValue(macBytes))
-	assertRequestBytesBuffer(t, "putRequestAttribute(mac)", err, b[:27], n,
-		6, 's', 't', 'r', 'i', 'n', 'g', byte(requestWireTypeString), 17, 0,
-		48, 99, 58, 99, 52, 58, 55, 97, 58, 53, 48, 58, 55, 55, 58, 53, 51,
 	)
 
 	n, err = putRequestAttribute(b[:14], "network", MakeNetworkValue(makeTestNetwork("192.0.2.0/24")))

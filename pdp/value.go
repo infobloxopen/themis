@@ -1,7 +1,6 @@
 package pdp
 
 import (
-	"encoding/hex"
 	"fmt"
 	"net"
 	"strconv"
@@ -59,22 +58,6 @@ func MakeAddressValue(v net.IP) AttributeValue {
 	return AttributeValue{
 		t: TypeAddress,
 		v: v}
-}
-
-// MakeMacAddressValue creates instance of Mac address attribute value.
-func MakeMacAddressValue(mac []byte) AttributeValue {
-
-	value := ""
-	for i := 0; i < len(mac); i++ {
-		if i > 0 {
-			value += ":"
-		}
-		value += fmt.Sprintf("%02x", mac[i])
-	}
-
-	return AttributeValue{
-		t: TypeMacAddress,
-		v: string(value)}
 }
 
 // MakeNetworkValue creates instance of IP network address attribute value.
@@ -231,13 +214,6 @@ func MakeValueFromString(t Type, s string) (AttributeValue, error) {
 
 		return MakeAddressValue(a), nil
 
-	case TypeMacAddress:
-		macBytes, err := hex.DecodeString(s)
-		if err != nil {
-			return UndefinedValue, err
-		}
-		return MakeMacAddressValue(macBytes), nil
-
 	case TypeNetwork:
 		_, n, err := net.ParseCIDR(s)
 		if err != nil {
@@ -313,9 +289,6 @@ func (v AttributeValue) describe() string {
 
 	case TypeAddress:
 		return v.v.(net.IP).String()
-
-	case TypeMacAddress:
-		return v.v.(string)
 
 	case TypeNetwork:
 		return v.v.(*net.IPNet).String()
@@ -447,15 +420,6 @@ func (v AttributeValue) address() (net.IP, error) {
 	}
 
 	return v.v.(net.IP), nil
-}
-
-func (v AttributeValue) mac() (string, error) {
-	err := v.typeCheck(TypeMacAddress)
-	if err != nil {
-		return "", err
-	}
-
-	return v.v.(string), nil
 }
 
 func (v AttributeValue) network() (*net.IPNet, error) {

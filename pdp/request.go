@@ -329,10 +329,6 @@ func putRequestAttribute(b []byte, name string, value AttributeValue) (int, erro
 		v, _ := value.address()
 		return putRequestAttributeAddress(b, name, v)
 
-	case TypeMacAddress:
-		v, _ := value.mac()
-		return putRequestAttributeString(b, name, v)
-
 	case TypeNetwork:
 		v, _ := value.network()
 		return putRequestAttributeNetwork(b, name, v)
@@ -1260,10 +1256,6 @@ func calcRequestAttributeSize(value AttributeValue) (int, error) {
 	case TypeAddress:
 		v, _ := value.address()
 		s, err = calcRequestAttributeAddressSize(v)
-
-	case TypeMacAddress:
-		v, _ := value.mac()
-		s, err = calcRequestAttributeStringSize(v)
 
 	case TypeNetwork:
 		v, _ := value.network()
