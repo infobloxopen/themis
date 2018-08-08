@@ -146,8 +146,8 @@ func MarshalRequestAssignmentsToBuffer(b []byte, in []AttributeAssignment) (int,
 // It expects the function to return attribute id, type and value.
 // For TypeBoolean MarshalRequestReflectionToBuffer expects bool value,
 // for TypeString - string, for TypeInteger - intX, uintX (internally converting
-// to int64), TypeFloat - float32 or float64, TypeAddress - net.IP,
-// TypeNetwork - net.IPNet or *net.IPNet, TypeDomain - string or domain.Name from
+// to int64), TypeFloat - float32 or float64, TypeAddress - net.IP, TypeNetwork
+// - net.IPNet or *net.IPNet, TypeDomain - string or domain.Name from
 // github.com/infobloxopen/go-trees/domain package, TypeSetOfStrings -
 // *strtree.Tree from github.com/infobloxopen/go-trees/strtree package,
 // TypeSetOfNetworks - *iptree.Node from
