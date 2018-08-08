@@ -589,31 +589,6 @@ func TestGetRequestIPv6AddressValue(t *testing.T) {
 	}
 }
 
-func TestGetRequestMacAddressValue(t *testing.T) {
-	testWireMacAddressValue, _ := hex.DecodeString("0cc47a507753")
-	v, n, err := getRequestMacAddressValue(testWireMacAddressValue)
-	if err != nil {
-		t.Error(err)
-	} else if n != len(testWireMacAddressValue) {
-		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireMacAddressValue), n)
-	}
-
-	strVal := ""
-	for _, val := range v {
-		strVal += fmt.Sprintf("%02x", val)
-	}
-
-	expect := "0cc47a507753"
-	if strVal != expect {
-		t.Errorf("expected Mac address %q as attribute value but got %q", expect, v)
-	}
-
-	v, _, err = getRequestMacAddressValue([]byte{})
-	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got Mac address %q", v)
-	}
-}
-
 func TestGetRequestIPv4NetworkValue(t *testing.T) {
 	testWireIPv4NetworkValue := []byte{
 		24, 192, 0, 2, 1,
@@ -1498,11 +1473,12 @@ func TestPutRequestAttribute(t *testing.T) {
 		7, 'a', 'd', 'd', 'r', 'e', 's', 's', byte(requestWireTypeIPv4Address), 192, 0, 2, 1,
 	)
 
-	// 12, 196, 122, 80, 119, 83 is equivalent to 0c c4 7a 50 77 53
+	// 48, 99, 58, 99, 52, 58, 55, 97, 58, 53, 48, 58, 55, 55, 58, 53, 51 is equivalent to 0c:c4:7a:50:77:53
 	macBytes, _ := hex.DecodeString("0cc47a507753")
-	n, err = putRequestAttribute(b[:11], "mac", MakeMacAddressValue(macBytes))
-	assertRequestBytesBuffer(t, "putRequestAttribute(mac)", err, b[:14], n,
-		3, 'm', 'a', 'c', byte(requestWireTypeMacAddress), 12, 196, 122, 80, 119, 83,
+	n, err = putRequestAttribute(b[:27], "string", MakeMacAddressValue(macBytes))
+	assertRequestBytesBuffer(t, "putRequestAttribute(mac)", err, b[:27], n,
+		6, 's', 't', 'r', 'i', 'n', 'g', byte(requestWireTypeString), 17, 0,
+		48, 99, 58, 99, 52, 58, 55, 97, 58, 53, 48, 58, 55, 55, 58, 53, 51,
 	)
 
 	n, err = putRequestAttribute(b[:14], "network", MakeNetworkValue(makeTestNetwork("192.0.2.0/24")))
