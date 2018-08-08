@@ -1,6 +1,7 @@
 package pdp
 
 import (
+	"encoding/hex"
 	"fmt"
 	"net"
 	"testing"
@@ -108,7 +109,8 @@ func TestAttributeValue(t *testing.T) {
 		t.Errorf("Expected %q as value description but got %q", expDesc, d)
 	}
 
-	v = MakeMacAddressValue([]byte("0cc47a507753"))
+	macAddr, _ := hex.DecodeString("0cc47a507753")
+	v = MakeMacAddressValue(macAddr)
 	vt = v.GetResultType()
 	if vt != TypeMacAddress {
 		t.Errorf("Expected %q as value type but got %q", TypeMacAddress, vt)

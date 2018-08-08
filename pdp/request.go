@@ -2,6 +2,8 @@ package pdp
 
 import (
 	"encoding/binary"
+	"encoding/hex"
+	"errors"
 	"math"
 	"net"
 	"reflect"
@@ -22,6 +24,7 @@ const (
 	requestWireTypeFloat
 	requestWireTypeIPv4Address
 	requestWireTypeIPv6Address
+	requestWireTypeMacAddress
 	requestWireTypeIPv4Network
 	requestWireTypeIPv6Network
 	requestWireTypeDomain
@@ -42,6 +45,7 @@ var (
 		"float",
 		"IPv4 address",
 		"IPv6 address",
+		"mac",
 		"IPv4 network",
 		"IPv6 network",
 		"domain",
@@ -59,6 +63,7 @@ var (
 		TypeFloat,
 		TypeAddress,
 		TypeAddress,
+		TypeMacAddress,
 		TypeNetwork,
 		TypeNetwork,
 		TypeDomain,
@@ -82,6 +87,7 @@ const (
 	reqFloatValueSize       = 8
 	reqIPv4AddressValueSize = 4
 	reqIPv6AddressValueSize = 16
+	reqMacAddressValueSize  = 6
 	reqNetworkCIDRSize      = 1
 )
 
@@ -146,8 +152,8 @@ func MarshalRequestAssignmentsToBuffer(b []byte, in []AttributeAssignment) (int,
 // It expects the function to return attribute id, type and value.
 // For TypeBoolean MarshalRequestReflectionToBuffer expects bool value,
 // for TypeString - string, for TypeInteger - intX, uintX (internally converting
-// to int64), TypeFloat - float32 or float64, TypeAddress - net.IP, TypeNetwork
-// - net.IPNet or *net.IPNet, TypeDomain - string or domain.Name from
+// to int64), TypeFloat - float32 or float64, TypeAddress - net.IP, TypeMacAddress - []byte,
+// TypeNetwork - net.IPNet or *net.IPNet, TypeDomain - string or domain.Name from
 // github.com/infobloxopen/go-trees/domain package, TypeSetOfStrings -
 // *strtree.Tree from github.com/infobloxopen/go-trees/strtree package,
 // TypeSetOfNetworks - *iptree.Node from
@@ -328,6 +334,10 @@ func putRequestAttribute(b []byte, name string, value AttributeValue) (int, erro
 		v, _ := value.address()
 		return putRequestAttributeAddress(b, name, v)
 
+	case TypeMacAddress:
+		v, _ := value.mac()
+		return putRequestAttributeMacAddress(b, name, v)
+
 	case TypeNetwork:
 		v, _ := value.network()
 		return putRequestAttributeNetwork(b, name, v)
@@ -415,6 +425,14 @@ func getRequestAttribute(b []byte) (string, AttributeValue, int, error) {
 		}
 
 		return name, MakeAddressValue(a), off + n, nil
+
+	case requestWireTypeMacAddress:
+		mac, n, err := getRequestMacAddressValue(b[off:])
+		if err != nil {
+			return "", UndefinedValue, 0, bindError(bindError(err, "value"), name)
+		}
+
+		return name, MakeMacAddressValue(mac), off + n, nil
 
 	case requestWireTypeIPv4Network:
 		a, n, err := getRequestIPv4NetworkValue(b[off:])
@@ -732,6 +750,59 @@ func getRequestIPv6AddressValue(b []byte) (net.IP, int, error) {
 	ip := net.IP(make([]byte, reqIPv6AddressValueSize))
 	copy(ip, b)
 	return ip, reqIPv6AddressValueSize, nil
+}
+
+func putRequestAttributeMacAddress(b []byte, name string, value string) (int, error) {
+	off, err := putRequestAttributeName(b, name)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestMacAddressValue(b[off:], value)
+	if err != nil {
+		return 0, err
+	}
+
+	return off + n, err
+}
+
+func putRequestMacAddressValue(b []byte, value string) (int, error) {
+	t := requestWireTypeMacAddress
+
+	off, err := putRequestAttributeType(b, t)
+	if err != nil {
+		return 0, err
+	}
+
+	b = b[off:]
+
+	// Convert the string to hex bytes
+	macBytes, err := hex.DecodeString(value)
+	if err != nil {
+		return 0, err
+	}
+	if len(b) < len(macBytes) {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	// copy all the mac address bytes
+	for i, val := range macBytes {
+		b[i] = val
+	}
+	return off + len(macBytes), nil
+}
+
+func getRequestMacAddressValue(b []byte) ([]byte, int, error) {
+	if len(b) < reqMacAddressValueSize {
+		return nil, 0, newRequestBufferUnderflowError()
+	}
+
+	macAddress := make([]byte, reqMacAddressValueSize)
+	for i, val := range b {
+		macAddress[i] = val
+	}
+
+	return macAddress, reqMacAddressValueSize, nil
 }
 
 func putRequestAttributeNetwork(b []byte, name string, value *net.IPNet) (int, error) {
@@ -1256,6 +1327,10 @@ func calcRequestAttributeSize(value AttributeValue) (int, error) {
 		v, _ := value.address()
 		s, err = calcRequestAttributeAddressSize(v)
 
+	case TypeMacAddress:
+		v, _ := value.mac()
+		s, err = calcRequestAttributeMacAddressSize(v)
+
 	case TypeNetwork:
 		v, _ := value.network()
 		s, err = calcRequestAttributeNetworkSize(v)
@@ -1318,6 +1393,14 @@ func calcRequestAttributeAddressSize(value net.IP) (int, error) {
 	}
 
 	return 0, newRequestAddressValueError(value)
+}
+
+func calcRequestAttributeMacAddressSize(value string) (int, error) {
+	if value != "" {
+		return len(value), nil
+	}
+
+	return 0, errors.New("Invalid Mac Address with size 0")
 }
 
 func calcRequestAttributeNetworkSize(value *net.IPNet) (int, error) {

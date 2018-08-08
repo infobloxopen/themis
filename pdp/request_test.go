@@ -3,6 +3,7 @@ package pdp
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math"
@@ -585,6 +586,31 @@ func TestGetRequestIPv6AddressValue(t *testing.T) {
 		t.Errorf("expected *requestBufferUnderflowError but got IPv6 address %q", v)
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetRequestMacAddressValue(t *testing.T) {
+	testWireMacAddressValue, _ := hex.DecodeString("0cc47a507753")
+	v, n, err := getRequestMacAddressValue(testWireMacAddressValue)
+	if err != nil {
+		t.Error(err)
+	} else if n != len(testWireMacAddressValue) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireMacAddressValue), n)
+	}
+
+	strVal := ""
+	for _, val := range v {
+		strVal += fmt.Sprintf("%02x", val)
+	}
+
+	expect := "0cc47a507753"
+	if strVal != expect {
+		t.Errorf("expected Mac address %q as attribute value but got %q", expect, v)
+	}
+
+	v, _, err = getRequestMacAddressValue([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got Mac address %q", v)
 	}
 }
 
@@ -1470,6 +1496,13 @@ func TestPutRequestAttribute(t *testing.T) {
 	n, err = putRequestAttribute(b[:13], "address", MakeAddressValue(net.ParseIP("192.0.2.1")))
 	assertRequestBytesBuffer(t, "putRequestAttribute(address)", err, b[:13], n,
 		7, 'a', 'd', 'd', 'r', 'e', 's', 's', byte(requestWireTypeIPv4Address), 192, 0, 2, 1,
+	)
+
+	// 12, 196, 122, 80, 119, 83 is equivalent to 0c c4 7a 50 77 53
+	macBytes, _ := hex.DecodeString("0cc47a507753")
+	n, err = putRequestAttribute(b[:11], "mac", MakeMacAddressValue(macBytes))
+	assertRequestBytesBuffer(t, "putRequestAttribute(mac)", err, b[:14], n,
+		3, 'm', 'a', 'c', byte(requestWireTypeMacAddress), 12, 196, 122, 80, 119, 83,
 	)
 
 	n, err = putRequestAttribute(b[:14], "network", MakeNetworkValue(makeTestNetwork("192.0.2.0/24")))
