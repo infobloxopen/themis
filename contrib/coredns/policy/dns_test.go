@@ -203,7 +203,7 @@ func TestResetTTL(t *testing.T) {
 			";; ANSWER SECTION:\n"+
 			"test.com.\t0\tIN\tA\t10.0.10.11\n"+
 			"test.com.\t0\tIN\tAAAA\t10::12\n"+
-			"test.com.\t597\tIN\tNS\tns1.test.com.\n",
+			"test.com.\t0\tIN\tNS\tns1.test.com.\n",
 	)
 }
 
