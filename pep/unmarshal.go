@@ -37,29 +37,15 @@ var (
 	}
 )
 
-func fillResponse(res pb.Msg, v interface{}) error {
-	switch v := v.(type) {
-	case *pb.Msg:
-		*v = res
-		return nil
+type CachedResponse struct {
+	pdp.Response
 
-	case *pdp.Response:
-		if v.Obligations == nil {
-			effect, a, err := pdp.UnmarshalResponseAssignments(res.Body)
-			if err != nil {
-				if _, ok := err.(*pdp.ResponseServerError); !ok {
-					return err
-				}
-			}
+	Cached bool
+}
 
-			v.Effect = effect
-			v.Status = err
-			v.Obligations = a
-
-			return nil
-		}
-
-		effect, n, err := pdp.UnmarshalResponseToAssignmentsArray(res.Body, v.Obligations)
+func fillPdpResponse(res pb.Msg, v *pdp.Response) error {
+	if v.Obligations == nil {
+		effect, a, err := pdp.UnmarshalResponseAssignments(res.Body)
 		if err != nil {
 			if _, ok := err.(*pdp.ResponseServerError); !ok {
 				return err
@@ -68,11 +54,37 @@ func fillResponse(res pb.Msg, v interface{}) error {
 
 		v.Effect = effect
 		v.Status = err
-		if v.Obligations != nil {
-			v.Obligations = v.Obligations[:n]
-		}
+		v.Obligations = a
 
 		return nil
+	}
+
+	effect, n, err := pdp.UnmarshalResponseToAssignmentsArray(res.Body, v.Obligations)
+	if err != nil {
+		if _, ok := err.(*pdp.ResponseServerError); !ok {
+			return err
+		}
+	}
+
+	v.Effect = effect
+	v.Status = err
+	if v.Obligations != nil {
+		v.Obligations = v.Obligations[:n]
+	}
+
+	return nil
+}
+
+func fillResponse(res pb.Msg, v interface{}) error {
+	switch v := v.(type) {
+	case *pb.Msg:
+		*v = res
+		return nil
+
+	case *pdp.Response:
+		return fillPdpResponse(res, v)
+	case *CachedResponse:
+		return fillPdpResponse(res, &v.Response)
 	}
 
 	return unmarshalToValue(res.Body, reflect.ValueOf(v))

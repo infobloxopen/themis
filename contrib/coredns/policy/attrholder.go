@@ -2,7 +2,6 @@ package policy
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"strconv"
 
@@ -134,7 +133,7 @@ func (ah *attrHolder) addDnRes(r *pdp.Response, custAttrs map[string]custAttr) {
 
 	switch r.Effect {
 	default:
-		log.Printf("[ERROR] PDP Effect: %s, Reason: %s", pdp.EffectNameFromEnum(r.Effect), r.Status)
+		log.Errorf("PDP Effect: %s, Reason: %s", pdp.EffectNameFromEnum(r.Effect), r.Status)
 		ah.action = actionInvalid
 
 	case pdp.EffectPermit:
@@ -203,7 +202,7 @@ func (ah *attrHolder) addRedirect(attr pdp.AttributeAssignment) {
 	ah.action = actionRedirect
 	dst, err := attr.GetString(emptyCtx)
 	if err != nil {
-		log.Printf("[ERROR] Action: %s, Destination: %s (%s)", actionNames[ah.action], serializeOrPanic(attr), err)
+		log.Errorf("Action: %s, Destination: %s (%s)", actionNames[ah.action], serializeOrPanic(attr), err)
 
 		ah.action = actionInvalid
 		return
@@ -247,7 +246,7 @@ func (ah *attrHolder) addIPReq(ip net.IP) {
 func (ah *attrHolder) addIPRes(r *pdp.Response) {
 	switch r.Effect {
 	default:
-		log.Printf("[ERROR] PDP Effect: %s, Reason: %s", pdp.EffectNameFromEnum(r.Effect), r.Status)
+		log.Errorf("PDP Effect: %s, Reason: %s", pdp.EffectNameFromEnum(r.Effect), r.Status)
 		ah.action = actionInvalid
 
 	case pdp.EffectPermit:

@@ -1,7 +1,6 @@
 package policy
 
 import (
-	"log"
 	"strconv"
 	"time"
 
@@ -46,7 +45,7 @@ func newPolicyDnstapSender(io dnstap.IORoutine) dnstapSender {
 // message with IORoutine interface
 func (s *policyDnstapSender) sendCRExtraMsg(w dns.ResponseWriter, msg *dns.Msg, ah *attrHolder) {
 	if w == nil || msg == nil {
-		log.Printf("[ERROR] Failed to create dnstap CR message - no DNS response message found")
+		log.Errorf("Failed to create dnstap CR message - no DNS response message found")
 		return
 	}
 
@@ -55,7 +54,7 @@ func (s *policyDnstapSender) sendCRExtraMsg(w dns.ResponseWriter, msg *dns.Msg, 
 	b.Msg(msg)
 	crMsg, err := b.ToClientResponse()
 	if err != nil {
-		log.Printf("[ERROR] Failed to create dnstap CR message (%v)", err)
+		log.Errorf("Failed to create dnstap CR message (%v)", err)
 		return
 	}
 
@@ -67,7 +66,7 @@ func (s *policyDnstapSender) sendCRExtraMsg(w dns.ResponseWriter, msg *dns.Msg, 
 	if ah != nil {
 		extra, err = proto.Marshal(&pb.Extra{Attrs: ah.makeDnstapReport()})
 		if err != nil {
-			log.Printf("[ERROR] Failed to create extra data for dnstap CR message (%v)", err)
+			log.Errorf("Failed to create extra data for dnstap CR message (%v)", err)
 		}
 	}
 	dnstapMsg := tap.Dnstap{Type: &t, Message: crMsg, Extra: extra}
