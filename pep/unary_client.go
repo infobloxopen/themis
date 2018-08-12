@@ -148,8 +148,15 @@ func (c *unaryClient) Validate(in, out interface{}) error {
 	}
 
 	if c.cache != nil {
-		if b, err := c.cache.Get(string(req.Body)); err == nil {
-			return fillResponse(pb.Msg{Body: b}, out)
+		var b []byte
+		if b, err = c.cache.Get(string(req.Body)); err == nil {
+			if err = fillResponse(pb.Msg{Body: b}, out); err == nil {
+				switch r := out.(type) {
+				case *CachedResponse:
+					r.Cached = true
+				}
+			}
+			return err
 		}
 	}
 

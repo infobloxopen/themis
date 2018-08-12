@@ -3,7 +3,7 @@ package policy
 import (
 	"bytes"
 	"fmt"
-	"log"
+	logr "github.com/sirupsen/logrus"
 	"net"
 	"os"
 	"sync/atomic"
@@ -804,7 +804,7 @@ type logGrabber struct {
 
 func newLogGrabber() *logGrabber {
 	b := new(bytes.Buffer)
-	log.SetOutput(b)
+	logr.SetOutput(b)
 
 	return &logGrabber{
 		b: b,
@@ -812,7 +812,7 @@ func newLogGrabber() *logGrabber {
 }
 
 func (g *logGrabber) Release() string {
-	log.SetOutput(os.Stderr)
+	logr.SetOutput(os.Stderr)
 
 	return g.b.String()
 }

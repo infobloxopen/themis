@@ -12,7 +12,7 @@ import (
 	_ "github.com/infobloxopen/themis/pdp/selector"
 	"github.com/infobloxopen/themis/pdpserver/server"
 	"github.com/miekg/dns"
-	log "github.com/sirupsen/logrus"
+	logr "github.com/sirupsen/logrus"
 )
 
 const testPolicy = `# Policy set for client interaction tests
@@ -348,9 +348,9 @@ func newServer(opts ...server.Option) *loggedServer {
 		b: new(bytes.Buffer),
 	}
 
-	logger := log.New()
+	logger := logr.New()
 	logger.Out = s.b
-	logger.Level = log.ErrorLevel
+	logger.Level = logr.ErrorLevel
 	opts = append(opts,
 		server.WithLogger(logger),
 	)
