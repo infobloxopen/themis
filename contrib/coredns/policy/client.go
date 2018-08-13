@@ -1,7 +1,6 @@
 package policy
 
 import (
-	"log"
 	"sync/atomic"
 
 	"github.com/coredns/coredns/plugin/pkg/trace"
@@ -11,7 +10,7 @@ import (
 
 // connect establishes connection to PDP server.
 func (p *policyPlugin) connect() error {
-	log.Printf("[DEBUG] Connecting %v", p)
+	log.Debugf("Connecting %v", p)
 
 	for _, addr := range p.conf.endpoints {
 		p.connAttempts[addr] = new(uint32)
@@ -77,18 +76,18 @@ func (p *policyPlugin) validate(ah *attrHolder, a []pdp.AttributeAssignment) err
 	}
 
 	if p.conf.log {
-		log.Printf("[INFO] PDP request: %+v", req)
+		log.Infof("PDP request: %+v", req)
 	}
 
 	res := pdp.Response{Obligations: a}
 	err := p.pdp.Validate(req, &res)
 	if err != nil {
-		log.Printf("[ERROR] Policy validation failed due to error %s", err)
+		log.Errorf("Policy validation failed due to error %s", err)
 		return err
 	}
 
 	if p.conf.log {
-		log.Printf("[INFO] PDP response: %+v", res)
+		log.Infof("PDP response: %+v", res)
 	}
 
 	if len(ah.ipReq) > 0 {
@@ -104,9 +103,9 @@ func (p *policyPlugin) connStateCb(addr string, state int, err error) {
 	switch state {
 	default:
 		if err != nil {
-			log.Printf("[DEBUG] Unknown connection notification %s (%s)", addr, err)
+			log.Debugf("Unknown connection notification %s (%s)", addr, err)
 		} else {
-			log.Printf("[DEBUG] Unknown connection notification %s", addr)
+			log.Debugf("Unknown connection notification %s", addr)
 		}
 
 	case pep.StreamingConnectionEstablished:
@@ -116,10 +115,10 @@ func (p *policyPlugin) connStateCb(addr string, state int, err error) {
 		}
 		atomic.StoreUint32(ptr, 0)
 
-		log.Printf("[INFO] Connected to %s", addr)
+		log.Infof("Connected to %s", addr)
 
 	case pep.StreamingConnectionBroken:
-		log.Printf("[ERROR] Connection to %s has been broken", addr)
+		log.Errorf("Connection to %s has been broken", addr)
 
 	case pep.StreamingConnectionConnecting:
 		ptr, ok := p.connAttempts[addr]
@@ -129,11 +128,11 @@ func (p *policyPlugin) connStateCb(addr string, state int, err error) {
 		count := atomic.AddUint32(ptr, 1)
 
 		if count <= 1 {
-			log.Printf("[INFO] Connecting to %s", addr)
+			log.Infof("Connecting to %s", addr)
 		}
 
 		if count > 100 {
-			log.Printf("[ERROR] Connecting to %s", addr)
+			log.Errorf("Connecting to %s", addr)
 			atomic.StoreUint32(ptr, 1)
 		}
 
@@ -143,7 +142,7 @@ func (p *policyPlugin) connStateCb(addr string, state int, err error) {
 			ptr = p.unkConnAttempts
 		}
 		if atomic.LoadUint32(ptr) <= 1 {
-			log.Printf("[ERROR] Failed to connect to %s (%s)", addr, err)
+			log.Errorf("Failed to connect to %s (%s)", addr, err)
 		}
 	}
 }

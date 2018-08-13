@@ -2,7 +2,6 @@ package policy
 
 import (
 	"errors"
-	"log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -133,7 +132,7 @@ func (g *AttrGauge) Start(tickInt time.Duration, chSize int) {
 				case <-timer.C:
 					eCnt := g.tick()
 					if eCnt != 0 {
-						log.Printf("[WARN] Policy metrics: %d queries was skipped", eCnt)
+						log.Warningf("Policy metrics: %d queries was skipped", eCnt)
 					}
 					timer.Reset(tickInt)
 				}
