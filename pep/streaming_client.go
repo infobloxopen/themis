@@ -134,8 +134,15 @@ func (c *streamingClient) Validate(in, out interface{}) error {
 	}
 
 	if c.cache != nil {
-		if b, err := c.cache.Get(string(m.Body)); err == nil {
-			return fillResponse(pb.Msg{Body: b}, out)
+		var b []byte
+		if b, err = c.cache.Get(string(m.Body)); err == nil {
+			err = fillResponse(pb.Msg{Body: b}, out)
+			if err == nil {
+				if c.opts.onCacheHitHandler != nil {
+					c.opts.onCacheHitHandler.Handle(in, out)
+				}
+			}
+			return err
 		}
 	}
 
