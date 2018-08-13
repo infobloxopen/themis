@@ -9,6 +9,16 @@ import (
 	"github.com/infobloxopen/themis/pep"
 )
 
+type pepCacheHitHandler struct{}
+
+func (ch *pepCacheHitHandler) Handle(req interface{}, resp interface{}) {
+	log.Printf("[INFO] PEP responding to PDP request from cache %+v", req)
+}
+
+func newPepCacheHitHandler() *pepCacheHitHandler {
+	return &pepCacheHitHandler{}
+}
+
 // connect establishes connection to PDP server.
 func (p *policyPlugin) connect() error {
 	log.Printf("[DEBUG] Connecting %v", p)
@@ -52,6 +62,10 @@ func (p *policyPlugin) connect() error {
 		if t, ok := p.trace.(trace.Trace); ok {
 			opts = append(opts, pep.WithTracer(t.Tracer()))
 		}
+	}
+
+	if p.conf.log {
+		opts = append(opts, pep.WithOnCacheHitHandler(newPepCacheHitHandler()))
 	}
 
 	p.pdp = pep.NewClient(opts...)

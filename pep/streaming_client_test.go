@@ -10,6 +10,31 @@ import (
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
+type testPepCacheHitHandler struct {
+	t      *testing.T
+	called int
+}
+
+func (ch *testPepCacheHitHandler) Handle(req interface{}, resp interface{}) {
+	if r, ok := req.(decisionRequest); !ok {
+		ch.t.Errorf("expected descisionRequest but got %T", r)
+	} else {
+		if r.Direction != "Any" || r.Policy != "AllPermitPolicy" || r.Domain != "example.com" {
+			ch.t.Errorf("got unexpected response: %s", r)
+		}
+	}
+
+	if r, ok := resp.(*decisionResponse); !ok {
+		ch.t.Errorf("expected *descisionResponse but got %T", r)
+	} else {
+		if r.Effect != pdp.EffectPermit || r.Reason != nil || r.X != "AllPermitRule" {
+			ch.t.Errorf("got unexpected response: %s", r)
+		}
+	}
+
+	ch.called += 1
+}
+
 func TestStreamingClientValidation(t *testing.T) {
 	pdpServer := startTestPDPServer(allPermitPolicy, 5555, t)
 	defer func() {
@@ -30,10 +55,12 @@ func TestStreamingClientValidationWithCache(t *testing.T) {
 		}
 	}()
 
+	ph := testPepCacheHitHandler{t: t}
 	c := NewClient(
 		WithStreams(1),
 		WithMaxRequestSize(128),
 		WithCacheTTL(15*time.Minute),
+		WithOnCacheHitHandler(&ph),
 	)
 	err := c.Connect("127.0.0.1:5555")
 	if err != nil {
@@ -89,6 +116,10 @@ func TestStreamingClientValidationWithCache(t *testing.T) {
 
 	if out.Effect != pdp.EffectPermit || out.Reason != nil || out.X != "AllPermitRule" {
 		t.Errorf("got unexpected response: %s", out)
+	}
+
+	if ph.called != 1 {
+		t.Errorf("expect testPepCacheHitHandler called 1 time but got %d", ph.called)
 	}
 }
 

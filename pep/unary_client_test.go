@@ -72,9 +72,11 @@ func TestUnaryClientValidationWithCache(t *testing.T) {
 		}
 	}()
 
+	ph := testPepCacheHitHandler{t: t}
 	c := NewClient(
 		WithMaxRequestSize(128),
 		WithCacheTTL(15*time.Minute),
+		WithOnCacheHitHandler(&ph),
 	)
 	err := c.Connect("127.0.0.1:5555")
 	if err != nil {
@@ -130,6 +132,10 @@ func TestUnaryClientValidationWithCache(t *testing.T) {
 
 	if out.Effect != pdp.EffectPermit || out.Reason != nil || out.X != "AllPermitRule" {
 		t.Errorf("got unexpected response: %s", out)
+	}
+
+	if ph.called != 1 {
+		t.Errorf("expect testPepCacheHitHandler called 1 time but got %d", ph.called)
 	}
 }
 

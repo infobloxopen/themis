@@ -183,6 +183,16 @@ func WithCacheTTLAndMaxSize(ttl time.Duration, size int) Option {
 	}
 }
 
+type OnCacheHitHandler interface {
+	Handle(req interface{}, resp interface{})
+}
+
+func WithOnCacheHitHandler(h OnCacheHitHandler) Option {
+	return func(o *options) {
+		o.onCacheHitHandler = h
+	}
+}
+
 const (
 	noBalancer = iota
 	roundRobinBalancer
@@ -190,18 +200,19 @@ const (
 )
 
 type options struct {
-	addresses       []string
-	balancer        int
-	tracer          ot.Tracer
-	maxStreams      int
-	connTimeout     time.Duration
-	connStateCb     ConnectionStateNotificationCallback
-	autoRequestSize bool
-	maxRequestSize  uint32
-	noPool          bool
-	cache           bool
-	cacheTTL        time.Duration
-	cacheMaxSize    int
+	addresses         []string
+	balancer          int
+	tracer            ot.Tracer
+	maxStreams        int
+	connTimeout       time.Duration
+	connStateCb       ConnectionStateNotificationCallback
+	autoRequestSize   bool
+	maxRequestSize    uint32
+	noPool            bool
+	cache             bool
+	cacheTTL          time.Duration
+	cacheMaxSize      int
+	onCacheHitHandler OnCacheHitHandler
 }
 
 // NewClient creates client instance using given options.
