@@ -3,7 +3,6 @@ package policy
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"sync/atomic"
@@ -14,6 +13,7 @@ import (
 	dtest "github.com/coredns/coredns/plugin/dnstap/test"
 	"github.com/infobloxopen/themis/pep"
 	"github.com/miekg/dns"
+	logr "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 
 	pb "github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
@@ -804,7 +804,7 @@ type logGrabber struct {
 
 func newLogGrabber() *logGrabber {
 	b := new(bytes.Buffer)
-	log.SetOutput(b)
+	logr.SetOutput(b)
 
 	return &logGrabber{
 		b: b,
@@ -812,7 +812,7 @@ func newLogGrabber() *logGrabber {
 }
 
 func (g *logGrabber) Release() string {
-	log.SetOutput(os.Stderr)
+	logr.SetOutput(os.Stderr)
 
 	return g.b.String()
 }
