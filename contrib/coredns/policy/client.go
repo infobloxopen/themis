@@ -10,7 +10,7 @@ import (
 
 type pepCacheHitHandler struct{}
 
-func (ch *pepCacheHitHandler) Handle(req interface{}, resp interface{}) {
+func (ch *pepCacheHitHandler) Handle(req interface{}, resp interface{}, err error) {
 	log.Printf("[INFO] PEP responding to PDP request from cache %+v", req)
 }
 
