@@ -10,7 +10,7 @@ import (
 
 // connect establishes connection to PDP server.
 func (p *policyPlugin) connect() error {
-	log.Debugf("Connecting %v", p)
+	log.Infof("Connecting %v", p)
 
 	for _, addr := range p.conf.endpoints {
 		p.connAttempts[addr] = new(uint32)
@@ -103,9 +103,9 @@ func (p *policyPlugin) connStateCb(addr string, state int, err error) {
 	switch state {
 	default:
 		if err != nil {
-			log.Debugf("Unknown connection notification %s (%s)", addr, err)
+			log.Infof("Unknown connection notification %s (%s)", addr, err)
 		} else {
-			log.Debugf("Unknown connection notification %s", addr)
+			log.Infof("Unknown connection notification %s", addr)
 		}
 
 	case pep.StreamingConnectionEstablished:
