@@ -15,23 +15,33 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// BucketCnt is how many slices the total counter consists of
+// DefExpire is default period (in seconds) to keep data in counters
 const (
 	BucketCnt = 16
-	FreshCnt  = 10
+	DefExpire = 60
 )
 
 // SlicedCounter stores the counter value both as a single number and as a separate
-// values per second. The sum of values per second is synchronized with total value
-// but not guaranteed to be equal at any moment of time
+// values per quantum period. The sum of values per quantum is synchronized with total
+// value but not guaranteed to be equal at any moment of time
+// freshCnt is how many last slices hold actual (not outdated) data
+// quantum is the time interval (in seconds) corresponding to a single slice
+// freshCnt * quantum = target time period for which data is kept in counters
 type SlicedCounter struct {
 	oldestValid uint32
 	total       uint32
 	buckets     [BucketCnt]uint32
+	freshCnt    uint16
+	quantum     uint16
 }
 
 // NewSlicedCounter creates new SlicedCounter
-func NewSlicedCounter(ut uint32) *SlicedCounter {
-	return &SlicedCounter{oldestValid: ut}
+func NewSlicedCounter(ut uint32, expiry uint16) *SlicedCounter {
+	q, fc := calcQuantum(expiry)
+	sc := &SlicedCounter{freshCnt: fc, quantum: q}
+	sc.oldestValid = sc.ut2qt(ut)
+	return sc
 }
 
 // Total returns the counter value
@@ -42,12 +52,13 @@ func (sc *SlicedCounter) Total() uint32 {
 // Inc increments the latest and total counters. Can be called simultaneously
 // from different goroutines
 func (sc *SlicedCounter) Inc(ut uint32) bool {
+	qt := sc.ut2qt(ut)
 	oldest := atomic.LoadUint32(&sc.oldestValid)
-	if ut-oldest >= BucketCnt {
+	if qt-oldest >= BucketCnt {
 		return false
 	}
 	atomic.AddUint32(&sc.total, 1)
-	atomic.AddUint32(&sc.buckets[ut%BucketCnt], 1)
+	atomic.AddUint32(&sc.buckets[qt%BucketCnt], 1)
 	return true
 }
 
@@ -56,7 +67,7 @@ func (sc *SlicedCounter) Inc(ut uint32) bool {
 // in single goroutine
 func (sc *SlicedCounter) EraseStale(ut uint32) {
 	oldest := atomic.LoadUint32(&sc.oldestValid)
-	stale := ut - FreshCnt
+	stale := sc.ut2qt(ut) - uint32(sc.freshCnt)
 	if stale >= oldest+BucketCnt {
 		oldest = stale - BucketCnt + 1
 		atomic.StoreUint32(&sc.oldestValid, oldest)
@@ -69,6 +80,23 @@ func (sc *SlicedCounter) EraseStale(ut uint32) {
 	}
 }
 
+func (sc *SlicedCounter) ut2qt(ut uint32) uint32 {
+	return ut / uint32(sc.quantum)
+}
+
+func calcQuantum(exp uint16) (q, fc uint16) {
+	maxFreshCnt := uint16(BucketCnt - 2)
+	q = exp / maxFreshCnt
+	if exp%maxFreshCnt != 0 {
+		q++
+	}
+	fc = exp / q
+	if exp%q != 0 {
+		fc++
+	}
+	return
+}
+
 const (
 	AttrGaugeStopped = iota
 	AttrGaugeStarted
@@ -76,7 +104,6 @@ const (
 )
 
 const (
-	DefaultEraseInterval = 500 * time.Millisecond
 	DefaultQueryChanSize = 1000
 )
 
@@ -91,6 +118,7 @@ type AttrGauge struct {
 	timeFunc func() uint32
 	errCnt   uint32
 	state    uint32
+	expire   uint16
 }
 
 // NewAttrGauge constructs new AttrGauge object
@@ -106,6 +134,7 @@ func NewAttrGauge() *AttrGauge {
 		qChan:    make(chan pdp.AttributeAssignment),
 		nameChan: make(chan string),
 		timeFunc: unixTime,
+		expire:   DefExpire,
 	}
 }
 
@@ -194,7 +223,7 @@ func (g *AttrGauge) synchInc(attr pdp.AttributeAssignment) {
 	v := serializeOrPanic(attr)
 	sc := g.perAttr[id][v]
 	if sc == nil {
-		sc = NewSlicedCounter(ut)
+		sc = NewSlicedCounter(ut, g.expire)
 		g.perAttr[id][v] = sc
 	}
 	if sc.Inc(ut) {
@@ -259,7 +288,8 @@ func (pp *policyPlugin) SetupMetrics(c *caddy.Controller) error {
 					m.MustRegister(globalAttrGauge.pgv)
 					// The globalAttrGauge is started once and is not stopped
 					// until process termination
-					globalAttrGauge.Start(DefaultEraseInterval, DefaultQueryChanSize)
+					q, _ := calcQuantum(globalAttrGauge.expire)
+					globalAttrGauge.Start(time.Duration(q)*time.Second, DefaultQueryChanSize)
 				})
 				globalAttrGauge.AddAttributes(attrNames...)
 				pp.attrGauges = globalAttrGauge
