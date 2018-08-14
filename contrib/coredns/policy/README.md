@@ -14,6 +14,7 @@ policy {
     streams COUNT
     transfer ATTR_1, ATTR_2, ... ATTR_N
     dnstap ATTR_1, ATTR_2, ... ATTR_N
+    metrics ATTR_1, ATTR_2, ... ATTR_N
     passthrough SUFFIX_1, SUFFIX_2, ... SUFFIX_N
     log
     max_request_size [[auto] SIZE]
@@ -46,6 +47,12 @@ Option transfer defines set of attributes (from domain validation response) that
 
 Option dnstap defines attributes to be included in extra field of DNStap message if received from PDP.
 
+Option metrics defines the attributes for which metric counters to be generated. The metric counters hold the number of recently received queries per attribute/value and look like
+~~~ txt
+coredns_policy_recent_queries{attribute="uid",value="9e868487da91153c"} 153
+~~~
+The counter is decremented when queries get expired. The default expiration period is 1 minute. If no new query is received during the expiration period for the given attribute/value then the related counter is removed to save memory
+
 Option passthrough defines set of domain name suffixes, domain that contains one of these is resolved without validation, each suffix should have dot at the end.
 
 Option connection_timeout sets timeout for query validation when no PDP server are available. Negative value or "no" keyword means wait forever. This is default behavior. With zero timeout validation fails instantly if there is no PDP servers. The option works only if gRPC streams are greater than 0.
@@ -73,6 +80,7 @@ policy {
     streams 100
     transfer gid uid
     dnstap pid
+    metrics uid
     passthrough mycompanyname.com. mycompanyname.org.
     log
 }

@@ -16,7 +16,7 @@ import (
 
 func TestSlicedCounterInc(t *testing.T) {
 	var utime uint32 = 100
-	sc := NewSlicedCounter(100)
+	sc := NewSlicedCounter(100, DefExpire)
 
 	var wg sync.WaitGroup
 	wg.Add(10)
@@ -25,12 +25,12 @@ func TestSlicedCounterInc(t *testing.T) {
 			for {
 				ut := atomic.LoadUint32(&utime)
 				if !sc.Inc(ut) {
-					if ut < 100+BucketCnt {
+					if ut < 100+uint32(BucketCnt*sc.quantum) {
 						t.Errorf("Inc unexpectedly returned false")
 					}
 					break
 				}
-				if ut >= 100+BucketCnt {
+				if ut >= 100+uint32(BucketCnt*sc.quantum) {
 					t.Errorf("Inc unexpectedly returned true")
 					break
 				}
@@ -39,7 +39,7 @@ func TestSlicedCounterInc(t *testing.T) {
 			wg.Done()
 		}()
 	}
-	for i := 0; i <= BucketCnt; i++ {
+	for i := 0; i <= int(BucketCnt*sc.quantum); i++ {
 		atomic.AddUint32(&utime, 1)
 		time.Sleep(time.Microsecond)
 	}
@@ -49,7 +49,7 @@ func TestSlicedCounterInc(t *testing.T) {
 }
 
 func TestNoStale(t *testing.T) {
-	sc := newTestSlicedCounter(100)
+	sc := newTestSlicedCounter(100, 10)
 	sc.EraseStale(105)
 
 	for i := 0; i < BucketCnt; i++ {
@@ -62,7 +62,7 @@ func TestNoStale(t *testing.T) {
 }
 
 func Test6Stale(t *testing.T) {
-	sc := newTestSlicedCounter(100)
+	sc := newTestSlicedCounter(100, 10)
 	sc.EraseStale(115)
 
 	for i := 0; i < 4; i++ {
@@ -84,8 +84,31 @@ func Test6Stale(t *testing.T) {
 	checkTotal(t, sc)
 }
 
+func TestFreshAndQuantum(t *testing.T) {
+	sc := newTestSlicedCounter(100, 60)
+	sc.EraseStale(175)
+
+	for i := 0; i < 4; i++ {
+		if sc.buckets[i] != uint32(i+10) {
+			t.Errorf("bucket[%d] unexpectedly was erased", i)
+		}
+	}
+	for i := 4; i < 8; i++ {
+		if sc.buckets[i] != 0 {
+			t.Errorf("bucket[%d] unexpectedly was not erased", i)
+		}
+	}
+	for i := 8; i < 16; i++ {
+		if sc.buckets[i] != uint32(i+10) {
+			t.Errorf("bucket[%d] unexpectedly was erased", i)
+		}
+	}
+
+	checkTotal(t, sc)
+}
+
 func TestAllStale(t *testing.T) {
-	sc := newTestSlicedCounter(100)
+	sc := newTestSlicedCounter(100, 10)
 	sc.EraseStale(130)
 
 	for i := 0; i < BucketCnt; i++ {
@@ -98,7 +121,7 @@ func TestAllStale(t *testing.T) {
 }
 
 func TestIncVsAllStale(t *testing.T) {
-	sc := newTestSlicedCounter(100)
+	sc := newTestSlicedCounter(100, 10)
 	var testTime uint32 = 140
 	var utime uint32 = testTime
 
@@ -122,14 +145,14 @@ func TestIncVsAllStale(t *testing.T) {
 	atomic.AddUint32(&utime, 1)
 	wg.Wait()
 
-	if sc.buckets[utime%BucketCnt] != 10 {
-		t.Errorf("Unexpected counter after Erase, expected 10, got %d", sc.buckets[utime%BucketCnt])
+	if bc := sc.buckets[sc.ut2qt(utime)%BucketCnt]; bc != 10 {
+		t.Errorf("Unexpected counter after Erase, expected 10, got %d", bc)
 	}
 	checkTotal(t, sc)
 }
 
 func TestIncVsPartiallyStale(t *testing.T) {
-	sc := newTestSlicedCounter(100)
+	sc := newTestSlicedCounter(100, 10)
 	var testTime uint32 = 114
 	var utime uint32 = testTime
 
@@ -156,6 +179,22 @@ func TestIncVsPartiallyStale(t *testing.T) {
 	wg.Wait()
 
 	checkTotal(t, sc)
+}
+
+func TestCalcQuantum(t *testing.T) {
+	for i := uint16(1); i < 1000; i++ {
+		q, fc := calcQuantum(i)
+		if q < 1 {
+			t.Errorf("Inappropriate quantum: exp=%d, q=%d, fc=%d", i, q, fc)
+		}
+		if fc < 1 || fc > BucketCnt-2 {
+			t.Errorf("Inappropriate freshCnt: exp=%d, q=%d, fc=%d", i, q, fc)
+		}
+		realExp := fc * q
+		if realExp < i || realExp >= i+q {
+			t.Errorf("Inappropriate realExp: exp=%d, q=%d, fc=%d", i, q, fc)
+		}
+	}
 }
 
 // ============= AttrGauge tests ==============
@@ -346,8 +385,8 @@ func TestAttrGaugeAddAttributeAgain(t *testing.T) {
 
 // ============== utility functions ===============
 
-func newTestSlicedCounter(ut uint32) *SlicedCounter {
-	sc := NewSlicedCounter(ut)
+func newTestSlicedCounter(ut uint32, exp uint16) *SlicedCounter {
+	sc := NewSlicedCounter(ut, exp)
 	for i := 0; i < BucketCnt; i++ {
 		sc.buckets[i] = uint32(i + 10)
 		sc.total += sc.buckets[i]
@@ -389,6 +428,7 @@ func newTestAttrGauge() *AttrGauge {
 	ag := NewAttrGauge()
 	ag.addAttribute("test_attr")
 	ag.timeFunc = testTime
+	ag.expire = 10
 	return ag
 }
 
@@ -441,8 +481,4 @@ func checkVal(err error, gVal, scVal, expVal uint32) error {
 		return fmt.Errorf("gauge value mismatch, gauge=%d, slicedCounter=%d", gVal, scVal)
 	}
 	return nil
-}
-
-func resetGlobals() {
-
 }
