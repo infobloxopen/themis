@@ -184,7 +184,7 @@ func WithCacheTTLAndMaxSize(ttl time.Duration, size int) Option {
 }
 
 type OnCacheHitHandler interface {
-	Handle(req interface{}, resp interface{})
+	Handle(req interface{}, resp interface{}, err error)
 }
 
 func WithOnCacheHitHandler(h OnCacheHitHandler) Option {

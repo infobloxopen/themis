@@ -15,7 +15,11 @@ type testPepCacheHitHandler struct {
 	called int
 }
 
-func (ch *testPepCacheHitHandler) Handle(req interface{}, resp interface{}) {
+func (ch *testPepCacheHitHandler) Handle(req interface{}, resp interface{}, err error) {
+	if err != nil {
+		ch.t.Errorf("expected no error but got %s", err)
+	}
+
 	if r, ok := req.(decisionRequest); !ok {
 		ch.t.Errorf("expected descisionRequest but got %T", r)
 	} else {

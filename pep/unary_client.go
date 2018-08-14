@@ -151,9 +151,11 @@ func (c *unaryClient) Validate(in, out interface{}) error {
 		var b []byte
 		if b, err = c.cache.Get(string(req.Body)); err == nil {
 			err = fillResponse(pb.Msg{Body: b}, out)
-			if err == nil {
-				if c.opts.onCacheHitHandler != nil {
-					c.opts.onCacheHitHandler.Handle(in, out)
+			if c.opts.onCacheHitHandler != nil {
+				if err != nil {
+					c.opts.onCacheHitHandler.Handle(in, b, err)
+				} else {
+					c.opts.onCacheHitHandler.Handle(in, out, nil)
 				}
 			}
 			return err
