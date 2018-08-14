@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"testing"
-	"time"
 
 	"github.com/coredns/coredns/plugin/dnstap"
 	"github.com/coredns/coredns/plugin/dnstap/taprw"
@@ -37,11 +36,10 @@ func TestSendCRExtraNoMsg(t *testing.T) {
 		Tapper:         &trapper,
 	}
 
-	io := newIORoutine(100 * time.Millisecond)
+	io := newIORoutine()
 	tapIO := newPolicyDnstapSender(io)
 	tapIO.sendCRExtraMsg(tapRW, nil, nil)
-	_, ok = <-io.dnstapChan
-	if ok {
+	if !io.isEmpty() {
 		t.Errorf("Unexpected msg received")
 	}
 }
@@ -71,11 +69,10 @@ func TestSendCRExtraInvalidMsg(t *testing.T) {
 	}
 	tapRW.WriteMsg(&msg)
 
-	io := newIORoutine(100 * time.Millisecond)
+	io := newIORoutine()
 	tapIO := newPolicyDnstapSender(io)
 	tapIO.sendCRExtraMsg(tapRW, &msg, nil)
-	_, ok = <-io.dnstapChan
-	if ok {
+	if !io.isEmpty() {
 		t.Errorf("Unexpected msg received")
 	}
 }
@@ -105,7 +102,7 @@ func TestSendCRExtraMsg(t *testing.T) {
 	}
 	tapRW.WriteMsg(&msg)
 
-	io := newIORoutine(5000 * time.Millisecond)
+	io := newIORoutine()
 	tapIO := newPolicyDnstapSender(io)
 
 	testAttrHolder := &attrHolder{
@@ -164,30 +161,23 @@ func TestRestCqCr(t *testing.T) {
 }
 
 type testIORoutine struct {
-	dnstapChan chan tap.Dnstap
+	msg tap.Dnstap
 }
 
-func newIORoutine(timeout time.Duration) testIORoutine {
-	ch := make(chan tap.Dnstap, 1)
-	tapIO := testIORoutine{dnstapChan: ch}
-	// close channel by timeout to prevent checker from waiting forever
-	go func() {
-		time.Sleep(timeout)
-		close(ch)
-	}()
-	return tapIO
+func newIORoutine() *testIORoutine {
+	return &testIORoutine{}
 }
 
-func (tapIO testIORoutine) Dnstap(msg tap.Dnstap) {
-	tapIO.dnstapChan <- msg
+func (t *testIORoutine) Dnstap(msg tap.Dnstap) {
+	t.msg = msg
 }
 
-func assertCRExtraResult(t *testing.T, desc string, io testIORoutine, eMsg *dns.Msg, e ...*pb.DnstapAttribute) bool {
-	dnstapMsg, ok := <-io.dnstapChan
-	if !ok {
-		t.Errorf("Receiving Dnstap for %q message was timed out", desc)
-		return false
-	}
+func (t *testIORoutine) isEmpty() bool {
+	return t.msg.Message == nil || t.msg.Type == nil
+}
+
+func assertCRExtraResult(t *testing.T, desc string, io *testIORoutine, eMsg *dns.Msg, e ...*pb.DnstapAttribute) bool {
+	dnstapMsg := io.msg
 
 	extra := &pb.Extra{}
 	err := proto.Unmarshal(dnstapMsg.Extra, extra)
@@ -196,7 +186,7 @@ func assertCRExtraResult(t *testing.T, desc string, io testIORoutine, eMsg *dns.
 		return false
 	}
 
-	ok = assertDnstapAttributes(t, desc, extra.GetAttrs(), e...)
+	ok := assertDnstapAttributes(t, desc, extra.GetAttrs(), e...)
 	ok = assertCRMessage(t, desc, dnstapMsg.Message, eMsg) && ok
 	return ok
 }

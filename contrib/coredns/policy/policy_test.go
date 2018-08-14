@@ -549,7 +549,7 @@ func TestPolicyPluginServeDNSWithDnstap(t *testing.T) {
 	}
 	p.next = mp
 
-	io := newIORoutine(5000 * time.Millisecond)
+	io := newIORoutine()
 	p.tapIO = newPolicyDnstapSender(io)
 
 	g := newLogGrabber()
