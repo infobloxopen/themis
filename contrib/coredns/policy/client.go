@@ -11,7 +11,7 @@ import (
 type pepCacheHitHandler struct{}
 
 func (ch *pepCacheHitHandler) Handle(req interface{}, resp interface{}, err error) {
-	log.Printf("[INFO] PEP responding to PDP request from cache %+v", req)
+	log.Infof("PEP responding to PDP request from cache %+v", req)
 }
 
 func newPepCacheHitHandler() *pepCacheHitHandler {
