@@ -101,9 +101,9 @@ func TestSendCRExtraMsg(t *testing.T) {
 	tapIO := newPolicyDnstapSender(io)
 
 	dnstapAttrs := []*pb.DnstapAttribute{
-		&pb.DnstapAttribute{Id: attrNameSourceIP, Value: "10.0.0.7"},
-		&pb.DnstapAttribute{Id: "option", Value: "option"},
-		&pb.DnstapAttribute{Id: "dnstap", Value: "val"},
+		{Id: attrNameSourceIP, Value: "10.0.0.7"},
+		{Id: "option", Value: "option"},
+		{Id: "dnstap", Value: "val"},
 	}
 
 	tapIO.sendCRExtraMsg(tapRW, &msg, dnstapAttrs)
