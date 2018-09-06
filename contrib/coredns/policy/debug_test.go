@@ -4,6 +4,7 @@ import (
 	"net"
 	"testing"
 
+	"github.com/infobloxopen/themis/contrib/coredns/policy/testutil"
 	"github.com/infobloxopen/themis/pdp"
 	"github.com/miekg/dns"
 )
@@ -12,13 +13,13 @@ func TestPatchDebugMsg(t *testing.T) {
 	p := newPolicyPlugin()
 	p.conf.debugSuffix = "debug.local."
 
-	m := makeTestDNSMsg("example.com.debug.local", dns.TypeTXT, dns.ClassCHAOS)
+	m := testutil.MakeTestDNSMsg("example.com.debug.local", dns.TypeTXT, dns.ClassCHAOS)
 	patched := p.patchDebugMsg(m)
 	if !patched {
 		t.Error("expected patched message")
 	}
 
-	assertDNSMessage(t, "patchDebugMsg", 0, m, 0,
+	testutil.AssertDNSMessage(t, "patchDebugMsg", 0, m, 0,
 		";; opcode: QUERY, status: NOERROR, id: 0\n"+
 			";; flags:; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
 			";; QUESTION SECTION:\n"+
@@ -31,18 +32,18 @@ func TestPatchDebugMsg(t *testing.T) {
 		t.Error("expected NOT patched message")
 	}
 
-	assertDNSMessage(t, "patchDebugMsg(nil)", 0, m, 0,
+	testutil.AssertDNSMessage(t, "patchDebugMsg(nil)", 0, m, 0,
 		";; opcode: QUERY, status: NOERROR, id: 0\n"+
 			";; flags:; QUERY: 0, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0\n",
 	)
 
-	m = makeTestDNSMsg("example.com", dns.TypeTXT, dns.ClassCHAOS)
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeTXT, dns.ClassCHAOS)
 	patched = p.patchDebugMsg(m)
 	if patched {
 		t.Error("expected NOT patched message")
 	}
 
-	assertDNSMessage(t, "patchDebugMsg(nil)", 0, m, 0,
+	testutil.AssertDNSMessage(t, "patchDebugMsg(nil)", 0, m, 0,
 		";; opcode: QUERY, status: NOERROR, id: 0\n"+
 			";; flags:; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
 			";; QUESTION SECTION:\n"+
@@ -54,13 +55,13 @@ func TestSetDebugQueryPassthroughAnswer(t *testing.T) {
 	p := newPolicyPlugin()
 	p.conf.debugSuffix = "debug.local."
 
-	m := makeTestDNSMsg("example.passthrough.local", dns.TypeA, dns.ClassINET)
-	w := newTestAddressedNonwriter("192.0.2.1")
+	m := testutil.MakeTestDNSMsg("example.passthrough.local", dns.TypeA, dns.ClassINET)
+	w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	ah := newAttrHolderWithDnReq(w, m, nil, nil)
 
 	p.setDebugQueryPassthroughAnswer(ah, m)
-	assertDNSMessage(t, "setDebugQueryPassthroughAnswer", 0, m, 0,
+	testutil.AssertDNSMessage(t, "setDebugQueryPassthroughAnswer", 0, m, 0,
 		";; opcode: QUERY, status: NOERROR, id: 0\n"+
 			";; flags:; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
 			";; QUESTION SECTION:\n"+
@@ -76,8 +77,8 @@ func TestSetDebugQueryAnswer(t *testing.T) {
 	p.conf.debugSuffix = "debug.local."
 
 	t.Run("OnDomainResponse(RcodeSuccess)", func(t *testing.T) {
-		m := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-		w := newTestAddressedNonwriter("192.0.2.1")
+		m := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+		w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 		ah := newAttrHolderWithDnReq(w, m, nil, nil)
 		ah.addDnRes(&pdp.Response{
@@ -88,7 +89,7 @@ func TestSetDebugQueryAnswer(t *testing.T) {
 		}, nil)
 
 		p.setDebugQueryAnswer(ah, m, dns.RcodeSuccess)
-		assertDNSMessage(t, "setDebugQueryAnswer", 0, m, 0,
+		testutil.AssertDNSMessage(t, "setDebugQueryAnswer", 0, m, 0,
 			";; opcode: QUERY, status: NOERROR, id: 0\n"+
 				";; flags:; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
 				";; QUESTION SECTION:\n"+
@@ -100,8 +101,8 @@ func TestSetDebugQueryAnswer(t *testing.T) {
 	})
 
 	t.Run("OnDomainResponse(RcodeNameError)", func(t *testing.T) {
-		m := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-		w := newTestAddressedNonwriter("192.0.2.1")
+		m := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+		w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 		ah := newAttrHolderWithDnReq(w, m, nil, nil)
 		ah.addDnRes(&pdp.Response{
@@ -109,7 +110,7 @@ func TestSetDebugQueryAnswer(t *testing.T) {
 		}, nil)
 
 		p.setDebugQueryAnswer(ah, m, dns.RcodeNameError)
-		assertDNSMessage(t, "setDebugQueryAnswer", 0, m, 0,
+		testutil.AssertDNSMessage(t, "setDebugQueryAnswer", 0, m, 0,
 			";; opcode: QUERY, status: NOERROR, id: 0\n"+
 				";; flags:; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
 				";; QUESTION SECTION:\n"+
@@ -121,8 +122,8 @@ func TestSetDebugQueryAnswer(t *testing.T) {
 	})
 
 	t.Run("OnDomainResponse(RcodeServerFailure)", func(t *testing.T) {
-		m := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-		w := newTestAddressedNonwriter("192.0.2.1")
+		m := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+		w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 		ah := newAttrHolderWithDnReq(w, m, nil, nil)
 		ah.addDnRes(&pdp.Response{
@@ -130,7 +131,7 @@ func TestSetDebugQueryAnswer(t *testing.T) {
 		}, nil)
 
 		p.setDebugQueryAnswer(ah, m, dns.RcodeServerFailure)
-		assertDNSMessage(t, "setDebugQueryAnswer", 0, m, 0,
+		testutil.AssertDNSMessage(t, "setDebugQueryAnswer", 0, m, 0,
 			";; opcode: QUERY, status: NOERROR, id: 0\n"+
 				";; flags:; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
 				";; QUESTION SECTION:\n"+
@@ -142,8 +143,8 @@ func TestSetDebugQueryAnswer(t *testing.T) {
 	})
 
 	t.Run("OnDomainResponse(-1)", func(t *testing.T) {
-		m := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-		w := newTestAddressedNonwriter("192.0.2.1")
+		m := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+		w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 		ah := newAttrHolderWithDnReq(w, m, nil, nil)
 		ah.addDnRes(&pdp.Response{
@@ -151,7 +152,7 @@ func TestSetDebugQueryAnswer(t *testing.T) {
 		}, nil)
 
 		p.setDebugQueryAnswer(ah, m, -1)
-		assertDNSMessage(t, "setDebugQueryAnswer", 0, m, 0,
+		testutil.AssertDNSMessage(t, "setDebugQueryAnswer", 0, m, 0,
 			";; opcode: QUERY, status: NOERROR, id: 0\n"+
 				";; flags:; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
 				";; QUESTION SECTION:\n"+
@@ -163,8 +164,8 @@ func TestSetDebugQueryAnswer(t *testing.T) {
 	})
 
 	t.Run("OnIPResponse", func(t *testing.T) {
-		m := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-		w := newTestAddressedNonwriter("192.0.2.1")
+		m := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+		w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 		ah := newAttrHolderWithDnReq(w, m, nil, nil)
 		ah.addDnRes(&pdp.Response{
@@ -180,7 +181,7 @@ func TestSetDebugQueryAnswer(t *testing.T) {
 		})
 
 		p.setDebugQueryAnswer(ah, m, dns.RcodeSuccess)
-		assertDNSMessage(t, "setDebugQueryAnswer", 0, m, 0,
+		testutil.AssertDNSMessage(t, "setDebugQueryAnswer", 0, m, 0,
 			";; opcode: QUERY, status: NOERROR, id: 0\n"+
 				";; flags:; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
 				";; QUESTION SECTION:\n"+
