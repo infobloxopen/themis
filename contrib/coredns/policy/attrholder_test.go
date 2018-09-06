@@ -10,6 +10,7 @@ import (
 	"github.com/miekg/dns"
 
 	pb "github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
+	"github.com/infobloxopen/themis/contrib/coredns/policy/testutil"
 	"github.com/infobloxopen/themis/pdp"
 )
 
@@ -43,25 +44,25 @@ func TestNewAttrHolderWithDnReq(t *testing.T) {
 		},
 	}
 
-	m := makeTestDNSMsgWithEdns0("example.com", dns.TypeA, dns.ClassINET,
-		newEdns0(
-			newEdns0Local(0xfffd,
+	m := testutil.MakeTestDNSMsgWithEdns0("example.com", dns.TypeA, dns.ClassINET,
+		testutil.NewEdns0(
+			testutil.NewEdns0Local(0xfffd,
 				[]byte{
 					0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
 					0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf,
 				},
 			),
-			newEdns0Local(0xfffd, []byte{}),
-			newEdns0Local(0xfffe, []byte("test")),
-			newEdns0Local(0xfffc, []byte(net.ParseIP("2001:db8::1"))),
+			testutil.NewEdns0Local(0xfffd, []byte{}),
+			testutil.NewEdns0Local(0xfffe, []byte("test")),
+			testutil.NewEdns0Local(0xfffc, []byte(net.ParseIP("2001:db8::1"))),
 		),
 	)
-	w := newTestAddressedNonwriter("192.0.2.1")
+	w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	ah := newAttrHolderWithDnReq(w, m, optsMap, nil)
 	pdp.AssertAttributeAssignments(t, "newAttrHolderWithDnReq", ah.dnReq,
 		pdp.MakeStringAssignment(attrNameType, typeValueQuery),
-		pdp.MakeDomainAssignment(attrNameDomainName, makeTestDomain(dns.Fqdn("example.com"))),
+		pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeTestDomain(dns.Fqdn("example.com"))),
 		pdp.MakeStringAssignment(attrNameDNSQtype, strconv.FormatUint(uint64(dns.TypeA), 16)),
 		pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("2001:db8::1")),
 		pdp.MakeStringAssignment("low", "0001020304050607"),
@@ -69,25 +70,25 @@ func TestNewAttrHolderWithDnReq(t *testing.T) {
 		pdp.MakeStringAssignment("byte", "test"),
 	)
 
-	m = makeTestDNSMsgWithEdns0("example.com", dns.TypeA, dns.ClassINET,
-		newEdns0(
-			newEdns0Local(0xfffd,
+	m = testutil.MakeTestDNSMsgWithEdns0("example.com", dns.TypeA, dns.ClassINET,
+		testutil.NewEdns0(
+			testutil.NewEdns0Local(0xfffd,
 				[]byte{
 					0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
 					0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf,
 				},
 			),
-			newEdns0Local(0xfffd, []byte{}),
-			newEdns0Local(0xfffe, []byte("test")),
-			newEdns0Local(0xfffc, []byte(net.ParseIP("2001:db8::1"))),
+			testutil.NewEdns0Local(0xfffd, []byte{}),
+			testutil.NewEdns0Local(0xfffe, []byte("test")),
+			testutil.NewEdns0Local(0xfffc, []byte(net.ParseIP("2001:db8::1"))),
 		),
 	)
-	w = newTestAddressedNonwriter("example.com:53")
+	w = testutil.NewTestAddressedNonwriter("example.com:53")
 
 	ah = newAttrHolderWithDnReq(w, m, optsMap, nil)
 	pdp.AssertAttributeAssignments(t, "newAttrHolderWithDnReq(notIPRemoteAddr)", ah.dnReq,
 		pdp.MakeStringAssignment(attrNameType, typeValueQuery),
-		pdp.MakeDomainAssignment(attrNameDomainName, makeTestDomain(dns.Fqdn("example.com"))),
+		pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeTestDomain(dns.Fqdn("example.com"))),
 		pdp.MakeStringAssignment(attrNameDNSQtype, strconv.FormatUint(uint64(dns.TypeA), 16)),
 		pdp.MakeStringAssignment("low", "0001020304050607"),
 		pdp.MakeStringAssignment("high", "08090a0b0c0d0e0f"),
@@ -95,15 +96,15 @@ func TestNewAttrHolderWithDnReq(t *testing.T) {
 		pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("2001:db8::1")),
 	)
 
-	m = makeTestDNSMsg("...", dns.TypeA, dns.ClassINET)
-	assertPanicWithError(t, "newAttrHolderWithDnReq(invalidDomainName)", func() {
+	m = testutil.MakeTestDNSMsg("...", dns.TypeA, dns.ClassINET)
+	testutil.AssertPanicWithError(t, "newAttrHolderWithDnReq(invalidDomainName)", func() {
 		newAttrHolderWithDnReq(w, m, nil, nil)
 	}, "Can't treat %q as domain name: %s", "...", domain.ErrEmptyLabel)
 }
 
 func TestAddIpReq(t *testing.T) {
-	m := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-	w := newTestAddressedNonwriter("192.0.2.1")
+	m := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	custAttrs := map[string]custAttr{
 		"trans": custAttrTransfer,
@@ -112,7 +113,7 @@ func TestAddIpReq(t *testing.T) {
 	ah := newAttrHolderWithDnReq(w, m, nil, nil)
 	pdp.AssertAttributeAssignments(t, "newAttrHolderWithDnReq - dnReq", ah.dnReq,
 		pdp.MakeStringAssignment(attrNameType, typeValueQuery),
-		pdp.MakeDomainAssignment(attrNameDomainName, makeTestDomain(dns.Fqdn("example.com"))),
+		pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeTestDomain(dns.Fqdn("example.com"))),
 		pdp.MakeStringAssignment(attrNameDNSQtype, strconv.FormatUint(uint64(dns.TypeA), 16)),
 		pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.1")),
 	)
@@ -215,13 +216,13 @@ func TestActionDomainResponse(t *testing.T) {
 		},
 	}
 
-	r := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-	w := newTestAddressedNonwriter("192.0.2.1")
+	r := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 	for i, test := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			ah := newAttrHolderWithDnReq(w, r, nil, nil)
 
-			g := newLogGrabber()
+			g := testutil.NewLogGrabber()
 			ah.addDnRes(test.res, nil)
 			logs := g.Release()
 
@@ -316,14 +317,14 @@ func TestActionIpResponse(t *testing.T) {
 		},
 	}
 
-	r := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-	w := newTestAddressedNonwriter("192.0.2.1")
+	r := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 	for i, test := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			ah := newAttrHolderWithDnReq(w, r, nil, nil)
 			ah.action = test.initAction
 
-			g := newLogGrabber()
+			g := testutil.NewLogGrabber()
 			ah.addIPRes(test.res)
 			logs := g.Release()
 
@@ -350,8 +351,8 @@ func TestAddResponse(t *testing.T) {
 	}
 
 	opts := []*dns.OPT{
-		newEdns0(
-			newEdns0Local(0xfffe, []byte("edns1Val")),
+		testutil.NewEdns0(
+			testutil.NewEdns0Local(0xfffe, []byte("edns1Val")),
 		),
 	}
 
@@ -628,9 +629,9 @@ func TestAddResponse(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			w := newTestAddressedNonwriter(fmt.Sprintf("192.0.2.%d", i+1))
+			w := testutil.NewTestAddressedNonwriter(fmt.Sprintf("192.0.2.%d", i+1))
 			if test.dnRes != nil {
-				r := makeTestDNSMsgWithEdns0("example.com", dns.TypeA, dns.ClassINET, copyEdns0(test.opts...)...)
+				r := testutil.MakeTestDNSMsgWithEdns0("example.com", dns.TypeA, dns.ClassINET, testutil.CopyEdns0(test.opts...)...)
 				ah := newAttrHolderWithDnReq(w, r, optsMap, nil)
 				ah.addDnRes(test.resp, custAttrs)
 
@@ -659,7 +660,7 @@ func TestAddResponse(t *testing.T) {
 			}
 
 			if test.ipRes != nil {
-				r := makeTestDNSMsgWithEdns0("example.com", dns.TypeA, dns.ClassINET, copyEdns0(test.opts...)...)
+				r := testutil.MakeTestDNSMsgWithEdns0("example.com", dns.TypeA, dns.ClassINET, testutil.CopyEdns0(test.opts...)...)
 				ah := newAttrHolderWithDnReq(w, r, optsMap, nil)
 				ah.addIPRes(test.resp)
 
@@ -700,12 +701,12 @@ func TestMakeDnstapReport(t *testing.T) {
 		},
 	}
 
-	m := makeTestDNSMsgWithEdns0("example.com", dns.TypeA, dns.ClassINET,
-		newEdns0(
-			newEdns0Local(0xfffe, []byte("ednsVal")),
+	m := testutil.MakeTestDNSMsgWithEdns0("example.com", dns.TypeA, dns.ClassINET,
+		testutil.NewEdns0(
+			testutil.NewEdns0Local(0xfffe, []byte("ednsVal")),
 		),
 	)
-	w := newTestAddressedNonwriter("192.0.2.1")
+	w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	custAttrs := map[string]custAttr{
 		"edns":   custAttrEdns,
@@ -716,7 +717,7 @@ func TestMakeDnstapReport(t *testing.T) {
 	ah := newAttrHolderWithDnReq(w, m, optsMap, nil)
 	pdp.AssertAttributeAssignments(t, "newAttrHolderWithDnReq - dnReq", ah.dnReq,
 		pdp.MakeStringAssignment(attrNameType, typeValueQuery),
-		pdp.MakeDomainAssignment(attrNameDomainName, makeTestDomain(dns.Fqdn("example.com"))),
+		pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeTestDomain(dns.Fqdn("example.com"))),
 		pdp.MakeStringAssignment(attrNameDNSQtype, strconv.FormatUint(uint64(dns.TypeA), 16)),
 		pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.1")),
 		pdp.MakeStringAssignment("edns", "ednsVal"),
@@ -774,14 +775,14 @@ func TestMakeDnstapReport(t *testing.T) {
 		pdp.MakeStringAssignment("dnstap", "dnstapVal"),
 	)
 
-	assertDnstapAttributes(t, "makeDnstapReport", ah.makeDnstapReport(),
+	testutil.AssertDnstapAttributes(t, "makeDnstapReport", ah.makeDnstapReport(),
 		&pb.DnstapAttribute{Id: attrNameSourceIP, Value: "192.0.2.1"},
 		&pb.DnstapAttribute{Id: "edns", Value: "ednsVal"},
 		&pb.DnstapAttribute{Id: "dnstap", Value: "dnstapVal"},
 	)
 
 	ah.action = actionLog
-	assertDnstapAttributes(t, "makeDnstapReport(full)", ah.makeDnstapReport(),
+	testutil.AssertDnstapAttributes(t, "makeDnstapReport(full)", ah.makeDnstapReport(),
 		&pb.DnstapAttribute{Id: attrNameDomainName, Value: dns.Fqdn("example.com")},
 		&pb.DnstapAttribute{Id: attrNameDNSQtype, Value: strconv.FormatUint(uint64(dns.TypeA), 16)},
 		&pb.DnstapAttribute{Id: attrNameSourceIP, Value: "192.0.2.1"},
@@ -793,31 +794,4 @@ func TestMakeDnstapReport(t *testing.T) {
 		&pb.DnstapAttribute{Id: attrNamePolicyAction, Value: dnstapActionValues[actionLog]},
 		&pb.DnstapAttribute{Id: attrNameType, Value: typeValueResponse},
 	)
-}
-
-func makeTestDomain(s string) domain.Name {
-	dn, err := domain.MakeNameFromString(s)
-	if err != nil {
-		panic(err)
-	}
-
-	return dn
-}
-
-func assertPanicWithError(t *testing.T, desc string, f func(), format string, args ...interface{}) {
-	defer func() {
-		if r := recover(); r != nil {
-			e := fmt.Sprintf(format, args...)
-			err, ok := r.(error)
-			if !ok {
-				t.Errorf("excpected error %q on panic for %q but got %T (%#v)", e, desc, r, r)
-			} else if err.Error() != e {
-				t.Errorf("excpected error %q on panic for %q but got %q", e, desc, r)
-			}
-		} else {
-			t.Errorf("expected panic %q for %q", fmt.Sprintf(format, args...), desc)
-		}
-	}()
-
-	f()
 }

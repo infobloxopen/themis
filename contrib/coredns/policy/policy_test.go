@@ -11,6 +11,7 @@ import (
 
 	"github.com/coredns/coredns/plugin/dnstap/taprw"
 	dtest "github.com/coredns/coredns/plugin/dnstap/test"
+	"github.com/infobloxopen/themis/contrib/coredns/policy/testutil"
 	"github.com/infobloxopen/themis/pep"
 	"github.com/miekg/dns"
 	logr "github.com/sirupsen/logrus"
@@ -37,14 +38,14 @@ func TestPolicyPluginName(t *testing.T) {
 
 func TestPolicyPluginServeDNS(t *testing.T) {
 	endpoint := "127.0.0.1:5555"
-	srv := startPDPServer(t, serveDNSTestPolicy, endpoint)
+	srv := testutil.StartPDPServer(t, serveDNSTestPolicy, endpoint)
 	defer func() {
 		if logs := srv.Stop(); len(logs) > 0 {
 			t.Logf("server logs:\n%s", logs)
 		}
 	}()
 
-	if err := waitForPortOpened(endpoint); err != nil {
+	if err := testutil.WaitForPortOpened(endpoint); err != nil {
 		t.Fatalf("can't connect to PDP server: %s", err)
 	}
 
@@ -70,8 +71,8 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 	}
 	defer p.closeConn()
 
-	m := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-	w := newTestAddressedNonwriter("192.0.2.1")
+	m := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	g = newLogGrabber()
 	rc, err := p.ServeDNS(context.TODO(), w, m)
@@ -92,8 +93,8 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 		}
 	}
 
-	m = makeTestDNSMsg("example.com.debug.local", dns.TypeTXT, dns.ClassCHAOS)
-	w = newTestAddressedNonwriter("192.0.2.1")
+	m = testutil.MakeTestDNSMsg("example.com.debug.local", dns.TypeTXT, dns.ClassCHAOS)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	g = newLogGrabber()
 	rc, err = p.ServeDNS(context.TODO(), w, m)
@@ -114,8 +115,8 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 		}
 	}
 
-	m = makeTestDNSMsg("example.redirect", dns.TypeA, dns.ClassINET)
-	w = newTestAddressedNonwriter("192.0.2.1")
+	m = testutil.MakeTestDNSMsg("example.redirect", dns.TypeA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	g = newLogGrabber()
 	rc, err = p.ServeDNS(context.TODO(), w, m)
@@ -136,8 +137,8 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 		}
 	}
 
-	m = makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-	w = newTestAddressedNonwriter("192.0.2.1")
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	mp.ip = net.ParseIP("192.0.2.1")
 
@@ -162,8 +163,8 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 
 	mp.ip = net.ParseIP("192.0.2.53")
 
-	m = makeTestDNSMsg("example.block", dns.TypeA, dns.ClassINET)
-	w = newTestAddressedNonwriter("192.0.2.1")
+	m = testutil.MakeTestDNSMsg("example.block", dns.TypeA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	g = newLogGrabber()
 	rc, err = p.ServeDNS(context.TODO(), w, m)
@@ -182,8 +183,8 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 		}
 	}
 
-	m = makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-	w = newTestAddressedNonwriter("192.0.2.1")
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	mp.ip = net.ParseIP("192.0.2.17")
 
@@ -206,8 +207,8 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 
 	mp.ip = net.ParseIP("192.0.2.53")
 
-	m = makeTestDNSMsg("example.refuse", dns.TypeA, dns.ClassINET)
-	w = newTestAddressedNonwriter("192.0.2.1")
+	m = testutil.MakeTestDNSMsg("example.refuse", dns.TypeA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	g = newLogGrabber()
 	rc, err = p.ServeDNS(context.TODO(), w, m)
@@ -226,8 +227,8 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 		}
 	}
 
-	m = makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-	w = newTestAddressedNonwriter("192.0.2.1")
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	mp.ip = net.ParseIP("192.0.2.33")
 
@@ -250,8 +251,8 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 
 	mp.ip = net.ParseIP("192.0.2.53")
 
-	m = makeTestDNSMsg("example.drop", dns.TypeA, dns.ClassINET)
-	w = newTestAddressedNonwriter("192.0.2.1")
+	m = testutil.MakeTestDNSMsg("example.drop", dns.TypeA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	g = newLogGrabber()
 	rc, err = p.ServeDNS(context.TODO(), w, m)
@@ -267,8 +268,8 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 		}
 	}
 
-	m = makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-	w = newTestAddressedNonwriter("192.0.2.1")
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	mp.ip = net.ParseIP("192.0.2.65")
 
@@ -288,8 +289,8 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 
 	mp.ip = net.ParseIP("192.0.2.53")
 
-	m = makeTestDNSMsg("example.missing", dns.TypeA, dns.ClassINET)
-	w = newTestAddressedNonwriter("192.0.2.1")
+	m = testutil.MakeTestDNSMsg("example.missing", dns.TypeA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	g = newLogGrabber()
 	rc, err = p.ServeDNS(context.TODO(), w, m)
@@ -302,8 +303,8 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 		t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
 	}
 
-	m = makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-	w = newTestAddressedNonwriter("192.0.2.1")
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	mp.ip = net.ParseIP("192.0.2.81")
 
@@ -320,8 +321,8 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 
 	mp.err = fmt.Errorf("test next plugin error")
 
-	m = makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-	w = newTestAddressedNonwriter("192.0.2.1")
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	g = newLogGrabber()
 	rc, err = p.ServeDNS(context.TODO(), w, m)
@@ -338,8 +339,8 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 		t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
 	}
 
-	m = makeTestDNSMsg("example.com.debug.local", dns.TypeTXT, dns.ClassCHAOS)
-	w = newTestAddressedNonwriter("192.0.2.1")
+	m = testutil.MakeTestDNSMsg("example.com.debug.local", dns.TypeTXT, dns.ClassCHAOS)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	g = newLogGrabber()
 	rc, err = p.ServeDNS(context.TODO(), w, m)
@@ -363,8 +364,8 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 	mp.err = nil
 	mp.ip = nil
 
-	m = makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-	w = newTestAddressedNonwriter("192.0.2.1")
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	g = newLogGrabber()
 	rc, err = p.ServeDNS(context.TODO(), w, m)
@@ -383,8 +384,8 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 	mp.ip = net.ParseIP("192.0.2.53")
 	mp.rc = dns.RcodeServerFailure
 
-	m = makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-	w = newTestAddressedNonwriter("192.0.2.1")
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	g = newLogGrabber()
 	rc, err = p.ServeDNS(context.TODO(), w, m)
@@ -411,8 +412,8 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 	errPep := newErraticPep(client, dnErr, nil)
 	p.pdp = errPep
 
-	m = makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-	w = newTestAddressedNonwriter("192.0.2.1")
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	g = newLogGrabber()
 	rc, err = p.ServeDNS(context.TODO(), w, m)
@@ -431,8 +432,8 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 	errPep = newErraticPep(client, nil, ipErr)
 	p.pdp = errPep
 
-	m = makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-	w = newTestAddressedNonwriter("192.0.2.1")
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	g = newLogGrabber()
 	rc, err = p.ServeDNS(context.TODO(), w, m)
@@ -450,7 +451,7 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 
 func TestPolicyPluginServeDNSPassthrough(t *testing.T) {
 	endpoint := "127.0.0.1:5555"
-	if err := waitForPortClosed(endpoint); err != nil {
+	if err := testutil.WaitForPortClosed(endpoint); err != nil {
 		t.Fatalf("port still in use: %s", err)
 	}
 
@@ -477,8 +478,8 @@ func TestPolicyPluginServeDNSPassthrough(t *testing.T) {
 	}
 	defer p.closeConn()
 
-	m := makeTestDNSMsg("example.passthrough.local", dns.TypeA, dns.ClassINET)
-	w := newTestAddressedNonwriter("192.0.2.1")
+	m := testutil.MakeTestDNSMsg("example.passthrough.local", dns.TypeA, dns.ClassINET)
+	w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	g = newLogGrabber()
 	rc, err := p.ServeDNS(context.TODO(), w, m)
@@ -499,8 +500,8 @@ func TestPolicyPluginServeDNSPassthrough(t *testing.T) {
 		}
 	}
 
-	m = makeTestDNSMsg("example.passthrough.local.debug.local.", dns.TypeTXT, dns.ClassCHAOS)
-	w = newTestAddressedNonwriter("192.0.2.1")
+	m = testutil.MakeTestDNSMsg("example.passthrough.local.debug.local.", dns.TypeTXT, dns.ClassCHAOS)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	g = newLogGrabber()
 	rc, err = p.ServeDNS(context.TODO(), w, m)
@@ -524,14 +525,14 @@ func TestPolicyPluginServeDNSPassthrough(t *testing.T) {
 
 func TestPolicyPluginServeDNSWithDnstap(t *testing.T) {
 	endpoint := "127.0.0.1:5555"
-	srv := startPDPServer(t, serveDNSTestPolicy, endpoint)
+	srv := testutil.StartPDPServer(t, serveDNSTestPolicy, endpoint)
 	defer func() {
 		if logs := srv.Stop(); len(logs) > 0 {
 			t.Logf("server logs:\n%s", logs)
 		}
 	}()
 
-	if err := waitForPortOpened(endpoint); err != nil {
+	if err := testutil.WaitForPortOpened(endpoint); err != nil {
 		t.Fatalf("can't connect to PDP server: %s", err)
 	}
 
@@ -549,7 +550,7 @@ func TestPolicyPluginServeDNSWithDnstap(t *testing.T) {
 	}
 	p.next = mp
 
-	io := newIORoutine()
+	io := testutil.NewIORoutine()
 	p.tapIO = newPolicyDnstapSender(io)
 
 	g := newLogGrabber()
@@ -560,8 +561,8 @@ func TestPolicyPluginServeDNSWithDnstap(t *testing.T) {
 	}
 	defer p.closeConn()
 
-	m := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-	w := newTestAddressedNonwriterWithAddr(&net.UDPAddr{
+	m := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w := testutil.NewTestAddressedNonwriterWithAddr(&net.UDPAddr{
 		IP:   net.ParseIP("10.240.0.1"),
 		Port: 40212,
 		Zone: "",
@@ -592,7 +593,7 @@ func TestPolicyPluginServeDNSWithDnstap(t *testing.T) {
 			t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
 		}
 
-		if !assertCRExtraResult(t, "sendCRExtraMsg(actionAllow)", io, w.Msg,
+		if !testutil.AssertCRExtraResult(t, "sendCRExtraMsg(actionAllow)", io, w.Msg,
 			&pb.DnstapAttribute{Id: attrNameSourceIP, Value: "10.240.0.1"},
 		) {
 			t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)

@@ -1,18 +1,15 @@
 package policy
 
 import (
-	"bytes"
 	"fmt"
 	"net"
-	"strings"
 	"testing"
 	"time"
 
+	"github.com/infobloxopen/themis/contrib/coredns/policy/testutil"
 	"github.com/infobloxopen/themis/pdp"
 	_ "github.com/infobloxopen/themis/pdp/selector"
-	"github.com/infobloxopen/themis/pdpserver/server"
 	"github.com/miekg/dns"
-	logr "github.com/sirupsen/logrus"
 )
 
 const testPolicy = `# Policy set for client interaction tests
@@ -109,18 +106,18 @@ policies:
 
 func TestStreamingClientInteraction(t *testing.T) {
 	endpoint := "127.0.0.1:5555"
-	srv := startPDPServer(t, testPolicy, endpoint)
+	srv := testutil.StartPDPServer(t, testPolicy, endpoint)
 	defer func() {
 		if logs := srv.Stop(); len(logs) > 0 {
 			t.Logf("server logs:\n%s", logs)
 		}
 	}()
 
-	if err := waitForPortOpened(endpoint); err != nil {
+	if err := testutil.WaitForPortOpened(endpoint); err != nil {
 		t.Fatalf("can't connect to PDP server: %s", err)
 	}
 
-	g := newLogGrabber()
+	g := testutil.NewLogGrabber()
 	ok := t.Run("noCache", func(t *testing.T) {
 		p := newPolicyPlugin()
 		p.conf.endpoints = []string{endpoint}
@@ -133,8 +130,8 @@ func TestStreamingClientInteraction(t *testing.T) {
 		}
 		defer p.closeConn()
 
-		m := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-		w := newTestAddressedNonwriter("192.0.2.1")
+		m := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+		w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 		ah := newAttrHolderWithDnReq(w, m, p.conf.options, nil)
 		attrs := make([]pdp.AttributeAssignment, p.conf.maxResAttrs)
@@ -180,7 +177,7 @@ func TestStreamingClientInteraction(t *testing.T) {
 		t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
 	}
 
-	g = newLogGrabber()
+	g = testutil.NewLogGrabber()
 	ok = t.Run("cacheTTL", func(t *testing.T) {
 		p := newPolicyPlugin()
 		p.conf.endpoints = []string{endpoint}
@@ -195,8 +192,8 @@ func TestStreamingClientInteraction(t *testing.T) {
 		}
 		defer p.closeConn()
 
-		m := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-		w := newTestAddressedNonwriter("192.0.2.1")
+		m := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+		w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 		ah := newAttrHolderWithDnReq(w, m, p.conf.options, nil)
 		attrs := make([]pdp.AttributeAssignment, p.conf.maxResAttrs)
@@ -222,7 +219,7 @@ func TestStreamingClientInteraction(t *testing.T) {
 		t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
 	}
 
-	g = newLogGrabber()
+	g = testutil.NewLogGrabber()
 	ok = t.Run("cacheTTLAndLimit", func(t *testing.T) {
 		p := newPolicyPlugin()
 		p.conf.endpoints = []string{endpoint}
@@ -238,8 +235,8 @@ func TestStreamingClientInteraction(t *testing.T) {
 		}
 		defer p.closeConn()
 
-		m := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-		w := newTestAddressedNonwriter("192.0.2.1")
+		m := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+		w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 		ah := newAttrHolderWithDnReq(w, m, p.conf.options, nil)
 		attrs := make([]pdp.AttributeAssignment, p.conf.maxResAttrs)
@@ -268,19 +265,19 @@ func TestStreamingClientInteraction(t *testing.T) {
 
 func TestStreamingClientInteractionWithObligationsOverflow(t *testing.T) {
 	endpoint := "127.0.0.1:5555"
-	srv := startPDPServer(t, testPolicy, endpoint)
+	srv := testutil.StartPDPServer(t, testPolicy, endpoint)
 	defer func() {
 		if logs := srv.Stop(); len(logs) > 0 {
 			t.Logf("server logs:\n%s", logs)
 		}
 	}()
 
-	if err := waitForPortOpened(endpoint); err != nil {
+	if err := testutil.WaitForPortOpened(endpoint); err != nil {
 		t.Fatalf("can't connect to PDP server: %s", err)
 	}
 
 	ok := true
-	g := newLogGrabber()
+	g := testutil.NewLogGrabber()
 	defer func() {
 		logs := g.Release()
 		if !ok {
@@ -301,8 +298,8 @@ func TestStreamingClientInteractionWithObligationsOverflow(t *testing.T) {
 	}
 	defer p.closeConn()
 
-	m := makeTestDNSMsg("overflow.me", dns.TypeA, dns.ClassINET)
-	w := newTestAddressedNonwriter("192.0.2.1")
+	m := testutil.MakeTestDNSMsg("overflow.me", dns.TypeA, dns.ClassINET)
+	w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 	ah := newAttrHolderWithDnReq(w, m, p.conf.options, nil)
 	attrs := make([]pdp.AttributeAssignment, p.conf.maxResAttrs)
@@ -316,89 +313,4 @@ func TestStreamingClientInteractionWithObligationsOverflow(t *testing.T) {
 		t.Errorf("expected response overflow error but got %q response:\n:%+v", aName, ah.dnRes)
 		ok = false
 	}
-}
-
-func startPDPServer(t *testing.T, p, endpoint string) *loggedServer {
-	s := newServer(server.WithServiceAt(endpoint))
-
-	if err := s.s.ReadPolicies(strings.NewReader(p)); err != nil {
-		t.Fatalf("can't read policies: %s", err)
-	}
-
-	if err := waitForPortClosed(endpoint); err != nil {
-		t.Fatalf("port still in use: %s", err)
-	}
-
-	go func() {
-		if err := s.s.Serve(); err != nil {
-			t.Fatalf("PDP server failed: %s", err)
-		}
-	}()
-
-	return s
-}
-
-type loggedServer struct {
-	s *server.Server
-	b *bytes.Buffer
-}
-
-func newServer(opts ...server.Option) *loggedServer {
-	s := &loggedServer{
-		b: new(bytes.Buffer),
-	}
-
-	logger := logr.New()
-	logger.Out = s.b
-	logger.Level = logr.ErrorLevel
-	opts = append(opts,
-		server.WithLogger(logger),
-	)
-
-	s.s = server.NewServer(opts...)
-	return s
-}
-
-func (s *loggedServer) Stop() string {
-	s.s.Stop()
-	return s.b.String()
-}
-
-func waitForPortOpened(address string) error {
-	var (
-		c   net.Conn
-		err error
-	)
-
-	for i := 0; i < 20; i++ {
-		after := time.After(500 * time.Millisecond)
-		c, err = net.DialTimeout("tcp", address, 500*time.Millisecond)
-		if err == nil {
-			return c.Close()
-		}
-
-		<-after
-	}
-
-	return err
-}
-
-func waitForPortClosed(address string) error {
-	var (
-		c   net.Conn
-		err error
-	)
-
-	for i := 0; i < 20; i++ {
-		after := time.After(500 * time.Millisecond)
-		c, err = net.DialTimeout("tcp", address, 500*time.Millisecond)
-		if err != nil {
-			return nil
-		}
-
-		c.Close()
-		<-after
-	}
-
-	return fmt.Errorf("port at %s hasn't been closed yet", address)
 }

@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/infobloxopen/themis/contrib/coredns/policy/testutil"
 	_ "github.com/infobloxopen/themis/pdp/selector"
 	"github.com/infobloxopen/themis/pdpserver/server"
 	"github.com/miekg/dns"
@@ -25,16 +26,16 @@ func BenchmarkPlugin(b *testing.B) {
 		}
 	}()
 
-	if err := waitForPortOpened(endpoint); err != nil {
+	if err := testutil.WaitForPortOpened(endpoint); err != nil {
 		b.Fatalf("can't connect to PDP server: %s", err)
 	}
 
 	b.Run("1-stream", func(b *testing.B) {
-		benchSerial(b, newTestPolicyPlugin(mpModeConst, endpoint))
+		benchSerial(b, newTestPolicyPlugin(testutil.MpModeConst, endpoint))
 	})
 
 	b.Run("1-stream-cache", func(b *testing.B) {
-		p := newTestPolicyPlugin(mpModeConst, endpoint)
+		p := newTestPolicyPlugin(testutil.MpModeConst, endpoint)
 		p.conf.cacheTTL = 10 * time.Minute
 		p.conf.cacheLimit = 128
 
@@ -43,7 +44,7 @@ func BenchmarkPlugin(b *testing.B) {
 
 	ps := newParStat()
 	if b.Run("100-streams", func(b *testing.B) {
-		p := newTestPolicyPlugin(mpModeConst, endpoint)
+		p := newTestPolicyPlugin(testutil.MpModeConst, endpoint)
 		p.conf.streams = 100
 		p.conf.hotSpot = true
 
@@ -54,7 +55,7 @@ func BenchmarkPlugin(b *testing.B) {
 
 	ps = newParStat()
 	if b.Run("100-streams-cache-100%-hit", func(b *testing.B) {
-		p := newTestPolicyPlugin(mpModeConst, endpoint)
+		p := newTestPolicyPlugin(testutil.MpModeConst, endpoint)
 		p.conf.streams = 100
 		p.conf.hotSpot = true
 		p.conf.cacheTTL = 10 * time.Minute
@@ -67,7 +68,7 @@ func BenchmarkPlugin(b *testing.B) {
 
 	ps = newParStat()
 	if b.Run("100-streams-cache-50%-hit", func(b *testing.B) {
-		p := newTestPolicyPlugin(mpModeHalfInc, endpoint)
+		p := newTestPolicyPlugin(testutil.MpModeHalfInc, endpoint)
 		p.conf.streams = 100
 		p.conf.hotSpot = true
 		p.conf.cacheTTL = 10 * time.Minute
@@ -80,7 +81,7 @@ func BenchmarkPlugin(b *testing.B) {
 
 	ps = newParStat()
 	if b.Run("100-streams-cache-0%-hit", func(b *testing.B) {
-		p := newTestPolicyPlugin(mpModeInc, endpoint)
+		p := newTestPolicyPlugin(testutil.MpModeInc, endpoint)
 		p.conf.streams = 100
 		p.conf.hotSpot = true
 		p.conf.cacheTTL = 10 * time.Minute
@@ -93,18 +94,18 @@ func BenchmarkPlugin(b *testing.B) {
 }
 
 func benchSerial(b *testing.B, p *policyPlugin) {
-	g := newLogGrabber()
+	g := testutil.NewLogGrabber()
 	if err := p.connect(); err != nil {
 		b.Fatalf("can't connect to PDP: %s\n=== plugin logs ===\n%s--- plugin logs ---", err, g.Release())
 	}
 	defer p.closeConn()
 	g.Release()
 
-	w := newTestAddressedNonwriter("192.0.2.1")
+	w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 
-	g = newLogGrabber()
+	g = testutil.NewLogGrabber()
 	for n := 0; n < b.N; n++ {
-		m := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+		m := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
 		w.Msg = nil
 		rc, err := p.ServeDNS(context.TODO(), w, m)
 		if rc != dns.RcodeSuccess || err != nil {
@@ -115,7 +116,7 @@ func benchSerial(b *testing.B, p *policyPlugin) {
 }
 
 func benchParallel(b *testing.B, p *policyPlugin, ps *parStat) {
-	g := newLogGrabber()
+	g := testutil.NewLogGrabber()
 	if err := p.connect(); err != nil {
 		b.Fatalf("can't connect to PDP: %s\n=== plugin logs ===\n%s--- plugin logs ---", err, g.Release())
 	}
@@ -128,13 +129,13 @@ func benchParallel(b *testing.B, p *policyPlugin, ps *parStat) {
 	var pCnt uint32
 	pCntPtr := &pCnt
 
-	g = newLogGrabber()
+	g = testutil.NewLogGrabber()
 	b.SetParallelism(25)
 	b.RunParallel(func(pb *testing.PB) {
 		atomic.AddUint32(pCntPtr, 1)
-		w := newTestAddressedNonwriter("192.0.2.1")
+		w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 		for pb.Next() {
-			m := makeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+			m := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
 			w.Msg = nil
 			rc, err := p.ServeDNS(context.TODO(), w, m)
 			if rc != dns.RcodeSuccess || err != nil {
@@ -153,7 +154,7 @@ func benchParallel(b *testing.B, p *policyPlugin, ps *parStat) {
 }
 
 func benchParallelNoHits(b *testing.B, p *policyPlugin, ps *parStat) {
-	g := newLogGrabber()
+	g := testutil.NewLogGrabber()
 	if err := p.connect(); err != nil {
 		b.Fatalf("can't connect to PDP: %s\n=== plugin logs ===\n%s--- plugin logs ---", err, g.Release())
 	}
@@ -166,17 +167,17 @@ func benchParallelNoHits(b *testing.B, p *policyPlugin, ps *parStat) {
 	var pCnt uint32
 	pCntPtr := &pCnt
 
-	g = newLogGrabber()
+	g = testutil.NewLogGrabber()
 	b.SetParallelism(25)
 	b.RunParallel(func(pb *testing.PB) {
 		i := int(atomic.AddUint32(pCntPtr, 1))
-		w := newTestAddressedNonwriter("192.0.2.1")
+		w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 		j := 0
 		for pb.Next() {
 			j++
 
-			m := makeTestDNSMsg(strconv.Itoa(i)+"."+strconv.Itoa(j)+".example.com", dns.TypeA, dns.ClassINET)
+			m := testutil.MakeTestDNSMsg(strconv.Itoa(i)+"."+strconv.Itoa(j)+".example.com", dns.TypeA, dns.ClassINET)
 			w.Msg = nil
 			rc, err := p.ServeDNS(context.TODO(), w, m)
 			if rc != dns.RcodeSuccess || err != nil {
@@ -195,7 +196,7 @@ func benchParallelNoHits(b *testing.B, p *policyPlugin, ps *parStat) {
 }
 
 func benchParallelHalfHits(b *testing.B, p *policyPlugin, ps *parStat) {
-	g := newLogGrabber()
+	g := testutil.NewLogGrabber()
 	if err := p.connect(); err != nil {
 		b.Fatalf("can't connect to PDP: %s\n=== plugin logs ===\n%s--- plugin logs ---", err, g.Release())
 	}
@@ -208,11 +209,11 @@ func benchParallelHalfHits(b *testing.B, p *policyPlugin, ps *parStat) {
 	var pCnt uint32
 	pCntPtr := &pCnt
 
-	g = newLogGrabber()
+	g = testutil.NewLogGrabber()
 	b.SetParallelism(25)
 	b.RunParallel(func(pb *testing.PB) {
 		i := int(atomic.AddUint32(pCntPtr, 1))
-		w := newTestAddressedNonwriter("192.0.2.1")
+		w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 
 		j := 0
 		for pb.Next() {
@@ -223,7 +224,7 @@ func benchParallelHalfHits(b *testing.B, p *policyPlugin, ps *parStat) {
 				dn = strconv.Itoa(i) + "." + strconv.Itoa(j) + "." + dn
 			}
 
-			m := makeTestDNSMsg(dn, dns.TypeA, dns.ClassINET)
+			m := testutil.MakeTestDNSMsg(dn, dns.TypeA, dns.ClassINET)
 			w.Msg = nil
 			rc, err := p.ServeDNS(context.TODO(), w, m)
 			if rc != dns.RcodeSuccess || err != nil {
@@ -255,15 +256,15 @@ func newTestPolicyPlugin(mpMode int, endpoints ...string) *policyPlugin {
 	p.conf.streams = 1
 	p.conf.maxReqSize = 256
 
-	mp := &mockPlugin{
-		ip: net.ParseIP("192.0.2.53"),
-		rc: dns.RcodeSuccess,
+	mp := &testutil.MockPlugin{
+		Ip: net.ParseIP("192.0.2.53"),
+		Rc: dns.RcodeSuccess,
 	}
 
-	mp.mode = mpMode
-	if mp.mode != mpModeConst {
+	mp.Mode = mpMode
+	if mp.Mode != testutil.MpModeConst {
 		var cnt uint32
-		mp.cnt = &cnt
+		mp.Cnt = &cnt
 	}
 
 	p.next = mp
@@ -311,19 +312,19 @@ func (ps *parStat) String() string {
 	)
 }
 
-func startPDPServerForBenchmark(b *testing.B, p, endpoint string) *loggedServer {
-	s := newServer(server.WithServiceAt(endpoint))
+func startPDPServerForBenchmark(b *testing.B, p, endpoint string) *testutil.LoggedServer {
+	s := testutil.NewServer(server.WithServiceAt(endpoint))
 
-	if err := s.s.ReadPolicies(strings.NewReader(p)); err != nil {
+	if err := s.S.ReadPolicies(strings.NewReader(p)); err != nil {
 		b.Fatalf("can't read policies: %s", err)
 	}
 
-	if err := waitForPortClosed(endpoint); err != nil {
+	if err := testutil.WaitForPortClosed(endpoint); err != nil {
 		b.Fatalf("port still in use: %s", err)
 	}
 
 	go func() {
-		if err := s.s.Serve(); err != nil {
+		if err := s.S.Serve(); err != nil {
 			b.Fatalf("PDP server failed: %s", err)
 		}
 	}()
