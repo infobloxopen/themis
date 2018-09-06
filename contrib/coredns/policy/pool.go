@@ -24,6 +24,14 @@ func makeAttrPool(size int, dummy bool) attrPool {
 	return p
 }
 
+func createAttrPoolFromConfig(conf *config) attrPool {
+	size := len(conf.attrs.attrInds)
+	if conf.maxResAttrs > size {
+		size = conf.maxResAttrs
+	}
+	return makeAttrPool(size, false)
+}
+
 func (p attrPool) newAttrs() []pdp.AttributeAssignment {
 	return make([]pdp.AttributeAssignment, p.s)
 }

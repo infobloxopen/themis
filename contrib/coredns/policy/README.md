@@ -1,94 +1,102 @@
 # policy
 
-*policy* is the Policy Enforcement Point for Themis project implemented as CoreDNS plugin.
+*policy* is the Policy Enforcement Point (PEP) for Themis project implemented as CoreDNS plugin.
 
 ## Syntax
 
 ~~~ txt
 policy {
-    endpoint ADDR_1, ADDR_2, ... ADDR_N
-    edns0 CODE NAME [SRCTYPE DSTTYPE] [SIZE START END]
-    ...
-    debug_query_suffix SUFFIX
-    debug_id ID
+    endpoint ADDR_1 ADDR_2 ... ADDR_N
     streams COUNT
-    transfer ATTR_1, ATTR_2, ... ATTR_N
-    dnstap ATTR_1, ATTR_2, ... ATTR_N
-    metrics ATTR_1, ATTR_2, ... ATTR_N
-    passthrough SUFFIX_1, SUFFIX_2, ... SUFFIX_N
-    log
+    connection_timeout TIMEOUT
     max_request_size [[auto] SIZE]
     max_response_attributes auto | COUNT
     cache [TTL [SIZE]]
+
+    edns0 CODE NAME [SRCTYPE] [SIZE START END]
+    validation1 ATTR_1 ATTR_2 ... ATTR_N
+    validation2 ATTR_1 ATTR_2 ... ATTR_N
+    default_decision ATTR_1 ATTR_2 ... ATTR_N
+    metrics ATTR_1 ATTR_2 ... ATTR_N
+    dnstap LEVEL ATTR_1 ATTR_2 ... ATTR_N
+
+    passthrough SUFFIX_1 SUFFIX_2 ... SUFFIX_N
+    debug_query_suffix SUFFIX
+    debug_id ID
+    log
 }
 ~~~
 
-Option endpoint defines set of PDP addresses
+Option **endpoint** defines addresses of PDP servers.
 
-Option edns0 is used for parsing edns0 options into PDP attributes, option with CODE is parsed as attribute with NAME.
+Option **streams** sets number of gRPC streams to be used in each PDP connection.
 
-Valid SRCTYPE are hex (default), bytes, ip.
+Option **connection_timeout** sets timeout for query validation when no PDP server is available. Negative value or "no" keyword means wait forever. This is default behavior. With zero timeout validation fails instantly if there is no PDP server. The option works only if gRPC streams number is greater than 0.
 
-Valid DSTTYPE depends on Themis PDP implementation, ATM is supported string (default), address.
+Option **max_request_size** sets maximum buffer size in bytes for serialized request. Too high limit makes the plugin to allocate unnecessary memory while too small can lead to buffer overflow errors on validation. With setting `auto` plugin automatically allocates required amount of bytes for each request. In case of both `auto` and *SIZE* defined, the *SIZE* doesn't limit request buffer but used for cache allocations. 
 
-Params SIZE, START, END is supported only for SRCTYPE = hex.
+Option **max_response_attributes** defines the limit of attribute number expected in PDP response. If value is `auto` the appropriate buffer for all PDP response attributes is allocated automatically.
 
-Set param SIZE to value > 0 enables edns0 option data size check.
+Option **cache** enables decision cache. The default value for *TTL* is 10 minutes. *SIZE* (in megabytes) limits the memory cache can use. If *SIZE* is not provided the cache can grow until application crashes due to out of memory.
 
-Param START and END (last data byte index + 1) allow to get separate part of edns0 option data.
+Option **edns0** is used for parsing edns0 options into PDP attributes, option with code *CODE* is parsed as attribute with name *NAME*. *CODE* can be defined as octal, decimal or hexadecimal value. Hexadecimal numbers should start with prefix `0x`, e.g `0xfff5`, octal numbers should start with `0`, e.g. `0177765`. *SRCTYPE* defines encoding if edns0 data, valid values are `hex` (default), `bytes`, `ip`. Params *SIZE*, *START*, *END* is supported only for *SRCTYPE* = `hex`. Setting param *SIZE* to value > 0 enables edns0 option data size check. Param *START* and *END* (last data byte index + 1) allows picking out a particular part of edns0 option data into a separate attribute. Option **edns0** can be used repeatedly to define several ends0 attributes
 
-Option debug_query_suffix SUFFIX (should have dot at the end) enables debug query feature.
+Option **validation1** defines a set of attributes to be sent to PDP for validation before resolving domain name.
 
-Option debug_id set string that is used for debug query response as unique id for determine what CoreDNS instance replies on the request.
+Option **validation2** defines a set of attributes to be sent to PDP for validation after resolving domain name.
 
-Option streams set gRPC streams count for PDP connection.
+Option **default_decision** defines default values for some attributes in case if PDP request was failed.
 
-Option transfer defines set of attributes (from domain validation response) that should be inserted into IP validation request.
+Option **metrics** defines the attributes for which metric counters to be generated. The metric counters hold the number of recently received queries per attribute/value and look like below.
 
-Option dnstap defines attributes to be included in extra field of DNStap message if received from PDP.
-
-Option metrics defines the attributes for which metric counters to be generated. The metric counters hold the number of recently received queries per attribute/value and look like
 ~~~ txt
 coredns_policy_recent_queries{attribute="uid",value="9e868487da91153c"} 153
 ~~~
-The counter is decremented when queries get expired. The default expiration period is 1 minute. If no new query is received during the expiration period for the given attribute/value then the related counter is removed to save memory
 
-Option passthrough defines set of domain name suffixes, domain that contains one of these is resolved without validation, each suffix should have dot at the end.
+The counter is decremented when queries get expired. The default expiration period is 1 minute. If no new query is received during the expiration period for the given attribute/value then the related counter is removed to save memory.
 
-Option connection_timeout sets timeout for query validation when no PDP server are available. Negative value or "no" keyword means wait forever. This is default behavior. With zero timeout validation fails instantly if there is no PDP servers. The option works only if gRPC streams are greater than 0.
+Option **dnstap** defines the attributes to be included in extra field of DNStap message if those attributes are available. The option can be used repeatedly with different values of *LEVEL* parameter to define different sets of dnstap attributes. Value of *LEVEL* should be in range [0..2]. The level of dnstap logging is defined by PDP response with `log` attribute. The default value for log level is 0.
 
-Option log enables log PDP request and response
+The *ATTR_N* parameters have the syntax like `<name>[=<value>]` where value can be one of quoted string, number or IP address. See examples below.
 
-Option max_request_size sets maximum buffer size in bytes for serialized request. Too high limit makes the plugin to allocate too much memory while too small can lead to buffer overflow errors on validation. If "auto" is set plugin allocates required amount of bytes for each request. In case of both "auto" and SIZE, SIZE doesn't limit request buffer but used for cache allocations. 
+Option **passthrough** defines set of domain name suffixes. Domain that has one of these suffixes is resolved without validation. Each suffix should have dot at the end.
 
-Option max_response_attributes sets maximum number of attributes expected from PDP. If value is "auto" plugin allocates necessary attribuets for each PDP response.
+Option **debug_query_suffix** enables debug query feature. Debug query returns some debug information about query processing in text representation. *SUFFIX* should have dot at the end. Debug query uses protocol CHAOS and TXT resource record. See below an example of dig command for debug query.
 
-Option cache enables decision cache. TTL default value is 10 minutes. SIZE limits memory cache takes to given number of megabytes. If it isn't provided cache can grow until application crashes due to out of memory.
+~~~ txt
+dig @127.0.0.1 test.com.debug txt ch
+~~~
+
+Option **debug_id** defines a string to be sent with debug response to identify a CoreDNS instance.
+
+Option **log** enables logging PDP request and response attributes
 
 ## Example
 
 ~~~ txt
 policy {
     endpoint 10.0.0.7:1234, 10.0.0.8:1234
-    edns0 0xffee client_id hex string 32 0 32
-    edns0 0xffee group_id hex string 32 16 32
-    edns0 0xffef uid // equal edns0 0xffef uid hex string
-    edns0 0xffea source_ip ip address
-    edns0 0xffeb client_name bytes string
+    streams 100
+    connection_timeout 1s
+
+    edns0 0xffee client_id hex 32 0 32
+    edns0 0xffee group_id hex 32 16 32
+    edns0 0xffef uid
+    edns0 0xffea client_ip ip
+    edns0 0xffeb client_name bytes
+    validation1 type="query" domain_name
+    validation2 type="response" address
+    default_decision policy_action=2 log=1 client_ip=192.168.0.101
+    metrics client_name
+    dnstap 0 policy_action
+    dnstap 1 policy_action client_id
+    dnstap 2 policy_action client_id group_id uid
+
+    passthrough mycompanyname.com. mycompanyname.org.
     debug_query_suffix debug.
     debug_id instance_1
-    streams 100
-    transfer gid uid
-    dnstap pid
-    metrics uid
-    passthrough mycompanyname.com. mycompanyname.org.
     log
 }
 ~~~
 
-In this case edns0 options with code 0xffee is splitted into two values - client_id (first 16 bytes) and group_id (last 16 bytes), option should have size 32 bytes otherwise client_id and group_id is not parsed.
-
-Dig command example for debug query:
-~~~ txt
-dig @127.0.0.1 msn.com.debug txt ch
-~~~
+In example above the edns0 options with code 0xffee is splitted into two attributes - `client_id` (first 16 bytes) and `group_id` (last 16 bytes). Entire option should have size 32 bytes otherwise `client_id` and `group_id` will not be parsed.

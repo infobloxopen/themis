@@ -25,7 +25,7 @@ type edns0Opt struct {
 	size     int
 	start    int
 	end      int
-	metrics  bool
+	attrInd  int
 }
 
 func newEdns0Opt(sCode, name, sType, sSize, sStart, sEnd string) (uint16, *edns0Opt, error) {

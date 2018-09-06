@@ -3,25 +3,42 @@ package policy
 import (
 	"strings"
 
+	"github.com/infobloxopen/themis/pdp"
 	"github.com/miekg/dns"
 )
 
-const (
-	queryInfoResolveYes        = "resolve:yes"
-	queryInfoResolveNo         = "resolve:no"
-	queryInfoResolveSkip       = "resolve:skip"
-	queryInfoResolveFailed     = "resolve:failed"
-	queryInfoActionPassthrough = "action:passthrough"
-)
+var actionNames [actionsTotal]string
 
-func (p *policyPlugin) patchDebugMsg(r *dns.Msg) bool {
+func init() {
+	actionNames[actionInvalid] = "invalid"
+	actionNames[actionDrop] = "drop"
+	actionNames[actionAllow] = "allow"
+	actionNames[actionBlock] = "block"
+	actionNames[actionRedirect] = "redirect"
+	actionNames[actionRefuse] = "refuse"
+}
+
+type dbgMessenger struct {
+	strings.Builder
+	suffix string
+}
+
+func newDbgMessenger(suff, id string) *dbgMessenger {
+	dm := &dbgMessenger{suffix: suff}
+	if id != "" {
+		dm.appendDebugID(id)
+	}
+	return dm
+}
+
+func (p *policyPlugin) patchDebugMsg(r *dns.Msg) *dbgMessenger {
 	if r == nil || len(r.Question) <= 0 {
-		return false
+		return nil
 	}
 
 	q := r.Question[0]
 	if q.Qclass != dns.ClassCHAOS || q.Qtype != dns.TypeTXT || !strings.HasSuffix(q.Name, p.conf.debugSuffix) {
-		return false
+		return nil
 	}
 
 	q.Name = dns.Fqdn(strings.TrimSuffix(q.Name, p.conf.debugSuffix))
@@ -30,70 +47,87 @@ func (p *policyPlugin) patchDebugMsg(r *dns.Msg) bool {
 
 	r.Question[0] = q
 
-	return true
+	return newDbgMessenger(p.conf.debugSuffix, p.conf.debugID)
 }
 
-func (p *policyPlugin) setDebugQueryPassthroughAnswer(ah *attrHolder, r *dns.Msg) {
-	r.Answer = p.makeDebugQueryAnswerRR(ah, queryInfoActionPassthrough)
+func (dm *dbgMessenger) setDebugQueryPassthroughAnswer(dn string, r *dns.Msg) {
+	dm.appendPassthrough()
+	r.Answer = dm.makeDebugQueryAnswerRR(dn)
 	r.Ns = nil
 }
 
-func (p *policyPlugin) setDebugQueryAnswer(ah *attrHolder, r *dns.Msg, status int) {
-	info := getResolveStatusQueryInfo(status)
-
-	action := actionNamePass
-	if len(ah.ipRes) <= 0 {
-		action = actionNames[ah.action]
-	}
-	info = appendQueryInfo(info, typeValueQuery, action)
-
-	for _, a := range ah.dnRes {
-		info = appendQueryInfo(info, a.GetID(), serializeOrPanic(a))
-	}
-
-	if len(ah.ipRes) > 0 {
-		info = appendQueryInfo(info, typeValueResponse, actionNames[ah.action])
-
-		for _, a := range ah.ipRes {
-			info = appendQueryInfo(info, a.GetID(), serializeOrPanic(a))
-		}
-	}
-
-	if len(p.conf.debugID) > 0 {
-		info = appendQueryInfo(info, "ident", p.conf.debugID)
-	}
-
-	r.Answer = p.makeDebugQueryAnswerRR(ah, info)
+func (dm *dbgMessenger) setDebugQueryAnswer(dn string, r *dns.Msg, status int) {
+	dm.appendResolution(status)
+	r.Answer = dm.makeDebugQueryAnswerRR(dn)
 }
 
-func (p *policyPlugin) makeDebugQueryAnswerRR(ah *attrHolder, info string) []dns.RR {
+func (dm *dbgMessenger) makeDebugQueryAnswerRR(dn string) []dns.RR {
 	return []dns.RR{
 		&dns.TXT{
 			Hdr: dns.RR_Header{
-				Name:   ah.dn + p.conf.debugSuffix,
+				Name:   dn + dm.suffix,
 				Rrtype: dns.TypeTXT,
 				Class:  dns.ClassCHAOS,
 			},
-			Txt: []string{info},
+			Txt: []string{dm.String()},
 		},
 	}
 }
 
-func getResolveStatusQueryInfo(status int) string {
-	switch status {
-	case -1:
-		return queryInfoResolveSkip
-
-	case dns.RcodeSuccess:
-		return queryInfoResolveYes
-
-	case dns.RcodeServerFailure:
-		return queryInfoResolveFailed
+func debugNameVal(a pdp.AttributeAssignment) (n, v string) {
+	if a.GetID() == attrNamePolicyAction {
+		iv, err := a.GetInteger(emptyCtx)
+		if err == nil && iv >= 0 && iv < actionsTotal {
+			n = attrNamePolicyAction
+			v = actionNames[iv]
+			return
+		}
 	}
-
-	return queryInfoResolveNo
+	n, _, v, _ = a.Serialize(emptyCtx)
+	return
 }
 
-func appendQueryInfo(info, key, value string) string {
-	return info + "," + key + ":'" + value + "'"
+func (dm *dbgMessenger) appendAttrs(msg string, attrs []pdp.AttributeAssignment) {
+	dm.WriteString(msg)
+	dm.WriteString(": [")
+	for _, a := range attrs {
+		n, v := debugNameVal(a)
+		dm.WriteString(n)
+		dm.WriteString(": ")
+		dm.WriteString(v)
+		dm.WriteString(", ")
+	}
+	dm.WriteString("], ")
+}
+
+func (dm *dbgMessenger) appendDebugID(id string) {
+	dm.WriteString("Ident: ")
+	dm.WriteString(id)
+	dm.WriteString(", ")
+}
+
+func (dm *dbgMessenger) appendPassthrough() {
+	dm.WriteString("Passthrough: yes, ")
+}
+
+func (dm *dbgMessenger) appendResolution(rCode int) {
+	dm.WriteString("Domain resolution: ")
+	switch rCode {
+	case -1:
+		dm.WriteString("skipped, ")
+	case dns.RcodeSuccess:
+		dm.WriteString("resolved, ")
+	case dns.RcodeServerFailure:
+		dm.WriteString("failed, ")
+	default:
+		dm.WriteString("not resolved, ")
+	}
+}
+
+func (dm *dbgMessenger) appendResponse(res *pdp.Response) {
+	dm.WriteString("PDP response {Effect: ")
+	dm.WriteString(pdp.EffectNameFromEnum(res.Effect))
+	dm.WriteString(", ")
+	dm.appendAttrs("Obligations", res.Obligations)
+	dm.WriteString("}, ")
 }
