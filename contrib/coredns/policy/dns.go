@@ -102,10 +102,10 @@ func resetTTL(r *dns.Msg) *dns.Msg {
 	}
 
 	for _, rr := range r.Answer {
-		// Ttl field in OPT record has different meaning
-		if _, ok := rr.(*dns.OPT); !ok {
-			rr.Header().Ttl = 0
-		}
+		rr.Header().Ttl = 0
+	}
+	for _, rr := range r.Ns {
+		rr.Header().Ttl = 0
 	}
 
 	return r
