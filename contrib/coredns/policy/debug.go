@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"bytes"
 	"strings"
 
 	"github.com/infobloxopen/themis/pdp"
@@ -19,7 +20,7 @@ func init() {
 }
 
 type dbgMessenger struct {
-	strings.Builder
+	bytes.Buffer
 	suffix string
 }
 
