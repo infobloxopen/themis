@@ -514,7 +514,9 @@ func TestAddResponse(t *testing.T) {
 			edns0: []pdp.AttributeAssignment{
 				pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.10")),
 			},
-			trans: []pdp.AttributeAssignment{},
+			trans: []pdp.AttributeAssignment{
+				pdp.MakeStringAssignment("trans1", "trans1Val1"),
+			},
 		},
 		{
 			resp: &pdp.Response{

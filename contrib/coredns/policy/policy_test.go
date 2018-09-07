@@ -127,11 +127,11 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 	} else {
 		if !assertDNSMessage(t, "ServeDNS(domain redirect)", rc, w.Msg, dns.RcodeSuccess,
 			";; opcode: QUERY, status: NOERROR, id: 0\n"+
-				";; flags: qr; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
+				";; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
 				";; QUESTION SECTION:\n"+
 				";example.redirect.\tIN\t A\n\n"+
 				";; ANSWER SECTION:\n"+
-				"example.redirect.\t0\tIN\tA\t192.0.2.254\n",
+				"example.redirect.\t0\tIN\tA\t192.0.2.53\n",
 		) {
 			t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
 		}
@@ -174,10 +174,12 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 		t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
 	} else {
 		if !assertDNSMessage(t, "ServeDNS(domain block)", rc, w.Msg, dns.RcodeSuccess,
-			";; opcode: QUERY, status: NXDOMAIN, id: 0\n"+
-				";; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
+			";; opcode: QUERY, status: NOERROR, id: 0\n"+
+				";; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
 				";; QUESTION SECTION:\n"+
-				";example.block.\tIN\t A\n",
+				";example.block.\tIN\t A\n\n"+
+				";; ANSWER SECTION:\n"+
+				"example.block.\t0\tIN\tA\t192.0.2.53\n",
 		) {
 			t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
 		}

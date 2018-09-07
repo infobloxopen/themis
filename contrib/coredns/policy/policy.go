@@ -123,7 +123,8 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		return dns.RcodeSuccess, err
 	}
 
-	if ah.action == actionAllow || ah.action == actionLog {
+	switch ah.action {
+	case actionAllow, actionLog, actionBlock, actionRedirect:
 		// resolve domain name to IP
 		nw := nonwriter.New(w)
 		_, err := plugin.NextOrFailure(p.Name(), p.next, ctx, nw, r)
