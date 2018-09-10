@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/infobloxopen/themis/contrib/coredns/policy/testutil"
+	"github.com/infobloxopen/themis/pdp"
 	"github.com/mholt/caddy"
 )
 
@@ -20,7 +22,7 @@ func TestPolicyConfigParse(t *testing.T) {
 		debugSuffix  *string
 		streams      *int
 		hotSpot      *bool
-		custAttrs    map[string]custAttr
+		attrs        *attrsConfig
 		debugID      *string
 		passthrough  []string
 		connTimeout  *time.Duration
@@ -66,7 +68,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			endpoints: []string{"10.2.4.1:5555"},
 		},
 		{
-			desc: "ThreeEntriesEndpoint",
+			desc: "TwoEntriesEndpoint",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555 10.2.4.2:5555
@@ -101,9 +103,6 @@ func TestPolicyConfigParse(t *testing.T) {
 						start:    0,
 						end:      32},
 				},
-			},
-			custAttrs: map[string]custAttr{
-				"uid": custAttrEdns,
 			},
 		},
 		{
@@ -160,10 +159,6 @@ func TestPolicyConfigParse(t *testing.T) {
 						start:    16,
 						end:      32},
 				},
-			},
-			custAttrs: map[string]custAttr{
-				"uid": custAttrEdns,
-				"id":  custAttrEdns,
 			},
 		},
 		{
@@ -299,75 +294,129 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Expected round-robin or hot-spot balancing but got Unknown-Balancer"),
 		},
 		{
-			desc: "TransferAttribute",
-			input: `.:53 {
-						policy {
-							endpoint 10.2.4.1:5555
-							transfer policy_id
-						}
-					}`,
-			custAttrs: map[string]custAttr{
-				"policy_id": custAttrTransfer,
-			},
-		},
-		{
 			desc: "ComplexAttributeConfig",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
 							edns0 0xfff0 uid hex 32 0 16
 							edns0 0xfff1 id
-							transfer policy_id id
-							dnstap policy_id query_id
+							validation1 type="query" domain_name uid
+							validation2 type="response" address pid
+							default_decision policy_action=2
+							metrics id policy_action
+							dnstap 0 src="policy_plugin"
+							dnstap 2 policy_id policy_plugin src="policy_plugin"
 						}
 					}`,
-			options: map[uint16][]*edns0Opt{
-				0xfff0: {
-					&edns0Opt{
-						name:     "uid",
-						dataType: typeEDNS0Hex,
-						size:     32,
-						start:    0,
-						end:      16},
+			attrs: &attrsConfig{
+				attrInds: map[string]int{
+					attrNameDomainName:   attrIndexDomainName,
+					attrNameDNSQtype:     attrIndexDNSQtype,
+					attrNameSourceIP:     attrIndexSourceIP,
+					attrNameAddress:      attrIndexAddress,
+					attrNamePolicyAction: attrIndexPolicyAction,
+					attrNameRedirectTo:   attrIndexRedirectTo,
+					attrNameLog:          attrIndexLog,
+					"uid":                attrIndexCount + 0,
+					"id":                 attrIndexCount + 1,
+					"type":               attrIndexCount + 2,
+					"pid":                attrIndexCount + 3,
+					"src":                attrIndexCount + 4,
+					"policy_id":          attrIndexCount + 5,
+					"policy_plugin":      attrIndexCount + 6,
 				},
-				0xfff1: {
-					&edns0Opt{
-						name:     "id",
-						dataType: typeEDNS0Hex,
-						size:     0,
-						start:    0,
-						end:      0},
+				confLists: [attrListTypeDnstap + maxDnstapLists][]attrConf{
+					{
+						attrConf{"type", attrIndexCount + 2, pdp.MakeStringValue("query")},
+						attrConf{"domain_name", attrIndexDomainName, pdp.UndefinedValue},
+						attrConf{"uid", attrIndexCount + 0, pdp.UndefinedValue},
+					},
+					{
+						attrConf{"type", attrIndexCount + 2, pdp.MakeStringValue("response")},
+						attrConf{"address", attrIndexAddress, pdp.UndefinedValue},
+						attrConf{"pid", attrIndexCount + 3, pdp.UndefinedValue},
+					},
+					{
+						attrConf{"policy_action", attrIndexPolicyAction, pdp.MakeIntegerValue(2)},
+					},
+					{
+						attrConf{"id", attrIndexCount + 1, pdp.UndefinedValue},
+						attrConf{"policy_action", attrIndexPolicyAction, pdp.UndefinedValue},
+					},
+					{
+						attrConf{"src", attrIndexCount + 4, pdp.MakeStringValue("policy_plugin")},
+					},
+					{},
+					{
+						attrConf{"policy_id", attrIndexCount + 5, pdp.UndefinedValue},
+						attrConf{"policy_plugin", attrIndexCount + 6, pdp.UndefinedValue},
+						attrConf{"src", attrIndexCount + 4, pdp.MakeStringValue("policy_plugin")},
+					},
 				},
-			},
-			custAttrs: map[string]custAttr{
-				"policy_id": custAttrTransfer | custAttrDnstap,
-				"id":        custAttrEdns | custAttrTransfer,
-				"uid":       custAttrEdns,
-				"query_id":  custAttrDnstap,
 			},
 		},
 		{
-			desc: "NoDNStapArguments",
+			desc: "BadDNStapArgument",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							dnstap
+							dnstap wrong_number
+						}
+					}`,
+			err: errors.New("invalid syntax"),
+		},
+		{
+			desc: "BadDNStapArgumentRange",
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							dnstap 10
+						}
+					}`,
+			err: errors.New("Incorrect dnstap log level"),
+		},
+		{
+			desc: "NoDNStapAttributes",
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							dnstap 0
 						}
 					}`,
 			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
-			desc: "NoTransferArguments",
+			desc: "NoValidation1Attributes",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							transfer
+							validation1
 						}
 					}`,
 			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
-			desc: "DebugID",
+			desc: "NoValidation2Attributes",
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							validation2
+						}
+					}`,
+			err: errors.New("Wrong argument count or unexpected line ending"),
+		},
+		{
+			desc: "NoDefaultDecisionAttributes",
+			input: `.:53 {
+						policy {
+							endpoint 10.2.4.1:5555
+							default_decision
+						}
+					}`,
+			err: errors.New("Wrong argument count or unexpected line ending"),
+		},
+		{
+			desc: "NoMetricsAttributes",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -377,41 +426,17 @@ func TestPolicyConfigParse(t *testing.T) {
 			err: errors.New("Wrong argument count or unexpected line ending"),
 		},
 		{
+			desc: "BadAttributeValue",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							edns0 0xfff0 uid hex 32 0 16
-							edns0 0xfff1 id
-							metrics uid query_id
+							metrics id=bad_value
 						}
 					}`,
-			options: map[uint16][]*edns0Opt{
-				0xfff0: {
-					&edns0Opt{
-						name:     "uid",
-						dataType: typeEDNS0Hex,
-						size:     32,
-						start:    0,
-						end:      16,
-						metrics:  true,
-					},
-				},
-				0xfff1: {
-					&edns0Opt{
-						name:     "id",
-						dataType: typeEDNS0Hex,
-						size:     0,
-						start:    0,
-						end:      0},
-				},
-			},
-			custAttrs: map[string]custAttr{
-				"id":       custAttrEdns,
-				"uid":      custAttrEdns | custAttrMetrics,
-				"query_id": custAttrMetrics,
-			},
+			err: errors.New("invalid attribute value"),
 		},
 		{
+			desc: "DebugID",
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
@@ -793,19 +818,28 @@ func TestPolicyConfigParse(t *testing.T) {
 						t.Errorf("Expected hotSpot=%v but got %v", *test.hotSpot, mw.conf.hotSpot)
 					}
 
-					if test.custAttrs != nil {
-						for k, et := range test.custAttrs {
-							at, ok := mw.conf.custAttrs[k]
-							if !ok {
-								t.Errorf("Missing conf attribute %q", k)
-							} else if et != at {
-								t.Errorf("Unexpected type of conf attribute %q; expected=%d, actual=%d", k, et, at)
+					if test.attrs != nil {
+						if len(test.attrs.attrInds) != len(mw.conf.attrs.attrInds) {
+							t.Errorf("Unexpected count of attributes in %+v: expected %d, but got %d",
+								mw.conf.attrs.attrInds, len(test.attrs.attrInds), len(mw.conf.attrs.attrInds))
+						}
+						for an, ai := range test.attrs.attrInds {
+							if mw.conf.attrs.attrInds[an] != ai {
+								t.Errorf("Unexpected index of attribute %s: expected %d, but got %d",
+									an, ai, mw.conf.attrs.attrInds[an])
 							}
 						}
-
-						for k, at := range mw.conf.custAttrs {
-							if _, ok := test.custAttrs[k]; !ok {
-								t.Errorf("Unexpected conf attribute %q=%d", k, at)
+						for lt, l := range test.attrs.confLists {
+							for i, ac := range l {
+								if ac.name != mw.conf.attrs.confLists[lt][i].name {
+									t.Errorf("Unexpected name of %d attribute in conf list %d: expected %s, but got %s",
+										i, lt, ac.name, mw.conf.attrs.confLists[lt][i].name)
+								}
+								if ac.index != mw.conf.attrs.confLists[lt][i].index {
+									t.Errorf("Unexpected index of %d attribute in conf list %d: expected %d, but got %d",
+										i, lt, ac.index, mw.conf.attrs.confLists[lt][i].index)
+								}
+								testutil.AssertValue(t, lt*10+i, ac.value, mw.conf.attrs.confLists[lt][i].value)
 							}
 						}
 					}

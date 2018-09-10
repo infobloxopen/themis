@@ -16,7 +16,7 @@ var errInvalidOption = errors.New("invalid policy plugin option")
 type config struct {
 	endpoints    []string
 	options      map[uint16][]*edns0Opt
-	custAttrs    map[string]custAttr
+	attrs        *attrsConfig
 	debugID      string
 	debugSuffix  string
 	streams      int
@@ -32,6 +32,16 @@ type config struct {
 	cacheLimit   int
 }
 
+func newConfig() config {
+	return config{
+		options:     make(map[uint16][]*edns0Opt),
+		connTimeout: -1,
+		maxReqSize:  -1,
+		maxResAttrs: 64,
+		attrs:       newAttrsConfig(),
+	}
+}
+
 func policyParse(c *caddy.Controller) (*policyPlugin, error) {
 	p := newPolicyPlugin()
 
@@ -43,6 +53,7 @@ func policyParse(c *caddy.Controller) (*policyPlugin, error) {
 					return nil, err
 				}
 			}
+			p.attrPool = createAttrPoolFromConfig(&p.conf)
 			return p, nil
 		}
 	}
@@ -55,7 +66,7 @@ func (conf *config) parseOption(c *caddy.Controller) error {
 		return conf.parseEndpoint(c)
 
 	case "edns0":
-		return conf.parseEDNS0(c)
+		return conf.parseEDNS0(c.RemainingArgs()...)
 
 	case "debug_query_suffix":
 		return conf.parseDebugQuerySuffix(c)
@@ -63,14 +74,20 @@ func (conf *config) parseOption(c *caddy.Controller) error {
 	case "streams":
 		return conf.parseStreams(c)
 
-	case "transfer":
-		return conf.parseAttributes(c, custAttrTransfer)
+	case "validation1":
+		return conf.parseAttributes(c, attrListTypeVal1)
+
+	case "validation2":
+		return conf.parseAttributes(c, attrListTypeVal2)
+
+	case "default_decision":
+		return conf.parseAttributes(c, attrListTypeDefDecision)
 
 	case "dnstap":
-		return conf.parseAttributes(c, custAttrDnstap)
+		return conf.parseDnstap(c)
 
 	case "metrics":
-		return conf.parseAttributes(c, custAttrMetrics)
+		return conf.parseAttributes(c, attrListTypeMetrics)
 
 	case "debug_id":
 		return conf.parseDebugID(c)
@@ -107,8 +124,7 @@ func (conf *config) parseEndpoint(c *caddy.Controller) error {
 	return nil
 }
 
-func (conf *config) parseEDNS0(c *caddy.Controller) error {
-	args := c.RemainingArgs()
+func (conf *config) parseEDNS0(args ...string) error {
 	// Usage: edns0 <code> <name> [ <dataType> ] [ <size> <start> <end> ].
 	// Valid dataTypes are hex (default), bytes, ip.
 	// Valid destTypes depend on PDP (default string).
@@ -136,6 +152,7 @@ func (conf *config) parseEDNS0(c *caddy.Controller) error {
 	if err != nil {
 		return fmt.Errorf("Could not add EDNS0 %s (%s): %s", args[1], args[0], err)
 	}
+	opt.attrInd = conf.attrs.provideIndex(opt.name)
 
 	opts, ok := conf.options[code]
 	if !ok {
@@ -143,21 +160,33 @@ func (conf *config) parseEDNS0(c *caddy.Controller) error {
 	}
 	conf.options[code] = append(opts, opt)
 
-	conf.custAttrs[opt.name] = conf.custAttrs[opt.name] | custAttrEdns
 	return nil
 }
 
-func (conf *config) parseAttributes(c *caddy.Controller, a custAttr) error {
+func (conf *config) parseAttributes(c *caddy.Controller, listType int) error {
 	args := c.RemainingArgs()
 	if len(args) <= 0 {
 		return c.ArgErr()
 	}
 
-	for _, item := range args {
-		conf.custAttrs[item] = conf.custAttrs[item] | a
+	if e := conf.attrs.parseAttrList(listType, args...); e != nil {
+		return c.Err(e.Error())
 	}
-
 	return nil
+}
+
+func (conf *config) parseDnstap(c *caddy.Controller) error {
+	if !c.NextArg() {
+		return c.ArgErr()
+	}
+	num, err := strconv.Atoi(c.Val())
+	if err != nil {
+		return c.Err(err.Error())
+	}
+	if num < 0 || num >= maxDnstapLists {
+		return c.Err("Incorrect dnstap log level")
+	}
+	return conf.parseAttributes(c, attrListTypeDnstap+num)
 }
 
 func (conf *config) parseStreams(c *caddy.Controller) error {

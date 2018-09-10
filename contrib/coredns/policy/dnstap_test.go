@@ -1,7 +1,6 @@
 package policy
 
 import (
-	"net"
 	"testing"
 
 	"github.com/coredns/coredns/plugin/dnstap"
@@ -9,7 +8,6 @@ import (
 	dtest "github.com/coredns/coredns/plugin/dnstap/test"
 	"github.com/coredns/coredns/plugin/test"
 	"github.com/infobloxopen/themis/contrib/coredns/policy/testutil"
-	"github.com/infobloxopen/themis/pdp"
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
 
@@ -102,45 +100,19 @@ func TestSendCRExtraMsg(t *testing.T) {
 	io := testutil.NewIORoutine()
 	tapIO := newPolicyDnstapSender(io)
 
-	testAttrHolder := &attrHolder{
-		dnReq: []pdp.AttributeAssignment{
-			pdp.MakeStringAssignment(attrNameType, typeValueQuery),
-			pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeTestDomain("test.com")),
-			pdp.MakeStringAssignment(attrNameDNSQtype, "1"),
-			pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("10.0.0.7")),
-			pdp.MakeStringAssignment("option", "option"),
-		},
-		dnstap: []pdp.AttributeAssignment{
-			pdp.MakeStringAssignment("dnstap", "val"),
-		},
-		action: actionAllow,
+	dnstapAttrs := []*pb.DnstapAttribute{
+		{Id: attrNameSourceIP, Value: "10.0.0.7"},
+		{Id: "option", Value: "option"},
+		{Id: "dnstap", Value: "val"},
 	}
 
-	tapIO.sendCRExtraMsg(tapRW, &msg, testAttrHolder)
+	tapIO.sendCRExtraMsg(tapRW, &msg, dnstapAttrs)
 
 	ok = testutil.AssertCRExtraResult(t, "sendCRExtraMsg(actionAllow)", io, &msg,
 		&pb.DnstapAttribute{Id: attrNameSourceIP, Value: "10.0.0.7"},
 		&pb.DnstapAttribute{Id: "option", Value: "option"},
 		&pb.DnstapAttribute{Id: "dnstap", Value: "val"},
 	)
-
-	if l := len(trapper.Trap); l != 0 {
-		t.Fatalf("Dnstap unexpectedly sent %d messages", l)
-		ok = false
-	}
-
-	testAttrHolder.action = actionBlock
-
-	tapIO.sendCRExtraMsg(tapRW, &msg, testAttrHolder)
-
-	ok = testutil.AssertCRExtraResult(t, "sendCRExtraMsg(actionBlock)", io, &msg,
-		&pb.DnstapAttribute{Id: attrNameDomainName, Value: "test.com"},
-		&pb.DnstapAttribute{Id: attrNameDNSQtype, Value: "1"},
-		&pb.DnstapAttribute{Id: attrNameSourceIP, Value: "10.0.0.7"},
-		&pb.DnstapAttribute{Id: "option", Value: "option"},
-		&pb.DnstapAttribute{Id: attrNamePolicyAction, Value: "3"},
-		&pb.DnstapAttribute{Id: attrNameType, Value: typeValueQuery},
-	) && ok
 
 	if l := len(trapper.Trap); l != 0 {
 		t.Fatalf("Dnstap unexpectedly sent %d messages", l)

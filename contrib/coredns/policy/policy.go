@@ -10,7 +10,6 @@ import (
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
 
-	"github.com/infobloxopen/themis/pdp"
 	"github.com/infobloxopen/themis/pep"
 )
 
@@ -33,13 +32,7 @@ type policyPlugin struct {
 
 func newPolicyPlugin() *policyPlugin {
 	return &policyPlugin{
-		conf: config{
-			options:     make(map[uint16][]*edns0Opt),
-			custAttrs:   make(map[string]custAttr),
-			connTimeout: -1,
-			maxReqSize:  -1,
-			maxResAttrs: 64,
-		},
+		conf:            newConfig(),
 		connAttempts:    make(map[string]*uint32),
 		unkConnAttempts: new(uint32),
 	}
@@ -58,15 +51,23 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	p.wg.Add(1)
 	defer p.wg.Done()
 
-	debug := p.patchDebugMsg(r)
+	dbgMsgr := p.patchDebugMsg(r)
 
 	// turn off default Cq and Cr dnstap messages
 	resetCqCr(ctx)
 
-	ah := newAttrHolderWithDnReq(w, r, p.conf.options, p.attrGauges)
+	attrBuffer := p.attrPool.Get()
+	tmpAttrBuffer := p.attrPool.Get()
+
+	ah := newAttrHolder(attrBuffer, p.conf.attrs)
+	dn := ah.addDnsQuery(w, r, p.conf.options)
+
 	defer func() {
-		if ah.action == actionDrop {
-			return
+		if p.conf.attrs.hasMetrics() {
+			metricsList := ah.attrList(tmpAttrBuffer, attrListTypeMetrics)
+			for _, a := range metricsList {
+				p.attrGauges.Inc(a)
+			}
 		}
 
 		if r != nil {
@@ -74,7 +75,7 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 			r.Response = true
 			clearECS(r)
 
-			if debug && len(r.Question) > 0 {
+			if dbgMsgr != nil && len(r.Question) > 0 {
 				q := r.Question[0]
 
 				q.Name += p.conf.debugSuffix
@@ -84,26 +85,29 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 				r.Question[0] = q
 			}
 
-			if status != dns.RcodeServerFailure || resolveFailed {
+			if ah.actionValue() != actionDrop && (status != dns.RcodeServerFailure || resolveFailed) {
 				w.WriteMsg(r)
+			}
+
+			if p.tapIO != nil && dbgMsgr == nil {
+				p.tapIO.sendCRExtraMsg(w, r, ah.dnstapList())
 			}
 		}
 
-		if p.tapIO != nil && !debug {
-			p.tapIO.sendCRExtraMsg(w, r, ah)
-		}
+		p.attrPool.Put(tmpAttrBuffer)
+		p.attrPool.Put(attrBuffer)
 	}()
 
 	for _, s := range p.conf.passthrough {
-		if strings.HasSuffix(ah.dn, s) {
+		if strings.HasSuffix(dn, s) {
 			nw := nonwriter.New(w)
 			_, err := plugin.NextOrFailure(p.Name(), p.next, ctx, nw, r)
 			r = nw.Msg
 			if r != nil {
 				status = r.Rcode
 
-				if debug {
-					p.setDebugQueryPassthroughAnswer(ah, r)
+				if dbgMsgr != nil {
+					dbgMsgr.setDebugQueryPassthroughAnswer(dn, r)
 					status = dns.RcodeSuccess
 				}
 			}
@@ -112,18 +116,14 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		}
 	}
 
-	var attrsRequest []pdp.AttributeAssignment
-	if !p.conf.autoResAttrs {
-		attrsRequest = p.attrPool.Get()
-		defer p.attrPool.Put(attrsRequest)
-	}
 	// validate domain name (validation #1)
-	if err := p.validate(ah, attrsRequest); err != nil {
+	goon, err := p.validate(tmpAttrBuffer, ah, attrListTypeVal1, dbgMsgr)
+	if err != nil {
 		status = dns.RcodeServerFailure
 		return dns.RcodeSuccess, err
 	}
 
-	if ah.action == actionAllow || ah.action == actionLog {
+	if goon {
 		// resolve domain name to IP
 		nw := nonwriter.New(w)
 		_, err := plugin.NextOrFailure(p.Name(), p.next, ctx, nw, r)
@@ -131,8 +131,8 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 			resolveFailed = true
 			status = dns.RcodeServerFailure
 
-			if debug {
-				p.setDebugQueryAnswer(ah, r, status)
+			if dbgMsgr != nil {
+				dbgMsgr.setDebugQueryAnswer(dn, r, status)
 				status = dns.RcodeSuccess
 				return dns.RcodeSuccess, nil
 			}
@@ -156,40 +156,33 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		// address is not filled from the answer
 		// in this case just pass through answer w/o validation
 		if address != nil {
-			ah.addIPReq(address)
+			ah.addAddressAttr(address)
 
-			var attrsResponse []pdp.AttributeAssignment
-			if !p.conf.autoResAttrs {
-				attrsResponse = p.attrPool.Get()
-				defer p.attrPool.Put(attrsResponse)
-			}
 			// validate response IP (validation #2)
-			if err := p.validate(ah, attrsResponse); err != nil {
+			if _, err := p.validate(tmpAttrBuffer, ah, attrListTypeVal2, dbgMsgr); err != nil {
 				status = dns.RcodeServerFailure
 				return dns.RcodeSuccess, err
 			}
 		}
 	}
 
-	if debug && ah.action != actionRefuse {
-		p.setDebugQueryAnswer(ah, r, status)
+	if dbgMsgr != nil && ah.actionValue() != actionRefuse {
+		dbgMsgr.setDebugQueryAnswer(dn, r, status)
 		status = dns.RcodeSuccess
-
 		return dns.RcodeSuccess, nil
 	}
 
-	switch ah.action {
+	switch ah.actionValue() {
 	case actionAllow:
 		r = respMsg
-		return dns.RcodeSuccess, nil
-
-	case actionLog:
-		r = resetTTL(respMsg)
+		if ah.logValue() > 0 {
+			r = resetTTL(respMsg)
+		}
 		return dns.RcodeSuccess, nil
 
 	case actionRedirect:
 		var err error
-		status, err = p.setRedirectQueryAnswer(ctx, w, r, ah.dst)
+		status, err = p.setRedirectQueryAnswer(ctx, w, r, ah.redirectValue())
 		r.AuthenticatedData = false
 		return dns.RcodeSuccess, err
 

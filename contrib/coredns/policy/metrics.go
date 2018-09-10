@@ -265,20 +265,8 @@ func unixTime() uint32 {
 // configures globalAttrGauge as needed
 func (pp *policyPlugin) SetupMetrics(c *caddy.Controller) error {
 	attrNames := []string{}
-	for attr, t := range pp.conf.custAttrs {
-		if !t.isMetrics() {
-			continue
-		}
-
-		attrNames = append(attrNames, attr)
-
-		for _, list := range pp.conf.options {
-			for _, opt := range list {
-				if opt.name == attr {
-					opt.metrics = true
-				}
-			}
-		}
+	for _, conf := range pp.conf.attrs.confLists[attrListTypeMetrics] {
+		attrNames = append(attrNames, conf.name)
 	}
 	if len(attrNames) > 0 {
 		if mh := dnsserver.GetConfig(c).Handler("prometheus"); mh != nil {

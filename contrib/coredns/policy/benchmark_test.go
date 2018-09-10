@@ -243,10 +243,17 @@ func benchParallelHalfHits(b *testing.B, p *policyPlugin, ps *parStat) {
 }
 
 const allPermitTestPolicy = `# All Permit Policy
+attributes:
+  policy_action: integer
 policies:
   alg: FirstApplicableEffect
   rules:
   - effect: Permit
+    obligations:
+    - policy_action:
+        val:
+          type: integer
+          content: 2
 `
 
 func newTestPolicyPlugin(mpMode int, endpoints ...string) *policyPlugin {
@@ -255,6 +262,9 @@ func newTestPolicyPlugin(mpMode int, endpoints ...string) *policyPlugin {
 	p.conf.connTimeout = time.Second
 	p.conf.streams = 1
 	p.conf.maxReqSize = 256
+	p.conf.autoResAttrs = true
+	p.conf.attrs.parseAttrList(attrListTypeVal1, attrNameDomainName)
+	p.conf.attrs.parseAttrList(attrListTypeVal2, attrNameAddress)
 
 	mp := &testutil.MockPlugin{
 		Ip: net.ParseIP("192.0.2.53"),

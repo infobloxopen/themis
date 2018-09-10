@@ -55,8 +55,6 @@ func (p *policyPlugin) connect() error {
 		opts = append(opts, pep.WithMaxRequestSize(uint32(p.conf.maxReqSize)))
 	}
 
-	p.attrPool = makeAttrPool(p.conf.maxResAttrs, false)
-
 	if p.trace != nil {
 		if t, ok := p.trace.(trace.Trace); ok {
 			opts = append(opts, pep.WithTracer(t.Tracer()))
@@ -81,36 +79,59 @@ func (p *policyPlugin) closeConn() {
 	}
 }
 
-func (p *policyPlugin) validate(ah *attrHolder, a []pdp.AttributeAssignment) error {
-	var req []pdp.AttributeAssignment
-	if len(ah.ipReq) > 0 {
-		req = ah.ipReq
-	} else {
-		req = ah.dnReq
+func (p *policyPlugin) validate(buf []pdp.AttributeAssignment, ah *attrHolder, lt int, dbg *dbgMessenger) (bool, error) {
+	req := ah.attrList(buf, lt)
+	if len(req) <= 0 {
+		return true, nil
 	}
 
 	if p.conf.log {
 		log.Infof("PDP request: %+v", req)
 	}
 
-	res := pdp.Response{Obligations: a}
+	var respBuffer []pdp.AttributeAssignment
+	if !p.conf.autoResAttrs {
+		respBuffer = p.attrPool.Get()
+		defer p.attrPool.Put(respBuffer)
+	}
+
+	res := pdp.Response{Obligations: respBuffer}
 	err := p.pdp.Validate(req, &res)
+
+	ah.resetAttribute(attrIndexPolicyAction)
+	ah.resetAttribute(attrIndexRedirectTo)
+	ah.resetAttribute(attrIndexLog)
+
 	if err != nil {
-		log.Errorf("Policy validation failed due to error %s", err)
-		return err
+		log.Errorf("Policy validation failed due to error: %s", err)
+		if dbg != nil {
+			dbg.appendAttrs("Default decision", ah.attrList(buf, attrListTypeDefDecision))
+		} else {
+			ah.resetAttrList(attrListTypeDefDecision)
+		}
+		return false, err
 	}
 
 	if p.conf.log {
 		log.Infof("PDP response: %+v", res)
 	}
-
-	if len(ah.ipReq) > 0 {
-		ah.addIPRes(&res)
-	} else {
-		ah.addDnRes(&res, p.conf.custAttrs)
+	if dbg != nil {
+		dbg.appendResponse(&res)
 	}
 
-	return nil
+	if res.Effect != pdp.EffectPermit && res.Effect != pdp.EffectDeny {
+		log.Errorf("Policy validation failed due to PDP error: %s", res.Status)
+		if dbg != nil {
+			dbg.appendAttrs("Default decision", ah.attrList(buf, attrListTypeDefDecision))
+		} else {
+			ah.resetAttrList(attrListTypeDefDecision)
+		}
+		return false, err
+	}
+
+	ah.addAttrList(res.Obligations)
+
+	return res.Effect == pdp.EffectPermit, nil
 }
 
 func (p *policyPlugin) connStateCb(addr string, state int, err error) {

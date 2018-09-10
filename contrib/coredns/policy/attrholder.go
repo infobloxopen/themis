@@ -12,104 +12,56 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 )
 
-const (
-	actionInvalid = iota
-	actionRefuse
-	actionAllow
-	actionRedirect
-	actionBlock
-	actionLog
-	actionDrop
+var emptyCtx, _ = pdp.NewContext(nil, 0, nil)
+var emptyAttr = pdp.MakeAttributeAssignment(pdp.Attribute{}, pdp.UndefinedValue)
 
-	actionsTotal
-)
-
-const (
-	actionNameInvalid  = "invalid"
-	actionNameRefuse   = "refuse"
-	actionNameAllow    = "allow"
-	actionNameRedirect = "redirect"
-	actionNameBlock    = "block"
-	actionNameLog      = "log"
-	actionNameDrop     = "drop"
-	actionNamePass     = "pass"
-)
-
-var actionNames [actionsTotal]string
-
-var emptyCtx *pdp.Context
-
+// attrHolder holds all attributes related to particular DNS query
 type attrHolder struct {
-	dn string
-
-	dnReq []pdp.AttributeAssignment
-	dnRes []pdp.AttributeAssignment
-
-	transfer []pdp.AttributeAssignment
-
-	ipReq []pdp.AttributeAssignment
-	ipRes []pdp.AttributeAssignment
-
-	dnstap []pdp.AttributeAssignment
-
-	action byte
-	dst    string
+	attrs []pdp.AttributeAssignment
+	cfg   *attrsConfig
 }
 
-func init() {
-	actionNames[actionInvalid] = actionNameInvalid
-	actionNames[actionRefuse] = actionNameRefuse
-	actionNames[actionAllow] = actionNameAllow
-	actionNames[actionRedirect] = actionNameRedirect
-	actionNames[actionBlock] = actionNameBlock
-	actionNames[actionLog] = actionNameLog
-	actionNames[actionDrop] = actionNameDrop
-
-	emptyCtx, _ = pdp.NewContext(nil, 0, nil)
+// newAttrHolder constructs attrHolder object which holds all attributes related to
+// particular DNS query
+// buf is a slice with underlying allocated buffer for attributes. If buf is nil
+// or capacity is not enough to store all predefined+configured attributes then new
+// buffer is allocated
+// conf must have mappings for all predefined and configured attributes
+func newAttrHolder(buf []pdp.AttributeAssignment, conf *attrsConfig) *attrHolder {
+	attrCnt := len(conf.attrInds)
+	if cap(buf) < attrCnt {
+		buf = make([]pdp.AttributeAssignment, attrCnt)
+	}
+	ah := &attrHolder{attrs: buf[:attrCnt], cfg: conf}
+	for i := range ah.attrs {
+		ah.attrs[i] = emptyAttr
+	}
+	return ah
 }
 
-func newAttrHolderWithDnReq(w dns.ResponseWriter, r *dns.Msg, optMap map[uint16][]*edns0Opt, ag *AttrGauge) *attrHolder {
-	hdrCount := ednsAttrsStart
+// addDnsQuery adds some predefined attributes from DNS query as well as configured
+// attributes from EDNS record
+func (ah *attrHolder) addDnsQuery(w dns.ResponseWriter, r *dns.Msg, optMap map[uint16][]*edns0Opt) string {
 	qName, qType := getNameAndType(r)
 	dn, err := domain.MakeNameFromString(qName)
 	if err != nil {
 		panic(fmt.Errorf("Can't treat %q as domain name: %s", qName, err))
 	}
+	ah.attrs[attrIndexDomainName] = pdp.MakeDomainAssignment(attrNameDomainName, dn)
+	ah.attrs[attrIndexDNSQtype] = pdp.MakeStringAssignment(attrNameDNSQtype, strconv.FormatUint(uint64(qType), 16))
 
-	srcIP := getRemoteIP(w)
-	if srcIP != nil {
-		hdrCount++
-	}
-
-	ah := &attrHolder{
-		dn:    qName,
-		dnReq: make([]pdp.AttributeAssignment, hdrCount, 8),
-	}
-
-	ah.dnReq[0] = pdp.MakeStringAssignment(attrNameType, typeValueQuery)
-	ah.dnReq[1] = pdp.MakeDomainAssignment(attrNameDomainName, dn)
-	ah.dnReq[2] = pdp.MakeStringAssignment(attrNameDNSQtype, strconv.FormatUint(uint64(qType), 16))
-
-	if srcIP != nil {
-		ah.dnReq[3] = pdp.MakeAddressAssignment(attrNameSourceIP, srcIP)
+	if srcIP := getRemoteIP(w); srcIP != nil {
+		ah.attrs[attrIndexSourceIP] = pdp.MakeAddressAssignment(attrNameSourceIP, srcIP)
 	}
 
 	extractOptionsFromEDNS0(r, optMap, func(b []byte, opts []*edns0Opt) {
 		for _, o := range opts {
 			if a, ok := makeAssignmentByType(o, b); ok {
-				if o.name == attrNameSourceIP && srcIP != nil {
-					ah.dnReq[3] = a
-				} else {
-					ah.dnReq = append(ah.dnReq, a)
-					if o.metrics && ag != nil {
-						ag.Inc(a)
-					}
-				}
+				ah.attrs[o.attrInd] = a
 			}
 		}
 	})
-
-	return ah
+	return qName
 }
 
 func makeAssignmentByType(o *edns0Opt, b []byte) (pdp.AttributeAssignment, bool) {
@@ -128,194 +80,93 @@ func makeAssignmentByType(o *edns0Opt, b []byte) (pdp.AttributeAssignment, bool)
 	panic(fmt.Errorf("unknown attribute type %d", o.dataType))
 }
 
-func (ah *attrHolder) addDnRes(r *pdp.Response, custAttrs map[string]custAttr) {
-	oCount := len(r.Obligations)
-
-	switch r.Effect {
-	default:
-		log.Errorf("PDP Effect: %s, Reason: %s", pdp.EffectNameFromEnum(r.Effect), r.Status)
-		ah.action = actionInvalid
-
-	case pdp.EffectPermit:
-		ah.action = actionAllow
-
-		i := 0
-		for i < oCount {
-			o := r.Obligations[i]
-
-			id := o.GetID()
-			switch id {
-			case attrNameLog:
-				ah.action = actionLog
-
-			default:
-				if t, ok := custAttrs[id]; ok {
-					ah.putCustomAttr(o, t)
-
-					if t.isEdns() {
-						oCount--
-						r.Obligations[i] = r.Obligations[oCount]
-						continue
-					}
-				}
-			}
-
-			i++
-		}
-
-	case pdp.EffectDeny:
-		ah.action = actionBlock
-
-		i := 0
-		for i < oCount {
-			o := r.Obligations[i]
-
-			id := o.GetID()
-			switch id {
-			default:
-				if t, ok := custAttrs[id]; ok && t.isEdns() {
-					ah.putCustomAttr(o, t)
-
-					oCount--
-					r.Obligations[i] = r.Obligations[oCount]
-					continue
-				}
-
-			case attrNameRefuse:
-				ah.action = actionRefuse
-
-			case attrNameRedirectTo:
-				ah.addRedirect(o)
-
-			case attrNameDrop:
-				ah.action = actionDrop
-			}
-
-			i++
-		}
-	}
-
-	ah.dnRes = r.Obligations[:oCount]
+// addAddressAttr adds predefined Address attribute
+func (ah *attrHolder) addAddressAttr(ip net.IP) {
+	ah.attrs[attrIndexAddress] = pdp.MakeAddressAssignment(attrNameAddress, ip)
 }
 
-func (ah *attrHolder) addRedirect(attr pdp.AttributeAssignment) {
-	ah.action = actionRedirect
-	dst, err := attr.GetString(emptyCtx)
-	if err != nil {
-		log.Errorf("Action: %s, Destination: %s (%s)", actionNames[ah.action], serializeOrPanic(attr), err)
-
-		ah.action = actionInvalid
-		return
-	}
-
-	ah.dst = dst
-}
-
-func (ah *attrHolder) putCustomAttr(attr pdp.AttributeAssignment, f custAttr) {
-	if f.isEdns() {
-		id := attr.GetID()
-
-		for _, a := range ah.dnReq[ednsAttrsStart:] {
-			if id == a.GetID() {
-				return
-			}
+// addAttrList adds or replaces attributes from the attrs list
+func (ah *attrHolder) addAttrList(attrs []pdp.AttributeAssignment) {
+	for _, a := range attrs {
+		if ind, ok := ah.cfg.attrInds[a.GetID()]; ok {
+			ah.attrs[ind] = a
 		}
-
-		ah.dnReq = append(ah.dnReq, attr)
-	}
-
-	if f.isTransfer() {
-		ah.transfer = append(ah.transfer, attr)
-	}
-
-	if f.isDnstap() {
-		ah.dnstap = append(ah.dnstap, attr)
 	}
 }
 
-func (ah *attrHolder) addIPReq(ip net.IP) {
-	ah.ipReq = append(
-		[]pdp.AttributeAssignment{
-			pdp.MakeStringAssignment(attrNameType, typeValueResponse),
-			pdp.MakeAddressAssignment(attrNameAddress, ip),
-		},
-		ah.transfer...,
-	)
-}
-
-func (ah *attrHolder) addIPRes(r *pdp.Response) {
-	switch r.Effect {
-	default:
-		log.Errorf("PDP Effect: %s, Reason: %s", pdp.EffectNameFromEnum(r.Effect), r.Status)
-		ah.action = actionInvalid
-
-	case pdp.EffectPermit:
-		ah.action = actionAllow
-
-		for _, o := range r.Obligations {
-			if o.GetID() == attrNameLog {
-				ah.action = actionLog
-				break
-			}
-		}
-
-	case pdp.EffectDeny:
-		ah.action = actionBlock
-
-		for _, o := range r.Obligations {
-			switch o.GetID() {
-			case attrNameRefuse:
-				ah.action = actionRefuse
-
-			case attrNameRedirectTo:
-				ah.addRedirect(o)
-
-			case attrNameDrop:
-				ah.action = actionDrop
-			}
+// resetAttrList resets values of configured attribute list to preconfigured values
+func (ah *attrHolder) resetAttrList(listType int) {
+	for _, ac := range ah.cfg.confLists[listType] {
+		if ac.value != pdp.UndefinedValue {
+			ah.attrs[ac.index] = pdp.MakeExpressionAssignment(ac.name, ac.value)
 		}
 	}
-
-	ah.ipRes = r.Obligations
 }
 
-func (ah *attrHolder) makeDnstapReport() []*pb.DnstapAttribute {
-	if ah.action != actionAllow && ah.action != actionInvalid {
-		return ah.makeFullDnstapReport()
+// attrList returns non-empty attributes belonging to particular list
+// buf is a slice to use as a preallocated buffer. If capacity is not enough to hold
+// all returned attributes then the buffer will be automatically reallocated
+func (ah *attrHolder) attrList(buf []pdp.AttributeAssignment, listType int) []pdp.AttributeAssignment {
+	ah.resetAttrList(listType)
+
+	list := buf[:0]
+	for _, ac := range ah.cfg.confLists[listType] {
+		attr := ah.attrs[ac.index]
+		if attr.GetID() == "" {
+			continue
+		}
+		list = append(list, attr)
+	}
+	return list
+}
+
+// dnstapList returns list of non-empty dnstap attributes according to defined log level
+func (ah *attrHolder) dnstapList() []*pb.DnstapAttribute {
+	cfgList := ah.cfg.confLists[attrListTypeDnstap+ah.logValue()]
+	if len(cfgList) <= 0 {
+		return nil
 	}
 
-	edns := ah.dnReq[ednsAttrsStart:]
-	dnstap := ah.dnstap
+	ah.resetAttrList(attrListTypeDnstap + ah.logValue())
+	out := make([]*pb.DnstapAttribute, 0, len(cfgList))
 
-	out := make([]*pb.DnstapAttribute, len(edns)+len(dnstap))
-	n := putAttrsToDnstap(edns, out)
-	putAttrsToDnstap(dnstap, out[n:])
-
+	for _, ac := range cfgList {
+		attr := ah.attrs[ac.index]
+		if attr.GetID() == "" {
+			continue
+		}
+		out = append(out, newDnstapAttribute(attr))
+	}
 	return out
 }
 
-func (ah *attrHolder) makeFullDnstapReport() []*pb.DnstapAttribute {
-	lenIPReq := len(ah.ipReq)
-	if lenIPReq > 0 {
-		lenIPReq = 1
+// redirectValue returns the value of Redirect attribute
+func (ah *attrHolder) redirectValue() string {
+	if rdr, err := ah.attrs[attrIndexRedirectTo].GetString(emptyCtx); err == nil {
+		return rdr
 	}
+	return ""
+}
 
-	out := make([]*pb.DnstapAttribute, len(ah.dnReq)+len(ah.dnRes)+lenIPReq+len(ah.ipRes)+1)
-
-	n := putAttrsToDnstap(ah.dnReq[1:], out)
-	n += putAttrsToDnstap(ah.dnRes, out[n:])
-
-	if lenIPReq > 0 {
-		out[n] = newDnstapAttribute(ah.ipReq[ipReqAddrPos])
-		n++
+// actionValue returns the Action
+func (ah *attrHolder) actionValue() int {
+	act64, err := ah.attrs[attrIndexPolicyAction].GetInteger(emptyCtx)
+	if err == nil && act64 >= 0 && act64 < actionsTotal {
+		return int(act64)
 	}
+	return actionInvalid
+}
 
-	n += putAttrsToDnstap(ah.ipRes, out[n:])
+// logValue returns the dnstap log level
+func (ah *attrHolder) logValue() int {
+	log64, err := ah.attrs[attrIndexLog].GetInteger(emptyCtx)
+	if err == nil && log64 > 0 && log64 < maxDnstapLists {
+		return int(log64)
+	}
+	return 0
+}
 
-	out[n] = newDnstapAttributeFromAction(ah.action)
-	n++
-
-	out[n] = newDnstapAttributeFromReqType(lenIPReq > 0)
-
-	return out
+// resetAttribute resets attribute to empty value
+func (ah *attrHolder) resetAttribute(ind int) {
+	ah.attrs[ind] = emptyAttr
 }

@@ -1,7 +1,6 @@
 package policy
 
 import (
-	"fmt"
 	"net"
 	"strconv"
 	"testing"
@@ -14,35 +13,40 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 )
 
-func TestNewAttrHolderWithDnReq(t *testing.T) {
-	optsMap := map[uint16][]*edns0Opt{
-		0xfffc: {
-			{
-				name:     attrNameSourceIP,
-				dataType: typeEDNS0IP,
-			},
-		},
-		0xfffd: {
-			{
-				name:     "low",
-				dataType: typeEDNS0Hex,
-				size:     16,
-				end:      8,
-			},
-			{
-				name:     "high",
-				dataType: typeEDNS0Hex,
-				size:     16,
-				start:    8,
-			},
-		},
-		0xfffe: {
-			{
-				name:     "byte",
-				dataType: typeEDNS0Bytes,
-			},
-		},
+func TestNewAttrHolder(t *testing.T) {
+	ac := newAttrsConfig()
+
+	// large buffer
+	ah := newAttrHolder(make([]pdp.AttributeAssignment, 100), ac)
+	if len(ah.attrs) != len(ac.attrInds) {
+		t.Errorf("Unexpected attrHolder size, expected %d, actual %d", len(ac.attrInds), len(ah.attrs))
 	}
+
+	// too small buffer
+	ah = newAttrHolder(make([]pdp.AttributeAssignment, 2), ac)
+	if len(ah.attrs) != len(ac.attrInds) {
+		t.Errorf("Unexpected attrHolder size, expected %d, actual %d", len(ac.attrInds), len(ah.attrs))
+	}
+
+	// no buffer
+	ah = newAttrHolder(nil, ac)
+	if len(ah.attrs) != len(ac.attrInds) {
+		t.Errorf("Unexpected attrHolder size, expected %d, actual %d", len(ac.attrInds), len(ah.attrs))
+	}
+
+	for i, a := range ah.attrs {
+		if a != emptyAttr {
+			t.Errorf("Attribute %d is not empty: %v", i, a)
+		}
+	}
+}
+
+func TestAddDnsQuery(t *testing.T) {
+	cfg := newConfig()
+	cfg.parseEDNS0("0xfffc", attrNameSourceIP, "address")
+	cfg.parseEDNS0("0xfffd", "low", "hex", "16", "0", "8")
+	cfg.parseEDNS0("0xfffd", "high", "hex", "16", "8", "16")
+	cfg.parseEDNS0("0xfffe", "byte", "bytes")
 
 	m := testutil.MakeTestDNSMsgWithEdns0("example.com", dns.TypeA, dns.ClassINET,
 		testutil.NewEdns0(
@@ -59,12 +63,13 @@ func TestNewAttrHolderWithDnReq(t *testing.T) {
 	)
 	w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 
-	ah := newAttrHolderWithDnReq(w, m, optsMap, nil)
-	pdp.AssertAttributeAssignments(t, "newAttrHolderWithDnReq", ah.dnReq,
-		pdp.MakeStringAssignment(attrNameType, typeValueQuery),
+	ah := newAttrHolder(nil, cfg.attrs)
+	ah.addDnsQuery(w, m, cfg.options)
+	testutil.AssertAttrList(t, ah.attrs,
 		pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeTestDomain(dns.Fqdn("example.com"))),
 		pdp.MakeStringAssignment(attrNameDNSQtype, strconv.FormatUint(uint64(dns.TypeA), 16)),
 		pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("2001:db8::1")),
+		emptyAttr, emptyAttr, emptyAttr, emptyAttr,
 		pdp.MakeStringAssignment("low", "0001020304050607"),
 		pdp.MakeStringAssignment("high", "08090a0b0c0d0e0f"),
 		pdp.MakeStringAssignment("byte", "test"),
@@ -80,718 +85,300 @@ func TestNewAttrHolderWithDnReq(t *testing.T) {
 			),
 			testutil.NewEdns0Local(0xfffd, []byte{}),
 			testutil.NewEdns0Local(0xfffe, []byte("test")),
-			testutil.NewEdns0Local(0xfffc, []byte(net.ParseIP("2001:db8::1"))),
 		),
 	)
-	w = testutil.NewTestAddressedNonwriter("example.com:53")
 
-	ah = newAttrHolderWithDnReq(w, m, optsMap, nil)
-	pdp.AssertAttributeAssignments(t, "newAttrHolderWithDnReq(notIPRemoteAddr)", ah.dnReq,
-		pdp.MakeStringAssignment(attrNameType, typeValueQuery),
+	ah = newAttrHolder(nil, cfg.attrs)
+	ah.addDnsQuery(w, m, cfg.options)
+	testutil.AssertAttrList(t, ah.attrs,
 		pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeTestDomain(dns.Fqdn("example.com"))),
 		pdp.MakeStringAssignment(attrNameDNSQtype, strconv.FormatUint(uint64(dns.TypeA), 16)),
+		pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.1")),
+		emptyAttr, emptyAttr, emptyAttr, emptyAttr,
 		pdp.MakeStringAssignment("low", "0001020304050607"),
 		pdp.MakeStringAssignment("high", "08090a0b0c0d0e0f"),
 		pdp.MakeStringAssignment("byte", "test"),
-		pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("2001:db8::1")),
 	)
 
 	m = testutil.MakeTestDNSMsg("...", dns.TypeA, dns.ClassINET)
-	testutil.AssertPanicWithError(t, "newAttrHolderWithDnReq(invalidDomainName)", func() {
-		newAttrHolderWithDnReq(w, m, nil, nil)
+	testutil.AssertPanicWithError(t, "addDnsQuery(invalidDomainName)", func() {
+		ah.addDnsQuery(w, m, nil)
 	}, "Can't treat %q as domain name: %s", "...", domain.ErrEmptyLabel)
 }
 
-func TestAddIpReq(t *testing.T) {
-	m := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-	w := testutil.NewTestAddressedNonwriter("192.0.2.1")
+func TestAddAddressAttr(t *testing.T) {
+	ah := newAttrHolder(nil, newAttrsConfig())
 
-	custAttrs := map[string]custAttr{
-		"trans": custAttrTransfer,
-	}
+	ah.addAddressAttr(net.ParseIP("221.222.223.224"))
+	testutil.AssertAttrList(t, ah.attrs,
+		emptyAttr, emptyAttr, emptyAttr,
+		pdp.MakeAddressAssignment(attrNameAddress, net.ParseIP("221.222.223.224")),
+		emptyAttr, emptyAttr, emptyAttr,
+	)
+}
 
-	ah := newAttrHolderWithDnReq(w, m, nil, nil)
-	pdp.AssertAttributeAssignments(t, "newAttrHolderWithDnReq - dnReq", ah.dnReq,
-		pdp.MakeStringAssignment(attrNameType, typeValueQuery),
+func TestAddAttrList(t *testing.T) {
+	ah := newAttrHolder(nil, newAttrsConfig())
+	ah.addAttrList([]pdp.AttributeAssignment{
+		pdp.MakeAddressAssignment(attrNameAddress, net.ParseIP("192.0.2.1")),
 		pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeTestDomain(dns.Fqdn("example.com"))),
-		pdp.MakeStringAssignment(attrNameDNSQtype, strconv.FormatUint(uint64(dns.TypeA), 16)),
-		pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.1")),
-	)
-	pdp.AssertAttributeAssignments(t, "newAttrHolderWithDnReq - dnRes", ah.dnRes)
-
-	ah.addDnRes(
-		&pdp.Response{
-			Effect: pdp.EffectPermit,
-			Obligations: []pdp.AttributeAssignment{
-				pdp.MakeStringAssignment("trans", "val"),
-			},
-		},
-		custAttrs,
-	)
-	pdp.AssertAttributeAssignments(t, "addDnRes - dnRes", ah.dnRes,
-		pdp.MakeStringAssignment("trans", "val"),
-	)
-	pdp.AssertAttributeAssignments(t, "addDnRes - transfer", ah.transfer,
-		pdp.MakeStringAssignment("trans", "val"),
-	)
-
-	ah.addIPReq(net.ParseIP("2001:db8::1"))
-	pdp.AssertAttributeAssignments(t, "addIPReq - ipReq", ah.ipReq,
-		pdp.MakeStringAssignment(attrNameType, typeValueResponse),
-		pdp.MakeAddressAssignment(attrNameAddress, net.ParseIP("2001:db8::1")),
-		pdp.MakeStringAssignment("trans", "val"),
-	)
-}
-
-func TestActionDomainResponse(t *testing.T) {
-	tests := []struct {
-		res    *pdp.Response
-		action byte
-		dst    string
-	}{
-		{
-			res: &pdp.Response{
-				Effect: pdp.EffectPermit,
-			},
-			action: actionAllow,
-		},
-		{
-			res: &pdp.Response{
-				Effect: pdp.EffectIndeterminate,
-				Status: fmt.Errorf("example of pdp failure on domain validation"),
-			},
-			action: actionInvalid,
-		},
-		{
-			res: &pdp.Response{
-				Effect: pdp.EffectDeny,
-			},
-			action: actionBlock,
-		},
-		{
-			res: &pdp.Response{
-				Effect: pdp.EffectDeny,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeStringAssignment(attrNameRedirectTo, "192.0.2.1"),
-				},
-			},
-			action: actionRedirect,
-			dst:    "192.0.2.1",
-		},
-		{
-			res: &pdp.Response{
-				Effect: pdp.EffectDeny,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeIntegerAssignment(attrNameRedirectTo, 0),
-				},
-			},
-			action: actionInvalid,
-		},
-		{
-			res: &pdp.Response{
-				Effect: pdp.EffectDeny,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeBooleanAssignment(attrNameRefuse, true),
-				},
-			},
-			action: actionRefuse,
-		},
-		{
-			res: &pdp.Response{
-				Effect: pdp.EffectPermit,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeBooleanAssignment(attrNameLog, true),
-				},
-			},
-			action: actionLog,
-		},
-		{
-			res: &pdp.Response{
-				Effect: pdp.EffectDeny,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeBooleanAssignment(attrNameDrop, true),
-				},
-			},
-			action: actionDrop,
-		},
-	}
-
-	r := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-	w := testutil.NewTestAddressedNonwriter("192.0.2.1")
-	for i, test := range tests {
-		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			ah := newAttrHolderWithDnReq(w, r, nil, nil)
-
-			g := testutil.NewLogGrabber()
-			ah.addDnRes(test.res, nil)
-			logs := g.Release()
-
-			if ah.action != test.action {
-				t.Errorf("unexpected action in TC #%d: expected=%d, actual=%d", i, test.action, ah.action)
-				t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
-			}
-			if ah.dst != test.dst {
-				t.Errorf("unexpected redirect destination in TC #%d: expected=%q, actual=%q", i, test.dst, ah.dst)
-				t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
-			}
-		})
-	}
-}
-
-func TestActionIpResponse(t *testing.T) {
-	tests := []struct {
-		res        *pdp.Response
-		initAction byte
-		action     byte
-		dst        string
-	}{
-		{
-			res: &pdp.Response{
-				Effect: pdp.EffectPermit,
-			},
-			initAction: actionAllow,
-			action:     actionAllow,
-		},
-		{
-			res: &pdp.Response{
-				Effect: pdp.EffectPermit,
-			},
-			initAction: actionLog,
-			action:     actionAllow,
-		},
-		{
-			res: &pdp.Response{
-				Effect: pdp.EffectPermit,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeBooleanAssignment(attrNameLog, true),
-				},
-			},
-			initAction: actionAllow,
-			action:     actionLog,
-		},
-		{
-			res: &pdp.Response{
-				Effect: pdp.EffectDeny,
-			},
-			initAction: actionAllow,
-			action:     actionBlock,
-		},
-		{
-			res: &pdp.Response{
-				Effect: pdp.EffectDeny,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeStringAssignment(attrNameRedirectTo, "192.0.2.1"),
-				},
-			},
-			initAction: actionAllow,
-			action:     actionRedirect,
-			dst:        "192.0.2.1",
-		},
-		{
-			res: &pdp.Response{
-				Effect: pdp.EffectDeny,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeBooleanAssignment(attrNameRefuse, true),
-				},
-			},
-			initAction: actionAllow,
-			action:     actionRefuse,
-		},
-		{
-			res: &pdp.Response{
-				Effect: pdp.EffectDeny,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeBooleanAssignment(attrNameDrop, true),
-				},
-			},
-			initAction: actionAllow,
-			action:     actionDrop,
-		},
-		{
-			res: &pdp.Response{
-				Effect: pdp.EffectIndeterminate,
-				Status: fmt.Errorf("example of pdp failure on IP validation"),
-			},
-			initAction: actionAllow,
-			action:     actionInvalid,
-		},
-	}
-
-	r := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-	w := testutil.NewTestAddressedNonwriter("192.0.2.1")
-	for i, test := range tests {
-		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			ah := newAttrHolderWithDnReq(w, r, nil, nil)
-			ah.action = test.initAction
-
-			g := testutil.NewLogGrabber()
-			ah.addIPRes(test.res)
-			logs := g.Release()
-
-			if ah.action != test.action {
-				t.Errorf("unexpected action in TC #%d: expected=%d, actual=%d", i, test.action, ah.action)
-				t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
-			}
-			if ah.dst != test.dst {
-				t.Errorf("unexpected redirect destination in TC #%d: expected=%q, actual=%q", i, test.dst, ah.dst)
-				t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
-			}
-		})
-	}
-}
-
-func TestAddResponse(t *testing.T) {
-	optsMap := map[uint16][]*edns0Opt{
-		0xfffe: {
-			{
-				name:     "edns1",
-				dataType: typeEDNS0Bytes,
-			},
-		},
-	}
-
-	opts := []*dns.OPT{
-		testutil.NewEdns0(
-			testutil.NewEdns0Local(0xfffe, []byte("edns1Val")),
-		),
-	}
-
-	custAttrs := map[string]custAttr{
-		"edns1":       custAttrEdns,
-		"trans1":      custAttrTransfer,
-		"transdnstap": custAttrTransfer | custAttrDnstap,
-		"dnstap":      custAttrDnstap,
-	}
-
-	tests := []struct {
-		opts   []*dns.OPT
-		resp   *pdp.Response
-		dnRes  []pdp.AttributeAssignment
-		ipRes  []pdp.AttributeAssignment
-		edns0  []pdp.AttributeAssignment
-		trans  []pdp.AttributeAssignment
-		dnstap []pdp.AttributeAssignment
-	}{
-		{
-			resp: &pdp.Response{
-				Effect: pdp.EffectPermit,
-			},
-			dnRes: []pdp.AttributeAssignment{},
-			ipRes: []pdp.AttributeAssignment{},
-			edns0: []pdp.AttributeAssignment{
-				pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.1")),
-			},
-			trans:  []pdp.AttributeAssignment{},
-			dnstap: []pdp.AttributeAssignment{},
-		},
-		{
-			opts: opts,
-			resp: &pdp.Response{
-				Effect: pdp.EffectPermit,
-			},
-			dnRes: []pdp.AttributeAssignment{},
-			ipRes: []pdp.AttributeAssignment{},
-			edns0: []pdp.AttributeAssignment{
-				pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.2")),
-				pdp.MakeStringAssignment("edns1", "edns1Val"),
-			},
-			trans: []pdp.AttributeAssignment{},
-		},
-		{
-			resp: &pdp.Response{
-				Effect: pdp.EffectPermit,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeStringAssignment("edns1", "edns1Val"),
-				},
-			},
-			dnRes: []pdp.AttributeAssignment{},
-			edns0: []pdp.AttributeAssignment{
-				pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.3")),
-				pdp.MakeStringAssignment("edns1", "edns1Val"),
-			},
-			trans: []pdp.AttributeAssignment{},
-		},
-		{
-			resp: &pdp.Response{
-				Effect: pdp.EffectDeny,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeStringAssignment("edns1", "edns1Val"),
-				},
-			},
-			dnRes: []pdp.AttributeAssignment{},
-			edns0: []pdp.AttributeAssignment{
-				pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.4")),
-				pdp.MakeStringAssignment("edns1", "edns1Val"),
-			},
-			trans: []pdp.AttributeAssignment{},
-		},
-		{
-			resp: &pdp.Response{
-				Effect: pdp.EffectPermit,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeStringAssignment("edns1", "edns1Val"),
-				},
-			},
-			ipRes: []pdp.AttributeAssignment{
-				pdp.MakeStringAssignment("edns1", "edns1Val"),
-			},
-			edns0: []pdp.AttributeAssignment{
-				pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.5")),
-			},
-			trans: []pdp.AttributeAssignment{},
-		},
-		{
-			opts: opts,
-			resp: &pdp.Response{
-				Effect: pdp.EffectPermit,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeStringAssignment("edns1", "edns1Val2"),
-				},
-			},
-			dnRes: []pdp.AttributeAssignment{},
-			edns0: []pdp.AttributeAssignment{
-				pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.6")),
-				pdp.MakeStringAssignment("edns1", "edns1Val"),
-			},
-			trans: []pdp.AttributeAssignment{},
-		},
-		{
-			resp: &pdp.Response{
-				Effect: pdp.EffectPermit,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeStringAssignment("edns1", "edns1Val2"),
-				},
-			},
-			dnRes: []pdp.AttributeAssignment{},
-			edns0: []pdp.AttributeAssignment{
-				pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.7")),
-				pdp.MakeStringAssignment("edns1", "edns1Val2"),
-			},
-			trans: []pdp.AttributeAssignment{},
-		},
-		{
-			resp: &pdp.Response{
-				Effect: pdp.EffectPermit,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeStringAssignment("trans1", "trans1Val1"),
-				},
-			},
-			ipRes: []pdp.AttributeAssignment{
-				pdp.MakeStringAssignment("trans1", "trans1Val1"),
-			},
-			edns0: []pdp.AttributeAssignment{
-				pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.8")),
-			},
-			trans: []pdp.AttributeAssignment{},
-		},
-		{
-			resp: &pdp.Response{
-				Effect: pdp.EffectPermit,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeStringAssignment("trans1", "trans1Val1"),
-				},
-			},
-			dnRes: []pdp.AttributeAssignment{
-				pdp.MakeStringAssignment("trans1", "trans1Val1"),
-			},
-			edns0: []pdp.AttributeAssignment{
-				pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.9")),
-			},
-			trans: []pdp.AttributeAssignment{
-				pdp.MakeStringAssignment("trans1", "trans1Val1"),
-			},
-		},
-		{
-			resp: &pdp.Response{
-				Effect: pdp.EffectDeny,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeStringAssignment("trans1", "trans1Val1"),
-				},
-			},
-			dnRes: []pdp.AttributeAssignment{
-				pdp.MakeStringAssignment("trans1", "trans1Val1"),
-			},
-			edns0: []pdp.AttributeAssignment{
-				pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.10")),
-			},
-			trans: []pdp.AttributeAssignment{},
-		},
-		{
-			resp: &pdp.Response{
-				Effect: pdp.EffectPermit,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeStringAssignment("edns1", "ends1Val"),
-					pdp.MakeStringAssignment("trans1", "trans1Val1"),
-					pdp.MakeStringAssignment("other1", "other1Val1"),
-				},
-			},
-			dnRes: []pdp.AttributeAssignment{
-				pdp.MakeStringAssignment("other1", "other1Val1"),
-				pdp.MakeStringAssignment("trans1", "trans1Val1"),
-			},
-			edns0: []pdp.AttributeAssignment{
-				pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.11")),
-				pdp.MakeStringAssignment("edns1", "ends1Val"),
-			},
-			trans: []pdp.AttributeAssignment{
-				pdp.MakeStringAssignment("trans1", "trans1Val1"),
-			},
-		},
-		{
-			resp: &pdp.Response{
-				Effect: pdp.EffectPermit,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeStringAssignment("edns1", "ends1Val"),
-					pdp.MakeStringAssignment("trans1", "trans1Val1"),
-					pdp.MakeStringAssignment("other1", "other1Val1"),
-				},
-			},
-			ipRes: []pdp.AttributeAssignment{
-				pdp.MakeStringAssignment("edns1", "ends1Val"),
-				pdp.MakeStringAssignment("trans1", "trans1Val1"),
-				pdp.MakeStringAssignment("other1", "other1Val1"),
-			},
-			edns0: []pdp.AttributeAssignment{
-				pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.12")),
-			},
-			trans: []pdp.AttributeAssignment{},
-		},
-		{
-			resp: &pdp.Response{
-				Effect: pdp.EffectPermit,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeStringAssignment("edns1", "ends1Val"),
-					pdp.MakeStringAssignment("trans1", "trans1Val1"),
-					pdp.MakeStringAssignment("other1", "other1Val1"),
-					pdp.MakeStringAssignment("transdnstap", "val"),
-				},
-			},
-			dnRes: []pdp.AttributeAssignment{
-				pdp.MakeStringAssignment("transdnstap", "val"),
-				pdp.MakeStringAssignment("trans1", "trans1Val1"),
-				pdp.MakeStringAssignment("other1", "other1Val1"),
-			},
-			edns0: []pdp.AttributeAssignment{
-				pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.13")),
-				pdp.MakeStringAssignment("edns1", "ends1Val"),
-			},
-			trans: []pdp.AttributeAssignment{
-				pdp.MakeStringAssignment("transdnstap", "val"),
-				pdp.MakeStringAssignment("trans1", "trans1Val1"),
-			},
-			dnstap: []pdp.AttributeAssignment{
-				pdp.MakeStringAssignment("transdnstap", "val"),
-			},
-		},
-		{
-			resp: &pdp.Response{
-				Effect: pdp.EffectPermit,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeStringAssignment("edns1", "ends1Val"),
-					pdp.MakeStringAssignment("trans1", "trans1Val1"),
-					pdp.MakeStringAssignment("other1", "other1Val1"),
-					pdp.MakeStringAssignment("transdnstap", "val"),
-				},
-			},
-			ipRes: []pdp.AttributeAssignment{
-				pdp.MakeStringAssignment("edns1", "ends1Val"),
-				pdp.MakeStringAssignment("trans1", "trans1Val1"),
-				pdp.MakeStringAssignment("other1", "other1Val1"),
-				pdp.MakeStringAssignment("transdnstap", "val"),
-			},
-			edns0: []pdp.AttributeAssignment{
-				pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.14")),
-			},
-			trans:  []pdp.AttributeAssignment{},
-			dnstap: []pdp.AttributeAssignment{},
-		},
-		{
-			resp: &pdp.Response{
-				Effect: pdp.EffectPermit,
-				Obligations: []pdp.AttributeAssignment{
-					pdp.MakeStringAssignment("other1", "other1Val1"),
-					pdp.MakeStringAssignment("dnstap", "val"),
-				},
-			},
-			dnRes: []pdp.AttributeAssignment{
-				pdp.MakeStringAssignment("other1", "other1Val1"),
-				pdp.MakeStringAssignment("dnstap", "val"),
-			},
-			edns0: []pdp.AttributeAssignment{
-				pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.15")),
-			},
-			trans: []pdp.AttributeAssignment{},
-			dnstap: []pdp.AttributeAssignment{
-				pdp.MakeStringAssignment("dnstap", "val"),
-			},
-		},
-	}
-
-	for i, test := range tests {
-		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			w := testutil.NewTestAddressedNonwriter(fmt.Sprintf("192.0.2.%d", i+1))
-			if test.dnRes != nil {
-				r := testutil.MakeTestDNSMsgWithEdns0("example.com", dns.TypeA, dns.ClassINET, testutil.CopyEdns0(test.opts...)...)
-				ah := newAttrHolderWithDnReq(w, r, optsMap, nil)
-				ah.addDnRes(test.resp, custAttrs)
-
-				pdp.AssertAttributeAssignments(t,
-					fmt.Sprintf("TestAddResponse test %d dnRes", i+1),
-					ah.dnRes, test.dnRes...,
-				)
-				if test.edns0 != nil {
-					pdp.AssertAttributeAssignments(t,
-						fmt.Sprintf("TestAddResponse test %d (dnRes) - edns0", i+1),
-						ah.dnReq[ednsAttrsStart:], test.edns0...,
-					)
-				}
-				if test.trans != nil {
-					pdp.AssertAttributeAssignments(t,
-						fmt.Sprintf("TestAddResponse test %d (dnRes) - trans", i+1),
-						ah.transfer, test.trans...,
-					)
-				}
-				if test.dnstap != nil {
-					pdp.AssertAttributeAssignments(t,
-						fmt.Sprintf("TestAddResponse test %d (dnRes) - dnstap", i+1),
-						ah.dnstap, test.dnstap...,
-					)
-				}
-			}
-
-			if test.ipRes != nil {
-				r := testutil.MakeTestDNSMsgWithEdns0("example.com", dns.TypeA, dns.ClassINET, testutil.CopyEdns0(test.opts...)...)
-				ah := newAttrHolderWithDnReq(w, r, optsMap, nil)
-				ah.addIPRes(test.resp)
-
-				pdp.AssertAttributeAssignments(t,
-					fmt.Sprintf("TestAddResponse test %d ipRes", i+1),
-					ah.dnRes, test.dnRes...,
-				)
-				if test.edns0 != nil {
-					pdp.AssertAttributeAssignments(t,
-						fmt.Sprintf("TestAddResponse test %d (ipRes) - edns0", i+1),
-						ah.dnReq[ednsAttrsStart:], test.edns0...,
-					)
-				}
-				if test.trans != nil {
-					pdp.AssertAttributeAssignments(t,
-						fmt.Sprintf("TestAddResponse test %d (ipRes) - trans", i+1),
-						ah.transfer, test.trans...,
-					)
-				}
-				if test.dnstap != nil {
-					pdp.AssertAttributeAssignments(t,
-						fmt.Sprintf("TestAddResponse test %d (ipRes) - dnstap", i+1),
-						ah.dnstap, test.dnstap...,
-					)
-				}
-			}
-		})
-	}
-}
-
-func TestMakeDnstapReport(t *testing.T) {
-	optsMap := map[uint16][]*edns0Opt{
-		0xfffe: {
-			{
-				name:     "edns",
-				dataType: typeEDNS0Bytes,
-			},
-		},
-	}
-
-	m := testutil.MakeTestDNSMsgWithEdns0("example.com", dns.TypeA, dns.ClassINET,
-		testutil.NewEdns0(
-			testutil.NewEdns0Local(0xfffe, []byte("ednsVal")),
-		),
-	)
-	w := testutil.NewTestAddressedNonwriter("192.0.2.1")
-
-	custAttrs := map[string]custAttr{
-		"edns":   custAttrEdns,
-		"trans":  custAttrTransfer,
-		"dnstap": custAttrDnstap,
-	}
-
-	ah := newAttrHolderWithDnReq(w, m, optsMap, nil)
-	pdp.AssertAttributeAssignments(t, "newAttrHolderWithDnReq - dnReq", ah.dnReq,
-		pdp.MakeStringAssignment(attrNameType, typeValueQuery),
+		pdp.MakeStringAssignment(attrNameRedirectTo, "test.com"),
+		pdp.MakeIntegerAssignment(attrNamePolicyAction, actionBlock),
+		pdp.MakeStringAssignment("reason", "tryagain"),
+		pdp.MakeAddressAssignment("router", net.ParseIP("2001:aaa8::1111")),
+		pdp.MakeIntegerAssignment("level", 5),
+		pdp.MakeDomainAssignment("proxy", testutil.MakeTestDomain(dns.Fqdn("proxy.net"))),
+	})
+	testutil.AssertAttrList(t, ah.attrs,
 		pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeTestDomain(dns.Fqdn("example.com"))),
-		pdp.MakeStringAssignment(attrNameDNSQtype, strconv.FormatUint(uint64(dns.TypeA), 16)),
-		pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.1")),
-		pdp.MakeStringAssignment("edns", "ednsVal"),
-	)
-	pdp.AssertAttributeAssignments(t, "newAttrHolderWithDnReq - dnRes", ah.dnRes)
-
-	ah.addDnRes(
-		&pdp.Response{
-			Effect: pdp.EffectPermit,
-			Obligations: []pdp.AttributeAssignment{
-				pdp.MakeStringAssignment("trans", "transVal"),
-				pdp.MakeStringAssignment("dnstap", "dnstapVal"),
-			},
-		},
-		custAttrs,
-	)
-	pdp.AssertAttributeAssignments(t, "addDnRes - dnRes", ah.dnRes,
-		pdp.MakeStringAssignment("trans", "transVal"),
-		pdp.MakeStringAssignment("dnstap", "dnstapVal"),
-	)
-	pdp.AssertAttributeAssignments(t, "addDnRes - transfer", ah.transfer,
-		pdp.MakeStringAssignment("trans", "transVal"),
-	)
-	pdp.AssertAttributeAssignments(t, "addDnRes - dnstap", ah.dnstap,
-		pdp.MakeStringAssignment("dnstap", "dnstapVal"),
+		emptyAttr, emptyAttr,
+		pdp.MakeAddressAssignment(attrNameAddress, net.ParseIP("192.0.2.1")),
+		pdp.MakeIntegerAssignment(attrNamePolicyAction, actionBlock),
+		pdp.MakeStringAssignment(attrNameRedirectTo, "test.com"),
+		emptyAttr,
 	)
 
-	ah.addIPReq(net.ParseIP("2001:db8::1"))
-	pdp.AssertAttributeAssignments(t, "addIPReq - ipReq", ah.ipReq,
-		pdp.MakeStringAssignment(attrNameType, typeValueResponse),
-		pdp.MakeAddressAssignment(attrNameAddress, net.ParseIP("2001:db8::1")),
-		pdp.MakeStringAssignment("trans", "transVal"),
+	cfg := newAttrsConfig()
+	cfg.parseAttrList(attrListTypeVal2, "proxy")
+	cfg.parseAttrList(attrListTypeMetrics, "level")
+	ah = newAttrHolder(nil, cfg)
+	ah.addAttrList([]pdp.AttributeAssignment{
+		pdp.MakeAddressAssignment(attrNameAddress, net.ParseIP("192.0.2.1")),
+		pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeTestDomain(dns.Fqdn("example.com"))),
+		pdp.MakeStringAssignment(attrNameRedirectTo, "test.com"),
+		pdp.MakeIntegerAssignment(attrNamePolicyAction, actionBlock),
+		pdp.MakeStringAssignment("reason", "tryagain"),
+		pdp.MakeAddressAssignment("router", net.ParseIP("2001:aaa8::1111")),
+		pdp.MakeIntegerAssignment("level", 5),
+		pdp.MakeDomainAssignment("proxy", testutil.MakeTestDomain(dns.Fqdn("proxy.net"))),
+	})
+	testutil.AssertAttrList(t, ah.attrs,
+		pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeTestDomain(dns.Fqdn("example.com"))),
+		emptyAttr, emptyAttr,
+		pdp.MakeAddressAssignment(attrNameAddress, net.ParseIP("192.0.2.1")),
+		pdp.MakeIntegerAssignment(attrNamePolicyAction, actionBlock),
+		pdp.MakeStringAssignment(attrNameRedirectTo, "test.com"),
+		emptyAttr,
+		pdp.MakeDomainAssignment("proxy", testutil.MakeTestDomain(dns.Fqdn("proxy.net"))),
+		pdp.MakeIntegerAssignment("level", 5),
+	)
+}
+
+func TestAttrList(t *testing.T) {
+	cfg := newAttrsConfig()
+	cfg.parseAttrList(attrListTypeDefDecision, "dd1", "dd2", attrNameDomainName)
+	cfg.parseAttrList(attrListTypeVal1, "v11", "v", "v13", attrNameDomainName)
+	cfg.parseAttrList(attrListTypeVal2, "v21", "v", "v23", "v24", attrNamePolicyAction)
+	cfg.parseAttrList(attrListTypeMetrics, "m1", "m3", attrNameDomainName)
+	cfg.parseAttrList(attrListTypeDnstap, "d01", "d02", "d", attrNamePolicyAction)
+	cfg.parseAttrList(attrListTypeDnstap+1, "d11", "d12", "d13", "d", attrNameDomainName)
+
+	ah := newAttrHolder(nil, cfg)
+	ah.addAttrList([]pdp.AttributeAssignment{
+		pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeTestDomain(dns.Fqdn("example.com"))),
+		pdp.MakeStringAssignment("dd1", "dd1val"),
+		pdp.MakeStringAssignment("v11", "v11val"),
+		pdp.MakeStringAssignment("v", "vval"),
+		pdp.MakeStringAssignment("v23", "v23val"),
+		pdp.MakeStringAssignment("v24", "v24val"),
+		pdp.MakeStringAssignment("m1", "m1val"),
+		pdp.MakeStringAssignment("d", "dval"),
+		pdp.MakeStringAssignment("d02", "d02val"),
+		pdp.MakeStringAssignment("d13", "d13val"),
+	})
+
+	testutil.AssertAttrList(t, ah.attrList(nil, attrListTypeDefDecision),
+		pdp.MakeStringAssignment("dd1", "dd1val"),
+		pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeTestDomain(dns.Fqdn("example.com"))),
 	)
 
-	ah.addIPRes(
-		&pdp.Response{
-			Effect: pdp.EffectPermit,
-			Obligations: []pdp.AttributeAssignment{
-				pdp.MakeStringAssignment("other", "otherVal"),
-			},
-		},
+	testutil.AssertAttrList(t, ah.attrList(nil, attrListTypeVal1),
+		pdp.MakeStringAssignment("v11", "v11val"),
+		pdp.MakeStringAssignment("v", "vval"),
+		pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeTestDomain(dns.Fqdn("example.com"))),
 	)
 
-	pdp.AssertAttributeAssignments(t, "addIPRes - dnRes", ah.dnRes,
-		pdp.MakeStringAssignment("trans", "transVal"),
-		pdp.MakeStringAssignment("dnstap", "dnstapVal"),
-	)
-	pdp.AssertAttributeAssignments(t, "addIPRes - ipRes", ah.ipRes,
-		pdp.MakeStringAssignment("other", "otherVal"),
-	)
-	pdp.AssertAttributeAssignments(t, "addIPRes - transfer", ah.transfer,
-		pdp.MakeStringAssignment("trans", "transVal"),
-	)
-	pdp.AssertAttributeAssignments(t, "addIPRes - dnstap", ah.dnstap,
-		pdp.MakeStringAssignment("dnstap", "dnstapVal"),
+	testutil.AssertAttrList(t, ah.attrList(nil, attrListTypeVal2),
+		pdp.MakeStringAssignment("v", "vval"),
+		pdp.MakeStringAssignment("v23", "v23val"),
+		pdp.MakeStringAssignment("v24", "v24val"),
 	)
 
-	testutil.AssertDnstapAttributes(t, "makeDnstapReport", ah.makeDnstapReport(),
-		&pb.DnstapAttribute{Id: attrNameSourceIP, Value: "192.0.2.1"},
-		&pb.DnstapAttribute{Id: "edns", Value: "ednsVal"},
-		&pb.DnstapAttribute{Id: "dnstap", Value: "dnstapVal"},
+	testutil.AssertAttrList(t, ah.attrList(nil, attrListTypeMetrics),
+		pdp.MakeStringAssignment("m1", "m1val"),
+		pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeTestDomain(dns.Fqdn("example.com"))),
 	)
 
-	ah.action = actionLog
-	testutil.AssertDnstapAttributes(t, "makeDnstapReport(full)", ah.makeDnstapReport(),
-		&pb.DnstapAttribute{Id: attrNameDomainName, Value: dns.Fqdn("example.com")},
-		&pb.DnstapAttribute{Id: attrNameDNSQtype, Value: strconv.FormatUint(uint64(dns.TypeA), 16)},
-		&pb.DnstapAttribute{Id: attrNameSourceIP, Value: "192.0.2.1"},
-		&pb.DnstapAttribute{Id: "edns", Value: "ednsVal"},
-		&pb.DnstapAttribute{Id: "trans", Value: "transVal"},
-		&pb.DnstapAttribute{Id: "dnstap", Value: "dnstapVal"},
-		&pb.DnstapAttribute{Id: attrNameAddress, Value: "2001:db8::1"},
-		&pb.DnstapAttribute{Id: "other", Value: "otherVal"},
-		&pb.DnstapAttribute{Id: attrNamePolicyAction, Value: dnstapActionValues[actionLog]},
-		&pb.DnstapAttribute{Id: attrNameType, Value: typeValueResponse},
+	testutil.AssertAttrList(t, ah.attrList(nil, attrListTypeDnstap),
+		pdp.MakeStringAssignment("d02", "d02val"),
+		pdp.MakeStringAssignment("d", "dval"),
+	)
+
+	testutil.AssertAttrList(t, ah.attrList(nil, attrListTypeDnstap+1),
+		pdp.MakeStringAssignment("d13", "d13val"),
+		pdp.MakeStringAssignment("d", "dval"),
+		pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeTestDomain(dns.Fqdn("example.com"))),
+	)
+}
+
+func TestResetAttrList(t *testing.T) {
+	cfg := newAttrsConfig()
+	cfg.parseAttrList(attrListTypeDefDecision, "dds=\"DD1val\"", "dd0", "dda=192.168.0.1", "ddi=15")
+	ah := newAttrHolder(nil, cfg)
+
+	ah.resetAttrList(attrListTypeDefDecision)
+	// check all attributes
+	testutil.AssertAttrList(t, ah.attrs,
+		emptyAttr, emptyAttr, emptyAttr, emptyAttr, emptyAttr, emptyAttr, emptyAttr,
+		pdp.MakeStringAssignment("dds", "DD1val"),
+		emptyAttr,
+		pdp.MakeAddressAssignment("dda", net.ParseIP("192.168.0.1")),
+		pdp.MakeIntegerAssignment("ddi", 15),
+	)
+
+	ah.addAttrList([]pdp.AttributeAssignment{
+		pdp.MakeStringAssignment("dd0", "DD0val"),
+		pdp.MakeIntegerAssignment("ddi", 2),
+		pdp.MakeStringAssignment("dda", "InconsistentType"),
+	})
+	// attrList calls resetAttrList internally
+	// check attrListTypeDefDecision attributes
+	testutil.AssertAttrList(t, ah.attrList(nil, attrListTypeDefDecision),
+		pdp.MakeStringAssignment("dds", "DD1val"),
+		pdp.MakeStringAssignment("dd0", "DD0val"),
+		pdp.MakeAddressAssignment("dda", net.ParseIP("192.168.0.1")),
+		pdp.MakeIntegerAssignment("ddi", 15),
+	)
+}
+
+func TestRedirectValue(t *testing.T) {
+	ah := newAttrHolder(nil, newAttrsConfig())
+
+	// empty attribute
+	rv := ah.redirectValue()
+	if rv != "" {
+		t.Errorf("Unexpected redirect value: %s", rv)
+	}
+
+	// wrong type
+	ah.attrs[attrIndexRedirectTo] = pdp.MakeIntegerAssignment(attrNameRedirectTo, 15)
+	rv = ah.redirectValue()
+	if rv != "" {
+		t.Errorf("Unexpected redirect value: %s", rv)
+	}
+
+	// correct value
+	ah.attrs[attrIndexRedirectTo] = pdp.MakeStringAssignment(attrNameRedirectTo, "test.com")
+	rv = ah.redirectValue()
+	if rv != "test.com" {
+		t.Errorf("Unexpected redirect value: %s", rv)
+	}
+}
+
+func TestActionValue(t *testing.T) {
+	ah := newAttrHolder(nil, newAttrsConfig())
+
+	// empty attribute
+	av := ah.actionValue()
+	if av != actionInvalid {
+		t.Errorf("Unexpected action value: %d", av)
+	}
+
+	// wrong type
+	ah.attrs[attrIndexPolicyAction] = pdp.MakeStringAssignment(attrNamePolicyAction, "block")
+	av = ah.actionValue()
+	if av != actionInvalid {
+		t.Errorf("Unexpected action value: %d", av)
+	}
+
+	// wrong value range
+	ah.attrs[attrIndexPolicyAction] = pdp.MakeIntegerAssignment(attrNamePolicyAction, 12345)
+	av = ah.actionValue()
+	if av != actionInvalid {
+		t.Errorf("Unexpected action value: %d", av)
+	}
+
+	// correct value
+	ah.attrs[attrIndexPolicyAction] = pdp.MakeIntegerAssignment(attrNamePolicyAction, 4)
+	av = ah.actionValue()
+	if av != 4 {
+		t.Errorf("Unexpected action value: %d", av)
+	}
+}
+
+func TestLogValue(t *testing.T) {
+	ah := newAttrHolder(nil, newAttrsConfig())
+
+	// empty attribute
+	lv := ah.logValue()
+	if lv != 0 {
+		t.Errorf("Unexpected log value: %d", lv)
+	}
+
+	// wrong type
+	ah.attrs[attrIndexLog] = pdp.MakeStringAssignment(attrNameLog, "brief")
+	lv = ah.logValue()
+	if lv != 0 {
+		t.Errorf("Unexpected log value: %d", lv)
+	}
+
+	// wrong value range
+	ah.attrs[attrIndexLog] = pdp.MakeIntegerAssignment(attrNameLog, maxDnstapLists+1)
+	lv = ah.logValue()
+	if lv != 0 {
+		t.Errorf("Unexpected log value: %d", lv)
+	}
+
+	// correct value
+	ah.attrs[attrIndexLog] = pdp.MakeIntegerAssignment(attrNameLog, maxDnstapLists-1)
+	lv = ah.logValue()
+	if lv != maxDnstapLists-1 {
+		t.Errorf("Unexpected log value: %d", lv)
+	}
+}
+
+func TestResetAttribute(t *testing.T) {
+	ah := newAttrHolder(nil, newAttrsConfig())
+	ah.attrs[attrIndexDNSQtype] = pdp.MakeStringAssignment("test", "testval")
+
+	ah.resetAttribute(attrIndexDNSQtype)
+
+	testutil.AssertAttr(t, 0, ah.attrs[attrIndexDNSQtype], emptyAttr)
+}
+
+func TestDnstapList(t *testing.T) {
+	cfg := newAttrsConfig()
+	cfg.parseAttrList(attrListTypeDnstap, "d0", "d")
+	cfg.parseAttrList(attrListTypeDnstap+2, "d2", "d")
+	ah := newAttrHolder(nil, cfg)
+	ah.addAttrList([]pdp.AttributeAssignment{
+		pdp.MakeStringAssignment("d", "Dval"),
+		pdp.MakeStringAssignment("d1", "D1val"),
+		pdp.MakeStringAssignment("d2", "D2val"),
+		pdp.MakeStringAssignment("d0", "D0val"),
+	})
+
+	// empty/wrong log attribute
+	testutil.AssertDnstapList(t, ah.dnstapList(),
+		&pb.DnstapAttribute{"d0", "D0val"},
+		&pb.DnstapAttribute{"d", "Dval"},
+	)
+
+	// log=1 - no attributes
+	ah.addAttrList([]pdp.AttributeAssignment{pdp.MakeIntegerAssignment(attrNameLog, 1)})
+	testutil.AssertDnstapList(t, ah.dnstapList())
+
+	// log=2
+	ah.addAttrList([]pdp.AttributeAssignment{pdp.MakeIntegerAssignment(attrNameLog, 2)})
+	testutil.AssertDnstapList(t, ah.dnstapList(),
+		&pb.DnstapAttribute{"d2", "D2val"},
+		&pb.DnstapAttribute{"d", "Dval"},
+	)
+
+	// log=3 (out of range)
+	ah.addAttrList([]pdp.AttributeAssignment{pdp.MakeIntegerAssignment(attrNameLog, 3)})
+	testutil.AssertDnstapList(t, ah.dnstapList(),
+		&pb.DnstapAttribute{"d0", "D0val"},
+		&pb.DnstapAttribute{"d", "Dval"},
 	)
 }

@@ -1,7 +1,6 @@
 package policy
 
 import (
-	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -9,7 +8,6 @@ import (
 	"github.com/infobloxopen/themis/contrib/coredns/policy/testutil"
 	"github.com/infobloxopen/themis/pdp"
 	_ "github.com/infobloxopen/themis/pdp/selector"
-	"github.com/miekg/dns"
 )
 
 const testPolicy = `# Policy set for client interaction tests
@@ -130,43 +128,29 @@ func TestStreamingClientInteraction(t *testing.T) {
 		}
 		defer p.closeConn()
 
-		m := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-		w := testutil.NewTestAddressedNonwriter("192.0.2.1")
-
-		ah := newAttrHolderWithDnReq(w, m, p.conf.options, nil)
-		attrs := make([]pdp.AttributeAssignment, p.conf.maxResAttrs)
-		if err := p.validate(ah, attrs); err != nil {
-			t.Error(err)
+		req := []pdp.AttributeAssignment{
+			pdp.MakeStringAssignment("type", "query"),
+			pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeDnOrFail(t, "example.com")),
 		}
-
-		if ah.action != actionAllow {
-			aName := fmt.Sprintf("unknown action %d", ah.action)
-			if ah.action >= 0 && int(ah.action) < len(actionNames) {
-				aName = actionNames[ah.action]
-			}
-			t.Errorf("expected %q action but got %q", actionNames[actionAllow], aName)
+		res := pdp.Response{}
+		err := p.pdp.Validate(req, &res)
+		if err != nil {
+			t.Errorf("Unexpected error: %s", err)
 		}
-
-		pdp.AssertAttributeAssignments(t, "p.validate(domain request)", ah.dnRes,
+		testutil.AssertPdpResponse(t, &res, pdp.EffectPermit,
 			pdp.MakeStringAssignment("rule", "Query rule for example.com"),
 		)
 
-		ah.addIPReq(net.ParseIP("192.0.2.1"))
-
-		attrs = make([]pdp.AttributeAssignment, p.conf.maxResAttrs)
-		if err := p.validate(ah, attrs); err != nil {
-			t.Error(err)
+		req = []pdp.AttributeAssignment{
+			pdp.MakeStringAssignment("type", "response"),
+			pdp.MakeAddressAssignment(attrNameAddress, net.ParseIP("192.0.2.1")),
 		}
-
-		if ah.action != actionLog {
-			aName := fmt.Sprintf("unknown action %d", ah.action)
-			if ah.action >= 0 && int(ah.action) < len(actionNames) {
-				aName = actionNames[ah.action]
-			}
-			t.Errorf("expected %q action but got %q", actionNames[actionLog], aName)
+		res = pdp.Response{}
+		err = p.pdp.Validate(req, &res)
+		if err != nil {
+			t.Errorf("Unexpected error: %s", err)
 		}
-
-		pdp.AssertAttributeAssignments(t, "p.validate(domain request)", ah.ipRes,
+		testutil.AssertPdpResponse(t, &res, pdp.EffectPermit,
 			pdp.MakeStringAssignment("rule", "Response rule for 192.0.2.0/28"),
 			pdp.MakeStringAssignment("log", ""),
 		)
@@ -192,24 +176,16 @@ func TestStreamingClientInteraction(t *testing.T) {
 		}
 		defer p.closeConn()
 
-		m := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-		w := testutil.NewTestAddressedNonwriter("192.0.2.1")
-
-		ah := newAttrHolderWithDnReq(w, m, p.conf.options, nil)
-		attrs := make([]pdp.AttributeAssignment, p.conf.maxResAttrs)
-		if err := p.validate(ah, attrs); err != nil {
-			t.Error(err)
+		req := []pdp.AttributeAssignment{
+			pdp.MakeStringAssignment("type", "query"),
+			pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeDnOrFail(t, "example.com")),
 		}
-
-		if ah.action != actionAllow {
-			aName := fmt.Sprintf("unknown action %d", ah.action)
-			if ah.action >= 0 && int(ah.action) < len(actionNames) {
-				aName = actionNames[ah.action]
-			}
-			t.Errorf("expected %q action but got %q", actionNames[actionAllow], aName)
+		res := pdp.Response{}
+		err := p.pdp.Validate(req, &res)
+		if err != nil {
+			t.Errorf("Unexpected error: %s", err)
 		}
-
-		pdp.AssertAttributeAssignments(t, "p.validate(domain request)", ah.dnRes,
+		testutil.AssertPdpResponse(t, &res, pdp.EffectPermit,
 			pdp.MakeStringAssignment("rule", "Query rule for example.com"),
 		)
 	})
@@ -235,24 +211,16 @@ func TestStreamingClientInteraction(t *testing.T) {
 		}
 		defer p.closeConn()
 
-		m := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
-		w := testutil.NewTestAddressedNonwriter("192.0.2.1")
-
-		ah := newAttrHolderWithDnReq(w, m, p.conf.options, nil)
-		attrs := make([]pdp.AttributeAssignment, p.conf.maxResAttrs)
-		if err := p.validate(ah, attrs); err != nil {
-			t.Error(err)
+		req := []pdp.AttributeAssignment{
+			pdp.MakeStringAssignment("type", "query"),
+			pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeDnOrFail(t, "example.com")),
 		}
-
-		if ah.action != actionAllow {
-			aName := fmt.Sprintf("unknown action %d", ah.action)
-			if ah.action >= 0 && int(ah.action) < len(actionNames) {
-				aName = actionNames[ah.action]
-			}
-			t.Errorf("expected %q action but got %q", actionNames[actionAllow], aName)
+		res := pdp.Response{}
+		err := p.pdp.Validate(req, &res)
+		if err != nil {
+			t.Errorf("Unexpected error: %s", err)
 		}
-
-		pdp.AssertAttributeAssignments(t, "p.validate(domain request)", ah.dnRes,
+		testutil.AssertPdpResponse(t, &res, pdp.EffectPermit,
 			pdp.MakeStringAssignment("rule", "Query rule for example.com"),
 		)
 	})
@@ -298,19 +266,14 @@ func TestStreamingClientInteractionWithObligationsOverflow(t *testing.T) {
 	}
 	defer p.closeConn()
 
-	m := testutil.MakeTestDNSMsg("overflow.me", dns.TypeA, dns.ClassINET)
-	w := testutil.NewTestAddressedNonwriter("192.0.2.1")
-
-	ah := newAttrHolderWithDnReq(w, m, p.conf.options, nil)
-	attrs := make([]pdp.AttributeAssignment, p.conf.maxResAttrs)
-	err := p.validate(ah, attrs)
+	req := []pdp.AttributeAssignment{
+		pdp.MakeStringAssignment("type", "query"),
+		pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeDnOrFail(t, "overflow.me")),
+	}
+	res := pdp.Response{Obligations: make([]pdp.AttributeAssignment, 1)}
+	err := p.pdp.Validate(req, &res)
 	if err == nil {
-		aName := fmt.Sprintf("unknown action %d", ah.action)
-		if ah.action >= 0 && int(ah.action) < len(actionNames) {
-			aName = actionNames[ah.action]
-		}
-
-		t.Errorf("expected response overflow error but got %q response:\n:%+v", aName, ah.dnRes)
+		t.Errorf("expected response overflow error but got response:\n:%+v", res)
 		ok = false
 	}
 }
