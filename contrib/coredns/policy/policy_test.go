@@ -64,7 +64,7 @@ func TestPolicyPluginValidate(t *testing.T) {
 	}
 	testutil.AssertAttrList(t, ah.attrs,
 		pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeTestDomain(dns.Fqdn("example.com"))),
-		pdp.MakeStringAssignment(attrNameDNSQtype, "1"),
+		pdp.MakeIntegerAssignment(attrNameDNSQtype, int64(dns.TypeA)),
 		pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.1")),
 		emptyAttr,
 		pdp.MakeIntegerAssignment("policy_action", 4),

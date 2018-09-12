@@ -50,9 +50,11 @@ func getRespIP(r *dns.Msg) net.IP {
 		switch rr := rr.(type) {
 		case *dns.A:
 			ip = rr.A
+			break
 
 		case *dns.AAAA:
 			ip = rr.AAAA
+			break
 		}
 	}
 
