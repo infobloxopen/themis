@@ -105,7 +105,7 @@ func (p *policyPlugin) validate(buf []pdp.AttributeAssignment, ah *attrHolder, l
 	if err != nil {
 		log.Errorf("Policy validation failed due to error: %s", err)
 		if dbg != nil {
-			dbg.appendAttrs("Default decision", ah.attrList(buf, attrListTypeDefDecision))
+			dbg.appendDefaultDecision(ah.attrList(buf, attrListTypeDefDecision))
 		} else {
 			ah.resetAttrList(attrListTypeDefDecision)
 		}
@@ -122,7 +122,7 @@ func (p *policyPlugin) validate(buf []pdp.AttributeAssignment, ah *attrHolder, l
 	if res.Effect != pdp.EffectPermit && res.Effect != pdp.EffectDeny {
 		log.Errorf("Policy validation failed due to PDP error: %s", res.Status)
 		if dbg != nil {
-			dbg.appendAttrs("Default decision", ah.attrList(buf, attrListTypeDefDecision))
+			dbg.appendDefaultDecision(ah.attrList(buf, attrListTypeDefDecision))
 		} else {
 			ah.resetAttrList(attrListTypeDefDecision)
 		}

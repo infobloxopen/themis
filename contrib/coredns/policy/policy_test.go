@@ -150,10 +150,10 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 				";; QUESTION SECTION:\n"+
 				";example.com.debug.local.\tCH\t TXT\n\n"+
 				";; ANSWER SECTION:\n"+
-				"example.com.debug.local.\t0\tCH\tTXT\t\"Ident: <DEBUG>, "+
-				"PDP response {Effect: Permit, Obligations: [policy_action: allow, ], }, "+
-				"PDP response {Effect: Permit, Obligations: [policy_action: allow, ], }, "+
-				"Domain resolution: resolved, \"\n",
+				"example.com.debug.local.\t0\tCH\tTXT\t\"Ident: <DEBUG>\" "+
+				"\"PDP response {Effect: Permit, Obligations: [policy_action: allow]}\" "+
+				"\"PDP response {Effect: Permit, Obligations: [policy_action: allow]}\" "+
+				"\"Domain resolution: resolved\"\n",
 		) {
 			t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
 		}
@@ -399,9 +399,9 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 				";; QUESTION SECTION:\n"+
 				";example.com.debug.local.\tCH\t TXT\n\n"+
 				";; ANSWER SECTION:\n"+
-				"example.com.debug.local.\t0\tCH\tTXT\t\"Ident: <DEBUG>, "+
-				"PDP response {Effect: Permit, Obligations: [policy_action: allow, ], }, "+
-				"Domain resolution: failed, \"\n",
+				"example.com.debug.local.\t0\tCH\tTXT\t\"Ident: <DEBUG>\" "+
+				"\"PDP response {Effect: Permit, Obligations: [policy_action: allow]}\" "+
+				"\"Domain resolution: failed\"\n",
 		) {
 			t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
 		}
@@ -562,7 +562,7 @@ func TestPolicyPluginServeDNSPassthrough(t *testing.T) {
 				";; QUESTION SECTION:\n"+
 				";example.passthrough.local.debug.local.\tCH\t TXT\n\n"+
 				";; ANSWER SECTION:\n"+
-				"example.passthrough.local.debug.local.\t0\tCH\tTXT\t\"Ident: <DEBUG>, Passthrough: yes, \"\n",
+				"example.passthrough.local.debug.local.\t0\tCH\tTXT\t\"Ident: <DEBUG>\" \"Passthrough: yes\"\n",
 		) {
 			t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
 		}

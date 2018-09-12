@@ -75,14 +75,8 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 			r.Response = true
 			clearECS(r)
 
-			if dbgMsgr != nil && len(r.Question) > 0 {
-				q := r.Question[0]
-
-				q.Name += p.conf.debugSuffix
-				q.Qtype = dns.TypeTXT
-				q.Qclass = dns.ClassCHAOS
-
-				r.Question[0] = q
+			if dbgMsgr != nil {
+				dbgMsgr.restoreDebugMsg(r)
 			}
 
 			if ah.actionValue() != actionDrop && (status != dns.RcodeServerFailure || resolveFailed) {
@@ -107,7 +101,7 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 				status = r.Rcode
 
 				if dbgMsgr != nil {
-					dbgMsgr.setDebugQueryPassthroughAnswer(dn, r)
+					dbgMsgr.setDebugQueryPassthroughAnswer(r)
 					status = dns.RcodeSuccess
 				}
 			}
@@ -132,7 +126,7 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 			status = dns.RcodeServerFailure
 
 			if dbgMsgr != nil {
-				dbgMsgr.setDebugQueryAnswer(dn, r, status)
+				dbgMsgr.setDebugQueryAnswer(r, status)
 				status = dns.RcodeSuccess
 				return dns.RcodeSuccess, nil
 			}
@@ -167,7 +161,7 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	}
 
 	if dbgMsgr != nil && ah.actionValue() != actionRefuse {
-		dbgMsgr.setDebugQueryAnswer(dn, r, status)
+		dbgMsgr.setDebugQueryAnswer(r, status)
 		status = dns.RcodeSuccess
 		return dns.RcodeSuccess, nil
 	}

@@ -8,6 +8,9 @@ import (
 	"github.com/miekg/dns"
 )
 
+const txtLenLimit = 255
+const initTxtCount = 5
+
 var actionNames [actionsTotal]string
 
 func init() {
@@ -21,11 +24,12 @@ func init() {
 
 type dbgMessenger struct {
 	bytes.Buffer
-	suffix string
+	orgName   string
+	msgBounds []int
 }
 
-func newDbgMessenger(suff, id string) *dbgMessenger {
-	dm := &dbgMessenger{suffix: suff}
+func newDbgMessenger(name, id string) *dbgMessenger {
+	dm := &dbgMessenger{orgName: name, msgBounds: make([]int, 0, initTxtCount)}
 	if id != "" {
 		dm.appendDebugID(id)
 	}
@@ -37,42 +41,67 @@ func (p *policyPlugin) patchDebugMsg(r *dns.Msg) *dbgMessenger {
 		return nil
 	}
 
-	q := r.Question[0]
+	q := &r.Question[0]
 	if q.Qclass != dns.ClassCHAOS || q.Qtype != dns.TypeTXT || !strings.HasSuffix(q.Name, p.conf.debugSuffix) {
 		return nil
 	}
 
+	orgName := q.Name
 	q.Name = dns.Fqdn(strings.TrimSuffix(q.Name, p.conf.debugSuffix))
 	q.Qtype = dns.TypeA
 	q.Qclass = dns.ClassINET
 
-	r.Question[0] = q
-
-	return newDbgMessenger(p.conf.debugSuffix, p.conf.debugID)
+	return newDbgMessenger(orgName, p.conf.debugID)
 }
 
-func (dm *dbgMessenger) setDebugQueryPassthroughAnswer(dn string, r *dns.Msg) {
+func (dm *dbgMessenger) restoreDebugMsg(r *dns.Msg) {
+	if len(r.Question) > 0 {
+		q := &r.Question[0]
+		q.Name = dm.orgName
+		q.Qtype = dns.TypeTXT
+		q.Qclass = dns.ClassCHAOS
+	}
+}
+
+func (dm *dbgMessenger) setDebugQueryPassthroughAnswer(r *dns.Msg) {
 	dm.appendPassthrough()
-	r.Answer = dm.makeDebugQueryAnswerRR(dn)
+	r.Answer = dm.makeDebugQueryAnswerRR()
 	r.Ns = nil
 }
 
-func (dm *dbgMessenger) setDebugQueryAnswer(dn string, r *dns.Msg, status int) {
+func (dm *dbgMessenger) setDebugQueryAnswer(r *dns.Msg, status int) {
 	dm.appendResolution(status)
-	r.Answer = dm.makeDebugQueryAnswerRR(dn)
+	r.Answer = dm.makeDebugQueryAnswerRR()
 }
 
-func (dm *dbgMessenger) makeDebugQueryAnswerRR(dn string) []dns.RR {
+func (dm *dbgMessenger) makeDebugQueryAnswerRR() []dns.RR {
 	return []dns.RR{
 		&dns.TXT{
 			Hdr: dns.RR_Header{
-				Name:   dn + dm.suffix,
+				Name:   dm.orgName,
 				Rrtype: dns.TypeTXT,
 				Class:  dns.ClassCHAOS,
 			},
-			Txt: []string{dm.String()},
+			Txt: dm.txtMsgs(),
 		},
 	}
+}
+
+func (dm *dbgMessenger) txtMsgs() []string {
+	msgs := dm.String()
+	txts := make([]string, 0, initTxtCount)
+	s := 0
+	for _, end := range dm.msgBounds {
+		for s < end {
+			e := end
+			if s+txtLenLimit < end {
+				e = s + txtLenLimit
+			}
+			txts = append(txts, msgs[s:e])
+			s = e
+		}
+	}
+	return txts
 }
 
 func debugNameVal(a pdp.AttributeAssignment) (n, v string) {
@@ -91,38 +120,47 @@ func debugNameVal(a pdp.AttributeAssignment) (n, v string) {
 func (dm *dbgMessenger) appendAttrs(msg string, attrs []pdp.AttributeAssignment) {
 	dm.WriteString(msg)
 	dm.WriteString(": [")
-	for _, a := range attrs {
+	for i, a := range attrs {
+		if i > 0 {
+			dm.WriteString(", ")
+		}
 		n, v := debugNameVal(a)
 		dm.WriteString(n)
 		dm.WriteString(": ")
 		dm.WriteString(v)
-		dm.WriteString(", ")
 	}
-	dm.WriteString("], ")
+	dm.WriteString("]")
 }
 
 func (dm *dbgMessenger) appendDebugID(id string) {
 	dm.WriteString("Ident: ")
 	dm.WriteString(id)
-	dm.WriteString(", ")
+	dm.msgBounds = append(dm.msgBounds, dm.Len())
 }
 
 func (dm *dbgMessenger) appendPassthrough() {
-	dm.WriteString("Passthrough: yes, ")
+	dm.WriteString("Passthrough: yes")
+	dm.msgBounds = append(dm.msgBounds, dm.Len())
 }
 
 func (dm *dbgMessenger) appendResolution(rCode int) {
 	dm.WriteString("Domain resolution: ")
 	switch rCode {
 	case -1:
-		dm.WriteString("skipped, ")
+		dm.WriteString("skipped")
 	case dns.RcodeSuccess:
-		dm.WriteString("resolved, ")
+		dm.WriteString("resolved")
 	case dns.RcodeServerFailure:
-		dm.WriteString("failed, ")
+		dm.WriteString("failed")
 	default:
-		dm.WriteString("not resolved, ")
+		dm.WriteString("not resolved")
 	}
+	dm.msgBounds = append(dm.msgBounds, dm.Len())
+}
+
+func (dm *dbgMessenger) appendDefaultDecision(attrs []pdp.AttributeAssignment) {
+	dm.appendAttrs("Default decision", attrs)
+	dm.msgBounds = append(dm.msgBounds, dm.Len())
 }
 
 func (dm *dbgMessenger) appendResponse(res *pdp.Response) {
@@ -130,5 +168,6 @@ func (dm *dbgMessenger) appendResponse(res *pdp.Response) {
 	dm.WriteString(pdp.EffectNameFromEnum(res.Effect))
 	dm.WriteString(", ")
 	dm.appendAttrs("Obligations", res.Obligations)
-	dm.WriteString("}, ")
+	dm.WriteString("}")
+	dm.msgBounds = append(dm.msgBounds, dm.Len())
 }
