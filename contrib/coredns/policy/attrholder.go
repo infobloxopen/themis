@@ -3,7 +3,6 @@ package policy
 import (
 	"fmt"
 	"net"
-	"strconv"
 
 	"github.com/infobloxopen/go-trees/domain"
 	pb "github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
@@ -48,7 +47,7 @@ func (ah *attrHolder) addDnsQuery(w dns.ResponseWriter, r *dns.Msg, optMap map[u
 		panic(fmt.Errorf("Can't treat %q as domain name: %s", qName, err))
 	}
 	ah.attrs[attrIndexDomainName] = pdp.MakeDomainAssignment(attrNameDomainName, dn)
-	ah.attrs[attrIndexDNSQtype] = pdp.MakeStringAssignment(attrNameDNSQtype, strconv.FormatUint(uint64(qType), 16))
+	ah.attrs[attrIndexDNSQtype] = pdp.MakeIntegerAssignment(attrNameDNSQtype, int64(qType))
 
 	if srcIP := getRemoteIP(w); srcIP != nil {
 		ah.attrs[attrIndexSourceIP] = pdp.MakeAddressAssignment(attrNameSourceIP, srcIP)

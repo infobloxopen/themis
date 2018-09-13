@@ -71,6 +71,24 @@ Option **debug_id** defines a string to be sent with debug response to identify 
 
 Option **log** enables logging PDP request and response attributes
 
+## Predefined attributes
+
+Policy plugin recognizes the following predefined attributes:
+
+ - *domain_name* (type string) - initialized with domain name taken from DNS query.
+
+ - *dns_qtype* (type integer) - initialized with numeric code of query type taken from DNS query. For example, code 1 corresponds to type A, code 28 corresponds to type AAAA, code 5 corresponds to CNAME.
+
+ - *source_ip* (type address) - initialized with IP address from which the DNS query was received.
+
+ - *address* (type address) - assigned with resolved IP address corresponding to query domain name (the first A or AAAA record in DNS response).
+
+ - *policy_action* (type integer) - can be assigned with a value defined in default_decision option or with a value taken from PDP response. The valid values are 1 - Drop, 2 - Allow, 3 - Block, 4 - Redirect, 5 - Refuse.
+
+ - *redirect_to* (type string) - can be assigned with a value defined in default_decision option or with a value taken from PDP response. The valid formats are string representation of IPv4 or IPv6 or domain name.
+
+ - *log* (type integer) - can be assigned with a value defined in default_decision option or with a value taken from PDP response. The attribute defines the dnstap log level, i.e. the attribute set to be sent with DNStap message. See option **dnstap** above. The valid range is from 0 to 2 (inclusive).
+
 ## Example
 
 ~~~ txt

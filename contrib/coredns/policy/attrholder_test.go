@@ -2,7 +2,6 @@ package policy
 
 import (
 	"net"
-	"strconv"
 	"testing"
 
 	"github.com/infobloxopen/go-trees/domain"
@@ -67,7 +66,7 @@ func TestAddDnsQuery(t *testing.T) {
 	ah.addDnsQuery(w, m, cfg.options)
 	testutil.AssertAttrList(t, ah.attrs,
 		pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeTestDomain(dns.Fqdn("example.com"))),
-		pdp.MakeStringAssignment(attrNameDNSQtype, strconv.FormatUint(uint64(dns.TypeA), 16)),
+		pdp.MakeIntegerAssignment(attrNameDNSQtype, int64(dns.TypeA)),
 		pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("2001:db8::1")),
 		emptyAttr, emptyAttr, emptyAttr, emptyAttr,
 		pdp.MakeStringAssignment("low", "0001020304050607"),
@@ -92,7 +91,7 @@ func TestAddDnsQuery(t *testing.T) {
 	ah.addDnsQuery(w, m, cfg.options)
 	testutil.AssertAttrList(t, ah.attrs,
 		pdp.MakeDomainAssignment(attrNameDomainName, testutil.MakeTestDomain(dns.Fqdn("example.com"))),
-		pdp.MakeStringAssignment(attrNameDNSQtype, strconv.FormatUint(uint64(dns.TypeA), 16)),
+		pdp.MakeIntegerAssignment(attrNameDNSQtype, int64(dns.TypeA)),
 		pdp.MakeAddressAssignment(attrNameSourceIP, net.ParseIP("192.0.2.1")),
 		emptyAttr, emptyAttr, emptyAttr, emptyAttr,
 		pdp.MakeStringAssignment("low", "0001020304050607"),
