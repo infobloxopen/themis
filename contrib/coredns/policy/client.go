@@ -109,6 +109,9 @@ func (p *policyPlugin) validate(buf []pdp.AttributeAssignment, ah *attrHolder, l
 		} else {
 			ah.resetAttrList(attrListTypeDefDecision)
 		}
+		if ah.actionValue() != actionInvalid {
+			return true, nil
+		}
 		return false, err
 	}
 
@@ -125,6 +128,9 @@ func (p *policyPlugin) validate(buf []pdp.AttributeAssignment, ah *attrHolder, l
 			dbg.appendDefaultDecision(ah.attrList(buf, attrListTypeDefDecision))
 		} else {
 			ah.resetAttrList(attrListTypeDefDecision)
+		}
+		if ah.actionValue() != actionInvalid {
+			return true, nil
 		}
 		return false, err
 	}
