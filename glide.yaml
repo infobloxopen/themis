@@ -1,6 +1,5 @@
 package: github.com/infobloxopen/themis
 import:
-- package: github.com/sirupsen/logrus
 - package: github.com/allegro/bigcache
 - package: github.com/coredns/coredns
   subpackages:
@@ -9,37 +8,20 @@ import:
   - plugin/dnstap
   - plugin/dnstap/msg
   - plugin/dnstap/taprw
+  - plugin/dnstap/test
   - plugin/metrics
+  - plugin/pkg/log
   - plugin/pkg/nonwriter
   - plugin/pkg/trace
+- package: github.com/dnstap/golang-dnstap
 - package: github.com/golang/protobuf
-  version: v1.1.0
+  version: v1.2.0
   subpackages:
   - proto
+- package: github.com/google/uuid
 - package: github.com/grpc-ecosystem/grpc-opentracing
   subpackages:
   - go/otgrpc
-- package: github.com/mholt/caddy
-- package: github.com/miekg/dns
-- package: github.com/opentracing/opentracing-go
-- package: github.com/openzipkin/zipkin-go-opentracing
-- package: github.com/pmezard/go-difflib
-  subpackages:
-  - difflib
-- package: github.com/prometheus/client_golang
-  subpackages:
-  - prometheus
-- package: golang.org/x/net
-  subpackages:
-  - context
-- package: google.golang.org/grpc
-  version: v1.13.0
-  subpackages:
-  - balancer
-  - naming
-  - transport
-- package: gopkg.in/yaml.v2
-- package: github.com/google/uuid
 - package: github.com/infobloxopen/go-trees
   subpackages:
   - domain
@@ -58,9 +40,25 @@ import:
   - uintX/strtree32
   - uintX/strtree64
   - uintX/strtree8
-- package: github.com/dnstap/golang-dnstap
-- package: golang.org/x/sys
-  version: ac767d655b305d4e9612f5f6e33120b9176c4ad4
+- package: github.com/mholt/caddy
+- package: github.com/miekg/dns
+- package: github.com/opentracing/opentracing-go
+- package: github.com/openzipkin/zipkin-go-opentracing
+- package: github.com/pmezard/go-difflib
+  subpackages:
+  - difflib
+- package: github.com/prometheus/client_golang
+  version: 3525612fea19680dd3d49c768802ec082ca853b2
+  subpackages:
+  - prometheus
+- package: github.com/sirupsen/logrus
+- package: golang.org/x/crypto
+  version: 0e37d006457bf46f9e6692014ba72ef82c33022c
+- package: google.golang.org/grpc
+  subpackages:
+  - balancer
+  - naming
+- package: gopkg.in/yaml.v2
 testImport:
 - package: github.com/prometheus/client_model
   subpackages:

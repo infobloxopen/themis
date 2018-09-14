@@ -7,6 +7,18 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/coredns/coredns)](https://goreportcard.com/report/coredns/coredns)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/1250/badge)](https://bestpractices.coreinfrastructure.org/projects/1250)
 
+
+
+## Feedback wanted ...
+
+CoreDNS is now part of [Kubernetes](http://kubernetes.io), [delivering the DNS and Discovery Service for the cluster](https://kubernetes.io/blog/2018/07/10/coredns-ga-for-kubernetes-cluster-dns/).
+If you are currently using CoreDNS inside a Kubernetes cluster, please, [take 5 minutes to provide us some feedback by filling this survey](https://www.surveymonkey.com/r/SKZQSLK)
+
+Thank you, we appreciate your collaboration here.
+
+
+## CoreDNS
+
 CoreDNS (written in Go) chains [plugins](https://coredns.io/plugins). Each plugin performs a DNS
 function.
 
@@ -32,7 +44,7 @@ Currently CoreDNS is able to:
 * Use k8s (kubernetes) as a backend (*kubernetes*).
 * Serve as a proxy to forward queries to some other (recursive) nameserver (*proxy*, and *forward*).
 * Provide metrics (by using Prometheus) (*metrics*).
-* Provide query (*log*) and error (*error*) logging.
+* Provide query (*log*) and error (*errors*) logging.
 * Support the CH class: `version.bind` and friends (*chaos*).
 * Support the RFC 5001 DNS name server identifier (NSID) option (*nsid*).
 * Profiling support (*pprof*).
@@ -67,7 +79,7 @@ a Go environment, you could build CoreDNS easily:
 
 ```
 $ docker run --rm -i -t -v $PWD:/go/src/github.com/coredns/coredns \
-      -w /go/src/github.com/coredns/coredns golang:1.10 make
+      -w /go/src/github.com/coredns/coredns golang:1.11 make
 ```
 
 The above command alone will have `coredns` binary generated.
@@ -174,17 +186,17 @@ When no transport protocol is specified the default `dns://` is assumed.
 
 ## Community
 
-We're most active on Slack (and Github):
+We're most active on Github (and Slack):
 
-- Slack: #coredns on <https://slack.cncf.io>
 - Github: <https://github.com/coredns/coredns>
+- Slack: #coredns on <https://slack.cncf.io>
 
 More resources can be found:
 
 - Website: <https://coredns.io>
 - Blog: <https://blog.coredns.io>
 - Twitter: [@corednsio](https://twitter.com/corednsio)
-- Mailing list/group: <coredns-discuss@googlegroups.com>
+- Mailing list/group: <coredns-discuss@googlegroups.com> (not very active)
 
 ## Deployment
 

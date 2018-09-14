@@ -31,7 +31,7 @@ clean:
 	@$(RM) $(BUILDPATH)
 
 .PHONY: fmt
-fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-local-selector fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-plugin fmt-egen
+fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdp-itests fmt-local-selector fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-plugin fmt-egen
 
 .PHONY: build
 build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-egen
@@ -66,6 +66,11 @@ fmt-pdp-jast:
 fmt-pdp-jcon:
 	@echo "Checking PDP JCon format..."
 	@$(AT)/pdp/jcon && $(GOFMTCHECK)
+
+.PHONY: fmt-pdp-itests
+fmt-pdp-itests:
+	@echo "Checking PDP integration tests format..."
+	@$(AT)/pdp/integration_tests && $(GOFMTCHECK)
 
 .PHONY: fmt-local-selector
 fmt-local-selector:

@@ -133,7 +133,7 @@ func newNameRule(nextAction string, args ...string) (Rule, error) {
 			if err != nil {
 				return nil, fmt.Errorf("Invalid regex pattern in a name rule: %s", args[1])
 			}
-			return &regexNameRule{nextAction, regexPattern, plugin.Name(args[2]).Normalize(), ResponseRule{}}, nil
+			return &regexNameRule{nextAction, regexPattern, plugin.Name(args[2]).Normalize(), ResponseRule{Type: "name"}}, nil
 		default:
 			return nil, fmt.Errorf("A name rule supports only exact, prefix, suffix, substring, and regex name matching")
 		}
@@ -162,6 +162,7 @@ func newNameRule(nextAction string, args ...string) (Rule, error) {
 				plugin.Name(args[2]).Normalize(),
 				ResponseRule{
 					Active:      true,
+					Type:        "name",
 					Pattern:     responseRegexPattern,
 					Replacement: plugin.Name(args[6]).Normalize(),
 				},
@@ -197,7 +198,7 @@ func (rule *substringNameRule) GetResponseRule() ResponseRule { return ResponseR
 // GetResponseRule return a rule to rewrite the response with.
 func (rule *regexNameRule) GetResponseRule() ResponseRule { return rule.ResponseRule }
 
-// validName returns true if s is valid domain name and shortern than 256 characters.
+// validName returns true if s is valid domain name and shorter than 256 characters.
 func validName(s string) bool {
 	_, ok := dns.IsDomainName(s)
 	if !ok {

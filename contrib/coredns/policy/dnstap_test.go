@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"context"
 	"testing"
 
 	"github.com/coredns/coredns/plugin/dnstap"
@@ -9,7 +10,6 @@ import (
 	"github.com/coredns/coredns/plugin/test"
 	"github.com/infobloxopen/themis/contrib/coredns/policy/testutil"
 	"github.com/miekg/dns"
-	"golang.org/x/net/context"
 
 	pb "github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 )

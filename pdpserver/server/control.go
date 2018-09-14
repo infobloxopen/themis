@@ -1,10 +1,10 @@
 package server
 
 import (
+	"context"
 	"io"
 
 	"github.com/google/uuid"
-	"golang.org/x/net/context"
 
 	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-control"

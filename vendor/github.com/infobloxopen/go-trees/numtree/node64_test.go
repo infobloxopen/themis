@@ -343,93 +343,6 @@ func TestDelete64(t *testing.T) {
 		"64-tree with deleted two children and non-leaf nodes", t)
 }
 
-func TestClz64(t *testing.T) {
-	assertClz64(0x0000000000000000, 64, t)
-	assertClz64(0x0000000000000001, 63, t)
-	assertClz64(0x0000000000000002, 62, t)
-	assertClz64(0x0000000000000003, 62, t)
-	assertClz64(0x0000000000000004, 61, t)
-	assertClz64(0x0000000000000005, 61, t)
-	assertClz64(0x0000000000000006, 61, t)
-	assertClz64(0x0000000000000007, 61, t)
-	assertClz64(0x0000000000000008, 60, t)
-
-	assertClz64(0x0000000000000010, 59, t)
-	assertClz64(0x0000000000000020, 58, t)
-	assertClz64(0x0000000000000040, 57, t)
-	assertClz64(0x0000000000000080, 56, t)
-
-	assertClz64(0x0000000000000100, 55, t)
-	assertClz64(0x0000000000000200, 54, t)
-	assertClz64(0x0000000000000400, 53, t)
-	assertClz64(0x0000000000000800, 52, t)
-
-	assertClz64(0x0000000000001000, 51, t)
-	assertClz64(0x0000000000002000, 50, t)
-	assertClz64(0x0000000000004000, 49, t)
-	assertClz64(0x0000000000008000, 48, t)
-
-	assertClz64(0x0000000000010000, 47, t)
-	assertClz64(0x0000000000020000, 46, t)
-	assertClz64(0x0000000000040000, 45, t)
-	assertClz64(0x0000000000080000, 44, t)
-
-	assertClz64(0x0000000000100000, 43, t)
-	assertClz64(0x0000000000200000, 42, t)
-	assertClz64(0x0000000000400000, 41, t)
-	assertClz64(0x0000000000800000, 40, t)
-
-	assertClz64(0x0000000001000000, 39, t)
-	assertClz64(0x0000000002000000, 38, t)
-	assertClz64(0x0000000004000000, 37, t)
-	assertClz64(0x0000000008000000, 36, t)
-
-	assertClz64(0x0000000010000000, 35, t)
-	assertClz64(0x0000000020000000, 34, t)
-	assertClz64(0x0000000040000000, 33, t)
-	assertClz64(0x0000000080000000, 32, t)
-
-	assertClz64(0x0000000100000000, 31, t)
-	assertClz64(0x0000000200000000, 30, t)
-	assertClz64(0x0000000400000000, 29, t)
-	assertClz64(0x0000000800000000, 28, t)
-
-	assertClz64(0x0000001000000000, 27, t)
-	assertClz64(0x0000002000000000, 26, t)
-	assertClz64(0x0000004000000000, 25, t)
-	assertClz64(0x0000008000000000, 24, t)
-
-	assertClz64(0x0000010000000000, 23, t)
-	assertClz64(0x0000020000000000, 22, t)
-	assertClz64(0x0000040000000000, 21, t)
-	assertClz64(0x0000080000000000, 20, t)
-
-	assertClz64(0x0000100000000000, 19, t)
-	assertClz64(0x0000200000000000, 18, t)
-	assertClz64(0x0000400000000000, 17, t)
-	assertClz64(0x0000800000000000, 16, t)
-
-	assertClz64(0x0001000000000000, 15, t)
-	assertClz64(0x0002000000000000, 14, t)
-	assertClz64(0x0004000000000000, 13, t)
-	assertClz64(0x0008000000000000, 12, t)
-
-	assertClz64(0x0010000000000000, 11, t)
-	assertClz64(0x0020000000000000, 10, t)
-	assertClz64(0x0040000000000000, 9, t)
-	assertClz64(0x0080000000000000, 8, t)
-
-	assertClz64(0x0100000000000000, 7, t)
-	assertClz64(0x0200000000000000, 6, t)
-	assertClz64(0x0400000000000000, 5, t)
-	assertClz64(0x0800000000000000, 4, t)
-
-	assertClz64(0x1000000000000000, 3, t)
-	assertClz64(0x2000000000000000, 2, t)
-	assertClz64(0x4000000000000000, 1, t)
-	assertClz64(0x8000000000000000, 0, t)
-}
-
 func assertTree64(r *Node64, e, desc string, t *testing.T) {
 	assertStringLists(difflib.SplitLines(r.Dot()), difflib.SplitLines(e), desc, t)
 }
@@ -470,13 +383,6 @@ func assertTree64Delete(r *Node64, ok bool, e string, desc string, t *testing.T)
 		assertTree64(r, e, desc, t)
 	} else if ok {
 		t.Errorf("Expected nothing to be deleted from %s but it is and got new root:\n%s\n", desc, r.Dot())
-	}
-}
-
-func assertClz64(x uint64, c uint8, t *testing.T) {
-	r := clz64(x)
-	if r != c {
-		t.Errorf("Expected %d as result of clz64(0x%016x) but got %d", c, x, r)
 	}
 }
 

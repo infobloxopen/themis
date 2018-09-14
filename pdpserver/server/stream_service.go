@@ -1,11 +1,11 @@
 package server
 
 import (
+	"context"
 	"io"
 	"sync/atomic"
 
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 
 	pb "github.com/infobloxopen/themis/pdp-service"
 )

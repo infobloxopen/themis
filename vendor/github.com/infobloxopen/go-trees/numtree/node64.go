@@ -1,6 +1,9 @@
 package numtree
 
-import "fmt"
+import (
+	"fmt"
+	"math/bits"
+)
 
 // Key64BitSize is an alias for bitsize of 64-bit radix tree's key.
 const Key64BitSize = 64
@@ -175,7 +178,7 @@ func (n *Node64) insert(c *Node64) *Node64 {
 		return c
 	}
 
-	bits := clz64((n.Key ^ c.Key) | ^masks64[n.Bits] | ^masks64[c.Bits])
+	bits := uint8(bits.LeadingZeros64((n.Key ^ c.Key) | ^masks64[n.Bits] | ^masks64[c.Bits]))
 	if bits < n.Bits {
 		branch := (n.Key >> (Key64BitSize - 1 - bits)) & 1
 		if bits == c.Bits {
@@ -204,7 +207,7 @@ func (n *Node64) insert(c *Node64) *Node64 {
 	return m
 }
 
-func (n *Node64) inplaceInsert(key uint64, bits uint8, value interface{}) *Node64 {
+func (n *Node64) inplaceInsert(key uint64, sbits uint8, value interface{}) *Node64 {
 	var (
 		p      *Node64
 		branch uint64
@@ -213,19 +216,19 @@ func (n *Node64) inplaceInsert(key uint64, bits uint8, value interface{}) *Node6
 	r := n
 
 	for n != nil {
-		cbits := clz64((n.Key ^ key) | ^masks64[n.Bits] | ^masks64[bits])
+		cbits := uint8(bits.LeadingZeros64((n.Key ^ key) | ^masks64[n.Bits] | ^masks64[sbits]))
 		if cbits < n.Bits {
 			pBranch := branch
 			branch = (n.Key >> (Key64BitSize - 1 - cbits)) & 1
 
 			var m *Node64
 
-			if cbits == bits {
-				m = newNode64(key, bits, true, value)
+			if cbits == sbits {
+				m = newNode64(key, sbits, true, value)
 				m.chld[branch] = n
 			} else {
 				m = newNode64(key&masks64[cbits], cbits, false, nil)
-				m.chld[1-branch] = newNode64(key, bits, true, value)
+				m.chld[1-branch] = newNode64(key, sbits, true, value)
 			}
 
 			m.chld[branch] = n
@@ -238,7 +241,7 @@ func (n *Node64) inplaceInsert(key uint64, bits uint8, value interface{}) *Node6
 			return r
 		}
 
-		if bits == n.Bits {
+		if sbits == n.Bits {
 			n.Key = key
 			n.Leaf = true
 			n.Value = value
@@ -250,7 +253,7 @@ func (n *Node64) inplaceInsert(key uint64, bits uint8, value interface{}) *Node6
 		n = n.chld[branch]
 	}
 
-	n = newNode64(key, bits, true, value)
+	n = newNode64(key, sbits, true, value)
 	if p == nil {
 		return n
 	}
@@ -374,31 +377,4 @@ func newNode64(key uint64, bits uint8, leaf bool, value interface{}) *Node64 {
 		Bits:  bits,
 		Leaf:  leaf,
 		Value: value}
-}
-
-// clz64 counts leading zeroes in unsigned 64-bit integer using binary search combined with table lookup for last 4 bits.
-func clz64(x uint64) uint8 {
-	var n uint8
-
-	if x&0xffffffff00000000 == 0 {
-		n += 32
-		x <<= 32
-	}
-
-	if x&0xffff000000000000 == 0 {
-		n += 16
-		x <<= 16
-	}
-
-	if x&0xff00000000000000 == 0 {
-		n += 8
-		x <<= 8
-	}
-
-	if x&0xf000000000000000 == 0 {
-		n += 4
-		x <<= 4
-	}
-
-	return n + clzTable[x>>(Key64BitSize-4)]
 }

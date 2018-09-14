@@ -224,7 +224,6 @@ policies:
 				attrs: []pdp.AttributeAssignment{
 					pdp.MakeIntegerAssignment("a", 0),
 					pdp.MakeIntegerAssignment("b", 1),
-
 				},
 				expected: pdp.EffectNotApplicable,
 			},

@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"net"
@@ -14,7 +15,6 @@ import (
 	_ "github.com/infobloxopen/themis/pdp/selector"
 	"github.com/infobloxopen/themis/pdpserver/server"
 	"github.com/miekg/dns"
-	"golang.org/x/net/context"
 )
 
 func BenchmarkPlugin(b *testing.B) {

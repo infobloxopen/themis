@@ -1,13 +1,13 @@
 package pep
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
 	"github.com/allegro/bigcache"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	ot "github.com/opentracing/opentracing-go"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	pb "github.com/infobloxopen/themis/pdp-service"

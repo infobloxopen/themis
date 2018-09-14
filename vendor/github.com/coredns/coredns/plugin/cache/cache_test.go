@@ -167,9 +167,11 @@ func TestCache(t *testing.T) {
 		state := request.Request{W: nil, Req: m}
 
 		mt, _ := response.Typify(m, utc)
-		k := key(m, mt, state.Do())
+		valid, k := key(m, mt, state.Do())
 
-		crr.set(m, k, mt, c.pttl)
+		if valid {
+			crr.set(m, k, mt, c.pttl)
+		}
 
 		i, _ := c.get(time.Now().UTC(), state, "dns://:53")
 		ok := i != nil
@@ -203,6 +205,8 @@ func TestCache(t *testing.T) {
 
 func TestCacheZeroTTL(t *testing.T) {
 	c := New()
+	c.minpttl = 0
+	c.minnttl = 0
 	c.Next = zeroTTLBackend()
 
 	req := new(dns.Msg)
@@ -267,4 +271,24 @@ func zeroTTLBackend() plugin.Handler {
 		w.WriteMsg(m)
 		return dns.RcodeSuccess, nil
 	})
+}
+
+func TestComputeTTL(t *testing.T) {
+	tests := []struct {
+		msgTTL      time.Duration
+		minTTL      time.Duration
+		maxTTL      time.Duration
+		expectedTTL time.Duration
+	}{
+		{1800 * time.Second, 300 * time.Second, 3600 * time.Second, 1800 * time.Second},
+		{299 * time.Second, 300 * time.Second, 3600 * time.Second, 300 * time.Second},
+		{299 * time.Second, 0 * time.Second, 3600 * time.Second, 299 * time.Second},
+		{3601 * time.Second, 300 * time.Second, 3600 * time.Second, 3600 * time.Second},
+	}
+	for i, test := range tests {
+		ttl := computeTTL(test.msgTTL, test.minTTL, test.maxTTL)
+		if ttl != test.expectedTTL {
+			t.Errorf("Test %v: Expected ttl %v but found: %v", i, test.expectedTTL, ttl)
+		}
+	}
 }

@@ -18,18 +18,19 @@
 # * Send PR to get this merged.
 #
 # * Open an issue for this release
-# * In an issue give the command: /release: master
-# * (to test as release /release: -t master can be used.
+# * In an issue give the command: /release: master VERSION
+#   Where VERSION is the version of the release - the release script double checks this with the
+#   actual CoreDNS version in coremain/version.go
+# * (to test as release /release: -t master VERSION can be used.
 #
-# See github.com/coredns/release for documentation README on what needs to be setup for this to be
+# See https://github.com/coredns/release for documentation README on what needs to be setup for this to be
 # automated (can still be done by hand if needed). Especially what environment variables need to be
 # set!
 #
-# To release we run, where 'release' and 'docker' only locally build assets; these are the same
-# targets that get executed in case of testing.
+# To release we run, these target from the this Makefile:
 # * make release
-# * make github-push
 # * make docker
+# * make github-push
 # * make docker-push
 
 EMPTY:=
@@ -70,7 +71,7 @@ build:
 	@echo Building: darwin/amd64 - $(VERSION)
 	mkdir -p build/darwin/amd64 && $(MAKE) coredns BINARY=build/darwin/amd64/$(NAME) SYSTEM="GOOS=darwin GOARCH=amd64" CHECKS="godeps" VERBOSE=""
 	@echo Building: windows/amd64 - $(VERSION)
-	mkdir -p build/windows/amd64 && $(MAKE) coredns BINARY=build/windows/amd64/$(NAME) SYSTEM="GOOS=windows GOARCH=amd64" CHECKS="" VERBOSE=""
+	mkdir -p build/windows/amd64 && $(MAKE) coredns BINARY=build/windows/amd64/$(NAME).exe SYSTEM="GOOS=windows GOARCH=amd64" CHECKS="" VERBOSE=""
 	@echo Building: linux/$(LINUX_ARCH) - $(VERSION) ;\
 	for arch in $(LINUX_ARCH); do \
 	    mkdir -p build/linux/$$arch  && $(MAKE) coredns BINARY=build/linux/$$arch/$(NAME) SYSTEM="GOOS=linux GOARCH=$$arch" CHECKS="" VERBOSE="" ;\
@@ -81,7 +82,7 @@ tar:
 	@echo Cleaning old releases
 	@rm -rf release && mkdir release
 	tar -zcf release/$(NAME)_$(VERSION)_darwin_amd64.tgz -C build/darwin/amd64 $(NAME)
-	tar -zcf release/$(NAME)_$(VERSION)_windows_amd64.tgz -C build/windows/amd64 $(NAME)
+	tar -zcf release/$(NAME)_$(VERSION)_windows_amd64.tgz -C build/windows/amd64 $(NAME).exe
 	for arch in $(LINUX_ARCH); do \
 	    tar -zcf release/$(NAME)_$(VERSION)_linux_$$arch.tgz -C build/linux/$$arch $(NAME) ;\
 	done
@@ -91,10 +92,21 @@ github-push:
 	@echo Releasing: $(VERSION)
 	@$(eval RELEASE:=$(shell curl -s -d '{"tag_name": "v$(VERSION)", "name": "v$(VERSION)"}' "https://api.github.com/repos/$(GITHUB)/$(NAME)/releases?access_token=${GITHUB_ACCESS_TOKEN}" | grep -m 1 '"id"' | tr -cd '[[:digit:]]'))
 	@echo ReleaseID: $(RELEASE)
-	@for asset in `ls -A release`; do \
+	@for asset in `ls -A release/*tgz`; do \
+	    echo $$asset; \
 	    curl -o /dev/null -X POST \
 	      -H "Content-Type: application/gzip" \
-	      --data-binary "@release/$$asset" \
+	      --data-binary "@$$asset" \
+	      "https://uploads.github.com/repos/$(GITHUB)/$(NAME)/releases/$(RELEASE)/assets?name=$${asset}&access_token=${GITHUB_ACCESS_TOKEN}" ; \
+	done
+	for asset in `ls -A release/*tgz`; do \
+	    sha256sum $$asset > $$asset.sha256; \
+	done
+	@for asset in `ls -A release/*sha256`; do \
+	    echo $$asset; \
+	    curl -o /dev/null -X POST \
+	      -H "Content-Type: text/plain" \
+	      --data-binary "@$$asset" \
 	      "https://uploads.github.com/repos/$(GITHUB)/$(NAME)/releases/$(RELEASE)/assets?name=$${asset}&access_token=${GITHUB_ACCESS_TOKEN}" ; \
 	done
 
@@ -121,6 +133,10 @@ docker-push:
 	done
 	manifest-tool push from-args --platforms $(PLATFORMS) --template $(DOCKER_IMAGE_NAME):coredns-ARCH --target $(DOCKER_IMAGE_NAME):$(VERSION)
 	manifest-tool push from-args --platforms $(PLATFORMS) --template $(DOCKER_IMAGE_NAME):coredns-ARCH --target $(DOCKER_IMAGE_NAME):latest
+
+.PHONY: version
+version:
+	@echo $(VERSION)
 
 .PHONY: clean
 clean:

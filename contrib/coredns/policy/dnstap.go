@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"context"
 	"time"
 
 	"github.com/coredns/coredns/plugin/dnstap"
@@ -10,7 +11,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	pb "github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 	"github.com/miekg/dns"
-	"golang.org/x/net/context"
 
 	"github.com/infobloxopen/themis/pdp"
 )

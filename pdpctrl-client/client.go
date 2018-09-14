@@ -8,12 +8,12 @@ package pdpcc
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-control && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/control.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-control && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-control"
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"time"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	pb "github.com/infobloxopen/themis/pdp-control"

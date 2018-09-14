@@ -53,7 +53,7 @@ func (m *ReadRowsRequest) Reset()         { *m = ReadRowsRequest{} }
 func (m *ReadRowsRequest) String() string { return proto.CompactTextString(m) }
 func (*ReadRowsRequest) ProtoMessage()    {}
 func (*ReadRowsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bigtable_service_messages_b1638ccc1a7cde9b, []int{0}
+	return fileDescriptor_f3f31120fcc6bad7, []int{0}
 }
 func (m *ReadRowsRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ReadRowsRequest.Unmarshal(m, b)
@@ -61,8 +61,8 @@ func (m *ReadRowsRequest) XXX_Unmarshal(b []byte) error {
 func (m *ReadRowsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ReadRowsRequest.Marshal(b, m, deterministic)
 }
-func (dst *ReadRowsRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ReadRowsRequest.Merge(dst, src)
+func (m *ReadRowsRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ReadRowsRequest.Merge(m, src)
 }
 func (m *ReadRowsRequest) XXX_Size() int {
 	return xxx_messageInfo_ReadRowsRequest.Size(m)
@@ -73,6 +73,13 @@ func (m *ReadRowsRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ReadRowsRequest proto.InternalMessageInfo
 
+func (m *ReadRowsRequest) GetTableName() string {
+	if m != nil {
+		return m.TableName
+	}
+	return ""
+}
+
 type isReadRowsRequest_Target interface {
 	isReadRowsRequest_Target()
 }
@@ -80,29 +87,26 @@ type isReadRowsRequest_Target interface {
 type ReadRowsRequest_RowKey struct {
 	RowKey []byte `protobuf:"bytes,2,opt,name=row_key,json=rowKey,proto3,oneof"`
 }
+
 type ReadRowsRequest_RowRange struct {
 	RowRange *RowRange `protobuf:"bytes,3,opt,name=row_range,json=rowRange,proto3,oneof"`
 }
+
 type ReadRowsRequest_RowSet struct {
 	RowSet *RowSet `protobuf:"bytes,8,opt,name=row_set,json=rowSet,proto3,oneof"`
 }
 
-func (*ReadRowsRequest_RowKey) isReadRowsRequest_Target()   {}
+func (*ReadRowsRequest_RowKey) isReadRowsRequest_Target() {}
+
 func (*ReadRowsRequest_RowRange) isReadRowsRequest_Target() {}
-func (*ReadRowsRequest_RowSet) isReadRowsRequest_Target()   {}
+
+func (*ReadRowsRequest_RowSet) isReadRowsRequest_Target() {}
 
 func (m *ReadRowsRequest) GetTarget() isReadRowsRequest_Target {
 	if m != nil {
 		return m.Target
 	}
 	return nil
-}
-
-func (m *ReadRowsRequest) GetTableName() string {
-	if m != nil {
-		return m.TableName
-	}
-	return ""
 }
 
 func (m *ReadRowsRequest) GetRowKey() []byte {
@@ -253,7 +257,7 @@ func (m *ReadRowsResponse) Reset()         { *m = ReadRowsResponse{} }
 func (m *ReadRowsResponse) String() string { return proto.CompactTextString(m) }
 func (*ReadRowsResponse) ProtoMessage()    {}
 func (*ReadRowsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bigtable_service_messages_b1638ccc1a7cde9b, []int{1}
+	return fileDescriptor_f3f31120fcc6bad7, []int{1}
 }
 func (m *ReadRowsResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ReadRowsResponse.Unmarshal(m, b)
@@ -261,8 +265,8 @@ func (m *ReadRowsResponse) XXX_Unmarshal(b []byte) error {
 func (m *ReadRowsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ReadRowsResponse.Marshal(b, m, deterministic)
 }
-func (dst *ReadRowsResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ReadRowsResponse.Merge(dst, src)
+func (m *ReadRowsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ReadRowsResponse.Merge(m, src)
 }
 func (m *ReadRowsResponse) XXX_Size() int {
 	return xxx_messageInfo_ReadRowsResponse.Size(m)
@@ -304,7 +308,7 @@ func (m *ReadRowsResponse_Chunk) Reset()         { *m = ReadRowsResponse_Chunk{}
 func (m *ReadRowsResponse_Chunk) String() string { return proto.CompactTextString(m) }
 func (*ReadRowsResponse_Chunk) ProtoMessage()    {}
 func (*ReadRowsResponse_Chunk) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bigtable_service_messages_b1638ccc1a7cde9b, []int{1, 0}
+	return fileDescriptor_f3f31120fcc6bad7, []int{1, 0}
 }
 func (m *ReadRowsResponse_Chunk) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ReadRowsResponse_Chunk.Unmarshal(m, b)
@@ -312,8 +316,8 @@ func (m *ReadRowsResponse_Chunk) XXX_Unmarshal(b []byte) error {
 func (m *ReadRowsResponse_Chunk) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ReadRowsResponse_Chunk.Marshal(b, m, deterministic)
 }
-func (dst *ReadRowsResponse_Chunk) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ReadRowsResponse_Chunk.Merge(dst, src)
+func (m *ReadRowsResponse_Chunk) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ReadRowsResponse_Chunk.Merge(m, src)
 }
 func (m *ReadRowsResponse_Chunk) XXX_Size() int {
 	return xxx_messageInfo_ReadRowsResponse_Chunk.Size(m)
@@ -331,16 +335,20 @@ type isReadRowsResponse_Chunk_Chunk interface {
 type ReadRowsResponse_Chunk_RowContents struct {
 	RowContents *Family `protobuf:"bytes,1,opt,name=row_contents,json=rowContents,proto3,oneof"`
 }
+
 type ReadRowsResponse_Chunk_ResetRow struct {
 	ResetRow bool `protobuf:"varint,2,opt,name=reset_row,json=resetRow,proto3,oneof"`
 }
+
 type ReadRowsResponse_Chunk_CommitRow struct {
 	CommitRow bool `protobuf:"varint,3,opt,name=commit_row,json=commitRow,proto3,oneof"`
 }
 
 func (*ReadRowsResponse_Chunk_RowContents) isReadRowsResponse_Chunk_Chunk() {}
-func (*ReadRowsResponse_Chunk_ResetRow) isReadRowsResponse_Chunk_Chunk()    {}
-func (*ReadRowsResponse_Chunk_CommitRow) isReadRowsResponse_Chunk_Chunk()   {}
+
+func (*ReadRowsResponse_Chunk_ResetRow) isReadRowsResponse_Chunk_Chunk() {}
+
+func (*ReadRowsResponse_Chunk_CommitRow) isReadRowsResponse_Chunk_Chunk() {}
 
 func (m *ReadRowsResponse_Chunk) GetChunk() isReadRowsResponse_Chunk_Chunk {
 	if m != nil {
@@ -474,7 +482,7 @@ func (m *SampleRowKeysRequest) Reset()         { *m = SampleRowKeysRequest{} }
 func (m *SampleRowKeysRequest) String() string { return proto.CompactTextString(m) }
 func (*SampleRowKeysRequest) ProtoMessage()    {}
 func (*SampleRowKeysRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bigtable_service_messages_b1638ccc1a7cde9b, []int{2}
+	return fileDescriptor_f3f31120fcc6bad7, []int{2}
 }
 func (m *SampleRowKeysRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SampleRowKeysRequest.Unmarshal(m, b)
@@ -482,8 +490,8 @@ func (m *SampleRowKeysRequest) XXX_Unmarshal(b []byte) error {
 func (m *SampleRowKeysRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SampleRowKeysRequest.Marshal(b, m, deterministic)
 }
-func (dst *SampleRowKeysRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SampleRowKeysRequest.Merge(dst, src)
+func (m *SampleRowKeysRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SampleRowKeysRequest.Merge(m, src)
 }
 func (m *SampleRowKeysRequest) XXX_Size() int {
 	return xxx_messageInfo_SampleRowKeysRequest.Size(m)
@@ -525,7 +533,7 @@ func (m *SampleRowKeysResponse) Reset()         { *m = SampleRowKeysResponse{} }
 func (m *SampleRowKeysResponse) String() string { return proto.CompactTextString(m) }
 func (*SampleRowKeysResponse) ProtoMessage()    {}
 func (*SampleRowKeysResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bigtable_service_messages_b1638ccc1a7cde9b, []int{3}
+	return fileDescriptor_f3f31120fcc6bad7, []int{3}
 }
 func (m *SampleRowKeysResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SampleRowKeysResponse.Unmarshal(m, b)
@@ -533,8 +541,8 @@ func (m *SampleRowKeysResponse) XXX_Unmarshal(b []byte) error {
 func (m *SampleRowKeysResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SampleRowKeysResponse.Marshal(b, m, deterministic)
 }
-func (dst *SampleRowKeysResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SampleRowKeysResponse.Merge(dst, src)
+func (m *SampleRowKeysResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SampleRowKeysResponse.Merge(m, src)
 }
 func (m *SampleRowKeysResponse) XXX_Size() int {
 	return xxx_messageInfo_SampleRowKeysResponse.Size(m)
@@ -578,7 +586,7 @@ func (m *MutateRowRequest) Reset()         { *m = MutateRowRequest{} }
 func (m *MutateRowRequest) String() string { return proto.CompactTextString(m) }
 func (*MutateRowRequest) ProtoMessage()    {}
 func (*MutateRowRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bigtable_service_messages_b1638ccc1a7cde9b, []int{4}
+	return fileDescriptor_f3f31120fcc6bad7, []int{4}
 }
 func (m *MutateRowRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MutateRowRequest.Unmarshal(m, b)
@@ -586,8 +594,8 @@ func (m *MutateRowRequest) XXX_Unmarshal(b []byte) error {
 func (m *MutateRowRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_MutateRowRequest.Marshal(b, m, deterministic)
 }
-func (dst *MutateRowRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MutateRowRequest.Merge(dst, src)
+func (m *MutateRowRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MutateRowRequest.Merge(m, src)
 }
 func (m *MutateRowRequest) XXX_Size() int {
 	return xxx_messageInfo_MutateRowRequest.Size(m)
@@ -638,7 +646,7 @@ func (m *MutateRowsRequest) Reset()         { *m = MutateRowsRequest{} }
 func (m *MutateRowsRequest) String() string { return proto.CompactTextString(m) }
 func (*MutateRowsRequest) ProtoMessage()    {}
 func (*MutateRowsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bigtable_service_messages_b1638ccc1a7cde9b, []int{5}
+	return fileDescriptor_f3f31120fcc6bad7, []int{5}
 }
 func (m *MutateRowsRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MutateRowsRequest.Unmarshal(m, b)
@@ -646,8 +654,8 @@ func (m *MutateRowsRequest) XXX_Unmarshal(b []byte) error {
 func (m *MutateRowsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_MutateRowsRequest.Marshal(b, m, deterministic)
 }
-func (dst *MutateRowsRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MutateRowsRequest.Merge(dst, src)
+func (m *MutateRowsRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MutateRowsRequest.Merge(m, src)
 }
 func (m *MutateRowsRequest) XXX_Size() int {
 	return xxx_messageInfo_MutateRowsRequest.Size(m)
@@ -689,7 +697,7 @@ func (m *MutateRowsRequest_Entry) Reset()         { *m = MutateRowsRequest_Entry
 func (m *MutateRowsRequest_Entry) String() string { return proto.CompactTextString(m) }
 func (*MutateRowsRequest_Entry) ProtoMessage()    {}
 func (*MutateRowsRequest_Entry) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bigtable_service_messages_b1638ccc1a7cde9b, []int{5, 0}
+	return fileDescriptor_f3f31120fcc6bad7, []int{5, 0}
 }
 func (m *MutateRowsRequest_Entry) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MutateRowsRequest_Entry.Unmarshal(m, b)
@@ -697,8 +705,8 @@ func (m *MutateRowsRequest_Entry) XXX_Unmarshal(b []byte) error {
 func (m *MutateRowsRequest_Entry) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_MutateRowsRequest_Entry.Marshal(b, m, deterministic)
 }
-func (dst *MutateRowsRequest_Entry) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MutateRowsRequest_Entry.Merge(dst, src)
+func (m *MutateRowsRequest_Entry) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MutateRowsRequest_Entry.Merge(m, src)
 }
 func (m *MutateRowsRequest_Entry) XXX_Size() int {
 	return xxx_messageInfo_MutateRowsRequest_Entry.Size(m)
@@ -740,7 +748,7 @@ func (m *MutateRowsResponse) Reset()         { *m = MutateRowsResponse{} }
 func (m *MutateRowsResponse) String() string { return proto.CompactTextString(m) }
 func (*MutateRowsResponse) ProtoMessage()    {}
 func (*MutateRowsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bigtable_service_messages_b1638ccc1a7cde9b, []int{6}
+	return fileDescriptor_f3f31120fcc6bad7, []int{6}
 }
 func (m *MutateRowsResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MutateRowsResponse.Unmarshal(m, b)
@@ -748,8 +756,8 @@ func (m *MutateRowsResponse) XXX_Unmarshal(b []byte) error {
 func (m *MutateRowsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_MutateRowsResponse.Marshal(b, m, deterministic)
 }
-func (dst *MutateRowsResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MutateRowsResponse.Merge(dst, src)
+func (m *MutateRowsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MutateRowsResponse.Merge(m, src)
 }
 func (m *MutateRowsResponse) XXX_Size() int {
 	return xxx_messageInfo_MutateRowsResponse.Size(m)
@@ -800,7 +808,7 @@ func (m *CheckAndMutateRowRequest) Reset()         { *m = CheckAndMutateRowReque
 func (m *CheckAndMutateRowRequest) String() string { return proto.CompactTextString(m) }
 func (*CheckAndMutateRowRequest) ProtoMessage()    {}
 func (*CheckAndMutateRowRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bigtable_service_messages_b1638ccc1a7cde9b, []int{7}
+	return fileDescriptor_f3f31120fcc6bad7, []int{7}
 }
 func (m *CheckAndMutateRowRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CheckAndMutateRowRequest.Unmarshal(m, b)
@@ -808,8 +816,8 @@ func (m *CheckAndMutateRowRequest) XXX_Unmarshal(b []byte) error {
 func (m *CheckAndMutateRowRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_CheckAndMutateRowRequest.Marshal(b, m, deterministic)
 }
-func (dst *CheckAndMutateRowRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_CheckAndMutateRowRequest.Merge(dst, src)
+func (m *CheckAndMutateRowRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CheckAndMutateRowRequest.Merge(m, src)
 }
 func (m *CheckAndMutateRowRequest) XXX_Size() int {
 	return xxx_messageInfo_CheckAndMutateRowRequest.Size(m)
@@ -869,7 +877,7 @@ func (m *CheckAndMutateRowResponse) Reset()         { *m = CheckAndMutateRowResp
 func (m *CheckAndMutateRowResponse) String() string { return proto.CompactTextString(m) }
 func (*CheckAndMutateRowResponse) ProtoMessage()    {}
 func (*CheckAndMutateRowResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bigtable_service_messages_b1638ccc1a7cde9b, []int{8}
+	return fileDescriptor_f3f31120fcc6bad7, []int{8}
 }
 func (m *CheckAndMutateRowResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CheckAndMutateRowResponse.Unmarshal(m, b)
@@ -877,8 +885,8 @@ func (m *CheckAndMutateRowResponse) XXX_Unmarshal(b []byte) error {
 func (m *CheckAndMutateRowResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_CheckAndMutateRowResponse.Marshal(b, m, deterministic)
 }
-func (dst *CheckAndMutateRowResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_CheckAndMutateRowResponse.Merge(dst, src)
+func (m *CheckAndMutateRowResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CheckAndMutateRowResponse.Merge(m, src)
 }
 func (m *CheckAndMutateRowResponse) XXX_Size() int {
 	return xxx_messageInfo_CheckAndMutateRowResponse.Size(m)
@@ -916,7 +924,7 @@ func (m *ReadModifyWriteRowRequest) Reset()         { *m = ReadModifyWriteRowReq
 func (m *ReadModifyWriteRowRequest) String() string { return proto.CompactTextString(m) }
 func (*ReadModifyWriteRowRequest) ProtoMessage()    {}
 func (*ReadModifyWriteRowRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bigtable_service_messages_b1638ccc1a7cde9b, []int{9}
+	return fileDescriptor_f3f31120fcc6bad7, []int{9}
 }
 func (m *ReadModifyWriteRowRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ReadModifyWriteRowRequest.Unmarshal(m, b)
@@ -924,8 +932,8 @@ func (m *ReadModifyWriteRowRequest) XXX_Unmarshal(b []byte) error {
 func (m *ReadModifyWriteRowRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ReadModifyWriteRowRequest.Marshal(b, m, deterministic)
 }
-func (dst *ReadModifyWriteRowRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ReadModifyWriteRowRequest.Merge(dst, src)
+func (m *ReadModifyWriteRowRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ReadModifyWriteRowRequest.Merge(m, src)
 }
 func (m *ReadModifyWriteRowRequest) XXX_Size() int {
 	return xxx_messageInfo_ReadModifyWriteRowRequest.Size(m)
@@ -973,10 +981,10 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("google/bigtable/v1/bigtable_service_messages.proto", fileDescriptor_bigtable_service_messages_b1638ccc1a7cde9b)
+	proto.RegisterFile("google/bigtable/v1/bigtable_service_messages.proto", fileDescriptor_f3f31120fcc6bad7)
 }
 
-var fileDescriptor_bigtable_service_messages_b1638ccc1a7cde9b = []byte{
+var fileDescriptor_f3f31120fcc6bad7 = []byte{
 	// 788 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x55, 0x5f, 0x8b, 0x23, 0x45,
 	0x10, 0xdf, 0x49, 0xcc, 0xbf, 0x4a, 0xdc, 0xdd, 0x6b, 0xce, 0xdb, 0xd9, 0x70, 0x8b, 0x71, 0x10,

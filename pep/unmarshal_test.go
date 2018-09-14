@@ -441,7 +441,7 @@ func assertTestTaggedAllTypesStruct(t *testing.T, v, e TestTaggedAllTypesRespons
 
 	if v.Effect != e.Effect ||
 		v.Reason != e.Reason ||
-		v.BoolFalse != v.BoolFalse ||
+		v.BoolFalse != e.BoolFalse ||
 		v.BoolTrue != e.BoolTrue ||
 		v.String != e.String ||
 		v.Int != e.Int ||

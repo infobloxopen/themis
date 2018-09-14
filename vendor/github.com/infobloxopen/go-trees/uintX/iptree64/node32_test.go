@@ -346,53 +346,6 @@ func TestDelete32(t *testing.T) {
 		"32-tree with deleted two children and non-leaf nodes", t)
 }
 
-func TestClz32(t *testing.T) {
-	assertClz32(0x00000000, 32, t)
-	assertClz32(0x00000001, 31, t)
-	assertClz32(0x00000002, 30, t)
-	assertClz32(0x00000003, 30, t)
-	assertClz32(0x00000004, 29, t)
-	assertClz32(0x00000005, 29, t)
-	assertClz32(0x00000006, 29, t)
-	assertClz32(0x00000007, 29, t)
-	assertClz32(0x00000008, 28, t)
-
-	assertClz32(0x00000010, 27, t)
-	assertClz32(0x00000020, 26, t)
-	assertClz32(0x00000040, 25, t)
-	assertClz32(0x00000080, 24, t)
-
-	assertClz32(0x00000100, 23, t)
-	assertClz32(0x00000200, 22, t)
-	assertClz32(0x00000400, 21, t)
-	assertClz32(0x00000800, 20, t)
-
-	assertClz32(0x00001000, 19, t)
-	assertClz32(0x00002000, 18, t)
-	assertClz32(0x00004000, 17, t)
-	assertClz32(0x00008000, 16, t)
-
-	assertClz32(0x00010000, 15, t)
-	assertClz32(0x00020000, 14, t)
-	assertClz32(0x00040000, 13, t)
-	assertClz32(0x00080000, 12, t)
-
-	assertClz32(0x00100000, 11, t)
-	assertClz32(0x00200000, 10, t)
-	assertClz32(0x00400000, 9, t)
-	assertClz32(0x00800000, 8, t)
-
-	assertClz32(0x01000000, 7, t)
-	assertClz32(0x02000000, 6, t)
-	assertClz32(0x04000000, 5, t)
-	assertClz32(0x08000000, 4, t)
-
-	assertClz32(0x10000000, 3, t)
-	assertClz32(0x20000000, 2, t)
-	assertClz32(0x40000000, 1, t)
-	assertClz32(0x80000000, 0, t)
-}
-
 func assertTree32(r *node32, e, desc string, t *testing.T) {
 	assertStringLists(difflib.SplitLines(r.Dot()), difflib.SplitLines(e), desc, t)
 }
@@ -459,13 +412,6 @@ func assertTree32Delete(r *node32, ok bool, e string, desc string, t *testing.T)
 		assertTree32(r, e, desc, t)
 	} else if ok {
 		t.Errorf("Expected nothing to be deleted from %s but it is and got new root:\n%s\n", desc, r.Dot())
-	}
-}
-
-func assertClz32(x uint32, c uint8, t *testing.T) {
-	r := clz32(x)
-	if r != c {
-		t.Errorf("Expected %d as result of clz32(0x%08x) but got %d", c, x, r)
 	}
 }
 

@@ -1,13 +1,13 @@
 package policy
 
 import (
+	"context"
 	"errors"
 	"net"
 
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/pkg/nonwriter"
 	"github.com/miekg/dns"
-	"golang.org/x/net/context"
 )
 
 var errInvalidDNSMessage = errors.New("invalid DNS message")

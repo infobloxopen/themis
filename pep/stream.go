@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"google.golang.org/grpc/balancer"
-	"google.golang.org/grpc/transport"
 
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
@@ -103,7 +102,7 @@ func (s *stream) validate(m *pb.Msg) (pb.Msg, error) {
 
 	err := (*sp).Send(m)
 	if err != nil {
-		if err == transport.ErrConnClosing || err == balancer.ErrTransientFailure {
+		if err == balancer.ErrTransientFailure {
 			return pb.Msg{}, errConnFailure
 		}
 
@@ -112,7 +111,7 @@ func (s *stream) validate(m *pb.Msg) (pb.Msg, error) {
 
 	res, err := (*sp).Recv()
 	if err != nil {
-		if err == transport.ErrConnClosing || err == balancer.ErrTransientFailure {
+		if err == balancer.ErrTransientFailure {
 			return pb.Msg{}, errConnFailure
 		}
 

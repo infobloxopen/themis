@@ -1,6 +1,7 @@
 package pep
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net"
@@ -8,7 +9,6 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	"github.com/infobloxopen/themis/pdp"

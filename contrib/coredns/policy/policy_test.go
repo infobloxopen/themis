@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"testing"
@@ -11,7 +12,6 @@ import (
 	"github.com/infobloxopen/themis/contrib/coredns/policy/testutil"
 	"github.com/infobloxopen/themis/pdp"
 	"github.com/miekg/dns"
-	"golang.org/x/net/context"
 
 	pb "github.com/infobloxopen/themis/contrib/coredns/policy/dnstap"
 )
