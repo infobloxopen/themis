@@ -36,7 +36,7 @@ func (ch *testPepCacheHitHandler) Handle(req interface{}, resp interface{}, err 
 		}
 	}
 
-	ch.called += 1
+	ch.called++
 }
 
 func TestStreamingClientValidation(t *testing.T) {

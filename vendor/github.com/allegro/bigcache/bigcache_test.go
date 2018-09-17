@@ -2,6 +2,7 @@ package bigcache
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -615,6 +616,28 @@ func TestNilValueCaching(t *testing.T) {
 	// then
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{}, cachedValue)
+}
+
+func TestClosing(t *testing.T) {
+	// given
+	config := Config{
+		CleanWindow: time.Minute,
+	}
+	startGR := runtime.NumGoroutine()
+
+	// when
+	for i := 0; i < 100; i++ {
+		cache, _ := NewBigCache(config)
+		cache.Close()
+	}
+
+	// wait till all goroutines are stopped.
+	time.Sleep(200 * time.Millisecond)
+
+	// then
+	endGR := runtime.NumGoroutine()
+	assert.True(t, endGR >= startGR)
+	assert.InDelta(t, endGR, startGR, 25)
 }
 
 type mockedLogger struct {

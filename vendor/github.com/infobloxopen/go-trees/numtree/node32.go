@@ -1,6 +1,10 @@
+// Package numtree implements radix tree data structure for 32 and 64-bit unsigned integets. Copy-on-write is used for any tree modification so old root doesn't see any change happens with tree.
 package numtree
 
-import "fmt"
+import (
+	"fmt"
+	"math/bits"
+)
 
 // Key32BitSize is an alias for bitsize of 32-bit radix tree's key.
 const Key32BitSize = 32
@@ -185,7 +189,7 @@ func (n *Node32) insert(c *Node32) *Node32 {
 	// 1. xor operation puts zeroes at common bits;
 	// 2. or masks put ones so that zeroes can't go after smaller number of significant bits (NSB)
 	// 3. count of leading zeroes gives number of common bits
-	bits := clz32((n.Key ^ c.Key) | ^masks32[n.Bits] | ^masks32[c.Bits])
+	bits := uint8(bits.LeadingZeros32((n.Key ^ c.Key) | ^masks32[n.Bits] | ^masks32[c.Bits]))
 
 	// There are three cases possible:
 	// - NCSB less than number of significant bits (NSB) of current tree node:
@@ -231,7 +235,7 @@ func (n *Node32) insert(c *Node32) *Node32 {
 	return m
 }
 
-func (n *Node32) inplaceInsert(key uint32, bits uint8, value interface{}) *Node32 {
+func (n *Node32) inplaceInsert(key uint32, sbits uint8, value interface{}) *Node32 {
 	var (
 		p      *Node32
 		branch uint32
@@ -240,19 +244,19 @@ func (n *Node32) inplaceInsert(key uint32, bits uint8, value interface{}) *Node3
 	r := n
 
 	for n != nil {
-		cbits := clz32((n.Key ^ key) | ^masks32[n.Bits] | ^masks32[bits])
+		cbits := uint8(bits.LeadingZeros32((n.Key ^ key) | ^masks32[n.Bits] | ^masks32[sbits]))
 		if cbits < n.Bits {
 			pBranch := branch
 			branch = (n.Key >> (Key32BitSize - 1 - cbits)) & 1
 
 			var m *Node32
 
-			if cbits == bits {
-				m = newNode32(key, bits, true, value)
+			if cbits == sbits {
+				m = newNode32(key, sbits, true, value)
 				m.chld[branch] = n
 			} else {
 				m = newNode32(key&masks32[cbits], cbits, false, nil)
-				m.chld[1-branch] = newNode32(key, bits, true, value)
+				m.chld[1-branch] = newNode32(key, sbits, true, value)
 			}
 
 			m.chld[branch] = n
@@ -265,7 +269,7 @@ func (n *Node32) inplaceInsert(key uint32, bits uint8, value interface{}) *Node3
 			return r
 		}
 
-		if bits == n.Bits {
+		if sbits == n.Bits {
 			n.Key = key
 			n.Leaf = true
 			n.Value = value
@@ -277,7 +281,7 @@ func (n *Node32) inplaceInsert(key uint32, bits uint8, value interface{}) *Node3
 		n = n.chld[branch]
 	}
 
-	n = newNode32(key, bits, true, value)
+	n = newNode32(key, sbits, true, value)
 	if p == nil {
 		return n
 	}
@@ -431,26 +435,4 @@ func newNode32(key uint32, bits uint8, leaf bool, value interface{}) *Node32 {
 		Bits:  bits,
 		Leaf:  leaf,
 		Value: value}
-}
-
-// clz32 counts leading zeroes in unsigned 32-bit integer using binary search combined with table lookup for last 4 bits.
-func clz32(x uint32) uint8 {
-	var n uint8
-
-	if x&0xffff0000 == 0 {
-		n = 16
-		x <<= 16
-	}
-
-	if x&0xff000000 == 0 {
-		n += 8
-		x <<= 8
-	}
-
-	if x&0xf0000000 == 0 {
-		n += 4
-		x <<= 4
-	}
-
-	return n + clzTable[x>>(Key32BitSize-4)]
 }

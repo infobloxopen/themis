@@ -32,8 +32,8 @@ If you want more control:
 
 ~~~ txt
 cache [TTL] [ZONES...] {
-    success CAPACITY [TTL]
-    denial CAPACITY [TTL]
+    success CAPACITY [TTL] [MINTTL]
+    denial CAPACITY [TTL] [MINTTL]
     prefetch AMOUNT [[DURATION] [PERCENTAGE%]]
 }
 ~~~
@@ -41,8 +41,10 @@ cache [TTL] [ZONES...] {
 * **TTL**  and **ZONES** as above.
 * `success`, override the settings for caching successful responses. **CAPACITY** indicates the maximum
   number of packets we cache before we start evicting (*randomly*). **TTL** overrides the cache maximum TTL.
+  **MINTTL** overrides the cache minimum TTL, which can be useful to limit queries to the backend.
 * `denial`, override the settings for caching denial of existence responses. **CAPACITY** indicates the maximum
   number of packets we cache before we start evicting (LRU). **TTL** overrides the cache maximum TTL.
+  **MINTTL** overrides the cache minimum TTL, which can be useful to limit queries to the backend.
   There is a third category (`error`) but those responses are never cached.
 * `prefetch` will prefetch popular items when they are about to be expunged from the cache.
   Popular means **AMOUNT** queries have been seen with no gaps of **DURATION** or more between them.
@@ -52,11 +54,12 @@ cache [TTL] [ZONES...] {
 
 ## Capacity and Eviction
 
-When specifying **CAPACITY**, the minimum cache capacity is 131,072.  Specifying a lower value will be
-ignored. Specifying a **CAPACITY** of zero does not disable the cache.
+If **CAPACITY** is not specified, the default cache size is 10,000 per cache. The minimum allowed cache size is 1024.
 
-Eviction is done per shard - i.e. when a shard reaches capacity, items are evicted from that shard.  Since shards don't fill up perfectly evenly, evictions will occur before the entire cache reaches full capacity. Each shard capacity is equal to the total cache size / number of shards (256).
-
+Eviction is done per shard. In effect, when a shard reaches capacity, items are evicted from that shard.
+Since shards don't fill up perfectly evenly, evictions will occur before the entire cache reaches full capacity.
+Each shard capacity is equal to the total cache size / number of shards (256). Eviction is random, not TTL based.
+Entries with 0 TTL will remain in the cache until randomly evicted when the shard reaches capacity.
 
 ## Metrics
 
@@ -89,3 +92,13 @@ Proxy to Google Public DNS and only cache responses for example.org (or below).
     cache example.org
 }
 ~~~
+
+Enable caching for all zones, keep a positive cache size of 5000 and a negative cache size of 2500:
+ ~~~ corefile
+ . {
+     cache {
+         success 5000
+         denial 2500
+    }
+ }
+ ~~~

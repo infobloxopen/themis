@@ -64,6 +64,7 @@ var LoggingConfig_Level_name = map[int32]string{
 	7: "FATAL",
 	8: "OFF",
 }
+
 var LoggingConfig_Level_value = map[string]int32{
 	"LEVEL_UNSPECIFIED": 0,
 	"ALL":               1,
@@ -79,8 +80,9 @@ var LoggingConfig_Level_value = map[string]int32{
 func (x LoggingConfig_Level) String() string {
 	return proto.EnumName(LoggingConfig_Level_name, int32(x))
 }
+
 func (LoggingConfig_Level) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{0, 0}
+	return fileDescriptor_20fb118582e1d7de, []int{0, 0}
 }
 
 // The job state.
@@ -126,6 +128,7 @@ var JobStatus_State_name = map[int32]string{
 	6: "ERROR",
 	9: "ATTEMPT_FAILURE",
 }
+
 var JobStatus_State_value = map[string]int32{
 	"STATE_UNSPECIFIED": 0,
 	"PENDING":           1,
@@ -142,8 +145,9 @@ var JobStatus_State_value = map[string]int32{
 func (x JobStatus_State) String() string {
 	return proto.EnumName(JobStatus_State_name, int32(x))
 }
+
 func (JobStatus_State) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{9, 0}
+	return fileDescriptor_20fb118582e1d7de, []int{9, 0}
 }
 
 // The job substate.
@@ -176,6 +180,7 @@ var JobStatus_Substate_name = map[int32]string{
 	2: "QUEUED",
 	3: "STALE_STATUS",
 }
+
 var JobStatus_Substate_value = map[string]int32{
 	"UNSPECIFIED":  0,
 	"SUBMITTED":    1,
@@ -186,8 +191,9 @@ var JobStatus_Substate_value = map[string]int32{
 func (x JobStatus_Substate) String() string {
 	return proto.EnumName(JobStatus_Substate_name, int32(x))
 }
+
 func (JobStatus_Substate) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{9, 1}
+	return fileDescriptor_20fb118582e1d7de, []int{9, 1}
 }
 
 // The application state, corresponding to
@@ -226,6 +232,7 @@ var YarnApplication_State_name = map[int32]string{
 	7: "FAILED",
 	8: "KILLED",
 }
+
 var YarnApplication_State_value = map[string]int32{
 	"STATE_UNSPECIFIED": 0,
 	"NEW":               1,
@@ -241,8 +248,9 @@ var YarnApplication_State_value = map[string]int32{
 func (x YarnApplication_State) String() string {
 	return proto.EnumName(YarnApplication_State_name, int32(x))
 }
+
 func (YarnApplication_State) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{11, 0}
+	return fileDescriptor_20fb118582e1d7de, []int{11, 0}
 }
 
 // A matcher that specifies categories of job states.
@@ -263,6 +271,7 @@ var ListJobsRequest_JobStateMatcher_name = map[int32]string{
 	1: "ACTIVE",
 	2: "NON_ACTIVE",
 }
+
 var ListJobsRequest_JobStateMatcher_value = map[string]int32{
 	"ALL":        0,
 	"ACTIVE":     1,
@@ -272,8 +281,9 @@ var ListJobsRequest_JobStateMatcher_value = map[string]int32{
 func (x ListJobsRequest_JobStateMatcher) String() string {
 	return proto.EnumName(ListJobsRequest_JobStateMatcher_name, int32(x))
 }
+
 func (ListJobsRequest_JobStateMatcher) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{16, 0}
+	return fileDescriptor_20fb118582e1d7de, []int{16, 0}
 }
 
 // The runtime logging config of the job.
@@ -292,7 +302,7 @@ func (m *LoggingConfig) Reset()         { *m = LoggingConfig{} }
 func (m *LoggingConfig) String() string { return proto.CompactTextString(m) }
 func (*LoggingConfig) ProtoMessage()    {}
 func (*LoggingConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{0}
+	return fileDescriptor_20fb118582e1d7de, []int{0}
 }
 func (m *LoggingConfig) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LoggingConfig.Unmarshal(m, b)
@@ -300,8 +310,8 @@ func (m *LoggingConfig) XXX_Unmarshal(b []byte) error {
 func (m *LoggingConfig) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_LoggingConfig.Marshal(b, m, deterministic)
 }
-func (dst *LoggingConfig) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_LoggingConfig.Merge(dst, src)
+func (m *LoggingConfig) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LoggingConfig.Merge(m, src)
 }
 func (m *LoggingConfig) XXX_Size() int {
 	return xxx_messageInfo_LoggingConfig.Size(m)
@@ -364,7 +374,7 @@ func (m *HadoopJob) Reset()         { *m = HadoopJob{} }
 func (m *HadoopJob) String() string { return proto.CompactTextString(m) }
 func (*HadoopJob) ProtoMessage()    {}
 func (*HadoopJob) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{1}
+	return fileDescriptor_20fb118582e1d7de, []int{1}
 }
 func (m *HadoopJob) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_HadoopJob.Unmarshal(m, b)
@@ -372,8 +382,8 @@ func (m *HadoopJob) XXX_Unmarshal(b []byte) error {
 func (m *HadoopJob) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_HadoopJob.Marshal(b, m, deterministic)
 }
-func (dst *HadoopJob) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_HadoopJob.Merge(dst, src)
+func (m *HadoopJob) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HadoopJob.Merge(m, src)
 }
 func (m *HadoopJob) XXX_Size() int {
 	return xxx_messageInfo_HadoopJob.Size(m)
@@ -391,12 +401,14 @@ type isHadoopJob_Driver interface {
 type HadoopJob_MainJarFileUri struct {
 	MainJarFileUri string `protobuf:"bytes,1,opt,name=main_jar_file_uri,json=mainJarFileUri,proto3,oneof"`
 }
+
 type HadoopJob_MainClass struct {
 	MainClass string `protobuf:"bytes,2,opt,name=main_class,json=mainClass,proto3,oneof"`
 }
 
 func (*HadoopJob_MainJarFileUri) isHadoopJob_Driver() {}
-func (*HadoopJob_MainClass) isHadoopJob_Driver()      {}
+
+func (*HadoopJob_MainClass) isHadoopJob_Driver() {}
 
 func (m *HadoopJob) GetDriver() isHadoopJob_Driver {
 	if m != nil {
@@ -569,7 +581,7 @@ func (m *SparkJob) Reset()         { *m = SparkJob{} }
 func (m *SparkJob) String() string { return proto.CompactTextString(m) }
 func (*SparkJob) ProtoMessage()    {}
 func (*SparkJob) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{2}
+	return fileDescriptor_20fb118582e1d7de, []int{2}
 }
 func (m *SparkJob) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SparkJob.Unmarshal(m, b)
@@ -577,8 +589,8 @@ func (m *SparkJob) XXX_Unmarshal(b []byte) error {
 func (m *SparkJob) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SparkJob.Marshal(b, m, deterministic)
 }
-func (dst *SparkJob) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SparkJob.Merge(dst, src)
+func (m *SparkJob) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SparkJob.Merge(m, src)
 }
 func (m *SparkJob) XXX_Size() int {
 	return xxx_messageInfo_SparkJob.Size(m)
@@ -596,12 +608,14 @@ type isSparkJob_Driver interface {
 type SparkJob_MainJarFileUri struct {
 	MainJarFileUri string `protobuf:"bytes,1,opt,name=main_jar_file_uri,json=mainJarFileUri,proto3,oneof"`
 }
+
 type SparkJob_MainClass struct {
 	MainClass string `protobuf:"bytes,2,opt,name=main_class,json=mainClass,proto3,oneof"`
 }
 
 func (*SparkJob_MainJarFileUri) isSparkJob_Driver() {}
-func (*SparkJob_MainClass) isSparkJob_Driver()      {}
+
+func (*SparkJob_MainClass) isSparkJob_Driver() {}
 
 func (m *SparkJob) GetDriver() isSparkJob_Driver {
 	if m != nil {
@@ -771,7 +785,7 @@ func (m *PySparkJob) Reset()         { *m = PySparkJob{} }
 func (m *PySparkJob) String() string { return proto.CompactTextString(m) }
 func (*PySparkJob) ProtoMessage()    {}
 func (*PySparkJob) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{3}
+	return fileDescriptor_20fb118582e1d7de, []int{3}
 }
 func (m *PySparkJob) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PySparkJob.Unmarshal(m, b)
@@ -779,8 +793,8 @@ func (m *PySparkJob) XXX_Unmarshal(b []byte) error {
 func (m *PySparkJob) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PySparkJob.Marshal(b, m, deterministic)
 }
-func (dst *PySparkJob) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PySparkJob.Merge(dst, src)
+func (m *PySparkJob) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PySparkJob.Merge(m, src)
 }
 func (m *PySparkJob) XXX_Size() int {
 	return xxx_messageInfo_PySparkJob.Size(m)
@@ -873,7 +887,7 @@ func (m *QueryList) Reset()         { *m = QueryList{} }
 func (m *QueryList) String() string { return proto.CompactTextString(m) }
 func (*QueryList) ProtoMessage()    {}
 func (*QueryList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{4}
+	return fileDescriptor_20fb118582e1d7de, []int{4}
 }
 func (m *QueryList) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_QueryList.Unmarshal(m, b)
@@ -881,8 +895,8 @@ func (m *QueryList) XXX_Unmarshal(b []byte) error {
 func (m *QueryList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_QueryList.Marshal(b, m, deterministic)
 }
-func (dst *QueryList) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_QueryList.Merge(dst, src)
+func (m *QueryList) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_QueryList.Merge(m, src)
 }
 func (m *QueryList) XXX_Size() int {
 	return xxx_messageInfo_QueryList.Size(m)
@@ -935,7 +949,7 @@ func (m *HiveJob) Reset()         { *m = HiveJob{} }
 func (m *HiveJob) String() string { return proto.CompactTextString(m) }
 func (*HiveJob) ProtoMessage()    {}
 func (*HiveJob) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{5}
+	return fileDescriptor_20fb118582e1d7de, []int{5}
 }
 func (m *HiveJob) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_HiveJob.Unmarshal(m, b)
@@ -943,8 +957,8 @@ func (m *HiveJob) XXX_Unmarshal(b []byte) error {
 func (m *HiveJob) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_HiveJob.Marshal(b, m, deterministic)
 }
-func (dst *HiveJob) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_HiveJob.Merge(dst, src)
+func (m *HiveJob) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HiveJob.Merge(m, src)
 }
 func (m *HiveJob) XXX_Size() int {
 	return xxx_messageInfo_HiveJob.Size(m)
@@ -962,12 +976,14 @@ type isHiveJob_Queries interface {
 type HiveJob_QueryFileUri struct {
 	QueryFileUri string `protobuf:"bytes,1,opt,name=query_file_uri,json=queryFileUri,proto3,oneof"`
 }
+
 type HiveJob_QueryList struct {
 	QueryList *QueryList `protobuf:"bytes,2,opt,name=query_list,json=queryList,proto3,oneof"`
 }
 
 func (*HiveJob_QueryFileUri) isHiveJob_Queries() {}
-func (*HiveJob_QueryList) isHiveJob_Queries()    {}
+
+func (*HiveJob_QueryList) isHiveJob_Queries() {}
 
 func (m *HiveJob) GetQueries() isHiveJob_Queries {
 	if m != nil {
@@ -1118,7 +1134,7 @@ func (m *SparkSqlJob) Reset()         { *m = SparkSqlJob{} }
 func (m *SparkSqlJob) String() string { return proto.CompactTextString(m) }
 func (*SparkSqlJob) ProtoMessage()    {}
 func (*SparkSqlJob) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{6}
+	return fileDescriptor_20fb118582e1d7de, []int{6}
 }
 func (m *SparkSqlJob) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SparkSqlJob.Unmarshal(m, b)
@@ -1126,8 +1142,8 @@ func (m *SparkSqlJob) XXX_Unmarshal(b []byte) error {
 func (m *SparkSqlJob) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SparkSqlJob.Marshal(b, m, deterministic)
 }
-func (dst *SparkSqlJob) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SparkSqlJob.Merge(dst, src)
+func (m *SparkSqlJob) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SparkSqlJob.Merge(m, src)
 }
 func (m *SparkSqlJob) XXX_Size() int {
 	return xxx_messageInfo_SparkSqlJob.Size(m)
@@ -1145,12 +1161,14 @@ type isSparkSqlJob_Queries interface {
 type SparkSqlJob_QueryFileUri struct {
 	QueryFileUri string `protobuf:"bytes,1,opt,name=query_file_uri,json=queryFileUri,proto3,oneof"`
 }
+
 type SparkSqlJob_QueryList struct {
 	QueryList *QueryList `protobuf:"bytes,2,opt,name=query_list,json=queryList,proto3,oneof"`
 }
 
 func (*SparkSqlJob_QueryFileUri) isSparkSqlJob_Queries() {}
-func (*SparkSqlJob_QueryList) isSparkSqlJob_Queries()    {}
+
+func (*SparkSqlJob_QueryList) isSparkSqlJob_Queries() {}
 
 func (m *SparkSqlJob) GetQueries() isSparkSqlJob_Queries {
 	if m != nil {
@@ -1307,7 +1325,7 @@ func (m *PigJob) Reset()         { *m = PigJob{} }
 func (m *PigJob) String() string { return proto.CompactTextString(m) }
 func (*PigJob) ProtoMessage()    {}
 func (*PigJob) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{7}
+	return fileDescriptor_20fb118582e1d7de, []int{7}
 }
 func (m *PigJob) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PigJob.Unmarshal(m, b)
@@ -1315,8 +1333,8 @@ func (m *PigJob) XXX_Unmarshal(b []byte) error {
 func (m *PigJob) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PigJob.Marshal(b, m, deterministic)
 }
-func (dst *PigJob) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PigJob.Merge(dst, src)
+func (m *PigJob) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PigJob.Merge(m, src)
 }
 func (m *PigJob) XXX_Size() int {
 	return xxx_messageInfo_PigJob.Size(m)
@@ -1334,12 +1352,14 @@ type isPigJob_Queries interface {
 type PigJob_QueryFileUri struct {
 	QueryFileUri string `protobuf:"bytes,1,opt,name=query_file_uri,json=queryFileUri,proto3,oneof"`
 }
+
 type PigJob_QueryList struct {
 	QueryList *QueryList `protobuf:"bytes,2,opt,name=query_list,json=queryList,proto3,oneof"`
 }
 
 func (*PigJob_QueryFileUri) isPigJob_Queries() {}
-func (*PigJob_QueryList) isPigJob_Queries()    {}
+
+func (*PigJob_QueryList) isPigJob_Queries() {}
 
 func (m *PigJob) GetQueries() isPigJob_Queries {
 	if m != nil {
@@ -1483,7 +1503,7 @@ func (m *JobPlacement) Reset()         { *m = JobPlacement{} }
 func (m *JobPlacement) String() string { return proto.CompactTextString(m) }
 func (*JobPlacement) ProtoMessage()    {}
 func (*JobPlacement) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{8}
+	return fileDescriptor_20fb118582e1d7de, []int{8}
 }
 func (m *JobPlacement) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_JobPlacement.Unmarshal(m, b)
@@ -1491,8 +1511,8 @@ func (m *JobPlacement) XXX_Unmarshal(b []byte) error {
 func (m *JobPlacement) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_JobPlacement.Marshal(b, m, deterministic)
 }
-func (dst *JobPlacement) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_JobPlacement.Merge(dst, src)
+func (m *JobPlacement) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_JobPlacement.Merge(m, src)
 }
 func (m *JobPlacement) XXX_Size() int {
 	return xxx_messageInfo_JobPlacement.Size(m)
@@ -1538,7 +1558,7 @@ func (m *JobStatus) Reset()         { *m = JobStatus{} }
 func (m *JobStatus) String() string { return proto.CompactTextString(m) }
 func (*JobStatus) ProtoMessage()    {}
 func (*JobStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{9}
+	return fileDescriptor_20fb118582e1d7de, []int{9}
 }
 func (m *JobStatus) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_JobStatus.Unmarshal(m, b)
@@ -1546,8 +1566,8 @@ func (m *JobStatus) XXX_Unmarshal(b []byte) error {
 func (m *JobStatus) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_JobStatus.Marshal(b, m, deterministic)
 }
-func (dst *JobStatus) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_JobStatus.Merge(dst, src)
+func (m *JobStatus) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_JobStatus.Merge(m, src)
 }
 func (m *JobStatus) XXX_Size() int {
 	return xxx_messageInfo_JobStatus.Size(m)
@@ -1606,7 +1626,7 @@ func (m *JobReference) Reset()         { *m = JobReference{} }
 func (m *JobReference) String() string { return proto.CompactTextString(m) }
 func (*JobReference) ProtoMessage()    {}
 func (*JobReference) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{10}
+	return fileDescriptor_20fb118582e1d7de, []int{10}
 }
 func (m *JobReference) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_JobReference.Unmarshal(m, b)
@@ -1614,8 +1634,8 @@ func (m *JobReference) XXX_Unmarshal(b []byte) error {
 func (m *JobReference) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_JobReference.Marshal(b, m, deterministic)
 }
-func (dst *JobReference) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_JobReference.Merge(dst, src)
+func (m *JobReference) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_JobReference.Merge(m, src)
 }
 func (m *JobReference) XXX_Size() int {
 	return xxx_messageInfo_JobReference.Size(m)
@@ -1666,7 +1686,7 @@ func (m *YarnApplication) Reset()         { *m = YarnApplication{} }
 func (m *YarnApplication) String() string { return proto.CompactTextString(m) }
 func (*YarnApplication) ProtoMessage()    {}
 func (*YarnApplication) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{11}
+	return fileDescriptor_20fb118582e1d7de, []int{11}
 }
 func (m *YarnApplication) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_YarnApplication.Unmarshal(m, b)
@@ -1674,8 +1694,8 @@ func (m *YarnApplication) XXX_Unmarshal(b []byte) error {
 func (m *YarnApplication) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_YarnApplication.Marshal(b, m, deterministic)
 }
-func (dst *YarnApplication) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_YarnApplication.Merge(dst, src)
+func (m *YarnApplication) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_YarnApplication.Merge(m, src)
 }
 func (m *YarnApplication) XXX_Size() int {
 	return xxx_messageInfo_YarnApplication.Size(m)
@@ -1770,7 +1790,7 @@ func (m *Job) Reset()         { *m = Job{} }
 func (m *Job) String() string { return proto.CompactTextString(m) }
 func (*Job) ProtoMessage()    {}
 func (*Job) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{12}
+	return fileDescriptor_20fb118582e1d7de, []int{12}
 }
 func (m *Job) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Job.Unmarshal(m, b)
@@ -1778,8 +1798,8 @@ func (m *Job) XXX_Unmarshal(b []byte) error {
 func (m *Job) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Job.Marshal(b, m, deterministic)
 }
-func (dst *Job) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Job.Merge(dst, src)
+func (m *Job) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Job.Merge(m, src)
 }
 func (m *Job) XXX_Size() int {
 	return xxx_messageInfo_Job.Size(m)
@@ -1789,43 +1809,6 @@ func (m *Job) XXX_DiscardUnknown() {
 }
 
 var xxx_messageInfo_Job proto.InternalMessageInfo
-
-type isJob_TypeJob interface {
-	isJob_TypeJob()
-}
-
-type Job_HadoopJob struct {
-	HadoopJob *HadoopJob `protobuf:"bytes,3,opt,name=hadoop_job,json=hadoopJob,proto3,oneof"`
-}
-type Job_SparkJob struct {
-	SparkJob *SparkJob `protobuf:"bytes,4,opt,name=spark_job,json=sparkJob,proto3,oneof"`
-}
-type Job_PysparkJob struct {
-	PysparkJob *PySparkJob `protobuf:"bytes,5,opt,name=pyspark_job,json=pysparkJob,proto3,oneof"`
-}
-type Job_HiveJob struct {
-	HiveJob *HiveJob `protobuf:"bytes,6,opt,name=hive_job,json=hiveJob,proto3,oneof"`
-}
-type Job_PigJob struct {
-	PigJob *PigJob `protobuf:"bytes,7,opt,name=pig_job,json=pigJob,proto3,oneof"`
-}
-type Job_SparkSqlJob struct {
-	SparkSqlJob *SparkSqlJob `protobuf:"bytes,12,opt,name=spark_sql_job,json=sparkSqlJob,proto3,oneof"`
-}
-
-func (*Job_HadoopJob) isJob_TypeJob()   {}
-func (*Job_SparkJob) isJob_TypeJob()    {}
-func (*Job_PysparkJob) isJob_TypeJob()  {}
-func (*Job_HiveJob) isJob_TypeJob()     {}
-func (*Job_PigJob) isJob_TypeJob()      {}
-func (*Job_SparkSqlJob) isJob_TypeJob() {}
-
-func (m *Job) GetTypeJob() isJob_TypeJob {
-	if m != nil {
-		return m.TypeJob
-	}
-	return nil
-}
 
 func (m *Job) GetReference() *JobReference {
 	if m != nil {
@@ -1837,6 +1820,53 @@ func (m *Job) GetReference() *JobReference {
 func (m *Job) GetPlacement() *JobPlacement {
 	if m != nil {
 		return m.Placement
+	}
+	return nil
+}
+
+type isJob_TypeJob interface {
+	isJob_TypeJob()
+}
+
+type Job_HadoopJob struct {
+	HadoopJob *HadoopJob `protobuf:"bytes,3,opt,name=hadoop_job,json=hadoopJob,proto3,oneof"`
+}
+
+type Job_SparkJob struct {
+	SparkJob *SparkJob `protobuf:"bytes,4,opt,name=spark_job,json=sparkJob,proto3,oneof"`
+}
+
+type Job_PysparkJob struct {
+	PysparkJob *PySparkJob `protobuf:"bytes,5,opt,name=pyspark_job,json=pysparkJob,proto3,oneof"`
+}
+
+type Job_HiveJob struct {
+	HiveJob *HiveJob `protobuf:"bytes,6,opt,name=hive_job,json=hiveJob,proto3,oneof"`
+}
+
+type Job_PigJob struct {
+	PigJob *PigJob `protobuf:"bytes,7,opt,name=pig_job,json=pigJob,proto3,oneof"`
+}
+
+type Job_SparkSqlJob struct {
+	SparkSqlJob *SparkSqlJob `protobuf:"bytes,12,opt,name=spark_sql_job,json=sparkSqlJob,proto3,oneof"`
+}
+
+func (*Job_HadoopJob) isJob_TypeJob() {}
+
+func (*Job_SparkJob) isJob_TypeJob() {}
+
+func (*Job_PysparkJob) isJob_TypeJob() {}
+
+func (*Job_HiveJob) isJob_TypeJob() {}
+
+func (*Job_PigJob) isJob_TypeJob() {}
+
+func (*Job_SparkSqlJob) isJob_TypeJob() {}
+
+func (m *Job) GetTypeJob() isJob_TypeJob {
+	if m != nil {
+		return m.TypeJob
 	}
 	return nil
 }
@@ -2102,7 +2132,7 @@ func (m *JobScheduling) Reset()         { *m = JobScheduling{} }
 func (m *JobScheduling) String() string { return proto.CompactTextString(m) }
 func (*JobScheduling) ProtoMessage()    {}
 func (*JobScheduling) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{13}
+	return fileDescriptor_20fb118582e1d7de, []int{13}
 }
 func (m *JobScheduling) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_JobScheduling.Unmarshal(m, b)
@@ -2110,8 +2140,8 @@ func (m *JobScheduling) XXX_Unmarshal(b []byte) error {
 func (m *JobScheduling) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_JobScheduling.Marshal(b, m, deterministic)
 }
-func (dst *JobScheduling) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_JobScheduling.Merge(dst, src)
+func (m *JobScheduling) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_JobScheduling.Merge(m, src)
 }
 func (m *JobScheduling) XXX_Size() int {
 	return xxx_messageInfo_JobScheduling.Size(m)
@@ -2159,7 +2189,7 @@ func (m *SubmitJobRequest) Reset()         { *m = SubmitJobRequest{} }
 func (m *SubmitJobRequest) String() string { return proto.CompactTextString(m) }
 func (*SubmitJobRequest) ProtoMessage()    {}
 func (*SubmitJobRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{14}
+	return fileDescriptor_20fb118582e1d7de, []int{14}
 }
 func (m *SubmitJobRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SubmitJobRequest.Unmarshal(m, b)
@@ -2167,8 +2197,8 @@ func (m *SubmitJobRequest) XXX_Unmarshal(b []byte) error {
 func (m *SubmitJobRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SubmitJobRequest.Marshal(b, m, deterministic)
 }
-func (dst *SubmitJobRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SubmitJobRequest.Merge(dst, src)
+func (m *SubmitJobRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SubmitJobRequest.Merge(m, src)
 }
 func (m *SubmitJobRequest) XXX_Size() int {
 	return xxx_messageInfo_SubmitJobRequest.Size(m)
@@ -2225,7 +2255,7 @@ func (m *GetJobRequest) Reset()         { *m = GetJobRequest{} }
 func (m *GetJobRequest) String() string { return proto.CompactTextString(m) }
 func (*GetJobRequest) ProtoMessage()    {}
 func (*GetJobRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{15}
+	return fileDescriptor_20fb118582e1d7de, []int{15}
 }
 func (m *GetJobRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetJobRequest.Unmarshal(m, b)
@@ -2233,8 +2263,8 @@ func (m *GetJobRequest) XXX_Unmarshal(b []byte) error {
 func (m *GetJobRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetJobRequest.Marshal(b, m, deterministic)
 }
-func (dst *GetJobRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetJobRequest.Merge(dst, src)
+func (m *GetJobRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetJobRequest.Merge(m, src)
 }
 func (m *GetJobRequest) XXX_Size() int {
 	return xxx_messageInfo_GetJobRequest.Size(m)
@@ -2310,7 +2340,7 @@ func (m *ListJobsRequest) Reset()         { *m = ListJobsRequest{} }
 func (m *ListJobsRequest) String() string { return proto.CompactTextString(m) }
 func (*ListJobsRequest) ProtoMessage()    {}
 func (*ListJobsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{16}
+	return fileDescriptor_20fb118582e1d7de, []int{16}
 }
 func (m *ListJobsRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListJobsRequest.Unmarshal(m, b)
@@ -2318,8 +2348,8 @@ func (m *ListJobsRequest) XXX_Unmarshal(b []byte) error {
 func (m *ListJobsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ListJobsRequest.Marshal(b, m, deterministic)
 }
-func (dst *ListJobsRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ListJobsRequest.Merge(dst, src)
+func (m *ListJobsRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListJobsRequest.Merge(m, src)
 }
 func (m *ListJobsRequest) XXX_Size() int {
 	return xxx_messageInfo_ListJobsRequest.Size(m)
@@ -2406,7 +2436,7 @@ func (m *UpdateJobRequest) Reset()         { *m = UpdateJobRequest{} }
 func (m *UpdateJobRequest) String() string { return proto.CompactTextString(m) }
 func (*UpdateJobRequest) ProtoMessage()    {}
 func (*UpdateJobRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{17}
+	return fileDescriptor_20fb118582e1d7de, []int{17}
 }
 func (m *UpdateJobRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_UpdateJobRequest.Unmarshal(m, b)
@@ -2414,8 +2444,8 @@ func (m *UpdateJobRequest) XXX_Unmarshal(b []byte) error {
 func (m *UpdateJobRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_UpdateJobRequest.Marshal(b, m, deterministic)
 }
-func (dst *UpdateJobRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_UpdateJobRequest.Merge(dst, src)
+func (m *UpdateJobRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_UpdateJobRequest.Merge(m, src)
 }
 func (m *UpdateJobRequest) XXX_Size() int {
 	return xxx_messageInfo_UpdateJobRequest.Size(m)
@@ -2478,7 +2508,7 @@ func (m *ListJobsResponse) Reset()         { *m = ListJobsResponse{} }
 func (m *ListJobsResponse) String() string { return proto.CompactTextString(m) }
 func (*ListJobsResponse) ProtoMessage()    {}
 func (*ListJobsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{18}
+	return fileDescriptor_20fb118582e1d7de, []int{18}
 }
 func (m *ListJobsResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListJobsResponse.Unmarshal(m, b)
@@ -2486,8 +2516,8 @@ func (m *ListJobsResponse) XXX_Unmarshal(b []byte) error {
 func (m *ListJobsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ListJobsResponse.Marshal(b, m, deterministic)
 }
-func (dst *ListJobsResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ListJobsResponse.Merge(dst, src)
+func (m *ListJobsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListJobsResponse.Merge(m, src)
 }
 func (m *ListJobsResponse) XXX_Size() int {
 	return xxx_messageInfo_ListJobsResponse.Size(m)
@@ -2530,7 +2560,7 @@ func (m *CancelJobRequest) Reset()         { *m = CancelJobRequest{} }
 func (m *CancelJobRequest) String() string { return proto.CompactTextString(m) }
 func (*CancelJobRequest) ProtoMessage()    {}
 func (*CancelJobRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{19}
+	return fileDescriptor_20fb118582e1d7de, []int{19}
 }
 func (m *CancelJobRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CancelJobRequest.Unmarshal(m, b)
@@ -2538,8 +2568,8 @@ func (m *CancelJobRequest) XXX_Unmarshal(b []byte) error {
 func (m *CancelJobRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_CancelJobRequest.Marshal(b, m, deterministic)
 }
-func (dst *CancelJobRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_CancelJobRequest.Merge(dst, src)
+func (m *CancelJobRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CancelJobRequest.Merge(m, src)
 }
 func (m *CancelJobRequest) XXX_Size() int {
 	return xxx_messageInfo_CancelJobRequest.Size(m)
@@ -2589,7 +2619,7 @@ func (m *DeleteJobRequest) Reset()         { *m = DeleteJobRequest{} }
 func (m *DeleteJobRequest) String() string { return proto.CompactTextString(m) }
 func (*DeleteJobRequest) ProtoMessage()    {}
 func (*DeleteJobRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jobs_0f6ff1bb746c0b59, []int{20}
+	return fileDescriptor_20fb118582e1d7de, []int{20}
 }
 func (m *DeleteJobRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DeleteJobRequest.Unmarshal(m, b)
@@ -2597,8 +2627,8 @@ func (m *DeleteJobRequest) XXX_Unmarshal(b []byte) error {
 func (m *DeleteJobRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_DeleteJobRequest.Marshal(b, m, deterministic)
 }
-func (dst *DeleteJobRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DeleteJobRequest.Merge(dst, src)
+func (m *DeleteJobRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DeleteJobRequest.Merge(m, src)
 }
 func (m *DeleteJobRequest) XXX_Size() int {
 	return xxx_messageInfo_DeleteJobRequest.Size(m)
@@ -2928,10 +2958,10 @@ var _JobController_serviceDesc = grpc.ServiceDesc{
 }
 
 func init() {
-	proto.RegisterFile("google/cloud/dataproc/v1beta2/jobs.proto", fileDescriptor_jobs_0f6ff1bb746c0b59)
+	proto.RegisterFile("google/cloud/dataproc/v1beta2/jobs.proto", fileDescriptor_20fb118582e1d7de)
 }
 
-var fileDescriptor_jobs_0f6ff1bb746c0b59 = []byte{
+var fileDescriptor_20fb118582e1d7de = []byte{
 	// 2306 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xdc, 0x5a, 0xcd, 0x73, 0xdb, 0xc6,
 	0x15, 0x17, 0xbf, 0x89, 0x47, 0x7d, 0x40, 0x1b, 0x3b, 0xe5, 0x30, 0xcd, 0x44, 0xc1, 0x4c, 0x52,

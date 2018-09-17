@@ -1,13 +1,13 @@
 package policy
 
 import (
+	"context"
 	"errors"
 	"net"
 	"testing"
 
 	"github.com/infobloxopen/themis/contrib/coredns/policy/testutil"
 	"github.com/miekg/dns"
-	"golang.org/x/net/context"
 )
 
 func TestGetNameAndType(t *testing.T) {

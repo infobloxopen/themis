@@ -34,7 +34,7 @@ type Document struct {
 	// The map keys represent field names.
 	//
 	// A simple field name contains only characters `a` to `z`, `A` to `Z`,
-	// `0` to `9`, or `_`, and must not start with `0` to `9` or `_`. For example,
+	// `0` to `9`, or `_`, and must not start with `0` to `9`. For example,
 	// `foo_bar_17`.
 	//
 	// Field names matching the regular expression `__.*__` are reserved. Reserved
@@ -62,7 +62,7 @@ type Document struct {
 	CreateTime *timestamp.Timestamp `protobuf:"bytes,3,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
 	// Output only. The time at which the document was last changed.
 	//
-	// This value is initally set to the `create_time` then increases
+	// This value is initially set to the `create_time` then increases
 	// monotonically with each change to the document. It can also be
 	// compared to values from other documents and the `read_time` of a query.
 	UpdateTime           *timestamp.Timestamp `protobuf:"bytes,4,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
@@ -75,7 +75,7 @@ func (m *Document) Reset()         { *m = Document{} }
 func (m *Document) String() string { return proto.CompactTextString(m) }
 func (*Document) ProtoMessage()    {}
 func (*Document) Descriptor() ([]byte, []int) {
-	return fileDescriptor_document_f332568b22daa44c, []int{0}
+	return fileDescriptor_1522b475188e04d0, []int{0}
 }
 func (m *Document) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Document.Unmarshal(m, b)
@@ -83,8 +83,8 @@ func (m *Document) XXX_Unmarshal(b []byte) error {
 func (m *Document) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Document.Marshal(b, m, deterministic)
 }
-func (dst *Document) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Document.Merge(dst, src)
+func (m *Document) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Document.Merge(m, src)
 }
 func (m *Document) XXX_Size() int {
 	return xxx_messageInfo_Document.Size(m)
@@ -149,7 +149,7 @@ func (m *Value) Reset()         { *m = Value{} }
 func (m *Value) String() string { return proto.CompactTextString(m) }
 func (*Value) ProtoMessage()    {}
 func (*Value) Descriptor() ([]byte, []int) {
-	return fileDescriptor_document_f332568b22daa44c, []int{1}
+	return fileDescriptor_1522b475188e04d0, []int{1}
 }
 func (m *Value) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Value.Unmarshal(m, b)
@@ -157,8 +157,8 @@ func (m *Value) XXX_Unmarshal(b []byte) error {
 func (m *Value) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Value.Marshal(b, m, deterministic)
 }
-func (dst *Value) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Value.Merge(dst, src)
+func (m *Value) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Value.Merge(m, src)
 }
 func (m *Value) XXX_Size() int {
 	return xxx_messageInfo_Value.Size(m)
@@ -176,48 +176,68 @@ type isValue_ValueType interface {
 type Value_NullValue struct {
 	NullValue _struct.NullValue `protobuf:"varint,11,opt,name=null_value,json=nullValue,proto3,enum=google.protobuf.NullValue,oneof"`
 }
+
 type Value_BooleanValue struct {
 	BooleanValue bool `protobuf:"varint,1,opt,name=boolean_value,json=booleanValue,proto3,oneof"`
 }
+
 type Value_IntegerValue struct {
 	IntegerValue int64 `protobuf:"varint,2,opt,name=integer_value,json=integerValue,proto3,oneof"`
 }
+
 type Value_DoubleValue struct {
 	DoubleValue float64 `protobuf:"fixed64,3,opt,name=double_value,json=doubleValue,proto3,oneof"`
 }
+
 type Value_TimestampValue struct {
 	TimestampValue *timestamp.Timestamp `protobuf:"bytes,10,opt,name=timestamp_value,json=timestampValue,proto3,oneof"`
 }
+
 type Value_StringValue struct {
 	StringValue string `protobuf:"bytes,17,opt,name=string_value,json=stringValue,proto3,oneof"`
 }
+
 type Value_BytesValue struct {
 	BytesValue []byte `protobuf:"bytes,18,opt,name=bytes_value,json=bytesValue,proto3,oneof"`
 }
+
 type Value_ReferenceValue struct {
 	ReferenceValue string `protobuf:"bytes,5,opt,name=reference_value,json=referenceValue,proto3,oneof"`
 }
+
 type Value_GeoPointValue struct {
 	GeoPointValue *latlng.LatLng `protobuf:"bytes,8,opt,name=geo_point_value,json=geoPointValue,proto3,oneof"`
 }
+
 type Value_ArrayValue struct {
 	ArrayValue *ArrayValue `protobuf:"bytes,9,opt,name=array_value,json=arrayValue,proto3,oneof"`
 }
+
 type Value_MapValue struct {
 	MapValue *MapValue `protobuf:"bytes,6,opt,name=map_value,json=mapValue,proto3,oneof"`
 }
 
-func (*Value_NullValue) isValue_ValueType()      {}
-func (*Value_BooleanValue) isValue_ValueType()   {}
-func (*Value_IntegerValue) isValue_ValueType()   {}
-func (*Value_DoubleValue) isValue_ValueType()    {}
+func (*Value_NullValue) isValue_ValueType() {}
+
+func (*Value_BooleanValue) isValue_ValueType() {}
+
+func (*Value_IntegerValue) isValue_ValueType() {}
+
+func (*Value_DoubleValue) isValue_ValueType() {}
+
 func (*Value_TimestampValue) isValue_ValueType() {}
-func (*Value_StringValue) isValue_ValueType()    {}
-func (*Value_BytesValue) isValue_ValueType()     {}
+
+func (*Value_StringValue) isValue_ValueType() {}
+
+func (*Value_BytesValue) isValue_ValueType() {}
+
 func (*Value_ReferenceValue) isValue_ValueType() {}
-func (*Value_GeoPointValue) isValue_ValueType()  {}
-func (*Value_ArrayValue) isValue_ValueType()     {}
-func (*Value_MapValue) isValue_ValueType()       {}
+
+func (*Value_GeoPointValue) isValue_ValueType() {}
+
+func (*Value_ArrayValue) isValue_ValueType() {}
+
+func (*Value_MapValue) isValue_ValueType() {}
 
 func (m *Value) GetValueType() isValue_ValueType {
 	if m != nil {
@@ -533,7 +553,7 @@ func (m *ArrayValue) Reset()         { *m = ArrayValue{} }
 func (m *ArrayValue) String() string { return proto.CompactTextString(m) }
 func (*ArrayValue) ProtoMessage()    {}
 func (*ArrayValue) Descriptor() ([]byte, []int) {
-	return fileDescriptor_document_f332568b22daa44c, []int{2}
+	return fileDescriptor_1522b475188e04d0, []int{2}
 }
 func (m *ArrayValue) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ArrayValue.Unmarshal(m, b)
@@ -541,8 +561,8 @@ func (m *ArrayValue) XXX_Unmarshal(b []byte) error {
 func (m *ArrayValue) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ArrayValue.Marshal(b, m, deterministic)
 }
-func (dst *ArrayValue) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ArrayValue.Merge(dst, src)
+func (m *ArrayValue) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ArrayValue.Merge(m, src)
 }
 func (m *ArrayValue) XXX_Size() int {
 	return xxx_messageInfo_ArrayValue.Size(m)
@@ -578,7 +598,7 @@ func (m *MapValue) Reset()         { *m = MapValue{} }
 func (m *MapValue) String() string { return proto.CompactTextString(m) }
 func (*MapValue) ProtoMessage()    {}
 func (*MapValue) Descriptor() ([]byte, []int) {
-	return fileDescriptor_document_f332568b22daa44c, []int{3}
+	return fileDescriptor_1522b475188e04d0, []int{3}
 }
 func (m *MapValue) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MapValue.Unmarshal(m, b)
@@ -586,8 +606,8 @@ func (m *MapValue) XXX_Unmarshal(b []byte) error {
 func (m *MapValue) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_MapValue.Marshal(b, m, deterministic)
 }
-func (dst *MapValue) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MapValue.Merge(dst, src)
+func (m *MapValue) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MapValue.Merge(m, src)
 }
 func (m *MapValue) XXX_Size() int {
 	return xxx_messageInfo_MapValue.Size(m)
@@ -615,10 +635,10 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("google/firestore/v1beta1/document.proto", fileDescriptor_document_f332568b22daa44c)
+	proto.RegisterFile("google/firestore/v1beta1/document.proto", fileDescriptor_1522b475188e04d0)
 }
 
-var fileDescriptor_document_f332568b22daa44c = []byte{
+var fileDescriptor_1522b475188e04d0 = []byte{
 	// 655 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x94, 0xcf, 0x6e, 0xd3, 0x4c,
 	0x14, 0xc5, 0xe3, 0x24, 0x8d, 0x92, 0xeb, 0xb4, 0xfd, 0x3e, 0xb3, 0x89, 0xa2, 0x8a, 0x86, 0x00,
