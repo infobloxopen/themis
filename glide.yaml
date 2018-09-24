@@ -63,3 +63,6 @@ testImport:
 - package: github.com/prometheus/client_model
   subpackages:
   - go
+- package: github.com/stretchr/testify
+  subpackages:
+  - assert

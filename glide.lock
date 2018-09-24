@@ -1,5 +1,5 @@
-hash: e156510d1ec641a45f2a707b628f5cad913280887e02783a20c700ece7908f17
-updated: 2018-09-14T18:18:13.985291+03:00
+hash: 3b29e2eb04ca709388bc5b49f0d232084f23f1551ac4c1bdebe1fe453b8c55d7
+updated: 2018-09-24T13:30:06.709761+03:00
 imports:
 - name: github.com/allegro/bigcache
   version: 5946793e3c8e05106dd56fbd87da9c60db1fc94a
@@ -247,4 +247,8 @@ imports:
   - tap
 - name: gopkg.in/yaml.v2
   version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
-testImports: []
+testImports:
+- name: github.com/stretchr/testify
+  version: f35b8ab0b5a2cef36673838d662e249dd9c94686
+  subpackages:
+  - assert
