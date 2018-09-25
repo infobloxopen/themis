@@ -3,6 +3,7 @@ package server
 import (
 	"math"
 	"net"
+	"time"
 )
 
 // Option configures how we set up PIP server.
@@ -72,6 +73,7 @@ type options struct {
 	onErr      ConnErrHandler
 	bufSize    int
 	maxMsgSize int
+	writeInt   time.Duration
 }
 
 const (
@@ -84,4 +86,5 @@ var defaults = options{
 	addr:       "localhost:5600",
 	bufSize:    defBufSize,
 	maxMsgSize: defMaxMsgSize,
+	writeInt:   50 * time.Microsecond,
 }

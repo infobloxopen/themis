@@ -249,7 +249,12 @@ func TestServerServeWithConnectionLimit(t *testing.T) {
 
 		assert.NoError(t, primary.CloseWrite())
 
-		_, err = primary.Read(make([]byte, 256))
+		b := make([]byte, 256)
+		n, err := primary.Read(b)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, []byte{4, 0, 0, 0, 0xef, 0xbe, 0xad, 0xde}, b[:n])
+
+		_, err = primary.Read(b)
 		assert.Equal(t, io.EOF, err)
 	}
 
