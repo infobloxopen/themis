@@ -51,7 +51,7 @@ func NewServer(opts ...Option) *Server {
 	return &Server{
 		opts:  o,
 		state: new(uint32),
-		conns: newConnReg(int(o.maxConn)),
+		conns: newConnReg(o.maxConn),
 	}
 }
 
@@ -103,7 +103,7 @@ func (s *Server) Serve() error {
 	for {
 		c, err := ln.Accept()
 		if err != nil {
-			if opErr, ok := err.(*net.OpError); ok && opErr.Err.Error() == "use of closed network connection" {
+			if isLisenerClosed(err) {
 				break
 			}
 
@@ -144,4 +144,15 @@ func (s *Server) Stop() error {
 	s.ln = nil
 
 	return ln.Close()
+}
+
+const netListenerClosedMsg = "use of closed network connection"
+
+func isLisenerClosed(err error) bool {
+	switch err := err.(type) {
+	case *net.OpError:
+		return err.Err.Error() == netListenerClosedMsg
+	}
+
+	return false
 }

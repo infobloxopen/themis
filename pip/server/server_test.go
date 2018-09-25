@@ -302,7 +302,7 @@ func TestServerStop(t *testing.T) {
 	if assert.NoError(t, s.Bind()) {
 		s.ln.Close()
 
-	    c := makeTestWaitingConn()
+		c := makeTestWaitingConn()
 		s.ln = newTestListener(c)
 
 		var sErr error
@@ -357,7 +357,7 @@ func newTestListener(c ...net.Conn) *testListener {
 	}
 }
 
-var errClosedListener = errors.New("use of closed network connection")
+var errClosedListener = errors.New(netListenerClosedMsg)
 
 func (ln *testListener) Accept() (net.Conn, error) {
 	if len(ln.c) > 0 {

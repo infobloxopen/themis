@@ -11,7 +11,10 @@ func (s *Server) handle(wg *sync.WaitGroup, c connWithErrHandler, idx int) {
 		s.conns.del(idx)
 	}()
 
-	read(c, s.opts.bufSize, s.opts.maxMsgSize)
+	msgs := makePool(1, s.opts.maxMsgSize)
+	for msg := range read(c, msgs, s.opts.bufSize) {
+		msgs.put(msg)
+	}
 }
 
 type connReg struct {

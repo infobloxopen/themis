@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -24,8 +25,15 @@ func TestRead(t *testing.T) {
 		},
 	}
 
-	read(c, 2, 10)
+	out := []uint32{}
+	msgs := makePool(1, 10)
+	for msg := range read(c, msgs, 2) {
+		assert.Equal(t, 4, len(msg), "message %d", len(out)+1)
+		out = append(out, binary.LittleEndian.Uint32(msg))
+	}
+
 	assert.Equal(t, []error{}, errs)
+	assert.Equal(t, []uint32{0xdeadbeef}, out)
 }
 
 func TestReadWithMsgBufferOverflow(t *testing.T) {
@@ -41,8 +49,15 @@ func TestReadWithMsgBufferOverflow(t *testing.T) {
 		},
 	}
 
-	read(c, 2, 2)
+	out := []uint32{}
+	msgs := makePool(1, 2)
+	for msg := range read(c, msgs, 2) {
+		assert.Equal(t, 4, len(msg), "message %d", len(out)+1)
+		out = append(out, binary.LittleEndian.Uint32(msg))
+	}
+
 	assert.Equal(t, []error{ErrMsgOverflow}, errs)
+	assert.Equal(t, []uint32{}, out)
 }
 
 func TestReadError(t *testing.T) {
@@ -60,8 +75,15 @@ func TestReadError(t *testing.T) {
 		},
 	}
 
-	read(c, 2, 10)
+	out := []uint32{}
+	msgs := makePool(1, 10)
+	for msg := range read(c, msgs, 2) {
+		assert.Equal(t, 4, len(msg), "message %d", len(out)+1)
+		out = append(out, binary.LittleEndian.Uint32(msg))
+	}
+
 	assert.Equal(t, []error{err}, errs)
+	assert.Equal(t, []uint32{0xdeadbeef}, out)
 }
 
 type rTestConn struct {
