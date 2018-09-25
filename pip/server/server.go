@@ -6,21 +6,39 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"syscall"
 )
 
 var (
 	// ErrBound indicates that server has been already bound to a port or file.
 	ErrBound = errors.New("server has been already bound to a port or file")
+	// ErrNotBound indicates that server hasn't been bound yet.
+	ErrNotBound = errors.New("server hasn't been bound yet")
+	// ErrStarted indicates that server has been already started.
+	ErrStarted = errors.New("server has been already started")
 	// ErrNotStarted indicates that server hasn't been started yet.
 	ErrNotStarted = errors.New("server hasn't been started yet")
+)
+
+const (
+	srvIdle uint32 = iota
+	srvBinding
+	srvBound
+	srvStarting
+	srvStarted
+	srvStopping
 )
 
 // Server structure represents PIP server.
 type Server struct {
 	opts options
 
-	ln net.Listener
+	state *uint32
+	ln    net.Listener
+
+	conns *connReg
 }
 
 // NewServer creates new Server instance.
@@ -31,15 +49,21 @@ func NewServer(opts ...Option) *Server {
 	}
 
 	return &Server{
-		opts: o,
+		opts:  o,
+		state: new(uint32),
+		conns: newConnReg(int(o.maxConn)),
 	}
 }
 
 // Bind links server to a port or file.
 func (s *Server) Bind() error {
-	if s.ln != nil {
+	if !atomic.CompareAndSwapUint32(s.state, srvIdle, srvBinding) {
 		return ErrBound
 	}
+	state := srvIdle
+	defer func() {
+		atomic.StoreUint32(s.state, state)
+	}()
 
 	nw := strings.ToLower(s.opts.net)
 	if nw == "unix" {
@@ -56,13 +80,28 @@ func (s *Server) Bind() error {
 	}
 
 	s.ln = ln
+	state = srvBound
 	return nil
 }
 
 // Serve starts accepting incoming connections.
 func (s *Server) Serve() error {
+	if !atomic.CompareAndSwapUint32(s.state, srvBound, srvStarting) {
+		if s := atomic.LoadUint32(s.state); s == srvIdle || s == srvBinding {
+			return ErrNotBound
+		}
+
+		return ErrStarted
+	}
+
+	ln := s.ln
+
+	atomic.StoreUint32(s.state, srvStarted)
+
+	wg := new(sync.WaitGroup)
+
 	for {
-		c, err := s.ln.Accept()
+		c, err := ln.Accept()
 		if err != nil {
 			if opErr, ok := err.(*net.OpError); ok && opErr.Err.Error() == "use of closed network connection" {
 				break
@@ -71,22 +110,38 @@ func (s *Server) Serve() error {
 			return err
 		}
 
-		c.Close()
+		cc := connWithErrHandler{
+			c: c,
+			h: s.opts.onErr,
+		}
+		idx := s.conns.put(cc)
+		if idx >= 0 {
+			wg.Add(1)
+			go s.handle(wg, cc, idx)
+		} else {
+			cc.handle(c.Close())
+		}
 	}
+
+	wg.Wait()
 
 	return nil
 }
 
 // Stop terminates server.
 func (s *Server) Stop() error {
-	if s.ln == nil {
+	if atomic.CompareAndSwapUint32(s.state, srvStarted, srvStopping) {
+		defer atomic.StoreUint32(s.state, srvIdle)
+
+		s.conns.delAll()
+	} else if atomic.CompareAndSwapUint32(s.state, srvBound, srvStopping) {
+		defer atomic.StoreUint32(s.state, srvIdle)
+	} else {
 		return ErrNotStarted
 	}
 
-	if err := s.ln.Close(); err != nil {
-		return err
-	}
+	ln := s.ln
 	s.ln = nil
 
-	return nil
+	return ln.Close()
 }
