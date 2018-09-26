@@ -66,6 +66,13 @@ func WithMaxMessageSize(n int) Option {
 	}
 }
 
+// WithWriteInterval returns an Option which sets duration after which data from write buffer are sent to network even if write buffer isn't full.
+func WithWriteInterval(d time.Duration) Option {
+	return func(o *options) {
+		o.writeInt = d
+	}
+}
+
 type options struct {
 	net        string
 	addr       string
@@ -79,6 +86,7 @@ type options struct {
 const (
 	defBufSize    = 1024 * 1024
 	defMaxMsgSize = 10 * 1024
+	defWriteInt   = 50 * time.Microsecond
 )
 
 var defaults = options{
@@ -86,5 +94,5 @@ var defaults = options{
 	addr:       "localhost:5600",
 	bufSize:    defBufSize,
 	maxMsgSize: defMaxMsgSize,
-	writeInt:   50 * time.Microsecond,
+	writeInt:   defWriteInt,
 }

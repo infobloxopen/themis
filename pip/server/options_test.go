@@ -5,6 +5,7 @@ import (
 	"net"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -65,4 +66,11 @@ func TestWithMaxMessageSize(t *testing.T) {
 		WithMaxMessageSize(above)(&o)
 		assert.Equal(t, defMaxMsgSize, o.maxMsgSize)
 	}
+}
+
+func TestWithWriteInterval(t *testing.T) {
+	var o options
+
+	WithWriteInterval(time.Second)(&o)
+	assert.Equal(t, time.Second, o.writeInt)
 }
