@@ -7,12 +7,15 @@ import (
 
 func (s *Server) handle(wg *sync.WaitGroup, c connWithErrHandler, idx int) {
 	defer func() {
-		wg.Done()
 		s.conns.del(idx)
+		wg.Done()
 	}()
 
-	msgs := makePool(1, s.opts.maxMsgSize)
-	write(c, read(c, msgs, s.opts.bufSize), msgs, s.opts.bufSize, s.opts.writeInt)
+	msgs := makePool(s.opts.workers+1, s.opts.maxMsgSize)
+
+	in := startReader(c, msgs, s.opts.bufSize)
+	out := startWorkers(in, s.opts.workers, s.opts.handler)
+	write(c, out, msgs, s.opts.bufSize, s.opts.writeInt)
 }
 
 type connReg struct {

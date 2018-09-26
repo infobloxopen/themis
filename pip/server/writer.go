@@ -10,7 +10,7 @@ func write(c connWithErrHandler, in chan []byte, msgs pool, bufSize int, d time.
 	defer t.Stop()
 
 	out := make([]byte, 0, bufSize)
-	sizeBuf := make([]byte, 4)
+	sizeBuf := make([]byte, msgSizeBytes)
 
 	for {
 		select {

@@ -74,3 +74,21 @@ func TestWithWriteInterval(t *testing.T) {
 	WithWriteInterval(time.Second)(&o)
 	assert.Equal(t, time.Second, o.writeInt)
 }
+
+func TestWithHandler(t *testing.T) {
+	var o options
+
+	f := func(b []byte) []byte {
+		for i := range b {
+			b[i] = 0
+		}
+
+		return b
+	}
+
+	WithHandler(f)(&o)
+	assert.Equal(t, reflect.ValueOf(f).Pointer(), reflect.ValueOf(o.handler).Pointer())
+
+	WithHandler(nil)(&o)
+	assert.Equal(t, reflect.ValueOf(echo).Pointer(), reflect.ValueOf(o.handler).Pointer())
+}

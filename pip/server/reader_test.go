@@ -27,7 +27,7 @@ func TestRead(t *testing.T) {
 
 	out := []uint32{}
 	msgs := makePool(1, 10)
-	for msg := range read(c, msgs, 2) {
+	for msg := range startReader(c, msgs, 2) {
 		assert.Equal(t, 4, len(msg), "message %d", len(out)+1)
 		out = append(out, binary.LittleEndian.Uint32(msg))
 	}
@@ -51,7 +51,7 @@ func TestReadWithMsgBufferOverflow(t *testing.T) {
 
 	out := []uint32{}
 	msgs := makePool(1, 2)
-	for msg := range read(c, msgs, 2) {
+	for msg := range startReader(c, msgs, 2) {
 		assert.Equal(t, 4, len(msg), "message %d", len(out)+1)
 		out = append(out, binary.LittleEndian.Uint32(msg))
 	}
@@ -77,7 +77,7 @@ func TestReadError(t *testing.T) {
 
 	out := []uint32{}
 	msgs := makePool(1, 10)
-	for msg := range read(c, msgs, 2) {
+	for msg := range startReader(c, msgs, 2) {
 		assert.Equal(t, 4, len(msg), "message %d", len(out)+1)
 		out = append(out, binary.LittleEndian.Uint32(msg))
 	}

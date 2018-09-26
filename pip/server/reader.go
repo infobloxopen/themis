@@ -11,7 +11,7 @@ var ErrMsgOverflow = errors.New("message buffer overflow")
 
 const msgSizeBytes = 4
 
-func read(c connWithErrHandler, msgs pool, bufSize int) chan []byte {
+func startReader(c connWithErrHandler, msgs pool, bufSize int) chan []byte {
 	out := make(chan []byte, 1)
 
 	go func() {

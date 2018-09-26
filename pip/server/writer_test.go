@@ -34,7 +34,7 @@ func TestWrite(t *testing.T) {
 		write(cc, ch, p, defBufSize, defWriteInt)
 	}()
 
-	time.Sleep(5 * defWriteInt)
+	time.Sleep(1000 * defWriteInt)
 	ch <- append(p.get(), 0xde, 0xc0, 0xad, 0x0b)
 	close(ch)
 

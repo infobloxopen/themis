@@ -73,6 +73,17 @@ func WithWriteInterval(d time.Duration) Option {
 	}
 }
 
+// WithHandler returs an Option which sets handler for service requests. The handler must write response and return the same buffer it got. It must not change buffer capacity.
+func WithHandler(f ServiceHandler) Option {
+	return func(o *options) {
+		if f != nil {
+			o.handler = f
+		} else {
+			o.handler = echo
+		}
+	}
+}
+
 type options struct {
 	net        string
 	addr       string
@@ -81,12 +92,15 @@ type options struct {
 	bufSize    int
 	maxMsgSize int
 	writeInt   time.Duration
+	workers    int
+	handler    func([]byte) []byte
 }
 
 const (
 	defBufSize    = 1024 * 1024
 	defMaxMsgSize = 10 * 1024
 	defWriteInt   = 50 * time.Microsecond
+	defWorkers    = 100
 )
 
 var defaults = options{
@@ -95,4 +109,6 @@ var defaults = options{
 	bufSize:    defBufSize,
 	maxMsgSize: defMaxMsgSize,
 	writeInt:   defWriteInt,
+	workers:    defWorkers,
+	handler:    echo,
 }
