@@ -8,7 +8,7 @@ import (
 )
 
 func TestStartWorkers(t *testing.T) {
-	in := make(chan []byte, 10)
+	in := make(chan []byte, 8)
 	out := startWorkers(in, 2, echo)
 
 	go func() {
@@ -24,7 +24,7 @@ func TestStartWorkers(t *testing.T) {
 		msgs = append(msgs, msg)
 	}
 
-	assert.Equal(t, [][]byte{
+	assert.ElementsMatch(t, [][]byte{
 		{0},
 		{0, 0},
 		{0, 0, 0},
@@ -33,8 +33,6 @@ func TestStartWorkers(t *testing.T) {
 		{0, 0, 0, 0, 0, 0},
 		{0, 0, 0, 0, 0, 0, 0},
 		{0, 0, 0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 	}, msgs)
 }
 
