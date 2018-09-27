@@ -103,7 +103,7 @@ func (s *Server) Serve() error {
 	for {
 		c, err := ln.Accept()
 		if err != nil {
-			if isLisenerClosed(err) {
+			if isConnClosed(err) {
 				break
 			}
 
@@ -146,12 +146,12 @@ func (s *Server) Stop() error {
 	return ln.Close()
 }
 
-const netListenerClosedMsg = "use of closed network connection"
+const netConnClosedMsg = "use of closed network connection"
 
-func isLisenerClosed(err error) bool {
+func isConnClosed(err error) bool {
 	switch err := err.(type) {
 	case *net.OpError:
-		return err.Err.Error() == netListenerClosedMsg
+		return err.Err.Error() == netConnClosedMsg
 	}
 
 	return false

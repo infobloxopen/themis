@@ -64,6 +64,8 @@ func startReader(c connWithErrHandler, msgs pool, bufSize int) chan []byte {
 						b = b[m:]
 
 						size = binary.LittleEndian.Uint32(sizeBuf)
+						sizeBuf = sizeBuf[:0]
+
 						msgBuf = msgs.get()
 						if size > uint32(cap(msgBuf)) {
 							c.handle(ErrMsgOverflow)

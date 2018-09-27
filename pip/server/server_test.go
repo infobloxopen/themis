@@ -362,7 +362,7 @@ func newTestListener(c ...net.Conn) *testListener {
 	}
 }
 
-var errClosedListener = errors.New(netListenerClosedMsg)
+var errClosedListener = errors.New(netConnClosedMsg)
 
 func (ln *testListener) Accept() (net.Conn, error) {
 	if len(ln.c) > 0 {
