@@ -31,13 +31,13 @@ clean:
 	@$(RM) $(BUILDPATH)
 
 .PHONY: fmt
-fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdp-itests fmt-local-selector fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-pip-server fmt-plugin fmt-egen
+fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdp-itests fmt-local-selector fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-pip-server fmt-pip-client fmt-plugin fmt-egen
 
 .PHONY: build
 build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-egen
 
 .PHONY: test
-test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-local-selector test-pep test-pip-server test-plugin
+test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-local-selector test-pep test-pip-server test-pip-client test-plugin
 
 .PHONY: bench
 bench: bench-pep bench-pip-server bench-pdpserver-pkg bench-plugin
@@ -127,6 +127,11 @@ fmt-pip-server:
 	@echo "Checking PIP server package format..."
 	@$(AT)/pip/server && $(GOFMTCHECK)
 
+.PHONY: fmt-pip-client
+fmt-pip-client:
+	@echo "Checking PIP client package format..."
+	@$(AT)/pip/client && $(GOFMTCHECK)
+
 .PHONY: fmt-plugin
 fmt-plugin:
 	@echo "Checking CoreDNS PEP plugin format..."
@@ -196,6 +201,10 @@ test-pep: build-pdpserver cover-out
 .PHONY: test-pip-server
 test-pip-server:
 	$(AT)/pip/server && $(GOTESTRACE)
+
+.PHONY: test-pip-client
+test-pip-client:
+	$(AT)/pip/client && $(GOTESTRACE)
 
 .PHONY: test-plugin
 test-plugin: cover-out
