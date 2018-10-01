@@ -18,12 +18,20 @@ type Client interface {
 }
 
 // NewClient creates client instance.
-func NewClient() Client {
+func NewClient(opts ...Option) Client {
+	o := defaults
+	for _, opt := range opts {
+		opt(&o)
+	}
+
 	return &client{
+		opts:  o,
 		state: new(uint32),
 	}
 }
 
 type client struct {
+	opts options
+
 	state *uint32
 }
