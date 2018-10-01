@@ -9,13 +9,15 @@ import (
 func TestClientConnect(t *testing.T) {
 	c := NewClient()
 
-	assert.NoError(t, c.Connect())
-	assert.Equal(t, ErrorConnected, c.Connect())
+	if assert.NoError(t, c.Connect()) {
+		assert.Equal(t, ErrorConnected, c.Connect())
+	}
 }
 
 func TestClientClose(t *testing.T) {
 	c := NewClient()
 
-	assert.NoError(t, c.Connect())
-	c.Close()
+	if assert.NoError(t, c.Connect()) {
+		c.Close()
+	}
 }
