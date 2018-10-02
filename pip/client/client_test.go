@@ -11,11 +11,11 @@ func TestNewClient(t *testing.T) {
 	assert.NotEmpty(t, c)
 }
 
-func TestNewClientWithNetwork(t *testing.T) {
-	c := NewClient(WithNetwork("unix"))
+func TestNewClientWithTooSmallBuffer(t *testing.T) {
+	c := NewClient(WithBufferSize(1024))
 	if assert.NotEmpty(t, c) {
 		if c, ok := c.(*client); assert.True(t, ok) {
-			assert.Equal(t, "unix", c.opts.net)
+			assert.Equal(t, defBufSize, c.opts.bufSize)
 		}
 	}
 }

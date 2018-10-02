@@ -3,13 +3,20 @@ package client
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/infobloxopen/themis/pdp"
 )
 
-// ErrorConnected occurs if method connect is called after connection has been
-// established.
-var ErrorConnected = errors.New("connection has been already established")
+var (
+	// ErrConnected occurs if method connect is called after connection has been
+	// established.
+	ErrConnected = errors.New("connection has been already established")
+
+	// ErrNotConnected occurs if method get is called before connection has been
+	// established.
+	ErrNotConnected = errors.New("connection hasn't been established yet")
+)
 
 // Client defines abstract PIP service client interface.
 type Client interface {
@@ -32,9 +39,17 @@ func NewClient(opts ...Option) Client {
 		opt(&o)
 	}
 
+	if o.maxSize+msgSizeBytes+msgIdxBytes > o.bufSize {
+		o.bufSize = defBufSize
+	}
+
 	return &client{
-		opts:  o,
+		opts: o,
+
 		state: new(uint32),
+		pool:  makeBytePool(o.maxSize, false),
+
+		lock: new(sync.RWMutex),
 	}
 }
 
@@ -42,4 +57,12 @@ type client struct {
 	opts options
 
 	state *uint32
+	pool  bytePool
+
+	lock *sync.RWMutex
+	rwg  *sync.WaitGroup
+	req  chan request
+	wwg  *sync.WaitGroup
+
+	pipes pipes
 }
