@@ -271,8 +271,8 @@ func (pp *policyPlugin) SetupMetrics(c *caddy.Controller) error {
 	if len(attrNames) > 0 {
 		if mh := dnsserver.GetConfig(c).Handler("prometheus"); mh != nil {
 			if m, ok := mh.(*metrics.Metrics); ok {
+				m.MustRegister(globalAttrGauge.pgv)
 				metricsOnce.Do(func() {
-					m.MustRegister(globalAttrGauge.pgv)
 					// The globalAttrGauge is started once and is not stopped
 					// until process termination
 					q, _ := calcQuantum(globalAttrGauge.expire)
