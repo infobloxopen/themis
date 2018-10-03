@@ -1,15 +1,33 @@
 package client
 
-import "time"
+import (
+	"math"
+	"time"
+)
 
 // An Option allows to set PIP client options.
 type Option func(*options)
+
+// WithNetwork returns an Option which sets destination network. The client
+// supports "tcp", "tcp4", "tcp6" and "unix" netwroks.
+func WithNetwork(n string) Option {
+	return func(o *options) {
+		o.net = n
+	}
+}
+
+// WithAddress returns an Option which sets destination address.
+func WithAddress(a string) Option {
+	return func(o *options) {
+		o.addr = a
+	}
+}
 
 // WithMaxRequestSize returns an Option which limits request size in bytes
 // to given value. Default 10KB.
 func WithMaxRequestSize(n int) Option {
 	return func(o *options) {
-		if n > 0 {
+		if n > 0 && n <= math.MaxInt32-msgIdxBytes {
 			o.maxSize = n
 		} else {
 			o.maxSize = defMaxSize
@@ -21,7 +39,7 @@ func WithMaxRequestSize(n int) Option {
 // send in parallel.
 func WithMaxQueue(n int) Option {
 	return func(o *options) {
-		if n > 0 {
+		if n > 0 && n <= math.MaxInt32 {
 			o.maxQueue = n
 		} else {
 			o.maxQueue = defMaxQueue

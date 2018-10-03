@@ -1,14 +1,15 @@
 package client
 
 import (
+	"net"
 	"sync"
 	"time"
 )
 
-func (c *client) writer(wg *sync.WaitGroup, req chan request, p pipes) {
+func (c *client) writer(wg *sync.WaitGroup, nc net.Conn, req chan request, p pipes) {
 	defer wg.Done()
 
-	w := newWriteBuffer(c.opts.bufSize, p)
+	w := newWriteBuffer(nc, c.opts.bufSize, p)
 
 	ch := c.opts.writeFlushCh
 	if ch == nil {
@@ -22,19 +23,14 @@ func (c *client) writer(wg *sync.WaitGroup, req chan request, p pipes) {
 		select {
 		case r, ok := <-req:
 			if !ok {
-				if !w.isEmpty() {
-					w.flush()
-				}
-
+				w.flush()
 				return
 			}
 
 			w.put(r)
 
 		case <-ch:
-			if !w.isEmpty() {
-				w.flush()
-			}
+			w.flush()
 		}
 	}
 }

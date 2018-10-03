@@ -6,9 +6,25 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/infobloxopen/themis/pdp"
+	"github.com/infobloxopen/themis/pip/server"
 )
 
 func TestClientGet(t *testing.T) {
+	s := server.NewServer()
+	if !assert.NoError(t, s.Bind()) {
+		assert.FailNow(t, "failed to bind server")
+	}
+	defer func() {
+		assert.NoError(t, s.Stop())
+	}()
+	var sErr error
+	go func() {
+		sErr = s.Serve()
+	}()
+	defer func() {
+		assert.NoError(t, sErr)
+	}()
+
 	c := NewClient()
 	if err := c.Connect(); assert.NoError(t, err) {
 		defer c.Close()
@@ -26,6 +42,21 @@ func TestClientGetErrNotConnected(t *testing.T) {
 }
 
 func TestClientGetMarshallingError(t *testing.T) {
+	s := server.NewServer()
+	if !assert.NoError(t, s.Bind()) {
+		assert.FailNow(t, "failed to bind server")
+	}
+	defer func() {
+		assert.NoError(t, s.Stop())
+	}()
+	var sErr error
+	go func() {
+		sErr = s.Serve()
+	}()
+	defer func() {
+		assert.NoError(t, sErr)
+	}()
+
 	c := NewClient()
 	if err := c.Connect(); assert.NoError(t, err) {
 		defer c.Close()

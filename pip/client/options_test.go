@@ -7,6 +7,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestWithNetwork(t *testing.T) {
+	var o options
+
+	WithNetwork("unix")(&o)
+	assert.Equal(t, "unix", o.net)
+}
+
+func TestWithAddress(t *testing.T) {
+	var o options
+
+	WithAddress("localhost:0")(&o)
+	assert.Equal(t, "localhost:0", o.addr)
+}
+
 func TestWithMaxRequestSize(t *testing.T) {
 	var o options
 

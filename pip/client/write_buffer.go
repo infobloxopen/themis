@@ -1,6 +1,9 @@
 package client
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"net"
+)
 
 const (
 	msgSizeBytes = 4
@@ -8,21 +11,19 @@ const (
 )
 
 type writeBuffer struct {
+	c   net.Conn
 	out []byte
 	idx []int
 	p   pipes
 }
 
-func newWriteBuffer(n int, p pipes) *writeBuffer {
+func newWriteBuffer(c net.Conn, n int, p pipes) *writeBuffer {
 	return &writeBuffer{
+		c:   c,
 		out: make([]byte, 0, n),
 		idx: make([]int, n/(msgSizeBytes+msgIdxBytes)),
 		p:   p,
 	}
-}
-
-func (w *writeBuffer) isEmpty() bool {
-	return len(w.out) <= 0
 }
 
 func (w *writeBuffer) rem() int {
@@ -32,7 +33,7 @@ func (w *writeBuffer) rem() int {
 func (w *writeBuffer) put(r request) {
 	size := msgIdxBytes + len(r.b)
 	if w.rem() < msgSizeBytes+size {
-		w.flush()
+		w.rawFlush()
 	}
 
 	i := len(w.out)
@@ -43,13 +44,21 @@ func (w *writeBuffer) put(r request) {
 	w.idx = append(w.idx, r.i)
 
 	if w.rem() <= 0 {
-		w.flush()
+		w.rawFlush()
 	}
 }
 
 func (w *writeBuffer) flush() {
-	for _, i := range w.idx {
-		w.p.putBytes(i, nil)
+	if len(w.out) > 0 {
+		w.rawFlush()
+	}
+}
+
+func (w *writeBuffer) rawFlush() {
+	if _, err := w.c.Write(w.out); err != nil {
+		for _, i := range w.idx {
+			w.p.putError(i, err)
+		}
 	}
 
 	w.out = w.out[:0]

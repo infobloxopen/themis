@@ -1,6 +1,7 @@
 package client
 
 import (
+	"net"
 	"sync"
 	"sync/atomic"
 )
@@ -22,17 +23,24 @@ func (c *client) Connect() error {
 		atomic.StoreUint32(c.state, state)
 	}()
 
-	rwg := new(sync.WaitGroup)
+	nc, err := net.Dial(c.opts.net, c.opts.addr)
+	if err != nil {
+		return err
+	}
+
+	gwg := new(sync.WaitGroup)
 	req := make(chan request, c.opts.maxQueue)
 	wwg := new(sync.WaitGroup)
 
 	p := makePipes(c.opts.maxQueue)
 
-	wwg.Add(1)
-	go c.writer(wwg, req, p)
+	wwg.Add(2)
+	go c.writer(wwg, nc, req, p)
+	go c.reader(wwg, nc, p)
 
 	c.lock.Lock()
-	c.rwg = rwg
+	c.c = nc
+	c.gwg = gwg
 	c.req = req
 	c.wwg = wwg
 	c.pipes = p
@@ -50,15 +58,19 @@ func (c *client) Close() {
 	defer atomic.StoreUint32(c.state, pipClientIdle)
 
 	c.lock.Lock()
-	rwg := c.rwg
-	c.rwg = nil
+	nc := c.c
+	c.c = nil
+	gwg := c.gwg
+	c.gwg = nil
 	req := c.req
 	c.req = nil
 	wwg := c.wwg
 	c.wwg = nil
 	c.lock.Unlock()
 
-	rwg.Wait()
+	nc.Close()
+
+	gwg.Wait()
 	close(req)
 
 	wwg.Wait()

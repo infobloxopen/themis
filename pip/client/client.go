@@ -3,6 +3,7 @@ package client
 
 import (
 	"errors"
+	"net"
 	"sync"
 
 	"github.com/infobloxopen/themis/pdp"
@@ -59,8 +60,10 @@ type client struct {
 	state *uint32
 	pool  bytePool
 
+	c net.Conn
+
 	lock *sync.RWMutex
-	rwg  *sync.WaitGroup
+	gwg  *sync.WaitGroup
 	req  chan request
 	wwg  *sync.WaitGroup
 

@@ -4,16 +4,17 @@ import "github.com/infobloxopen/themis/pdp"
 
 func (c *client) Get(args ...pdp.AttributeAssignment) (pdp.AttributeValue, error) {
 	c.lock.RLock()
-	if c.rwg == nil {
+	if c.gwg == nil {
 		c.lock.RUnlock()
 		return pdp.UndefinedValue, ErrNotConnected
 	}
 
-	c.rwg.Add(1)
+	c.gwg.Add(1)
+	defer c.gwg.Done()
+
 	req := c.req
 	ps := c.pipes
 	c.lock.RUnlock()
-	defer c.rwg.Done()
 
 	b := c.pool.Get()
 	defer c.pool.Put(b)
@@ -31,6 +32,9 @@ func (c *client) Get(args ...pdp.AttributeAssignment) (pdp.AttributeValue, error
 		b: b[:n],
 	}
 
-	_, err = p.get()
+	b, err = p.get()
+	if b != nil {
+		c.pool.Put(b[:cap(b)])
+	}
 	return pdp.UndefinedValue, err
 }
