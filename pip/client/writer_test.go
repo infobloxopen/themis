@@ -15,13 +15,16 @@ func TestWriter(t *testing.T) {
 	wg := new(sync.WaitGroup)
 	req := make(chan request)
 	ps := makePipes(1)
+	inc := make(chan int, 1)
 
 	c := NewClient().(*client)
 
 	wg.Add(1)
-	go c.writer(wg, makeTestWriterConn(ps), req, ps)
+	go c.writer(wg, makeTestWriterConn(ps), req, ps, inc)
 
 	i, p := ps.alloc()
+	defer ps.free(i)
+
 	req <- request{
 		i: i,
 		b: []byte{0xef, 0xbe, 0xad, 0xde},
@@ -38,13 +41,14 @@ func TestWriterNoTimeout(t *testing.T) {
 	wg := new(sync.WaitGroup)
 	req := make(chan request)
 	ps := makePipes(1)
+	inc := make(chan int, 1)
 
 	c := NewClient(
 		withTestWriteFlushChannel(make(chan time.Time)),
 	).(*client)
 
 	wg.Add(1)
-	go c.writer(wg, makeTestWriterConn(ps), req, ps)
+	go c.writer(wg, makeTestWriterConn(ps), req, ps, inc)
 
 	i, p := ps.alloc()
 	req <- request{

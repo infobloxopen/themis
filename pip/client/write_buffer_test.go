@@ -13,137 +13,196 @@ import (
 )
 
 func TestNewWriteBuffer(t *testing.T) {
-	p := makePipes(1)
-
-	w := newWriteBuffer(makeTestWriteBufferConn(p), 16, p)
-	if assert.NotZero(t, w) {
-		assert.Equal(t, 16, cap(w.out))
-		assert.Empty(t, w.out)
-		assert.NotZero(t, w.idx)
-		assert.Equal(t, p, w.p)
+	ctx := makeWriteBufferContext(16, 1, nil)
+	if assert.NotZero(t, ctx.w) {
+		assert.Equal(t, 16, cap(ctx.w.out))
+		assert.Empty(t, ctx.w.out)
+		assert.NotZero(t, ctx.w.idx)
+		assert.Equal(t, ctx.ps, ctx.w.p)
+		assert.Equal(t, ctx.inc, ctx.w.inc)
 	}
 }
 
 func TestWriteBufferRem(t *testing.T) {
-	ps := makePipes(1)
-	w := newWriteBuffer(makeTestWriteBufferConn(ps), 16, ps)
+	ctx := makeWriteBufferContext(16, 1, nil)
 
-	assert.Equal(t, 16, w.rem())
+	assert.Equal(t, 16, ctx.w.rem())
 
-	i, _ := ps.alloc()
-	defer ps.free(i)
+	i, _ := ctx.ps.alloc()
+	defer ctx.ps.free(i)
 
-	w.put(request{
+	ctx.w.put(request{
 		i: i,
 		b: []byte{0xde, 0xc0, 0xad, 0xde},
 	})
-	assert.Equal(t, 4, w.rem())
+	assert.Equal(t, 4, ctx.w.rem())
 }
 
 func TestWriteBufferPut(t *testing.T) {
-	wg := new(sync.WaitGroup)
-	p := makePipes(2)
+	ctx := makeWriteBufferContext(16, 2, nil)
 
-	w := newWriteBuffer(makeTestWriteBufferConn(p), 16, p)
+	i1, _, b1, err1 := ctx.put([]byte{0xde, 0xc0, 0xad, 0xde}, true)
+	i2, _, b2, err2 := ctx.put([]byte{0xde, 0xc0, 0xad, 0xde, 0xef, 0xeb, 0, 0}, true)
 
-	i1, p1 := p.alloc()
-	wg.Add(1)
-	var b1 []byte
-	err1 := errors.New("test1")
-	go func() {
-		defer wg.Done()
-		defer p.free(i1)
+	ctx.wg.Wait()
 
-		b1, err1 = p1.get()
-	}()
+	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde}, *b1)
+	assert.NoError(t, *err1)
+	assert.Equal(t, i1, <-ctx.inc)
 
-	w.put(request{
-		i: i1,
-		b: []byte{0xde, 0xc0, 0xad, 0xde},
-	})
+	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde, 0xef, 0xeb, 0, 0}, *b2)
+	assert.NoError(t, *err2)
+	assert.Equal(t, i2, <-ctx.inc)
+}
 
-	i2, p2 := p.alloc()
-	wg.Add(1)
-	var b2 []byte
-	err2 := errors.New("test2")
-	go func() {
-		defer wg.Done()
-		defer p.free(i2)
+func TestWriteBufferPutAfterError(t *testing.T) {
+	tErr := errors.New("test")
+	ctx := makeWriteBufferContext(16, 1, makeBrokenWriteBufferConn(tErr))
 
-		b2, err2 = p2.get()
-	}()
+	_, _, _, err := ctx.put([]byte{0, 1, 2, 3, 4, 5, 6, 7}, false)
 
-	w.put(request{
-		i: i2,
-		b: []byte{0xde, 0xc0, 0xad, 0xde, 0xef, 0xeb, 0, 0},
-	})
+	ctx.wg.Wait()
+	assert.Equal(t, tErr, *err)
 
-	wg.Wait()
-	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde}, b1)
-	assert.NoError(t, err1)
-	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde, 0xef, 0xeb, 0, 0}, b2)
-	assert.NoError(t, err2)
+	_, _, _, err = ctx.put([]byte{0, 1, 2, 3, 4, 5, 6, 7}, false)
+
+	ctx.wg.Wait()
+	assert.Equal(t, errWriterBroken, *err)
 }
 
 func TestWriteBufferFlush(t *testing.T) {
-	wg := new(sync.WaitGroup)
-	ps := makePipes(1)
+	ctx := makeWriteBufferContext(16, 1, nil)
 
-	w := newWriteBuffer(makeTestWriteBufferConn(ps), 16, ps)
-
-	i, p := ps.alloc()
-	wg.Add(1)
-	var b []byte
-	err := errors.New("test")
-	go func() {
-		defer wg.Done()
-		defer ps.free(i)
-
-		b, err = p.get()
-	}()
-
-	w.put(request{
-		i: i,
-		b: []byte{0xde, 0xc0, 0xad, 0xde},
-	})
+	_, p, b, err := ctx.put([]byte{0xde, 0xc0, 0xad, 0xde}, true)
 	assert.Empty(t, p)
 
-	w.flush()
+	ctx.w.flush()
+	ctx.wg.Wait()
 
-	wg.Wait()
-	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde}, b)
-	assert.NoError(t, err)
+	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde}, *b)
+	assert.NoError(t, *err)
 }
 
 func TestWriteBufferFlushWithError(t *testing.T) {
-	wg := new(sync.WaitGroup)
-	ps := makePipes(1)
-
 	tErr := errors.New("test")
-	w := newWriteBuffer(makeBrokenWriteBufferConn(tErr), 16, ps)
+	ctx := makeWriteBufferContext(16, 1, makeBrokenWriteBufferConn(tErr))
 
-	i, p := ps.alloc()
-	wg.Add(1)
-	b := []byte{0xde, 0xc0, 0xad, 0xde}
-	err := errors.New("test")
-	go func() {
-		defer wg.Done()
-		defer ps.free(i)
-
-		b, err = p.get()
-	}()
-
-	w.put(request{
-		i: i,
-		b: []byte{0xde, 0xc0, 0xad, 0xde},
-	})
+	_, p, b, err := ctx.put([]byte{0xde, 0xc0, 0xad, 0xde}, true)
 	assert.Empty(t, p)
 
-	w.flush()
+	ctx.w.flush()
+	ctx.wg.Wait()
 
-	wg.Wait()
-	assert.Empty(t, b)
-	assert.Equal(t, tErr, err)
+	assert.Empty(t, *b)
+	assert.Equal(t, tErr, *err)
+}
+
+func TestWriteBufferFlushAfterError(t *testing.T) {
+	tErr := errors.New("test")
+	ctx := makeWriteBufferContext(16, 1, makeBrokenWriteBufferConn(tErr))
+
+	_, p, b, err := ctx.put([]byte{0xde, 0xc0, 0xad, 0xde}, true)
+	assert.Empty(t, p)
+
+	ctx.w.flush()
+	ctx.wg.Wait()
+
+	assert.Empty(t, *b)
+	assert.Equal(t, tErr, *err)
+
+	i, p, b, err := ctx.startReceiver(true)
+
+	ctx.w.out = append(ctx.w.out,
+		append(
+			[]byte{byte(msgIdxBytes + len(*b)), 0x00, 0x00, 0x00, byte(i), 0x00, 0x00, 0x00},
+			*b...,
+		)...,
+	)
+	ctx.w.idx = append(ctx.w.idx, i)
+
+	ctx.w.flush()
+	ctx.wg.Wait()
+
+	assert.Empty(t, *b)
+	assert.Equal(t, errWriterBroken, *err)
+}
+
+func TestWriteBufferFinalize(t *testing.T) {
+	ctx := makeWriteBufferContext(16, 1, nil)
+
+	i, p, b, err := ctx.put([]byte{0xde, 0xc0, 0xad, 0xde}, true)
+	assert.Empty(t, p)
+
+	ctx.w.finalize()
+	ctx.wg.Wait()
+
+	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde}, *b)
+	assert.NoError(t, *err)
+	assert.Equal(t, i, <-ctx.w.inc)
+
+	select {
+	default:
+		assert.Fail(t, "channel inc hasn't been closed yet")
+
+	case _, ok := <-ctx.w.inc:
+		assert.False(t, ok)
+	}
+}
+
+type writeBufferContext struct {
+	w  *writeBuffer
+	wg *sync.WaitGroup
+	ps pipes
+	inc chan int
+}
+
+func makeWriteBufferContext(n, q int, c net.Conn) writeBufferContext {
+	out := writeBufferContext{
+		wg:  new(sync.WaitGroup),
+		ps:  makePipes(q),
+		inc: make(chan int, q),
+	}
+
+	if c == nil {
+		c = makeTestWriteBufferConn(out.ps)
+	}
+
+	out.w = newWriteBuffer(c, n, out.ps, out.inc)
+	return out
+}
+
+func (ctx writeBufferContext) startReceiver(fill bool) (int, pipe, *[]byte, *error) {
+	var (
+		out []byte
+		err error
+	)
+
+	if fill {
+		out = []byte{0xff}
+		err = errors.New("artificial")
+	}
+
+	i, p := ctx.ps.alloc()
+	ctx.wg.Add(1)
+	go func() {
+		defer ctx.wg.Done()
+		defer ctx.ps.free(i)
+
+		out, err = p.get()
+	}()
+
+	return i, p, &out, &err
+}
+
+func (ctx writeBufferContext) put(in []byte, fill bool) (int, pipe, *[]byte, *error) {
+	i, p, out, err := ctx.startReceiver(fill)
+
+	ctx.w.put(request{
+		i: i,
+		b: in,
+	})
+
+	return i, p, out, err
 }
 
 type testWriteBufferConn struct {

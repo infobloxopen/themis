@@ -2,8 +2,11 @@ package client
 
 import (
 	"encoding/binary"
+	"errors"
 	"net"
 )
+
+var errWriterBroken = errors.New("writer has been broken")
 
 const (
 	msgSizeBytes = 4
@@ -15,14 +18,16 @@ type writeBuffer struct {
 	out []byte
 	idx []int
 	p   pipes
+	inc chan int
 }
 
-func newWriteBuffer(c net.Conn, n int, p pipes) *writeBuffer {
+func newWriteBuffer(c net.Conn, n int, p pipes, inc chan int) *writeBuffer {
 	return &writeBuffer{
 		c:   c,
 		out: make([]byte, 0, n),
-		idx: make([]int, n/(msgSizeBytes+msgIdxBytes)),
+		idx: make([]int, 0, n/(msgSizeBytes+msgIdxBytes)),
 		p:   p,
+		inc: inc,
 	}
 }
 
@@ -31,6 +36,11 @@ func (w *writeBuffer) rem() int {
 }
 
 func (w *writeBuffer) put(r request) {
+	if w.c == nil {
+		w.p.putError(r.i, errWriterBroken)
+		return
+	}
+
 	size := msgIdxBytes + len(r.b)
 	if w.rem() < msgSizeBytes+size {
 		w.rawFlush()
@@ -54,10 +64,33 @@ func (w *writeBuffer) flush() {
 	}
 }
 
+func (w *writeBuffer) finalize() {
+	w.flush()
+
+	if w.inc != nil {
+		close(w.inc)
+	}
+}
+
 func (w *writeBuffer) rawFlush() {
-	if _, err := w.c.Write(w.out); err != nil {
+	if w.c != nil {
+		if _, err := w.c.Write(w.out); err != nil {
+			for _, i := range w.idx {
+				w.p.putError(i, err)
+			}
+
+			w.c = nil
+
+			close(w.inc)
+			w.inc = nil
+		} else {
+			for _, i := range w.idx {
+				w.inc <- i
+			}
+		}
+	} else {
 		for _, i := range w.idx {
-			w.p.putError(i, err)
+			w.p.putError(i, errWriterBroken)
 		}
 	}
 

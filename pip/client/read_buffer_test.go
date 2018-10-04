@@ -8,28 +8,23 @@ import (
 )
 
 func TestNewReadBuffer(t *testing.T) {
-	p := makePipes(1)
-	pool := makeBytePool(8, false)
-
-	r := newReadBuffer(1024, 8, pool, p)
-	if assert.NotZero(t, r) {
-		assert.Equal(t, 1024, len(r.in))
-		assert.Equal(t, msgSizeBytes, cap(r.buf))
-		assert.Zero(t, r.msgBuf)
-		assert.Zero(t, r.size)
-		assert.Equal(t, uint32(8), r.max)
-		assert.Equal(t, -1, r.idx)
-		assert.Equal(t, pool, r.pool)
-		assert.Equal(t, p, r.p)
+	ctx := makeReadBufferContext(1024, 8, 1)
+	if assert.NotZero(t, ctx.r) {
+		assert.Equal(t, 1024, len(ctx.r.in))
+		assert.Equal(t, msgSizeBytes, cap(ctx.r.buf))
+		assert.Zero(t, ctx.r.msgBuf)
+		assert.Zero(t, ctx.r.size)
+		assert.Equal(t, uint32(8), ctx.r.max)
+		assert.Equal(t, -1, ctx.r.idx)
+		assert.Equal(t, ctx.pool, ctx.r.pool)
+		assert.Equal(t, ctx.p, ctx.r.p)
+		assert.Equal(t, ctx.dec, ctx.r.dec)
 	}
 }
 
 func TestReadBufferRead(t *testing.T) {
-	p := makePipes(1)
-	pool := makeBytePool(8, false)
-
-	r := newReadBuffer(1024, 8, pool, p)
-	assert.False(t, r.read(newTestReadBufferReadCloser(
+	ctx := makeReadBufferContext(1024, 8, 1)
+	assert.False(t, ctx.r.read(newTestReadBufferReadCloser(
 		[]byte{
 			0x08, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00,
@@ -37,19 +32,16 @@ func TestReadBufferRead(t *testing.T) {
 		},
 	)))
 
-	b, err := p.p[0].get()
-	defer pool.Put(b)
+	b, err := ctx.p.p[0].get()
+	defer ctx.pool.Put(b)
 
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde}, b)
 }
 
 func TestReadBufferReadWithInvalidIdx(t *testing.T) {
-	p := makePipes(1)
-	pool := makeBytePool(8, false)
-
-	r := newReadBuffer(1024, 8, pool, p)
-	assert.False(t, r.read(newTestReadBufferReadCloser(
+	ctx := makeReadBufferContext(1024, 8, 1)
+	assert.False(t, ctx.r.read(newTestReadBufferReadCloser(
 		[]byte{
 			0x08, 0x00, 0x00, 0x00,
 			0x01, 0x00, 0x00, 0x00,
@@ -59,227 +51,209 @@ func TestReadBufferReadWithInvalidIdx(t *testing.T) {
 }
 
 func TestReadBufferExtractData(t *testing.T) {
-	p := makePipes(1)
-	pool := makeBytePool(8, false)
-
-	r := newReadBuffer(1024, 8, pool, p)
+	ctx := makeReadBufferContext(1024, 8, 1)
 
 	b := []byte{
 		0x08, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00,
 		0xde, 0xc0, 0xad, 0xde,
 	}
-	n, ok := r.extractData(b)
+	n, ok := ctx.r.extractData(b)
 	assert.Equal(t, 4, n)
 	assert.True(t, ok)
-	assert.Equal(t, 8, r.size)
-	assert.Equal(t, 0, len(r.buf))
-	assert.Equal(t, msgSizeBytes, cap(r.buf))
+	assert.Equal(t, 8, ctx.r.size)
+	assert.Equal(t, 0, len(ctx.r.buf))
+	assert.Equal(t, msgSizeBytes, cap(ctx.r.buf))
 
-	n, ok = r.extractData(b[4:])
+	n, ok = ctx.r.extractData(b[4:])
 	assert.Equal(t, 4, n)
 	assert.True(t, ok)
-	assert.Equal(t, 4, r.size)
-	assert.Equal(t, 0, r.idx)
-	assert.Equal(t, 0, len(r.buf))
-	assert.Equal(t, msgIdxBytes, cap(r.buf))
-	assert.NotZero(t, r.msgBuf)
-	assert.Equal(t, 8, cap(r.msgBuf))
+	assert.Equal(t, 4, ctx.r.size)
+	assert.Equal(t, 0, ctx.r.idx)
+	assert.Equal(t, 0, len(ctx.r.buf))
+	assert.Equal(t, msgIdxBytes, cap(ctx.r.buf))
+	assert.NotZero(t, ctx.r.msgBuf)
+	assert.Equal(t, 8, cap(ctx.r.msgBuf))
 
-	n, ok = r.extractData(b[8:])
+	n, ok = ctx.r.extractData(b[8:])
 	assert.Equal(t, 4, n)
 	assert.True(t, ok)
-	assert.Equal(t, 0, r.size)
-	assert.Equal(t, -1, r.idx)
-	assert.Zero(t, r.msgBuf)
+	assert.Equal(t, 0, ctx.r.size)
+	assert.Equal(t, -1, ctx.r.idx)
+	assert.Zero(t, ctx.r.msgBuf)
 
-	b, err := p.p[0].get()
-	defer pool.Put(b)
+	b, err := ctx.p.p[0].get()
+	defer ctx.pool.Put(b)
 
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde}, b)
 }
 
 func TestReadBufferFillSize(t *testing.T) {
-	p := makePipes(1)
-	pool := makeBytePool(8, false)
+	ctx := makeReadBufferContext(1024, 8, 1)
 
-	r := newReadBuffer(1024, 8, pool, p)
-
-	n, ok := r.fillSize([]byte{
+	n, ok := ctx.r.fillSize([]byte{
 		0x08, 0x00, 0x00, 0x00,
 	})
 	assert.Equal(t, 4, n)
 	assert.True(t, ok)
-	assert.Equal(t, 8, r.size)
-	assert.Equal(t, 0, len(r.buf))
-	assert.Equal(t, msgSizeBytes, cap(r.buf))
+	assert.Equal(t, 8, ctx.r.size)
+	assert.Equal(t, 0, len(ctx.r.buf))
+	assert.Equal(t, msgSizeBytes, cap(ctx.r.buf))
 }
 
 func TestReadBufferFillSizePartial(t *testing.T) {
-	p := makePipes(1)
-	pool := makeBytePool(8, false)
+	ctx := makeReadBufferContext(1024, 8, 1)
 
-	r := newReadBuffer(1024, 8, pool, p)
-
-	n, ok := r.fillSize([]byte{
+	n, ok := ctx.r.fillSize([]byte{
 		0x08, 0x00, 0x00,
 	})
 	assert.Equal(t, 3, n)
 	assert.True(t, ok)
-	assert.Equal(t, 0, r.size)
-	assert.Equal(t, 3, len(r.buf))
-	assert.Equal(t, msgSizeBytes, cap(r.buf))
+	assert.Equal(t, 0, ctx.r.size)
+	assert.Equal(t, 3, len(ctx.r.buf))
+	assert.Equal(t, msgSizeBytes, cap(ctx.r.buf))
 }
 
 func TestReadBufferFillSizeTooBig(t *testing.T) {
-	p := makePipes(1)
-	pool := makeBytePool(8, false)
+	ctx := makeReadBufferContext(1024, 8, 1)
 
-	r := newReadBuffer(1024, 8, pool, p)
-
-	n, ok := r.fillSize([]byte{
+	n, ok := ctx.r.fillSize([]byte{
 		0xff, 0xff, 0xff, 0xff,
 	})
 	assert.Equal(t, 4, n)
 	assert.False(t, ok)
-	assert.Equal(t, 0, r.size)
-	assert.Equal(t, 0, len(r.buf))
-	assert.Equal(t, msgSizeBytes, cap(r.buf))
+	assert.Equal(t, 0, ctx.r.size)
+	assert.Equal(t, 0, len(ctx.r.buf))
+	assert.Equal(t, msgSizeBytes, cap(ctx.r.buf))
 }
 
 func TestReadBufferFillSizeTooSmall(t *testing.T) {
-	p := makePipes(1)
-	pool := makeBytePool(8, false)
+	ctx := makeReadBufferContext(1024, 8, 1)
 
-	r := newReadBuffer(1024, 8, pool, p)
-
-	n, ok := r.fillSize([]byte{
+	n, ok := ctx.r.fillSize([]byte{
 		0x02, 0x00, 0x00, 0x00,
 	})
 	assert.Equal(t, 4, n)
 	assert.False(t, ok)
-	assert.Equal(t, 2, r.size)
-	assert.Equal(t, 0, len(r.buf))
-	assert.Equal(t, msgSizeBytes, cap(r.buf))
+	assert.Equal(t, 2, ctx.r.size)
+	assert.Equal(t, 0, len(ctx.r.buf))
+	assert.Equal(t, msgSizeBytes, cap(ctx.r.buf))
 }
 
 func TestReadBufferFillIdx(t *testing.T) {
-	p := makePipes(1)
-	pool := makeBytePool(8, false)
+	ctx := makeReadBufferContext(1024, 8, 1)
 
-	r := newReadBuffer(1024, 8, pool, p)
-
-	n, ok := r.fillIdx([]byte{
+	n, ok := ctx.r.fillIdx([]byte{
 		0x00, 0x00, 0x00, 0x00,
 	})
 	assert.Equal(t, 4, n)
 	assert.True(t, ok)
-	assert.Equal(t, 0, r.idx)
-	assert.Equal(t, 0, len(r.buf))
-	assert.Equal(t, msgIdxBytes, cap(r.buf))
+	assert.Equal(t, 0, ctx.r.idx)
+	assert.Equal(t, 0, len(ctx.r.buf))
+	assert.Equal(t, msgIdxBytes, cap(ctx.r.buf))
 }
 
 func TestReadBufferFillIdxPartial(t *testing.T) {
-	p := makePipes(1)
-	pool := makeBytePool(8, false)
+	ctx := makeReadBufferContext(1024, 8, 1)
 
-	r := newReadBuffer(1024, 8, pool, p)
-
-	n, ok := r.fillIdx([]byte{
+	n, ok := ctx.r.fillIdx([]byte{
 		0x00, 0x00, 0x00,
 	})
 	assert.Equal(t, 3, n)
 	assert.True(t, ok)
-	assert.Equal(t, -1, r.idx)
-	assert.Equal(t, 3, len(r.buf))
-	assert.Equal(t, msgIdxBytes, cap(r.buf))
+	assert.Equal(t, -1, ctx.r.idx)
+	assert.Equal(t, 3, len(ctx.r.buf))
+	assert.Equal(t, msgIdxBytes, cap(ctx.r.buf))
 }
 
 func TestReadBufferFillIdxTooBig(t *testing.T) {
-	p := makePipes(1)
-	pool := makeBytePool(8, false)
+	ctx := makeReadBufferContext(1024, 8, 1)
 
-	r := newReadBuffer(1024, 8, pool, p)
-
-	n, ok := r.fillIdx([]byte{
+	n, ok := ctx.r.fillIdx([]byte{
 		0xff, 0xff, 0xff, 0xff,
 	})
 	assert.Equal(t, 4, n)
 	assert.False(t, ok)
-	assert.Equal(t, -1, r.idx)
-	assert.Equal(t, 0, len(r.buf))
-	assert.Equal(t, msgIdxBytes, cap(r.buf))
+	assert.Equal(t, -1, ctx.r.idx)
+	assert.Equal(t, 0, len(ctx.r.buf))
+	assert.Equal(t, msgIdxBytes, cap(ctx.r.buf))
 }
 
 func TestReadBufferFillMsg(t *testing.T) {
-	p := makePipes(1)
-	pool := makeBytePool(8, false)
+	ctx := makeReadBufferContext(1024, 8, 1)
+	ctx.r.size = 4
+	ctx.r.idx = 0
+	ctx.r.msgBuf = ctx.pool.Get()[:0]
 
-	r := newReadBuffer(1024, 8, pool, p)
-	r.size = 4
-	r.idx = 0
-	r.msgBuf = pool.Get()[:0]
-
-	n, ok := r.fillMsg([]byte{
+	n, ok := ctx.r.fillMsg([]byte{
 		0xde, 0xc0, 0xad, 0xde,
 	})
 	assert.Equal(t, 4, n)
 	assert.True(t, ok)
-	assert.Equal(t, 0, r.size)
-	assert.Equal(t, -1, r.idx)
-	assert.Zero(t, r.msgBuf)
+	assert.Equal(t, 0, ctx.r.size)
+	assert.Equal(t, -1, ctx.r.idx)
+	assert.Zero(t, ctx.r.msgBuf)
 
-	b, err := p.p[0].get()
-	defer pool.Put(b)
+	b, err := ctx.p.p[0].get()
+	defer ctx.pool.Put(b)
 
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde}, b)
 }
 
 func TestReadBufferFillMsgPartial(t *testing.T) {
-	p := makePipes(1)
-	pool := makeBytePool(8, false)
+	ctx := makeReadBufferContext(1024, 8, 1)
+	ctx.r.size = 4
+	ctx.r.idx = 0
+	ctx.r.msgBuf = ctx.pool.Get()[:0]
 
-	r := newReadBuffer(1024, 8, pool, p)
-	r.size = 4
-	r.idx = 0
-	r.msgBuf = pool.Get()[:0]
-
-	n, ok := r.fillMsg([]byte{
+	n, ok := ctx.r.fillMsg([]byte{
 		0xde, 0xc0,
 	})
 	assert.Equal(t, 2, n)
 	assert.True(t, ok)
-	assert.Equal(t, 2, r.size)
-	assert.Equal(t, 0, r.idx)
-	assert.Equal(t, []byte{0xde, 0xc0}, r.msgBuf)
+	assert.Equal(t, 2, ctx.r.size)
+	assert.Equal(t, 0, ctx.r.idx)
+	assert.Equal(t, []byte{0xde, 0xc0}, ctx.r.msgBuf)
 }
 
-func TestReadBufferClean(t *testing.T) {
-	p := makePipes(1)
-	pool := makeBytePool(8, false)
+func TestReadBufferFinalize(t *testing.T) {
+	ctx := makeReadBufferContext(1024, 8, 1)
+	ctx.r.size = 4
+	ctx.r.idx = 0
+	ctx.r.msgBuf = ctx.pool.Get()[:0]
 
-	r := newReadBuffer(1024, 8, pool, p)
-	r.size = 4
-	r.idx = 0
-	r.msgBuf = pool.Get()[:0]
-
-	n, ok := r.fillMsg([]byte{
+	n, ok := ctx.r.fillMsg([]byte{
 		0xde, 0xc0,
 	})
 	assert.Equal(t, 2, n)
 	assert.True(t, ok)
-	assert.Equal(t, 2, r.size)
-	assert.Equal(t, 0, r.idx)
-	assert.Equal(t, []byte{0xde, 0xc0}, r.msgBuf)
+	assert.Equal(t, 2, ctx.r.size)
+	assert.Equal(t, 0, ctx.r.idx)
+	assert.Equal(t, []byte{0xde, 0xc0}, ctx.r.msgBuf)
 
-	r.clean()
-	assert.Equal(t, 0, len(r.buf))
-	assert.Equal(t, msgSizeBytes, cap(r.buf))
-	assert.Zero(t, r.msgBuf)
-	assert.Equal(t, 0, r.size)
-	assert.Equal(t, -1, r.idx)
+	ctx.r.finalize()
+	_, ok = <-ctx.dec
+	assert.False(t, ok)
+}
+
+type readBufferContext struct {
+	r    *readBuffer
+	p    pipes
+	pool bytePool
+	dec  chan int
+}
+
+func makeReadBufferContext(n, m, q int) readBufferContext {
+	out := readBufferContext{
+		p: makePipes(q),
+		pool: makeBytePool(m, false),
+		dec: make(chan int, q),
+	}
+
+	out.r = newReadBuffer(n, m, out.pool, out.p, out.dec)
+	return out
 }
 
 type testReadBufferReadCloser struct {

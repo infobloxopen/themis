@@ -34,9 +34,13 @@ func (c *client) Connect() error {
 
 	p := makePipes(c.opts.maxQueue)
 
-	wwg.Add(2)
-	go c.writer(wwg, nc, req, p)
-	go c.reader(wwg, nc, p)
+	inc := make(chan int, c.opts.maxQueue)
+	dec := make(chan int, c.opts.maxQueue)
+
+	wwg.Add(3)
+	go c.writer(wwg, nc, req, p, inc)
+	go c.reader(wwg, nc, p, dec)
+	go terminator(wwg, inc, dec)
 
 	c.lock.Lock()
 	c.c = nc
