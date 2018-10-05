@@ -18,7 +18,6 @@ func TestNewReadBuffer(t *testing.T) {
 		assert.Equal(t, -1, ctx.r.idx)
 		assert.Equal(t, ctx.pool, ctx.r.pool)
 		assert.Equal(t, ctx.p, ctx.r.p)
-		assert.Equal(t, ctx.dec, ctx.r.dec)
 	}
 }
 
@@ -234,25 +233,21 @@ func TestReadBufferFinalize(t *testing.T) {
 	assert.Equal(t, []byte{0xde, 0xc0}, ctx.r.msgBuf)
 
 	ctx.r.finalize()
-	_, ok = <-ctx.dec
-	assert.False(t, ok)
 }
 
 type readBufferContext struct {
 	r    *readBuffer
 	p    pipes
 	pool bytePool
-	dec  chan int
 }
 
 func makeReadBufferContext(n, m, q int) readBufferContext {
 	out := readBufferContext{
-		p: makePipes(q),
+		p:    makePipes(q, defTimeout.Nanoseconds()),
 		pool: makeBytePool(m, false),
-		dec: make(chan int, q),
 	}
 
-	out.r = newReadBuffer(n, m, out.pool, out.p, out.dec)
+	out.r = newReadBuffer(n, m, out.pool, out.p)
 	return out
 }
 

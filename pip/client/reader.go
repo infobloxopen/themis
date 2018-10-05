@@ -5,10 +5,10 @@ import (
 	"sync"
 )
 
-func (c *client) reader(wg *sync.WaitGroup, nc net.Conn, p pipes, dec chan int) {
+func (c *client) reader(wg *sync.WaitGroup, nc net.Conn, p pipes) {
 	defer wg.Done()
 
-	r := newReadBuffer(c.opts.bufSize, c.opts.maxSize, c.pool, p, dec)
+	r := newReadBuffer(c.opts.bufSize, c.opts.maxSize, c.pool, p)
 	for {
 		if ok := r.read(nc); !ok {
 			r.finalize()

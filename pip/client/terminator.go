@@ -1,26 +1,31 @@
 package client
 
-import "sync"
+import (
+	"net"
+	"sync"
+	"time"
+)
 
-func terminator(wg *sync.WaitGroup, inc, dec chan int) {
+func (c *client) terminator(wg *sync.WaitGroup, nc net.Conn, p pipes, done chan struct{}) {
 	defer wg.Done()
+
+	ch := c.opts.termFlushCh
+	if ch == nil {
+		t := time.NewTicker(c.opts.termInt)
+		defer t.Stop()
+
+		ch = t.C
+	}
 
 	for {
 		select {
-		case _, ok := <-inc:
-			if !ok {
-				for range dec {
-				}
+		case <-done:
+			p.flush()
+			return
 
-				return
-			}
-
-		case _, ok := <-dec:
-			if !ok {
-				for range inc {
-				}
-
-				return
+		case t := <-ch:
+			if p.check(t) {
+				nc.Close()
 			}
 		}
 	}

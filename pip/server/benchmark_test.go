@@ -134,7 +134,7 @@ func genReqs(n, m int) [][]byte {
 		b := make([]byte, msgSizeBytes+rand.Intn(2*m)+msgIdxBytes)
 
 		binary.LittleEndian.PutUint32(b, uint32(len(b)-msgSizeBytes))
-		for j := msgSizeBytes+msgIdxBytes; j < len(b); j++ {
+		for j := msgSizeBytes + msgIdxBytes; j < len(b); j++ {
 			b[j] = byte(rand.Intn(256))
 		}
 

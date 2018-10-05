@@ -18,7 +18,7 @@ func TestReader(t *testing.T) {
 	pool := makeBytePool(defMaxSize, false)
 
 	wg := new(sync.WaitGroup)
-	ps := makePipes(3)
+	ps := makePipes(3, defTimeout.Nanoseconds())
 	for i := 0; i < len(ps.p); i++ {
 		idx, p := ps.alloc()
 		wg.Add(1)
@@ -48,14 +48,12 @@ func TestReader(t *testing.T) {
 
 	c := NewClient().(*client)
 
-	dec := make(chan int, defMaxQueue)
-
 	wg.Add(1)
 	c.reader(wg, newTestReaderConn(
 		0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01,
 		0x08, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x02, 0x02, 0x02,
 		0x08, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x03, 0x03, 0x03,
-	), ps, dec)
+	), ps)
 
 	wg.Wait()
 
@@ -65,12 +63,6 @@ func TestReader(t *testing.T) {
 		{0x03, 0x03, 0x03, 0x03},
 	}, msgs)
 	assert.Equal(t, []error{nil, nil, nil}, errs)
-
-	didx := []int{}
-	for i := range dec {
-		didx = append(didx, i)
-	}
-	assert.ElementsMatch(t, []int{0, 1, 2}, didx)
 }
 
 type testReaderConn struct {

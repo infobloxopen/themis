@@ -2,32 +2,42 @@ package client
 
 import (
 	"errors"
+	"math"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMakePipe(t *testing.T) {
 	p := makePipe()
-	assert.NotZero(t, p)
+	if assert.NotZero(t, p.t) {
+		assert.Equal(t, int64(math.MinInt64), *p.t)
+	}
+	assert.NotZero(t, p.ch)
 }
 
 func TestPipeClean(t *testing.T) {
 	p := makePipe()
 
 	p.putBytes(nil)
-	assert.NotEmpty(t, p)
+	assert.NotEmpty(t, p.ch)
+	assert.Equal(t, int64(math.MinInt64), *p.t)
 
-	p.clean()
-	assert.Empty(t, p)
+	n := new(int64)
+	*n = time.Now().UnixNano()
 
-	p.clean()
-	assert.Empty(t, p)
+	p.clean(n)
+	assert.Empty(t, p.ch)
+	assert.Equal(t, *n, *p.t)
+
+	p.clean(n)
+	assert.Empty(t, p.ch)
 }
 
 func TestPipeGet(t *testing.T) {
 	p := makePipe()
-	assert.Empty(t, p)
+	assert.Empty(t, p.ch)
 
 	p.putBytes(nil)
 
@@ -38,7 +48,7 @@ func TestPipeGet(t *testing.T) {
 
 func TestPipePutBytes(t *testing.T) {
 	p := makePipe()
-	assert.Empty(t, p)
+	assert.Empty(t, p.ch)
 
 	p.putBytes([]byte{0xde, 0xc0, 0xad, 0xde})
 
@@ -49,7 +59,7 @@ func TestPipePutBytes(t *testing.T) {
 
 func TestPipePutError(t *testing.T) {
 	p := makePipe()
-	assert.Empty(t, p)
+	assert.Empty(t, p.ch)
 
 	tErr := errors.New("test")
 	p.putError(tErr)

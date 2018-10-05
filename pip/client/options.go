@@ -72,9 +72,39 @@ func WithWriteInterval(d time.Duration) Option {
 	}
 }
 
+// WithResponseTimeout returns an Option which sets timeout for a response.
+// If client gets no response within the interval it drops connection.
+func WithResponseTimeout(d time.Duration) Option {
+	return func(o *options) {
+		if d > 0 {
+			o.timeout = d
+		} else {
+			o.timeout = defTimeout
+		}
+	}
+}
+
+// WithResponseCheckInterval returns an Option which sets inteval of
+// timeout checks.
+func WithResponseCheckInterval(d time.Duration) Option {
+	return func(o *options) {
+		if d > 0 {
+			o.termInt = d
+		} else {
+			o.termInt = defTermInt
+		}
+	}
+}
+
 func withTestWriteFlushChannel(ch <-chan time.Time) Option {
 	return func(o *options) {
 		o.writeFlushCh = ch
+	}
+}
+
+func withTestTermFlushChannel(ch <-chan time.Time) Option {
+	return func(o *options) {
+		o.termFlushCh = ch
 	}
 }
 
@@ -83,11 +113,14 @@ type options struct {
 	maxQueue int
 	bufSize  int
 	writeInt time.Duration
+	timeout  time.Duration
+	termInt  time.Duration
 
 	net  string
 	addr string
 
 	writeFlushCh <-chan time.Time
+	termFlushCh  <-chan time.Time
 }
 
 const (
@@ -95,6 +128,11 @@ const (
 	defMaxQueue = 100
 	defBufSize  = 1024 * 1024
 	defWriteInt = 50 * time.Microsecond
+	defTimeout  = time.Second
+	defTermInt  = 50 * time.Microsecond
+
+	defNet  = "tcp"
+	defAddr = "localhost:5600"
 )
 
 var defaults = options{
@@ -102,7 +140,9 @@ var defaults = options{
 	maxQueue: defMaxQueue,
 	bufSize:  defBufSize,
 	writeInt: defWriteInt,
+	timeout:  defTimeout,
+	termInt:  defTermInt,
 
-	net:  "tcp",
-	addr: "localhost:5600",
+	net:  defNet,
+	addr: defAddr,
 }

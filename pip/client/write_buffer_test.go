@@ -19,7 +19,6 @@ func TestNewWriteBuffer(t *testing.T) {
 		assert.Empty(t, ctx.w.out)
 		assert.NotZero(t, ctx.w.idx)
 		assert.Equal(t, ctx.ps, ctx.w.p)
-		assert.Equal(t, ctx.inc, ctx.w.inc)
 	}
 }
 
@@ -41,18 +40,16 @@ func TestWriteBufferRem(t *testing.T) {
 func TestWriteBufferPut(t *testing.T) {
 	ctx := makeWriteBufferContext(16, 2, nil)
 
-	i1, _, b1, err1 := ctx.put([]byte{0xde, 0xc0, 0xad, 0xde}, true)
-	i2, _, b2, err2 := ctx.put([]byte{0xde, 0xc0, 0xad, 0xde, 0xef, 0xeb, 0, 0}, true)
+	_, _, b1, err1 := ctx.put([]byte{0xde, 0xc0, 0xad, 0xde}, true)
+	_, _, b2, err2 := ctx.put([]byte{0xde, 0xc0, 0xad, 0xde, 0xef, 0xeb, 0, 0}, true)
 
 	ctx.wg.Wait()
 
 	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde}, *b1)
 	assert.NoError(t, *err1)
-	assert.Equal(t, i1, <-ctx.inc)
 
 	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde, 0xef, 0xeb, 0, 0}, *b2)
 	assert.NoError(t, *err2)
-	assert.Equal(t, i2, <-ctx.inc)
 }
 
 func TestWriteBufferPutAfterError(t *testing.T) {
@@ -74,7 +71,7 @@ func TestWriteBufferFlush(t *testing.T) {
 	ctx := makeWriteBufferContext(16, 1, nil)
 
 	_, p, b, err := ctx.put([]byte{0xde, 0xc0, 0xad, 0xde}, true)
-	assert.Empty(t, p)
+	assert.Empty(t, p.ch)
 
 	ctx.w.flush()
 	ctx.wg.Wait()
@@ -88,7 +85,7 @@ func TestWriteBufferFlushWithError(t *testing.T) {
 	ctx := makeWriteBufferContext(16, 1, makeBrokenWriteBufferConn(tErr))
 
 	_, p, b, err := ctx.put([]byte{0xde, 0xc0, 0xad, 0xde}, true)
-	assert.Empty(t, p)
+	assert.Empty(t, p.ch)
 
 	ctx.w.flush()
 	ctx.wg.Wait()
@@ -102,7 +99,7 @@ func TestWriteBufferFlushAfterError(t *testing.T) {
 	ctx := makeWriteBufferContext(16, 1, makeBrokenWriteBufferConn(tErr))
 
 	_, p, b, err := ctx.put([]byte{0xde, 0xc0, 0xad, 0xde}, true)
-	assert.Empty(t, p)
+	assert.Empty(t, p.ch)
 
 	ctx.w.flush()
 	ctx.wg.Wait()
@@ -127,47 +124,23 @@ func TestWriteBufferFlushAfterError(t *testing.T) {
 	assert.Equal(t, errWriterBroken, *err)
 }
 
-func TestWriteBufferFinalize(t *testing.T) {
-	ctx := makeWriteBufferContext(16, 1, nil)
-
-	i, p, b, err := ctx.put([]byte{0xde, 0xc0, 0xad, 0xde}, true)
-	assert.Empty(t, p)
-
-	ctx.w.finalize()
-	ctx.wg.Wait()
-
-	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde}, *b)
-	assert.NoError(t, *err)
-	assert.Equal(t, i, <-ctx.w.inc)
-
-	select {
-	default:
-		assert.Fail(t, "channel inc hasn't been closed yet")
-
-	case _, ok := <-ctx.w.inc:
-		assert.False(t, ok)
-	}
-}
-
 type writeBufferContext struct {
 	w  *writeBuffer
 	wg *sync.WaitGroup
 	ps pipes
-	inc chan int
 }
 
 func makeWriteBufferContext(n, q int, c net.Conn) writeBufferContext {
 	out := writeBufferContext{
-		wg:  new(sync.WaitGroup),
-		ps:  makePipes(q),
-		inc: make(chan int, q),
+		wg: new(sync.WaitGroup),
+		ps: makePipes(q, defTimeout.Nanoseconds()),
 	}
 
 	if c == nil {
 		c = makeTestWriteBufferConn(out.ps)
 	}
 
-	out.w = newWriteBuffer(c, n, out.ps, out.inc)
+	out.w = newWriteBuffer(c, n, out.ps)
 	return out
 }
 

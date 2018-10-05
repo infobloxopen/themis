@@ -1,50 +1,95 @@
 package client
 
 import (
+	"net"
 	"sync"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestTerminatorIncFirst(t *testing.T) {
+func TestTerminator(t *testing.T) {
 	wg := new(sync.WaitGroup)
+	c := NewClient().(*client)
 
-	inc := make(chan int)
-	dec := make(chan int)
+	p := makePipes(defMaxQueue, defTimeout.Nanoseconds())
+	dt := make(chan struct{})
+
+	nc := newTestTerminatorConn()
 
 	wg.Add(1)
-	go terminator(wg, inc, dec)
+	go c.terminator(wg, nc, p, dt)
 
-	inc <- 0
-	inc <- 1
-	inc <- 2
-	close(inc)
-
-	dec <- 0
-	dec <- 1
-	dec <- 2
-	close(dec)
-
+	close(dt)
 	wg.Wait()
+
+	assert.False(t, nc.c)
 }
 
-func TestTerminatorDecFirst(t *testing.T) {
+func TestTerminatorTimeout(t *testing.T) {
 	wg := new(sync.WaitGroup)
+	ch := make(chan time.Time)
+	c := NewClient(withTestTermFlushChannel(ch)).(*client)
 
-	inc := make(chan int)
-	dec := make(chan int)
+	ps := makePipes(defMaxQueue, defTimeout.Nanoseconds())
+	dt := make(chan struct{})
+
+	nc := newTestTerminatorConn()
 
 	wg.Add(1)
-	go terminator(wg, inc, dec)
+	go c.terminator(wg, nc, ps, dt)
 
-	dec <- 0
-	dec <- 1
-	dec <- 2
-	close(dec)
+	i1, p1 := ps.alloc()
+	var err1 error
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer ps.free(i1)
 
-	inc <- 0
-	inc <- 1
-	inc <- 2
-	close(inc)
+		_, err1 = p1.get()
+	}()
 
+	i2, p2 := ps.alloc()
+	var err2 error
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer ps.free(i2)
+
+		_, err2 = p2.get()
+	}()
+
+	next := time.Unix(0, *p1.t).Add(2 * defTimeout)
+	*p2.t = next.UnixNano()
+
+	ch <- next
+
+	close(dt)
 	wg.Wait()
+
+	assert.True(t, nc.c)
+	assert.Equal(t, errTimeout, err1)
+	assert.Equal(t, errReaderBroken, err2)
 }
+
+type testTerminatorConn struct {
+	c bool
+}
+
+func newTestTerminatorConn() *testTerminatorConn {
+	return new(testTerminatorConn)
+}
+
+func (c *testTerminatorConn) Close() error {
+	c.c = true
+	return nil
+}
+
+func (c *testTerminatorConn) Write(b []byte) (int, error)        { panic("not implemented") }
+func (c *testTerminatorConn) Read(b []byte) (int, error)         { panic("not implemented") }
+func (c *testTerminatorConn) LocalAddr() net.Addr                { panic("not implemented") }
+func (c *testTerminatorConn) RemoteAddr() net.Addr               { panic("not implemented") }
+func (c *testTerminatorConn) SetDeadline(t time.Time) error      { panic("not implemented") }
+func (c *testTerminatorConn) SetReadDeadline(t time.Time) error  { panic("not implemented") }
+func (c *testTerminatorConn) SetWriteDeadline(t time.Time) error { panic("not implemented") }

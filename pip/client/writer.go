@@ -6,10 +6,10 @@ import (
 	"time"
 )
 
-func (c *client) writer(wg *sync.WaitGroup, nc net.Conn, req chan request, p pipes, inc chan int) {
+func (c *client) writer(wg *sync.WaitGroup, nc net.Conn, p pipes, req chan request) {
 	defer wg.Done()
 
-	w := newWriteBuffer(nc, c.opts.bufSize, p, inc)
+	w := newWriteBuffer(nc, c.opts.bufSize, p)
 
 	ch := c.opts.writeFlushCh
 	if ch == nil {
@@ -23,7 +23,7 @@ func (c *client) writer(wg *sync.WaitGroup, nc net.Conn, req chan request, p pip
 		select {
 		case r, ok := <-req:
 			if !ok {
-				w.finalize()
+				w.flush()
 				return
 			}
 

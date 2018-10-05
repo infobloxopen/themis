@@ -32,15 +32,13 @@ func (c *client) Connect() error {
 	req := make(chan request, c.opts.maxQueue)
 	wwg := new(sync.WaitGroup)
 
-	p := makePipes(c.opts.maxQueue)
-
-	inc := make(chan int, c.opts.maxQueue)
-	dec := make(chan int, c.opts.maxQueue)
+	p := makePipes(c.opts.maxQueue, c.opts.timeout.Nanoseconds())
+	dt := make(chan struct{})
 
 	wwg.Add(3)
-	go c.writer(wwg, nc, req, p, inc)
-	go c.reader(wwg, nc, p, dec)
-	go terminator(wwg, inc, dec)
+	go c.writer(wwg, nc, p, req)
+	go c.reader(wwg, nc, p)
+	go c.terminator(wwg, nc, p, dt)
 
 	c.lock.Lock()
 	c.c = nc
@@ -48,6 +46,7 @@ func (c *client) Connect() error {
 	c.req = req
 	c.wwg = wwg
 	c.pipes = p
+	c.dt = dt
 	c.lock.Unlock()
 
 	state = pipClientConnected
@@ -70,9 +69,13 @@ func (c *client) Close() {
 	c.req = nil
 	wwg := c.wwg
 	c.wwg = nil
+	c.pipes = pipes{}
+	dt := c.dt
+	c.dt = nil
 	c.lock.Unlock()
 
 	nc.Close()
+	close(dt)
 
 	gwg.Wait()
 	close(req)

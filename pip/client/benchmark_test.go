@@ -2,7 +2,9 @@ package client
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/infobloxopen/themis/pdp"
@@ -36,22 +38,32 @@ func BenchmarkClientServerParallel(b *testing.B) {
 
 	a := pdp.MakeStringAssignment("test", "test")
 
-	N := 25
+	N := 256
+	gmp := runtime.GOMAXPROCS(0)
 
-	c := NewClient()
+	c := NewClient(WithMaxQueue(N * gmp))
 	if err := c.Connect(); err != nil {
 		b.Fatalf("failed to connect to server %s", err)
 	}
 	defer c.Close()
 
-	b.SetParallelism(N)
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			if _, err := c.Get(a); err != nil {
-				panic(fmt.Errorf("failed to get data from %s: %s", c.(*client).c.RemoteAddr(), err))
+	p := new(int64)
+	idx := 0
+	b.Run("BenchmarkClientServerParallel", func(b *testing.B) {
+		idx++
+		*p = 0
+		b.SetParallelism(N)
+		b.RunParallel(func(pb *testing.PB) {
+			atomic.AddInt64(p, 1)
+			for pb.Next() {
+				if _, err := c.Get(a); err != nil {
+					panic(fmt.Errorf("failed to get data from %s: %s", c.(*client).c.RemoteAddr(), err))
+				}
 			}
-		}
+		})
 	})
+
+	b.Logf("number of goroutines: %d (GOMAXPROCS=%d)", *p, gmp)
 }
 
 type benchEchoServer struct {

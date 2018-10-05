@@ -14,10 +14,9 @@ type readBuffer struct {
 	idx    int
 	pool   bytePool
 	p      pipes
-	dec    chan int
 }
 
-func newReadBuffer(n, m int, pool bytePool, p pipes, dec chan int) *readBuffer {
+func newReadBuffer(n, m int, pool bytePool, p pipes) *readBuffer {
 	return &readBuffer{
 		in:   make([]byte, n),
 		buf:  make([]byte, 0, msgSizeBytes),
@@ -25,7 +24,6 @@ func newReadBuffer(n, m int, pool bytePool, p pipes, dec chan int) *readBuffer {
 		idx:  -1,
 		pool: pool,
 		p:    p,
-		dec:  dec,
 	}
 }
 
@@ -33,8 +31,6 @@ func (rb *readBuffer) finalize() {
 	if rb.msgBuf != nil {
 		rb.pool.Put(rb.msgBuf[:cap(rb.msgBuf)])
 	}
-
-	close(rb.dec)
 }
 
 func (rb *readBuffer) read(r io.ReadCloser) bool {
@@ -121,7 +117,6 @@ func (rb *readBuffer) fillMsg(b []byte) (int, bool) {
 	}
 
 	rb.p.putBytes(rb.idx, append(a, b[:n]...))
-	rb.dec <- rb.idx
 	rb.size, rb.idx, rb.msgBuf = 0, -1, nil
 
 	return n, true

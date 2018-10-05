@@ -61,9 +61,36 @@ func TestWithWriteInterval(t *testing.T) {
 	assert.Equal(t, defWriteInt, o.writeInt)
 }
 
+func TestWithResponseTimeout(t *testing.T) {
+	var o options
+
+	WithResponseTimeout(time.Second)(&o)
+	assert.Equal(t, time.Second, o.timeout)
+
+	WithResponseTimeout(-1 * time.Second)(&o)
+	assert.Equal(t, defTimeout, o.timeout)
+}
+
+func TestWithResponseCheckInterval(t *testing.T) {
+	var o options
+
+	WithResponseCheckInterval(time.Second)(&o)
+	assert.Equal(t, time.Second, o.termInt)
+
+	WithResponseCheckInterval(-1 * time.Second)(&o)
+	assert.Equal(t, defTermInt, o.termInt)
+}
+
 func TestWithTestWriteFlushChannel(t *testing.T) {
 	var o options
 
 	withTestWriteFlushChannel(make(chan time.Time))(&o)
 	assert.NotZero(t, o.writeFlushCh)
+}
+
+func TestWithTestTermFlushChannel(t *testing.T) {
+	var o options
+
+	withTestTermFlushChannel(make(chan time.Time))(&o)
+	assert.NotZero(t, o.termFlushCh)
 }

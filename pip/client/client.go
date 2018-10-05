@@ -68,4 +68,5 @@ type client struct {
 	wwg  *sync.WaitGroup
 
 	pipes pipes
+	dt    chan struct{}
 }
