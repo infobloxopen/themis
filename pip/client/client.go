@@ -3,7 +3,6 @@ package client
 
 import (
 	"errors"
-	"net"
 	"sync"
 
 	"github.com/infobloxopen/themis/pdp"
@@ -49,24 +48,16 @@ func NewClient(opts ...Option) Client {
 
 		state: new(uint32),
 		pool:  makeBytePool(o.maxSize, false),
-
-		lock: new(sync.RWMutex),
 	}
 }
 
 type client struct {
+	sync.RWMutex
+
 	opts options
 
 	state *uint32
 	pool  bytePool
 
-	c net.Conn
-
-	lock *sync.RWMutex
-	gwg  *sync.WaitGroup
-	req  chan request
-	wwg  *sync.WaitGroup
-
-	pipes pipes
-	dt    chan struct{}
+	c *connection
 }

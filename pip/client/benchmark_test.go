@@ -26,7 +26,7 @@ func BenchmarkClientServer(b *testing.B) {
 
 		for i := 0; i < b.N; i++ {
 			if _, err := c.Get(a); err != nil {
-				b.Fatalf("failed to get data %d from %s: %s", i, c.(*client).c.RemoteAddr(), err)
+				b.Fatalf("failed to get data %d from %s: %s", i, c.(*client).c.n.RemoteAddr(), err)
 			}
 		}
 	})
@@ -57,7 +57,7 @@ func BenchmarkClientServerParallel(b *testing.B) {
 			atomic.AddInt64(p, 1)
 			for pb.Next() {
 				if _, err := c.Get(a); err != nil {
-					panic(fmt.Errorf("failed to get data from %s: %s", c.(*client).c.RemoteAddr(), err))
+					panic(fmt.Errorf("failed to get data from %s: %s", c.(*client).c.n.RemoteAddr(), err))
 				}
 			}
 		})

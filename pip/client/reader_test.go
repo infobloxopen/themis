@@ -15,16 +15,22 @@ func TestReader(t *testing.T) {
 	msgs := [][]byte{}
 	errs := []error{}
 
-	pool := makeBytePool(defMaxSize, false)
+	c := NewClient(
+		WithMaxQueue(3),
+	).(*client)
 
-	wg := new(sync.WaitGroup)
-	ps := makePipes(3, defTimeout.Nanoseconds())
-	for i := 0; i < len(ps.p); i++ {
-		idx, p := ps.alloc()
-		wg.Add(1)
-		go func(wg *sync.WaitGroup, idx int, p pipe) {
-			defer wg.Done()
-			defer ps.free(idx)
+	conn := c.newConnection(newTestReaderConn(
+		0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01,
+		0x08, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x02, 0x02, 0x02,
+		0x08, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x03, 0x03, 0x03,
+	))
+
+	for i := 0; i < len(conn.p.p); i++ {
+		idx, p := conn.p.alloc()
+		conn.w.Add(1)
+		go func(idx int, p pipe) {
+			defer conn.w.Done()
+			defer conn.p.free(idx)
 
 			b, err := p.get()
 			m.Lock()
@@ -41,21 +47,14 @@ func TestReader(t *testing.T) {
 			m.Unlock()
 
 			if b != nil {
-				pool.Put(b[:cap(b)])
+				c.pool.Put(b[:cap(b)])
 			}
-		}(wg, idx, p)
+		}(idx, p)
 	}
 
-	c := NewClient().(*client)
-
-	wg.Add(1)
-	c.reader(wg, newTestReaderConn(
-		0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01,
-		0x08, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x02, 0x02, 0x02,
-		0x08, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x03, 0x03, 0x03,
-	), ps)
-
-	wg.Wait()
+	conn.w.Add(1)
+	conn.reader()
+	conn.w.Wait()
 
 	assert.ElementsMatch(t, [][]byte{
 		{0x01, 0x01, 0x01, 0x01},

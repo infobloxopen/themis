@@ -2,7 +2,6 @@ package client
 
 import (
 	"net"
-	"sync"
 	"testing"
 	"time"
 
@@ -10,52 +9,46 @@ import (
 )
 
 func TestTerminator(t *testing.T) {
-	wg := new(sync.WaitGroup)
 	c := NewClient().(*client)
 
-	p := makePipes(defMaxQueue, defTimeout.Nanoseconds())
-	dt := make(chan struct{})
+	n := newTestTerminatorConn()
+	conn := c.newConnection(n)
 
-	nc := newTestTerminatorConn()
+	conn.w.Add(1)
+	go conn.terminator()
 
-	wg.Add(1)
-	go c.terminator(wg, nc, p, dt)
+	close(conn.t)
+	conn.w.Wait()
 
-	close(dt)
-	wg.Wait()
-
-	assert.False(t, nc.c)
+	assert.False(t, n.c)
 }
 
 func TestTerminatorTimeout(t *testing.T) {
-	wg := new(sync.WaitGroup)
 	ch := make(chan time.Time)
 	c := NewClient(withTestTermFlushChannel(ch)).(*client)
 
-	ps := makePipes(defMaxQueue, defTimeout.Nanoseconds())
-	dt := make(chan struct{})
+	n := newTestTerminatorConn()
+	conn := c.newConnection(n)
 
-	nc := newTestTerminatorConn()
+	conn.w.Add(1)
+	go conn.terminator()
 
-	wg.Add(1)
-	go c.terminator(wg, nc, ps, dt)
-
-	i1, p1 := ps.alloc()
+	i1, p1 := conn.p.alloc()
 	var err1 error
-	wg.Add(1)
+	conn.w.Add(1)
 	go func() {
-		defer wg.Done()
-		defer ps.free(i1)
+		defer conn.w.Done()
+		defer conn.p.free(i1)
 
 		_, err1 = p1.get()
 	}()
 
-	i2, p2 := ps.alloc()
+	i2, p2 := conn.p.alloc()
 	var err2 error
-	wg.Add(1)
+	conn.w.Add(1)
 	go func() {
-		defer wg.Done()
-		defer ps.free(i2)
+		defer conn.w.Done()
+		defer conn.p.free(i2)
 
 		_, err2 = p2.get()
 	}()
@@ -65,10 +58,10 @@ func TestTerminatorTimeout(t *testing.T) {
 
 	ch <- next
 
-	close(dt)
-	wg.Wait()
+	close(conn.t)
+	conn.w.Wait()
 
-	assert.True(t, nc.c)
+	assert.True(t, n.c)
 	assert.Equal(t, errTimeout, err1)
 	assert.Equal(t, errReaderBroken, err2)
 }

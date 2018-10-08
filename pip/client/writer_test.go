@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
-	"sync"
 	"testing"
 	"time"
 
@@ -12,19 +11,20 @@ import (
 )
 
 func TestWriter(t *testing.T) {
-	wg := new(sync.WaitGroup)
-	req := make(chan request)
-	ps := makePipes(1, defTimeout.Nanoseconds())
+	c := NewClient(
+		WithMaxQueue(1),
+	).(*client)
 
-	c := NewClient().(*client)
+	conn := c.newConnection(nil)
+	conn.n = makeTestWriterConn(conn.p)
 
-	wg.Add(1)
-	go c.writer(wg, makeTestWriterConn(ps), ps, req)
+	conn.w.Add(1)
+	go conn.writer()
 
-	i, p := ps.alloc()
-	defer ps.free(i)
+	i, p := conn.p.alloc()
+	defer conn.p.free(i)
 
-	req <- request{
+	conn.r <- request{
 		i: i,
 		b: []byte{0xef, 0xbe, 0xad, 0xde},
 	}
@@ -32,30 +32,32 @@ func TestWriter(t *testing.T) {
 	_, err := p.get()
 	assert.NoError(t, err)
 
-	close(req)
-	wg.Wait()
+	close(conn.r)
+	conn.w.Wait()
 }
 
 func TestWriterNoTimeout(t *testing.T) {
-	wg := new(sync.WaitGroup)
-	req := make(chan request)
-	ps := makePipes(1, defTimeout.Nanoseconds())
-
 	c := NewClient(
+		WithMaxQueue(1),
 		withTestWriteFlushChannel(make(chan time.Time)),
 	).(*client)
 
-	wg.Add(1)
-	go c.writer(wg, makeTestWriterConn(ps), ps, req)
+	conn := c.newConnection(nil)
+	conn.n = makeTestWriterConn(conn.p)
 
-	i, p := ps.alloc()
-	req <- request{
+	conn.w.Add(1)
+	go conn.writer()
+
+	i, p := conn.p.alloc()
+	defer conn.p.free(i)
+
+	conn.r <- request{
 		i: i,
 		b: []byte{0xef, 0xbe, 0xad, 0xde},
 	}
-	close(req)
+	close(conn.r)
 
-	wg.Wait()
+	conn.w.Wait()
 	_, err := p.get()
 	assert.NoError(t, err)
 }

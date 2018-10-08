@@ -1,19 +1,15 @@
 package client
 
-import (
-	"net"
-	"sync"
-	"time"
-)
+import "time"
 
-func (c *client) writer(wg *sync.WaitGroup, nc net.Conn, p pipes, req chan request) {
-	defer wg.Done()
+func (c *connection) writer() {
+	defer c.w.Done()
 
-	w := newWriteBuffer(nc, c.opts.bufSize, p)
+	w := newWriteBuffer(c.n, c.c.opts.bufSize, c.p)
 
-	ch := c.opts.writeFlushCh
+	ch := c.c.opts.writeFlushCh
 	if ch == nil {
-		t := time.NewTicker(c.opts.writeInt)
+		t := time.NewTicker(c.c.opts.writeInt)
 		defer t.Stop()
 
 		ch = t.C
@@ -21,7 +17,7 @@ func (c *client) writer(wg *sync.WaitGroup, nc net.Conn, p pipes, req chan reque
 
 	for {
 		select {
-		case r, ok := <-req:
+		case r, ok := <-c.r:
 			if !ok {
 				w.flush()
 				return

@@ -1,17 +1,13 @@
 package client
 
-import (
-	"net"
-	"sync"
-	"time"
-)
+import "time"
 
-func (c *client) terminator(wg *sync.WaitGroup, nc net.Conn, p pipes, done chan struct{}) {
-	defer wg.Done()
+func (c *connection) terminator() {
+	defer c.w.Done()
 
-	ch := c.opts.termFlushCh
+	ch := c.c.opts.termFlushCh
 	if ch == nil {
-		t := time.NewTicker(c.opts.termInt)
+		t := time.NewTicker(c.c.opts.termInt)
 		defer t.Stop()
 
 		ch = t.C
@@ -19,13 +15,13 @@ func (c *client) terminator(wg *sync.WaitGroup, nc net.Conn, p pipes, done chan 
 
 	for {
 		select {
-		case <-done:
-			p.flush()
+		case <-c.t:
+			c.p.flush()
 			return
 
 		case t := <-ch:
-			if p.check(t) {
-				nc.Close()
+			if c.p.check(t) {
+				c.n.Close()
 			}
 		}
 	}

@@ -23,31 +23,17 @@ func (c *client) Connect() error {
 		atomic.StoreUint32(c.state, state)
 	}()
 
-	nc, err := net.Dial(c.opts.net, c.opts.addr)
+	n, err := net.Dial(c.opts.net, c.opts.addr)
 	if err != nil {
 		return err
 	}
 
-	gwg := new(sync.WaitGroup)
-	req := make(chan request, c.opts.maxQueue)
-	wwg := new(sync.WaitGroup)
+	conn := c.newConnection(n)
+	conn.start()
 
-	p := makePipes(c.opts.maxQueue, c.opts.timeout.Nanoseconds())
-	dt := make(chan struct{})
-
-	wwg.Add(3)
-	go c.writer(wwg, nc, p, req)
-	go c.reader(wwg, nc, p)
-	go c.terminator(wwg, nc, p, dt)
-
-	c.lock.Lock()
-	c.c = nc
-	c.gwg = gwg
-	c.req = req
-	c.wwg = wwg
-	c.pipes = p
-	c.dt = dt
-	c.lock.Unlock()
+	c.Lock()
+	c.c = conn
+	c.Unlock()
 
 	state = pipClientConnected
 
@@ -60,25 +46,48 @@ func (c *client) Close() {
 	}
 	defer atomic.StoreUint32(c.state, pipClientIdle)
 
-	c.lock.Lock()
-	nc := c.c
+	c.Lock()
+	conn := c.c
 	c.c = nil
-	gwg := c.gwg
-	c.gwg = nil
-	req := c.req
-	c.req = nil
-	wwg := c.wwg
-	c.wwg = nil
-	c.pipes = pipes{}
-	dt := c.dt
-	c.dt = nil
-	c.lock.Unlock()
+	c.Unlock()
 
-	nc.Close()
-	close(dt)
+	conn.close()
+}
 
-	gwg.Wait()
-	close(req)
+type connection struct {
+	c *client
+	n net.Conn
 
-	wwg.Wait()
+	g sync.WaitGroup
+	w sync.WaitGroup
+
+	r chan request
+	t chan struct{}
+	p pipes
+}
+
+func (c *client) newConnection(n net.Conn) *connection {
+	return &connection{
+		c: c,
+		n: n,
+		r: make(chan request, c.opts.maxQueue),
+		t: make(chan struct{}),
+		p: makePipes(c.opts.maxQueue, c.opts.timeout.Nanoseconds()),
+	}
+}
+
+func (c *connection) start() {
+	c.w.Add(3)
+	go c.writer()
+	go c.reader()
+	go c.terminator()
+}
+
+func (c *connection) close() {
+	c.n.Close()
+	close(c.t)
+	c.g.Wait()
+
+	close(c.r)
+	c.w.Wait()
 }

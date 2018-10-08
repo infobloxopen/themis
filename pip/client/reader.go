@@ -1,16 +1,11 @@
 package client
 
-import (
-	"net"
-	"sync"
-)
+func (c *connection) reader() {
+	defer c.w.Done()
 
-func (c *client) reader(wg *sync.WaitGroup, nc net.Conn, p pipes) {
-	defer wg.Done()
-
-	r := newReadBuffer(c.opts.bufSize, c.opts.maxSize, c.pool, p)
+	r := newReadBuffer(c.c.opts.bufSize, c.c.opts.maxSize, c.c.pool, c.p)
 	for {
-		if ok := r.read(nc); !ok {
+		if ok := r.read(c.n); !ok {
 			r.finalize()
 			break
 		}
