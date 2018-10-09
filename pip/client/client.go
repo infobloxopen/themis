@@ -49,7 +49,7 @@ func NewClient(opts ...Option) Client {
 		opts: o,
 
 		state: new(uint32),
-		pool:  makeBytePool(o.maxSize, false),
+		pool:  makeBytePool(o.maxSize),
 	}
 }
 
@@ -120,7 +120,11 @@ func (c *client) Get(args ...pdp.AttributeAssignment) (pdp.AttributeValue, error
 	defer conn.g.Done()
 
 	b := c.pool.Get()
-	defer c.pool.Put(b)
+	defer func() {
+		if b != nil {
+			c.pool.Put(b)
+		}
+	}()
 
 	n, err := pdp.MarshalRequestAssignmentsToBuffer(b, args)
 	if err != nil {
@@ -128,9 +132,6 @@ func (c *client) Get(args ...pdp.AttributeAssignment) (pdp.AttributeValue, error
 	}
 
 	b, err = conn.get(b[:n])
-	if b != nil {
-		c.pool.Put(b[:cap(b)])
-	}
 	return pdp.UndefinedValue, err
 }
 

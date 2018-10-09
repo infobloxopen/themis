@@ -24,6 +24,7 @@ func (c *connection) writer() {
 			}
 
 			w.put(r)
+			c.c.pool.Put(r.b)
 
 		case <-ch:
 			w.flush()

@@ -56,8 +56,8 @@ func (p pipes) putError(i int, err error) {
 	p.p[i].putError(err)
 }
 
-func (p pipes) putBytes(i int, b []byte) {
-	p.p[i].putBytes(b)
+func (p pipes) putBytes(i int, b []byte) bool {
+	return p.p[i].putBytes(b)
 }
 
 func (p pipes) check(t time.Time) bool {

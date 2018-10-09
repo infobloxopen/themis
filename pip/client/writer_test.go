@@ -21,15 +21,23 @@ func TestWriter(t *testing.T) {
 	conn.w.Add(1)
 	go conn.writer()
 
+	b := c.pool.Get()
+	defer func() {
+		if b != nil {
+			c.pool.Put(b)
+		}
+	}()
+	b = append(b[:0], 0xef, 0xbe, 0xad, 0xde)
+
 	i, p := conn.p.alloc()
 	defer conn.p.free(i)
 
 	conn.r <- request{
 		i: i,
-		b: []byte{0xef, 0xbe, 0xad, 0xde},
+		b: b,
 	}
 
-	_, err := p.get()
+	b, err := p.get()
 	assert.NoError(t, err)
 
 	close(conn.r)
@@ -48,17 +56,26 @@ func TestWriterNoTimeout(t *testing.T) {
 	conn.w.Add(1)
 	go conn.writer()
 
+	b := c.pool.Get()
+	defer func() {
+		if b != nil {
+			c.pool.Put(b)
+		}
+	}()
+	b = append(b[:0], 0xef, 0xbe, 0xad, 0xde)
+
 	i, p := conn.p.alloc()
 	defer conn.p.free(i)
 
 	conn.r <- request{
 		i: i,
-		b: []byte{0xef, 0xbe, 0xad, 0xde},
+		b: b,
 	}
 	close(conn.r)
 
 	conn.w.Wait()
-	_, err := p.get()
+
+	b, err := p.get()
 	assert.NoError(t, err)
 }
 

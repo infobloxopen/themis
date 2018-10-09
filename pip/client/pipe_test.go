@@ -50,11 +50,23 @@ func TestPipePutBytes(t *testing.T) {
 	p := makePipe()
 	assert.Empty(t, p.ch)
 
-	p.putBytes([]byte{0xde, 0xc0, 0xad, 0xde})
+	assert.True(t, p.putBytes([]byte{0xde, 0xc0, 0xad, 0xde}))
 
 	b, err := p.get()
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde}, b)
+}
+
+func TestPipePutBytesDuplicate(t *testing.T) {
+	p := makePipe()
+	assert.Empty(t, p.ch)
+
+	assert.True(t, p.putBytes([]byte{0x01, 0x02, 0x03, 0x04}))
+	assert.False(t, p.putBytes([]byte{0x05, 0x06, 0x07, 0x08}))
+
+	b, err := p.get()
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{0x01, 0x02, 0x03, 0x04}, b)
 }
 
 func TestPipePutError(t *testing.T) {

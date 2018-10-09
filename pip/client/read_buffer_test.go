@@ -219,6 +219,42 @@ func TestReadBufferFillMsgPartial(t *testing.T) {
 	assert.Equal(t, []byte{0xde, 0xc0}, ctx.r.msgBuf)
 }
 
+func TestReadBufferFillMsgDuplicate(t *testing.T) {
+	ctx := makeReadBufferContext(1024, 8, 1)
+	ctx.r.size = 4
+	ctx.r.idx = 0
+	ctx.r.msgBuf = ctx.pool.Get()[:0]
+
+	n, err := ctx.r.fillMsg([]byte{
+		0x01, 0x02, 0x03, 0x04,
+	})
+	assert.Equal(t, 4, n)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, ctx.r.size)
+	assert.Equal(t, -1, ctx.r.idx)
+	assert.Zero(t, ctx.r.msgBuf)
+
+	ctx.r.size = 4
+	ctx.r.idx = 0
+	ctx.r.msgBuf = ctx.pool.Get()[:0]
+
+	n, err = ctx.r.fillMsg([]byte{
+		0x05, 0x06, 0x07, 0x08,
+	})
+	assert.Equal(t, 4, n)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, ctx.r.size)
+	assert.Equal(t, -1, ctx.r.idx)
+	assert.Zero(t, ctx.r.msgBuf)
+
+	b, err := ctx.p.p[0].get()
+	defer ctx.pool.Put(b)
+
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{0x01, 0x02, 0x03, 0x04}, b)
+	assert.Empty(t, ctx.p.p[0].ch)
+}
+
 func TestReadBufferFinalize(t *testing.T) {
 	ctx := makeReadBufferContext(1024, 8, 1)
 	ctx.r.size = 4
@@ -246,7 +282,7 @@ type readBufferContext struct {
 func makeReadBufferContext(n, m, q int) readBufferContext {
 	out := readBufferContext{
 		p:    makePipes(q, defTimeout.Nanoseconds()),
-		pool: makeBytePool(m, false),
+		pool: makeBytePool(m),
 	}
 
 	out.r = newReadBuffer(n, m, out.pool, out.p)

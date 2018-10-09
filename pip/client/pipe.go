@@ -46,11 +46,13 @@ func (p pipe) putError(err error) {
 	atomic.StoreInt64(p.t, math.MinInt64)
 }
 
-func (p pipe) putBytes(b []byte) {
+func (p pipe) putBytes(b []byte) (ok bool) {
 	select {
 	default:
 	case p.ch <- response{b: b}:
+		ok = true
 	}
 
 	atomic.StoreInt64(p.t, math.MinInt64)
+	return
 }

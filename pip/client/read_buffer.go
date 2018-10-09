@@ -36,7 +36,7 @@ func newReadBuffer(n, m int, pool bytePool, p pipes) *readBuffer {
 
 func (rb *readBuffer) finalize() {
 	if rb.msgBuf != nil {
-		rb.pool.Put(rb.msgBuf[:cap(rb.msgBuf)])
+		rb.pool.Put(rb.msgBuf)
 	}
 }
 
@@ -122,7 +122,9 @@ func (rb *readBuffer) fillMsg(b []byte) (int, error) {
 		return len(b), nil
 	}
 
-	rb.p.putBytes(rb.idx, append(a, b[:n]...))
+	if !rb.p.putBytes(rb.idx, append(a, b[:n]...)) {
+		rb.pool.Put(rb.msgBuf)
+	}
 	rb.size, rb.idx, rb.msgBuf = 0, -1, nil
 
 	return n, nil

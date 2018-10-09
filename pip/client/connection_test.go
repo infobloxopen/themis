@@ -53,13 +53,14 @@ func TestConnectionGet(t *testing.T) {
 	defer conn.close()
 
 	b := c.pool.Get()
-	defer c.pool.Put(b)
+	defer func() {
+		if b != nil {
+			c.pool.Put(b)
+		}
+	}()
 
 	b = append(b[:0], 0xef, 0xbe, 0xad, 0xde)
 	b, err = conn.get(b)
-	if b != nil {
-		c.pool.Put(b[:cap(b)])
-	}
 
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{0xef, 0xbe, 0xad, 0xde}, b)

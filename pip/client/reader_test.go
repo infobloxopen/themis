@@ -47,7 +47,7 @@ func TestReader(t *testing.T) {
 			m.Unlock()
 
 			if b != nil {
-				c.pool.Put(b[:cap(b)])
+				c.pool.Put(b)
 			}
 		}(idx, p)
 	}
