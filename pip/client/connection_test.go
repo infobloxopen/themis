@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"net"
 	"testing"
 	"time"
@@ -13,7 +14,7 @@ import (
 func TestNewConnection(t *testing.T) {
 	c := NewClient().(*client)
 
-	n := makeCTestConn()
+	n := makeCTestConn(nil)
 	conn := c.newConnection(n)
 	if assert.NotZero(t, conn) {
 		assert.Equal(t, c, conn.c)
@@ -43,6 +44,10 @@ func TestConnectionGet(t *testing.T) {
 	c := NewClient().(*client)
 
 	n, err := net.Dial(c.opts.net, c.opts.addr)
+	if !assert.NoError(t, err) {
+		assert.FailNow(t, "failed to connect to test server")
+	}
+
 	conn := c.newConnection(n)
 	conn.start()
 	defer conn.close()
@@ -60,13 +65,85 @@ func TestConnectionGet(t *testing.T) {
 	assert.Equal(t, []byte{0xef, 0xbe, 0xad, 0xde}, b)
 }
 
-type cTestConn struct{}
+func TestConnectionClose(t *testing.T) {
+	s := server.NewServer()
+	if !assert.NoError(t, s.Bind()) {
+		assert.FailNow(t, "failed to bind server")
+	}
+	defer func() {
+		assert.NoError(t, s.Stop())
+	}()
+	var sErr error
+	go func() {
+		sErr = s.Serve()
+	}()
+	defer func() {
+		assert.NoError(t, sErr)
+	}()
 
-func makeCTestConn() cTestConn                         { return cTestConn{} }
+	var cErr error
+	c := NewClient(WithConnErrHandler(func(a net.Addr, err error) {
+		cErr = err
+	})).(*client)
+
+	n, err := net.Dial(c.opts.net, c.opts.addr)
+	if !assert.NoError(t, err) {
+		assert.FailNow(t, "failed to connect to test server")
+	}
+
+	conn := c.newConnection(n)
+	conn.start()
+	conn.close()
+	assert.NoError(t, cErr)
+}
+
+func TestConnectionCloseNet(t *testing.T) {
+	var cErr error
+	c := NewClient(WithConnErrHandler(func(a net.Addr, err error) {
+		cErr = err
+	})).(*client)
+
+	tErr := errors.New("test")
+	conn := c.newConnection(makeCTestConn(tErr))
+	conn.closeNet()
+	assert.Equal(t, tErr, cErr)
+}
+
+func TestIsConnectionClosed(t *testing.T) {
+	err := errors.New("test")
+	assert.False(t, isConnClosed(err))
+
+	err = &net.OpError{
+		Err: errors.New(netConnClosedMsg),
+	}
+	assert.True(t, isConnClosed(err))
+}
+
+type cTestConn struct {
+	err error
+}
+
+func makeCTestConn(err error) cTestConn {
+	return cTestConn{
+		err: err,
+	}
+}
+
+func (c cTestConn) Close() error {
+	return c.err
+}
+
+func (c cTestConn) RemoteAddr() net.Addr {
+	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	if err != nil {
+		panic(err)
+	}
+
+	return addr
+}
+
 func (c cTestConn) Read(b []byte) (int, error)         { panic("not implemented") }
-func (c cTestConn) RemoteAddr() net.Addr               { panic("not implemented") }
-func (c cTestConn) Close() error                       { panic("not implemented") }
-func (c cTestConn) Write(b []byte) (n int, err error)  { panic("not implemented") }
+func (c cTestConn) Write(b []byte) (int, error)        { panic("not implemented") }
 func (c cTestConn) LocalAddr() net.Addr                { panic("not implemented") }
 func (c cTestConn) SetDeadline(t time.Time) error      { panic("not implemented") }
 func (c cTestConn) SetReadDeadline(t time.Time) error  { panic("not implemented") }

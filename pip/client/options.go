@@ -2,6 +2,7 @@ package client
 
 import (
 	"math"
+	"net"
 	"time"
 )
 
@@ -59,6 +60,17 @@ func WithBufferSize(n int) Option {
 	}
 }
 
+// ConnErrHandler is a function to process errors within a connection.
+type ConnErrHandler func(net.Addr, error)
+
+// WithConnErrHandler returns an Option which sets custom handler for transport
+// errors.
+func WithConnErrHandler(f ConnErrHandler) Option {
+	return func(o *options) {
+		o.onErr = f
+	}
+}
+
 // WithWriteInterval returns an Option which sets duration after which data
 // from write buffer are sent to network even if write buffer isn't full.
 // Default 50 us.
@@ -112,6 +124,7 @@ type options struct {
 	maxSize  int
 	maxQueue int
 	bufSize  int
+	onErr    ConnErrHandler
 	writeInt time.Duration
 	timeout  time.Duration
 	termInt  time.Duration

@@ -5,7 +5,11 @@ func (c *connection) reader() {
 
 	r := newReadBuffer(c.c.opts.bufSize, c.c.opts.maxSize, c.c.pool, c.p)
 	for {
-		if ok := r.read(c.n); !ok {
+		if err := r.read(c.n); err != nil {
+			if !isConnClosed(err) {
+				c.closeNet()
+			}
+
 			r.finalize()
 			break
 		}

@@ -1,6 +1,8 @@
 package client
 
 import (
+	"net"
+	"reflect"
 	"testing"
 	"time"
 
@@ -49,6 +51,14 @@ func TestWithBufferSize(t *testing.T) {
 
 	WithBufferSize(-1)(&o)
 	assert.Equal(t, defBufSize, o.bufSize)
+}
+
+func TestWithConnErrHandler(t *testing.T) {
+	var o options
+
+	f := func(net.Addr, error) {}
+	WithConnErrHandler(f)(&o)
+	assert.Equal(t, reflect.ValueOf(f).Pointer(), reflect.ValueOf(o.onErr).Pointer())
 }
 
 func TestWithWriteInterval(t *testing.T) {

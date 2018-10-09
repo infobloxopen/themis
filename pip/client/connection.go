@@ -34,8 +34,17 @@ func (c *connection) start() {
 	go c.terminator()
 }
 
+func (c *connection) closeNet() {
+	if err := c.n.Close(); err != nil && !isConnClosed(err) {
+		if f := c.c.opts.onErr; f != nil {
+			f(c.n.RemoteAddr(), err)
+		}
+	}
+}
+
 func (c *connection) close() {
-	c.n.Close()
+	c.closeNet()
+
 	close(c.t)
 	c.g.Wait()
 
@@ -53,4 +62,15 @@ func (c *connection) get(b []byte) ([]byte, error) {
 	}
 
 	return p.get()
+}
+
+const netConnClosedMsg = "use of closed network connection"
+
+func isConnClosed(err error) bool {
+	switch err := err.(type) {
+	case *net.OpError:
+		return err.Err.Error() == netConnClosedMsg
+	}
+
+	return false
 }

@@ -21,7 +21,7 @@ func (c *connection) terminator() {
 
 		case t := <-ch:
 			if c.p.check(t) {
-				c.n.Close()
+				c.closeNet()
 			}
 		}
 	}

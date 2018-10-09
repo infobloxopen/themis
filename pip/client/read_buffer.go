@@ -2,7 +2,14 @@ package client
 
 import (
 	"encoding/binary"
+	"errors"
 	"io"
+)
+
+var (
+	errMsgOverflow     = errors.New("message is too big")
+	errMsgUnderflow    = errors.New("message is too short")
+	errMsgInvalidIndex = errors.New("invalid message index")
 )
 
 type readBuffer struct {
@@ -33,25 +40,24 @@ func (rb *readBuffer) finalize() {
 	}
 }
 
-func (rb *readBuffer) read(r io.ReadCloser) bool {
+func (rb *readBuffer) read(r io.ReadCloser) error {
 	n, err := r.Read(rb.in)
 	if n > 0 {
 		b := rb.in[:n]
 		for len(b) > 0 {
-			m, ok := rb.extractData(b)
-			if !ok {
-				r.Close()
-				return false
+			m, err := rb.extractData(b)
+			if err != nil {
+				return err
 			}
 
 			b = b[m:]
 		}
 	}
 
-	return err == nil
+	return err
 }
 
-func (rb *readBuffer) extractData(b []byte) (int, bool) {
+func (rb *readBuffer) extractData(b []byte) (int, error) {
 	if rb.idx >= 0 {
 		return rb.fillMsg(b)
 	}
@@ -63,61 +69,61 @@ func (rb *readBuffer) extractData(b []byte) (int, bool) {
 	return rb.fillSize(b)
 }
 
-func (rb *readBuffer) fillSize(b []byte) (int, bool) {
+func (rb *readBuffer) fillSize(b []byte) (int, error) {
 	a := rb.buf
 	n := msgSizeBytes - len(a)
 	if n > len(b) {
 		rb.buf = append(a, b...)
-		return len(b), true
+		return len(b), nil
 	}
 
 	size := binary.LittleEndian.Uint32(append(a, b[:n]...))
 	rb.buf = a[:0]
 	if size > rb.max {
-		return n, false
+		return n, errMsgOverflow
 	}
 
 	rb.size = int(size)
 	if rb.size < msgIdxBytes {
-		return n, false
+		return n, errMsgUnderflow
 	}
 
-	return n, true
+	return n, nil
 }
 
-func (rb *readBuffer) fillIdx(b []byte) (int, bool) {
+func (rb *readBuffer) fillIdx(b []byte) (int, error) {
 	a := rb.buf
 	n := msgIdxBytes - len(a)
 	if n > len(b) {
 		rb.buf = append(a, b...)
 		rb.size -= len(b)
-		return len(b), true
+		return len(b), nil
 	}
 
 	idx := binary.LittleEndian.Uint32(append(a, b[:n]...))
 	rb.buf = a[:0]
 	if idx >= uint32(len(rb.p.p)) {
-		return n, false
+		return n, errMsgInvalidIndex
 	}
 
 	rb.size -= n
 	rb.idx = int(idx)
 	rb.msgBuf = rb.pool.Get()[:0]
 
-	return n, true
+	return n, nil
 }
 
-func (rb *readBuffer) fillMsg(b []byte) (int, bool) {
+func (rb *readBuffer) fillMsg(b []byte) (int, error) {
 	a := rb.msgBuf
 	n := rb.size
 	if n > len(b) {
 		rb.msgBuf = append(a, b...)
 		rb.size -= len(b)
-		return len(b), true
+		return len(b), nil
 	}
 
 	rb.p.putBytes(rb.idx, append(a, b[:n]...))
 	rb.size, rb.idx, rb.msgBuf = 0, -1, nil
 
-	return n, true
+	return n, nil
 }
