@@ -3,8 +3,6 @@ package client
 
 import (
 	"errors"
-	"net"
-	"sync"
 	"sync/atomic"
 
 	"github.com/infobloxopen/themis/pdp"
@@ -50,18 +48,17 @@ func NewClient(opts ...Option) Client {
 
 		state: new(uint32),
 		pool:  makeBytePool(o.maxSize),
+		b:     new(simpleBalancer),
 	}
 }
 
 type client struct {
-	sync.RWMutex
-
 	opts options
 
 	state *uint32
 	pool  bytePool
 
-	c *connection
+	b balancer
 }
 
 const (
@@ -81,17 +78,9 @@ func (c *client) Connect() error {
 		atomic.StoreUint32(c.state, state)
 	}()
 
-	n, err := net.Dial(c.opts.net, c.opts.addr)
-	if err != nil {
+	if err := c.b.start(c); err != nil {
 		return err
 	}
-
-	conn := c.newConnection(n)
-	conn.start()
-
-	c.Lock()
-	c.c = conn
-	c.Unlock()
 
 	state = pipClientConnected
 
@@ -104,16 +93,11 @@ func (c *client) Close() {
 	}
 	defer atomic.StoreUint32(c.state, pipClientIdle)
 
-	c.Lock()
-	conn := c.c
-	c.c = nil
-	c.Unlock()
-
-	conn.close()
+	c.b.stop()
 }
 
 func (c *client) Get(args ...pdp.AttributeAssignment) (pdp.AttributeValue, error) {
-	conn := c.getConnection()
+	conn := c.b.get()
 	if conn == nil {
 		return pdp.UndefinedValue, ErrNotConnected
 	}
@@ -133,16 +117,4 @@ func (c *client) Get(args ...pdp.AttributeAssignment) (pdp.AttributeValue, error
 
 	b, err = conn.get(b[:n])
 	return pdp.UndefinedValue, err
-}
-
-func (c *client) getConnection() *connection {
-	c.RLock()
-	defer c.RUnlock()
-
-	conn := c.c
-	if conn != nil {
-		conn.g.Add(1)
-	}
-
-	return conn
 }
