@@ -3,7 +3,9 @@ package client
 
 import (
 	"errors"
+	"net"
 	"sync"
+	"sync/atomic"
 
 	"github.com/infobloxopen/themis/pdp"
 )
@@ -60,4 +62,86 @@ type client struct {
 	pool  bytePool
 
 	c *connection
+}
+
+const (
+	pipClientIdle uint32 = iota
+	pipClientConnecting
+	pipClientConnected
+	pipClientClosing
+)
+
+func (c *client) Connect() error {
+	if !atomic.CompareAndSwapUint32(c.state, pipClientIdle, pipClientConnecting) {
+		return ErrConnected
+	}
+
+	state := pipClientIdle
+	defer func() {
+		atomic.StoreUint32(c.state, state)
+	}()
+
+	n, err := net.Dial(c.opts.net, c.opts.addr)
+	if err != nil {
+		return err
+	}
+
+	conn := c.newConnection(n)
+	conn.start()
+
+	c.Lock()
+	c.c = conn
+	c.Unlock()
+
+	state = pipClientConnected
+
+	return nil
+}
+
+func (c *client) Close() {
+	if !atomic.CompareAndSwapUint32(c.state, pipClientConnected, pipClientClosing) {
+		return
+	}
+	defer atomic.StoreUint32(c.state, pipClientIdle)
+
+	c.Lock()
+	conn := c.c
+	c.c = nil
+	c.Unlock()
+
+	conn.close()
+}
+
+func (c *client) Get(args ...pdp.AttributeAssignment) (pdp.AttributeValue, error) {
+	conn := c.getConnection()
+	if conn == nil {
+		return pdp.UndefinedValue, ErrNotConnected
+	}
+	defer conn.g.Done()
+
+	b := c.pool.Get()
+	defer c.pool.Put(b)
+
+	n, err := pdp.MarshalRequestAssignmentsToBuffer(b, args)
+	if err != nil {
+		return pdp.UndefinedValue, err
+	}
+
+	b, err = conn.get(b[:n])
+	if b != nil {
+		c.pool.Put(b[:cap(b)])
+	}
+	return pdp.UndefinedValue, err
+}
+
+func (c *client) getConnection() *connection {
+	c.RLock()
+	defer c.RUnlock()
+
+	conn := c.c
+	if conn != nil {
+		conn.g.Add(1)
+	}
+
+	return conn
 }
