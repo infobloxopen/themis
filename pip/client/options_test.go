@@ -23,6 +23,18 @@ func TestWithAddress(t *testing.T) {
 	assert.Equal(t, "localhost:0", o.addr)
 }
 
+func TestWithRoundRobinBalancer(t *testing.T) {
+	var o options
+
+	WithRoundRobinBalancer()(&o)
+	assert.Equal(t, balancerTypeRoundRobin, o.balancer)
+	assert.Empty(t, o.addrs)
+
+	WithRoundRobinBalancer("127.0.0.1:5600", "[::1]:5600")(&o)
+	assert.Equal(t, balancerTypeRoundRobin, o.balancer)
+	assert.Equal(t, []string{"127.0.0.1:5600", "[::1]:5600"}, o.addrs)
+}
+
 func TestWithMaxRequestSize(t *testing.T) {
 	var o options
 
@@ -59,6 +71,13 @@ func TestWithConnErrHandler(t *testing.T) {
 	f := func(net.Addr, error) {}
 	WithConnErrHandler(f)(&o)
 	assert.Equal(t, reflect.ValueOf(f).Pointer(), reflect.ValueOf(o.onErr).Pointer())
+}
+
+func TestWithConnTimeout(t *testing.T) {
+	var o options
+
+	WithConnTimeout(time.Second)(&o)
+	assert.Equal(t, time.Second, o.connTimeout)
 }
 
 func TestWithWriteInterval(t *testing.T) {

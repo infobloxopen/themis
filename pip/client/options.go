@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// An Option allows to set PIP client options.
+// An Option allows to set such options as address, balancer and so on.
 type Option func(*options)
 
 // WithNetwork returns an Option which sets destination network. The client
@@ -21,6 +21,19 @@ func WithNetwork(n string) Option {
 func WithAddress(a string) Option {
 	return func(o *options) {
 		o.addr = a
+	}
+}
+
+// WithRoundRobinBalancer returns an Option which sets round robin balancer.
+// If no addresses provided with the option client connects to all IP addresses
+// it can get by host name from WithAddress option. For "unix" network
+// the option is ignored.
+func WithRoundRobinBalancer(addrs ...string) Option {
+	return func(o *options) {
+		o.balancer = balancerTypeRoundRobin
+		if len(addrs) > 0 {
+			o.addrs = addrs
+		}
 	}
 }
 
@@ -68,6 +81,13 @@ type ConnErrHandler func(net.Addr, error)
 func WithConnErrHandler(f ConnErrHandler) Option {
 	return func(o *options) {
 		o.onErr = f
+	}
+}
+
+// WithConnTimeout returns an Option which sets connection timeout.
+func WithConnTimeout(d time.Duration) Option {
+	return func(o *options) {
+		o.connTimeout = d
 	}
 }
 
@@ -121,41 +141,59 @@ func withTestTermFlushChannel(ch <-chan time.Time) Option {
 }
 
 type options struct {
-	maxSize  int
-	maxQueue int
-	bufSize  int
-	onErr    ConnErrHandler
-	writeInt time.Duration
-	timeout  time.Duration
-	termInt  time.Duration
+	maxSize     int
+	maxQueue    int
+	bufSize     int
+	onErr       ConnErrHandler
+	connTimeout time.Duration
+	writeInt    time.Duration
+	timeout     time.Duration
+	termInt     time.Duration
 
 	net  string
 	addr string
+
+	addrs    []string
+	balancer int
 
 	writeFlushCh <-chan time.Time
 	termFlushCh  <-chan time.Time
 }
 
 const (
-	defMaxSize  = 10 * 1024
-	defMaxQueue = 100
-	defBufSize  = 1024 * 1024
-	defWriteInt = 50 * time.Microsecond
-	defTimeout  = time.Second
-	defTermInt  = 50 * time.Microsecond
+	defMaxSize     = 10 * 1024
+	defMaxQueue    = 100
+	defBufSize     = 1024 * 1024
+	defConnTimeout = 30 * time.Second
+	defWriteInt    = 50 * time.Microsecond
+	defTimeout     = time.Second
+	defTermInt     = 50 * time.Microsecond
 
 	defNet  = "tcp"
 	defAddr = "localhost:5600"
+	defPort = "5600"
+
+	defBalancer = balancerTypeSimple
+
+	unixNet = "unix"
+)
+
+const (
+	balancerTypeSimple = iota
+	balancerTypeRoundRobin
 )
 
 var defaults = options{
-	maxSize:  defMaxSize,
-	maxQueue: defMaxQueue,
-	bufSize:  defBufSize,
-	writeInt: defWriteInt,
-	timeout:  defTimeout,
-	termInt:  defTermInt,
+	maxSize:     defMaxSize,
+	maxQueue:    defMaxQueue,
+	bufSize:     defBufSize,
+	connTimeout: defConnTimeout,
+	writeInt:    defWriteInt,
+	timeout:     defTimeout,
+	termInt:     defTermInt,
 
 	net:  defNet,
 	addr: defAddr,
+
+	balancer: defBalancer,
 }

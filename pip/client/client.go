@@ -48,7 +48,7 @@ func NewClient(opts ...Option) Client {
 
 		state: new(uint32),
 		pool:  makeBytePool(o.maxSize),
-		b:     new(simpleBalancer),
+		b:     newBalancer(o.net, o.balancer),
 	}
 }
 

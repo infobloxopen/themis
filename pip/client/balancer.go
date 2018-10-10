@@ -11,6 +11,14 @@ type balancer interface {
 	get() *connection
 }
 
+func newBalancer(network string, balancerType int) balancer {
+	if balancerType == balancerTypeRoundRobin && network != unixNet {
+		return new(roundRobinBalancer)
+	}
+
+	return new(simpleBalancer)
+}
+
 type simpleBalancer struct {
 	sync.RWMutex
 
@@ -18,7 +26,7 @@ type simpleBalancer struct {
 }
 
 func (b *simpleBalancer) start(c *client) error {
-	n, err := net.Dial(c.opts.net, c.opts.addr)
+	n, err := net.DialTimeout(c.opts.net, c.opts.addr, c.opts.connTimeout)
 	if err != nil {
 		return err
 	}

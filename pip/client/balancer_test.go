@@ -10,6 +10,17 @@ import (
 	"github.com/infobloxopen/themis/pip/server"
 )
 
+func TestNewBalancer(t *testing.T) {
+	b := newBalancer(defNet, balancerTypeSimple)
+	assert.IsType(t, new(simpleBalancer), b)
+
+	b = newBalancer(defNet, balancerTypeRoundRobin)
+	assert.IsType(t, new(roundRobinBalancer), b)
+
+	b = newBalancer(unixNet, balancerTypeRoundRobin)
+	assert.IsType(t, new(simpleBalancer), b)
+}
+
 func TestBalancerStart(t *testing.T) {
 	s := server.NewServer()
 	if !assert.NoError(t, s.Bind()) {

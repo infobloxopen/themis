@@ -11,13 +11,13 @@ import (
 	"github.com/infobloxopen/themis/pip/server"
 )
 
-func BenchmarkClientServer(b *testing.B) {
+func BenchmarkSequential(b *testing.B) {
 	s := startBenchEchoServer(b)
 	defer s.stop(b)
 
 	a := pdp.MakeStringAssignment("test", "test")
 
-	b.Run("BenchmarkClientServer", func(b *testing.B) {
+	b.Run("BenchmarkSequential", func(b *testing.B) {
 		c := NewClient()
 		if err := c.Connect(); err != nil {
 			b.Fatalf("failed to connect to server %s", err)
@@ -33,7 +33,7 @@ func BenchmarkClientServer(b *testing.B) {
 	})
 }
 
-func BenchmarkClientServerParallel(b *testing.B) {
+func BenchmarkParallel(b *testing.B) {
 	s := startBenchEchoServer(b)
 	defer s.stop(b)
 
@@ -50,7 +50,59 @@ func BenchmarkClientServerParallel(b *testing.B) {
 
 	p := new(int64)
 	idx := 0
-	b.Run("BenchmarkClientServerParallel", func(b *testing.B) {
+	b.Run("BenchmarkParallel", func(b *testing.B) {
+		idx++
+		*p = 0
+		b.SetParallelism(N)
+		b.RunParallel(func(pb *testing.PB) {
+			atomic.AddInt64(p, 1)
+			for pb.Next() {
+				if _, err := c.Get(a); err != nil {
+					n := c.(*client).b.(*simpleBalancer).c.n
+					panic(fmt.Errorf("failed to get data from %s: %s", n.RemoteAddr(), err))
+				}
+			}
+		})
+	})
+
+	b.Logf("number of goroutines: %d (GOMAXPROCS=%d)", *p, gmp)
+}
+
+func BenchmarkRoundRobin(b *testing.B) {
+	s1 := startBenchEchoServer(b, server.WithAddress("127.0.0.1:5601"))
+	defer s1.stop(b)
+
+	s2 := startBenchEchoServer(b, server.WithAddress("127.0.0.1:5602"))
+	defer s2.stop(b)
+
+	s3 := startBenchEchoServer(b, server.WithAddress("127.0.0.1:5603"))
+	defer s3.stop(b)
+
+	s4 := startBenchEchoServer(b, server.WithAddress("127.0.0.1:5604"))
+	defer s4.stop(b)
+
+	a := pdp.MakeStringAssignment("test", "test")
+
+	N := 256
+	gmp := runtime.GOMAXPROCS(0)
+
+	c := NewClient(
+		WithMaxQueue(N*gmp/4),
+		WithRoundRobinBalancer(
+			"127.0.0.1:5601",
+			"127.0.0.1:5602",
+			"127.0.0.1:5603",
+			"127.0.0.1:5604",
+		),
+	)
+	if err := c.Connect(); err != nil {
+		b.Fatalf("failed to connect to server %s", err)
+	}
+	defer c.Close()
+
+	p := new(int64)
+	idx := 0
+	b.Run("BenchmarkRoundRobin", func(b *testing.B) {
 		idx++
 		*p = 0
 		b.SetParallelism(N)
@@ -74,9 +126,9 @@ type benchEchoServer struct {
 	err error
 }
 
-func startBenchEchoServer(b *testing.B) *benchEchoServer {
+func startBenchEchoServer(b *testing.B, opts ...server.Option) *benchEchoServer {
 	out := &benchEchoServer{
-		s:  server.NewServer(),
+		s:  server.NewServer(opts...),
 		wg: new(sync.WaitGroup),
 	}
 
