@@ -19,6 +19,12 @@ func TestNewBalancer(t *testing.T) {
 
 	b = newBalancer(unixNet, balancerTypeRoundRobin)
 	assert.IsType(t, new(simpleBalancer), b)
+
+	b = newBalancer(defNet, balancerTypeHotSpot)
+	assert.IsType(t, new(hotSpotBalancer), b)
+
+	b = newBalancer(unixNet, balancerTypeHotSpot)
+	assert.IsType(t, new(simpleBalancer), b)
 }
 
 func TestBalancerStart(t *testing.T) {

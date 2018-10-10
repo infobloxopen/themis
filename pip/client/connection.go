@@ -64,6 +64,10 @@ func (c *connection) get(b []byte) ([]byte, error) {
 	return p.get()
 }
 
+func (c *connection) isFull() bool {
+	return len(c.r) >= cap(c.r)
+}
+
 const netConnClosedMsg = "use of closed network connection"
 
 func isConnClosed(err error) bool {

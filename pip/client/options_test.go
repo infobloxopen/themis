@@ -35,6 +35,18 @@ func TestWithRoundRobinBalancer(t *testing.T) {
 	assert.Equal(t, []string{"127.0.0.1:5600", "[::1]:5600"}, o.addrs)
 }
 
+func TestWithHotSpotBalancer(t *testing.T) {
+	var o options
+
+	WithHotSpotBalancer()(&o)
+	assert.Equal(t, balancerTypeHotSpot, o.balancer)
+	assert.Empty(t, o.addrs)
+
+	WithHotSpotBalancer("127.0.0.1:5600", "[::1]:5600")(&o)
+	assert.Equal(t, balancerTypeHotSpot, o.balancer)
+	assert.Equal(t, []string{"127.0.0.1:5600", "[::1]:5600"}, o.addrs)
+}
+
 func TestWithMaxRequestSize(t *testing.T) {
 	var o options
 

@@ -66,6 +66,25 @@ func TestConnectionGet(t *testing.T) {
 	assert.Equal(t, []byte{0xef, 0xbe, 0xad, 0xde}, b)
 }
 
+func TestConnectionIsFull(t *testing.T) {
+	c := NewClient(
+		WithMaxQueue(2),
+	).(*client)
+
+	n := makeCTestConn(nil)
+	conn := c.newConnection(n)
+	assert.False(t, conn.isFull())
+
+	conn.r <- request{}
+	assert.False(t, conn.isFull())
+
+	conn.r <- request{}
+	assert.True(t, conn.isFull())
+
+	<-conn.r
+	assert.False(t, conn.isFull())
+}
+
 func TestConnectionClose(t *testing.T) {
 	s := server.NewServer()
 	if !assert.NoError(t, s.Bind()) {

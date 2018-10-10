@@ -37,6 +37,20 @@ func WithRoundRobinBalancer(addrs ...string) Option {
 	}
 }
 
+// WithHotSpotBalancer returns an Option which sets hot spot balancer.
+// The balancer puts requests to the same connection until its queue is full
+// and then goes to the next connection. If no addresses provided with
+// the option client connects to all IP addresses it can get by host name from
+// WithAddress option. For "unix" network the option is ignored.
+func WithHotSpotBalancer(addrs ...string) Option {
+	return func(o *options) {
+		o.balancer = balancerTypeHotSpot
+		if len(addrs) > 0 {
+			o.addrs = addrs
+		}
+	}
+}
+
 // WithMaxRequestSize returns an Option which limits request size in bytes
 // to given value. Default 10KB.
 func WithMaxRequestSize(n int) Option {
@@ -181,6 +195,7 @@ const (
 const (
 	balancerTypeSimple = iota
 	balancerTypeRoundRobin
+	balancerTypeHotSpot
 )
 
 var defaults = options{

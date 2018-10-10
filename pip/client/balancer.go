@@ -12,8 +12,14 @@ type balancer interface {
 }
 
 func newBalancer(network string, balancerType int) balancer {
-	if balancerType == balancerTypeRoundRobin && network != unixNet {
-		return new(roundRobinBalancer)
+	if network != unixNet {
+		switch balancerType {
+		case balancerTypeRoundRobin:
+			return new(roundRobinBalancer)
+
+		case balancerTypeHotSpot:
+			return new(hotSpotBalancer)
+		}
 	}
 
 	return new(simpleBalancer)
