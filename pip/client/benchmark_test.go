@@ -28,8 +28,7 @@ func BenchmarkSequential(b *testing.B) {
 
 		for i := 0; i < b.N; i++ {
 			if _, err := c.Get(a); err != nil {
-				n := c.(*client).b.(*simpleBalancer).c.n
-				b.Fatalf("failed to get data %d from %s: %s", i, n.RemoteAddr(), err)
+				b.Fatalf("failed to get data %d: %s", i, err)
 			}
 		}
 	})
@@ -58,8 +57,7 @@ func BenchmarkParallel(b *testing.B) {
 			atomic.AddInt64(p, 1)
 			for pb.Next() {
 				if _, err := c.Get(a); err != nil {
-					n := c.(*client).b.(*simpleBalancer).c.n
-					panic(fmt.Errorf("failed to get data from %s: %s", n.RemoteAddr(), err))
+					panic(fmt.Errorf("failed to get data: %s", err))
 				}
 			}
 		})
@@ -108,8 +106,7 @@ func BenchmarkRoundRobin(b *testing.B) {
 			atomic.AddInt64(p, 1)
 			for pb.Next() {
 				if _, err := c.Get(a); err != nil {
-					n := c.(*client).b.(*simpleBalancer).c.n
-					panic(fmt.Errorf("failed to get data from %s: %s", n.RemoteAddr(), err))
+					panic(fmt.Errorf("failed to get data: %s", err))
 				}
 			}
 		})
@@ -158,8 +155,7 @@ func BenchmarkHotSpot(b *testing.B) {
 			atomic.AddInt64(p, 1)
 			for pb.Next() {
 				if _, err := c.Get(a); err != nil {
-					n := c.(*client).b.(*simpleBalancer).c.n
-					panic(fmt.Errorf("failed to get data from %s: %s", n.RemoteAddr(), err))
+					panic(fmt.Errorf("failed to get data: %s", err))
 				}
 			}
 		})
@@ -199,7 +195,7 @@ func (s *benchEchoServer) stop(b *testing.B) {
 	}
 
 	s.wg.Wait()
-	if s.err != nil {
+	if s.err != nil && s.err != server.ErrNotBound {
 		b.Fatalf("failed to start server: %s", s.err)
 	}
 }

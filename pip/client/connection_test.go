@@ -2,7 +2,10 @@ package client
 
 import (
 	"errors"
+	"math"
 	"net"
+	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -17,6 +20,7 @@ func TestNewConnection(t *testing.T) {
 	n := makeCTestConn(nil)
 	conn := c.newConnection(n)
 	if assert.NotZero(t, conn) {
+		assert.NotZero(t, conn.i)
 		assert.Equal(t, c, conn.c)
 		assert.Equal(t, n, conn.n)
 		assert.NotZero(t, conn.r)
@@ -25,7 +29,24 @@ func TestNewConnection(t *testing.T) {
 	}
 }
 
+func TestNewConnectionOverflow(t *testing.T) {
+	c := NewClient().(*client)
+	*c.autoID = math.MaxUint64
+
+	conn := c.newConnection(nil)
+	assert.Zero(t, conn)
+}
+
 func TestConnectionGet(t *testing.T) {
+	var sErr error
+	wg := new(sync.WaitGroup)
+	defer func() {
+		wg.Wait()
+		if sErr != server.ErrNotBound {
+			assert.NoError(t, sErr)
+		}
+	}()
+
 	s := server.NewServer()
 	if !assert.NoError(t, s.Bind()) {
 		assert.FailNow(t, "failed to bind server")
@@ -33,12 +54,10 @@ func TestConnectionGet(t *testing.T) {
 	defer func() {
 		assert.NoError(t, s.Stop())
 	}()
-	var sErr error
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		sErr = s.Serve()
-	}()
-	defer func() {
-		assert.NoError(t, sErr)
 	}()
 
 	c := NewClient().(*client)
@@ -86,6 +105,15 @@ func TestConnectionIsFull(t *testing.T) {
 }
 
 func TestConnectionClose(t *testing.T) {
+	var sErr error
+	wg := new(sync.WaitGroup)
+	defer func() {
+		wg.Wait()
+		if sErr != server.ErrNotBound {
+			assert.NoError(t, sErr)
+		}
+	}()
+
 	s := server.NewServer()
 	if !assert.NoError(t, s.Bind()) {
 		assert.FailNow(t, "failed to bind server")
@@ -93,12 +121,10 @@ func TestConnectionClose(t *testing.T) {
 	defer func() {
 		assert.NoError(t, s.Stop())
 	}()
-	var sErr error
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		sErr = s.Serve()
-	}()
-	defer func() {
-		assert.NoError(t, sErr)
 	}()
 
 	var cErr error
@@ -129,6 +155,21 @@ func TestConnectionCloseNet(t *testing.T) {
 	assert.Equal(t, tErr, cErr)
 }
 
+func TestIsConnectionRefused(t *testing.T) {
+	err := errors.New("test")
+	assert.False(t, isConnRefused(err))
+
+	err = &net.OpError{
+		Err: errors.New("test"),
+	}
+	assert.False(t, isConnRefused(err))
+
+	err = &net.OpError{
+		Err: os.NewSyscallError("test", errors.New(netConnRefusedMsg)),
+	}
+	assert.True(t, isConnRefused(err))
+}
+
 func TestIsConnectionClosed(t *testing.T) {
 	err := errors.New("test")
 	assert.False(t, isConnClosed(err))
@@ -137,6 +178,16 @@ func TestIsConnectionClosed(t *testing.T) {
 		Err: errors.New(netConnClosedMsg),
 	}
 	assert.True(t, isConnClosed(err))
+}
+
+func TestIsConnectionTimeout(t *testing.T) {
+	err := errors.New("test")
+	assert.False(t, isConnTimeout(err))
+
+	err = &net.OpError{
+		Err: cTestTimeoutError{},
+	}
+	assert.True(t, isConnTimeout(err))
 }
 
 type cTestConn struct {
@@ -168,3 +219,13 @@ func (c cTestConn) LocalAddr() net.Addr                { panic("not implemented"
 func (c cTestConn) SetDeadline(t time.Time) error      { panic("not implemented") }
 func (c cTestConn) SetReadDeadline(t time.Time) error  { panic("not implemented") }
 func (c cTestConn) SetWriteDeadline(t time.Time) error { panic("not implemented") }
+
+type cTestTimeoutError struct{}
+
+func (err cTestTimeoutError) Error() string {
+	return "test timeout"
+}
+
+func (err cTestTimeoutError) Timeout() bool {
+	return true
+}

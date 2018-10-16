@@ -87,7 +87,7 @@ func (s *Server) Bind() error {
 // Serve starts accepting incoming connections.
 func (s *Server) Serve() error {
 	if !atomic.CompareAndSwapUint32(s.state, srvBound, srvStarting) {
-		if s := atomic.LoadUint32(s.state); s == srvIdle || s == srvBinding {
+		if s := atomic.LoadUint32(s.state); s == srvIdle || s == srvBinding || s == srvStopping {
 			return ErrNotBound
 		}
 

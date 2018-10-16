@@ -2,10 +2,13 @@ package client
 
 import (
 	"net"
+	"os"
 	"sync"
 )
 
 type connection struct {
+	i uint64
+
 	c *client
 	n net.Conn
 
@@ -17,8 +20,19 @@ type connection struct {
 	p pipes
 }
 
+type destConn struct {
+	d string
+	c *connection
+}
+
 func (c *client) newConnection(n net.Conn) *connection {
+	i := c.nextID()
+	if i == 0 {
+		return nil
+	}
+
 	return &connection{
+		i: i,
 		c: c,
 		n: n,
 		r: make(chan request, c.opts.maxQueue),
@@ -68,12 +82,34 @@ func (c *connection) isFull() bool {
 	return len(c.r) >= cap(c.r)
 }
 
-const netConnClosedMsg = "use of closed network connection"
+const (
+	netConnRefusedMsg = "connection refused"
+	netConnClosedMsg  = "use of closed network connection"
+)
+
+func isConnRefused(err error) bool {
+	if err, ok := err.(*net.OpError); ok {
+		if err, ok := err.Err.(*os.SyscallError); ok {
+			return err.Err.Error() == netConnRefusedMsg
+		}
+
+		return false
+	}
+
+	return false
+}
 
 func isConnClosed(err error) bool {
-	switch err := err.(type) {
-	case *net.OpError:
+	if err, ok := err.(*net.OpError); ok {
 		return err.Err.Error() == netConnClosedMsg
+	}
+
+	return false
+}
+
+func isConnTimeout(err error) bool {
+	if err, ok := err.(*net.OpError); ok {
+		return err.Timeout()
 	}
 
 	return false

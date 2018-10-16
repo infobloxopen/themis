@@ -3,7 +3,10 @@ package client
 
 import (
 	"errors"
+	"math"
+	"net"
 	"sync/atomic"
+	"time"
 
 	"github.com/infobloxopen/themis/pdp"
 )
@@ -46,9 +49,11 @@ func NewClient(opts ...Option) Client {
 	return &client{
 		opts: o,
 
-		state: new(uint32),
-		pool:  makeBytePool(o.maxSize),
-		b:     newBalancer(o.net, o.balancer),
+		state:  new(uint32),
+		pool:   makeBytePool(o.maxSize),
+		d:      makeDialerTK(o.net, o.connAttemptTimeout, o.keepAlive),
+		p:      new(provider),
+		autoID: new(uint64),
 	}
 }
 
@@ -58,7 +63,10 @@ type client struct {
 	state *uint32
 	pool  bytePool
 
-	b balancer
+	d dialer
+	p *provider
+
+	autoID *uint64
 }
 
 const (
@@ -78,9 +86,20 @@ func (c *client) Connect() error {
 		atomic.StoreUint32(c.state, state)
 	}()
 
-	if err := c.b.start(c); err != nil {
-		return err
+	addrs := []string{c.opts.addr}
+	var err error
+	if c.opts.balancer != balancerTypeSimple {
+		if len(c.opts.addrs) > 0 {
+			addrs = c.opts.addrs
+		} else {
+			addrs, err = lookupHostPort(c.opts.addr)
+			if err != nil {
+				return err
+			}
+		}
 	}
+
+	c.p.start(c, addrs)
 
 	state = pipClientConnected
 
@@ -93,11 +112,11 @@ func (c *client) Close() {
 	}
 	defer atomic.StoreUint32(c.state, pipClientIdle)
 
-	c.b.stop()
+	c.p.stop()
 }
 
 func (c *client) Get(args ...pdp.AttributeAssignment) (pdp.AttributeValue, error) {
-	conn := c.b.get()
+	conn := c.p.get()
 	if conn == nil {
 		return pdp.UndefinedValue, ErrNotConnected
 	}
@@ -117,4 +136,75 @@ func (c *client) Get(args ...pdp.AttributeAssignment) (pdp.AttributeValue, error
 
 	b, err = conn.get(b[:n])
 	return pdp.UndefinedValue, err
+}
+
+func (c *client) nextID() uint64 {
+	if atomic.LoadUint64(c.autoID) < math.MaxUint64 {
+		return atomic.AddUint64(c.autoID, 1)
+	}
+
+	return 0
+}
+
+func (c *client) dial(addr string) net.Conn {
+	if c.opts.connTimeout > 0 {
+		return c.dialIterTimeout(addr)
+	}
+
+	return c.dialIter(addr)
+}
+
+func (c *client) dialIter(addr string) net.Conn {
+	for atomic.LoadUint32(c.state) == pipClientConnected {
+		n, err := c.d.dial(addr)
+		if err == nil {
+			return n
+		}
+
+		if isConnRefused(err) {
+			time.Sleep(c.opts.connAttemptTimeout)
+			continue
+		}
+
+		if isConnTimeout(err) {
+			continue
+		}
+
+		if c.opts.onErr != nil {
+			c.opts.onErr(nil, err)
+		}
+
+		return nil
+	}
+
+	return nil
+}
+
+func (c *client) dialIterTimeout(addr string) net.Conn {
+	start := time.Now()
+	for atomic.LoadUint32(c.state) == pipClientConnected {
+		n, err := c.d.dial(addr)
+		if err == nil {
+			return n
+		}
+
+		if time.Since(start) < c.opts.connTimeout {
+			if isConnRefused(err) {
+				time.Sleep(c.opts.connAttemptTimeout)
+				continue
+			}
+
+			if isConnTimeout(err) {
+				continue
+			}
+		}
+
+		if c.opts.onErr != nil {
+			c.opts.onErr(nil, err)
+		}
+
+		return nil
+	}
+
+	return nil
 }

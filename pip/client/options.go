@@ -155,14 +155,16 @@ func withTestTermFlushChannel(ch <-chan time.Time) Option {
 }
 
 type options struct {
-	maxSize     int
-	maxQueue    int
-	bufSize     int
-	onErr       ConnErrHandler
-	connTimeout time.Duration
-	writeInt    time.Duration
-	timeout     time.Duration
-	termInt     time.Duration
+	maxSize            int
+	maxQueue           int
+	bufSize            int
+	onErr              ConnErrHandler
+	connTimeout        time.Duration
+	connAttemptTimeout time.Duration
+	keepAlive          time.Duration
+	writeInt           time.Duration
+	timeout            time.Duration
+	termInt            time.Duration
 
 	net  string
 	addr string
@@ -175,21 +177,21 @@ type options struct {
 }
 
 const (
-	defMaxSize     = 10 * 1024
-	defMaxQueue    = 100
-	defBufSize     = 1024 * 1024
-	defConnTimeout = 30 * time.Second
-	defWriteInt    = 50 * time.Microsecond
-	defTimeout     = time.Second
-	defTermInt     = 50 * time.Microsecond
+	defMaxSize            = 10 * 1024
+	defMaxQueue           = 100
+	defBufSize            = 1024 * 1024
+	defConnTimeout        = 30 * time.Second
+	defConnAttemptTimeout = 5 * time.Second
+	defKeepAlive          = 5 * time.Second
+	defWriteInt           = 50 * time.Microsecond
+	defTimeout            = time.Second
+	defTermInt            = 50 * time.Microsecond
 
 	defNet  = "tcp"
 	defAddr = "localhost:5600"
 	defPort = "5600"
 
 	defBalancer = balancerTypeSimple
-
-	unixNet = "unix"
 )
 
 const (
@@ -199,13 +201,15 @@ const (
 )
 
 var defaults = options{
-	maxSize:     defMaxSize,
-	maxQueue:    defMaxQueue,
-	bufSize:     defBufSize,
-	connTimeout: defConnTimeout,
-	writeInt:    defWriteInt,
-	timeout:     defTimeout,
-	termInt:     defTermInt,
+	maxSize:            defMaxSize,
+	maxQueue:           defMaxQueue,
+	bufSize:            defBufSize,
+	connTimeout:        defConnTimeout,
+	connAttemptTimeout: defConnAttemptTimeout,
+	keepAlive:          defKeepAlive,
+	writeInt:           defWriteInt,
+	timeout:            defTimeout,
+	termInt:            defTermInt,
 
 	net:  defNet,
 	addr: defAddr,
