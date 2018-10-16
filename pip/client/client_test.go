@@ -33,30 +33,10 @@ func TestNewClientWithTooSmallBuffer(t *testing.T) {
 }
 
 func TestClientConnect(t *testing.T) {
-	var sErr error
-	wg := new(sync.WaitGroup)
-	defer func() {
-		wg.Wait()
-		if sErr != server.ErrNotBound {
-			assert.NoError(t, sErr)
-		}
-	}()
-
-	s := server.NewServer()
-	if !assert.NoError(t, s.Bind()) {
-		assert.FailNow(t, "failed to bind server")
-	}
-	defer func() {
-		assert.NoError(t, s.Stop())
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		sErr = s.Serve()
-	}()
+	s := newTestServerForClient(t)
+	defer s.stop(t)
 
 	c := NewClient()
-
 	if assert.NoError(t, c.Connect()) {
 		defer c.Close()
 
@@ -65,53 +45,15 @@ func TestClientConnect(t *testing.T) {
 }
 
 func TestClientConnectRoundRobinBalancer(t *testing.T) {
-	var s1Err error
-	wg1 := new(sync.WaitGroup)
-	defer func() {
-		wg1.Wait()
-		if s1Err != server.ErrNotBound {
-			assert.NoError(t, s1Err)
-		}
-	}()
-
-	s1 := server.NewServer(
+	s1 := newTestServerForClient(t,
 		server.WithAddress("127.0.0.1:5601"),
 	)
-	if !assert.NoError(t, s1.Bind()) {
-		assert.FailNow(t, "failed to bind server")
-	}
-	defer func() {
-		assert.NoError(t, s1.Stop())
-	}()
-	wg1.Add(1)
-	go func() {
-		defer wg1.Done()
-		s1Err = s1.Serve()
-	}()
+	defer s1.stop(t)
 
-	var s2Err error
-	wg2 := new(sync.WaitGroup)
-	defer func() {
-		wg2.Wait()
-		if s2Err != server.ErrNotBound {
-			assert.NoError(t, s2Err)
-		}
-	}()
-
-	s2 := server.NewServer(
+	s2 := newTestServerForClient(t,
 		server.WithAddress("127.0.0.1:5602"),
 	)
-	if !assert.NoError(t, s2.Bind()) {
-		assert.FailNow(t, "failed to bind server")
-	}
-	defer func() {
-		assert.NoError(t, s2.Stop())
-	}()
-	wg2.Add(1)
-	go func() {
-		defer wg2.Done()
-		s2Err = s2.Serve()
-	}()
+	defer s2.stop(t)
 
 	c := NewClient(
 		WithRoundRobinBalancer(
@@ -126,53 +68,15 @@ func TestClientConnectRoundRobinBalancer(t *testing.T) {
 }
 
 func TestClientConnectRoundRobinBalancerInvalidAddress(t *testing.T) {
-	var s1Err error
-	wg1 := new(sync.WaitGroup)
-	defer func() {
-		wg1.Wait()
-		if s1Err != server.ErrNotBound {
-			assert.NoError(t, s1Err)
-		}
-	}()
-
-	s1 := server.NewServer(
+	s1 := newTestServerForClient(t,
 		server.WithAddress("127.0.0.1:5601"),
 	)
-	if !assert.NoError(t, s1.Bind()) {
-		assert.FailNow(t, "failed to bind server")
-	}
-	defer func() {
-		assert.NoError(t, s1.Stop())
-	}()
-	wg1.Add(1)
-	go func() {
-		defer wg1.Done()
-		s1Err = s1.Serve()
-	}()
+	defer s1.stop(t)
 
-	var s2Err error
-	wg2 := new(sync.WaitGroup)
-	defer func() {
-		wg2.Wait()
-		if s2Err != server.ErrNotBound {
-			assert.NoError(t, s2Err)
-		}
-	}()
-
-	s2 := server.NewServer(
+	s2 := newTestServerForClient(t,
 		server.WithAddress("127.0.0.1:5602"),
 	)
-	if !assert.NoError(t, s2.Bind()) {
-		assert.FailNow(t, "failed to bind server")
-	}
-	defer func() {
-		assert.NoError(t, s2.Stop())
-	}()
-	wg2.Add(1)
-	go func() {
-		defer wg2.Done()
-		s2Err = s2.Serve()
-	}()
+	defer s2.stop(t)
 
 	c := NewClient(
 		WithAddress("/dev/null"),
@@ -207,27 +111,8 @@ func TestClientConnectNoServer(t *testing.T) {
 }
 
 func TestClientClose(t *testing.T) {
-	var sErr error
-	wg := new(sync.WaitGroup)
-	defer func() {
-		wg.Wait()
-		if sErr != server.ErrNotBound {
-			assert.NoError(t, sErr)
-		}
-	}()
-
-	s := server.NewServer()
-	if !assert.NoError(t, s.Bind()) {
-		assert.FailNow(t, "failed to bind server")
-	}
-	defer func() {
-		assert.NoError(t, s.Stop())
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		sErr = s.Serve()
-	}()
+	s := newTestServerForClient(t)
+	defer s.stop(t)
 
 	c := NewClient()
 
@@ -283,7 +168,7 @@ func TestClientCloseWithDifferentRequests(t *testing.T) {
 		WithMaxRequestSize(16),
 		WithMaxQueue(1),
 		WithBufferSize(24),
-	)
+	).(*client)
 
 	if !assert.NoError(t, c.Connect()) {
 		assert.FailNow(t, "failed to connect to server")
@@ -294,7 +179,7 @@ func TestClientCloseWithDifferentRequests(t *testing.T) {
 	var err1 error
 	go func() {
 		defer wg.Done()
-		_, err1 = c.Get(pdp.MakeStringAssignment("test", "test"))
+		_, _, err1 = c.tryGet(pdp.MakeStringAssignment("test", "test"))
 	}()
 
 	time.Sleep(50 * time.Millisecond)
@@ -303,7 +188,7 @@ func TestClientCloseWithDifferentRequests(t *testing.T) {
 	var err2 error
 	go func() {
 		defer wg.Done()
-		_, err2 = c.Get(pdp.MakeStringAssignment("a", "a"))
+		_, _, err2 = c.tryGet(pdp.MakeStringAssignment("a", "a"))
 	}()
 
 	time.Sleep(50 * time.Millisecond)
@@ -312,7 +197,7 @@ func TestClientCloseWithDifferentRequests(t *testing.T) {
 	var err3 error
 	go func() {
 		defer wg.Done()
-		_, err3 = c.Get(pdp.MakeStringAssignment("b", "b"))
+		_, _, err3 = c.tryGet(pdp.MakeStringAssignment("b", "b"))
 	}()
 
 	time.Sleep(50 * time.Millisecond)
@@ -326,27 +211,8 @@ func TestClientCloseWithDifferentRequests(t *testing.T) {
 }
 
 func TestClientGet(t *testing.T) {
-	var sErr error
-	wg := new(sync.WaitGroup)
-	defer func() {
-		wg.Wait()
-		if sErr != server.ErrNotBound {
-			assert.NoError(t, sErr)
-		}
-	}()
-
-	s := server.NewServer()
-	if !assert.NoError(t, s.Bind()) {
-		assert.FailNow(t, "failed to bind server")
-	}
-	defer func() {
-		assert.NoError(t, s.Stop())
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		sErr = s.Serve()
-	}()
+	s := newTestServerForClient(t)
+	defer s.stop(t)
 
 	c := NewClient()
 	if err := c.Connect(); assert.NoError(t, err) {
@@ -364,34 +230,38 @@ func TestClientGetErrNotConnected(t *testing.T) {
 	assert.Equal(t, ErrNotConnected, err)
 }
 
-func TestClientGetMarshallingError(t *testing.T) {
-	var sErr error
-	wg := new(sync.WaitGroup)
-	defer func() {
-		wg.Wait()
-		if sErr != server.ErrNotBound {
-			assert.NoError(t, sErr)
-		}
-	}()
+func TestClientTryGet(t *testing.T) {
+	s := newTestServerForClient(t)
+	defer s.stop(t)
 
-	s := server.NewServer()
-	if !assert.NoError(t, s.Bind()) {
-		assert.FailNow(t, "failed to bind server")
-	}
-	defer func() {
-		assert.NoError(t, s.Stop())
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		sErr = s.Serve()
-	}()
-
-	c := NewClient()
+	c := NewClient().(*client)
 	if err := c.Connect(); assert.NoError(t, err) {
 		defer c.Close()
 
-		_, err := c.Get(pdp.MakeExpressionAssignment("test", pdp.UndefinedValue))
+		v, ok, err := c.tryGet()
+		assert.Equal(t, pdp.UndefinedValue, v)
+		assert.True(t, ok)
+		assert.NoError(t, err)
+	}
+}
+
+func TestClientTryGettErrNotConnected(t *testing.T) {
+	c := NewClient().(*client)
+	_, ok, err := c.tryGet()
+	assert.False(t, ok)
+	assert.Equal(t, ErrNotConnected, err)
+}
+
+func TestClientTryGetMarshallingError(t *testing.T) {
+	s := newTestServerForClient(t)
+	defer s.stop(t)
+
+	c := NewClient().(*client)
+	if err := c.Connect(); assert.NoError(t, err) {
+		defer c.Close()
+
+		_, ok, err := c.tryGet(pdp.MakeExpressionAssignment("test", pdp.UndefinedValue))
+		assert.False(t, ok)
 		assert.Error(t, err)
 	}
 }
@@ -414,32 +284,13 @@ func TestClientNextIdOverflow(t *testing.T) {
 }
 
 func TestClientDial(t *testing.T) {
-	var sErr error
-	wg := new(sync.WaitGroup)
-	defer func() {
-		wg.Wait()
-		if sErr != server.ErrNotBound {
-			assert.NoError(t, sErr)
-		}
-	}()
-
-	s := server.NewServer()
-	if !assert.NoError(t, s.Bind()) {
-		assert.FailNow(t, "failed to bind server")
-	}
-	defer func() {
-		assert.NoError(t, s.Stop())
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		sErr = s.Serve()
-	}()
+	s := newTestServerForClient(t)
+	defer s.stop(t)
 
 	c := NewClient().(*client)
 	atomic.StoreUint32(c.state, pipClientConnected)
 
-	n := c.dial("127.0.0.1:5600")
+	n := c.dial("127.0.0.1:5600", make(chan struct{}))
 	if assert.NotZero(t, n) {
 		assert.NoError(t, n.Close())
 	}
@@ -449,7 +300,7 @@ func TestClientDial(t *testing.T) {
 	).(*client)
 	atomic.StoreUint32(c.state, pipClientConnected)
 
-	n = c.dial("127.0.0.1:5600")
+	n = c.dial("127.0.0.1:5600", make(chan struct{}))
 	if assert.NotZero(t, n) {
 		assert.NoError(t, n.Close())
 	}
@@ -459,12 +310,29 @@ func TestClientDialIter(t *testing.T) {
 	c := NewClient().(*client)
 	c.d = makeTestClientDialer(nil)
 
-	n := c.dialIter("127.0.0.1:5600")
+	n := c.dialIter("127.0.0.1:5600", make(chan struct{}))
 	assert.Zero(t, n)
 
 	atomic.StoreUint32(c.state, pipClientConnected)
-	n = c.dialIter("127.0.0.1:5600")
+	n = c.dialIter("127.0.0.1:5600", make(chan struct{}))
 	assert.IsType(t, testClientConn{}, n)
+
+	c.opts.connAttemptTimeout = time.Millisecond
+	c.d = makeTestClientDialer(newTestNetRefusedError())
+	ch := make(chan struct{})
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		n = c.dialIter("127.0.0.1:5600", ch)
+	}()
+
+	time.Sleep(time.Millisecond)
+	close(ch)
+	wg.Wait()
+
+	assert.Zero(t, n)
 }
 
 func TestClientDialIterErrorTimeout(t *testing.T) {
@@ -486,7 +354,7 @@ func TestClientDialIterErrorTimeout(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		n = c.dialIter("127.0.0.1:5600")
+		n = c.dialIter("127.0.0.1:5600", make(chan struct{}))
 	}()
 
 	time.Sleep(time.Millisecond)
@@ -517,7 +385,7 @@ func TestClientDialIterErrorRefused(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		n = c.dialIter("127.0.0.1:5600")
+		n = c.dialIter("127.0.0.1:5600", make(chan struct{}))
 	}()
 
 	time.Sleep(time.Millisecond)
@@ -542,7 +410,7 @@ func TestClientDialIterError(t *testing.T) {
 	c.d = makeTestClientDialer(tErr)
 	atomic.StoreUint32(c.state, pipClientConnected)
 
-	n := c.dialIter("127.0.0.1:5600")
+	n := c.dialIter("127.0.0.1:5600", make(chan struct{}))
 	assert.Zero(t, n)
 	assert.Equal(t, []net.Addr{nil}, addrs)
 	assert.Equal(t, []error{tErr}, errs)
@@ -552,12 +420,29 @@ func TestClientDialIterTimeout(t *testing.T) {
 	c := NewClient().(*client)
 	c.d = makeTestClientDialer(nil)
 
-	n := c.dialIterTimeout("127.0.0.1:5600")
+	n := c.dialIterTimeout("127.0.0.1:5600", make(chan struct{}))
 	assert.Zero(t, n)
 
 	atomic.StoreUint32(c.state, pipClientConnected)
-	n = c.dialIterTimeout("127.0.0.1:5600")
+	n = c.dialIterTimeout("127.0.0.1:5600", make(chan struct{}))
 	assert.IsType(t, testClientConn{}, n)
+
+	c.opts.connAttemptTimeout = time.Millisecond
+	c.d = makeTestClientDialer(newTestNetRefusedError())
+	ch := make(chan struct{})
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		n = c.dialIterTimeout("127.0.0.1:5600", ch)
+	}()
+
+	time.Sleep(time.Millisecond)
+	close(ch)
+	wg.Wait()
+
+	assert.Zero(t, n)
 }
 
 func TestClientDialIterTimeoutErrorTimeout(t *testing.T) {
@@ -581,7 +466,7 @@ func TestClientDialIterTimeoutErrorTimeout(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		n = c.dialIterTimeout("127.0.0.1:5600")
+		n = c.dialIterTimeout("127.0.0.1:5600", make(chan struct{}))
 	}()
 	wg.Wait()
 
@@ -611,7 +496,7 @@ func TestClientDialIterTimeoutErrorRefused(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		n = c.dialIterTimeout("127.0.0.1:5600")
+		n = c.dialIterTimeout("127.0.0.1:5600", make(chan struct{}))
 	}()
 	wg.Wait()
 
@@ -633,10 +518,44 @@ func TestClientDialIterTimeoutError(t *testing.T) {
 	c.d = makeTestClientDialer(tErr)
 	atomic.StoreUint32(c.state, pipClientConnected)
 
-	n := c.dialIterTimeout("127.0.0.1:5600")
+	n := c.dialIterTimeout("127.0.0.1:5600", make(chan struct{}))
 	assert.Zero(t, n)
 	assert.Equal(t, []net.Addr{nil}, addrs)
 	assert.Equal(t, []error{tErr}, errs)
+}
+
+type testServerForClient struct {
+	sync.WaitGroup
+	s   *server.Server
+	err error
+}
+
+func newTestServerForClient(t *testing.T, opts ...server.Option) *testServerForClient {
+	s := new(testServerForClient)
+
+	s.s = server.NewServer(opts...)
+	if !assert.NoError(t, s.s.Bind()) {
+		assert.FailNow(t, "failed to bind server")
+	}
+
+	s.Add(1)
+	go func() {
+		defer s.Done()
+
+		s.err = s.s.Serve()
+	}()
+
+	return s
+}
+
+func (s *testServerForClient) stop(t *testing.T) {
+	if assert.NoError(t, s.s.Stop()) {
+		s.Wait()
+
+		if s.err != server.ErrNotBound {
+			assert.NoError(t, s.err)
+		}
+	}
 }
 
 type testClientDialer struct {

@@ -116,9 +116,20 @@ func (c *client) Close() {
 }
 
 func (c *client) Get(args ...pdp.AttributeAssignment) (pdp.AttributeValue, error) {
+	for atomic.LoadUint32(c.state) == pipClientConnected {
+		v, ok, err := c.tryGet(args...)
+		if !ok || err == nil {
+			return v, err
+		}
+	}
+
+	return pdp.UndefinedValue, ErrNotConnected
+}
+
+func (c *client) tryGet(args ...pdp.AttributeAssignment) (pdp.AttributeValue, bool, error) {
 	conn := c.p.get()
 	if conn == nil {
-		return pdp.UndefinedValue, ErrNotConnected
+		return pdp.UndefinedValue, false, ErrNotConnected
 	}
 	defer conn.g.Done()
 
@@ -131,11 +142,15 @@ func (c *client) Get(args ...pdp.AttributeAssignment) (pdp.AttributeValue, error
 
 	n, err := pdp.MarshalRequestAssignmentsToBuffer(b, args)
 	if err != nil {
-		return pdp.UndefinedValue, err
+		return pdp.UndefinedValue, false, err
 	}
 
 	b, err = conn.get(b[:n])
-	return pdp.UndefinedValue, err
+	if err != nil {
+		c.p.report(conn)
+	}
+
+	return pdp.UndefinedValue, true, err
 }
 
 func (c *client) nextID() uint64 {
@@ -146,16 +161,24 @@ func (c *client) nextID() uint64 {
 	return 0
 }
 
-func (c *client) dial(addr string) net.Conn {
+func (c *client) dial(addr string, ch <-chan struct{}) net.Conn {
 	if c.opts.connTimeout > 0 {
-		return c.dialIterTimeout(addr)
+		return c.dialIterTimeout(addr, ch)
 	}
 
-	return c.dialIter(addr)
+	return c.dialIter(addr, ch)
 }
 
-func (c *client) dialIter(addr string) net.Conn {
+func (c *client) dialIter(addr string, ch <-chan struct{}) net.Conn {
 	for atomic.LoadUint32(c.state) == pipClientConnected {
+		select {
+		default:
+		case _, ok := <-ch:
+			if !ok {
+				return nil
+			}
+		}
+
 		n, err := c.d.dial(addr)
 		if err == nil {
 			return n
@@ -180,9 +203,17 @@ func (c *client) dialIter(addr string) net.Conn {
 	return nil
 }
 
-func (c *client) dialIterTimeout(addr string) net.Conn {
+func (c *client) dialIterTimeout(addr string, ch <-chan struct{}) net.Conn {
 	start := time.Now()
 	for atomic.LoadUint32(c.state) == pipClientConnected {
+		select {
+		default:
+		case _, ok := <-ch:
+			if !ok {
+				return nil
+			}
+		}
+
 		n, err := c.d.dial(addr)
 		if err == nil {
 			return n

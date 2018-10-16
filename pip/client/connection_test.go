@@ -38,27 +38,8 @@ func TestNewConnectionOverflow(t *testing.T) {
 }
 
 func TestConnectionGet(t *testing.T) {
-	var sErr error
-	wg := new(sync.WaitGroup)
-	defer func() {
-		wg.Wait()
-		if sErr != server.ErrNotBound {
-			assert.NoError(t, sErr)
-		}
-	}()
-
-	s := server.NewServer()
-	if !assert.NoError(t, s.Bind()) {
-		assert.FailNow(t, "failed to bind server")
-	}
-	defer func() {
-		assert.NoError(t, s.Stop())
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		sErr = s.Serve()
-	}()
+	s := newTestServerForConn(t)
+	defer s.stop(t)
 
 	c := NewClient().(*client)
 
@@ -105,27 +86,8 @@ func TestConnectionIsFull(t *testing.T) {
 }
 
 func TestConnectionClose(t *testing.T) {
-	var sErr error
-	wg := new(sync.WaitGroup)
-	defer func() {
-		wg.Wait()
-		if sErr != server.ErrNotBound {
-			assert.NoError(t, sErr)
-		}
-	}()
-
-	s := server.NewServer()
-	if !assert.NoError(t, s.Bind()) {
-		assert.FailNow(t, "failed to bind server")
-	}
-	defer func() {
-		assert.NoError(t, s.Stop())
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		sErr = s.Serve()
-	}()
+	s := newTestServerForConn(t)
+	defer s.stop(t)
 
 	var cErr error
 	c := NewClient(WithConnErrHandler(func(a net.Addr, err error) {
@@ -188,6 +150,40 @@ func TestIsConnectionTimeout(t *testing.T) {
 		Err: cTestTimeoutError{},
 	}
 	assert.True(t, isConnTimeout(err))
+}
+
+type testServerForConn struct {
+	sync.WaitGroup
+	s   *server.Server
+	err error
+}
+
+func newTestServerForConn(t *testing.T) *testServerForConn {
+	s := new(testServerForConn)
+
+	s.s = server.NewServer()
+	if !assert.NoError(t, s.s.Bind()) {
+		assert.FailNow(t, "failed to bind server")
+	}
+
+	s.Add(1)
+	go func() {
+		defer s.Done()
+
+		s.err = s.s.Serve()
+	}()
+
+	return s
+}
+
+func (s *testServerForConn) stop(t *testing.T) {
+	if assert.NoError(t, s.s.Stop()) {
+		s.Wait()
+
+		if s.err != server.ErrNotBound {
+			assert.NoError(t, s.err)
+		}
+	}
 }
 
 type cTestConn struct {

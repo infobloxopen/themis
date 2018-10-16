@@ -21,6 +21,7 @@ type provider struct {
 	queue   []*connection
 	healthy map[string]*connection
 	broken  map[uint64]destConn
+	retry   map[string]chan struct{}
 
 	getter getter
 }
@@ -48,6 +49,7 @@ func (p *provider) start(c *client, addrs []string) {
 			d: a,
 		}
 	}
+	p.retry = make(map[string]chan struct{})
 
 	p.rCnd = sync.NewCond(p.RLocker())
 	p.wCnd = sync.NewCond(p)
@@ -73,6 +75,9 @@ func (p *provider) stop() {
 
 	broken := p.broken
 	p.broken = nil
+
+	retry := p.retry
+	p.retry = nil
 
 	wg := p.wg
 	p.wg = nil
@@ -112,6 +117,10 @@ func (p *provider) stop() {
 		}
 	}
 
+	for _, ch := range retry {
+		close(ch)
+	}
+
 	wg.Wait()
 }
 
@@ -139,7 +148,7 @@ func (p *provider) connector(wg *sync.WaitGroup, c *client) {
 	defer wg.Done()
 
 	for {
-		a, conn := p.getBroken()
+		a, conn, ch := p.getBroken()
 		if len(a) <= 0 && conn == nil {
 			break
 		}
@@ -150,32 +159,42 @@ func (p *provider) connector(wg *sync.WaitGroup, c *client) {
 
 		if len(a) > 0 {
 			wg.Add(1)
-			go p.connect(wg, c, a)
+			go p.connect(wg, c, a, ch)
 		}
 	}
 }
 
-func (p *provider) connect(wg *sync.WaitGroup, c *client, a string) {
+func (p *provider) connect(wg *sync.WaitGroup, c *client, a string, ch <-chan struct{}) {
 	defer wg.Done()
 
-	if n := c.dial(a); n != nil {
-		p.Lock()
-		defer p.Unlock()
+	n := c.dial(a, ch)
+	p.Lock()
+	defer p.Unlock()
 
-		if !p.started {
-			n.Close()
-			return
+	if !p.started {
+		if n != nil {
+			if err := n.Close(); err != nil && c.opts.onErr != nil {
+				c.opts.onErr(n.RemoteAddr(), err)
+			}
 		}
 
+		return
+	}
+
+	delete(p.retry, a)
+
+	if n != nil {
 		conn := p.c.newConnection(n)
 		conn.start()
+
 		p.healthy[a] = conn
 		p.queue = append(p.queue, conn)
+
 		p.rCnd.Broadcast()
 	}
 }
 
-func (p *provider) getBroken() (string, *connection) {
+func (p *provider) getBroken() (string, *connection, <-chan struct{}) {
 	p.Lock()
 	defer p.Unlock()
 
@@ -186,11 +205,69 @@ func (p *provider) getBroken() (string, *connection) {
 	if p.started {
 		for i, dc := range p.broken {
 			delete(p.broken, i)
-			return dc.d, dc.c
+
+			if len(dc.d) > 0 {
+				if _, ok := p.retry[dc.d]; !ok {
+					ch := make(chan struct{})
+					p.retry[dc.d] = ch
+					return dc.d, dc.c, ch
+				}
+			}
+
+			return "", dc.c, nil
 		}
 	}
 
-	return "", nil
+	return "", nil, nil
+}
+
+func (p *provider) unqueue(c *connection) {
+	for i, qc := range p.queue {
+		if c == qc {
+			if i == 0 {
+				p.queue = p.queue[i+1:]
+			} else if i == len(p.queue)-1 {
+				p.queue = p.queue[:i]
+			} else {
+				p.queue = append(p.queue[:i], p.queue[i+1:]...)
+			}
+
+			return
+		}
+	}
+}
+
+func (p *provider) unhealthy(c *connection) string {
+	for d, hc := range p.healthy {
+		if c == hc {
+			delete(p.healthy, d)
+			return d
+		}
+	}
+
+	return ""
+}
+
+func (p *provider) report(c *connection) {
+	p.Lock()
+	defer p.Unlock()
+
+	if !p.started {
+		return
+	}
+
+	if _, ok := p.broken[c.i]; ok {
+		return
+	}
+
+	p.unqueue(c)
+	d := p.unhealthy(c)
+
+	p.broken[c.i] = destConn{
+		d: d,
+		c: c,
+	}
+	p.wCnd.Signal()
 }
 
 func selectGetter(balancer int) getter {

@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"io"
 	"net"
 	"reflect"
@@ -43,6 +44,9 @@ func TestProviderStartStop(t *testing.T) {
 		broken := p.broken
 		assert.NotZero(t, broken)
 
+		retry := p.retry
+		assert.NotZero(t, retry)
+
 		getter := p.getter
 		assert.NotZero(t, getter)
 		p.RUnlock()
@@ -61,6 +65,7 @@ func TestProviderStartStop(t *testing.T) {
 		assert.Equal(t, queue, p.queue)
 		assert.Equal(t, healthy, p.healthy)
 		assert.Equal(t, broken, p.broken)
+		assert.Equal(t, retry, p.retry)
 		assert.Equal(t, reflect.ValueOf(getter).Pointer(), reflect.ValueOf(p.getter).Pointer())
 		p.RUnlock()
 
@@ -107,12 +112,19 @@ func TestProviderStopAndDisconnectAll(t *testing.T) {
 	cc := c.newConnection(bConn)
 	cc.start()
 
+	ch := make(chan struct{})
+
+	c.p.Lock()
 	c.p.broken[cc.i] = destConn{c: cc}
+	c.p.retry["127.0.0.2:5601"] = ch
+	c.p.Unlock()
 
 	c.p.stop()
 
 	assert.True(t, conn.isClosed())
 	assert.True(t, bConn.isClosed())
+	_, ok := <-ch
+	assert.False(t, ok)
 }
 
 func TestProviderGet(t *testing.T) {
@@ -201,7 +213,7 @@ func TestProviderConnect(t *testing.T) {
 
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
-	go c.p.connect(wg, c, "127.0.0.1:5600")
+	go c.p.connect(wg, c, "127.0.0.1:5600", make(chan struct{}))
 
 	conn := <-d.ch
 	wg.Wait()
@@ -228,7 +240,7 @@ func TestProviderConnect(t *testing.T) {
 
 	c.p.started = false
 	wg.Add(1)
-	go c.p.connect(wg, c, "127.0.0.1:5600")
+	go c.p.connect(wg, c, "127.0.0.1:5600", make(chan struct{}))
 
 	conn = <-d.ch
 	wg.Wait()
@@ -238,6 +250,26 @@ func TestProviderConnect(t *testing.T) {
 	assert.Empty(t, c.p.queue)
 	assert.True(t, conn.isClosed())
 	c.p.RUnlock()
+
+	var (
+		cAddr net.Addr
+		cErr  error
+	)
+	bd := newTestProviderSyncDialerBrokenConn(errors.New("test"))
+	c.d = bd
+	c.opts.onErr = func(a net.Addr, err error) {
+		cAddr = a
+		cErr = err
+	}
+
+	wg.Add(1)
+	go c.p.connect(wg, c, "127.0.0.1:5600", make(chan struct{}))
+
+	<-bd.ch
+	wg.Wait()
+
+	assert.Equal(t, "127.0.0.1:5600", cAddr.String())
+	assert.Equal(t, bd.err, cErr)
 }
 
 func TestProviderGetBroken(t *testing.T) {
@@ -248,15 +280,20 @@ func TestProviderGetBroken(t *testing.T) {
 	c.p.started = true
 	c.p.wCnd = sync.NewCond(c.p)
 	c.p.broken = make(map[uint64]destConn)
+	c.p.retry = make(map[string]chan struct{})
 	c.p.Unlock()
 
-	var d string
+	var (
+		d  string
+		bc *connection
+		ch <-chan struct{}
+	)
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 
-		d, _ = c.p.getBroken()
+		d, bc, ch = c.p.getBroken()
 	}()
 
 	c.p.wCnd.Signal()
@@ -269,15 +306,161 @@ func TestProviderGetBroken(t *testing.T) {
 
 	wg.Wait()
 
-	c.p.Lock()
+	c.p.RLock()
 	assert.Equal(t, "test", d)
+	assert.Zero(t, bc)
+	assert.NotZero(t, ch)
 	assert.Empty(t, c.p.broken)
+	c.p.RUnlock()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		d, bc, ch = c.p.getBroken()
+	}()
+
+	c.p.wCnd.Signal()
+	time.Sleep(time.Millisecond)
+
+	conn := c.newConnection(newTestProviderConn("127.0.0.1:5600"))
+	c.p.Lock()
+	c.p.broken[conn.i] = destConn{c: conn}
+	c.p.wCnd.Signal()
+	c.p.Unlock()
+
+	wg.Wait()
+
+	c.p.RLock()
+	assert.Zero(t, d)
+	assert.Equal(t, conn, bc)
+	assert.Zero(t, ch)
+	assert.Empty(t, c.p.broken)
+	c.p.RUnlock()
+
+	c.p.Lock()
 	c.p.started = false
 	c.p.Unlock()
 
-	d, conn := c.p.getBroken()
+	d, bc, ch = c.p.getBroken()
 	assert.Zero(t, d)
-	assert.Zero(t, conn)
+	assert.Zero(t, bc)
+	assert.Zero(t, ch)
+}
+
+func TestProviderUnqueue(t *testing.T) {
+	c := NewClient().(*client)
+
+	c1 := c.newConnection(newTestProviderConn("127.0.0.1:5601"))
+	c2 := c.newConnection(newTestProviderConn("127.0.0.1:5602"))
+	c3 := c.newConnection(newTestProviderConn("127.0.0.1:5603"))
+
+	c.p.queue = []*connection{c1, c2, c3}
+	c.p.unqueue(c2)
+	assert.Equal(t, []*connection{c1, c3}, c.p.queue)
+
+	c.p.queue = []*connection{c1, c2, c3}
+	c.p.unqueue(c1)
+	assert.Equal(t, []*connection{c2, c3}, c.p.queue)
+
+	c.p.queue = []*connection{c1, c2, c3}
+	c.p.unqueue(c3)
+	assert.Equal(t, []*connection{c1, c2}, c.p.queue)
+}
+
+func TestProviderUnhealthy(t *testing.T) {
+	c := NewClient().(*client)
+
+	c1 := c.newConnection(newTestProviderConn("127.0.0.1:5601"))
+	c2 := c.newConnection(newTestProviderConn("127.0.0.1:5602"))
+	c3 := c.newConnection(newTestProviderConn("127.0.0.1:5603"))
+
+	c.p.healthy = map[string]*connection{
+		"127.0.0.1:5601": c1,
+		"127.0.0.1:5602": c2,
+		"127.0.0.1:5603": c3,
+	}
+
+	d := c.p.unhealthy(c2)
+	assert.Equal(t, "127.0.0.1:5602", d)
+	assert.Equal(t,
+		map[string]*connection{
+			"127.0.0.1:5601": c1,
+			"127.0.0.1:5603": c3,
+		},
+		c.p.healthy,
+	)
+
+	d = c.p.unhealthy(c2)
+	assert.Zero(t, d)
+}
+
+func TestProviderReport(t *testing.T) {
+	c := NewClient().(*client)
+
+	c1 := c.newConnection(newTestProviderConn("127.0.0.1:5601"))
+	c2 := c.newConnection(newTestProviderConn("127.0.0.1:5602"))
+	c3 := c.newConnection(newTestProviderConn("127.0.0.1:5603"))
+
+	c.p.wCnd = sync.NewCond(c.p)
+	c.p.broken = make(map[uint64]destConn)
+	c.p.queue = []*connection{c1, c2, c3}
+	c.p.healthy = map[string]*connection{
+		"127.0.0.1:5601": c1,
+		"127.0.0.1:5602": c2,
+		"127.0.0.1:5603": c3,
+	}
+
+	c.p.report(c2)
+	assert.Empty(t, c.p.broken)
+	assert.Equal(t, []*connection{c1, c2, c3}, c.p.queue)
+	assert.Equal(t,
+		map[string]*connection{
+			"127.0.0.1:5601": c1,
+			"127.0.0.1:5602": c2,
+			"127.0.0.1:5603": c3,
+		},
+		c.p.healthy,
+	)
+
+	c.p.started = true
+	c.p.report(c2)
+	assert.Equal(t,
+		map[uint64]destConn{
+			2: {
+				d: "127.0.0.1:5602",
+				c: c2,
+			},
+		},
+		c.p.broken,
+	)
+	assert.Equal(t, []*connection{c1, c3}, c.p.queue)
+	assert.Equal(t,
+		map[string]*connection{
+			"127.0.0.1:5601": c1,
+			"127.0.0.1:5603": c3,
+		},
+		c.p.healthy,
+	)
+
+	c.p.report(c2)
+	assert.Equal(t,
+		map[uint64]destConn{
+			2: {
+				d: "127.0.0.1:5602",
+				c: c2,
+			},
+		},
+		c.p.broken,
+	)
+	assert.Equal(t, []*connection{c1, c3}, c.p.queue)
+	assert.Equal(t,
+		map[string]*connection{
+			"127.0.0.1:5601": c1,
+			"127.0.0.1:5603": c3,
+		},
+		c.p.healthy,
+	)
 }
 
 func TestProviderSelectGetter(t *testing.T) {
@@ -391,6 +574,24 @@ func (d testProviderSyncDialer) dial(a string) (net.Conn, error) {
 	return c, nil
 }
 
+type testProviderSyncDialerBrokenConn struct {
+	ch  chan *testProviderBrokenConn
+	err error
+}
+
+func newTestProviderSyncDialerBrokenConn(err error) testProviderSyncDialerBrokenConn {
+	return testProviderSyncDialerBrokenConn{
+		ch:  make(chan *testProviderBrokenConn),
+		err: err,
+	}
+}
+
+func (d testProviderSyncDialerBrokenConn) dial(a string) (net.Conn, error) {
+	c := newTestProviderBrokenConn(a, d.err)
+	d.ch <- c
+	return c, nil
+}
+
 type testProviderConn struct {
 	a      string
 	closed *uint32
@@ -431,3 +632,46 @@ func (c *testProviderConn) RemoteAddr() net.Addr               { panic("not impl
 func (c *testProviderConn) SetDeadline(t time.Time) error      { panic("not implemented") }
 func (c *testProviderConn) SetReadDeadline(t time.Time) error  { panic("not implemented") }
 func (c *testProviderConn) SetWriteDeadline(t time.Time) error { panic("not implemented") }
+
+type testProviderBrokenConn struct {
+	a      string
+	err    error
+	closed *uint32
+	ch     chan struct{}
+}
+
+func newTestProviderBrokenConn(a string, err error) *testProviderBrokenConn {
+	return &testProviderBrokenConn{
+		a:      a,
+		err:    err,
+		closed: new(uint32),
+		ch:     make(chan struct{}),
+	}
+}
+
+func (c *testProviderBrokenConn) Close() error {
+	if atomic.CompareAndSwapUint32(c.closed, 0, 1) {
+		close(c.ch)
+	}
+
+	return c.err
+}
+
+func (c *testProviderBrokenConn) Write(b []byte) (int, error) {
+	return len(b), nil
+}
+
+func (c *testProviderBrokenConn) Read(b []byte) (int, error) {
+	<-c.ch
+	return 0, io.EOF
+}
+
+func (c *testProviderBrokenConn) RemoteAddr() net.Addr {
+	a, _ := net.ResolveTCPAddr("tcp", c.a)
+	return a
+}
+
+func (c *testProviderBrokenConn) LocalAddr() net.Addr                { panic("not implemented") }
+func (c *testProviderBrokenConn) SetDeadline(t time.Time) error      { panic("not implemented") }
+func (c *testProviderBrokenConn) SetReadDeadline(t time.Time) error  { panic("not implemented") }
+func (c *testProviderBrokenConn) SetWriteDeadline(t time.Time) error { panic("not implemented") }
