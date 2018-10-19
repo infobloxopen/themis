@@ -1,10 +1,14 @@
 package route53
 
 import (
+	"context"
 	"strings"
 
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
+	"github.com/coredns/coredns/plugin/pkg/fall"
+	clog "github.com/coredns/coredns/plugin/pkg/log"
+	"github.com/coredns/coredns/plugin/pkg/upstream"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -13,6 +17,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/route53/route53iface"
 	"github.com/mholt/caddy"
 )
+
+var log = clog.NewWithPlugin("route53")
 
 func init() {
 	caddy.RegisterPlugin("route53", caddy.Plugin{
@@ -29,8 +35,20 @@ func init() {
 }
 
 func setup(c *caddy.Controller, f func(*credentials.Credentials) route53iface.Route53API) error {
-	keys := map[string]string{}
-	var credential *credentials.Credentials
+	keyPairs := map[string]struct{}{}
+	keys := map[string][]string{}
+
+	// Route53 plugin attempts to find AWS credentials by using ChainCredentials.
+	// And the order of that provider chain is as follows:
+	// Static AWS keys -> Environment Variables -> Credentials file -> IAM role
+	// With that said, even though a user doesn't define any credentials in
+	// Corefile, we should still attempt to read the default credentials file,
+	// ~/.aws/credentials with the default profile.
+	sharedProvider := &credentials.SharedCredentialsProvider{}
+	var providers []credentials.Provider
+	var fall fall.F
+
+	up, _ := upstream.New(nil)
 	for c.Next() {
 		args := c.RemainingArgs()
 
@@ -39,14 +57,16 @@ func setup(c *caddy.Controller, f func(*credentials.Credentials) route53iface.Ro
 			if len(parts) != 2 {
 				return c.Errf("invalid zone '%s'", args[i])
 			}
-			if parts[0] == "" || parts[1] == "" {
+			dns, hostedZoneID := parts[0], parts[1]
+			if dns == "" || hostedZoneID == "" {
 				return c.Errf("invalid zone '%s'", args[i])
 			}
-			zone := plugin.Host(parts[0]).Normalize()
-			if v, ok := keys[zone]; ok && v != parts[1] {
-				return c.Errf("conflict zone '%s' ('%s' vs. '%s')", zone, v, parts[1])
+			if _, ok := keyPairs[args[i]]; ok {
+				return c.Errf("conflict zone '%s'", args[i])
 			}
-			keys[zone] = parts[1]
+
+			keyPairs[args[i]] = struct{}{}
+			keys[dns] = append(keys[dns], hostedZoneID)
 		}
 
 		for c.NextBlock() {
@@ -56,33 +76,55 @@ func setup(c *caddy.Controller, f func(*credentials.Credentials) route53iface.Ro
 				if len(v) < 2 {
 					return c.Errf("invalid access key '%v'", v)
 				}
-				credential = credentials.NewStaticCredentials(v[0], v[1], "")
+				providers = append(providers, &credentials.StaticProvider{
+					Value: credentials.Value{
+						AccessKeyID:     v[0],
+						SecretAccessKey: v[1],
+					},
+				})
+			case "upstream":
+				args := c.RemainingArgs()
+				// TODO(dilyevsky): There is a bug that causes coredns to crash
+				// when no upstream endpoint is provided.
+				if len(args) == 0 {
+					return c.Errf("local upstream not supported. please provide upstream endpoint")
+				}
+				var err error
+				up, err = upstream.New(args)
+				if err != nil {
+					return c.Errf("invalid upstream: %v", err)
+				}
+			case "credentials":
+				if c.NextArg() {
+					sharedProvider.Profile = c.Val()
+				} else {
+					return c.ArgErr()
+				}
+				if c.NextArg() {
+					sharedProvider.Filename = c.Val()
+				}
+			case "fallthrough":
+				fall.SetZonesFromArgs(c.RemainingArgs())
 			default:
 				return c.Errf("unknown property '%s'", c.Val())
 			}
 		}
 	}
-	client := f(credential)
-	zones := []string{}
-	for zone, v := range keys {
-		// Make sure enough credentials is needed
-		if _, err := client.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{
-			HostedZoneId: aws.String(v),
-			MaxItems:     aws.String("1"),
-		}); err != nil {
-			return c.Errf("aws error: '%s'", err)
-		}
+	providers = append(providers, &credentials.EnvProvider{}, sharedProvider)
 
-		zones = append(zones, zone)
+	client := f(credentials.NewChainCredentials(providers))
+	ctx := context.Background()
+	h, err := New(ctx, client, keys, &up)
+	if err != nil {
+		return c.Errf("failed to create Route53 plugin: %v", err)
 	}
-
+	h.Fall = fall
+	if err := h.Run(ctx); err != nil {
+		return c.Errf("failed to initialize Route53 plugin: %v", err)
+	}
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
-		return Route53{
-			Next:   next,
-			keys:   keys,
-			zones:  zones,
-			client: client,
-		}
+		h.Next = next
+		return h
 	})
 
 	return nil
