@@ -246,7 +246,7 @@ func (g *AttrGauge) tick() uint32 {
 			g.pgv.DeleteLabelValues(attr, val)
 			delete(amap, val)
 		}
-		g.pgv.WithLabelValues(attr, "VALUES_COUNT").Set(float64(len(amap)))
+		g.pgv.WithLabelValues(attr, "values_count").Set(float64(len(amap)))
 	}
 	return atomic.SwapUint32(&g.errCnt, 0)
 }
