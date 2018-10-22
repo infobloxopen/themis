@@ -16,6 +16,8 @@ import (
 func TestProviderStartStop(t *testing.T) {
 	c := NewClient().(*client)
 	c.d = testProviderDialer{}
+	r := new(testProviderRadar)
+	c.r = r
 	p := new(provider)
 
 	p.start(c, []string{"127.0.0.1:5600"})
@@ -49,6 +51,9 @@ func TestProviderStartStop(t *testing.T) {
 
 		getter := p.getter
 		assert.NotZero(t, getter)
+
+		ch := r.ch
+		assert.NotZero(t, ch)
 		p.RUnlock()
 
 		c1 := NewClient().(*client)
@@ -89,6 +94,15 @@ func TestProviderStartStop(t *testing.T) {
 
 			p.RLock()
 			assert.False(t, p.started)
+
+			assert.Zero(t, r.ch)
+			select {
+			default:
+				assert.Fail(t, "radar channel hasn't been closed")
+			case u, ok := <-ch:
+				assert.False(t, ok, "update %#v", u)
+			}
+
 			p.RUnlock()
 		} else {
 			p.RUnlock()
@@ -207,13 +221,17 @@ func TestProviderConnect(t *testing.T) {
 	c.p.c = c
 	c.p.started = true
 	c.p.healthy = make(map[string]*connection)
+	c.p.retry = make(map[string]chan struct{})
 	c.p.queue = []*connection{}
 	c.p.rCnd = sync.NewCond(c.p.RLocker())
+
+	done := make(chan struct{})
+	c.p.retry["127.0.0.1:5600"] = done
 	c.p.Unlock()
 
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
-	go c.p.connect(wg, c, "127.0.0.1:5600", make(chan struct{}))
+	go c.p.connect(wg, c, "127.0.0.1:5600", done)
 
 	conn := <-d.ch
 	wg.Wait()
@@ -235,12 +253,15 @@ func TestProviderConnect(t *testing.T) {
 		c.p.queue = []*connection{}
 	}
 
+	assert.Empty(t, c.p.retry)
 	assert.False(t, conn.isClosed())
+
+	done = make(chan struct{})
+	c.p.started = false
 	c.p.Unlock()
 
-	c.p.started = false
 	wg.Add(1)
-	go c.p.connect(wg, c, "127.0.0.1:5600", make(chan struct{}))
+	go c.p.connect(wg, c, "127.0.0.1:5600", done)
 
 	conn = <-d.ch
 	wg.Wait()
@@ -463,6 +484,191 @@ func TestProviderReport(t *testing.T) {
 	)
 }
 
+func TestProviderChanger(t *testing.T) {
+	tErr := errors.New("test")
+	errs := []error{}
+
+	c := NewClient().(*client)
+	i1 := c.nextID()
+	conn := &connection{
+		i: i1,
+	}
+
+	wg := new(sync.WaitGroup)
+	ch := make(chan addrUpdate)
+
+	p := new(provider)
+	p.Lock()
+	p.c = c
+	p.started = true
+	p.wCnd = sync.NewCond(p)
+	p.queue = []*connection{conn}
+	p.healthy = map[string]*connection{"127.0.0.1:5600": conn}
+	p.broken = map[uint64]destConn{}
+	p.retry = map[string]chan struct{}{}
+	p.Unlock()
+
+	wg.Add(1)
+	go p.changer(wg, ch, func(addr net.Addr, err error) {
+		errs = append(errs, err)
+	})
+
+	ch <- addrUpdate{
+		err: tErr,
+	}
+	ch <- addrUpdate{
+		op:   addrUpdateOpDel,
+		addr: "127.0.0.1:5600",
+	}
+	ch <- addrUpdate{
+		op:   addrUpdateOpAdd,
+		addr: "127.0.0.2:5600",
+	}
+	close(ch)
+
+	wg.Wait()
+
+	p.Lock()
+	i2 := atomic.LoadUint64(c.autoID)
+	assert.Equal(t, []error{tErr}, errs)
+	assert.Empty(t, p.queue)
+	assert.Empty(t, p.healthy)
+	assert.Equal(t, map[uint64]destConn{
+		i1: {c: conn},
+		i2: {d: "127.0.0.2:5600"},
+	}, p.broken)
+	assert.Empty(t, p.retry)
+	p.Unlock()
+}
+
+func TestProviderAddAddress(t *testing.T) {
+	p := new(provider)
+	p.wCnd = sync.NewCond(p)
+	c := NewClient().(*client)
+	p.c = c
+
+	p.queue = []*connection{}
+	p.healthy = map[string]*connection{}
+	p.broken = map[uint64]destConn{}
+	p.retry = map[string]chan struct{}{}
+
+	p.addAddress("127.0.0.1:5600")
+	assert.Empty(t, p.queue)
+	assert.Empty(t, p.healthy)
+	assert.Empty(t, p.broken)
+	assert.Empty(t, p.retry)
+
+	p.started = true
+	p.addAddress("127.0.0.1:5600")
+	assert.Empty(t, p.queue)
+	assert.Empty(t, p.healthy)
+	i := atomic.LoadUint64(c.autoID)
+	assert.Equal(t, map[uint64]destConn{i: {d: "127.0.0.1:5600"}}, p.broken)
+	assert.Empty(t, p.retry)
+
+	conn := &connection{
+		i: c.nextID(),
+	}
+	p.queue = []*connection{conn}
+	p.healthy = map[string]*connection{"127.0.0.1:5600": conn}
+	p.broken = map[uint64]destConn{}
+	p.retry = map[string]chan struct{}{}
+	p.addAddress("127.0.0.1:5600")
+	assert.Equal(t, []*connection{conn}, p.queue)
+	assert.Equal(t, map[string]*connection{"127.0.0.1:5600": conn}, p.healthy)
+	assert.Empty(t, p.broken)
+	assert.Empty(t, p.retry)
+
+	p.queue = []*connection{}
+	p.healthy = map[string]*connection{}
+	p.broken = map[uint64]destConn{}
+	p.retry = map[string]chan struct{}{"127.0.0.1:5600": nil}
+	p.addAddress("127.0.0.1:5600")
+	assert.Empty(t, p.queue)
+	assert.Empty(t, p.healthy)
+	assert.Empty(t, p.broken)
+	assert.Equal(t, map[string]chan struct{}{"127.0.0.1:5600": nil}, p.retry)
+
+	p.queue = []*connection{}
+	p.healthy = map[string]*connection{}
+	p.broken = map[uint64]destConn{conn.i: {d: "127.0.0.1:5600", c: conn}}
+	p.retry = map[string]chan struct{}{}
+	p.addAddress("127.0.0.1:5600")
+	assert.Empty(t, p.queue)
+	assert.Empty(t, p.healthy)
+	assert.Equal(t, map[uint64]destConn{conn.i: {d: "127.0.0.1:5600", c: conn}}, p.broken)
+	assert.Empty(t, p.retry)
+}
+
+func TestProviderDelAddress(t *testing.T) {
+	p := new(provider)
+	p.wCnd = sync.NewCond(p)
+	c := NewClient().(*client)
+	p.c = c
+
+	p.queue = []*connection{}
+	p.healthy = map[string]*connection{}
+	p.broken = map[uint64]destConn{}
+	p.retry = map[string]chan struct{}{}
+
+	p.delAddress("127.0.0.1:5600")
+	assert.Empty(t, p.queue)
+	assert.Empty(t, p.healthy)
+	assert.Empty(t, p.broken)
+	assert.Empty(t, p.retry)
+
+	p.started = true
+	conn := &connection{
+		i: c.nextID(),
+	}
+	p.queue = []*connection{conn}
+	p.healthy = map[string]*connection{"127.0.0.1:5600": conn}
+	p.broken = map[uint64]destConn{}
+	p.retry = map[string]chan struct{}{}
+	p.delAddress("127.0.0.1:5600")
+	assert.Empty(t, p.queue)
+	assert.Empty(t, p.healthy)
+	assert.Equal(t, map[uint64]destConn{conn.i: {c: conn}}, p.broken)
+	assert.Empty(t, p.retry)
+
+	p.queue = []*connection{}
+	p.healthy = map[string]*connection{}
+	p.broken = map[uint64]destConn{}
+	ch := make(chan struct{}, 1)
+	p.retry = map[string]chan struct{}{"127.0.0.1:5600": ch}
+	p.delAddress("127.0.0.1:5600")
+	assert.Empty(t, p.queue)
+	assert.Empty(t, p.healthy)
+	assert.Empty(t, p.broken)
+	assert.Empty(t, p.retry)
+	select {
+	default:
+		assert.Fail(t, "retry channel hasn't been closed")
+	case _, ok := <-ch:
+		assert.False(t, ok)
+	}
+
+	p.queue = []*connection{}
+	p.healthy = map[string]*connection{}
+	p.broken = map[uint64]destConn{c.nextID(): {d: "127.0.0.1:5600"}}
+	p.retry = map[string]chan struct{}{}
+	p.delAddress("127.0.0.1:5600")
+	assert.Empty(t, p.queue)
+	assert.Empty(t, p.healthy)
+	assert.Empty(t, p.broken)
+	assert.Empty(t, p.retry)
+
+	p.queue = []*connection{}
+	p.healthy = map[string]*connection{}
+	p.broken = map[uint64]destConn{conn.i: {d: "127.0.0.1:5600", c: conn}}
+	p.retry = map[string]chan struct{}{}
+	p.delAddress("127.0.0.1:5600")
+	assert.Empty(t, p.queue)
+	assert.Empty(t, p.healthy)
+	assert.Equal(t, map[uint64]destConn{conn.i: {c: conn}}, p.broken)
+	assert.Empty(t, p.retry)
+}
+
 func TestProviderSelectGetter(t *testing.T) {
 	g := selectGetter(balancerTypeSimple)
 	assert.Equal(t, reflect.ValueOf(simpleGetter).Pointer(), reflect.ValueOf(g).Pointer())
@@ -675,3 +881,31 @@ func (c *testProviderBrokenConn) LocalAddr() net.Addr                { panic("no
 func (c *testProviderBrokenConn) SetDeadline(t time.Time) error      { panic("not implemented") }
 func (c *testProviderBrokenConn) SetReadDeadline(t time.Time) error  { panic("not implemented") }
 func (c *testProviderBrokenConn) SetWriteDeadline(t time.Time) error { panic("not implemented") }
+
+type testProviderRadar struct {
+	sync.Mutex
+
+	ch chan addrUpdate
+}
+
+func (r *testProviderRadar) start(addrs []string) <-chan addrUpdate {
+	r.Lock()
+	r.Unlock()
+
+	if r.ch != nil {
+		return nil
+	}
+
+	r.ch = make(chan addrUpdate)
+	return r.ch
+}
+
+func (r *testProviderRadar) stop() {
+	r.Lock()
+	r.Unlock()
+
+	if r.ch != nil {
+		close(r.ch)
+		r.ch = nil
+	}
+}

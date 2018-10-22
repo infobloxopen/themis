@@ -7,13 +7,15 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 func TestWithNetwork(t *testing.T) {
 	var o options
 
-	WithNetwork("unix")(&o)
-	assert.Equal(t, "unix", o.net)
+	WithNetwork(unixNet)(&o)
+	assert.Equal(t, unixNet, o.net)
 }
 
 func TestWithAddress(t *testing.T) {
@@ -134,4 +136,50 @@ func TestWithTestTermFlushChannel(t *testing.T) {
 
 	withTestTermFlushChannel(make(chan time.Time))(&o)
 	assert.NotZero(t, o.termFlushCh)
+}
+
+func TestWithTestK8sClient(t *testing.T) {
+	var o options
+
+	f := func() (kubernetes.Interface, error) {
+		return fake.NewSimpleClientset(), nil
+	}
+	withTestK8sClient(f)(&o)
+	assert.Equal(t, reflect.ValueOf(f).Pointer(), reflect.ValueOf(o.k8sClientMaker).Pointer())
+}
+
+func TestMakeOptions(t *testing.T) {
+	o := makeOptions([]Option{
+		WithNetwork(unixNet),
+		WithAddress("/var/run/pip.socket"),
+	})
+
+	assert.Equal(t, unixNet, o.net)
+	assert.Equal(t, "/var/run/pip.socket", o.addr)
+	assert.Equal(t, defMaxSize, o.maxSize)
+}
+
+func TestMakeOptionsWithTooSmallBufSize(t *testing.T) {
+	o := makeOptions([]Option{
+		WithBufferSize(1024),
+	})
+	assert.Equal(t, defBufSize, o.bufSize)
+
+	o = makeOptions([]Option{
+		WithMaxRequestSize(256),
+		WithBufferSize(1024),
+	})
+	assert.Equal(t, 1024, o.bufSize)
+}
+
+func TestMakeOptionsWithDefRadarInt(t *testing.T) {
+	o := makeOptions([]Option{
+		WithDNSRadar(),
+	})
+	assert.Equal(t, defDNSRadarInt, o.radarInt)
+
+	o = makeOptions([]Option{
+		WithK8sRadar(),
+	})
+	assert.Equal(t, defK8sRadarInt, o.radarInt)
 }

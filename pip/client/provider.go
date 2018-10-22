@@ -57,6 +57,11 @@ func (p *provider) start(c *client, addrs []string) {
 	p.wg = new(sync.WaitGroup)
 	p.wg.Add(1)
 	go p.connector(p.wg, p.c)
+
+	if p.c.r != nil {
+		p.wg.Add(1)
+		go p.changer(p.wg, p.c.r.start(addrs), p.c.opts.onErr)
+	}
 }
 
 func (p *provider) stop() {
@@ -90,9 +95,15 @@ func (p *provider) stop() {
 
 	p.getter = nil
 	p.idx = nil
+
+	c := p.c
 	p.c = nil
 
 	p.Unlock()
+
+	if c.r != nil {
+		c.r.stop()
+	}
 
 	rCnd.Broadcast()
 	wCnd.Signal()
@@ -171,7 +182,13 @@ func (p *provider) connect(wg *sync.WaitGroup, c *client, a string, ch <-chan st
 	p.Lock()
 	defer p.Unlock()
 
-	if !p.started {
+	var done chan struct{}
+	ok := false
+	if p.retry != nil {
+		done, ok = p.retry[a]
+	}
+
+	if !p.started || !ok {
 		if n != nil {
 			if err := n.Close(); err != nil && c.opts.onErr != nil {
 				c.opts.onErr(n.RemoteAddr(), err)
@@ -182,6 +199,7 @@ func (p *provider) connect(wg *sync.WaitGroup, c *client, a string, ch <-chan st
 	}
 
 	delete(p.retry, a)
+	close(done)
 
 	if n != nil {
 		conn := p.c.newConnection(n)
@@ -268,6 +286,94 @@ func (p *provider) report(c *connection) {
 		c: c,
 	}
 	p.wCnd.Signal()
+}
+
+func (p *provider) changer(wg *sync.WaitGroup, ch <-chan addrUpdate, onErr ConnErrHandler) {
+	defer wg.Done()
+
+	for u := range ch {
+		if u.err != nil {
+			if onErr != nil {
+				onErr(nil, u.err)
+			}
+
+			continue
+		}
+
+		switch u.op {
+		case addrUpdateOpAdd:
+			p.addAddress(u.addr)
+
+		case addrUpdateOpDel:
+			p.delAddress(u.addr)
+		}
+	}
+}
+
+func (p *provider) addAddress(addr string) {
+	p.Lock()
+	defer p.Unlock()
+
+	if !p.started {
+		return
+	}
+
+	if _, ok := p.healthy[addr]; ok {
+		return
+	}
+
+	if _, ok := p.retry[addr]; ok {
+		return
+	}
+
+	for _, dc := range p.broken {
+		if dc.d == addr {
+			return
+		}
+	}
+
+	p.broken[p.c.nextID()] = destConn{d: addr}
+	p.wCnd.Signal()
+}
+
+func (p *provider) delAddress(addr string) {
+	p.Lock()
+	defer p.Unlock()
+
+	if !p.started {
+		return
+	}
+
+	if c, ok := p.healthy[addr]; ok {
+		delete(p.healthy, addr)
+		p.unqueue(c)
+
+		p.broken[c.i] = destConn{c: c}
+		p.wCnd.Signal()
+
+		return
+	}
+
+	if ch, ok := p.retry[addr]; ok {
+		delete(p.retry, addr)
+		close(ch)
+
+		return
+	}
+
+	for i, dc := range p.broken {
+		if dc.d == addr {
+			if dc.c != nil {
+				p.broken[i] = destConn{c: dc.c}
+				p.wCnd.Signal()
+
+				return
+			}
+
+			delete(p.broken, i)
+			return
+		}
+	}
 }
 
 func selectGetter(balancer int) getter {

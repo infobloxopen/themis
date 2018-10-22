@@ -4,6 +4,9 @@ import (
 	"math"
 	"net"
 	"time"
+
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 // An Option allows to set such options as address, balancer and so on.
@@ -48,6 +51,36 @@ func WithHotSpotBalancer(addrs ...string) Option {
 		if len(addrs) > 0 {
 			o.addrs = addrs
 		}
+	}
+}
+
+// WithDNSRadar returns an Option which turns on DNS discovery (DNS radar).
+// The radar periodicaly looks up for IP addresses using system resolver
+// (works only for TCP networks). It uses an address given by WithAddress option
+// as host name for DNS qurey. If the query gives several IP addresses,
+// PIP client balances load using balancer given by With*Balancer option.
+// Addresses which come from With*Balancer option are used only as initial
+// set of addresses to connect to. If further DNS queries don't return those
+// addresses client stops using them.
+func WithDNSRadar() Option {
+	return func(o *options) {
+		o.radar = radarDNS
+	}
+}
+
+// WithK8sRadar returns an Option which turns on kubernetes discovery.
+// The discovery works only inside kubernetes cluster and requires "get",
+// "watch" and "list" access to "pods" resource. It treats address from
+// WithAddress option as selector encoded in following form
+// "<valueN>.<keyN>. ... .<value2>.<key2>.<value1>.<key1>.<namespacea>"
+// (it should contain at least one key value pair and namespace). Similarly
+// to DNS in case of several pods given balancer is used and addresses coming
+// with balancer options become initiall addresses. However the discovery drops
+// connection to an initiall address only if kubernetes tells that the pod with
+// the IP goes down.
+func WithK8sRadar() Option {
+	return func(o *options) {
+		o.radar = radarK8s
 	}
 }
 
@@ -154,17 +187,26 @@ func withTestTermFlushChannel(ch <-chan time.Time) Option {
 	}
 }
 
+func withTestK8sClient(f func() (kubernetes.Interface, error)) Option {
+	return func(o *options) {
+		o.k8sClientMaker = f
+	}
+}
+
 type options struct {
 	maxSize            int
 	maxQueue           int
 	bufSize            int
 	onErr              ConnErrHandler
+	radar              int
+	radarInt           time.Duration
 	connTimeout        time.Duration
 	connAttemptTimeout time.Duration
 	keepAlive          time.Duration
 	writeInt           time.Duration
 	timeout            time.Duration
 	termInt            time.Duration
+	k8sClientMaker     func() (kubernetes.Interface, error)
 
 	net  string
 	addr string
@@ -180,6 +222,8 @@ const (
 	defMaxSize            = 10 * 1024
 	defMaxQueue           = 100
 	defBufSize            = 1024 * 1024
+	defDNSRadarInt        = time.Second
+	defK8sRadarInt        = time.Minute
 	defConnTimeout        = 30 * time.Second
 	defConnAttemptTimeout = 5 * time.Second
 	defKeepAlive          = 5 * time.Second
@@ -191,7 +235,16 @@ const (
 	defAddr = "localhost:5600"
 	defPort = "5600"
 
+	defRadar    = radarNone
 	defBalancer = balancerTypeSimple
+
+	unixNet = "unix"
+)
+
+const (
+	radarNone = iota
+	radarDNS
+	radarK8s
 )
 
 const (
@@ -200,19 +253,50 @@ const (
 	balancerTypeHotSpot
 )
 
-var defaults = options{
-	maxSize:            defMaxSize,
-	maxQueue:           defMaxQueue,
-	bufSize:            defBufSize,
-	connTimeout:        defConnTimeout,
-	connAttemptTimeout: defConnAttemptTimeout,
-	keepAlive:          defKeepAlive,
-	writeInt:           defWriteInt,
-	timeout:            defTimeout,
-	termInt:            defTermInt,
+var (
+	defK8sConfig = rest.InClusterConfig
 
-	net:  defNet,
-	addr: defAddr,
+	defaults = options{
+		maxSize:            defMaxSize,
+		maxQueue:           defMaxQueue,
+		bufSize:            defBufSize,
+		radar:              defRadar,
+		connTimeout:        defConnTimeout,
+		connAttemptTimeout: defConnAttemptTimeout,
+		keepAlive:          defKeepAlive,
+		writeInt:           defWriteInt,
+		timeout:            defTimeout,
+		termInt:            defTermInt,
+		k8sClientMaker:     makeInClusterK8sClient,
 
-	balancer: defBalancer,
+		net:  defNet,
+		addr: defAddr,
+
+		balancer: defBalancer,
+	}
+)
+
+func makeOptions(opts []Option) options {
+	o := defaults
+	for _, opt := range opts {
+		opt(&o)
+	}
+
+	if o.maxSize+msgSizeBytes+msgIdxBytes > o.bufSize {
+		o.bufSize = defBufSize
+	}
+
+	switch o.radar {
+	case radarDNS:
+		if o.radarInt <= 0 {
+			o.radarInt = defDNSRadarInt
+		}
+
+	case radarK8s:
+		if o.radarInt <= 0 {
+			o.radarInt = defK8sRadarInt
+		}
+	}
+
+	return o
 }

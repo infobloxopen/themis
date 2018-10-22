@@ -37,14 +37,7 @@ type Client interface {
 
 // NewClient creates client instance.
 func NewClient(opts ...Option) Client {
-	o := defaults
-	for _, opt := range opts {
-		opt(&o)
-	}
-
-	if o.maxSize+msgSizeBytes+msgIdxBytes > o.bufSize {
-		o.bufSize = defBufSize
-	}
+	o := makeOptions(opts)
 
 	return &client{
 		opts: o,
@@ -64,6 +57,7 @@ type client struct {
 	pool  bytePool
 
 	d dialer
+	r radar
 	p *provider
 
 	autoID *uint64
@@ -86,19 +80,12 @@ func (c *client) Connect() error {
 		atomic.StoreUint32(c.state, state)
 	}()
 
-	addrs := []string{c.opts.addr}
-	var err error
-	if c.opts.balancer != balancerTypeSimple {
-		if len(c.opts.addrs) > 0 {
-			addrs = c.opts.addrs
-		} else {
-			addrs, err = lookupHostPort(c.opts.addr)
-			if err != nil {
-				return err
-			}
-		}
+	addrs, r, err := c.newAddressesAndRadar()
+	if err != nil {
+		return err
 	}
 
+	c.r = r
 	c.p.start(c, addrs)
 
 	state = pipClientConnected
