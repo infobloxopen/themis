@@ -59,11 +59,11 @@ func TestConnectionGet(t *testing.T) {
 		}
 	}()
 
-	b = append(b[:0], 0xef, 0xbe, 0xad, 0xde)
+	b.b = append(b.b[:0], 0xef, 0xbe, 0xad, 0xde)
 	b, err = conn.get(b)
 
 	assert.NoError(t, err)
-	assert.Equal(t, []byte{0xef, 0xbe, 0xad, 0xde}, b)
+	assert.Equal(t, []byte{0xef, 0xbe, 0xad, 0xde}, b.b)
 }
 
 func TestConnectionIsFull(t *testing.T) {

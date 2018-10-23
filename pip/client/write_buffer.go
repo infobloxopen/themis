@@ -39,7 +39,7 @@ func (w *writeBuffer) put(r request) {
 		return
 	}
 
-	size := msgIdxBytes + len(r.b)
+	size := msgIdxBytes + len(r.b.b)
 	if w.rem() < msgSizeBytes+size {
 		w.rawFlush()
 	}
@@ -48,7 +48,7 @@ func (w *writeBuffer) put(r request) {
 	w.out = append(w.out, 0, 0, 0, 0, 0, 0, 0, 0)
 	binary.LittleEndian.PutUint32(w.out[i:], uint32(size))
 	binary.LittleEndian.PutUint32(w.out[i+msgSizeBytes:], uint32(r.i))
-	w.out = append(w.out, r.b...)
+	w.out = append(w.out, r.b.b...)
 	w.idx = append(w.idx, r.i)
 
 	if w.rem() <= 0 {

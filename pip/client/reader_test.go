@@ -35,8 +35,8 @@ func TestReader(t *testing.T) {
 			b, err := p.get()
 			m.Lock()
 			if b != nil {
-				msg := make([]byte, len(b))
-				copy(msg, b)
+				msg := make([]byte, len(b.b))
+				copy(msg, b.b)
 
 				msgs = append(msgs, msg)
 			} else {

@@ -15,15 +15,15 @@ var (
 type readBuffer struct {
 	in     []byte
 	buf    []byte
-	msgBuf []byte
+	msgBuf *byteBuffer
 	size   int
 	max    uint32
 	idx    int
-	pool   bytePool
+	pool   byteBufferPool
 	p      pipes
 }
 
-func newReadBuffer(n, m int, pool bytePool, p pipes) *readBuffer {
+func newReadBuffer(n, m int, pool byteBufferPool, p pipes) *readBuffer {
 	return &readBuffer{
 		in:   make([]byte, n),
 		buf:  make([]byte, 0, msgSizeBytes),
@@ -108,21 +108,23 @@ func (rb *readBuffer) fillIdx(b []byte) (int, error) {
 
 	rb.size -= n
 	rb.idx = int(idx)
-	rb.msgBuf = rb.pool.Get()[:0]
+	rb.msgBuf = rb.pool.Get()
+	rb.msgBuf.b = rb.msgBuf.b[:0]
 
 	return n, nil
 }
 
 func (rb *readBuffer) fillMsg(b []byte) (int, error) {
-	a := rb.msgBuf
+	a := rb.msgBuf.b
 	n := rb.size
 	if n > len(b) {
-		rb.msgBuf = append(a, b...)
+		rb.msgBuf.b = append(a, b...)
 		rb.size -= len(b)
 		return len(b), nil
 	}
 
-	if !rb.p.putBytes(rb.idx, append(a, b[:n]...)) {
+	rb.msgBuf.b = append(a, b[:n]...)
+	if !rb.p.putBytes(rb.idx, rb.msgBuf) {
 		rb.pool.Put(rb.msgBuf)
 	}
 	rb.size, rb.idx, rb.msgBuf = 0, -1, nil

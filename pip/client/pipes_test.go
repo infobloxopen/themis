@@ -53,11 +53,14 @@ func TestPipesPutBytes(t *testing.T) {
 	ps := makePipes(3, defTimeout.Nanoseconds())
 
 	i, p := ps.alloc()
-	ps.putBytes(i, []byte{0xde, 0xc0, 0xad, 0xde})
+	b := &byteBuffer{
+		b: []byte{0xde, 0xc0, 0xad, 0xde},
+	}
+	ps.putBytes(i, b)
 
 	b, err := p.get()
 	assert.NoError(t, err)
-	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde}, b)
+	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde}, b.b)
 }
 
 func TestPipesPutError(t *testing.T) {

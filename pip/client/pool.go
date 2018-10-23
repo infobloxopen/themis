@@ -2,24 +2,31 @@ package client
 
 import "sync"
 
-type bytePool struct {
+type byteBufferPool struct {
 	b *sync.Pool
 }
 
-func makeBytePool(size int) bytePool {
-	return bytePool{
+func makeByteBufferPool(size int) byteBufferPool {
+	return byteBufferPool{
 		b: &sync.Pool{
 			New: func() interface{} {
-				return make([]byte, size)
+				return &byteBuffer{
+					b: make([]byte, size),
+				}
 			},
 		},
 	}
 }
 
-func (p bytePool) Get() []byte {
-	return p.b.Get().([]byte)
+func (p byteBufferPool) Get() *byteBuffer {
+	return p.b.Get().(*byteBuffer)
 }
 
-func (p bytePool) Put(b []byte) {
-	p.b.Put(b[:cap(b)])
+func (p byteBufferPool) Put(b *byteBuffer) {
+	b.b = b.b[:cap(b.b)]
+	p.b.Put(b)
+}
+
+type byteBuffer struct {
+	b []byte
 }

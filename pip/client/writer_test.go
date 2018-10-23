@@ -27,7 +27,7 @@ func TestWriter(t *testing.T) {
 			c.pool.Put(b)
 		}
 	}()
-	b = append(b[:0], 0xef, 0xbe, 0xad, 0xde)
+	b.b = append(b.b[:0], 0xef, 0xbe, 0xad, 0xde)
 
 	i, p := conn.p.alloc()
 	defer conn.p.free(i)
@@ -62,7 +62,7 @@ func TestWriterNoTimeout(t *testing.T) {
 			c.pool.Put(b)
 		}
 	}()
-	b = append(b[:0], 0xef, 0xbe, 0xad, 0xde)
+	b.b = append(b.b[:0], 0xef, 0xbe, 0xad, 0xde)
 
 	i, p := conn.p.alloc()
 	defer conn.p.free(i)
@@ -107,7 +107,9 @@ func (c testWriterConn) Write(b []byte) (int, error) {
 			return n, fmt.Errorf("expected %d bytes for index but got only %d", msgIdxBytes, size)
 		}
 		idx := int(binary.LittleEndian.Uint32(b))
-		c.p.putBytes(idx, append(make([]byte, 0, size-msgIdxBytes), b[msgIdxBytes:size]...))
+		c.p.putBytes(idx, &byteBuffer{
+			b: append(make([]byte, 0, size-msgIdxBytes), b[msgIdxBytes:size]...),
+		})
 
 		b = b[size:]
 		n += size

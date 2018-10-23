@@ -1,6 +1,6 @@
 package client
 
 type response struct {
-	b   []byte
+	b   *byteBuffer
 	err error
 }

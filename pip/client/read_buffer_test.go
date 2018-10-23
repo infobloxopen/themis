@@ -36,7 +36,7 @@ func TestReadBufferRead(t *testing.T) {
 	defer ctx.pool.Put(b)
 
 	assert.NoError(t, err)
-	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde}, b)
+	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde}, b.b)
 }
 
 func TestReadBufferReadWithInvalidIdx(t *testing.T) {
@@ -54,19 +54,21 @@ func TestReadBufferReadWithInvalidIdx(t *testing.T) {
 func TestReadBufferExtractData(t *testing.T) {
 	ctx := makeReadBufferContext(1024, 8, 1)
 
-	b := []byte{
-		0x08, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00,
-		0xde, 0xc0, 0xad, 0xde,
+	b := &byteBuffer{
+		b: []byte{
+			0x08, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0xde, 0xc0, 0xad, 0xde,
+		},
 	}
-	n, err := ctx.r.extractData(b)
+	n, err := ctx.r.extractData(b.b)
 	assert.Equal(t, 4, n)
 	assert.NoError(t, err)
 	assert.Equal(t, 8, ctx.r.size)
 	assert.Equal(t, 0, len(ctx.r.buf))
 	assert.Equal(t, msgSizeBytes, cap(ctx.r.buf))
 
-	n, err = ctx.r.extractData(b[4:])
+	n, err = ctx.r.extractData(b.b[4:])
 	assert.Equal(t, 4, n)
 	assert.NoError(t, err)
 	assert.Equal(t, 4, ctx.r.size)
@@ -74,9 +76,9 @@ func TestReadBufferExtractData(t *testing.T) {
 	assert.Equal(t, 0, len(ctx.r.buf))
 	assert.Equal(t, msgIdxBytes, cap(ctx.r.buf))
 	assert.NotZero(t, ctx.r.msgBuf)
-	assert.Equal(t, 8, cap(ctx.r.msgBuf))
+	assert.Equal(t, 8, cap(ctx.r.msgBuf.b))
 
-	n, err = ctx.r.extractData(b[8:])
+	n, err = ctx.r.extractData(b.b[8:])
 	assert.Equal(t, 4, n)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, ctx.r.size)
@@ -87,7 +89,7 @@ func TestReadBufferExtractData(t *testing.T) {
 	defer ctx.pool.Put(b)
 
 	assert.NoError(t, err)
-	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde}, b)
+	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde}, b.b)
 }
 
 func TestReadBufferFillSize(t *testing.T) {
@@ -185,7 +187,8 @@ func TestReadBufferFillMsg(t *testing.T) {
 	ctx := makeReadBufferContext(1024, 8, 1)
 	ctx.r.size = 4
 	ctx.r.idx = 0
-	ctx.r.msgBuf = ctx.pool.Get()[:0]
+	ctx.r.msgBuf = ctx.pool.Get()
+	ctx.r.msgBuf.b = ctx.r.msgBuf.b[:0]
 
 	n, err := ctx.r.fillMsg([]byte{
 		0xde, 0xc0, 0xad, 0xde,
@@ -200,14 +203,15 @@ func TestReadBufferFillMsg(t *testing.T) {
 	defer ctx.pool.Put(b)
 
 	assert.NoError(t, err)
-	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde}, b)
+	assert.Equal(t, []byte{0xde, 0xc0, 0xad, 0xde}, b.b)
 }
 
 func TestReadBufferFillMsgPartial(t *testing.T) {
 	ctx := makeReadBufferContext(1024, 8, 1)
 	ctx.r.size = 4
 	ctx.r.idx = 0
-	ctx.r.msgBuf = ctx.pool.Get()[:0]
+	ctx.r.msgBuf = ctx.pool.Get()
+	ctx.r.msgBuf.b = ctx.r.msgBuf.b[:0]
 
 	n, err := ctx.r.fillMsg([]byte{
 		0xde, 0xc0,
@@ -216,14 +220,15 @@ func TestReadBufferFillMsgPartial(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 2, ctx.r.size)
 	assert.Equal(t, 0, ctx.r.idx)
-	assert.Equal(t, []byte{0xde, 0xc0}, ctx.r.msgBuf)
+	assert.Equal(t, []byte{0xde, 0xc0}, ctx.r.msgBuf.b)
 }
 
 func TestReadBufferFillMsgDuplicate(t *testing.T) {
 	ctx := makeReadBufferContext(1024, 8, 1)
 	ctx.r.size = 4
 	ctx.r.idx = 0
-	ctx.r.msgBuf = ctx.pool.Get()[:0]
+	ctx.r.msgBuf = ctx.pool.Get()
+	ctx.r.msgBuf.b = ctx.r.msgBuf.b[:0]
 
 	n, err := ctx.r.fillMsg([]byte{
 		0x01, 0x02, 0x03, 0x04,
@@ -236,7 +241,8 @@ func TestReadBufferFillMsgDuplicate(t *testing.T) {
 
 	ctx.r.size = 4
 	ctx.r.idx = 0
-	ctx.r.msgBuf = ctx.pool.Get()[:0]
+	ctx.r.msgBuf = ctx.pool.Get()
+	ctx.r.msgBuf.b = ctx.r.msgBuf.b[:0]
 
 	n, err = ctx.r.fillMsg([]byte{
 		0x05, 0x06, 0x07, 0x08,
@@ -251,7 +257,7 @@ func TestReadBufferFillMsgDuplicate(t *testing.T) {
 	defer ctx.pool.Put(b)
 
 	assert.NoError(t, err)
-	assert.Equal(t, []byte{0x01, 0x02, 0x03, 0x04}, b)
+	assert.Equal(t, []byte{0x01, 0x02, 0x03, 0x04}, b.b)
 	assert.Empty(t, ctx.p.p[0].ch)
 }
 
@@ -259,7 +265,8 @@ func TestReadBufferFinalize(t *testing.T) {
 	ctx := makeReadBufferContext(1024, 8, 1)
 	ctx.r.size = 4
 	ctx.r.idx = 0
-	ctx.r.msgBuf = ctx.pool.Get()[:0]
+	ctx.r.msgBuf = ctx.pool.Get()
+	ctx.r.msgBuf.b = ctx.r.msgBuf.b[:0]
 
 	n, err := ctx.r.fillMsg([]byte{
 		0xde, 0xc0,
@@ -268,7 +275,7 @@ func TestReadBufferFinalize(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 2, ctx.r.size)
 	assert.Equal(t, 0, ctx.r.idx)
-	assert.Equal(t, []byte{0xde, 0xc0}, ctx.r.msgBuf)
+	assert.Equal(t, []byte{0xde, 0xc0}, ctx.r.msgBuf.b)
 
 	ctx.r.finalize()
 }
@@ -276,13 +283,13 @@ func TestReadBufferFinalize(t *testing.T) {
 type readBufferContext struct {
 	r    *readBuffer
 	p    pipes
-	pool bytePool
+	pool byteBufferPool
 }
 
 func makeReadBufferContext(n, m, q int) readBufferContext {
 	out := readBufferContext{
 		p:    makePipes(q, defTimeout.Nanoseconds()),
-		pool: makeBytePool(m),
+		pool: makeByteBufferPool(m),
 	}
 
 	out.r = newReadBuffer(n, m, out.pool, out.p)

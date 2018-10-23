@@ -2,5 +2,5 @@ package client
 
 type request struct {
 	i int
-	b []byte
+	b *byteBuffer
 }

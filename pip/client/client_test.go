@@ -170,7 +170,9 @@ func TestClientCloseWithDifferentRequests(t *testing.T) {
 	var err1 error
 	go func() {
 		defer wg.Done()
-		_, _, err1 = c.tryGet(pdp.MakeStringAssignment("test", "test"))
+		_, _, err1 = c.tryGet([]pdp.AttributeAssignment{
+			pdp.MakeStringAssignment("test", "test"),
+		})
 	}()
 
 	time.Sleep(50 * time.Millisecond)
@@ -179,7 +181,9 @@ func TestClientCloseWithDifferentRequests(t *testing.T) {
 	var err2 error
 	go func() {
 		defer wg.Done()
-		_, _, err2 = c.tryGet(pdp.MakeStringAssignment("a", "a"))
+		_, _, err2 = c.tryGet([]pdp.AttributeAssignment{
+			pdp.MakeStringAssignment("a", "a"),
+		})
 	}()
 
 	time.Sleep(50 * time.Millisecond)
@@ -188,7 +192,9 @@ func TestClientCloseWithDifferentRequests(t *testing.T) {
 	var err3 error
 	go func() {
 		defer wg.Done()
-		_, _, err3 = c.tryGet(pdp.MakeStringAssignment("b", "b"))
+		_, _, err3 = c.tryGet([]pdp.AttributeAssignment{
+			pdp.MakeStringAssignment("b", "b"),
+		})
 	}()
 
 	time.Sleep(50 * time.Millisecond)
@@ -209,7 +215,7 @@ func TestClientGet(t *testing.T) {
 	if err := c.Connect(); assert.NoError(t, err) {
 		defer c.Close()
 
-		v, err := c.Get()
+		v, err := c.Get([]pdp.AttributeAssignment{})
 		assert.Equal(t, pdp.UndefinedValue, v)
 		assert.NoError(t, err)
 	}
@@ -217,7 +223,7 @@ func TestClientGet(t *testing.T) {
 
 func TestClientGetErrNotConnected(t *testing.T) {
 	c := NewClient()
-	_, err := c.Get()
+	_, err := c.Get([]pdp.AttributeAssignment{})
 	assert.Equal(t, ErrNotConnected, err)
 }
 
@@ -229,7 +235,7 @@ func TestClientTryGet(t *testing.T) {
 	if err := c.Connect(); assert.NoError(t, err) {
 		defer c.Close()
 
-		v, ok, err := c.tryGet()
+		v, ok, err := c.tryGet([]pdp.AttributeAssignment{})
 		assert.Equal(t, pdp.UndefinedValue, v)
 		assert.True(t, ok)
 		assert.NoError(t, err)
@@ -238,7 +244,7 @@ func TestClientTryGet(t *testing.T) {
 
 func TestClientTryGettErrNotConnected(t *testing.T) {
 	c := NewClient().(*client)
-	_, ok, err := c.tryGet()
+	_, ok, err := c.tryGet([]pdp.AttributeAssignment{})
 	assert.False(t, ok)
 	assert.Equal(t, ErrNotConnected, err)
 }
@@ -251,7 +257,9 @@ func TestClientTryGetMarshallingError(t *testing.T) {
 	if err := c.Connect(); assert.NoError(t, err) {
 		defer c.Close()
 
-		_, ok, err := c.tryGet(pdp.MakeExpressionAssignment("test", pdp.UndefinedValue))
+		_, ok, err := c.tryGet([]pdp.AttributeAssignment{
+			pdp.MakeExpressionAssignment("test", pdp.UndefinedValue),
+		})
 		assert.False(t, ok)
 		assert.Error(t, err)
 	}

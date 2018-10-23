@@ -56,7 +56,7 @@ func (p pipes) putError(i int, err error) {
 	p.p[i].putError(err)
 }
 
-func (p pipes) putBytes(i int, b []byte) bool {
+func (p pipes) putBytes(i int, b *byteBuffer) bool {
 	return p.p[i].putBytes(b)
 }
 

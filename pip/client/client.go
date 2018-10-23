@@ -32,7 +32,7 @@ type Client interface {
 	Close()
 
 	// Get requests information from PIP.
-	Get(args ...pdp.AttributeAssignment) (pdp.AttributeValue, error)
+	Get(args []pdp.AttributeAssignment) (pdp.AttributeValue, error)
 }
 
 // NewClient creates client instance.
@@ -43,7 +43,7 @@ func NewClient(opts ...Option) Client {
 		opts: o,
 
 		state:  new(uint32),
-		pool:   makeBytePool(o.maxSize),
+		pool:   makeByteBufferPool(o.maxSize),
 		d:      makeDialerTK(o.net, o.connAttemptTimeout, o.keepAlive),
 		p:      new(provider),
 		autoID: new(uint64),
@@ -54,7 +54,7 @@ type client struct {
 	opts options
 
 	state *uint32
-	pool  bytePool
+	pool  byteBufferPool
 
 	d dialer
 	r radar
@@ -102,9 +102,9 @@ func (c *client) Close() {
 	c.p.stop()
 }
 
-func (c *client) Get(args ...pdp.AttributeAssignment) (pdp.AttributeValue, error) {
+func (c *client) Get(args []pdp.AttributeAssignment) (pdp.AttributeValue, error) {
 	for atomic.LoadUint32(c.state) == pipClientConnected {
-		v, ok, err := c.tryGet(args...)
+		v, ok, err := c.tryGet(args)
 		if !ok || err == nil {
 			return v, err
 		}
@@ -113,7 +113,7 @@ func (c *client) Get(args ...pdp.AttributeAssignment) (pdp.AttributeValue, error
 	return pdp.UndefinedValue, ErrNotConnected
 }
 
-func (c *client) tryGet(args ...pdp.AttributeAssignment) (pdp.AttributeValue, bool, error) {
+func (c *client) tryGet(args []pdp.AttributeAssignment) (pdp.AttributeValue, bool, error) {
 	conn := c.p.get()
 	if conn == nil {
 		return pdp.UndefinedValue, false, ErrNotConnected
@@ -127,12 +127,13 @@ func (c *client) tryGet(args ...pdp.AttributeAssignment) (pdp.AttributeValue, bo
 		}
 	}()
 
-	n, err := pdp.MarshalRequestAssignmentsToBuffer(b, args)
+	n, err := pdp.MarshalRequestAssignmentsToBuffer(b.b, args)
 	if err != nil {
 		return pdp.UndefinedValue, false, err
 	}
+	b.b = b.b[:n]
 
-	b, err = conn.get(b[:n])
+	b, err = conn.get(b)
 	if err != nil {
 		c.p.report(conn)
 	}

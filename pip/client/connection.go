@@ -66,7 +66,7 @@ func (c *connection) close() {
 	c.w.Wait()
 }
 
-func (c *connection) get(b []byte) ([]byte, error) {
+func (c *connection) get(b *byteBuffer) (*byteBuffer, error) {
 	i, p := c.p.alloc()
 	defer c.p.free(i)
 

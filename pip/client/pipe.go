@@ -32,7 +32,7 @@ func (p pipe) clean(t *int64) {
 	}
 }
 
-func (p pipe) get() ([]byte, error) {
+func (p pipe) get() (*byteBuffer, error) {
 	r := <-p.ch
 	return r.b, r.err
 }
@@ -46,7 +46,7 @@ func (p pipe) putError(err error) {
 	atomic.StoreInt64(p.t, math.MinInt64)
 }
 
-func (p pipe) putBytes(b []byte) (ok bool) {
+func (p pipe) putBytes(b *byteBuffer) (ok bool) {
 	select {
 	default:
 	case p.ch <- response{b: b}:

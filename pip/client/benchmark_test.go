@@ -17,7 +17,9 @@ func BenchmarkSequential(b *testing.B) {
 	s := startBenchEchoServer(b)
 	defer s.stop(b)
 
-	a := pdp.MakeStringAssignment("test", "test")
+	a := []pdp.AttributeAssignment{
+		pdp.MakeStringAssignment("test", "test"),
+	}
 
 	b.Run("BenchmarkSequential", func(b *testing.B) {
 		c := NewClient()
@@ -38,7 +40,9 @@ func BenchmarkParallel(b *testing.B) {
 	s := startBenchEchoServer(b)
 	defer s.stop(b)
 
-	a := pdp.MakeStringAssignment("test", "test")
+	a := []pdp.AttributeAssignment{
+		pdp.MakeStringAssignment("test", "test"),
+	}
 
 	gmp := runtime.GOMAXPROCS(0)
 	c := NewClient(WithMaxQueue(N * gmp))
@@ -79,7 +83,9 @@ func BenchmarkRoundRobin(b *testing.B) {
 	s4 := startBenchEchoServer(b, server.WithAddress("127.0.0.1:5604"))
 	defer s4.stop(b)
 
-	a := pdp.MakeStringAssignment("test", "test")
+	a := []pdp.AttributeAssignment{
+		pdp.MakeStringAssignment("test", "test"),
+	}
 
 	gmp := runtime.GOMAXPROCS(0)
 	c := NewClient(
@@ -128,7 +134,9 @@ func BenchmarkHotSpot(b *testing.B) {
 	s4 := startBenchEchoServer(b, server.WithAddress("127.0.0.1:5604"))
 	defer s4.stop(b)
 
-	a := pdp.MakeStringAssignment("test", "test")
+	a := []pdp.AttributeAssignment{
+		pdp.MakeStringAssignment("test", "test"),
+	}
 
 	gmp := runtime.GOMAXPROCS(0)
 	c := NewClient(
