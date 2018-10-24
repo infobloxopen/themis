@@ -890,7 +890,7 @@ type testProviderRadar struct {
 
 func (r *testProviderRadar) start(addrs []string) <-chan addrUpdate {
 	r.Lock()
-	r.Unlock()
+	defer r.Unlock()
 
 	if r.ch != nil {
 		return nil
@@ -902,7 +902,7 @@ func (r *testProviderRadar) start(addrs []string) <-chan addrUpdate {
 
 func (r *testProviderRadar) stop() {
 	r.Lock()
-	r.Unlock()
+	defer r.Unlock()
 
 	if r.ch != nil {
 		close(r.ch)

@@ -46,7 +46,8 @@ func TestNewAddressesAndRadar(t *testing.T) {
 	assert.Zero(t, r)
 	assert.NoError(t, err)
 
-	if lAddrs, err := lookupHostPort(defAddr); assert.NoError(t, err) {
+	lAddrs, err := lookupHostPort(defAddr)
+	if assert.NoError(t, err) {
 		c = NewClient(
 			WithRoundRobinBalancer(),
 		).(*client)
@@ -88,10 +89,10 @@ func TestNewRadarWithK8s(t *testing.T) {
 	c := NewClient(
 		WithK8sRadar(),
 		WithAddress("value.key.namespace:5600"),
-		withTestK8sClient(func() (kubernetes.Interface, error) {
-			return fake.NewSimpleClientset(), nil
-		}),
 	).(*client)
+	c.opts.k8sClientMaker = func() (kubernetes.Interface, error) {
+		return fake.NewSimpleClientset(), nil
+	}
 
 	r, err := c.newRadar()
 	assert.IsType(t, &k8sRadar{}, r)
@@ -104,10 +105,10 @@ func TestNewRadarWithK8sWithBrokenClientMaker(t *testing.T) {
 	c := NewClient(
 		WithK8sRadar(),
 		WithAddress("value.key.namespace:5600"),
-		withTestK8sClient(func() (kubernetes.Interface, error) {
-			return nil, tErr
-		}),
 	).(*client)
+	c.opts.k8sClientMaker = func() (kubernetes.Interface, error) {
+		return nil, tErr
+	}
 
 	r, err := c.newRadar()
 	assert.Zero(t, r)
@@ -118,10 +119,10 @@ func TestNewRadarWithK8sWithShortName(t *testing.T) {
 	c := NewClient(
 		WithK8sRadar(),
 		WithAddress("key.namespace:5600"),
-		withTestK8sClient(func() (kubernetes.Interface, error) {
-			return fake.NewSimpleClientset(), nil
-		}),
 	).(*client)
+	c.opts.k8sClientMaker = func() (kubernetes.Interface, error) {
+		return fake.NewSimpleClientset(), nil
+	}
 
 	r, err := c.newRadar()
 	assert.Zero(t, r)

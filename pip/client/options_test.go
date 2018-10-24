@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/fake"
 )
 
 func TestWithNetwork(t *testing.T) {
@@ -122,30 +120,6 @@ func TestWithResponseCheckInterval(t *testing.T) {
 
 	WithResponseCheckInterval(-1 * time.Second)(&o)
 	assert.Equal(t, defTermInt, o.termInt)
-}
-
-func TestWithTestWriteFlushChannel(t *testing.T) {
-	var o options
-
-	withTestWriteFlushChannel(make(chan time.Time))(&o)
-	assert.NotZero(t, o.writeFlushCh)
-}
-
-func TestWithTestTermFlushChannel(t *testing.T) {
-	var o options
-
-	withTestTermFlushChannel(make(chan time.Time))(&o)
-	assert.NotZero(t, o.termFlushCh)
-}
-
-func TestWithTestK8sClient(t *testing.T) {
-	var o options
-
-	f := func() (kubernetes.Interface, error) {
-		return fake.NewSimpleClientset(), nil
-	}
-	withTestK8sClient(f)(&o)
-	assert.Equal(t, reflect.ValueOf(f).Pointer(), reflect.ValueOf(o.k8sClientMaker).Pointer())
 }
 
 func TestMakeOptions(t *testing.T) {

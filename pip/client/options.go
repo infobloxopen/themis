@@ -175,24 +175,6 @@ func WithResponseCheckInterval(d time.Duration) Option {
 	}
 }
 
-func withTestWriteFlushChannel(ch <-chan time.Time) Option {
-	return func(o *options) {
-		o.writeFlushCh = ch
-	}
-}
-
-func withTestTermFlushChannel(ch <-chan time.Time) Option {
-	return func(o *options) {
-		o.termFlushCh = ch
-	}
-}
-
-func withTestK8sClient(f func() (kubernetes.Interface, error)) Option {
-	return func(o *options) {
-		o.k8sClientMaker = f
-	}
-}
-
 type options struct {
 	maxSize            int
 	maxQueue           int

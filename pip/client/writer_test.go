@@ -47,8 +47,8 @@ func TestWriter(t *testing.T) {
 func TestWriterNoTimeout(t *testing.T) {
 	c := NewClient(
 		WithMaxQueue(1),
-		withTestWriteFlushChannel(make(chan time.Time)),
 	).(*client)
+	c.opts.writeFlushCh = make(chan time.Time)
 
 	conn := c.newConnection(nil)
 	conn.n = makeTestWriterConn(conn.p)

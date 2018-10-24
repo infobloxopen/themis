@@ -25,7 +25,8 @@ func TestTerminator(t *testing.T) {
 
 func TestTerminatorTimeout(t *testing.T) {
 	ch := make(chan time.Time)
-	c := NewClient(withTestTermFlushChannel(ch)).(*client)
+	c := NewClient().(*client)
+	c.opts.termFlushCh = ch
 
 	n := newTestTerminatorConn()
 	conn := c.newConnection(n)
