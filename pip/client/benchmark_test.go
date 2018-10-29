@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/binary"
 	"fmt"
 	"runtime"
 	"sync"
@@ -17,8 +18,8 @@ func BenchmarkSequential(b *testing.B) {
 	s := startBenchEchoServer(b)
 	defer s.stop(b)
 
-	a := []pdp.AttributeAssignment{
-		pdp.MakeStringAssignment("test", "test"),
+	a := []pdp.AttributeValue{
+		pdp.MakeStringValue("test"),
 	}
 
 	b.Run("BenchmarkSequential", func(b *testing.B) {
@@ -29,8 +30,18 @@ func BenchmarkSequential(b *testing.B) {
 		defer c.Close()
 
 		for i := 0; i < b.N; i++ {
-			if _, err := c.Get(a); err != nil {
+			v, err := c.Get("test", a)
+			if err != nil {
 				b.Fatalf("failed to get data %d: %s", i, err)
+			}
+
+			s, err := v.Serialize()
+			if err != nil {
+				b.Fatalf("failed to serialize returned value %d: %s", i, err)
+			}
+
+			if s != "test" {
+				b.Fatalf("expected %q for %d but got %q", "test", i, s)
 			}
 		}
 	})
@@ -40,8 +51,8 @@ func BenchmarkParallel(b *testing.B) {
 	s := startBenchEchoServer(b)
 	defer s.stop(b)
 
-	a := []pdp.AttributeAssignment{
-		pdp.MakeStringAssignment("test", "test"),
+	a := []pdp.AttributeValue{
+		pdp.MakeStringValue("test"),
 	}
 
 	gmp := runtime.GOMAXPROCS(0)
@@ -53,6 +64,7 @@ func BenchmarkParallel(b *testing.B) {
 
 	p := new(int64)
 	idx := 0
+
 	b.Run("BenchmarkParallel", func(b *testing.B) {
 		idx++
 		*p = 0
@@ -60,8 +72,18 @@ func BenchmarkParallel(b *testing.B) {
 		b.RunParallel(func(pb *testing.PB) {
 			atomic.AddInt64(p, 1)
 			for pb.Next() {
-				if _, err := c.Get(a); err != nil {
+				v, err := c.Get("test", a)
+				if err != nil {
 					panic(fmt.Errorf("failed to get data: %s", err))
+				}
+
+				s, err := v.Serialize()
+				if err != nil {
+					panic(fmt.Errorf("failed to serialize returned value: %s", err))
+				}
+
+				if s != "test" {
+					panic(fmt.Errorf("expected %q but got %q", "test", s))
 				}
 			}
 		})
@@ -83,8 +105,8 @@ func BenchmarkRoundRobin(b *testing.B) {
 	s4 := startBenchEchoServer(b, server.WithAddress("127.0.0.1:5604"))
 	defer s4.stop(b)
 
-	a := []pdp.AttributeAssignment{
-		pdp.MakeStringAssignment("test", "test"),
+	a := []pdp.AttributeValue{
+		pdp.MakeStringValue("test"),
 	}
 
 	gmp := runtime.GOMAXPROCS(0)
@@ -111,8 +133,18 @@ func BenchmarkRoundRobin(b *testing.B) {
 		b.RunParallel(func(pb *testing.PB) {
 			atomic.AddInt64(p, 1)
 			for pb.Next() {
-				if _, err := c.Get(a); err != nil {
+				v, err := c.Get("test", a)
+				if err != nil {
 					panic(fmt.Errorf("failed to get data: %s", err))
+				}
+
+				s, err := v.Serialize()
+				if err != nil {
+					panic(fmt.Errorf("failed to serialize returned value: %s", err))
+				}
+
+				if s != "test" {
+					panic(fmt.Errorf("expected %q but got %q", "test", s))
 				}
 			}
 		})
@@ -134,8 +166,8 @@ func BenchmarkHotSpot(b *testing.B) {
 	s4 := startBenchEchoServer(b, server.WithAddress("127.0.0.1:5604"))
 	defer s4.stop(b)
 
-	a := []pdp.AttributeAssignment{
-		pdp.MakeStringAssignment("test", "test"),
+	a := []pdp.AttributeValue{
+		pdp.MakeStringValue("test"),
 	}
 
 	gmp := runtime.GOMAXPROCS(0)
@@ -162,8 +194,18 @@ func BenchmarkHotSpot(b *testing.B) {
 		b.RunParallel(func(pb *testing.PB) {
 			atomic.AddInt64(p, 1)
 			for pb.Next() {
-				if _, err := c.Get(a); err != nil {
+				v, err := c.Get("test", a)
+				if err != nil {
 					panic(fmt.Errorf("failed to get data: %s", err))
+				}
+
+				s, err := v.Serialize()
+				if err != nil {
+					panic(fmt.Errorf("failed to serialize returned value: %s", err))
+				}
+
+				if s != "test" {
+					panic(fmt.Errorf("expected %q but got %q", "test", s))
 				}
 			}
 		})
@@ -178,7 +220,13 @@ type benchEchoServer struct {
 	err error
 }
 
+var benchEchoServerInfoResponseHeader = []byte{1, 0, 0, 0, 2}
+
 func startBenchEchoServer(b *testing.B, opts ...server.Option) *benchEchoServer {
+	opts = append(opts,
+		server.WithHandler(benchEchoServerHandler),
+	)
+
 	out := &benchEchoServer{
 		s:  server.NewServer(opts...),
 		wg: new(sync.WaitGroup),
@@ -206,4 +254,90 @@ func (s *benchEchoServer) stop(b *testing.B) {
 	if s.err != nil && s.err != server.ErrNotBound {
 		b.Fatalf("failed to start server: %s", s.err)
 	}
+}
+func benchEchoServerHandler(b []byte) []byte {
+	if len(b) < 4 {
+		panic("too short input buffer")
+	}
+
+	in := benchEchoServerHandlerCheckVersion(b[4:])
+	in = benchEchoServerHandlerSkipPath(in)
+	in = benchEchoServerHandlerCheckValuesNumber(in)
+	in = benchEchoServerHandlerCheckFirstValueType(in)
+	in = benchEchoServerHandlerGetFirstValueBytes(in)
+
+	out := b
+	m := 4
+	m += copy(out[m:], benchEchoServerInfoResponseHeader)
+	binary.LittleEndian.PutUint16(out[m:], uint16(len(in)))
+	m += 2
+	m += copy(out[m:], in)
+
+	return out[:m]
+}
+
+func benchEchoServerHandlerCheckVersion(b []byte) []byte {
+	if len(b) < 2 {
+		panic("too short input buffer")
+	}
+
+	if v := binary.LittleEndian.Uint16(b); v != 1 {
+		panic(fmt.Errorf("invalid information request version %d (expected %d)", v, 1))
+	}
+
+	return b[2:]
+}
+
+func benchEchoServerHandlerSkipPath(b []byte) []byte {
+	if len(b) < 2 {
+		panic("too short input buffer")
+	}
+
+	n := int(binary.LittleEndian.Uint16(b))
+	b = b[2:]
+
+	if len(b) < n {
+		panic("too short input buffer")
+	}
+
+	return b[n:]
+}
+
+func benchEchoServerHandlerCheckValuesNumber(b []byte) []byte {
+	if len(b) < 2 {
+		panic("too short input buffer")
+	}
+
+	if c := int(binary.LittleEndian.Uint16(b)); c < 1 {
+		panic(fmt.Errorf("expected at least one value but got %d", c))
+	}
+
+	return b[2:]
+}
+
+func benchEchoServerHandlerCheckFirstValueType(b []byte) []byte {
+	if len(b) < 1 {
+		panic("too short input buffer")
+	}
+
+	if t := b[0]; t != 2 {
+		panic(fmt.Errorf("expected value of type %d (string) but got %d", 2, t))
+	}
+
+	return b[1:]
+}
+
+func benchEchoServerHandlerGetFirstValueBytes(b []byte) []byte {
+	if len(b) < 2 {
+		panic("too short input buffer")
+	}
+
+	n := int(binary.LittleEndian.Uint16(b))
+	b = b[2:]
+
+	if len(b) < n {
+		panic(fmt.Errorf("too short input buffer %d < %d", len(b), n))
+	}
+
+	return b[:n]
 }

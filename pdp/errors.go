@@ -147,38 +147,40 @@ const (
 	requestTooLongCollectionValueErrorID               = 130
 	requestInvalidExpressionErrorID                    = 131
 	requestAssignmentsOverflowErrorID                  = 132
-	requestUnmarshalEffectConstErrorID                 = 133
-	requestUnmarshalEffectTypeErrorID                  = 134
-	requestUnmarshalStatusConstErrorID                 = 135
-	requestUnmarshalStatusTypeErrorID                  = 136
-	requestUnmarshalBooleanConstErrorID                = 137
-	requestUnmarshalBooleanTypeErrorID                 = 138
-	requestUnmarshalStringConstErrorID                 = 139
-	requestUnmarshalStringTypeErrorID                  = 140
-	requestUnmarshalIntegerConstErrorID                = 141
-	requestUnmarshalIntegerTypeErrorID                 = 142
-	requestUnmarshalIntegerOverflowErrorID             = 143
-	requestUnmarshalIntegerUnderflowErrorID            = 144
-	requestUnmarshalFloatConstErrorID                  = 145
-	requestUnmarshalFloatTypeErrorID                   = 146
-	requestUnmarshalAddressConstErrorID                = 147
-	requestUnmarshalAddressTypeErrorID                 = 148
-	requestUnmarshalNetworkConstErrorID                = 149
-	requestUnmarshalNetworkTypeErrorID                 = 150
-	requestUnmarshalDomainConstErrorID                 = 151
-	requestUnmarshalDomainTypeErrorID                  = 152
-	requestUnmarshalSetOfStringsConstErrorID           = 153
-	requestUnmarshalSetOfStringsTypeErrorID            = 154
-	requestUnmarshalSetOfNetworksConstErrorID          = 155
-	requestUnmarshalSetOfNetworksTypeErrorID           = 156
-	requestUnmarshalSetOfDomainsConstErrorID           = 157
-	requestUnmarshalSetOfDomainsTypeErrorID            = 158
-	requestUnmarshalListOfStringsConstErrorID          = 159
-	requestUnmarshalListOfStringsTypeErrorID           = 160
-	responseEffectErrorID                              = 161
-	ResponseServerErrorID                              = 162
-	policyCalculationErrorID                           = 163
-	obligationCalculationErrorID                       = 164
+	requestValuesOverflowErrorID                       = 133
+	requestUnmarshalEffectConstErrorID                 = 134
+	requestUnmarshalEffectTypeErrorID                  = 135
+	requestUnmarshalStatusConstErrorID                 = 136
+	requestUnmarshalStatusTypeErrorID                  = 137
+	requestUnmarshalBooleanConstErrorID                = 138
+	requestUnmarshalBooleanTypeErrorID                 = 139
+	requestUnmarshalStringConstErrorID                 = 140
+	requestUnmarshalStringTypeErrorID                  = 141
+	requestUnmarshalIntegerConstErrorID                = 142
+	requestUnmarshalIntegerTypeErrorID                 = 143
+	requestUnmarshalIntegerOverflowErrorID             = 144
+	requestUnmarshalIntegerUnderflowErrorID            = 145
+	requestUnmarshalFloatConstErrorID                  = 146
+	requestUnmarshalFloatTypeErrorID                   = 147
+	requestUnmarshalAddressConstErrorID                = 148
+	requestUnmarshalAddressTypeErrorID                 = 149
+	requestUnmarshalNetworkConstErrorID                = 150
+	requestUnmarshalNetworkTypeErrorID                 = 151
+	requestUnmarshalDomainConstErrorID                 = 152
+	requestUnmarshalDomainTypeErrorID                  = 153
+	requestUnmarshalSetOfStringsConstErrorID           = 154
+	requestUnmarshalSetOfStringsTypeErrorID            = 155
+	requestUnmarshalSetOfNetworksConstErrorID          = 156
+	requestUnmarshalSetOfNetworksTypeErrorID           = 157
+	requestUnmarshalSetOfDomainsConstErrorID           = 158
+	requestUnmarshalSetOfDomainsTypeErrorID            = 159
+	requestUnmarshalListOfStringsConstErrorID          = 160
+	requestUnmarshalListOfStringsTypeErrorID           = 161
+	responseEffectErrorID                              = 162
+	ResponseServerErrorID                              = 163
+	policyCalculationErrorID                           = 164
+	obligationCalculationErrorID                       = 165
+	noInformationalErrorID                             = 166
 )
 
 type externalError struct {
@@ -2267,6 +2269,23 @@ func (e *requestAssignmentsOverflowError) Error() string {
 	return e.errorf("Expected buffer for at least %d assignments but got %d", e.expected, e.actual)
 }
 
+type requestValuesOverflowError struct {
+	errorLink
+	actual   int
+	expected int
+}
+
+func newRequestValuesOverflowError(actual, expected int) *requestValuesOverflowError {
+	return &requestValuesOverflowError{
+		errorLink: errorLink{id: requestValuesOverflowErrorID},
+		actual:    actual,
+		expected:  expected}
+}
+
+func (e *requestValuesOverflowError) Error() string {
+	return e.errorf("Expected buffer for at least %d values but got %d", e.expected, e.actual)
+}
+
 type requestUnmarshalEffectConstError struct {
 	errorLink
 	v reflect.Value
@@ -2753,4 +2772,17 @@ func newObligationCalculationError(a Attribute, err error) *obligationCalculatio
 
 func (e *obligationCalculationError) Error() string {
 	return e.errorf("Failed to calculate obligation for %s: %s", e.a.describe(), e.err)
+}
+
+type noInformationalError struct {
+	errorLink
+}
+
+func newNoInformationalError() *noInformationalError {
+	return &noInformationalError{
+		errorLink: errorLink{id: noInformationalErrorID}}
+}
+
+func (e *noInformationalError) Error() string {
+	return e.errorf("No information error providied to marshaller")
 }

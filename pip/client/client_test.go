@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -24,7 +25,9 @@ func TestNewClient(t *testing.T) {
 }
 
 func TestClientConnect(t *testing.T) {
-	s := newTestServerForClient(t)
+	s := newTestServerForClient(t,
+		server.WithHandler(testServerForClientHandler),
+	)
 	defer s.stop(t)
 
 	c := NewClient()
@@ -38,11 +41,13 @@ func TestClientConnect(t *testing.T) {
 func TestClientConnectRoundRobinBalancer(t *testing.T) {
 	s1 := newTestServerForClient(t,
 		server.WithAddress("127.0.0.1:5601"),
+		server.WithHandler(testServerForClientHandler),
 	)
 	defer s1.stop(t)
 
 	s2 := newTestServerForClient(t,
 		server.WithAddress("127.0.0.1:5602"),
+		server.WithHandler(testServerForClientHandler),
 	)
 	defer s2.stop(t)
 
@@ -61,11 +66,13 @@ func TestClientConnectRoundRobinBalancer(t *testing.T) {
 func TestClientConnectRoundRobinBalancerInvalidAddress(t *testing.T) {
 	s1 := newTestServerForClient(t,
 		server.WithAddress("127.0.0.1:5601"),
+		server.WithHandler(testServerForClientHandler),
 	)
 	defer s1.stop(t)
 
 	s2 := newTestServerForClient(t,
 		server.WithAddress("127.0.0.1:5602"),
+		server.WithHandler(testServerForClientHandler),
 	)
 	defer s2.stop(t)
 
@@ -102,7 +109,9 @@ func TestClientConnectNoServer(t *testing.T) {
 }
 
 func TestClientClose(t *testing.T) {
-	s := newTestServerForClient(t)
+	s := newTestServerForClient(t,
+		server.WithHandler(testServerForClientHandler),
+	)
 	defer s.stop(t)
 
 	c := NewClient()
@@ -156,9 +165,9 @@ func TestClientCloseWithDifferentRequests(t *testing.T) {
 	}()
 
 	c := NewClient(
-		WithMaxRequestSize(16),
+		WithMaxRequestSize(22),
 		WithMaxQueue(1),
-		WithBufferSize(24),
+		WithBufferSize(30),
 	).(*client)
 
 	if !assert.NoError(t, c.Connect()) {
@@ -170,8 +179,8 @@ func TestClientCloseWithDifferentRequests(t *testing.T) {
 	var err1 error
 	go func() {
 		defer wg.Done()
-		_, _, err1 = c.tryGet([]pdp.AttributeAssignment{
-			pdp.MakeStringAssignment("test", "test"),
+		_, _, err1 = c.tryGet("test", []pdp.AttributeValue{
+			pdp.MakeStringValue("test"),
 		})
 	}()
 
@@ -181,8 +190,8 @@ func TestClientCloseWithDifferentRequests(t *testing.T) {
 	var err2 error
 	go func() {
 		defer wg.Done()
-		_, _, err2 = c.tryGet([]pdp.AttributeAssignment{
-			pdp.MakeStringAssignment("a", "a"),
+		_, _, err2 = c.tryGet("test", []pdp.AttributeValue{
+			pdp.MakeStringValue("a"),
 		})
 	}()
 
@@ -192,8 +201,8 @@ func TestClientCloseWithDifferentRequests(t *testing.T) {
 	var err3 error
 	go func() {
 		defer wg.Done()
-		_, _, err3 = c.tryGet([]pdp.AttributeAssignment{
-			pdp.MakeStringAssignment("b", "b"),
+		_, _, err3 = c.tryGet("test", []pdp.AttributeValue{
+			pdp.MakeStringValue("b"),
 		})
 	}()
 
@@ -208,59 +217,103 @@ func TestClientCloseWithDifferentRequests(t *testing.T) {
 }
 
 func TestClientGet(t *testing.T) {
-	s := newTestServerForClient(t)
+	s := newTestServerForClient(t,
+		server.WithHandler(testServerForClientHandler),
+	)
 	defer s.stop(t)
 
 	c := NewClient()
 	if err := c.Connect(); assert.NoError(t, err) {
 		defer c.Close()
 
-		v, err := c.Get([]pdp.AttributeAssignment{})
-		assert.Equal(t, pdp.UndefinedValue, v)
+		v, err := c.Get("test", []pdp.AttributeValue{pdp.MakeStringValue("test")})
+		assert.Equal(t, pdp.MakeStringValue("test"), v)
 		assert.NoError(t, err)
 	}
 }
 
 func TestClientGetErrNotConnected(t *testing.T) {
 	c := NewClient()
-	_, err := c.Get([]pdp.AttributeAssignment{})
+	_, err := c.Get("test", nil)
 	assert.Equal(t, ErrNotConnected, err)
 }
 
 func TestClientTryGet(t *testing.T) {
-	s := newTestServerForClient(t)
+	s := newTestServerForClient(t,
+		server.WithHandler(testServerForClientHandler),
+	)
 	defer s.stop(t)
 
 	c := NewClient().(*client)
 	if err := c.Connect(); assert.NoError(t, err) {
 		defer c.Close()
 
-		v, ok, err := c.tryGet([]pdp.AttributeAssignment{})
-		assert.Equal(t, pdp.UndefinedValue, v)
-		assert.True(t, ok)
+		v, ok, err := c.tryGet("test", []pdp.AttributeValue{pdp.MakeStringValue("test")})
+		assert.Equal(t, pdp.MakeStringValue("test"), v)
+		assert.False(t, ok)
 		assert.NoError(t, err)
 	}
 }
 
 func TestClientTryGettErrNotConnected(t *testing.T) {
 	c := NewClient().(*client)
-	_, ok, err := c.tryGet([]pdp.AttributeAssignment{})
+	_, ok, err := c.tryGet("test", nil)
 	assert.False(t, ok)
 	assert.Equal(t, ErrNotConnected, err)
 }
 
 func TestClientTryGetMarshallingError(t *testing.T) {
-	s := newTestServerForClient(t)
+	s := newTestServerForClient(t,
+		server.WithHandler(testServerForClientHandler),
+	)
 	defer s.stop(t)
 
 	c := NewClient().(*client)
 	if err := c.Connect(); assert.NoError(t, err) {
 		defer c.Close()
 
-		_, ok, err := c.tryGet([]pdp.AttributeAssignment{
-			pdp.MakeExpressionAssignment("test", pdp.UndefinedValue),
+		_, ok, err := c.tryGet("test", []pdp.AttributeValue{
+			pdp.UndefinedValue,
 		})
 		assert.False(t, ok)
+		assert.Error(t, err)
+	}
+}
+
+func TestClientTryGetResponseServerError(t *testing.T) {
+	s := newTestServerForClient(t,
+		server.WithHandler(constTestServerForClientHandler(
+			1, 0, 4, 0, 't', 'e', 's', 't',
+		)),
+	)
+	defer s.stop(t)
+
+	c := NewClient().(*client)
+	if err := c.Connect(); assert.NoError(t, err) {
+		defer c.Close()
+
+		_, ok, err := c.tryGet("test", []pdp.AttributeValue{pdp.MakeStringValue("test")})
+		assert.False(t, ok)
+		if assert.Error(t, err) {
+			assert.IsType(t, &pdp.ResponseServerError{}, err)
+		}
+	}
+}
+
+func TestClientTryGetBadResponse(t *testing.T) {
+	s := newTestServerForClient(t,
+		server.WithHandler(constTestServerForClientHandler(
+			2, 0,
+		)),
+	)
+	defer s.stop(t)
+
+	c := NewClient().(*client)
+	if err := c.Connect(); assert.NoError(t, err) {
+		defer c.Close()
+
+		_, ok, err := c.tryGet("test", []pdp.AttributeValue{pdp.MakeStringValue("test")})
+		assert.True(t, ok)
 		assert.Error(t, err)
 	}
 }
@@ -283,7 +336,9 @@ func TestClientNextIdOverflow(t *testing.T) {
 }
 
 func TestClientDial(t *testing.T) {
-	s := newTestServerForClient(t)
+	s := newTestServerForClient(t,
+		server.WithHandler(testServerForClientHandler),
+	)
 	defer s.stop(t)
 
 	c := NewClient().(*client)
@@ -529,6 +584,8 @@ type testServerForClient struct {
 	err error
 }
 
+var testServerForClientInfoResponseHeader = []byte{1, 0, 0, 0, 2}
+
 func newTestServerForClient(t *testing.T, opts ...server.Option) *testServerForClient {
 	s := new(testServerForClient)
 
@@ -554,6 +611,110 @@ func (s *testServerForClient) stop(t *testing.T) {
 		if s.err != server.ErrNotBound {
 			assert.NoError(t, s.err)
 		}
+	}
+}
+
+func testServerForClientHandler(b []byte) []byte {
+	if len(b) < 4 {
+		panic("too short input buffer")
+	}
+
+	in := testServerForClientHandlerCheckVersion(b[4:])
+	in = testServerForClientHandlerSkipPath(in)
+	in = testServerForClientHandlerCheckValuesNumber(in)
+	in = testServerForClientHandlerCheckFirstValueType(in)
+	in = testServerForClientHandlerGetFirstValueBytes(in)
+
+	out := b
+	m := 4
+	m += copy(out[m:], testServerForClientInfoResponseHeader)
+	binary.LittleEndian.PutUint16(out[m:], uint16(len(in)))
+	m += 2
+	m += copy(out[m:], in)
+
+	return out[:m]
+}
+
+func testServerForClientHandlerCheckVersion(b []byte) []byte {
+	if len(b) < 2 {
+		panic("too short input buffer")
+	}
+
+	if v := binary.LittleEndian.Uint16(b); v != 1 {
+		panic(fmt.Errorf("invalid information request version %d (expected %d)", v, 1))
+	}
+
+	return b[2:]
+}
+
+func testServerForClientHandlerSkipPath(b []byte) []byte {
+	if len(b) < 2 {
+		panic("too short input buffer")
+	}
+
+	n := int(binary.LittleEndian.Uint16(b))
+	b = b[2:]
+
+	if len(b) < n {
+		panic("too short input buffer")
+	}
+
+	return b[n:]
+}
+
+func testServerForClientHandlerCheckValuesNumber(b []byte) []byte {
+	if len(b) < 2 {
+		panic("too short input buffer")
+	}
+
+	if c := int(binary.LittleEndian.Uint16(b)); c < 1 {
+		panic(fmt.Errorf("expected at least one value but got %d", c))
+	}
+
+	return b[2:]
+}
+
+func testServerForClientHandlerCheckFirstValueType(b []byte) []byte {
+	if len(b) < 1 {
+		panic("too short input buffer")
+	}
+
+	if t := b[0]; t != 2 {
+		panic(fmt.Errorf("expected value of type %d (string) but got %d", 2, t))
+	}
+
+	return b[1:]
+}
+
+func testServerForClientHandlerGetFirstValueBytes(b []byte) []byte {
+	if len(b) < 2 {
+		panic("too short input buffer")
+	}
+
+	n := int(binary.LittleEndian.Uint16(b))
+	b = b[2:]
+
+	if len(b) < n {
+		panic(fmt.Errorf("too short input buffer %d < %d", len(b), n))
+	}
+
+	return b[:n]
+}
+
+func constTestServerForClientHandler(payload ...byte) func([]byte) []byte {
+	return func(b []byte) []byte {
+		if len(b) < 4 {
+			panic(fmt.Errorf("too short input buffer %d (missing request id)", len(b)))
+		}
+
+		if len(b)-4 < len(payload) {
+			panic(fmt.Errorf("too short input buffer %d (reply don't fit)", len(b)))
+		}
+
+		m := 4
+		m += copy(b[m:], payload)
+
+		return b[:m]
 	}
 }
 

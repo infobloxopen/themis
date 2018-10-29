@@ -1140,6 +1140,17 @@ errors:
   - field: expected
   - field: actual
 
+- id: requestValuesOverflowError
+  fields:
+  - id: actual
+    type: int
+  - id: expected
+    type: int
+  msg: "Expected buffer for at least %d values but got %d"
+  args:
+  - field: expected
+  - field: actual
+
 - id: requestUnmarshalEffectConstError
   fields:
   - id: v
@@ -1405,3 +1416,6 @@ errors:
   args:
   - field: a.describe()
   - field: err
+
+- id: noInformationalError
+  msg: "No information error providied to marshaller"

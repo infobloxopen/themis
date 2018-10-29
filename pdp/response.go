@@ -17,6 +17,7 @@ import (
 const (
 	responseStatusTooLong            = "status too long"
 	responseStatusObligationsTooLong = "obligations too long"
+	responseInfoValueTooLong         = "information value too long"
 )
 
 // Names of special response fields.
@@ -27,22 +28,16 @@ const (
 	ResponseStatusFieldName = "status"
 )
 
-// MinResponseSize represents lower response buffer limit required to return
-// error that real error message or set of obligations are too long.
-var MinResponseSize uint
+const (
+	minResponseHeaderSize uint = reqVersionSize + resEffectSize + 2*reqBigCounterSize
+	// MinResponseSize represents lower response buffer limit required to return
+	// error that real error message or set of obligations are too long.
+	MinResponseSize uint = minResponseHeaderSize + uint(len(responseInfoValueTooLong))
+)
 
 const (
 	resEffectSize = 1
 )
-
-func init() {
-	n := len(responseStatusTooLong)
-	if len(responseStatusObligationsTooLong) > n {
-		n = len(responseStatusObligationsTooLong)
-	}
-
-	MinResponseSize = 7 + uint(n)
-}
 
 func marshalResponse(effect int, obligations []AttributeAssignment, errs ...error) ([]byte, error) {
 	n, err := calcResponseSize(obligations, errs...)
@@ -145,12 +140,74 @@ func MakeIndeterminateResponseWithAllocator(f func(n int) ([]byte, error), err e
 }
 
 // MakeIndeterminateResponseWithBuffer marshals given error as indenterminate
-// response with no obligations to given buffer. Caller need to allocate big
+// response with no obligations to given buffer. Caller needs to allocate big
 // enough buffer. It should be at least MinResponseSize to put message that
 // buffer isn't long enough. The function returns number of bytes written to
 // the buffer.
 func MakeIndeterminateResponseWithBuffer(b []byte, err error) (int, error) {
 	return marshalResponseToBuffer(b, EffectIndeterminate, nil, err)
+}
+
+// MarshalInfoResponse marshals information response to given byte buffer.
+// The response in the case is represented by an attribute value. Caller needs
+// to allocate big enough buffer.
+func MarshalInfoResponse(b []byte, value AttributeValue) (int, error) {
+	off, err := putRequestVersion(b)
+	if err != nil {
+		return off, err
+	}
+
+	if len(b)-off < 2 {
+		return off, newRequestBufferOverflowError()
+	}
+
+	binary.LittleEndian.PutUint16(b[off:], 0)
+	off += 2
+
+	n, err := putRequestAttributeValue(b[off:], value)
+	if err != nil {
+		if _, ok := err.(*requestBufferOverflowError); ok {
+			off, _ := putRequestVersion(b)
+
+			n, err := putResponseInfoValueTooLong(b[off:])
+			if err != nil {
+				return off, err
+			}
+
+			return off + n, nil
+		}
+
+		return off, err
+	}
+
+	return off + n, nil
+}
+
+// MarshalInfoError marshals error as an information response to given byte
+// buffer. Caller needs to allocate big enough buffer.
+func MarshalInfoError(b []byte, fail error) (int, error) {
+	if fail == nil {
+		return 0, newNoInformationalError()
+	}
+
+	off, err := putRequestVersion(b)
+	if err != nil {
+		return off, err
+	}
+
+	msg := trimResponseString(fail.Error())
+	n := len(msg) + 2
+	if len(b[off:]) >= n {
+		binary.LittleEndian.PutUint16(b[off:], uint16(len(msg)))
+		copy(b[off+2:], msg)
+	} else {
+		n, err = putResponseStatusTooLong(b[off:])
+		if err != nil {
+			return off, err
+		}
+	}
+
+	return off + n, nil
 }
 
 // UnmarshalResponseAssignments unmarshals response from given sequence of
@@ -226,7 +283,7 @@ func UnmarshalResponseAssignmentsWithAllocator(b []byte, f func(n int) ([]Attrib
 // sequence of bytes. Effect is returned as the first result value. The second
 // returned value gives number of obligations put to out parameter. Finally,
 // the third value is an error occured during unmarshalling or response status
-// if it has type *ResponseServerError. Caller need to allocate and pass big
+// if it has type *ResponseServerError. Caller needs to allocate and pass big
 // enough array to out argument.
 func UnmarshalResponseToAssignmentsArray(b []byte, out []AttributeAssignment) (int, int, error) {
 	off, err := checkRequestVersion(b)
@@ -320,6 +377,33 @@ func UnmarshalResponseToReflection(b []byte, f func(string, Type) (reflect.Value
 	return getAttributesToReflection(b[off:], f)
 }
 
+// UnmarshalInfoResponse unmarshals informational response from given sequence
+// of bytes to an attribute value or error.
+func UnmarshalInfoResponse(b []byte) (AttributeValue, error) {
+	n, err := checkRequestVersion(b)
+	if err != nil {
+		return UndefinedValue, err
+	}
+	b = b[n:]
+
+	s, n, err := getRequestStringValue(b)
+	if err != nil {
+		return UndefinedValue, err
+	}
+
+	if len(s) > 0 {
+		return UndefinedValue, newResponseServerError(s)
+	}
+	b = b[n:]
+
+	v, _, err := getRequestAttributeValue(b)
+	if err != nil {
+		return UndefinedValue, err
+	}
+
+	return v, nil
+}
+
 func putResponseEffect(b []byte, effect int) (int, error) {
 	if effect < 0 || effect >= effectTotalCount {
 		return 0, newResponseEffectError(effect)
@@ -367,19 +451,7 @@ func putResponseStatus(b []byte, err ...error) (int, error) {
 
 		msg = "multiple errors: " + strings.Join(msgs, ", ")
 	}
-
-	if len(msg) > math.MaxUint16 {
-		i := 0
-		for j := range msg {
-			if j > math.MaxUint16 {
-				break
-			}
-
-			i = j
-		}
-
-		msg = msg[:i]
-	}
+	msg = trimResponseString(msg)
 
 	size := len(msg) + 2
 	if len(b) < size {
@@ -414,6 +486,19 @@ func putResponseObligationsTooLong(b []byte) (int, error) {
 	copy(b[2:], responseStatusObligationsTooLong)
 
 	return size, nil
+}
+
+func putResponseInfoValueTooLong(b []byte) (int, error) {
+	size := len(responseInfoValueTooLong) + 2
+	if len(b) < size {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	binary.LittleEndian.PutUint16(b, uint16(len(responseInfoValueTooLong)))
+	copy(b[2:], responseInfoValueTooLong)
+
+	return size, nil
+
 }
 
 func putAssignmentExpressions(b []byte, in []AttributeAssignment) (int, error) {
@@ -774,19 +859,7 @@ func calcResponseStatus(err ...error) int {
 
 		msg = "multiple errors: " + strings.Join(msgs, ", ")
 	}
-
-	if len(msg) > math.MaxUint16 {
-		i := 0
-		for j := range msg {
-			if j > math.MaxUint16 {
-				break
-			}
-
-			i = j
-		}
-
-		msg = msg[:i]
-	}
+	msg = trimResponseString(msg)
 
 	return len(msg) + reqBigCounterSize
 }
@@ -877,4 +950,21 @@ func calcAttributesSizeFromReflection(c int, f func(i int) (string, Type, reflec
 	}
 
 	return s, nil
+}
+
+func trimResponseString(s string) string {
+	if len(s) <= math.MaxUint16 {
+		return s
+	}
+
+	i := 0
+	for j := range s {
+		if j > math.MaxUint16 {
+			break
+		}
+
+		i = j
+	}
+
+	return s[:i]
 }

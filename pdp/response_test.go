@@ -6,6 +6,7 @@ import (
 	"math"
 	"net"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/infobloxopen/go-trees/domain"
@@ -56,6 +57,28 @@ var (
 		5, 0, 't', 'h', 'r', 'e', 'e',
 	}
 )
+
+func TestMinResponseSize(t *testing.T) {
+	if MinResponseSize < minResponseHeaderSize {
+		t.Errorf("header minResponseHeaderSize = %d doesn't MinResponseSize = %d",
+			minResponseHeaderSize, MinResponseSize)
+	}
+
+	if MinResponseSize-minResponseHeaderSize < uint(len(responseStatusTooLong)) {
+		t.Errorf("%q message (%d) doesn't fit MinResponseSize %d",
+			responseStatusTooLong, len(responseStatusTooLong), MinResponseSize)
+	}
+
+	if MinResponseSize-minResponseHeaderSize < uint(len(responseStatusObligationsTooLong)) {
+		t.Errorf("%q message (%d) doesn't fit MinResponseSize %d",
+			responseStatusObligationsTooLong, len(responseStatusObligationsTooLong), MinResponseSize)
+	}
+
+	if MinResponseSize-minResponseHeaderSize < uint(len(responseInfoValueTooLong)) {
+		t.Errorf("%q message (%d) doesn't fit MinResponseSize %d",
+			responseInfoValueTooLong, len(responseInfoValueTooLong), MinResponseSize)
+	}
+}
 
 func TestMarshalResponse(t *testing.T) {
 	b, err := marshalResponse(EffectIndeterminate, testRequestAssignments,
@@ -236,6 +259,70 @@ func TestMakeIndeterminateResponseWithBuffer(t *testing.T) {
 		10, 0, 't', 'e', 's', 't', ' ', 'e', 'r', 'r', 'o', 'r',
 		0, 0,
 	)
+}
+
+func TestMarshalInfoResponse(t *testing.T) {
+	var b [30]byte
+
+	n, err := MarshalInfoResponse(b[:], MakeStringValue("0 1 2 3 4 5 6 7 8 9 A B"))
+	assertRequestBytesBuffer(t, "MarshalInfoResponse", err, b[:], n,
+		1, 0, 0, 0,
+		byte(requestWireTypeString), 23, 0,
+		'0', ' ', '1', ' ', '2', ' ', '3', ' ', '4', ' ', '5', ' ',
+		'6', ' ', '7', ' ', '8', ' ', '9', ' ', 'A', ' ', 'B',
+	)
+
+	n, err = MarshalInfoResponse(b[:], MakeStringValue("0 1 2 3 4 5 6 7 8 9 A B C D E F"))
+	assertRequestBytesBuffer(t, "MarshalInfoResponse(long)", err, b[:], n,
+		1, 0, 26, 0,
+		'i', 'n', 'f', 'o', 'r', 'm', 'a', 't', 'i', 'o', 'n', ' ',
+		'v', 'a', 'l', 'u', 'e', ' ', 't', 'o', 'o', ' ', 'l', 'o', 'n', 'g',
+	)
+
+	n, err = MarshalInfoResponse([]byte{}, MakeStringValue("test"))
+	assertRequestBufferOverflow(t, "MarshalInfoResponse(version)", err, n)
+
+	n, err = MarshalInfoResponse(b[:2], MakeStringValue("test"))
+	assertRequestBufferOverflow(t, "MarshalInfoResponse(noerror)", err, n)
+
+	n, err = MarshalInfoResponse(b[:4], MakeStringValue("test"))
+	assertRequestBufferOverflow(t, "MarshalInfoResponse(dontfit)", err, n)
+
+	n, err = MarshalInfoResponse(b[:], UndefinedValue)
+	if err == nil {
+		t.Errorf("expected no data put to buffer for response with undefined value but got %d", n)
+	} else if _, ok := err.(*requestAttributeMarshallingNotImplementedError); !ok {
+		t.Errorf("expected *requestAttributeMarshallingNotImplementedError but got %T (%s)", err, err)
+	}
+}
+
+func TestMarshalInfoError(t *testing.T) {
+	var b [19]byte
+
+	n, err := MarshalInfoError(b[:], errors.New("0 1 2 3 4 5 6 7"))
+	assertRequestBytesBuffer(t, "MarshalInfoError", err, b[:], n,
+		1, 0, 15, 0,
+		'0', ' ', '1', ' ', '2', ' ', '3', ' ', '4', ' ', '5', ' ', '6', ' ', '7',
+	)
+
+	n, err = MarshalInfoError(b[:], errors.New("0 1 2 3 4 5 6 7 8 9 A B C D E F"))
+	assertRequestBytesBuffer(t, "MarshalInfoError(long)", err, b[:], n,
+		1, 0, 15, 0,
+		's', 't', 'a', 't', 'u', 's', ' ', 't', 'o', 'o', ' ', 'l', 'o', 'n', 'g',
+	)
+
+	n, err = MarshalInfoError(b[:], nil)
+	if err == nil {
+		t.Errorf("expected no data put to buffer for response with no error but got %d", n)
+	} else if _, ok := err.(*noInformationalError); !ok {
+		t.Errorf("expected *noInformationalError but got %T (%s)", err, err)
+	}
+
+	n, err = MarshalInfoError([]byte{}, errors.New("0 1 2 3 4 5 6 7"))
+	assertRequestBufferOverflow(t, "MarshalInfoError(version)", err, n)
+
+	n, err = MarshalInfoError(b[:2], errors.New("0 1 2 3 4 5 6 7"))
+	assertRequestBufferOverflow(t, "MarshalInfoError(error)", err, n)
 }
 
 func TestUnmarshalResponseAssignments(t *testing.T) {
@@ -577,6 +664,58 @@ func TestUnmarshalResponseToReflection(t *testing.T) {
 	}
 }
 
+func TestUnmarshalInfoResponse(t *testing.T) {
+	v, err := UnmarshalInfoResponse([]byte{
+		1, 0, 0, 0, byte(requestWireTypeString), 4, 0, 't', 'e', 's', 't',
+	})
+
+	if err != nil {
+		t.Error(err)
+	} else if vt := v.GetResultType(); vt != TypeString {
+		t.Errorf("expected value of %q type but got %q %s", TypeString, vt, v.describe())
+	} else {
+		s, err := v.Serialize()
+		if err != nil {
+			t.Error(err)
+		} else {
+			e := "test"
+			if s != e {
+				t.Errorf("expected %q but got %q", e, s)
+			}
+		}
+	}
+
+	v, err = UnmarshalInfoResponse([]byte{
+		1, 0, 10, 0, 't', 'e', 's', 't', ' ', 'e', 'r', 'r', 'o', 'r',
+	})
+	if err == nil {
+		t.Errorf("expected *ResponseServerError but got %s", v.describe())
+	} else if _, ok := err.(*ResponseServerError); !ok || !strings.Contains(err.Error(), "test error") {
+		t.Errorf("expected *ResponseServerError but got %T (%s)", err, err)
+	}
+
+	v, err = UnmarshalInfoResponse([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %s", v.describe())
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, err = UnmarshalInfoResponse([]byte{1, 0})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %s", v.describe())
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, err = UnmarshalInfoResponse([]byte{1, 0, 0, 0})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %s", v.describe())
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
 func TestPutResponseEffect(t *testing.T) {
 	var b [1]byte
 
@@ -649,26 +788,6 @@ func TestPutResponseStatus(t *testing.T) {
 
 	n, err = putResponseStatus([]byte{}, fmt.Errorf("test"))
 	assertRequestBufferOverflow(t, "putResponseStatus(1)", err, n)
-
-	s := ""
-	for i := 0; i < 6553; i++ {
-		s += "0123456789"
-	}
-	s += "0123\u56db56789"
-
-	e := make([]byte, 65536)
-	e[0] = 254
-	e[1] = 255
-	for i := 0; i < 6553; i++ {
-		copy(e[10*i+2:], "0123456789")
-	}
-	e[65532] = '0'
-	e[65533] = '1'
-	e[65534] = '2'
-	e[65535] = '3'
-
-	n, err = putResponseStatus(b[:], fmt.Errorf(s))
-	assertRequestBytesBuffer(t, "putResponseStatus(long)", err, b[:], n, e...)
 }
 
 func TestPutResponseStatusTooLong(t *testing.T) {
@@ -705,6 +824,24 @@ func TestPutResponseObligationsTooLong(t *testing.T) {
 
 	n, err = putResponseObligationsTooLong([]byte{})
 	assertRequestBufferOverflow(t, "putResponseObligationsTooLong", err, n)
+}
+
+func TestPutResponseInfoValueTooLong(t *testing.T) {
+	if len(responseInfoValueTooLong) > math.MaxUint16 {
+		t.Errorf("expected no more than %d bytes for responseInfoValueTooLong but got %d",
+			math.MaxUint16, len(responseInfoValueTooLong),
+		)
+	}
+
+	var b [28]byte
+	n, err := putResponseInfoValueTooLong(b[:])
+	assertRequestBytesBuffer(t, "putResponseInfoValueTooLong", err, b[:], n,
+		26, 0, 'i', 'n', 'f', 'o', 'r', 'm', 'a', 't', 'i', 'o', 'n', ' ',
+		'v', 'a', 'l', 'u', 'e', ' ', 't', 'o', 'o', ' ', 'l', 'o', 'n', 'g',
+	)
+
+	n, err = putResponseInfoValueTooLong([]byte{})
+	assertRequestBufferOverflow(t, "putResponseInfoValueTooLong", err, n)
 }
 
 func TestPutAssignmentExpressions(t *testing.T) {
@@ -1262,16 +1399,6 @@ func TestCalcResponseStatus(t *testing.T) {
 	if s != reqBigCounterSize {
 		t.Errorf("expected %d bytes in response but got %d", reqBigCounterSize, s)
 	}
-
-	errs := make([]error, math.MaxUint16/10)
-	for i := range errs {
-		errs[i] = fmt.Errorf("testError%d", i)
-	}
-
-	s = calcResponseStatus(errs...)
-	if s != reqBigCounterSize+math.MaxUint16 {
-		t.Errorf("expected %d bytes in response but got %d", reqBigCounterSize+math.MaxUint16, s)
-	}
 }
 
 func TestCalcAssignmentExpressionsSize(t *testing.T) {
@@ -1365,6 +1492,33 @@ func TestCalcAttributesSizeFromReflectionSize(t *testing.T) {
 		t.Errorf("expected *requestAddressValueError but got %d bytes in respons", s)
 	} else if _, ok := err.(*requestAddressValueError); !ok {
 		t.Errorf("expected *requestAddressValueError but got %T (%s)", err, err)
+	}
+}
+
+func TestTrimResponseString(t *testing.T) {
+	s := "test"
+	if ts := trimResponseString(s); ts != s {
+		t.Errorf("expected %q but got %q", s, ts)
+	}
+
+	s = ""
+	for i := 0; i < 6553; i++ {
+		s += "0123456789"
+	}
+	s += "0123\u56db56789"
+
+	b := make([]byte, 65534)
+	for i := 0; i < 6553; i++ {
+		copy(b[10*i:], "0123456789")
+	}
+	b[65530] = '0'
+	b[65531] = '1'
+	b[65532] = '2'
+	b[65533] = '3'
+	e := string(b)
+
+	if ts := trimResponseString(s); ts != e {
+		t.Errorf("expected string of %d length but got %d:\n\t\texpected: %q\n\t\tgot: %q", len(e), len(ts), e, ts)
 	}
 }
 

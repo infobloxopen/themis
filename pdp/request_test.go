@@ -174,6 +174,35 @@ func TestMarshalRequestReflectionToBuffer(t *testing.T) {
 	assertRequestBufferOverflow(t, "MarshalRequestReflectionToBuffer(collection)", err, n)
 }
 
+func TestMarshalInfoRequest(t *testing.T) {
+	var b [26]byte
+
+	vals := []AttributeValue{
+		MakeStringValue("test"),
+		MakeIntegerValue(17),
+	}
+	n, err := MarshalInfoRequest(b[:], "test", vals)
+	assertRequestBytesBuffer(t, "MarshalInfoRequest", err, b[:], n,
+		1, 0,
+		4, 0, 't', 'e', 's', 't',
+		2, 0,
+		byte(requestWireTypeString), 4, 0, 't', 'e', 's', 't',
+		byte(requestWireTypeInteger), 17, 0, 0, 0, 0, 0, 0, 0,
+	)
+
+	n, err = MarshalInfoRequest([]byte{}, "test", vals)
+	assertRequestBufferOverflow(t, "MarshalInfoRequest(version)", err, n)
+
+	n, err = MarshalInfoRequest(b[:2], "test", vals)
+	assertRequestBufferOverflow(t, "MarshalInfoRequest(path)", err, n)
+
+	n, err = MarshalInfoRequest(b[:9], "test", vals)
+	assertRequestBufferOverflow(t, "MarshalInfoRequest(count)", err, n)
+
+	n, err = MarshalInfoRequest(b[:11], "test", vals)
+	assertRequestBufferOverflow(t, "MarshalInfoRequest(vals)", err, n)
+}
+
 func TestUnmarshalRequestAssignments(t *testing.T) {
 	a, err := UnmarshalRequestAssignments(testWireRequest)
 	assertRequestAssignmentExpressions(t, "UnmarshalRequestAssignments", err, a, len(a), testRequestAssignments...)
@@ -289,6 +318,106 @@ func TestUnmarshalRequestReflection(t *testing.T) {
 	})
 	if err == nil {
 		t.Error("expected *requestBufferUnderflowError but got nothing")
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestUnmarshalInfoRequest(t *testing.T) {
+	var vals [2]AttributeValue
+
+	path, n, err := UnmarshalInfoRequest([]byte{
+		1, 0,
+		4, 0, 't', 'e', 's', 't',
+		2, 0,
+		byte(requestWireTypeString), 4, 0, 't', 'e', 's', 't',
+		byte(requestWireTypeInteger), 17, 0, 0, 0, 0, 0, 0, 0,
+	}, vals[:])
+
+	if err != nil {
+		t.Error(err)
+	} else {
+		if path != "test" {
+			t.Errorf("expected %q as path but got %q", "test", path)
+		}
+
+		if n != len(vals) {
+			t.Errorf("expected %d values but got %d", len(vals), n)
+		} else {
+			s, err := vals[0].str()
+			if err != nil {
+				t.Error(err)
+			} else if s != "test" {
+				t.Errorf("expected %q as first value but got %q", "test", s)
+			}
+
+			i, err := vals[1].integer()
+			if err != nil {
+				t.Error(err)
+			} else if i != 17 {
+				t.Errorf("expected %d as second value but got %d", 17, i)
+			}
+		}
+	}
+
+	path, n, err = UnmarshalInfoRequest([]byte{
+		1, 0,
+		4, 0, 't', 'e', 's', 't',
+		2, 0,
+		byte(requestWireTypeString), 4, 0, 't', 'e', 's', 't',
+		byte(requestWireTypeInteger), 17, 0, 0, 0, 0, 0, 0, 0,
+	}, vals[:1])
+	if err == nil {
+		t.Errorf("expected *requestValuesOverflowError but got path %q and %d values", path, n)
+	} else if _, ok := err.(*requestValuesOverflowError); !ok {
+		t.Errorf("expected *requestValuesOverflowError but got %T (%s)", err, err)
+	}
+
+	path, n, err = UnmarshalInfoRequest([]byte{}, vals[:])
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got path %q and %d values", path, n)
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	path, n, err = UnmarshalInfoRequest([]byte{
+		1, 0,
+	}, vals[:])
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got path %q and %d values", path, n)
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	path, n, err = UnmarshalInfoRequest([]byte{
+		1, 0,
+		4, 0, 't', 'e', 's', 't',
+	}, vals[:])
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got path %q and %d values", path, n)
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	path, n, err = UnmarshalInfoRequest([]byte{
+		1, 0,
+		4, 0, 't', 'e', 's', 't',
+		2, 0,
+	}, vals[:])
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got path %q and %d values", path, n)
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	path, n, err = UnmarshalInfoRequest([]byte{
+		1, 0,
+		4, 0, 't', 'e', 's', 't',
+		2, 0,
+		byte(requestWireTypeString), 4, 0, 't', 'e', 's', 't',
+	}, vals[:])
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got path %q and %d values", path, n)
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
@@ -861,61 +990,11 @@ func TestGetRequestListOfStringsValue(t *testing.T) {
 }
 
 func TestGetRequestAttribute(t *testing.T) {
-	testWireBooleanFalseAttribute := []byte{
-		2, 'n', 'o', byte(requestWireTypeBooleanFalse),
-	}
-
-	name, v, n, err := getRequestAttribute(testWireBooleanFalseAttribute)
-	if err != nil {
-		t.Error(err)
-	} else if n != len(testWireBooleanFalseAttribute) {
-		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireBooleanFalseAttribute), n)
-	} else if name != "no" {
-		t.Errorf("expected %q as attribute name but got %q", "no", name)
-	} else if vt := v.GetResultType(); vt != TypeBoolean {
-		t.Errorf("expected value of %q type but got %q %s", TypeBoolean, vt, v.describe())
-	} else {
-		s, err := v.Serialize()
-		if err != nil {
-			t.Error(err)
-		} else {
-			e := "false"
-			if s != e {
-				t.Errorf("expected %q but got %q", e, s)
-			}
-		}
-	}
-
-	testWireBooleanTrueAttribute := []byte{
-		3, 'y', 'e', 's', byte(requestWireTypeBooleanTrue),
-	}
-
-	name, v, n, err = getRequestAttribute(testWireBooleanTrueAttribute)
-	if err != nil {
-		t.Error(err)
-	} else if n != len(testWireBooleanTrueAttribute) {
-		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireBooleanTrueAttribute), n)
-	} else if name != "yes" {
-		t.Errorf("expected %q as attribute name but got %q", "yes", name)
-	} else if vt := v.GetResultType(); vt != TypeBoolean {
-		t.Errorf("expected value of %q type but got %q %s", TypeBoolean, vt, v.describe())
-	} else {
-		s, err := v.Serialize()
-		if err != nil {
-			t.Error(err)
-		} else {
-			e := "true"
-			if s != e {
-				t.Errorf("expected %q but got %q", e, s)
-			}
-		}
-	}
-
 	testWireStringAttribute := []byte{
 		6, 's', 't', 'r', 'i', 'n', 'g', byte(requestWireTypeString), 4, 0, 't', 'e', 's', 't',
 	}
 
-	name, v, n, err = getRequestAttribute(testWireStringAttribute)
+	name, v, n, err := getRequestAttribute(testWireStringAttribute)
 	if err != nil {
 		t.Error(err)
 	} else if n != len(testWireStringAttribute) {
@@ -936,17 +1015,137 @@ func TestGetRequestAttribute(t *testing.T) {
 		}
 	}
 
-	testWireIntegerAttribute := []byte{
-		7, 'i', 'n', 't', 'e', 'g', 'e', 'r', byte(requestWireTypeInteger), 0, 0, 0, 0, 0, 0, 0, 128,
+	name, v, n, err = getRequestAttribute([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
 
-	name, v, n, err = getRequestAttribute(testWireIntegerAttribute)
+	name, v, n, err = getRequestAttribute([]byte{
+		6, 's', 't', 'r', 'i', 'n', 'g',
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetRequestAttributeValue(t *testing.T) {
+	testWireStringValue := []byte{
+		byte(requestWireTypeString), 4, 0, 't', 'e', 's', 't',
+	}
+
+	v, n, err := getRequestAttributeValue(testWireStringValue)
 	if err != nil {
 		t.Error(err)
-	} else if n != len(testWireIntegerAttribute) {
-		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireIntegerAttribute), n)
-	} else if name != "integer" {
-		t.Errorf("expected %q as attribute name but got %q", "integer", name)
+	} else if n != len(testWireStringValue) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireStringValue), n)
+	} else if vt := v.GetResultType(); vt != TypeString {
+		t.Errorf("expected value of %q type but got %q %s", TypeString, vt, v.describe())
+	} else {
+		s, err := v.Serialize()
+		if err != nil {
+			t.Error(err)
+		} else {
+			e := "test"
+			if s != e {
+				t.Errorf("expected %q but got %q", e, s)
+			}
+		}
+	}
+
+	v, n, err = getRequestAttributeValue([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %s", v.describe())
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, n, err = getRequestAttributeValue([]byte{
+		byte(requestWireTypeString),
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %s", v.describe())
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetRequestAttributeValueWithType(t *testing.T) {
+	testWireBooleanValue := []byte{}
+
+	v, n, err := getRequestAttributeValueWithType(requestWireTypeBooleanFalse, testWireBooleanValue)
+	if err != nil {
+		t.Error(err)
+	} else if n != len(testWireBooleanValue) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireBooleanValue), n)
+	} else if vt := v.GetResultType(); vt != TypeBoolean {
+		t.Errorf("expected value of %q type but got %q %s", TypeBoolean, vt, v.describe())
+	} else {
+		s, err := v.Serialize()
+		if err != nil {
+			t.Error(err)
+		} else {
+			e := "false"
+			if s != e {
+				t.Errorf("expected %q but got %q", e, s)
+			}
+		}
+	}
+
+	v, n, err = getRequestAttributeValueWithType(requestWireTypeBooleanTrue, testWireBooleanValue)
+	if err != nil {
+		t.Error(err)
+	} else if n != len(testWireBooleanValue) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireBooleanValue), n)
+	} else if vt := v.GetResultType(); vt != TypeBoolean {
+		t.Errorf("expected value of %q type but got %q %s", TypeBoolean, vt, v.describe())
+	} else {
+		s, err := v.Serialize()
+		if err != nil {
+			t.Error(err)
+		} else {
+			e := "true"
+			if s != e {
+				t.Errorf("expected %q but got %q", e, s)
+			}
+		}
+	}
+
+	testWireStringValue := []byte{
+		4, 0, 't', 'e', 's', 't',
+	}
+
+	v, n, err = getRequestAttributeValueWithType(requestWireTypeString, testWireStringValue)
+	if err != nil {
+		t.Error(err)
+	} else if n != len(testWireStringValue) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireStringValue), n)
+	} else if vt := v.GetResultType(); vt != TypeString {
+		t.Errorf("expected value of %q type but got %q %s", TypeString, vt, v.describe())
+	} else {
+		s, err := v.Serialize()
+		if err != nil {
+			t.Error(err)
+		} else {
+			e := "test"
+			if s != e {
+				t.Errorf("expected %q but got %q", e, s)
+			}
+		}
+	}
+
+	testWireIntegerValue := []byte{
+		0, 0, 0, 0, 0, 0, 0, 128,
+	}
+
+	v, n, err = getRequestAttributeValueWithType(requestWireTypeInteger, testWireIntegerValue)
+	if err != nil {
+		t.Error(err)
+	} else if n != len(testWireIntegerValue) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireIntegerValue), n)
 	} else if vt := v.GetResultType(); vt != TypeInteger {
 		t.Errorf("expected value of %q type but got %q %s", TypeInteger, vt, v.describe())
 	} else {
@@ -961,17 +1160,15 @@ func TestGetRequestAttribute(t *testing.T) {
 		}
 	}
 
-	testWireFloatAttribute := []byte{
-		5, 'f', 'l', 'o', 'a', 't', byte(requestWireTypeFloat), 24, 45, 68, 84, 251, 33, 9, 64,
+	testWireFloatValue := []byte{
+		24, 45, 68, 84, 251, 33, 9, 64,
 	}
 
-	name, v, n, err = getRequestAttribute(testWireFloatAttribute)
+	v, n, err = getRequestAttributeValueWithType(requestWireTypeFloat, testWireFloatValue)
 	if err != nil {
 		t.Error(err)
-	} else if n != len(testWireFloatAttribute) {
-		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireFloatAttribute), n)
-	} else if name != "float" {
-		t.Errorf("expected %q as attribute name but got %q", "float", name)
+	} else if n != len(testWireFloatValue) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireFloatValue), n)
 	} else if vt := v.GetResultType(); vt != TypeFloat {
 		t.Errorf("expected value of %q type but got %q %s", TypeFloat, vt, v.describe())
 	} else {
@@ -986,17 +1183,15 @@ func TestGetRequestAttribute(t *testing.T) {
 		}
 	}
 
-	testWireIPv4AddressAttribute := []byte{
-		4, 'I', 'P', 'v', '4', byte(requestWireTypeIPv4Address), 192, 0, 2, 1,
+	testWireIPv4AddressValue := []byte{
+		192, 0, 2, 1,
 	}
 
-	name, v, n, err = getRequestAttribute(testWireIPv4AddressAttribute)
+	v, n, err = getRequestAttributeValueWithType(requestWireTypeIPv4Address, testWireIPv4AddressValue)
 	if err != nil {
 		t.Error(err)
-	} else if n != len(testWireIPv4AddressAttribute) {
-		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireIPv4AddressAttribute), n)
-	} else if name != "IPv4" {
-		t.Errorf("expected %q as attribute name but got %q", "IPv4", name)
+	} else if n != len(testWireIPv4AddressValue) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireIPv4AddressValue), n)
 	} else if vt := v.GetResultType(); vt != TypeAddress {
 		t.Errorf("expected value of %q type but got %q %s", TypeAddress, vt, v.describe())
 	} else {
@@ -1011,17 +1206,15 @@ func TestGetRequestAttribute(t *testing.T) {
 		}
 	}
 
-	testWireIPv6AddressAttribute := []byte{
-		4, 'I', 'P', 'v', '6', byte(requestWireTypeIPv6Address), 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	testWireIPv6AddressValue := []byte{
+		32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
 	}
 
-	name, v, n, err = getRequestAttribute(testWireIPv6AddressAttribute)
+	v, n, err = getRequestAttributeValueWithType(requestWireTypeIPv6Address, testWireIPv6AddressValue)
 	if err != nil {
 		t.Error(err)
-	} else if n != len(testWireIPv6AddressAttribute) {
-		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireIPv6AddressAttribute), n)
-	} else if name != "IPv6" {
-		t.Errorf("expected %q as attribute name but got %q", "IPv6", name)
+	} else if n != len(testWireIPv6AddressValue) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireIPv6AddressValue), n)
 	} else if vt := v.GetResultType(); vt != TypeAddress {
 		t.Errorf("expected value of %q type but got %q %s", TypeAddress, vt, v.describe())
 	} else {
@@ -1036,17 +1229,15 @@ func TestGetRequestAttribute(t *testing.T) {
 		}
 	}
 
-	testWireIPv4NetworkAttribute := []byte{
-		11, 'I', 'P', 'v', '4', 'N', 'e', 't', 'w', 'o', 'r', 'k', byte(requestWireTypeIPv4Network), 24, 192, 0, 2, 1,
+	testWireIPv4NetworkValue := []byte{
+		24, 192, 0, 2, 1,
 	}
 
-	name, v, n, err = getRequestAttribute(testWireIPv4NetworkAttribute)
+	v, n, err = getRequestAttributeValueWithType(requestWireTypeIPv4Network, testWireIPv4NetworkValue)
 	if err != nil {
 		t.Error(err)
-	} else if n != len(testWireIPv4NetworkAttribute) {
-		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireIPv4NetworkAttribute), n)
-	} else if name != "IPv4Network" {
-		t.Errorf("expected %q as attribute name but got %q", "IPv4Network", name)
+	} else if n != len(testWireIPv4NetworkValue) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireIPv4NetworkValue), n)
 	} else if vt := v.GetResultType(); vt != TypeNetwork {
 		t.Errorf("expected value of %q type but got %q %s", TypeNetwork, vt, v.describe())
 	} else {
@@ -1061,18 +1252,15 @@ func TestGetRequestAttribute(t *testing.T) {
 		}
 	}
 
-	testWireIPv6NetworkAttribute := []byte{
-		11, 'I', 'P', 'v', '6', 'N', 'e', 't', 'w', 'o', 'r', 'k', byte(requestWireTypeIPv6Network),
+	testWireIPv6NetworkValue := []byte{
 		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
 	}
 
-	name, v, n, err = getRequestAttribute(testWireIPv6NetworkAttribute)
+	v, n, err = getRequestAttributeValueWithType(requestWireTypeIPv6Network, testWireIPv6NetworkValue)
 	if err != nil {
 		t.Error(err)
-	} else if n != len(testWireIPv6NetworkAttribute) {
-		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireIPv6NetworkAttribute), n)
-	} else if name != "IPv6Network" {
-		t.Errorf("expected %q as attribute name but got %q", "IPv6Network", name)
+	} else if n != len(testWireIPv6NetworkValue) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireIPv6NetworkValue), n)
 	} else if vt := v.GetResultType(); vt != TypeNetwork {
 		t.Errorf("expected value of %q type but got %q %s", TypeNetwork, vt, v.describe())
 	} else {
@@ -1087,17 +1275,15 @@ func TestGetRequestAttribute(t *testing.T) {
 		}
 	}
 
-	testWireDomainAttribute := []byte{
-		6, 'd', 'o', 'm', 'a', 'i', 'n', byte(requestWireTypeDomain), 8, 0, 't', 'e', 's', 't', '.', 'c', 'o', 'm',
+	testWireDomainValue := []byte{
+		8, 0, 't', 'e', 's', 't', '.', 'c', 'o', 'm',
 	}
 
-	name, v, n, err = getRequestAttribute(testWireDomainAttribute)
+	v, n, err = getRequestAttributeValueWithType(requestWireTypeDomain, testWireDomainValue)
 	if err != nil {
 		t.Error(err)
-	} else if n != len(testWireDomainAttribute) {
-		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireDomainAttribute), n)
-	} else if name != "domain" {
-		t.Errorf("expected %q as attribute name but got %q", "domain", name)
+	} else if n != len(testWireDomainValue) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireDomainValue), n)
 	} else if vt := v.GetResultType(); vt != TypeDomain {
 		t.Errorf("expected value of %q type but got %q %s", TypeDomain, vt, v.describe())
 	} else {
@@ -1112,20 +1298,17 @@ func TestGetRequestAttribute(t *testing.T) {
 		}
 	}
 
-	testWireSetOfStringsAttribute := []byte{
-		14, 's', 'e', 't', ' ', 'o', 'f', ' ', 's', 't', 'r', 'i', 'n', 'g', 's', byte(requestWireTypeSetOfStrings),
+	testWireSetOfStringsValue := []byte{
 		3, 0,
 		3, 0, 'o', 'n', 'e',
 		3, 0, 't', 'w', 'o',
 		5, 0, 't', 'h', 'r', 'e', 'e',
 	}
-	name, v, n, err = getRequestAttribute(testWireSetOfStringsAttribute)
+	v, n, err = getRequestAttributeValueWithType(requestWireTypeSetOfStrings, testWireSetOfStringsValue)
 	if err != nil {
 		t.Error(err)
-	} else if n != len(testWireSetOfStringsAttribute) {
-		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireSetOfStringsAttribute), n)
-	} else if name != "set of strings" {
-		t.Errorf("expected %q as attribute name but got %q", "set of strings", name)
+	} else if n != len(testWireSetOfStringsValue) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireSetOfStringsValue), n)
 	} else if vt := v.GetResultType(); vt != TypeSetOfStrings {
 		t.Errorf("expected value of %q type but got %q %s", TypeSetOfStrings, vt, v.describe())
 	} else {
@@ -1140,20 +1323,17 @@ func TestGetRequestAttribute(t *testing.T) {
 		}
 	}
 
-	testWireSetOfNetworksAttribute := []byte{
-		15, 's', 'e', 't', ' ', 'o', 'f', ' ', 'n', 'e', 't', 'w', 'o', 'r', 'k', 's',
-		byte(requestWireTypeSetOfNetworks), 3, 0,
+	testWireSetOfNetworksValue := []byte{
+		3, 0,
 		216, 192, 0, 2, 0,
 		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		220, 192, 0, 2, 16,
 	}
-	name, v, n, err = getRequestAttribute(testWireSetOfNetworksAttribute)
+	v, n, err = getRequestAttributeValueWithType(requestWireTypeSetOfNetworks, testWireSetOfNetworksValue)
 	if err != nil {
 		t.Error(err)
-	} else if n != len(testWireSetOfNetworksAttribute) {
-		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireSetOfNetworksAttribute), n)
-	} else if name != "set of networks" {
-		t.Errorf("expected %q as attribute name but got %q", "set of networks", name)
+	} else if n != len(testWireSetOfNetworksValue) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireSetOfNetworksValue), n)
 	} else if vt := v.GetResultType(); vt != TypeSetOfNetworks {
 		t.Errorf("expected value of %q type but got %q %s", TypeSetOfNetworks, vt, v.describe())
 	} else {
@@ -1168,20 +1348,17 @@ func TestGetRequestAttribute(t *testing.T) {
 		}
 	}
 
-	testWireSetOfDomainsAttribute := []byte{
-		14, 's', 'e', 't', ' ', 'o', 'f', ' ', 'd', 'o', 'm', 'a', 'i', 'n', 's', byte(requestWireTypeSetOfDomains),
+	testWireSetOfDomainsValue := []byte{
 		3, 0,
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
 		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
 	}
-	name, v, n, err = getRequestAttribute(testWireSetOfDomainsAttribute)
+	v, n, err = getRequestAttributeValueWithType(requestWireTypeSetOfDomains, testWireSetOfDomainsValue)
 	if err != nil {
 		t.Error(err)
-	} else if n != len(testWireSetOfDomainsAttribute) {
-		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireSetOfDomainsAttribute), n)
-	} else if name != "set of domains" {
-		t.Errorf("expected %q as attribute name but got %q", "set of strings", name)
+	} else if n != len(testWireSetOfDomainsValue) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireSetOfDomainsValue), n)
 	} else if vt := v.GetResultType(); vt != TypeSetOfDomains {
 		t.Errorf("expected value of %q type but got %q %s", TypeSetOfDomains, vt, v.describe())
 	} else {
@@ -1196,20 +1373,17 @@ func TestGetRequestAttribute(t *testing.T) {
 		}
 	}
 
-	testWireListOfStringsAttribute := []byte{
-		15, 'l', 'i', 's', 't', ' ', 'o', 'f', ' ', 's', 't', 'r', 'i', 'n', 'g', 's',
-		byte(requestWireTypeListOfStrings), 3, 0,
+	testWireListOfStringsValue := []byte{
+		3, 0,
 		3, 0, 'o', 'n', 'e',
 		3, 0, 't', 'w', 'o',
 		5, 0, 't', 'h', 'r', 'e', 'e',
 	}
-	name, v, n, err = getRequestAttribute(testWireListOfStringsAttribute)
+	v, n, err = getRequestAttributeValueWithType(requestWireTypeListOfStrings, testWireListOfStringsValue)
 	if err != nil {
 		t.Error(err)
-	} else if n != len(testWireListOfStringsAttribute) {
-		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireListOfStringsAttribute), n)
-	} else if name != "list of strings" {
-		t.Errorf("expected %q as attribute name but got %q", "list of strings", name)
+	} else if n != len(testWireListOfStringsValue) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireListOfStringsValue), n)
 	} else if vt := v.GetResultType(); vt != TypeListOfStrings {
 		t.Errorf("expected value of %q type but got %q %s", TypeListOfStrings, vt, v.describe())
 	} else {
@@ -1224,148 +1398,125 @@ func TestGetRequestAttribute(t *testing.T) {
 		}
 	}
 
-	name, v, _, err = getRequestAttribute([]byte{})
+	v, _, err = getRequestAttributeValueWithType(255, []byte{})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
-	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
-		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
-	}
-
-	name, v, _, err = getRequestAttribute([]byte{
-		6, 'n', 'o', 't', 'y', 'p', 'e',
-	})
-	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
-	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
-		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
-	}
-
-	name, v, _, err = getRequestAttribute([]byte{
-		7, 'u', 'n', 'k', 'n', 'o', 'w', 'n', 255,
-	})
-	if err == nil {
-		t.Errorf("expected *requestAttributeUnmarshallingTypeError but got attribute %q = %s", name, v.describe())
+		t.Errorf("expected *requestAttributeUnmarshallingTypeError but got %s", v.describe())
 	} else if _, ok := err.(*requestAttributeUnmarshallingTypeError); !ok {
 		t.Errorf("expected *requestAttributeUnmarshallingTypeError but got %T (%s)", err, err)
 	}
 
-	name, v, _, err = getRequestAttribute([]byte{
-		6, 's', 't', 'r', 'i', 'n', 'g', byte(requestWireTypeString), 4, 0, 't', 'e',
+	v, _, err = getRequestAttributeValueWithType(requestWireTypeString, []byte{
+		4, 0, 't', 'e',
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
+		t.Errorf("expected *requestBufferUnderflowError but got %s", v.describe())
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
 
-	name, v, _, err = getRequestAttribute([]byte{
-		7, 'i', 'n', 't', 'e', 'g', 'e', 'r', byte(requestWireTypeInteger), 0, 0, 0, 0,
+	v, _, err = getRequestAttributeValueWithType(requestWireTypeInteger, []byte{
+		0, 0, 0, 0,
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
+		t.Errorf("expected *requestBufferUnderflowError but got %s", v.describe())
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
 
-	name, v, _, err = getRequestAttribute([]byte{
-		5, 'f', 'l', 'o', 'a', 't', byte(requestWireTypeFloat), 24, 45, 68, 84,
+	v, _, err = getRequestAttributeValueWithType(requestWireTypeFloat, []byte{
+		24, 45, 68, 84,
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
+		t.Errorf("expected *requestBufferUnderflowError but got %s", v.describe())
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
 
-	name, v, _, err = getRequestAttribute([]byte{
-		4, 'I', 'P', 'v', '4', byte(requestWireTypeIPv4Address), 192, 0,
+	v, _, err = getRequestAttributeValueWithType(requestWireTypeIPv4Address, []byte{
+		192, 0,
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
+		t.Errorf("expected *requestBufferUnderflowError but got %s", v.describe())
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
 
-	name, v, _, err = getRequestAttribute([]byte{
-		4, 'I', 'P', 'v', '6', byte(requestWireTypeIPv6Address), 32, 1, 13, 184, 0, 0, 0, 0,
+	v, _, err = getRequestAttributeValueWithType(requestWireTypeIPv6Address, []byte{
+		32, 1, 13, 184, 0, 0, 0, 0,
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
+		t.Errorf("expected *requestBufferUnderflowError but got %s", v.describe())
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
 
-	name, v, _, err = getRequestAttribute([]byte{
-		11, 'I', 'P', 'v', '4', 'N', 'e', 't', 'w', 'o', 'r', 'k', byte(requestWireTypeIPv4Network), 192, 0, 2, 1,
+	v, _, err = getRequestAttributeValueWithType(requestWireTypeIPv4Network, []byte{
+		192, 0, 2, 1,
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
+		t.Errorf("expected *requestBufferUnderflowError but got %s", v.describe())
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
 
-	name, v, _, err = getRequestAttribute([]byte{
-		11, 'I', 'P', 'v', '6', 'N', 'e', 't', 'w', 'o', 'r', 'k', byte(requestWireTypeIPv6Network),
+	v, _, err = getRequestAttributeValueWithType(requestWireTypeIPv6Network, []byte{
 		32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
+		t.Errorf("expected *requestBufferUnderflowError but got %s", v.describe())
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
 
-	name, v, _, err = getRequestAttribute([]byte{
-		6, 'd', 'o', 'm', 'a', 'i', 'n', byte(requestWireTypeDomain), 8, 0, 't', 'e', 's', 't',
+	v, _, err = getRequestAttributeValueWithType(requestWireTypeDomain, []byte{
+		8, 0, 't', 'e', 's', 't',
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
+		t.Errorf("expected *requestBufferUnderflowError but got %s", v.describe())
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
 
-	name, v, _, err = getRequestAttribute([]byte{
-		14, 's', 'e', 't', ' ', 'o', 'f', ' ', 's', 't', 'r', 'i', 'n', 'g', 's', byte(requestWireTypeSetOfStrings),
+	v, _, err = getRequestAttributeValueWithType(requestWireTypeSetOfStrings, []byte{
 		3, 0,
 		3, 0, 'o', 'n', 'e',
 		3, 0, 't', 'w', 'o',
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
+		t.Errorf("expected *requestBufferUnderflowError but got %s", v.describe())
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
 
-	name, v, _, err = getRequestAttribute([]byte{
-		15, 's', 'e', 't', ' ', 'o', 'f', ' ', 'n', 'e', 't', 'w', 'o', 'r', 'k', 's',
-		byte(requestWireTypeSetOfNetworks), 3, 0,
+	v, _, err = getRequestAttributeValueWithType(requestWireTypeSetOfNetworks, []byte{
+		3, 0,
 		216, 192, 0, 2, 0,
 		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
+		t.Errorf("expected *requestBufferUnderflowError but got %s", v.describe())
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
 
-	name, v, _, err = getRequestAttribute([]byte{
-		14, 's', 'e', 't', ' ', 'o', 'f', ' ', 'd', 'o', 'm', 'a', 'i', 'n', 's', byte(requestWireTypeSetOfDomains),
+	v, _, err = getRequestAttributeValueWithType(requestWireTypeSetOfDomains, []byte{
 		3, 0,
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
 		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
+		t.Errorf("expected *requestBufferUnderflowError but got %s", v.describe())
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
 
-	name, v, _, err = getRequestAttribute([]byte{
-		15, 'l', 'i', 's', 't', ' ', 'o', 'f', ' ', 's', 't', 'r', 'i', 'n', 'g', 's',
-		byte(requestWireTypeListOfStrings), 3, 0,
+	v, _, err = getRequestAttributeValueWithType(requestWireTypeListOfStrings, []byte{
+		3, 0,
 		3, 0, 'o', 'n', 'e',
 		3, 0, 't', 'w', 'o',
 	})
 	if err == nil {
-		t.Errorf("expected *requestBufferUnderflowError but got attribute %q = %s", name, v.describe())
+		t.Errorf("expected *requestBufferUnderflowError but got %s", v.describe())
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
@@ -1528,6 +1679,93 @@ func TestPutRequestAttribute(t *testing.T) {
 	)
 
 	n, err = putRequestAttribute(b[:], "undefined", UndefinedValue)
+	if err == nil {
+		t.Errorf("expected no data put to buffer for undefined value but got %d", n)
+	} else if _, ok := err.(*requestAttributeMarshallingNotImplementedError); !ok {
+		t.Errorf("expected *requestAttributeMarshallingNotImplementedError but got %T (%s)", err, err)
+	}
+}
+
+func TestPutRequestAttributeValue(t *testing.T) {
+	var b [47]byte
+
+	n, err := putRequestAttributeValue(b[:1], MakeBooleanValue(true))
+	assertRequestBytesBuffer(t, "putRequestAttributeValue(boolean)", err, b[:1], n,
+		byte(requestWireTypeBooleanTrue),
+	)
+
+	n, err = putRequestAttributeValue(b[:7], MakeStringValue("test"))
+	assertRequestBytesBuffer(t, "putRequestAttributeValue(string)", err, b[:7], n,
+		byte(requestWireTypeString), 4, 0, 't', 'e', 's', 't',
+	)
+
+	n, err = putRequestAttributeValue(b[:9], MakeIntegerValue(-9223372036854775808))
+	assertRequestBytesBuffer(t, "putRequestAttributeValue(integer)", err, b[:9], n,
+		byte(requestWireTypeInteger), 0, 0, 0, 0, 0, 0, 0, 0x80,
+	)
+
+	n, err = putRequestAttributeValue(b[:9], MakeFloatValue(math.Pi))
+	assertRequestBytesBuffer(t, "putRequestAttributeValue(float)", err, b[:9], n,
+		byte(requestWireTypeFloat), 24, 45, 68, 84, 251, 33, 9, 64,
+	)
+
+	n, err = putRequestAttributeValue(b[:5], MakeAddressValue(net.ParseIP("192.0.2.1")))
+	assertRequestBytesBuffer(t, "putRequestAttributeValue(address)", err, b[:5], n,
+		byte(requestWireTypeIPv4Address), 192, 0, 2, 1,
+	)
+
+	n, err = putRequestAttributeValue(b[:6], MakeNetworkValue(makeTestNetwork("192.0.2.0/24")))
+	assertRequestBytesBuffer(t, "putRequestAttributeValue(network)", err, b[:6], n,
+		byte(requestWireTypeIPv4Network), 24, 192, 0, 2, 0,
+	)
+
+	n, err = putRequestAttributeValue(b[:18], MakeDomainValue(makeTestDomain("www.example.com")))
+	assertRequestBytesBuffer(t, "putRequestAttributeValue(domain)", err, b[:18], n,
+		byte(requestWireTypeDomain),
+		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+	)
+
+	n, err = putRequestAttributeValue(b[:20], MakeSetOfStringsValue(newStrTree("one", "two", "three")))
+	assertRequestBytesBuffer(t, "putRequestAttributeValue(set of strings)", err, b[:20], n,
+		byte(requestWireTypeSetOfStrings), 3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
+	)
+
+	n, err = putRequestAttributeValue(b[:30], MakeSetOfNetworksValue(newIPTree(
+		makeTestNetwork("192.0.2.0/24"),
+		makeTestNetwork("2001:db8::/32"),
+		makeTestNetwork("192.0.2.16/28"),
+	)))
+	assertRequestBytesBuffer(t, "putRequestAttributeValue(set of networks)", err, b[:30], n,
+		byte(requestWireTypeSetOfNetworks), 3, 0,
+		216, 192, 0, 2, 0,
+		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		220, 192, 0, 2, 16,
+	)
+
+	n, err = putRequestAttributeValue(b[:46], MakeSetOfDomainsValue(newDomainTree(
+		makeTestDomain("example.com"),
+		makeTestDomain("example.gov"),
+		makeTestDomain("www.example.com"),
+	)))
+	assertRequestBytesBuffer(t, "putRequestAttributeValue(set of domains)", err, b[:46], n,
+		byte(requestWireTypeSetOfDomains), 3, 0,
+		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
+		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+	)
+
+	n, err = putRequestAttributeValue(b[:20], MakeListOfStringsValue([]string{"one", "two", "three"}))
+	assertRequestBytesBuffer(t, "putRequestAttributeValue(list of strings)", err, b[:20], n,
+		byte(requestWireTypeListOfStrings), 3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
+	)
+
+	n, err = putRequestAttributeValue(b[:], UndefinedValue)
 	if err == nil {
 		t.Errorf("expected no data put to buffer for undefined value but got %d", n)
 	} else if _, ok := err.(*requestAttributeMarshallingNotImplementedError); !ok {

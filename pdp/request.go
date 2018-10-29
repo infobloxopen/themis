@@ -207,6 +207,41 @@ func MarshalRequestReflectionToBuffer(b []byte, c int, f func(i int) (string, Ty
 	return off + n, nil
 }
 
+// MarshalInfoRequest marshals request for additional information as a sequence
+// of bytes to given buffer. The information request is used to get data from
+// PIP and consists of a path and a set of attribute values. The path  is used
+// to identify specific data source within the same PIP server. Caller should
+// provide large enough buffer. The function fills given buffer and returns
+// number of bytes written.
+func MarshalInfoRequest(b []byte, path string, in []AttributeValue) (int, error) {
+	off, err := putRequestVersion(b)
+	if err != nil {
+		return off, err
+	}
+
+	n, err := putRequestString(b[off:], path)
+	if err != nil {
+		return off, err
+	}
+	off += n
+
+	n, err = putRequestAttributeCount(b[off:], len(in))
+	if err != nil {
+		return off, err
+	}
+	off += n
+
+	for _, v := range in {
+		n, err = putRequestAttributeValue(b[off:], v)
+		if err != nil {
+			return off, err
+		}
+		off += n
+	}
+
+	return off, nil
+}
+
 // UnmarshalRequestAssignments parses given sequence of bytes as
 // a list of assignments.
 func UnmarshalRequestAssignments(b []byte) ([]AttributeAssignment, error) {
@@ -256,6 +291,45 @@ func UnmarshalRequestReflection(b []byte, f func(string, Type) (reflect.Value, e
 	b = b[n:]
 
 	return getAttributesToReflection(b, f)
+}
+
+// UnmarshalInfoRequest unmarshals information request from given buffer.
+// It fills given assignment array and returns path and number of attributes.
+// Caller should provide large enough array for assignments.
+func UnmarshalInfoRequest(b []byte, out []AttributeValue) (string, int, error) {
+	n, err := checkRequestVersion(b)
+	if err != nil {
+		return "", 0, err
+	}
+	b = b[n:]
+
+	s, n, err := getRequestStringValue(b)
+	if err != nil {
+		return "", 0, err
+	}
+	b = b[n:]
+
+	c, n, err := getRequestAttributeCount(b)
+	if err != nil {
+		return "", 0, err
+	}
+	b = b[n:]
+
+	if c > len(out) {
+		return "", 0, newRequestValuesOverflowError(c, len(out))
+	}
+
+	for i := 0; i < c; i++ {
+		v, n, err := getRequestAttributeValue(b)
+		if err != nil {
+			return "", 0, err
+		}
+		b = b[n:]
+
+		out[i] = v
+	}
+
+	return s, c, nil
 }
 
 func putRequestVersion(b []byte) (int, error) {
@@ -356,124 +430,192 @@ func putRequestAttribute(b []byte, name string, value AttributeValue) (int, erro
 	return 0, newRequestAttributeMarshallingNotImplementedError(t)
 }
 
+func putRequestAttributeValue(b []byte, value AttributeValue) (int, error) {
+	t := value.GetResultType()
+
+	switch t {
+	case TypeBoolean:
+		v, _ := value.boolean()
+		return putRequestBooleanValue(b, v)
+
+	case TypeString:
+		v, _ := value.str()
+		return putRequestStringValue(b, v)
+
+	case TypeInteger:
+		v, _ := value.integer()
+		return putRequestIntegerValue(b, v)
+
+	case TypeFloat:
+		v, _ := value.float()
+		return putRequestFloatValue(b, v)
+
+	case TypeAddress:
+		v, _ := value.address()
+		return putRequestAddressValue(b, v)
+
+	case TypeNetwork:
+		v, _ := value.network()
+		return putRequestNetworkValue(b, v)
+
+	case TypeDomain:
+		v, _ := value.domain()
+		return putRequestDomainValue(b, v)
+
+	case TypeSetOfStrings:
+		v, _ := value.setOfStrings()
+		return putRequestSetOfStringsValue(b, v)
+
+	case TypeSetOfNetworks:
+		v, _ := value.setOfNetworks()
+		return putRequestSetOfNetworksValue(b, v)
+
+	case TypeSetOfDomains:
+		v, _ := value.setOfDomains()
+		return putRequestSetOfDomainsValue(b, v)
+
+	case TypeListOfStrings:
+		v, _ := value.listOfStrings()
+		return putRequestListOfStringsValue(b, v)
+	}
+
+	return 0, newRequestAttributeMarshallingNotImplementedError(t)
+}
+
 func getRequestAttribute(b []byte) (string, AttributeValue, int, error) {
 	name, off, err := getRequestAttributeName(b)
 	if err != nil {
 		return "", UndefinedValue, 0, bindError(err, "name")
 	}
 
-	t, n, err := getRequestAttributeType(b[off:])
+	v, n, err := getRequestAttributeValue(b[off:])
 	if err != nil {
-		return "", UndefinedValue, 0, bindError(bindError(err, "type"), name)
+		return "", UndefinedValue, 0, bindError(err, name)
 	}
 
-	off += n
+	return name, v, off + n, nil
+}
 
+func getRequestAttributeValue(b []byte) (AttributeValue, int, error) {
+	t, off, err := getRequestAttributeType(b)
+	if err != nil {
+		return UndefinedValue, 0, bindError(err, "type")
+	}
+
+	v, n, err := getRequestAttributeValueWithType(t, b[off:])
+	if err != nil {
+		return UndefinedValue, 0, bindError(err, "value")
+	}
+
+	return v, off + n, nil
+}
+
+func getRequestAttributeValueWithType(t int, b []byte) (AttributeValue, int, error) {
 	switch t {
 	case requestWireTypeBooleanFalse:
-		return name, MakeBooleanValue(false), off, nil
+		return MakeBooleanValue(false), 0, nil
 
 	case requestWireTypeBooleanTrue:
-		return name, MakeBooleanValue(true), off, nil
+		return MakeBooleanValue(true), 0, nil
 
 	case requestWireTypeString:
-		s, n, err := getRequestStringValue(b[off:])
+		s, n, err := getRequestStringValue(b)
 		if err != nil {
-			return "", UndefinedValue, 0, bindError(bindError(err, "value"), name)
+			return UndefinedValue, 0, err
 		}
 
-		return name, MakeStringValue(s), off + n, nil
+		return MakeStringValue(s), n, nil
 
 	case requestWireTypeInteger:
-		i, n, err := getRequestIntegerValue(b[off:])
+		i, n, err := getRequestIntegerValue(b)
 		if err != nil {
-			return "", UndefinedValue, 0, bindError(bindError(err, "value"), name)
+			return UndefinedValue, 0, err
 		}
 
-		return name, MakeIntegerValue(i), off + n, nil
+		return MakeIntegerValue(i), n, nil
 
 	case requestWireTypeFloat:
-		f, n, err := getRequestFloatValue(b[off:])
+		f, n, err := getRequestFloatValue(b)
 		if err != nil {
-			return "", UndefinedValue, 0, bindError(bindError(err, "value"), name)
+			return UndefinedValue, 0, err
 		}
 
-		return name, MakeFloatValue(f), off + n, nil
+		return MakeFloatValue(f), n, nil
 
 	case requestWireTypeIPv4Address:
-		a, n, err := getRequestIPv4AddressValue(b[off:])
+		a, n, err := getRequestIPv4AddressValue(b)
 		if err != nil {
-			return "", UndefinedValue, 0, bindError(bindError(err, "value"), name)
+			return UndefinedValue, 0, err
 		}
 
-		return name, MakeAddressValue(a), off + n, nil
+		return MakeAddressValue(a), n, nil
 
 	case requestWireTypeIPv6Address:
-		a, n, err := getRequestIPv6AddressValue(b[off:])
+		a, n, err := getRequestIPv6AddressValue(b)
 		if err != nil {
-			return "", UndefinedValue, 0, bindError(bindError(err, "value"), name)
+			return UndefinedValue, 0, err
 		}
 
-		return name, MakeAddressValue(a), off + n, nil
+		return MakeAddressValue(a), n, nil
 
 	case requestWireTypeIPv4Network:
-		a, n, err := getRequestIPv4NetworkValue(b[off:])
+		a, n, err := getRequestIPv4NetworkValue(b)
 		if err != nil {
-			return "", UndefinedValue, 0, bindError(bindError(err, "value"), name)
+			return UndefinedValue, 0, err
 		}
 
-		return name, MakeNetworkValue(a), off + n, nil
+		return MakeNetworkValue(a), n, nil
 
 	case requestWireTypeIPv6Network:
-		a, n, err := getRequestIPv6NetworkValue(b[off:])
+		a, n, err := getRequestIPv6NetworkValue(b)
 		if err != nil {
-			return "", UndefinedValue, 0, bindError(bindError(err, "value"), name)
+			return UndefinedValue, 0, err
 		}
 
-		return name, MakeNetworkValue(a), off + n, nil
+		return MakeNetworkValue(a), n, nil
 
 	case requestWireTypeDomain:
-		d, n, err := getRequestDomainValue(b[off:])
+		d, n, err := getRequestDomainValue(b)
 		if err != nil {
-			return "", UndefinedValue, 0, bindError(bindError(err, "value"), name)
+			return UndefinedValue, 0, err
 		}
 
-		return name, MakeDomainValue(d), off + n, nil
+		return MakeDomainValue(d), n, nil
 
 	case requestWireTypeSetOfStrings:
-		ss, n, err := getRequestSetOfStringsValue(b[off:])
+		ss, n, err := getRequestSetOfStringsValue(b)
 		if err != nil {
-			return "", UndefinedValue, 0, bindError(bindError(err, "value"), name)
+			return UndefinedValue, 0, err
 		}
 
-		return name, MakeSetOfStringsValue(ss), off + n, nil
+		return MakeSetOfStringsValue(ss), n, nil
 
 	case requestWireTypeSetOfNetworks:
-		sn, n, err := getRequestSetOfNetworksValue(b[off:])
+		sn, n, err := getRequestSetOfNetworksValue(b)
 		if err != nil {
-			return "", UndefinedValue, 0, bindError(bindError(err, "value"), name)
+			return UndefinedValue, 0, err
 		}
 
-		return name, MakeSetOfNetworksValue(sn), off + n, nil
+		return MakeSetOfNetworksValue(sn), n, nil
 
 	case requestWireTypeSetOfDomains:
-		sd, n, err := getRequestSetOfDomainsValue(b[off:])
+		sd, n, err := getRequestSetOfDomainsValue(b)
 		if err != nil {
-			return "", UndefinedValue, 0, bindError(bindError(err, "value"), name)
+			return UndefinedValue, 0, err
 		}
 
-		return name, MakeSetOfDomainsValue(sd), off + n, nil
+		return MakeSetOfDomainsValue(sd), n, nil
 
 	case requestWireTypeListOfStrings:
-		ls, n, err := getRequestListOfStringsValue(b[off:])
+		ls, n, err := getRequestListOfStringsValue(b)
 		if err != nil {
-			return "", UndefinedValue, 0, bindError(bindError(err, "value"), name)
+			return UndefinedValue, 0, err
 		}
 
-		return name, MakeListOfStringsValue(ls), off + n, nil
+		return MakeListOfStringsValue(ls), n, nil
 	}
 
-	return "", UndefinedValue, 0, bindError(newRequestAttributeUnmarshallingTypeError(t), name)
+	return UndefinedValue, 0, newRequestAttributeUnmarshallingTypeError(t)
 }
 
 func putRequestAttributeName(b []byte, name string) (int, error) {
@@ -570,6 +712,15 @@ func putRequestStringValue(b []byte, value string) (int, error) {
 
 	b = b[off:]
 
+	n, err := putRequestString(b, value)
+	if err != nil {
+		return 0, err
+	}
+
+	return off + n, nil
+}
+
+func putRequestString(b []byte, value string) (int, error) {
 	if len(value) > math.MaxUint16 {
 		return 0, newRequestTooLongStringValueError(value)
 	}
@@ -582,7 +733,7 @@ func putRequestStringValue(b []byte, value string) (int, error) {
 	binary.LittleEndian.PutUint16(b, uint16(len(value)))
 	copy(b[reqBigCounterSize:], value)
 
-	return off + n, nil
+	return n, nil
 }
 
 func getRequestStringValue(b []byte) (string, int, error) {

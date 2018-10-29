@@ -32,7 +32,7 @@ type Client interface {
 	Close()
 
 	// Get requests information from PIP.
-	Get(args []pdp.AttributeAssignment) (pdp.AttributeValue, error)
+	Get(path string, args []pdp.AttributeValue) (pdp.AttributeValue, error)
 }
 
 // NewClient creates client instance.
@@ -102,9 +102,9 @@ func (c *client) Close() {
 	c.p.stop()
 }
 
-func (c *client) Get(args []pdp.AttributeAssignment) (pdp.AttributeValue, error) {
+func (c *client) Get(path string, args []pdp.AttributeValue) (pdp.AttributeValue, error) {
 	for atomic.LoadUint32(c.state) == pipClientConnected {
-		v, ok, err := c.tryGet(args)
+		v, ok, err := c.tryGet(path, args)
 		if !ok || err == nil {
 			return v, err
 		}
@@ -113,7 +113,7 @@ func (c *client) Get(args []pdp.AttributeAssignment) (pdp.AttributeValue, error)
 	return pdp.UndefinedValue, ErrNotConnected
 }
 
-func (c *client) tryGet(args []pdp.AttributeAssignment) (pdp.AttributeValue, bool, error) {
+func (c *client) tryGet(path string, args []pdp.AttributeValue) (pdp.AttributeValue, bool, error) {
 	conn := c.p.get()
 	if conn == nil {
 		return pdp.UndefinedValue, false, ErrNotConnected
@@ -127,7 +127,7 @@ func (c *client) tryGet(args []pdp.AttributeAssignment) (pdp.AttributeValue, boo
 		}
 	}()
 
-	n, err := pdp.MarshalRequestAssignmentsToBuffer(b.b, args)
+	n, err := pdp.MarshalInfoRequest(b.b, path, args)
 	if err != nil {
 		return pdp.UndefinedValue, false, err
 	}
@@ -136,9 +136,20 @@ func (c *client) tryGet(args []pdp.AttributeAssignment) (pdp.AttributeValue, boo
 	b, err = conn.get(b)
 	if err != nil {
 		c.p.report(conn)
+		return pdp.UndefinedValue, true, err
 	}
 
-	return pdp.UndefinedValue, true, err
+	v, err := pdp.UnmarshalInfoResponse(b.b)
+	if err != nil {
+		if err, ok := err.(*pdp.ResponseServerError); ok {
+			return pdp.UndefinedValue, false, err
+		}
+
+		c.p.report(conn)
+		return pdp.UndefinedValue, true, err
+	}
+
+	return v, false, nil
 }
 
 func (c *client) nextID() uint64 {
