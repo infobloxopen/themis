@@ -57,6 +57,12 @@ var FunctionArgumentValidators = map[string][]functionArgumentValidator{
 	"list of strings": {
 		functionListOfStringsValidator,
 	},
+	"intersect": {
+		functionListOfStringsIntersectValidator,
+	},
+	"len": {
+		functionListOfStringsLenValidator,
+	},
 	"concat": {
 		functionConcatValidator,
 	},
