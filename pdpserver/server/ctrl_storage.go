@@ -19,15 +19,15 @@ by the depth parameter.
 
 Parameters:
 
-    path    an optional url parameter in the form of 'id1/id2/id3' where id2 is
-            the child of id1, and id3 is child of id2. The node with the right
-            most id is selected as displayed root (id3 in this case).
+	path    Is an optional url parameter in the form of 'id1/id2/.../id3'
+			where id2 is the child of id1.
+			Select the subtree of the right-most id in this path
+			(id3 in above case).
             By default, the path is empty (the root node is selected).
 
-    depth   an optional query parameter that is a positive integer.
-            This parameter specifies the maximum depth of the subtree displayed
-            in addition to the selected node. For example, a depth of 1
-            displays the selected node and its children.
+    depth   Is an optional query string parameter taking a positive integer.
+			Display a subtree with at most depth specified.
+			E.g.: depth=1 displays the selected root and its children.
             By default, the depth is 0 (only display the selected node).
 
 GET /query/<path>?depth=<depth>`
