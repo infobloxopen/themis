@@ -1,6 +1,7 @@
 package pdp
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 
@@ -16,6 +17,14 @@ import (
 type AttributeAssignment struct {
 	a Attribute
 	e Expression
+}
+
+// AttribAssignFmt is the json marshal format of serialized AttributeAssignment
+type AttribAssignFmt struct {
+	Name      string
+	NameType  string
+	Value     string
+	ValueType string
 }
 
 // MakeAttributeAssignment creates assignment of given expression to given
@@ -458,6 +467,20 @@ func (a AttributeAssignment) String() string {
 		return err.Error()
 	}
 	return fmt.Sprintf("(%s)%s:%s", valueType, name, value)
+}
+
+// MarshalJSON satisfies Marshaler interface
+func (a AttributeAssignment) MarshalJSON() ([]byte, error) {
+	name, valueType, value, err := a.Serialize(nil)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(AttribAssignFmt{
+		Name:      name,
+		NameType:  a.a.t.GetKey(),
+		Value:     value,
+		ValueType: valueType,
+	})
 }
 
 func (a AttributeAssignment) bindError(err error) error {
