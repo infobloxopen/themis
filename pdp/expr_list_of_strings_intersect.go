@@ -1,15 +1,19 @@
 package pdp
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+	"sort"
+)
 
 type functionListOfStringsIntersect struct {
-	first Expression
+	first  Expression
 	second Expression
 }
 
 func makeFunctionListOfStringsIntersect(first, second Expression) Expression {
 	return functionListOfStringsIntersect{
-		first: first,
+		first:  first,
 		second: second}
 }
 
@@ -38,16 +42,41 @@ func (f functionListOfStringsIntersect) Calculate(ctx *Context) (AttributeValue,
 	if err != nil {
 		return UndefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
-	// FIXME: room for improvement here...
-	var res []string
-	for _, f := range first {
-		for _, s := range second {
-			if f == s {
-				res = append(res, f)
+	sort.Strings(first)
+	sort.Strings(second)
+	iLen, jLen := len(first), len(second)
+	var res = make([]string, int(math.Max(float64(iLen), float64(jLen))))
+
+	k := 0
+	for i, j := 0, 0; i < iLen && j < jLen; {
+		if first[i] > second[j] {
+			if j < jLen {
+				j++
+			} else {
+				break
+			}
+		} else if first[i] < second[j] {
+			if i < iLen {
+				i++
+			} else {
+				break
+			}
+		} else {
+			val := first[i]
+			if k == 0 || res[k-1] != val {
+				res[k] = val
+				k++
+			}
+			if i < iLen {
+				i++
+			}
+			if j < jLen {
+				j++
 			}
 		}
 	}
-	return MakeListOfStringsValue(res), nil
+
+	return MakeListOfStringsValue(res[:k]), nil
 }
 
 func functionListOfStringsIntersectValidator(args []Expression) functionMaker {
