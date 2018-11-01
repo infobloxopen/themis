@@ -43,6 +43,7 @@ var FunctionArgumentValidators = map[string][]functionArgumentValidator{
 	},
 	"contains": {
 		functionStringContainsValidator,
+		functionListOfStringsContainsValidator,
 		functionNetworkContainsAddressValidator,
 		functionSetOfStringsContainsValidator,
 		functionSetOfNetworksContainsAddressValidator,

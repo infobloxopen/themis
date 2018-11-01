@@ -3,7 +3,7 @@ package pdp
 import "fmt"
 
 type functionListOfStringsLen struct {
-	e  Expression
+	e Expression
 }
 
 func makeFunctionListOfStringsLen(e Expression) Expression {
