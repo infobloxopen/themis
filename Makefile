@@ -31,13 +31,13 @@ clean:
 	@$(RM) $(BUILDPATH)
 
 .PHONY: fmt
-fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdp-itests fmt-local-selector fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-pip-server fmt-pip-client fmt-plugin fmt-egen
+fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdp-itests fmt-local-selector fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-pip-server fmt-pip-client fmt-pip-gen fmt-pip-genpkg fmt-plugin fmt-egen
 
 .PHONY: build
-build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-egen
+build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-egen build-pip-gen
 
 .PHONY: test
-test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-local-selector test-pep test-pip-server test-pip-client test-plugin
+test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-local-selector test-pep test-pip-server test-pip-client test-pip-genpkg test-plugin
 
 .PHONY: bench
 bench: bench-pep bench-pip-server bench-pip-client bench-pdpserver-pkg bench-plugin
@@ -132,6 +132,16 @@ fmt-pip-client:
 	@echo "Checking PIP client package format..."
 	@$(AT)/pip/client && $(GOFMTCHECK)
 
+.PHONY: fmt-pip-gen
+fmt-pip-gen:
+	@echo "Checking PIP handler generator format..."
+	@$(AT)/pip/mkpiphandler && $(GOFMTCHECK)
+
+.PHONY: fmt-pip-genpkg
+fmt-pip-genpkg:
+	@echo "Checking PIP handler generator package format..."
+	@$(AT)/pip/mkpiphandler/pkg && $(GOFMTCHECK)
+
 .PHONY: fmt-plugin
 fmt-plugin:
 	@echo "Checking CoreDNS PEP plugin format..."
@@ -170,6 +180,10 @@ build-plugin: build-dir
 build-egen: build-dir
 	$(AT)/egen && $(GOBUILD) -o $(BUILDPATH)/egen
 
+.PHONY: build-pip-gen
+build-pip-gen: build-dir
+	$(AT)/pip/mkpiphandler && $(GOBUILD) -o $(BUILDPATH)/mkpiphandler
+
 .PHONY: test-pdp
 test-pdp: cover-out
 	$(AT)/pdp && $(GOTESTRACE)
@@ -205,6 +219,10 @@ test-pip-server:
 .PHONY: test-pip-client
 test-pip-client:
 	$(AT)/pip/client && $(GOTESTRACE)
+
+.PHONY: test-pip-genpkg
+test-pip-genpkg:
+	$(AT)/pip/mkpiphandler/pkg && $(GOTESTRACE)
 
 .PHONY: test-plugin
 test-plugin: cover-out

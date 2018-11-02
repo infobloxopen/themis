@@ -2,6 +2,7 @@ package pdp
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math"
 	"net"
 	"reflect"
@@ -35,8 +36,8 @@ const (
 
 var (
 	requestWireTypeNames = []string{
-		"boolean true",
 		"boolean false",
+		"boolean true",
 		"string",
 		"integer",
 		"float",
@@ -378,6 +379,26 @@ func getRequestAttributeCount(b []byte) (int, int, error) {
 	return int(binary.LittleEndian.Uint16(b)), reqBigCounterSize, nil
 }
 
+// CheckInfoRequestHeader validates if request for additional information
+// has correct header - current version and required number of values.
+func CheckInfoRequestHeader(b []byte, count uint16) ([]byte, error) {
+	if len(b) < reqVersionSize+reqBigCounterSize {
+		return nil, newRequestBufferUnderflowError()
+	}
+
+	if v := binary.LittleEndian.Uint16(b); v != requestVersion {
+		return nil, newRequestVersionError(v, requestVersion)
+	}
+	b = b[reqVersionSize:]
+
+	if c := binary.LittleEndian.Uint16(b); c != count {
+		return nil, newRequestAttributeCountError(c, count)
+	}
+	b = b[reqBigCounterSize:]
+
+	return b, nil
+}
+
 func putRequestAttribute(b []byte, name string, value AttributeValue) (int, error) {
 	t := value.GetResultType()
 
@@ -690,6 +711,25 @@ func putRequestBooleanValue(b []byte, value bool) (int, error) {
 	return putRequestAttributeType(b, requestWireTypeBooleanFalse)
 }
 
+// GetInfoRequestBooleanValue extracts boolean value from request for additional
+// information.
+func GetInfoRequestBooleanValue(b []byte) (bool, []byte, error) {
+	if len(b) < reqTypeSize {
+		return false, nil, newRequestBufferUnderflowError()
+	}
+
+	t := int(b[0])
+	switch t {
+	case requestWireTypeBooleanFalse:
+		return false, b[reqTypeSize:], nil
+
+	case requestWireTypeBooleanTrue:
+		return true, b[reqTypeSize:], nil
+	}
+
+	return false, nil, newRequestAttributeUnmarshallingBooleanTypeError(t)
+}
+
 func putRequestAttributeString(b []byte, name string, value string) (int, error) {
 	off, err := putRequestAttributeName(b, name)
 	if err != nil {
@@ -749,6 +789,26 @@ func getRequestStringValue(b []byte) (string, int, error) {
 	return string(b[reqBigCounterSize:off]), off, nil
 }
 
+// GetInfoRequestStringValue extracts string from request for additional
+// information.
+func GetInfoRequestStringValue(b []byte) (string, []byte, error) {
+	if len(b) < reqTypeSize {
+		return "", nil, newRequestBufferUnderflowError()
+	}
+
+	if t := int(b[0]); t != requestWireTypeString {
+		return "", nil, newRequestAttributeUnmarshallingStringTypeError(t)
+	}
+	b = b[reqTypeSize:]
+
+	v, n, err := getRequestStringValue(b)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return v, b[n:], nil
+}
+
 func putRequestAttributeInteger(b []byte, name string, value int64) (int, error) {
 	off, err := putRequestAttributeName(b, name)
 	if err != nil {
@@ -787,6 +847,26 @@ func getRequestIntegerValue(b []byte) (int64, int, error) {
 	return int64(binary.LittleEndian.Uint64(b)), reqIntegerValueSize, nil
 }
 
+// GetInfoRequestIntegerValue extracts integer value from request for additional
+// information.
+func GetInfoRequestIntegerValue(b []byte) (int64, []byte, error) {
+	if len(b) < reqTypeSize {
+		return 0, nil, newRequestBufferUnderflowError()
+	}
+
+	if t := int(b[0]); t != requestWireTypeInteger {
+		return 0, nil, newRequestAttributeUnmarshallingIntegerTypeError(t)
+	}
+	b = b[reqTypeSize:]
+
+	v, n, err := getRequestIntegerValue(b)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	return v, b[n:], nil
+}
+
 func putRequestAttributeFloat(b []byte, name string, value float64) (int, error) {
 	off, err := putRequestAttributeName(b, name)
 	if err != nil {
@@ -823,6 +903,26 @@ func getRequestFloatValue(b []byte) (float64, int, error) {
 	}
 
 	return math.Float64frombits(binary.LittleEndian.Uint64(b)), 8, nil
+}
+
+// GetInfoRequestFloatValue extracts floating point value from request for
+// additional information.
+func GetInfoRequestFloatValue(b []byte) (float64, []byte, error) {
+	if len(b) < reqTypeSize {
+		return 0, nil, newRequestBufferUnderflowError()
+	}
+
+	if t := int(b[0]); t != requestWireTypeFloat {
+		return 0, nil, newRequestAttributeUnmarshallingFloatTypeError(t)
+	}
+	b = b[reqTypeSize:]
+
+	v, n, err := getRequestFloatValue(b)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	return v, b[n:], nil
 }
 
 func putRequestAttributeAddress(b []byte, name string, value net.IP) (int, error) {
@@ -883,6 +983,40 @@ func getRequestIPv6AddressValue(b []byte) (net.IP, int, error) {
 	ip := net.IP(make([]byte, reqIPv6AddressValueSize))
 	copy(ip, b)
 	return ip, reqIPv6AddressValueSize, nil
+}
+
+// GetInfoRequestAddressValue extracts IP address from request for additional
+// information.
+func GetInfoRequestAddressValue(b []byte) (net.IP, []byte, error) {
+	if len(b) < reqTypeSize {
+		return nil, nil, newRequestBufferUnderflowError()
+	}
+
+	t := int(b[0])
+	b = b[reqTypeSize:]
+
+	var (
+		v   net.IP
+		n   int
+		err error
+	)
+
+	switch t {
+	default:
+		return nil, nil, newRequestAttributeUnmarshallingAddressTypeError(t)
+
+	case requestWireTypeIPv4Address:
+		v, n, err = getRequestIPv4AddressValue(b)
+
+	case requestWireTypeIPv6Address:
+		v, n, err = getRequestIPv6AddressValue(b)
+	}
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return v, b[n:], nil
 }
 
 func putRequestAttributeNetwork(b []byte, name string, value *net.IPNet) (int, error) {
@@ -975,6 +1109,40 @@ func getRequestIPv6NetworkValue(b []byte) (*net.IPNet, int, error) {
 	}, reqNetworkCIDRSize + reqIPv6AddressValueSize, nil
 }
 
+// GetInfoRequestNetworkValue extracts IP network from request for additional
+// information.
+func GetInfoRequestNetworkValue(b []byte) (*net.IPNet, []byte, error) {
+	if len(b) < reqTypeSize {
+		return nil, nil, newRequestBufferUnderflowError()
+	}
+
+	t := int(b[0])
+	b = b[reqTypeSize:]
+
+	var (
+		v   *net.IPNet
+		n   int
+		err error
+	)
+
+	switch t {
+	default:
+		return nil, nil, newRequestAttributeUnmarshallingNetworkTypeError(t)
+
+	case requestWireTypeIPv4Network:
+		v, n, err = getRequestIPv4NetworkValue(b)
+
+	case requestWireTypeIPv6Network:
+		v, n, err = getRequestIPv6NetworkValue(b)
+	}
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return v, b[n:], nil
+}
+
 func putRequestAttributeDomain(b []byte, name string, value domain.Name) (int, error) {
 	off, err := putRequestAttributeName(b, name)
 	if err != nil {
@@ -1022,6 +1190,26 @@ func getRequestDomainValue(b []byte) (domain.Name, int, error) {
 	}
 
 	return d, n, nil
+}
+
+// GetInfoRequestDomainValue extracts domain name from request for additional
+// information.
+func GetInfoRequestDomainValue(b []byte) (domain.Name, []byte, error) {
+	if len(b) < reqTypeSize {
+		return domain.Name{}, nil, newRequestBufferUnderflowError()
+	}
+
+	if t := int(b[0]); t != requestWireTypeDomain {
+		return domain.Name{}, nil, newRequestAttributeUnmarshallingDomainTypeError(t)
+	}
+	b = b[reqTypeSize:]
+
+	v, n, err := getRequestDomainValue(b)
+	if err != nil {
+		return domain.Name{}, nil, err
+	}
+
+	return v, b[n:], nil
 }
 
 func putRequestAttributeSetOfStrings(b []byte, name string, value *strtree.Tree) (int, error) {
@@ -1099,6 +1287,26 @@ func getRequestSetOfStringsValue(b []byte) (*strtree.Tree, int, error) {
 	}
 
 	return ss, off, nil
+}
+
+// GetInfoRequestSetOfStringsValue extracts set of strings from request for
+// additional information.
+func GetInfoRequestSetOfStringsValue(b []byte) (*strtree.Tree, []byte, error) {
+	if len(b) < reqTypeSize {
+		return nil, nil, newRequestBufferUnderflowError()
+	}
+
+	if t := int(b[0]); t != requestWireTypeSetOfStrings {
+		return nil, nil, newRequestAttributeUnmarshallingSetOfStringsTypeError(t)
+	}
+	b = b[reqTypeSize:]
+
+	v, n, err := getRequestSetOfStringsValue(b)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return v, b[n:], nil
 }
 
 func putRequestAttributeSetOfNetworks(b []byte, name string, value *iptree.Tree) (int, error) {
@@ -1211,6 +1419,26 @@ func getRequestSetOfNetworksValue(b []byte) (*iptree.Tree, int, error) {
 	return sn, off, nil
 }
 
+// GetInfoRequestSetOfNetworksValue extracts set of networks from request for
+// additional information.
+func GetInfoRequestSetOfNetworksValue(b []byte) (*iptree.Tree, []byte, error) {
+	if len(b) < reqTypeSize {
+		return nil, nil, newRequestBufferUnderflowError()
+	}
+
+	if t := int(b[0]); t != requestWireTypeSetOfNetworks {
+		return nil, nil, newRequestAttributeUnmarshallingSetOfNetworksTypeError(t)
+	}
+	b = b[reqTypeSize:]
+
+	v, n, err := getRequestSetOfNetworksValue(b)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return v, b[n:], nil
+}
+
 func putRequestAttributeSetOfDomains(b []byte, name string, value *domaintree.Node) (int, error) {
 	off, err := putRequestAttributeName(b, name)
 	if err != nil {
@@ -1282,6 +1510,26 @@ func getRequestSetOfDomainsValue(b []byte) (*domaintree.Node, int, error) {
 	}
 
 	return sd, off, nil
+}
+
+// GetInfoRequestSetOfDomainsValue extracts set of domains from request for
+// additional information.
+func GetInfoRequestSetOfDomainsValue(b []byte) (*domaintree.Node, []byte, error) {
+	if len(b) < reqTypeSize {
+		return nil, nil, newRequestBufferUnderflowError()
+	}
+
+	if t := int(b[0]); t != requestWireTypeSetOfDomains {
+		return nil, nil, newRequestAttributeUnmarshallingSetOfDomainsTypeError(t)
+	}
+	b = b[reqTypeSize:]
+
+	v, n, err := getRequestSetOfDomainsValue(b)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return v, b[n:], nil
 }
 
 func putRequestAttributeListOfStrings(b []byte, name string, value []string) (int, error) {
@@ -1357,6 +1605,26 @@ func getRequestListOfStringsValue(b []byte) ([]string, int, error) {
 	}
 
 	return ls, off, nil
+}
+
+// GetInfoRequestListOfStringsValue extracts list of strings from request for
+// additional information.
+func GetInfoRequestListOfStringsValue(b []byte) ([]string, []byte, error) {
+	if len(b) < reqTypeSize {
+		return nil, nil, newRequestBufferUnderflowError()
+	}
+
+	if t := int(b[0]); t != requestWireTypeListOfStrings {
+		return nil, nil, newRequestAttributeUnmarshallingListOfStringsTypeError(t)
+	}
+	b = b[reqTypeSize:]
+
+	v, n, err := getRequestListOfStringsValue(b)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return v, b[n:], nil
 }
 
 func calcRequestSize(in []AttributeAssignment) (int, error) {
@@ -1557,4 +1825,12 @@ func calcRequestAttributeListOfStringsSize(value []string) (int, error) {
 	}
 
 	return total, nil
+}
+
+func getRequestWireTypeName(t int) string {
+	if t < 0 || t >= len(requestWireTypeNames) {
+		return fmt.Sprintf("unknown (%d)", t)
+	}
+
+	return requestWireTypeNames[t]
 }

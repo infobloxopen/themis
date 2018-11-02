@@ -281,19 +281,207 @@ func TestMarshalInfoResponse(t *testing.T) {
 
 	n, err = MarshalInfoResponse([]byte{}, MakeStringValue("test"))
 	assertRequestBufferOverflow(t, "MarshalInfoResponse(version)", err, n)
+}
 
-	n, err = MarshalInfoResponse(b[:2], MakeStringValue("test"))
-	assertRequestBufferOverflow(t, "MarshalInfoResponse(noerror)", err, n)
+func TestMarshalInfoResponseBoolean(t *testing.T) {
+	var b [5]byte
 
-	n, err = MarshalInfoResponse(b[:4], MakeStringValue("test"))
-	assertRequestBufferOverflow(t, "MarshalInfoResponse(dontfit)", err, n)
+	n, err := MarshalInfoResponseBoolean(b[:], true)
+	assertRequestBytesBuffer(t, "MarshalInfoResponseBoolean", err, b[:], n,
+		1, 0, 0, 0,
+		byte(requestWireTypeBooleanTrue),
+	)
 
-	n, err = MarshalInfoResponse(b[:], UndefinedValue)
-	if err == nil {
-		t.Errorf("expected no data put to buffer for response with undefined value but got %d", n)
-	} else if _, ok := err.(*requestAttributeMarshallingNotImplementedError); !ok {
-		t.Errorf("expected *requestAttributeMarshallingNotImplementedError but got %T (%s)", err, err)
-	}
+	n, err = MarshalInfoResponseBoolean(b[:4], false)
+	assertRequestBufferOverflow(t, "MarshalInfoResponseBoolean(error)", err, n)
+
+	n, err = MarshalInfoResponseBoolean([]byte{}, false)
+	assertRequestBufferOverflow(t, "MarshalInfoResponseBoolean(version)", err, n)
+}
+
+func TestMarshalInfoResponseString(t *testing.T) {
+	var b [11]byte
+
+	n, err := MarshalInfoResponseString(b[:], "test")
+	assertRequestBytesBuffer(t, "MarshalInfoResponseString", err, b[:], n,
+		1, 0, 0, 0,
+		byte(requestWireTypeString), 4, 0, 't', 'e', 's', 't',
+	)
+
+	n, err = MarshalInfoResponseString(b[:4], "test")
+	assertRequestBufferOverflow(t, "MarshalInfoResponseString(error)", err, n)
+
+	n, err = MarshalInfoResponseString([]byte{}, "test")
+	assertRequestBufferOverflow(t, "MarshalInfoResponseString(version)", err, n)
+}
+
+func TestMarshalInfoResponseInteger(t *testing.T) {
+	var b [13]byte
+
+	n, err := MarshalInfoResponseInteger(b[:], 17)
+	assertRequestBytesBuffer(t, "MarshalInfoResponseInteger", err, b[:], n,
+		1, 0, 0, 0,
+		byte(requestWireTypeInteger), 17, 0, 0, 0, 0, 0, 0, 0,
+	)
+
+	n, err = MarshalInfoResponseInteger(b[:4], 17)
+	assertRequestBufferOverflow(t, "MarshalInfoResponseInteger(error)", err, n)
+
+	n, err = MarshalInfoResponseInteger([]byte{}, 17)
+	assertRequestBufferOverflow(t, "MarshalInfoResponseInteger(version)", err, n)
+}
+
+func TestMarshalInfoResponseFloat(t *testing.T) {
+	var b [13]byte
+
+	n, err := MarshalInfoResponseFloat(b[:], math.Pi)
+	assertRequestBytesBuffer(t, "MarshalInfoResponseFloat", err, b[:], n,
+		1, 0, 0, 0,
+		byte(requestWireTypeFloat), 24, 45, 68, 84, 251, 33, 9, 64,
+	)
+
+	n, err = MarshalInfoResponseFloat(b[:4], math.Pi)
+	assertRequestBufferOverflow(t, "MarshalInfoResponseFloat(error)", err, n)
+
+	n, err = MarshalInfoResponseFloat([]byte{}, math.Pi)
+	assertRequestBufferOverflow(t, "MarshalInfoResponseFloat(version)", err, n)
+}
+
+func TestMarshalInfoResponseAddress(t *testing.T) {
+	var b [9]byte
+
+	n, err := MarshalInfoResponseAddress(b[:], net.ParseIP("192.0.2.1"))
+	assertRequestBytesBuffer(t, "MarshalInfoResponseAddress", err, b[:], n,
+		1, 0, 0, 0,
+		byte(requestWireTypeIPv4Address), 192, 0, 2, 1,
+	)
+
+	n, err = MarshalInfoResponseAddress(b[:4], net.ParseIP("192.0.2.1"))
+	assertRequestBufferOverflow(t, "MarshalInfoResponseAddress(error)", err, n)
+
+	n, err = MarshalInfoResponseAddress([]byte{}, net.ParseIP("192.0.2.1"))
+	assertRequestBufferOverflow(t, "MarshalInfoResponseAddress(version)", err, n)
+}
+
+func TestMarshalInfoResponseNetwork(t *testing.T) {
+	var b [10]byte
+
+	n, err := MarshalInfoResponseNetwork(b[:], makeTestNetwork("192.0.2.0/24"))
+	assertRequestBytesBuffer(t, "MarshalInfoResponseNetwork", err, b[:], n,
+		1, 0, 0, 0,
+		byte(requestWireTypeIPv4Network), 24, 192, 0, 2, 0,
+	)
+
+	n, err = MarshalInfoResponseNetwork(b[:4], makeTestNetwork("192.0.2.0/24"))
+	assertRequestBufferOverflow(t, "MarshalInfoResponseNetwork(error)", err, n)
+
+	n, err = MarshalInfoResponseNetwork([]byte{}, makeTestNetwork("192.0.2.0/24"))
+	assertRequestBufferOverflow(t, "MarshalInfoResponseNetwork(version)", err, n)
+}
+
+func TestMarshalInfoResponseDomain(t *testing.T) {
+	var b [22]byte
+
+	n, err := MarshalInfoResponseDomain(b[:], makeTestDomain("www.example.com"))
+	assertRequestBytesBuffer(t, "MarshalInfoResponseDomain", err, b[:], n,
+		1, 0, 0, 0,
+		byte(requestWireTypeDomain),
+		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+	)
+
+	n, err = MarshalInfoResponseDomain(b[:4], makeTestDomain("www.example.com"))
+	assertRequestBufferOverflow(t, "MarshalInfoResponseDomain(error)", err, n)
+
+	n, err = MarshalInfoResponseDomain([]byte{}, makeTestDomain("www.example.com"))
+	assertRequestBufferOverflow(t, "MarshalInfoResponseDomain(version)", err, n)
+}
+
+func TestMarshalInfoResponseSetOfStrings(t *testing.T) {
+	var b [24]byte
+
+	ss := newStrTree("one", "two", "three")
+	n, err := MarshalInfoResponseSetOfStrings(b[:], ss)
+	assertRequestBytesBuffer(t, "MarshalInfoResponseSetOfStrings", err, b[:], n,
+		1, 0, 0, 0,
+		byte(requestWireTypeSetOfStrings), 3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
+	)
+
+	n, err = MarshalInfoResponseSetOfStrings(b[:4], ss)
+	assertRequestBufferOverflow(t, "MarshalInfoResponseSetOfStrings(error)", err, n)
+
+	n, err = MarshalInfoResponseSetOfStrings([]byte{}, ss)
+	assertRequestBufferOverflow(t, "MarshalInfoResponseSetOfStrings(version)", err, n)
+}
+
+func TestMarshalInfoResponseSetOfNetworks(t *testing.T) {
+	var b [34]byte
+
+	sn := newIPTree(
+		makeTestNetwork("192.0.2.0/24"),
+		makeTestNetwork("2001:db8::/32"),
+		makeTestNetwork("192.0.2.16/28"),
+	)
+	n, err := MarshalInfoResponseSetOfNetworks(b[:], sn)
+	assertRequestBytesBuffer(t, "MarshalInfoResponseSetOfNetworks", err, b[:], n,
+		1, 0, 0, 0,
+		byte(requestWireTypeSetOfNetworks), 3, 0,
+		216, 192, 0, 2, 0,
+		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		220, 192, 0, 2, 16,
+	)
+
+	n, err = MarshalInfoResponseSetOfNetworks(b[:4], sn)
+	assertRequestBufferOverflow(t, "MarshalInfoResponseSetOfNetworks(error)", err, n)
+
+	n, err = MarshalInfoResponseSetOfNetworks([]byte{}, sn)
+	assertRequestBufferOverflow(t, "MarshalInfoResponseSetOfNetworks(version)", err, n)
+}
+
+func TestMarshalInfoResponseSetOfDomains(t *testing.T) {
+	var b [50]byte
+
+	sd := newDomainTree(
+		makeTestDomain("example.com"),
+		makeTestDomain("example.gov"),
+		makeTestDomain("www.example.com"),
+	)
+	n, err := MarshalInfoResponseSetOfDomains(b[:], sd)
+	assertRequestBytesBuffer(t, "MarshalInfoResponseSetOfDomains", err, b[:], n,
+		1, 0, 0, 0,
+		byte(requestWireTypeSetOfDomains), 3, 0,
+		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
+		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+	)
+
+	n, err = MarshalInfoResponseSetOfDomains(b[:4], sd)
+	assertRequestBufferOverflow(t, "MarshalInfoResponseSetOfDomains(error)", err, n)
+
+	n, err = MarshalInfoResponseSetOfDomains([]byte{}, sd)
+	assertRequestBufferOverflow(t, "MarshalInfoResponseSetOfDomains(version)", err, n)
+}
+
+func TestMarshalInfoResponseListOfStrings(t *testing.T) {
+	var b [24]byte
+
+	ls := []string{"one", "two", "three"}
+	n, err := MarshalInfoResponseListOfStrings(b[:], ls)
+	assertRequestBytesBuffer(t, "MarshalInfoResponseListOfStrings", err, b[:], n,
+		1, 0, 0, 0,
+		byte(requestWireTypeListOfStrings), 3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
+	)
+
+	n, err = MarshalInfoResponseListOfStrings(b[:4], ls)
+	assertRequestBufferOverflow(t, "MarshalInfoResponseListOfStrings(error)", err, n)
+
+	n, err = MarshalInfoResponseListOfStrings([]byte{}, ls)
+	assertRequestBufferOverflow(t, "MarshalInfoResponseListOfStrings(version)", err, n)
 }
 
 func TestMarshalInfoError(t *testing.T) {
@@ -824,6 +1012,46 @@ func TestPutResponseObligationsTooLong(t *testing.T) {
 
 	n, err = putResponseObligationsTooLong([]byte{})
 	assertRequestBufferOverflow(t, "putResponseObligationsTooLong", err, n)
+}
+
+func TestPutInfoResponseHeader(t *testing.T) {
+	var b [4]byte
+
+	n, err := putInfoResponseHeader(b[:])
+	assertRequestBytesBuffer(t, "putInfoResponseHeader", err, b[:], n,
+		1, 0, 0, 0,
+	)
+
+	n, err = putInfoResponseHeader([]byte{})
+	assertRequestBufferOverflow(t, "putInfoResponseHeader(version)", err, n)
+
+	n, err = putInfoResponseHeader(b[:2])
+	assertRequestBufferOverflow(t, "putInfoResponseHeader(error)", err, n)
+}
+
+func TestProcessInfoResponseBufferOverflow(t *testing.T) {
+	var b [30]byte
+
+	tErr := errors.New("test")
+	n, err := processInfoResponseBufferOverflow(b[:], tErr)
+	if err == nil {
+		t.Errorf("expected %q error but got buffer with %d bytes", tErr, n)
+	} else if err != tErr {
+		t.Errorf("expected %q error but got %q", tErr, err)
+	}
+
+	tErr = newRequestBufferOverflowError()
+	n, err = processInfoResponseBufferOverflow(b[:], tErr)
+	assertRequestBytesBuffer(t, "processInfoResponseBufferOverflow", err, b[:], n,
+		1, 0, 26, 0, 'i', 'n', 'f', 'o', 'r', 'm', 'a', 't', 'i', 'o', 'n', ' ',
+		'v', 'a', 'l', 'u', 'e', ' ', 't', 'o', 'o', ' ', 'l', 'o', 'n', 'g',
+	)
+
+	n, err = processInfoResponseBufferOverflow([]byte{}, tErr)
+	assertRequestBufferOverflow(t, "processInfoResponseBufferOverflow(version)", err, n)
+
+	n, err = processInfoResponseBufferOverflow(b[:4], tErr)
+	assertRequestBufferOverflow(t, "processInfoResponseBufferOverflow(error)", err, n)
 }
 
 func TestPutResponseInfoValueTooLong(t *testing.T) {

@@ -1,0 +1,9 @@
+package: pipexample
+
+endpoints:
+  "*":
+    args:
+    - string
+    - address
+
+    result: network

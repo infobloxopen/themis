@@ -29,7 +29,7 @@ var (
 
 func TestRequestWireTypesTotal(t *testing.T) {
 	if requestWireTypesTotal != len(requestWireTypeNames) {
-		t.Errorf("Expected number of wire type names %d to be equal to total number of wire types %d",
+		t.Errorf("expected number of wire type names %d to be equal to total number of wire types %d",
 			len(requestWireTypeNames), requestWireTypesTotal)
 	}
 }
@@ -470,6 +470,36 @@ func TestGetRequestAttributeCount(t *testing.T) {
 		t.Errorf("expected *requestBufferUnderflowError but got count %d", c)
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestCheckInfoRequestHeader(t *testing.T) {
+	out, err := CheckInfoRequestHeader([]byte{1, 0, 10, 0}, 10)
+	if err != nil {
+		t.Error(err)
+	} else if len(out) != 0 {
+		t.Errorf("expected whole buffer consumed but %d bytes remain", len(out))
+	}
+
+	out, err = CheckInfoRequestHeader([]byte{}, 10)
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got buffer of %d bytes", len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	out, err = CheckInfoRequestHeader([]byte{2, 0, 10, 0}, 10)
+	if err == nil {
+		t.Errorf("expected *requestVersionError but got buffer of %d bytes", len(out))
+	} else if _, ok := err.(*requestVersionError); !ok {
+		t.Errorf("expected *requestVersionError but got %T (%s)", err, err)
+	}
+
+	out, err = CheckInfoRequestHeader([]byte{1, 0, 5, 0}, 10)
+	if err == nil {
+		t.Errorf("expected *requestAttributeCountError but got buffer of %d bytes", len(out))
+	} else if _, ok := err.(*requestAttributeCountError); !ok {
+		t.Errorf("expected *requestAttributeCountError but got %T (%s)", err, err)
 	}
 }
 
@@ -984,6 +1014,477 @@ func TestGetRequestListOfStringsValue(t *testing.T) {
 	})
 	if err == nil {
 		t.Errorf("expected *requestBufferUnderflowError but got list of strings %#v", v)
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetInfoRequestBooleanValue(t *testing.T) {
+	v, out, err := GetInfoRequestBooleanValue([]byte{byte(requestWireTypeBooleanFalse)})
+	if err != nil {
+		t.Error(err)
+	} else if len(out) != 0 {
+		t.Errorf("expected whole buffer consumed but %d bytes remain", len(out))
+	} else if v {
+		t.Errorf("expected false but got %#v", v)
+	}
+
+	v, out, err = GetInfoRequestBooleanValue([]byte{byte(requestWireTypeBooleanTrue)})
+	if err != nil {
+		t.Error(err)
+	} else if len(out) != 0 {
+		t.Errorf("expected whole buffer consumed but %d bytes remain", len(out))
+	} else if !v {
+		t.Errorf("expected false but got %#v", v)
+	}
+
+	v, out, err = GetInfoRequestBooleanValue([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestBooleanValue([]byte{
+		byte(requestWireTypeString), 4, 0, 't', 'e', 's', 't',
+	})
+	if err == nil {
+		t.Errorf("expected *requestAttributeUnmarshallingBooleanTypeError but got %#v (and %d bytes remain)",
+			v, len(out))
+	} else if _, ok := err.(*requestAttributeUnmarshallingBooleanTypeError); !ok {
+		t.Errorf("expected *requestAttributeUnmarshallingBooleanTypeError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetInfoRequestStringValue(t *testing.T) {
+	v, out, err := GetInfoRequestStringValue([]byte{
+		byte(requestWireTypeString), 4, 0, 't', 'e', 's', 't',
+	})
+	if err != nil {
+		t.Error(err)
+	} else if len(out) != 0 {
+		t.Errorf("expected whole buffer consumed but %d bytes remain", len(out))
+	} else if v != "test" {
+		t.Errorf("expected %q but got %#v", "test", v)
+	}
+
+	v, out, err = GetInfoRequestStringValue([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestStringValue([]byte{
+		byte(requestWireTypeInteger), 17, 0, 0, 0, 0, 0, 0, 0,
+	})
+	if err == nil {
+		t.Errorf("expected *requestAttributeUnmarshallingStringTypeError but got %#v (and %d bytes remain)",
+			v, len(out))
+	} else if _, ok := err.(*requestAttributeUnmarshallingStringTypeError); !ok {
+		t.Errorf("expected *requestAttributeUnmarshallingStringTypeError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestStringValue([]byte{
+		byte(requestWireTypeString), 4, 0,
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetInfoRequestIntegerValue(t *testing.T) {
+	v, out, err := GetInfoRequestIntegerValue([]byte{
+		byte(requestWireTypeInteger), 17, 0, 0, 0, 0, 0, 0, 0,
+	})
+	if err != nil {
+		t.Error(err)
+	} else if len(out) != 0 {
+		t.Errorf("expected whole buffer consumed but %d bytes remain", len(out))
+	} else if v != 17 {
+		t.Errorf("expected %d but got %#v", 17, v)
+	}
+
+	v, out, err = GetInfoRequestIntegerValue([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestIntegerValue([]byte{
+		byte(requestWireTypeFloat), 24, 45, 68, 84, 251, 33, 9, 64,
+	})
+	if err == nil {
+		t.Errorf("expected *requestAttributeUnmarshallingIntegerTypeError but got %#v (and %d bytes remain)",
+			v, len(out))
+	} else if _, ok := err.(*requestAttributeUnmarshallingIntegerTypeError); !ok {
+		t.Errorf("expected *requestAttributeUnmarshallingIntegerTypeError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestIntegerValue([]byte{
+		byte(requestWireTypeInteger), 17,
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetInfoRequestFloatValue(t *testing.T) {
+	v, out, err := GetInfoRequestFloatValue([]byte{
+		byte(requestWireTypeFloat), 24, 45, 68, 84, 251, 33, 9, 64,
+	})
+	if err != nil {
+		t.Error(err)
+	} else if len(out) != 0 {
+		t.Errorf("expected whole buffer consumed but %d bytes remain", len(out))
+	} else if v != math.Pi {
+		t.Errorf("expected %f but got %#v", math.Pi, v)
+	}
+
+	v, out, err = GetInfoRequestFloatValue([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestFloatValue([]byte{
+		byte(requestWireTypeIPv4Address), 192, 0, 2, 1,
+	})
+	if err == nil {
+		t.Errorf("expected *requestAttributeUnmarshallingFloatTypeError but got %#v (and %d bytes remain)",
+			v, len(out))
+	} else if _, ok := err.(*requestAttributeUnmarshallingFloatTypeError); !ok {
+		t.Errorf("expected *requestAttributeUnmarshallingFloatTypeError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestFloatValue([]byte{
+		byte(requestWireTypeFloat), 24,
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetInfoRequestAddressValue(t *testing.T) {
+	v, out, err := GetInfoRequestAddressValue([]byte{
+		byte(requestWireTypeIPv4Address), 192, 0, 2, 1,
+	})
+	if err != nil {
+		t.Error(err)
+	} else if len(out) != 0 {
+		t.Errorf("expected whole buffer consumed but %d bytes remain", len(out))
+	} else if v.String() != "192.0.2.1" {
+		t.Errorf("expected %q but got %q", "192.0.2.1", v)
+	}
+
+	v, out, err = GetInfoRequestAddressValue([]byte{
+		byte(requestWireTypeIPv6Address), 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+	})
+	if err != nil {
+		t.Error(err)
+	} else if len(out) != 0 {
+		t.Errorf("expected whole buffer consumed but %d bytes remain", len(out))
+	} else if v.String() != "2001:db8::1" {
+		t.Errorf("expected %q but got %q", "2001:db8::1", v)
+	}
+
+	v, out, err = GetInfoRequestAddressValue([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestAddressValue([]byte{
+		byte(requestWireTypeIPv4Network), 24, 192, 0, 2, 0,
+	})
+	if err == nil {
+		t.Errorf("expected *requestAttributeUnmarshallingAddressTypeError but got %#v (and %d bytes remain)",
+			v, len(out))
+	} else if _, ok := err.(*requestAttributeUnmarshallingAddressTypeError); !ok {
+		t.Errorf("expected *requestAttributeUnmarshallingAddressTypeError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestAddressValue([]byte{
+		byte(requestWireTypeIPv4Address), 192,
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetInfoRequestNetworkValue(t *testing.T) {
+	v, out, err := GetInfoRequestNetworkValue([]byte{
+		byte(requestWireTypeIPv4Network), 24, 192, 0, 2, 0,
+	})
+	if err != nil {
+		t.Error(err)
+	} else if len(out) != 0 {
+		t.Errorf("expected whole buffer consumed but %d bytes remain", len(out))
+	} else if v.String() != "192.0.2.0/24" {
+		t.Errorf("expected %q but got %q", "192.0.2.0/24", v)
+	}
+
+	v, out, err = GetInfoRequestNetworkValue([]byte{
+		byte(requestWireTypeIPv6Network), 32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	})
+	if err != nil {
+		t.Error(err)
+	} else if len(out) != 0 {
+		t.Errorf("expected whole buffer consumed but %d bytes remain", len(out))
+	} else if v.String() != "2001:db8::/32" {
+		t.Errorf("expected %q but got %q", "2001:db8::/32", v)
+	}
+
+	v, out, err = GetInfoRequestNetworkValue([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestNetworkValue([]byte{
+		byte(requestWireTypeDomain), 15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+	})
+	if err == nil {
+		t.Errorf("expected *requestAttributeUnmarshallingNetworkTypeError but got %#v (and %d bytes remain)",
+			v, len(out))
+	} else if _, ok := err.(*requestAttributeUnmarshallingNetworkTypeError); !ok {
+		t.Errorf("expected *requestAttributeUnmarshallingNetworkTypeError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestNetworkValue([]byte{
+		byte(requestWireTypeIPv4Network), 24,
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetInfoRequestDomainValue(t *testing.T) {
+	v, out, err := GetInfoRequestDomainValue([]byte{
+		byte(requestWireTypeDomain), 15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+	})
+	if err != nil {
+		t.Error(err)
+	} else if len(out) != 0 {
+		t.Errorf("expected whole buffer consumed but %d bytes remain", len(out))
+	} else if v.String() != "www.example.com" {
+		t.Errorf("expected %q but got %q", "www.example.com", v)
+	}
+
+	v, out, err = GetInfoRequestDomainValue([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestDomainValue([]byte{
+		byte(requestWireTypeSetOfStrings), 3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
+	})
+	if err == nil {
+		t.Errorf("expected *requestAttributeUnmarshallingDomainTypeError but got %#v (and %d bytes remain)",
+			v, len(out))
+	} else if _, ok := err.(*requestAttributeUnmarshallingDomainTypeError); !ok {
+		t.Errorf("expected *requestAttributeUnmarshallingDomainTypeError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestDomainValue([]byte{
+		byte(requestWireTypeDomain), 15, 0,
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetInfoRequestSetOfStringsValue(t *testing.T) {
+	v, out, err := GetInfoRequestSetOfStringsValue([]byte{
+		byte(requestWireTypeSetOfStrings), 3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
+	})
+	if err != nil {
+		t.Error(err)
+	} else if len(out) != 0 {
+		t.Errorf("expected whole buffer consumed but %d bytes remain", len(out))
+	} else if s := serializeSetOfStrings(v); s != "\"one\",\"two\",\"three\"" {
+		t.Errorf("expected %q but got %q", "\"one\",\"two\",\"three\"", s)
+	}
+
+	v, out, err = GetInfoRequestSetOfStringsValue([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestSetOfStringsValue([]byte{
+		byte(requestWireTypeSetOfNetworks), 3, 0,
+		216, 192, 0, 2, 0,
+		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		220, 192, 0, 2, 16,
+	})
+	if err == nil {
+		t.Errorf("expected *requestAttributeUnmarshallingSetOfStringsTypeError but got %#v (and %d bytes remain)",
+			v, len(out))
+	} else if _, ok := err.(*requestAttributeUnmarshallingSetOfStringsTypeError); !ok {
+		t.Errorf("expected *requestAttributeUnmarshallingSetOfStringsTypeError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestSetOfStringsValue([]byte{
+		byte(requestWireTypeSetOfStrings), 3, 0,
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetInfoRequestSetOfNetworksValue(t *testing.T) {
+	v, out, err := GetInfoRequestSetOfNetworksValue([]byte{
+		byte(requestWireTypeSetOfNetworks), 3, 0,
+		216, 192, 0, 2, 0,
+		32, 32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		220, 192, 0, 2, 16,
+	})
+	if err != nil {
+		t.Error(err)
+	} else if len(out) != 0 {
+		t.Errorf("expected whole buffer consumed but %d bytes remain", len(out))
+	} else if s := serializeSetOfNetworks(v); s != "\"192.0.2.0/24\",\"2001:db8::/32\",\"192.0.2.16/28\"" {
+		t.Errorf("expected %q but got %q", "\"192.0.2.0/24\",\"2001:db8::/32\",\"192.0.2.16/28\"", s)
+	}
+
+	v, out, err = GetInfoRequestSetOfNetworksValue([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestSetOfNetworksValue([]byte{
+		byte(requestWireTypeSetOfDomains), 3, 0,
+		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
+		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+	})
+	if err == nil {
+		t.Errorf("expected *requestAttributeUnmarshallingSetOfNetworksTypeError but got %#v (and %d bytes remain)",
+			v, len(out))
+	} else if _, ok := err.(*requestAttributeUnmarshallingSetOfNetworksTypeError); !ok {
+		t.Errorf("expected *requestAttributeUnmarshallingSetOfNetworksTypeError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestSetOfNetworksValue([]byte{
+		byte(requestWireTypeSetOfNetworks), 3, 0,
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetInfoRequestSetOfDomainsValue(t *testing.T) {
+	v, out, err := GetInfoRequestSetOfDomainsValue([]byte{
+		byte(requestWireTypeSetOfDomains), 3, 0,
+		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+		11, 0, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'g', 'o', 'v',
+		15, 0, 'w', 'w', 'w', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm',
+	})
+	if err != nil {
+		t.Error(err)
+	} else if len(out) != 0 {
+		t.Errorf("expected whole buffer consumed but %d bytes remain", len(out))
+	} else if s := serializeSetOfDomains(v); s != "\"example.com\",\"example.gov\",\"www.example.com\"" {
+		t.Errorf("expected %q but got %q", "\"example.com\",\"example.gov\",\"www.example.com\"", s)
+	}
+
+	v, out, err = GetInfoRequestSetOfDomainsValue([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestSetOfDomainsValue([]byte{
+		byte(requestWireTypeListOfStrings), 3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
+	})
+	if err == nil {
+		t.Errorf("expected *requestAttributeUnmarshallingSetOfDomainsTypeError but got %#v (and %d bytes remain)",
+			v, len(out))
+	} else if _, ok := err.(*requestAttributeUnmarshallingSetOfDomainsTypeError); !ok {
+		t.Errorf("expected *requestAttributeUnmarshallingSetOfDomainsTypeError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestSetOfDomainsValue([]byte{
+		byte(requestWireTypeSetOfDomains), 3, 0,
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
+func TestGetInfoRequestListOfStringsValue(t *testing.T) {
+	v, out, err := GetInfoRequestListOfStringsValue([]byte{
+		byte(requestWireTypeListOfStrings), 3, 0,
+		3, 0, 'o', 'n', 'e',
+		3, 0, 't', 'w', 'o',
+		5, 0, 't', 'h', 'r', 'e', 'e',
+	})
+	if err != nil {
+		t.Error(err)
+	} else if len(out) != 0 {
+		t.Errorf("expected whole buffer consumed but %d bytes remain", len(out))
+	} else if s := serializeListOfStrings(v); s != "\"one\",\"two\",\"three\"" {
+		t.Errorf("expected %q but got %q", "\"one\",\"two\",\"three\"", s)
+	}
+
+	v, out, err = GetInfoRequestListOfStringsValue([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestListOfStringsValue([]byte{byte(requestWireTypeBooleanFalse)})
+	if err == nil {
+		t.Errorf("expected *requestAttributeUnmarshallingListOfStringsTypeError but got %#v (and %d bytes remain)",
+			v, len(out))
+	} else if _, ok := err.(*requestAttributeUnmarshallingListOfStringsTypeError); !ok {
+		t.Errorf("expected *requestAttributeUnmarshallingListOfStringsTypeError but got %T (%s)", err, err)
+	}
+
+	v, out, err = GetInfoRequestListOfStringsValue([]byte{
+		byte(requestWireTypeListOfStrings), 3, 0,
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %#v (and %d bytes remain)", v, len(out))
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
 	}
@@ -2666,13 +3167,25 @@ func TestCalcRequestAttributeListOfStringsSize(t *testing.T) {
 	}
 }
 
+func TestGetRequestWireTypeName(t *testing.T) {
+	n := getRequestWireTypeName(requestWireTypeBooleanFalse)
+	if n != "boolean false" {
+		t.Errorf("expected %q but got %q", "boolean false", n)
+	}
+
+	n = getRequestWireTypeName(-1)
+	if n != "unknown (-1)" {
+		t.Errorf("expected %q but got %q", "unknown (-1)", n)
+	}
+}
+
 func assertRequestBytesBuffer(t *testing.T, desc string, err error, b []byte, n int, e ...byte) {
 	if err != nil {
 		t.Errorf("expected no error for %s but got: %s", desc, err)
 	} else if n != len(b) {
 		t.Errorf("expected exactly all buffer used (%d bytes) for %s but got %d bytes", len(b), desc, n)
 	} else {
-		if bytes.Compare(b[:], e) != 0 {
+		if !bytes.Equal(b[:], e) {
 			t.Errorf("expected [% x] for %s but got [% x]", e, desc, b)
 		}
 	}

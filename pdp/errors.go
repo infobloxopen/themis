@@ -14,173 +14,185 @@ import (
 
 // Numeric identifiers of errors.
 const (
-	externalErrorID                                    = 0
-	multiErrorID                                       = 1
-	missingAttributeErrorID                            = 2
-	MissingValueErrorID                                = 3
-	unknownTypeStringCastErrorID                       = 4
-	invalidTypeStringCastErrorID                       = 5
-	notImplementedStringCastErrorID                    = 6
-	invalidBooleanStringCastErrorID                    = 7
-	invalidIntegerStringCastErrorID                    = 8
-	invalidFloatStringCastErrorID                      = 9
-	invalidAddressStringCastErrorID                    = 10
-	invalidNetworkStringCastErrorID                    = 11
-	invalidAddressNetworkStringCastErrorID             = 12
-	invalidDomainNameStringCastErrorID                 = 13
-	attributeValueTypeErrorID                          = 14
-	attributeValueFlagsTypeErrorID                     = 15
-	attributeValueFlagsBitsErrorID                     = 16
-	duplicateAttributeValueErrorID                     = 17
-	unknownTypeSerializationErrorID                    = 18
-	invalidTypeSerializationErrorID                    = 19
-	notMatchingTypeRebindErrorID                       = 20
-	unknownMetaTypeID                                  = 21
-	assignmentTypeMismatchID                           = 22
-	mapperArgumentTypeErrorID                          = 23
-	flagsMapperRCAArgumentTypeErrorID                  = 24
-	UntaggedPolicyModificationErrorID                  = 25
-	MissingPolicyTagErrorID                            = 26
-	PolicyTagsNotMatchErrorID                          = 27
-	emptyPathModificationErrorID                       = 28
-	invalidRootPolicyItemTypeErrorID                   = 29
-	hiddenRootPolicyAppendErrorID                      = 30
-	invalidRootPolicyErrorID                           = 31
-	hiddenPolicySetModificationErrorID                 = 32
-	invalidPolicySetItemTypeErrorID                    = 33
-	tooShortPathPolicySetModificationErrorID           = 34
-	missingPolicySetChildErrorID                       = 35
-	hiddenPolicyAppendErrorID                          = 36
-	policyTransactionTagsNotMatchErrorID               = 37
-	failedPolicyTransactionErrorID                     = 38
-	unknownPolicyUpdateOperationErrorID                = 39
-	hiddenPolicyModificationErrorID                    = 40
-	tooLongPathPolicyModificationErrorID               = 41
-	tooShortPathPolicyModificationErrorID              = 42
-	invalidPolicyItemTypeErrorID                       = 43
-	hiddenRuleAppendErrorID                            = 44
-	missingPolicyChildErrorID                          = 45
-	MissingContentErrorID                              = 46
-	invalidContentStorageItemID                        = 47
-	MissingContentItemErrorID                          = 48
-	invalidContentItemErrorID                          = 49
-	invalidContentItemTypeErrorID                      = 50
-	invalidSelectorPathErrorID                         = 51
-	networkMapKeyValueTypeErrorID                      = 52
-	mapContentSubitemErrorID                           = 53
-	invalidContentModificationErrorID                  = 54
-	missingPathContentModificationErrorID              = 55
-	tooLongPathContentModificationErrorID              = 56
-	invalidContentValueModificationErrorID             = 57
-	UntaggedContentModificationErrorID                 = 58
-	MissingContentTagErrorID                           = 59
-	ContentTagsNotMatchErrorID                         = 60
-	unknownContentUpdateOperationErrorID               = 61
-	failedContentTransactionErrorID                    = 62
-	contentTransactionIDNotMatchErrorID                = 63
-	contentTransactionTagsNotMatchErrorID              = 64
-	tooShortRawPathContentModificationErrorID          = 65
-	tooLongRawPathContentModificationErrorID           = 66
-	invalidContentUpdateDataErrorID                    = 67
-	invalidContentUpdateResultTypeErrorID              = 68
-	invalidContentUpdateKeysErrorID                    = 69
-	unknownContentItemResultTypeErrorID                = 70
-	invalidContentItemResultTypeErrorID                = 71
-	invalidContentKeyTypeErrorID                       = 72
-	invalidContentStringMapErrorID                     = 73
-	invalidContentNetworkMapErrorID                    = 74
-	invalidContentDomainMapErrorID                     = 75
-	invalidContentValueErrorID                         = 76
-	invalidContentValueTypeErrorID                     = 77
-	invalidContentStringFlags8MapValueErrorID          = 78
-	invalidContentStringFlags16MapValueErrorID         = 79
-	invalidContentStringFlags32MapValueErrorID         = 80
-	invalidContentStringFlags64MapValueErrorID         = 81
-	invalidContentNetworkFlags8MapValueErrorID         = 82
-	invalidContentNetworkFlags16MapValueErrorID        = 83
-	invalidContentNetworkFlags32MapValueErrorID        = 84
-	invalidContentNetworkFlags64MapValueErrorID        = 85
-	invalidContentDomainFlags8MapValueErrorID          = 86
-	invalidContentDomainFlags16MapValueErrorID         = 87
-	invalidContentDomainFlags32MapValueErrorID         = 88
-	invalidContentDomainFlags64MapValueErrorID         = 89
-	integerDivideByZeroErrorID                         = 90
-	floatDivideByZeroErrorID                           = 91
-	floatNanErrorID                                    = 92
-	floatInfErrorID                                    = 93
-	ReadOnlySymbolsChangeErrorID                       = 94
-	nilTypeErrorID                                     = 95
-	builtinCustomTypeErrorID                           = 96
-	duplicateCustomTypeErrorID                         = 97
-	duplicatesBuiltinTypeErrorID                       = 98
-	duplicateFlagNameID                                = 99
-	noTypedAttributeErrorID                            = 100
-	undefinedAttributeTypeErrorID                      = 101
-	unknownAttributeTypeErrorID                        = 102
-	duplicateAttributeErrorID                          = 103
-	noFlagsDefinedErrorID                              = 104
-	tooManyFlagsDefinedErrorID                         = 105
-	listOfStringsTypeErrorID                           = 106
-	concatTypeErrorID                                  = 107
-	unsupportedSelectorSchemeErrorID                   = 108
-	disabledSelectorErrorID                            = 109
-	marshalInvalidDepthErrorID                         = 110
-	invalidHeaderErrorID                               = 111
-	nonMarshableErrorID                                = 112
-	nilRootErrorID                                     = 113
-	PathNotFoundErrorID                                = 114
-	requestBufferOverflowErrorID                       = 115
-	requestBufferUnderflowErrorID                      = 116
-	requestVersionErrorID                              = 117
-	requestInvalidAttributeCountErrorID                = 118
-	requestTooManyAttributesErrorID                    = 119
-	requestAttributeMarshallingTypeErrorID             = 120
-	requestAttributeUnmarshallingTypeErrorID           = 121
-	requestAttributeMarshallingNotImplementedErrorID   = 122
-	requestAttributeUnmarshallingNotImplementedErrorID = 123
-	requestTooLongAttributeNameErrorID                 = 124
-	requestTooLongStringValueErrorID                   = 125
-	requestAddressValueErrorID                         = 126
-	requestInvalidNetworkValueErrorID                  = 127
-	requestIPv4InvalidMaskErrorID                      = 128
-	requestIPv6InvalidMaskErrorID                      = 129
-	requestTooLongCollectionValueErrorID               = 130
-	requestInvalidExpressionErrorID                    = 131
-	requestAssignmentsOverflowErrorID                  = 132
-	requestValuesOverflowErrorID                       = 133
-	requestUnmarshalEffectConstErrorID                 = 134
-	requestUnmarshalEffectTypeErrorID                  = 135
-	requestUnmarshalStatusConstErrorID                 = 136
-	requestUnmarshalStatusTypeErrorID                  = 137
-	requestUnmarshalBooleanConstErrorID                = 138
-	requestUnmarshalBooleanTypeErrorID                 = 139
-	requestUnmarshalStringConstErrorID                 = 140
-	requestUnmarshalStringTypeErrorID                  = 141
-	requestUnmarshalIntegerConstErrorID                = 142
-	requestUnmarshalIntegerTypeErrorID                 = 143
-	requestUnmarshalIntegerOverflowErrorID             = 144
-	requestUnmarshalIntegerUnderflowErrorID            = 145
-	requestUnmarshalFloatConstErrorID                  = 146
-	requestUnmarshalFloatTypeErrorID                   = 147
-	requestUnmarshalAddressConstErrorID                = 148
-	requestUnmarshalAddressTypeErrorID                 = 149
-	requestUnmarshalNetworkConstErrorID                = 150
-	requestUnmarshalNetworkTypeErrorID                 = 151
-	requestUnmarshalDomainConstErrorID                 = 152
-	requestUnmarshalDomainTypeErrorID                  = 153
-	requestUnmarshalSetOfStringsConstErrorID           = 154
-	requestUnmarshalSetOfStringsTypeErrorID            = 155
-	requestUnmarshalSetOfNetworksConstErrorID          = 156
-	requestUnmarshalSetOfNetworksTypeErrorID           = 157
-	requestUnmarshalSetOfDomainsConstErrorID           = 158
-	requestUnmarshalSetOfDomainsTypeErrorID            = 159
-	requestUnmarshalListOfStringsConstErrorID          = 160
-	requestUnmarshalListOfStringsTypeErrorID           = 161
-	responseEffectErrorID                              = 162
-	ResponseServerErrorID                              = 163
-	policyCalculationErrorID                           = 164
-	obligationCalculationErrorID                       = 165
-	noInformationalErrorID                             = 166
+	externalErrorID                                       = 0
+	multiErrorID                                          = 1
+	missingAttributeErrorID                               = 2
+	MissingValueErrorID                                   = 3
+	unknownTypeStringCastErrorID                          = 4
+	invalidTypeStringCastErrorID                          = 5
+	notImplementedStringCastErrorID                       = 6
+	invalidBooleanStringCastErrorID                       = 7
+	invalidIntegerStringCastErrorID                       = 8
+	invalidFloatStringCastErrorID                         = 9
+	invalidAddressStringCastErrorID                       = 10
+	invalidNetworkStringCastErrorID                       = 11
+	invalidAddressNetworkStringCastErrorID                = 12
+	invalidDomainNameStringCastErrorID                    = 13
+	attributeValueTypeErrorID                             = 14
+	attributeValueFlagsTypeErrorID                        = 15
+	attributeValueFlagsBitsErrorID                        = 16
+	duplicateAttributeValueErrorID                        = 17
+	unknownTypeSerializationErrorID                       = 18
+	invalidTypeSerializationErrorID                       = 19
+	notMatchingTypeRebindErrorID                          = 20
+	unknownMetaTypeID                                     = 21
+	assignmentTypeMismatchID                              = 22
+	mapperArgumentTypeErrorID                             = 23
+	flagsMapperRCAArgumentTypeErrorID                     = 24
+	UntaggedPolicyModificationErrorID                     = 25
+	MissingPolicyTagErrorID                               = 26
+	PolicyTagsNotMatchErrorID                             = 27
+	emptyPathModificationErrorID                          = 28
+	invalidRootPolicyItemTypeErrorID                      = 29
+	hiddenRootPolicyAppendErrorID                         = 30
+	invalidRootPolicyErrorID                              = 31
+	hiddenPolicySetModificationErrorID                    = 32
+	invalidPolicySetItemTypeErrorID                       = 33
+	tooShortPathPolicySetModificationErrorID              = 34
+	missingPolicySetChildErrorID                          = 35
+	hiddenPolicyAppendErrorID                             = 36
+	policyTransactionTagsNotMatchErrorID                  = 37
+	failedPolicyTransactionErrorID                        = 38
+	unknownPolicyUpdateOperationErrorID                   = 39
+	hiddenPolicyModificationErrorID                       = 40
+	tooLongPathPolicyModificationErrorID                  = 41
+	tooShortPathPolicyModificationErrorID                 = 42
+	invalidPolicyItemTypeErrorID                          = 43
+	hiddenRuleAppendErrorID                               = 44
+	missingPolicyChildErrorID                             = 45
+	MissingContentErrorID                                 = 46
+	invalidContentStorageItemID                           = 47
+	MissingContentItemErrorID                             = 48
+	invalidContentItemErrorID                             = 49
+	invalidContentItemTypeErrorID                         = 50
+	invalidSelectorPathErrorID                            = 51
+	networkMapKeyValueTypeErrorID                         = 52
+	mapContentSubitemErrorID                              = 53
+	invalidContentModificationErrorID                     = 54
+	missingPathContentModificationErrorID                 = 55
+	tooLongPathContentModificationErrorID                 = 56
+	invalidContentValueModificationErrorID                = 57
+	UntaggedContentModificationErrorID                    = 58
+	MissingContentTagErrorID                              = 59
+	ContentTagsNotMatchErrorID                            = 60
+	unknownContentUpdateOperationErrorID                  = 61
+	failedContentTransactionErrorID                       = 62
+	contentTransactionIDNotMatchErrorID                   = 63
+	contentTransactionTagsNotMatchErrorID                 = 64
+	tooShortRawPathContentModificationErrorID             = 65
+	tooLongRawPathContentModificationErrorID              = 66
+	invalidContentUpdateDataErrorID                       = 67
+	invalidContentUpdateResultTypeErrorID                 = 68
+	invalidContentUpdateKeysErrorID                       = 69
+	unknownContentItemResultTypeErrorID                   = 70
+	invalidContentItemResultTypeErrorID                   = 71
+	invalidContentKeyTypeErrorID                          = 72
+	invalidContentStringMapErrorID                        = 73
+	invalidContentNetworkMapErrorID                       = 74
+	invalidContentDomainMapErrorID                        = 75
+	invalidContentValueErrorID                            = 76
+	invalidContentValueTypeErrorID                        = 77
+	invalidContentStringFlags8MapValueErrorID             = 78
+	invalidContentStringFlags16MapValueErrorID            = 79
+	invalidContentStringFlags32MapValueErrorID            = 80
+	invalidContentStringFlags64MapValueErrorID            = 81
+	invalidContentNetworkFlags8MapValueErrorID            = 82
+	invalidContentNetworkFlags16MapValueErrorID           = 83
+	invalidContentNetworkFlags32MapValueErrorID           = 84
+	invalidContentNetworkFlags64MapValueErrorID           = 85
+	invalidContentDomainFlags8MapValueErrorID             = 86
+	invalidContentDomainFlags16MapValueErrorID            = 87
+	invalidContentDomainFlags32MapValueErrorID            = 88
+	invalidContentDomainFlags64MapValueErrorID            = 89
+	integerDivideByZeroErrorID                            = 90
+	floatDivideByZeroErrorID                              = 91
+	floatNanErrorID                                       = 92
+	floatInfErrorID                                       = 93
+	ReadOnlySymbolsChangeErrorID                          = 94
+	nilTypeErrorID                                        = 95
+	builtinCustomTypeErrorID                              = 96
+	duplicateCustomTypeErrorID                            = 97
+	duplicatesBuiltinTypeErrorID                          = 98
+	duplicateFlagNameID                                   = 99
+	noTypedAttributeErrorID                               = 100
+	undefinedAttributeTypeErrorID                         = 101
+	unknownAttributeTypeErrorID                           = 102
+	duplicateAttributeErrorID                             = 103
+	noFlagsDefinedErrorID                                 = 104
+	tooManyFlagsDefinedErrorID                            = 105
+	listOfStringsTypeErrorID                              = 106
+	concatTypeErrorID                                     = 107
+	unsupportedSelectorSchemeErrorID                      = 108
+	disabledSelectorErrorID                               = 109
+	marshalInvalidDepthErrorID                            = 110
+	invalidHeaderErrorID                                  = 111
+	nonMarshableErrorID                                   = 112
+	nilRootErrorID                                        = 113
+	PathNotFoundErrorID                                   = 114
+	requestBufferOverflowErrorID                          = 115
+	requestBufferUnderflowErrorID                         = 116
+	requestVersionErrorID                                 = 117
+	requestInvalidAttributeCountErrorID                   = 118
+	requestTooManyAttributesErrorID                       = 119
+	requestAttributeCountErrorID                          = 120
+	requestAttributeMarshallingTypeErrorID                = 121
+	requestAttributeUnmarshallingTypeErrorID              = 122
+	requestAttributeUnmarshallingBooleanTypeErrorID       = 123
+	requestAttributeUnmarshallingStringTypeErrorID        = 124
+	requestAttributeUnmarshallingIntegerTypeErrorID       = 125
+	requestAttributeUnmarshallingFloatTypeErrorID         = 126
+	requestAttributeUnmarshallingAddressTypeErrorID       = 127
+	requestAttributeUnmarshallingNetworkTypeErrorID       = 128
+	requestAttributeUnmarshallingDomainTypeErrorID        = 129
+	requestAttributeUnmarshallingSetOfStringsTypeErrorID  = 130
+	requestAttributeUnmarshallingSetOfNetworksTypeErrorID = 131
+	requestAttributeUnmarshallingSetOfDomainsTypeErrorID  = 132
+	requestAttributeUnmarshallingListOfStringsTypeErrorID = 133
+	requestAttributeMarshallingNotImplementedErrorID      = 134
+	requestAttributeUnmarshallingNotImplementedErrorID    = 135
+	requestTooLongAttributeNameErrorID                    = 136
+	requestTooLongStringValueErrorID                      = 137
+	requestAddressValueErrorID                            = 138
+	requestInvalidNetworkValueErrorID                     = 139
+	requestIPv4InvalidMaskErrorID                         = 140
+	requestIPv6InvalidMaskErrorID                         = 141
+	requestTooLongCollectionValueErrorID                  = 142
+	requestInvalidExpressionErrorID                       = 143
+	requestAssignmentsOverflowErrorID                     = 144
+	requestValuesOverflowErrorID                          = 145
+	requestUnmarshalEffectConstErrorID                    = 146
+	requestUnmarshalEffectTypeErrorID                     = 147
+	requestUnmarshalStatusConstErrorID                    = 148
+	requestUnmarshalStatusTypeErrorID                     = 149
+	requestUnmarshalBooleanConstErrorID                   = 150
+	requestUnmarshalBooleanTypeErrorID                    = 151
+	requestUnmarshalStringConstErrorID                    = 152
+	requestUnmarshalStringTypeErrorID                     = 153
+	requestUnmarshalIntegerConstErrorID                   = 154
+	requestUnmarshalIntegerTypeErrorID                    = 155
+	requestUnmarshalIntegerOverflowErrorID                = 156
+	requestUnmarshalIntegerUnderflowErrorID               = 157
+	requestUnmarshalFloatConstErrorID                     = 158
+	requestUnmarshalFloatTypeErrorID                      = 159
+	requestUnmarshalAddressConstErrorID                   = 160
+	requestUnmarshalAddressTypeErrorID                    = 161
+	requestUnmarshalNetworkConstErrorID                   = 162
+	requestUnmarshalNetworkTypeErrorID                    = 163
+	requestUnmarshalDomainConstErrorID                    = 164
+	requestUnmarshalDomainTypeErrorID                     = 165
+	requestUnmarshalSetOfStringsConstErrorID              = 166
+	requestUnmarshalSetOfStringsTypeErrorID               = 167
+	requestUnmarshalSetOfNetworksConstErrorID             = 168
+	requestUnmarshalSetOfNetworksTypeErrorID              = 169
+	requestUnmarshalSetOfDomainsConstErrorID              = 170
+	requestUnmarshalSetOfDomainsTypeErrorID               = 171
+	requestUnmarshalListOfStringsConstErrorID             = 172
+	requestUnmarshalListOfStringsTypeErrorID              = 173
+	responseEffectErrorID                                 = 174
+	ResponseServerErrorID                                 = 175
+	policyCalculationErrorID                              = 176
+	obligationCalculationErrorID                          = 177
+	noInformationalErrorID                                = 178
 )
 
 type externalError struct {
@@ -2070,6 +2082,23 @@ func (e *requestTooManyAttributesError) Error() string {
 	return e.errorf("Expected no more than %d attributes but got %d", math.MaxUint16, e.n)
 }
 
+type requestAttributeCountError struct {
+	errorLink
+	actual   uint16
+	expected uint16
+}
+
+func newRequestAttributeCountError(actual, expected uint16) *requestAttributeCountError {
+	return &requestAttributeCountError{
+		errorLink: errorLink{id: requestAttributeCountErrorID},
+		actual:    actual,
+		expected:  expected}
+}
+
+func (e *requestAttributeCountError) Error() string {
+	return e.errorf("Expected exactly %d values but got %d", e.expected, e.actual)
+}
+
 type requestAttributeMarshallingTypeError struct {
 	errorLink
 	t int
@@ -2098,6 +2127,171 @@ func newRequestAttributeUnmarshallingTypeError(t int) *requestAttributeUnmarshal
 
 func (e *requestAttributeUnmarshallingTypeError) Error() string {
 	return e.errorf("Unknown attribute type in request %d", e.t)
+}
+
+type requestAttributeUnmarshallingBooleanTypeError struct {
+	errorLink
+	t int
+}
+
+func newRequestAttributeUnmarshallingBooleanTypeError(t int) *requestAttributeUnmarshallingBooleanTypeError {
+	return &requestAttributeUnmarshallingBooleanTypeError{
+		errorLink: errorLink{id: requestAttributeUnmarshallingBooleanTypeErrorID},
+		t:         t}
+}
+
+func (e *requestAttributeUnmarshallingBooleanTypeError) Error() string {
+	return e.errorf("Expected %q or %q value but got %q", getRequestWireTypeName(requestWireTypeBooleanFalse), getRequestWireTypeName(requestWireTypeBooleanTrue), getRequestWireTypeName(e.t))
+}
+
+type requestAttributeUnmarshallingStringTypeError struct {
+	errorLink
+	t int
+}
+
+func newRequestAttributeUnmarshallingStringTypeError(t int) *requestAttributeUnmarshallingStringTypeError {
+	return &requestAttributeUnmarshallingStringTypeError{
+		errorLink: errorLink{id: requestAttributeUnmarshallingStringTypeErrorID},
+		t:         t}
+}
+
+func (e *requestAttributeUnmarshallingStringTypeError) Error() string {
+	return e.errorf("Expected %q value but got %q", getRequestWireTypeName(requestWireTypeString), getRequestWireTypeName(e.t))
+}
+
+type requestAttributeUnmarshallingIntegerTypeError struct {
+	errorLink
+	t int
+}
+
+func newRequestAttributeUnmarshallingIntegerTypeError(t int) *requestAttributeUnmarshallingIntegerTypeError {
+	return &requestAttributeUnmarshallingIntegerTypeError{
+		errorLink: errorLink{id: requestAttributeUnmarshallingIntegerTypeErrorID},
+		t:         t}
+}
+
+func (e *requestAttributeUnmarshallingIntegerTypeError) Error() string {
+	return e.errorf("Expected %q value but got %q", getRequestWireTypeName(requestWireTypeInteger), getRequestWireTypeName(e.t))
+}
+
+type requestAttributeUnmarshallingFloatTypeError struct {
+	errorLink
+	t int
+}
+
+func newRequestAttributeUnmarshallingFloatTypeError(t int) *requestAttributeUnmarshallingFloatTypeError {
+	return &requestAttributeUnmarshallingFloatTypeError{
+		errorLink: errorLink{id: requestAttributeUnmarshallingFloatTypeErrorID},
+		t:         t}
+}
+
+func (e *requestAttributeUnmarshallingFloatTypeError) Error() string {
+	return e.errorf("Expected %q value but got %q", getRequestWireTypeName(requestWireTypeFloat), getRequestWireTypeName(e.t))
+}
+
+type requestAttributeUnmarshallingAddressTypeError struct {
+	errorLink
+	t int
+}
+
+func newRequestAttributeUnmarshallingAddressTypeError(t int) *requestAttributeUnmarshallingAddressTypeError {
+	return &requestAttributeUnmarshallingAddressTypeError{
+		errorLink: errorLink{id: requestAttributeUnmarshallingAddressTypeErrorID},
+		t:         t}
+}
+
+func (e *requestAttributeUnmarshallingAddressTypeError) Error() string {
+	return e.errorf("Expected %q or %q value but got %q", getRequestWireTypeName(requestWireTypeIPv4Address), getRequestWireTypeName(requestWireTypeIPv6Address), getRequestWireTypeName(e.t))
+}
+
+type requestAttributeUnmarshallingNetworkTypeError struct {
+	errorLink
+	t int
+}
+
+func newRequestAttributeUnmarshallingNetworkTypeError(t int) *requestAttributeUnmarshallingNetworkTypeError {
+	return &requestAttributeUnmarshallingNetworkTypeError{
+		errorLink: errorLink{id: requestAttributeUnmarshallingNetworkTypeErrorID},
+		t:         t}
+}
+
+func (e *requestAttributeUnmarshallingNetworkTypeError) Error() string {
+	return e.errorf("Expected %q or %q value but got %q", getRequestWireTypeName(requestWireTypeIPv4Network), getRequestWireTypeName(requestWireTypeIPv6Network), getRequestWireTypeName(e.t))
+}
+
+type requestAttributeUnmarshallingDomainTypeError struct {
+	errorLink
+	t int
+}
+
+func newRequestAttributeUnmarshallingDomainTypeError(t int) *requestAttributeUnmarshallingDomainTypeError {
+	return &requestAttributeUnmarshallingDomainTypeError{
+		errorLink: errorLink{id: requestAttributeUnmarshallingDomainTypeErrorID},
+		t:         t}
+}
+
+func (e *requestAttributeUnmarshallingDomainTypeError) Error() string {
+	return e.errorf("Expected %q value but got %q", getRequestWireTypeName(requestWireTypeDomain), getRequestWireTypeName(e.t))
+}
+
+type requestAttributeUnmarshallingSetOfStringsTypeError struct {
+	errorLink
+	t int
+}
+
+func newRequestAttributeUnmarshallingSetOfStringsTypeError(t int) *requestAttributeUnmarshallingSetOfStringsTypeError {
+	return &requestAttributeUnmarshallingSetOfStringsTypeError{
+		errorLink: errorLink{id: requestAttributeUnmarshallingSetOfStringsTypeErrorID},
+		t:         t}
+}
+
+func (e *requestAttributeUnmarshallingSetOfStringsTypeError) Error() string {
+	return e.errorf("Expected %q value but got %q", getRequestWireTypeName(requestWireTypeSetOfStrings), getRequestWireTypeName(e.t))
+}
+
+type requestAttributeUnmarshallingSetOfNetworksTypeError struct {
+	errorLink
+	t int
+}
+
+func newRequestAttributeUnmarshallingSetOfNetworksTypeError(t int) *requestAttributeUnmarshallingSetOfNetworksTypeError {
+	return &requestAttributeUnmarshallingSetOfNetworksTypeError{
+		errorLink: errorLink{id: requestAttributeUnmarshallingSetOfNetworksTypeErrorID},
+		t:         t}
+}
+
+func (e *requestAttributeUnmarshallingSetOfNetworksTypeError) Error() string {
+	return e.errorf("Expected %q value but got %q", getRequestWireTypeName(requestWireTypeSetOfNetworks), getRequestWireTypeName(e.t))
+}
+
+type requestAttributeUnmarshallingSetOfDomainsTypeError struct {
+	errorLink
+	t int
+}
+
+func newRequestAttributeUnmarshallingSetOfDomainsTypeError(t int) *requestAttributeUnmarshallingSetOfDomainsTypeError {
+	return &requestAttributeUnmarshallingSetOfDomainsTypeError{
+		errorLink: errorLink{id: requestAttributeUnmarshallingSetOfDomainsTypeErrorID},
+		t:         t}
+}
+
+func (e *requestAttributeUnmarshallingSetOfDomainsTypeError) Error() string {
+	return e.errorf("Expected %q value but got %q", getRequestWireTypeName(requestWireTypeSetOfDomains), getRequestWireTypeName(e.t))
+}
+
+type requestAttributeUnmarshallingListOfStringsTypeError struct {
+	errorLink
+	t int
+}
+
+func newRequestAttributeUnmarshallingListOfStringsTypeError(t int) *requestAttributeUnmarshallingListOfStringsTypeError {
+	return &requestAttributeUnmarshallingListOfStringsTypeError{
+		errorLink: errorLink{id: requestAttributeUnmarshallingListOfStringsTypeErrorID},
+		t:         t}
+}
+
+func (e *requestAttributeUnmarshallingListOfStringsTypeError) Error() string {
+	return e.errorf("Expected %q value but got %q", getRequestWireTypeName(requestWireTypeListOfStrings), getRequestWireTypeName(e.t))
 }
 
 type requestAttributeMarshallingNotImplementedError struct {

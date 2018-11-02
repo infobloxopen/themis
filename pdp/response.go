@@ -152,32 +152,201 @@ func MakeIndeterminateResponseWithBuffer(b []byte, err error) (int, error) {
 // The response in the case is represented by an attribute value. Caller needs
 // to allocate big enough buffer.
 func MarshalInfoResponse(b []byte, value AttributeValue) (int, error) {
-	off, err := putRequestVersion(b)
+	off, err := putInfoResponseHeader(b)
 	if err != nil {
-		return off, err
+		return 0, err
 	}
-
-	if len(b)-off < 2 {
-		return off, newRequestBufferOverflowError()
-	}
-
-	binary.LittleEndian.PutUint16(b[off:], 0)
-	off += 2
 
 	n, err := putRequestAttributeValue(b[off:], value)
 	if err != nil {
-		if _, ok := err.(*requestBufferOverflowError); ok {
-			off, _ := putRequestVersion(b)
+		return processInfoResponseBufferOverflow(b, err)
+	}
 
-			n, err := putResponseInfoValueTooLong(b[off:])
-			if err != nil {
-				return off, err
-			}
+	return off + n, nil
+}
 
-			return off + n, nil
-		}
+// MarshalInfoResponseBoolean marshals information response to given byte
+// buffer. The response in the case is represented by a boolean value. Caller
+// needs to allocate big enough buffer.
+func MarshalInfoResponseBoolean(b []byte, value bool) (int, error) {
+	off, err := putInfoResponseHeader(b)
+	if err != nil {
+		return 0, err
+	}
 
-		return off, err
+	n, err := putRequestBooleanValue(b[off:], value)
+	if err != nil {
+		return processInfoResponseBufferOverflow(b, err)
+	}
+
+	return off + n, nil
+}
+
+// MarshalInfoResponseString marshals information response to given byte buffer.
+// The response in the case is represented by a string. Caller needs to allocate
+// big enough buffer.
+func MarshalInfoResponseString(b []byte, value string) (int, error) {
+	off, err := putInfoResponseHeader(b)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestStringValue(b[off:], value)
+	if err != nil {
+		return processInfoResponseBufferOverflow(b, err)
+	}
+
+	return off + n, nil
+}
+
+// MarshalInfoResponseInteger marshals information response to given byte
+// buffer. The response in the case is represented by an integer value. Caller
+// needs to allocate big enough buffer.
+func MarshalInfoResponseInteger(b []byte, value int64) (int, error) {
+	off, err := putInfoResponseHeader(b)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestIntegerValue(b[off:], value)
+	if err != nil {
+		return processInfoResponseBufferOverflow(b, err)
+	}
+
+	return off + n, nil
+}
+
+// MarshalInfoResponseFloat marshals information response to given byte buffer.
+// The response in the case is represented by a floating point value. Caller
+// needs to allocate big enough buffer.
+func MarshalInfoResponseFloat(b []byte, value float64) (int, error) {
+	off, err := putInfoResponseHeader(b)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestFloatValue(b[off:], value)
+	if err != nil {
+		return processInfoResponseBufferOverflow(b, err)
+	}
+
+	return off + n, nil
+}
+
+// MarshalInfoResponseAddress marshals information response to given byte
+// buffer. The response in the case is represented by an IP address. Caller
+// needs to allocate big enough buffer.
+func MarshalInfoResponseAddress(b []byte, value net.IP) (int, error) {
+	off, err := putInfoResponseHeader(b)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestAddressValue(b[off:], value)
+	if err != nil {
+		return processInfoResponseBufferOverflow(b, err)
+	}
+
+	return off + n, nil
+}
+
+// MarshalInfoResponseNetwork marshals information response to given byte
+// buffer. The response in the case is represented by an IP network. Caller
+// needs to allocate big enough buffer.
+func MarshalInfoResponseNetwork(b []byte, value *net.IPNet) (int, error) {
+	off, err := putInfoResponseHeader(b)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestNetworkValue(b[off:], value)
+	if err != nil {
+		return processInfoResponseBufferOverflow(b, err)
+	}
+
+	return off + n, nil
+}
+
+// MarshalInfoResponseDomain marshals information response to given byte buffer.
+// The response in the case is represented by a domain name. Caller needs
+// to allocate big enough buffer.
+func MarshalInfoResponseDomain(b []byte, value domain.Name) (int, error) {
+	off, err := putInfoResponseHeader(b)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestDomainValue(b[off:], value)
+	if err != nil {
+		return processInfoResponseBufferOverflow(b, err)
+	}
+
+	return off + n, nil
+}
+
+// MarshalInfoResponseSetOfStrings marshals information response to given byte
+// buffer. The response in the case is represented by a set of strings. Caller
+// needs to allocate big enough buffer.
+func MarshalInfoResponseSetOfStrings(b []byte, value *strtree.Tree) (int, error) {
+	off, err := putInfoResponseHeader(b)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestSetOfStringsValue(b[off:], value)
+	if err != nil {
+		return processInfoResponseBufferOverflow(b, err)
+	}
+
+	return off + n, nil
+}
+
+// MarshalInfoResponseSetOfNetworks marshals information response to given byte
+// buffer. The response in the case is represented by a set of networks. Caller
+// needs to allocate big enough buffer.
+func MarshalInfoResponseSetOfNetworks(b []byte, value *iptree.Tree) (int, error) {
+	off, err := putInfoResponseHeader(b)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestSetOfNetworksValue(b[off:], value)
+	if err != nil {
+		return processInfoResponseBufferOverflow(b, err)
+	}
+
+	return off + n, nil
+}
+
+// MarshalInfoResponseSetOfDomains marshals information response to given byte
+// buffer. The response in the case is represented by a set of domain names.
+// Caller needs to allocate big enough buffer.
+func MarshalInfoResponseSetOfDomains(b []byte, value *domaintree.Node) (int, error) {
+	off, err := putInfoResponseHeader(b)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestSetOfDomainsValue(b[off:], value)
+	if err != nil {
+		return processInfoResponseBufferOverflow(b, err)
+	}
+
+	return off + n, nil
+}
+
+// MarshalInfoResponseListOfStrings marshals information response to given byte
+// buffer. The response in the case is represented by a list of strings. Caller
+// needs to allocate big enough buffer.
+func MarshalInfoResponseListOfStrings(b []byte, value []string) (int, error) {
+	off, err := putInfoResponseHeader(b)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putRequestListOfStringsValue(b[off:], value)
+	if err != nil {
+		return processInfoResponseBufferOverflow(b, err)
 	}
 
 	return off + n, nil
@@ -486,6 +655,38 @@ func putResponseObligationsTooLong(b []byte) (int, error) {
 	copy(b[2:], responseStatusObligationsTooLong)
 
 	return size, nil
+}
+
+func putInfoResponseHeader(b []byte) (int, error) {
+	off, err := putRequestVersion(b)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(b)-off < reqBigCounterSize {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	binary.LittleEndian.PutUint16(b[off:], 0)
+	return off + reqBigCounterSize, nil
+}
+
+func processInfoResponseBufferOverflow(b []byte, err error) (int, error) {
+	if _, ok := err.(*requestBufferOverflowError); !ok {
+		return 0, err
+	}
+
+	off, err := putRequestVersion(b)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := putResponseInfoValueTooLong(b[off:])
+	if err != nil {
+		return 0, err
+	}
+
+	return off + n, nil
 }
 
 func putResponseInfoValueTooLong(b []byte) (int, error) {
