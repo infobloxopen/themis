@@ -7,6 +7,7 @@ Themis represents a set of tools for managing and enforcing security policies al
 - **pepcli** - CLI application which implements simple PEP and performance measurement tool for PDP server;
 - **pdpctr-client** - golang client package for "control" protocol (Policy Administration Point or PAP);
 - **papcli** - CLI application which implements simple PAP;
+- **pip** - client and server packages for information requests processing with generator for custom handlers (Policy Information Point or PIP);
 - **egen** - error processing code generator (development tool).
 
 Themis design is inspired by eXtensible Access Control Markup Language (XACML) **[XACML-V3.0]**.
