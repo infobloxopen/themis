@@ -2,10 +2,12 @@ package main
 
 import (
 	"net"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
+	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-control"
 	"github.com/infobloxopen/themis/pip/server"
 )
@@ -13,10 +15,17 @@ import (
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-control && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/control.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-control && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-control"
 
 type srv struct {
+	sync.RWMutex
+
 	ss *server.Server
 
 	ln net.Listener
 	sc *grpc.Server
+
+	c *pdp.LocalContentStorage
+
+	uIdx int32
+	u    *update
 }
 
 func newSrv() *srv {
@@ -40,6 +49,7 @@ func newSrv() *srv {
 			server.WithWriteInterval(conf.writeInt),
 			server.WithHandler(handler),
 		),
+		c: pdp.NewLocalContentStorage(nil),
 	}
 }
 

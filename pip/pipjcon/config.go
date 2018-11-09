@@ -27,7 +27,6 @@ const (
 
 	defUnixAddr = "/var/run/pip.socket"
 	defTCPAddr  = "localhost:5600"
-	defCtrlAddr = "localhost:5604"
 )
 
 var validNetworks = map[string]struct{}{
@@ -43,8 +42,7 @@ func init() {
 	flag.StringVar(&conf.net, "network", netTCP, "type of network to listen at")
 	flag.StringVar(&conf.addr, "a", "", "address to listen at "+
 		"(default for \"tcp*\" - localhost:5600, default for \"unix\" - /var/run/pip.socket)")
-	flag.StringVar(&conf.ctrl, "c", "", "address for control "+
-		"(default for \"tcp*\" - localhost:5604, unavailable for \"unix\")")
+	flag.StringVar(&conf.ctrl, "c", "", "address for control (unavailable for \"unix\")")
 	flag.StringVar(&conf.content, "j", "", "path to JCon file to load at startup")
 	flag.IntVar(&conf.maxConn, "max-connections", 0, "limit on number of simultaneous connections "+
 		"(defailt - no limit)")
@@ -68,14 +66,8 @@ func init() {
 		}
 	}
 
-	if len(conf.ctrl) <= 0 {
-		if netID != netUnix {
-			conf.ctrl = defCtrlAddr
-		}
-	} else {
-		if netID == netUnix {
-			log.WithField("control", conf.ctrl).Info("control address set for \"unix\" network. ignoring...")
-			conf.ctrl = ""
-		}
+	if len(conf.ctrl) > 0 && netID == netUnix {
+		log.WithField("control", conf.ctrl).Info("control address set for \"unix\" network. ignoring...")
+		conf.ctrl = ""
 	}
 }
