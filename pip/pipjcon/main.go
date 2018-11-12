@@ -6,6 +6,7 @@ func main() {
 	log.Info("PIP JCon server")
 
 	s := newSrv()
+	s.load()
 	s.start()
 
 	waitForInterrupt()
