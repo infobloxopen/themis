@@ -16,6 +16,7 @@ type config struct {
 	maxConn    int
 	bufSize    int
 	maxMsgSize int
+	maxArgs    int
 	writeInt   time.Duration
 }
 
@@ -48,6 +49,7 @@ func init() {
 		"(defailt - no limit)")
 	flag.IntVar(&conf.bufSize, "buffer-size", 1024*1024, "input/output buffer size")
 	flag.IntVar(&conf.maxMsgSize, "max-message", 10*1024, "limit on single request/response size")
+	flag.IntVar(&conf.maxArgs, "max-args", 32, "limit on number of arguments for a request")
 	flag.DurationVar(&conf.writeInt, "write-interval", 50*time.Microsecond,
 		"interval to wait for responses if output buffer isn't full")
 

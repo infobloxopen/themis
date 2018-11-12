@@ -23,6 +23,7 @@ type srv struct {
 	sc *grpc.Server
 
 	c *pdp.LocalContentStorage
+	a argsPool
 
 	uIdx int32
 	u    *update
@@ -33,6 +34,7 @@ type srv struct {
 func newSrv() *srv {
 	return &srv{
 		c:    pdp.NewLocalContentStorage(nil),
+		a:    makeArgsPool(conf.maxArgs),
 		once: new(sync.Once),
 	}
 }
@@ -110,7 +112,7 @@ func (s *srv) startSrv() {
 		server.WithBufferSize(conf.bufSize),
 		server.WithMaxMessageSize(conf.maxMsgSize),
 		server.WithWriteInterval(conf.writeInt),
-		server.WithHandler(handler),
+		server.WithHandler(s.handler),
 	)
 
 	log.WithFields(log.Fields{

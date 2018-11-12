@@ -16,6 +16,7 @@ Options:
 - **-max-connections** - limit on number of simultaneous connections (defailt - no limit);
 - **-buffer-size** - input/output buffer size (default 1MB);
 - **-max-message** - limit on single request/response size (default 10kB);
+- **-max-args** - limit on number of arguments for a request (default 32);
 - **-write-interval** - interval to wait for responses if output buffer isn't full (default 50µs).
 
 ## JSON Content format and updates

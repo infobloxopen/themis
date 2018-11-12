@@ -758,6 +758,38 @@ func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, erro
 	return c.r.getValue(UndefinedValue, c.t)
 }
 
+// GetByValues returns value from content item by given path which must
+// consist of attribute values.
+func (c *ContentItem) GetByValues(path []AttributeValue) (AttributeValue, error) {
+	if len(path) != len(c.k) {
+		return UndefinedValue, newInvalidSelectorValuePathError(c.k, path)
+	}
+
+	if len(path) > 0 {
+		m := c.r
+		loc := []string{""}
+		for _, v := range path[:len(path)-1] {
+			loc = append(loc, v.describe())
+
+			var err error
+			m, err = m.next(v)
+			if err != nil {
+				return UndefinedValue, bindError(err, strings.Join(loc, "/"))
+			}
+		}
+
+		v := path[len(path)-1]
+		r, err := m.getValue(v, c.t)
+		if err != nil {
+			return UndefinedValue, bindError(err, strings.Join(append(loc, v.describe()), "/"))
+		}
+
+		return r, nil
+	}
+
+	return c.r.getValue(UndefinedValue, c.t)
+}
+
 // ContentSubItem interface abstracts all possible mapping objects and immediate
 // content value.
 type ContentSubItem interface {

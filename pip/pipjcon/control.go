@@ -46,7 +46,7 @@ func (s *srv) Request(ctx context.Context, in *pb.Item) (*pb.Response, error) {
 
 		log.WithField("req-id", id).Info("request has been registered")
 
-		return ctrlAckId(id), nil
+		return ctrlAckID(id), nil
 	}
 
 	return ctrlErrorf("unknown upload request type: %d", in.Type), nil
@@ -82,7 +82,7 @@ func (s *srv) Upload(stream pb.PDPControl_UploadServer) error {
 		return stream.SendAndClose(ctrlError(err.Error()))
 	}
 
-	return stream.SendAndClose(ctrlAckId(id))
+	return stream.SendAndClose(ctrlAckID(id))
 }
 
 func (s *srv) Apply(ctx context.Context, in *pb.Update) (*pb.Response, error) {
@@ -114,7 +114,7 @@ func (s *srv) Apply(ctx context.Context, in *pb.Update) (*pb.Response, error) {
 			}).Info("new content has been applied")
 		}
 
-		return ctrlAckId(in.Id), nil
+		return ctrlAckID(in.Id), nil
 	}
 
 	if u.t != nil {
@@ -138,7 +138,7 @@ func (s *srv) Apply(ctx context.Context, in *pb.Update) (*pb.Response, error) {
 			"curr-tag": u.toTag,
 		}).Info("content update has been applied")
 
-		return ctrlAckId(in.Id), nil
+		return ctrlAckID(in.Id), nil
 	}
 
 	return ctrlErrorf("request %d doesn't contain parsed content %q or parsed content update", in.Id, u.id), nil
@@ -190,10 +190,10 @@ func newTag(s string) (*uuid.UUID, error) {
 }
 
 func ctrlAck() *pb.Response {
-	return ctrlAckId(0)
+	return ctrlAckID(0)
 }
 
-func ctrlAckId(id int32) *pb.Response {
+func ctrlAckID(id int32) *pb.Response {
 	return &pb.Response{Status: pb.Response_ACK, Id: id}
 }
 
@@ -206,7 +206,7 @@ func ctrlTagError(s string) *pb.Response {
 }
 
 func ctrlErrorf(f string, args ...interface{}) *pb.Response {
-	return ctrlErrorf(fmt.Sprintf(f, args...))
+	return ctrlError(fmt.Sprintf(f, args...))
 }
 
 func ctrlError(s string) *pb.Response {

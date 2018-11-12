@@ -457,6 +457,27 @@ errors:
         	actual = strings.Join(strs, "/")
         }
 
+- id: invalidSelectorValuePathError
+  fields:
+  - id: expected
+    type: Signature
+  - id: actual
+    type: "[]AttributeValue"
+  msg: "Invalid value path. Expected %s path but got %s"
+  args:
+  - field: expected
+  - snippet:
+      result: actual
+      code: |
+        actual := "nothing"
+        if len(e.actual) > 0 {
+        	strs := make([]string, len(e.actual))
+        	for i, e := range e.actual {
+        		strs[i] = e.GetResultType().String()
+        	}
+        	actual = strings.Join(strs, "/")
+        }
+
 - id: networkMapKeyValueTypeError
   fields:
   - id: t
