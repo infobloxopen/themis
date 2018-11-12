@@ -3,6 +3,7 @@ package pdp
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/infobloxopen/go-trees/strtree"
@@ -214,6 +215,160 @@ func TestFunctionListOfStrings(t *testing.T) {
 	}
 }
 
+func TestListOfStringsContains(t *testing.T) {
+	ctx, err := NewContext(nil, 0, nil)
+	if err != nil {
+		t.Fatalf("Expected context but got error %s", err)
+	}
+
+	testCases := []struct {
+		a []string
+		b string
+		c bool
+	}{
+		{
+			a: []string{},
+			b: "",
+			c: false,
+		},
+		{
+			a: []string{"foo"},
+			b: "",
+			c: false,
+		},
+		{
+			a: []string{""},
+			b: "",
+			c: true,
+		},
+		{
+			a: []string{"a", "a", "b", ""},
+			b: "",
+			c: true,
+		},
+		{
+			a: []string{},
+			b: "foo",
+			c: false,
+		},
+		{
+			a: []string{"banana"},
+			b: "banana",
+			c: true,
+		},
+		{
+			a: []string{"foo", "bar"},
+			b: "foo",
+			c: true,
+		},
+		{
+			a: []string{"foo", "bar"},
+			b: "boo",
+			c: false,
+		},
+		{
+			a: []string{"foo", "bar", "boo", "boo", "mar", "foo", "boo", "foo"},
+			b: "mar",
+			c: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("List of Strings Contains %v + %v", tc.a, tc.b), func(t *testing.T) {
+			a := MakeListOfStringsValue(tc.a)
+			b := MakeStringValue(tc.b)
+			e := makeFunctionListOfStringsContains(a, b)
+
+			v, err := e.Calculate(ctx)
+			if err != nil {
+				t.Errorf("Expect Calculate() returns no error, but got '%s'", err)
+				return
+			}
+
+			res, err := v.boolean()
+			if err != nil {
+				t.Errorf("Expect boolean result with no error, but got '%s'", err)
+			} else if res != tc.c {
+				t.Errorf("Expect result '%v', but got '%v'", tc.c, res)
+			}
+		})
+	}
+}
+
+func TestListOfStringsEqual(t *testing.T) {
+	ctx, err := NewContext(nil, 0, nil)
+	if err != nil {
+		t.Fatalf("Expected context but got error %s", err)
+	}
+
+	testCases := []struct {
+		a, b []string
+		c    bool
+	}{
+		{
+			a: []string{},
+			b: []string{},
+			c: true,
+		},
+		{
+			a: []string{"foo"},
+			b: []string{},
+			c: false,
+		},
+		{
+			a: []string{"foo"},
+			b: []string{"foo"},
+			c: true,
+		},
+		{
+			a: []string{"foo"},
+			b: []string{"bar"},
+			c: false,
+		},
+		{
+			a: []string{"foo", "bar"},
+			b: []string{"foo", "bar"},
+			c: true,
+		},
+		{
+			a: []string{"foo", "foo"},
+			b: []string{"foo"},
+			c: false,
+		},
+		{
+			a: []string{"foo", "bar"},
+			b: []string{"bar", "foo"},
+			c: false,
+		},
+		{
+			a: []string{"foo", "bar", "this"},
+			b: []string{"foo", "bar", "this", "extra"},
+			c: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("List of Strings Equal %v + %v", tc.a, tc.b), func(t *testing.T) {
+			a := MakeListOfStringsValue(tc.a)
+			b := MakeListOfStringsValue(tc.b)
+			e := makeFunctionListOfStringsEqual(a, b)
+
+			v, err := e.Calculate(ctx)
+			if err != nil {
+				t.Errorf("Expect Calculate() returns no error, but got '%s'", err)
+				return
+			}
+
+			res, err := v.boolean()
+			if err != nil {
+				t.Errorf("Expect boolean result with no error, but got '%s'", err)
+			} else if res != tc.c {
+				t.Errorf("Expect result '%v', but got '%v'", tc.c, res)
+			}
+		})
+	}
+}
+
 func TestListOfStringsIntersect(t *testing.T) {
 	ctx, err := NewContext(nil, 0, nil)
 	if err != nil {
@@ -238,6 +393,21 @@ func TestListOfStringsIntersect(t *testing.T) {
 			b: []string{"boo", "mar", "foo"},
 			c: []string{"boo", "foo"},
 		},
+		{
+			a: []string{"foo", "foo", "bar", "bar", "bar"},
+			b: []string{"bar", "foo", "foo", "moo"},
+			c: []string{"bar", "foo", "foo"},
+		},
+		{
+			a: []string{"1", "2", "2", "3", "3", "3", "4", "4", "4", "4"},
+			b: []string{"4", "3", "3", "2", "2", "2", "1", "1", "1", "1"},
+			c: []string{"4", "3", "2", "1", "2", "3"},
+		},
+		{
+			a: []string{"foo", "foo", "foo", "foo", "foo", "foo", "foo"},
+			b: []string{"foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo"},
+			c: []string{"foo", "foo", "foo", "foo", "foo", "foo", "foo"},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -245,6 +415,7 @@ func TestListOfStringsIntersect(t *testing.T) {
 			a := MakeListOfStringsValue(tc.a)
 			b := MakeListOfStringsValue(tc.b)
 			e := makeFunctionListOfStringsIntersect(a, b)
+			sort.Strings(tc.c) // intersection returned sorted
 
 			v, err := e.Calculate(ctx)
 			if err != nil {
@@ -254,7 +425,7 @@ func TestListOfStringsIntersect(t *testing.T) {
 
 			res, err := v.listOfStrings()
 			if err != nil {
-				t.Errorf("Expect integer result with no error, but got '%s'", err)
+				t.Errorf("Expect list of strings result with no error, but got '%s'", err)
 			} else if !reflect.DeepEqual(tc.c, res) {
 				t.Errorf("Expect result '%v', but got '%v'", tc.c, res)
 			}
@@ -302,61 +473,6 @@ func TestListOfStringsLen(t *testing.T) {
 				t.Errorf("Expect integer result with no error, but got '%s'", err)
 			} else if res != tc.b {
 				t.Errorf("Expect result '%v', but got '%v'", tc.b, res)
-			}
-		})
-	}
-}
-
-func TestListOfStringsContains(t *testing.T) {
-	ctx, err := NewContext(nil, 0, nil)
-	if err != nil {
-		t.Fatalf("Expected context but got error %s", err)
-	}
-
-	testCases := []struct {
-		a []string
-		b string
-		c bool
-	}{
-		{
-			a: []string{"banana"},
-			b: "banana",
-			c: true,
-		},
-		{
-			a: []string{"foo", "bar"},
-			b: "foo",
-			c: true,
-		},
-		{
-			a: []string{"foo", "bar"},
-			b: "boo",
-			c: false,
-		},
-		{
-			a: []string{"foo", "bar", "boo", "boo", "mar", "foo", "boo", "foo"},
-			b: "mar",
-			c: true,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("List of Strings Contains %v + %v", tc.a, tc.b), func(t *testing.T) {
-			a := MakeListOfStringsValue(tc.a)
-			b := MakeStringValue(tc.b)
-			e := makeFunctionListOfStringsContains(a, b)
-
-			v, err := e.Calculate(ctx)
-			if err != nil {
-				t.Errorf("Expect Calculate() returns no error, but got '%s'", err)
-				return
-			}
-
-			res, err := v.boolean()
-			if err != nil {
-				t.Errorf("Expect integer result with no error, but got '%s'", err)
-			} else if res != tc.c {
-				t.Errorf("Expect result '%v', but got '%v'", tc.c, res)
 			}
 		})
 	}

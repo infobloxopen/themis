@@ -1,6 +1,8 @@
 package pdp
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type functionSetOfStringsContains struct {
 	set   Expression

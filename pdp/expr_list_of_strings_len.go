@@ -1,6 +1,8 @@
 package pdp
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type functionListOfStringsLen struct {
 	e Expression
