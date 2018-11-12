@@ -63,10 +63,8 @@ func (f functionListOfStringsIntersect) Calculate(ctx *Context) (AttributeValue,
 			}
 		} else {
 			val := first[i]
-			if k == 0 || res[k-1] != val {
-				res[k] = val
-				k++
-			}
+			res[k] = val
+			k++
 			if i < iLen {
 				i++
 			}
