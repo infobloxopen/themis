@@ -3,7 +3,6 @@ package pdp
 import (
 	"fmt"
 	"math"
-	"sort"
 )
 
 type functionListOfStringsIntersect struct {
@@ -42,35 +41,20 @@ func (f functionListOfStringsIntersect) Calculate(ctx *Context) (AttributeValue,
 	if err != nil {
 		return UndefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
-	sort.Strings(first)
-	sort.Strings(second)
-	iLen, jLen := len(first), len(second)
-	var res = make([]string, int(math.Max(float64(iLen), float64(jLen))))
+
+	values := make(map[string]bool)
+	for _, f := range first {
+		values[f] = false
+	}
+
+	res := make([]string, int(math.Min(float64(len(first)), float64(len(second)))))
 
 	k := 0
-	for i, j := 0, 0; i < iLen && j < jLen; {
-		if first[i] > second[j] {
-			if j < jLen {
-				j++
-			} else {
-				break
-			}
-		} else if first[i] < second[j] {
-			if i < iLen {
-				i++
-			} else {
-				break
-			}
-		} else {
-			val := first[i]
-			res[k] = val
+	for _, s := range second {
+		if found, ok := values[s]; ok && !found {
+			values[s] = true
+			res[k] = s
 			k++
-			if i < iLen {
-				i++
-			}
-			if j < jLen {
-				j++
-			}
 		}
 	}
 

@@ -345,6 +345,16 @@ func TestListOfStringsEqual(t *testing.T) {
 			b: []string{"foo", "bar", "this", "extra"},
 			c: false,
 		},
+		{
+			a: []string{"foo", "bar", "for", "bor", "far", "bao"},
+			b: []string{"foo", "bar", "for", "bor", "far", "bao"},
+			c: true,
+		},
+		{
+			a: []string{"foo", "bar", "for", "bor", "far", "bao"},
+			b: []string{"foo", "bar", "for", "bor", "nar", "bao"},
+			c: false,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -379,6 +389,21 @@ func TestListOfStringsIntersect(t *testing.T) {
 		a, b, c []string
 	}{
 		{
+			a: []string{},
+			b: []string{},
+			c: []string{},
+		},
+		{
+			a: []string{"foo"},
+			b: []string{},
+			c: []string{},
+		},
+		{
+			a: []string{},
+			b: []string{"foo"},
+			c: []string{},
+		},
+		{
 			a: []string{"foo", "bar", "doo"},
 			b: []string{"boo", "mar", "aoo"},
 			c: []string{},
@@ -389,24 +414,49 @@ func TestListOfStringsIntersect(t *testing.T) {
 			c: []string{"foo"},
 		},
 		{
+			a: []string{"boo", "mar", "foo"},
+			b: []string{"foo", "bar"},
+			c: []string{"foo"},
+		},
+		{
 			a: []string{"foo", "bar", "boo"},
 			b: []string{"boo", "mar", "foo"},
 			c: []string{"boo", "foo"},
 		},
 		{
+			a: []string{"boo", "mar", "foo"},
+			b: []string{"foo", "bar", "boo"},
+			c: []string{"boo", "foo"},
+		},
+		{
 			a: []string{"foo", "foo", "bar", "bar", "bar"},
 			b: []string{"bar", "foo", "foo", "moo"},
-			c: []string{"bar", "foo", "foo"},
+			c: []string{"bar", "foo"},
+		},
+		{
+			a: []string{"bar", "foo", "foo", "moo"},
+			b: []string{"foo", "foo", "bar", "bar", "bar"},
+			c: []string{"bar", "foo"},
 		},
 		{
 			a: []string{"1", "2", "2", "3", "3", "3", "4", "4", "4", "4"},
 			b: []string{"4", "3", "3", "2", "2", "2", "1", "1", "1", "1"},
-			c: []string{"4", "3", "2", "1", "2", "3"},
+			c: []string{"1", "2", "3", "4"},
 		},
 		{
-			a: []string{"foo", "foo", "foo", "foo", "foo", "foo", "foo"},
-			b: []string{"foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo"},
-			c: []string{"foo", "foo", "foo", "foo", "foo", "foo", "foo"},
+			a: []string{"4", "3", "3", "2", "2", "2", "1", "1", "1", "1"},
+			b: []string{"1", "2", "2", "3", "3", "3", "4", "4", "4", "4"},
+			c: []string{"1", "2", "3", "4"},
+		},
+		{
+			a: []string{"foo", "bar", "far", "boo", "for", "for"},
+			b: []string{"foo", "foo", "foo", "foo", "foo", "foo", "bar", "foo"},
+			c: []string{"bar", "foo"},
+		},
+		{
+			a: []string{"foo", "foo", "foo", "foo", "foo", "foo", "bar", "foo"},
+			b: []string{"foo", "bar", "far", "boo", "for", "for"},
+			c: []string{"bar", "foo"},
 		},
 	}
 
@@ -415,7 +465,7 @@ func TestListOfStringsIntersect(t *testing.T) {
 			a := MakeListOfStringsValue(tc.a)
 			b := MakeListOfStringsValue(tc.b)
 			e := makeFunctionListOfStringsIntersect(a, b)
-			sort.Strings(tc.c) // intersection returned sorted
+			sort.Strings(tc.c)
 
 			v, err := e.Calculate(ctx)
 			if err != nil {
@@ -426,7 +476,7 @@ func TestListOfStringsIntersect(t *testing.T) {
 			res, err := v.listOfStrings()
 			if err != nil {
 				t.Errorf("Expect list of strings result with no error, but got '%s'", err)
-			} else if !reflect.DeepEqual(tc.c, res) {
+			} else if sort.Strings(res); !reflect.DeepEqual(tc.c, res) {
 				t.Errorf("Expect result '%v', but got '%v'", tc.c, res)
 			}
 		})
