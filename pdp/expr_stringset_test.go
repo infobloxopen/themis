@@ -155,7 +155,7 @@ func TestSetOfStringsEqual(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("Set of Strings Intersect %v + %v", tc.a, tc.b), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Set of Strings Equal %v + %v", tc.a, tc.b), func(t *testing.T) {
 			a := MakeSetOfStringsValue(tc.a)
 			b := MakeSetOfStringsValue(tc.b)
 			e := makeFunctionSetOfStringsEqual(a, b)
