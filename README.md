@@ -43,7 +43,7 @@ Some application may require more details for particular decision. For example i
 User can define her custom type based on **flags** metatype. A value of the type can be any combination of listed flags. PDP allows to define up to 64 flags for a type. Values can't appear in request or returned as obligations.
 
 ## Policies
-PDP uses YAML based language (YAML Abstract Syntax Tree or YAST) or JSON based language (JSON Abstract Syntax Tree or JAST) to define **policies** and specifically constructed JSON to define local **content**  (JSON Content or JCON). YAST can be converted to JAST (and vise versa) with any YAML to JSON convertor.
+PDP uses YAML based language (YAML Abstract Syntax Tree or YAST) or JSON based language (JSON Abstract Syntax Tree or JAST) to define **policies** and specifically constructed JSON to define local **content**  (JSON Content or JCON). YAST can be converted to JAST (and vise versa) with any YAML to JSON converter.
 
 ### Root
 Any **policies** definition consists of policies (required), attributes (optional) and types (optional) sections. Policies section contains root **policy** or **policy set**. **Policy** holds rules under its "rules" field while **policy set** is able to contain both inner policies or policy sets under its "policies" field. For example:
@@ -390,6 +390,8 @@ target:
 Condition is rule field which can be any boolean expression (for example see above "Rule with all its fields"). Following functions available to make such expression:
 - **equal** - expects two arguments, where the result is true if the arguments are equal. The two arguments can be:
     - both strings
+    - both list of strings, in which case, the comparison will be performed checking equality of the index and value for all elements in both lists.
+    - both set of strings, in which case, the comparison will be performed checking equality of the value for all elements in both sets.
     - both integers, in which case, the comparison will be performed using integer arithmetic.
     - both floats, in which case, the comparison will be performed using floating point arithmetic.
     - a float and an integer, in which case, the integer is promoted to float before floating point arithmetic is applied.
@@ -398,18 +400,19 @@ Condition is rule field which can be any boolean expression (for example see abo
     - both floats, in which case, the comparison will be performed using floating point arithmetic.
     - a float and an integer, in which case, the integer is promoted to float before floating point arithmetic is applied.
 - **contains**:
-  - string contains substring - expects two string arguments first is a string to search in and second is a substring to search for;
-  - network constains address;
-  - set of strings contains string;
-  - set of networks contains address;
-  - set of domains contains doman;
+    - string contains substring - expects two string arguments first is a string to search in and second is a substring to search for;
+    - network contains address;
+    - list of strings contains string;
+    - set of strings contains string;
+    - set of networks contains address;
+    - set of domains contains domain;
 - **not** - boolean not (expects boolean as its single argument);
 - **and**, **or** - boolean and and or (expect booleans as its arguments (requires at least one).
 
 In any expression attribute can be referred with **attr** keyword and immediate value with **val** keyword (see below). There is special **selector** expression which is described below.
 
 ### Immediate Value
-Immediate value can be refered with **val** keyword and has fields:
+Immediate value can be referred with **val** keyword and has fields:
 - **type** - value type (any of available types);
 - **content** - value data.
 For **obligations** only data itself requires as type can be derived from attribute definition.
@@ -602,6 +605,13 @@ Each of the above numerical functions performs the respective numerical operatio
 - if all the arguments are floats, the operation is performed using floating point arithmetic and the result returned as a float. (In the case of **range**, the result is a string)
 - if the arguments include a combination of integers and floats, the integers are first promoted to floats and then operation is performed using floating point arithmetic. The result is returned as a float. (In the case of **range**, the result is a string)
 
+### String Collections functions
+Both set of strings and list of strings have functions, in addition to **equal** and **contains**, related to analyzing the contents of the collection as a whole:
+- **len** - accepts one argument, where the result is the length/size of the argument
+- **intersect** - accepts two arguments, where the result is the intersection of the unique values in both arguments
+
+Note that like **equal**, **intersect** cannot mix string collection types (list and set); for comparing the two, convert the set of strings using **list of strings** (below).
+
 ### Other functions
 There are several other functions available:
 - **list of strings** - converts its argument to list of strings. It accepts set of strings, list of strings and flags. In case of set of strings the function returns list of strings sorted in order maintained by set (set keeps order of initial value definition). List of strings returned by the function as is. And for flags it returns list of names for flags which are set (keeping order of names from flags type definition).
@@ -611,10 +621,10 @@ There are several other functions available:
 ### Local Content
 Local content is a set of content **items** (see example above). It's identified by **id** field which can be any string with no slash character (`/`). Each content item also has id (key of "items" JSON object) and following fields:
 - **keys** - list of types of nested maps (optional, if not present data should contain immediate value of type);
-- **type** - any built-in type (or flags type defintion or name for domain map);
+- **type** - any built-in type (or flags type definition or name for domain map);
 - **data** - list of nested maps with keys of mentioned types or immediate value of given type.
 
-Local content supports string map (key type "string"), domain map (key type "domain") and network map (key type "network" or "address"). Selector expectes string expression as path item for string map, domain - for domain map and address or network - for network map ("address" expression is allowed even if content key is "network" and vice verse).
+Local content supports string map (key type "string"), domain map (key type "domain") and network map (key type "network" or "address"). Selector expects string expression as path item for string map, domain - for domain map and address or network - for network map ("address" expression is allowed even if content key is "network" and vice verse).
 
 Any map supports also mapping to flags type. To create such map user needs to define flags in type field. Being defined a flags type can be used by name within the content and its updates. Type definition goes to **type** field of content item but it's represented by JSON object instead of string. The object should have following fields:
 - **meta** - string "flags" (the only supported metatype for now);
@@ -653,7 +663,7 @@ For example:
 ```
 
 ### Policy and Rule Combining Algorithms
-Policy and rule combinig algorithms define how to use child policies or rules of given policy set or policy and how to combine their effects, statuses and obligations. Themis supports following algorithms:
+Policy and rule combining algorithms define how to use child policies or rules of given policy set or policy and how to combine their effects, statuses and obligations. Themis supports following algorithms:
 - **FirstApplicableEffect** - evaluates child policies or rules one by one until meets any other than **NotApplicable** effect (see details below);
 - **DenyOverrides** - evaluates child policies or rules one by one until meets **Deny** effect;
 - **Mapper** - evaluates map expression and uses result to find child policy or rule to evaluate.
@@ -821,7 +831,7 @@ Update is a list of commands each contains three fields:
 - **path** - list of ids;
 - **entity** - contains an entity to add as child to entity defined by path.
 
-PDP supporst **add** and **delete** commands. In case of **add** path should point to parent item and **entity** should contain appropriate child. For example if it is policy update and **path** points to policy set **entity** can be policy or other policy set. If **path** points to policy then only rule can be accepted as **entity**.
+PDP supports **add** and **delete** commands. In case of **add** path should point to parent item and **entity** should contain appropriate child. For example if it is policy update and **path** points to policy set **entity** can be policy or other policy set. If **path** points to policy then only rule can be accepted as **entity**.
 
 For example in one terminal start PDP server with no policies:
 ```
