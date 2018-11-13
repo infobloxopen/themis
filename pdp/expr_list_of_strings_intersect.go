@@ -47,18 +47,16 @@ func (f functionListOfStringsIntersect) Calculate(ctx *Context) (AttributeValue,
 		values[f] = false
 	}
 
-	res := make([]string, int(math.Min(float64(len(first)), float64(len(second)))))
+	res := make([]string, 0, int(math.Min(float64(len(first)), float64(len(second)))))
 
-	k := 0
 	for _, s := range second {
 		if found, ok := values[s]; ok && !found {
 			values[s] = true
-			res[k] = s
-			k++
+			res = append(res, s)
 		}
 	}
 
-	return MakeListOfStringsValue(res[:k]), nil
+	return MakeListOfStringsValue(res), nil
 }
 
 func functionListOfStringsIntersectValidator(args []Expression) functionMaker {
