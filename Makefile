@@ -31,10 +31,10 @@ clean:
 	@$(RM) $(BUILDPATH)
 
 .PHONY: fmt
-fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdp-itests fmt-local-selector fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-pip-server fmt-pip-client fmt-pip-gen fmt-pip-genpkg fmt-pipjcon fmt-plugin fmt-egen
+fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdp-itests fmt-local-selector fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-pip-server fmt-pip-client fmt-pip-gen fmt-pip-genpkg fmt-pipjcon fmt-pipcli fmt-pipcli-global fmt-pipcli-subflags fmt-pipcli-test fmt-plugin fmt-egen
 
 .PHONY: build
-build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-egen build-pip-gen build-pipjcon
+build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-egen build-pip-gen build-pipjcon build-pipcli
 
 .PHONY: test
 test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-local-selector test-pep test-pip-server test-pip-client test-pip-genpkg test-plugin
@@ -147,6 +147,26 @@ fmt-pipjcon:
 	@echo "Checking PIP JCon server format..."
 	@$(AT)/pip/pipjcon && $(GOFMTCHECK)
 
+.PHONY: fmt-pipcli
+fmt-pipcli:
+	@echo "Checking PIP CLI format..."
+	@$(AT)/pip/pipcli && $(GOFMTCHECK)
+
+.PHONY: fmt-pipcli-global
+fmt-pipcli-global:
+	@echo "Checking PIP CLI global options package format..."
+	@$(AT)/pip/pipcli/global && $(GOFMTCHECK)
+
+.PHONY: fmt-pipcli-subflags
+fmt-pipcli-subflags:
+	@echo "Checking PIP CLI command flags package format..."
+	@$(AT)/pip/pipcli/subflags && $(GOFMTCHECK)
+
+.PHONY: fmt-pipcli-test
+fmt-pipcli-test:
+	@echo "Checking PIP CLI test command package format..."
+	@$(AT)/pip/pipcli/test && $(GOFMTCHECK)
+
 .PHONY: fmt-plugin
 fmt-plugin:
 	@echo "Checking CoreDNS PEP plugin format..."
@@ -192,6 +212,10 @@ build-pip-gen: build-dir
 .PHONY: build-pipjcon
 build-pipjcon: build-dir
 	$(AT)/pip/pipjcon && $(GOBUILD) -o $(BUILDPATH)/pipjcon
+
+.PHONY: build-pipcli
+build-pipcli: build-dir
+	$(AT)/pip/pipcli && $(GOBUILD) -o $(BUILDPATH)/pipcli
 
 .PHONY: test-pdp
 test-pdp: cover-out
