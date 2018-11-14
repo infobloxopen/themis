@@ -8,16 +8,16 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/infobloxopen/themis/pip/client"
 )
 
 // Config holds all global options for PIP CLI.
 type Config struct {
-	// Requests holds path to file with requests.
-	Requests string
+	// Input holds path to file with requests.
+	Input string
 	// N is a number of requests to send.
 	N int
-	// Workers stores a number of workers.
-	Workers int
 
 	// Network stores kind of destination network.
 	Network string
@@ -51,6 +51,10 @@ type Config struct {
 	ResponseTimeout time.Duration
 	// ResponseCheckInterval is an inteval of response timeout checks.
 	ResponseCheckInterval time.Duration
+	// Requests holds a list of information requests.
+	Requests []Request
+	// Client is PIP client interface.
+	Client client.Client
 }
 
 const (
@@ -59,7 +63,6 @@ const (
 	netTCPv4 = "tcp4"
 	netTCPv6 = "tcp6"
 
-	defWorkers               = 100
 	defMaxSize               = 10 * 1024
 	defMaxQueue              = 100
 	defBufSize               = 1024 * 1024
@@ -80,9 +83,8 @@ var validNets = map[string]struct{}{
 func NewConfigFromCommandLine() *Config {
 	conf := new(Config)
 
-	flag.StringVar(&conf.Requests, "i", "requests.yaml", "path to input YAML file with requests")
+	flag.StringVar(&conf.Input, "i", "requests.yaml", "path to input YAML file with requests")
 	flag.IntVar(&conf.N, "n", 0, "number of requests to sent (default - all requests from input file)")
-	flag.IntVar(&conf.Workers, "w", defWorkers, "number of workers")
 
 	flag.StringVar(&conf.Network, "net", netTCP, "kind of destination network")
 	flag.StringVar(&conf.Address, "a", "localhost:5600", "destination address")
@@ -107,7 +109,6 @@ func NewConfigFromCommandLine() *Config {
 	flag.Parse()
 
 	conf.validateN()
-	conf.validateWorkers()
 	conf.validateNetwork()
 	conf.validateBalancers()
 	conf.validateRadars()
@@ -125,13 +126,6 @@ func NewConfigFromCommandLine() *Config {
 func (conf *Config) validateN() {
 	if conf.N < 0 {
 		fmt.Fprintf(os.Stderr, "%d is too small for number of requests. using default...\n", conf.N)
-	}
-}
-
-func (conf *Config) validateWorkers() {
-	if conf.Workers < 1 {
-		fmt.Fprintf(os.Stderr, "%d is too small for number of workers. using default...\n", conf.Workers)
-		conf.Workers = defWorkers
 	}
 }
 

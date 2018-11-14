@@ -1,4 +1,4 @@
-package main
+package global
 
 import (
 	"fmt"
@@ -16,9 +16,12 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 )
 
-type request struct {
-	path string
-	args []pdp.AttributeValue
+// Request represent single information request to PIP.
+type Request struct {
+	// Path identifies information endpoint within single PIP instance.
+	Path string
+	// Args is a list of arguments.
+	Args []pdp.AttributeValue
 }
 
 type rawRequest struct {
@@ -26,8 +29,9 @@ type rawRequest struct {
 	Args []interface{}
 }
 
-func loadRequests(path string) (out []request, err error) {
-	f, err := os.Open(path)
+// LoadRequests get a list of requests from YAML file.
+func (conf *Config) LoadRequests() (err error) {
+	f, err := os.Open(conf.Input)
 	if err != nil {
 		return
 	}
@@ -42,12 +46,17 @@ func loadRequests(path string) (out []request, err error) {
 		return
 	}
 
-	out, err = parseRequests(v)
+	reqs, err := parseRequests(v)
+	if err != nil {
+		return
+	}
+
+	conf.Requests = reqs
 	return
 }
 
-func parseRequests(in []rawRequest) ([]request, error) {
-	out := make([]request, 0, len(in))
+func parseRequests(in []rawRequest) ([]Request, error) {
+	out := make([]Request, 0, len(in))
 	for i, rr := range in {
 		r, err := parseRequest(i, rr)
 		if err != nil {
@@ -60,20 +69,20 @@ func parseRequests(in []rawRequest) ([]request, error) {
 	return out, nil
 }
 
-func parseRequest(i int, in rawRequest) (request, error) {
+func parseRequest(i int, in rawRequest) (Request, error) {
 	args := make([]pdp.AttributeValue, 0, len(in.Args))
 	for j, rv := range in.Args {
 		v, err := parseValue(i, j, rv)
 		if err != nil {
-			return request{}, err
+			return Request{}, err
 		}
 
 		args = append(args, v)
 	}
 
-	return request{
-		path: in.Path,
-		args: args,
+	return Request{
+		Path: in.Path,
+		Args: args,
 	}, nil
 }
 

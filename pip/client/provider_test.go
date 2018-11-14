@@ -180,6 +180,33 @@ func TestProviderGet(t *testing.T) {
 	assert.Zero(t, c.p.get())
 }
 
+func TestProviderIsConnectionExpected(t *testing.T) {
+	p := new(provider)
+	p.Lock()
+	defer p.Unlock()
+
+	assert.False(t, p.isConnectionExpected())
+
+	p.started = true
+	p.c = &client{
+		r: new(dNSRadar),
+	}
+	assert.True(t, p.isConnectionExpected())
+
+	p.c.r = nil
+	assert.False(t, p.isConnectionExpected())
+
+	p.broken = map[uint64]destConn{
+		1: {
+			c: new(connection),
+		},
+		2: {
+			d: "192.0.2.1:5600",
+		},
+	}
+	assert.True(t, p.isConnectionExpected())
+}
+
 func TestProviderConnector(t *testing.T) {
 	c := NewClient().(*client)
 	d := newTestProviderSyncDialer()
@@ -291,6 +318,49 @@ func TestProviderConnect(t *testing.T) {
 
 	assert.Equal(t, "127.0.0.1:5600", cAddr.String())
 	assert.Equal(t, bd.err, cErr)
+}
+
+func TestProviderConnectWithBrokenDialerAndNoMoreConns(t *testing.T) {
+	c := NewClient().(*client)
+	bd := makeTestProviderBrokenDialer(errors.New("test"))
+	c.d = bd
+	atomic.StoreUint32(c.state, pipClientConnected)
+
+	c.p.Lock()
+	c.p.c = c
+	c.p.started = true
+	c.p.healthy = make(map[string]*connection)
+	c.p.retry = make(map[string]chan struct{})
+	c.p.queue = []*connection{}
+	c.p.rCnd = sync.NewCond(c.p.RLocker())
+
+	done := make(chan struct{})
+	c.p.retry["127.0.0.1:5600"] = done
+	c.p.Unlock()
+
+	var conn *connection
+
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		conn = c.p.get()
+	}()
+
+	wg.Add(1)
+	go c.p.connect(wg, c, "127.0.0.1:5600", done)
+
+	wg.Wait()
+
+	c.p.Lock()
+	defer c.p.Unlock()
+
+	assert.Empty(t, c.p.queue)
+	assert.Empty(t, c.p.healthy)
+	assert.Empty(t, c.p.broken)
+	assert.Empty(t, c.p.retry)
+	assert.Zero(t, conn)
 }
 
 func TestProviderGetBroken(t *testing.T) {
@@ -796,6 +866,20 @@ func (d testProviderSyncDialerBrokenConn) dial(a string) (net.Conn, error) {
 	c := newTestProviderBrokenConn(a, d.err)
 	d.ch <- c
 	return c, nil
+}
+
+type testProviderBrokenDialer struct {
+	err error
+}
+
+func makeTestProviderBrokenDialer(err error) testProviderBrokenDialer {
+	return testProviderBrokenDialer{
+		err: err,
+	}
+}
+
+func (d testProviderBrokenDialer) dial(a string) (net.Conn, error) {
+	return nil, d.err
 }
 
 type testProviderConn struct {

@@ -139,7 +139,7 @@ func (p *provider) get() *connection {
 	p.RLock()
 	defer p.RUnlock()
 
-	for p.started && len(p.queue) <= 0 {
+	for len(p.queue) <= 0 && p.isConnectionExpected() {
 		p.rCnd.Wait()
 	}
 
@@ -153,6 +153,25 @@ func (p *provider) get() *connection {
 	}
 
 	return nil
+}
+
+func (p *provider) isConnectionExpected() bool {
+	if !p.started {
+		return false
+	}
+
+	if p.c.r != nil {
+		return true
+	}
+
+	count := len(p.healthy) + len(p.retry)
+	for _, dc := range p.broken {
+		if len(dc.d) > 0 {
+			count++
+		}
+	}
+
+	return count > 0
 }
 
 func (p *provider) connector(wg *sync.WaitGroup, c *client) {
@@ -208,6 +227,8 @@ func (p *provider) connect(wg *sync.WaitGroup, c *client, a string, ch <-chan st
 		p.healthy[a] = conn
 		p.queue = append(p.queue, conn)
 
+		p.rCnd.Broadcast()
+	} else if !p.isConnectionExpected() {
 		p.rCnd.Broadcast()
 	}
 }
