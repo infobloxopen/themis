@@ -63,6 +63,8 @@ const (
 	netTCPv4 = "tcp4"
 	netTCPv6 = "tcp6"
 
+	defAddress               = "localhost:5600"
+	defSocket                = "/var/run/pip.socket"
 	defMaxSize               = 10 * 1024
 	defMaxQueue              = 100
 	defBufSize               = 1024 * 1024
@@ -90,7 +92,8 @@ func NewConfigFromCommandLine(usage func()) *Config {
 	flag.IntVar(&conf.N, "n", 0, "number of requests to sent (default - all requests from input file)")
 
 	flag.StringVar(&conf.Network, "net", netTCP, "kind of destination network")
-	flag.StringVar(&conf.Address, "a", "localhost:5600", "destination address")
+	flag.StringVar(&conf.Address, "a", "", "destination address (default \"localhost:5600\" for \"tcp*\" network "+
+		"and \"/var/run/pip.socket\" for \"unix\")")
 
 	flag.Var(&conf.Servers, "s", "list of servers used to initialize balancer")
 	flag.BoolVar(&conf.RoundRobinBalancer, "round-robin", false, "use round-robin balancer")
@@ -113,6 +116,7 @@ func NewConfigFromCommandLine(usage func()) *Config {
 
 	conf.validateN()
 	conf.validateNetwork()
+	conf.validateAddress()
 	conf.validateBalancers()
 	conf.validateRadars()
 	conf.validateMaxRequestSize()
@@ -140,6 +144,16 @@ func (conf *Config) validateNetwork() {
 		os.Exit(2)
 	}
 	conf.Network = network
+}
+
+func (conf *Config) validateAddress() {
+	if len(conf.Address) <= 0 {
+		if conf.Network == netUnix {
+			conf.Address = defSocket
+		} else {
+			conf.Address = defAddress
+		}
+	}
 }
 
 func (conf *Config) validateBalancers() {
