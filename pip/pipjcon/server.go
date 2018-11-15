@@ -112,6 +112,7 @@ func (s *srv) startSrv() {
 		server.WithBufferSize(conf.bufSize),
 		server.WithMaxMessageSize(conf.maxMsgSize),
 		server.WithWriteInterval(conf.writeInt),
+		server.WithWorkers(conf.workers),
 		server.WithHandler(s.handler),
 	)
 

@@ -18,6 +18,7 @@ type config struct {
 	maxMsgSize int
 	maxArgs    int
 	writeInt   time.Duration
+	workers    int
 }
 
 const (
@@ -52,6 +53,7 @@ func init() {
 	flag.IntVar(&conf.maxArgs, "max-args", 32, "limit on number of arguments for a request")
 	flag.DurationVar(&conf.writeInt, "write-interval", 50*time.Microsecond,
 		"interval to wait for responses if output buffer isn't full")
+	flag.IntVar(&conf.workers, "w", 100, "number of workers per connection")
 
 	flag.Parse()
 

@@ -80,7 +80,10 @@ var validNets = map[string]struct{}{
 }
 
 // NewConfigFromCommandLine parses command line arguments and fills Config accordingly.
-func NewConfigFromCommandLine() *Config {
+func NewConfigFromCommandLine(usage func()) *Config {
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	flag.CommandLine.Usage = usage
+
 	conf := new(Config)
 
 	flag.StringVar(&conf.Input, "i", "requests.yaml", "path to input YAML file with requests")

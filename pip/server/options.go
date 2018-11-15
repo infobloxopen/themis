@@ -73,7 +73,18 @@ func WithWriteInterval(d time.Duration) Option {
 	}
 }
 
-// WithHandler returs an Option which sets handler for service requests. The handler must write response and return the same buffer it got. It must not change buffer capacity.
+// WithWorkers returns an Option which sets a number of workers per connection.
+func WithWorkers(n int) Option {
+	return func(o *options) {
+		if n > 0 {
+			o.workers = n
+		} else {
+			o.workers = defWorkers
+		}
+	}
+}
+
+// WithHandler returns an Option which sets handler for service requests. The handler must write response and return the same buffer it got. It must not change buffer capacity.
 func WithHandler(f ServiceHandler) Option {
 	return func(o *options) {
 		if f != nil {

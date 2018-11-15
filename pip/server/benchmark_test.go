@@ -308,7 +308,6 @@ func (c *asyncBenchClient) writer() {
 
 					c.wc++
 					c.wb += len(buf)
-					buf = buf[:0]
 				}
 
 				return

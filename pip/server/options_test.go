@@ -75,6 +75,16 @@ func TestWithWriteInterval(t *testing.T) {
 	assert.Equal(t, time.Second, o.writeInt)
 }
 
+func TestWithWorkers(t *testing.T) {
+	var o options
+
+	WithWorkers(1024)(&o)
+	assert.Equal(t, 1024, o.workers)
+
+	WithWorkers(-1)(&o)
+	assert.Equal(t, defWorkers, o.workers)
+}
+
 func TestWithHandler(t *testing.T) {
 	var o options
 

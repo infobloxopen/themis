@@ -31,7 +31,7 @@ clean:
 	@$(RM) $(BUILDPATH)
 
 .PHONY: fmt
-fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdp-itests fmt-local-selector fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-pip-server fmt-pip-client fmt-pip-gen fmt-pip-genpkg fmt-pipjcon fmt-pipcli fmt-pipcli-global fmt-pipcli-subflags fmt-pipcli-test fmt-plugin fmt-egen
+fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdp-itests fmt-local-selector fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-pip-server fmt-pip-client fmt-pip-gen fmt-pip-genpkg fmt-pipjcon fmt-pipcli fmt-pipcli-global fmt-pipcli-subflags fmt-pipcli-test fmt-pipcli-perf fmt-plugin fmt-egen
 
 .PHONY: build
 build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-egen build-pip-gen build-pipjcon build-pipcli
@@ -166,6 +166,11 @@ fmt-pipcli-subflags:
 fmt-pipcli-test:
 	@echo "Checking PIP CLI test command package format..."
 	@$(AT)/pip/pipcli/test && $(GOFMTCHECK)
+
+.PHONY: fmt-pipcli-perf
+fmt-pipcli-perf:
+	@echo "Checking PIP CLI perf command package format..."
+	@$(AT)/pip/pipcli/perf && $(GOFMTCHECK)
 
 .PHONY: fmt-plugin
 fmt-plugin:
