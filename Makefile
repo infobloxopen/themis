@@ -31,13 +31,13 @@ clean:
 	@$(RM) $(BUILDPATH)
 
 .PHONY: fmt
-fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdp-itests fmt-local-selector fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-pip-server fmt-pip-client fmt-pip-gen fmt-pip-genpkg fmt-pipjcon fmt-pipcli fmt-pipcli-global fmt-pipcli-subflags fmt-pipcli-test fmt-pipcli-perf fmt-plugin fmt-egen
+fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdp-itests fmt-local-selector fmt-pip-selector fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-pip-server fmt-pip-client fmt-pip-gen fmt-pip-genpkg fmt-pipjcon fmt-pipcli fmt-pipcli-global fmt-pipcli-subflags fmt-pipcli-test fmt-pipcli-perf fmt-plugin fmt-egen
 
 .PHONY: build
 build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-egen build-pip-gen build-pipjcon build-pipcli
 
 .PHONY: test
-test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-local-selector test-pep test-pip-server test-pip-client test-pip-genpkg test-plugin
+test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-local-selector test-pip-selector test-pep test-pip-server test-pip-client test-pip-genpkg test-plugin
 
 .PHONY: bench
 bench: bench-pep bench-pip-server bench-pip-client bench-pdpserver-pkg bench-plugin
@@ -76,6 +76,11 @@ fmt-pdp-itests:
 fmt-local-selector:
 	@echo "Checking PDP local selector format..."
 	@$(AT)/pdp/selector/local && $(GOFMTCHECK)
+
+.PHONY: fmt-pip-selector
+fmt-pip-selector:
+	@echo "Checking PDP PIP selector format..."
+	@$(AT)/pdp/selector/pip && $(GOFMTCHECK)
 
 .PHONY: fmt-pdpctrl-client
 fmt-pdpctrl-client:
@@ -245,6 +250,10 @@ test-pdp-jcon: cover-out
 .PHONY: test-local-selector
 test-local-selector: cover-out
 	$(AT)/pdp/selector/local && $(GOTESTRACE)
+
+.PHONY: test-pip-selector
+test-pip-selector: cover-out
+	$(AT)/pdp/selector/pip && $(GOTESTRACE)
 
 .PHONY: test-pep
 test-pep: build-pdpserver cover-out
