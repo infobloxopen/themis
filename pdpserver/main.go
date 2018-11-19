@@ -11,6 +11,8 @@ import (
 )
 
 func main() {
+	parseCommandLine()
+
 	logger := log.StandardLogger()
 	logger.Info("Starting PDP server")
 

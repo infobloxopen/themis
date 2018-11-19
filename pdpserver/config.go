@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"math"
+	"os"
 	"strings"
 	"time"
 
@@ -57,7 +58,9 @@ func (s *stringSet) Set(v string) error {
 
 var conf config
 
-func init() {
+func parseCommandLine() {
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
 	verbose := flag.Int("v", 1, "log verbosity (0 - error, 1 - warn (default), 2 - info, 3 - debug)")
 	flag.StringVar(&conf.policy, "p", "", "policy file to start with")
 	policyFmt := flag.String("pfmt", policyFormatNameYAML, "policy data format \"yaml\" or \"json\"")

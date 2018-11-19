@@ -17,15 +17,18 @@ type clientsPool struct {
 var (
 	pipClients = &clientsPool{
 		net: "tcp",
+		m:   make(map[string]client.Client),
 	}
 
 	pipUnixClients = &clientsPool{
 		net: "unix",
+		m:   make(map[string]client.Client),
 	}
 
 	pipK8sClients = &clientsPool{
 		net: "tcp",
 		k8s: true,
+		m:   make(map[string]client.Client),
 	}
 )
 
@@ -34,8 +37,24 @@ func (p *clientsPool) Get(addr string) (client.Client, error) {
 		return c, nil
 	}
 
+	return p.getOrNew(addr)
+}
+
+func (p *clientsPool) rawGet(addr string) (client.Client, bool) {
+	p.RLock()
+	defer p.RUnlock()
+
+	c, ok := p.m[addr]
+	return c, ok
+}
+
+func (p *clientsPool) getOrNew(addr string) (client.Client, error) {
 	p.Lock()
 	defer p.Unlock()
+
+	if c, ok := p.m[addr]; ok {
+		return c, nil
+	}
 
 	opts := []client.Option{
 		client.WithNetwork(p.net),
@@ -59,12 +78,4 @@ func (p *clientsPool) Get(addr string) (client.Client, error) {
 
 	p.m[addr] = c
 	return c, nil
-}
-
-func (p *clientsPool) rawGet(addr string) (client.Client, bool) {
-	p.RLock()
-	defer p.RUnlock()
-
-	c, ok := p.m[addr]
-	return c, ok
 }

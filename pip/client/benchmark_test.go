@@ -255,6 +255,7 @@ func (s *benchEchoServer) stop(b *testing.B) {
 		b.Fatalf("failed to start server: %s", s.err)
 	}
 }
+
 func benchEchoServerHandler(b []byte) []byte {
 	if len(b) < 4 {
 		panic("too short input buffer")

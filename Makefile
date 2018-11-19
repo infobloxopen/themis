@@ -11,6 +11,7 @@ GOTEST = go test -v
 COVER = $(GOTEST) -coverprofile=$(COVERTMP) -covermode=atomic
 JOINCOVER = cat $(COVERTMP) >> $(COVEROUT)
 GOTESTRACE = $(COVER) -race && $(JOINCOVER)
+GOTESTINTEGRACE = $(COVER) -race -coverpkg github.com/infobloxopen/themis/pdp,github.com/infobloxopen/themis/pdp/ast,github.com/infobloxopen/themis/pdp/ast/yast,github.com/infobloxopen/themis/pdp/ast/jast && $(JOINCOVER)
 GOBENCH = $(GOTEST) -run=\^\$$ -bench=
 GOBENCHALL = $(GOBENCH).
 
@@ -233,7 +234,7 @@ test-pdp: cover-out
 
 .PHONY: test-pdp-integration
 test-pdp-integration: cover-out
-	$(AT)/pdp/integration_tests && $(GOTESTRACE)
+	$(AT)/pdp/integration_tests && $(GOTESTINTEGRACE)
 
 .PHONY: test-pdp-yast
 test-pdp-yast: cover-out
