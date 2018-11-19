@@ -607,8 +607,8 @@ Each of the above numerical functions performs the respective numerical operatio
 
 ### String Collections functions
 Both set of strings and list of strings have functions, in addition to **equal** and **contains**, related to analyzing the contents of the collection as a whole:
-- **len** - accepts one argument, where the result is the length/size of the argument
-- **intersect** - accepts two arguments, where the result is the intersection of the unique values in both arguments
+- **len** - accepts one argument, where the result is the length/size of the argument.
+- **intersect** - accepts two arguments, where the result is the intersection of the unique values in both arguments; intersect's results' contents should be considered deterministic only for values present--no ordering logic or consistency should be expected.
 
 Note that like **equal**, **intersect** cannot mix string collection types (list and set); for comparing the two, convert the set of strings using **list of strings** (below).
 

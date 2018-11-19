@@ -48,7 +48,6 @@ func (f functionSetOfStringsIntersect) Calculate(ctx *Context) (AttributeValue, 
 	second := secondSet.Enumerate()
 	prev := ""
 
-	k := 1
 	for f, fok, s, sok := func() (
 		f strtree.Pair, fok bool,
 		s strtree.Pair, sok bool) {
@@ -63,9 +62,8 @@ func (f functionSetOfStringsIntersect) Calculate(ctx *Context) (AttributeValue, 
 			f, fok = <-first
 		} else {
 			if fkey != prev || res.IsEmpty() {
-				res.InplaceInsert(fkey, k)
+				res.InplaceInsert(fkey, 0)
 				prev = fkey
-				k++
 			}
 			f, fok = <-first
 			s, sok = <-second

@@ -42,12 +42,12 @@ func (f functionListOfStringsIntersect) Calculate(ctx *Context) (AttributeValue,
 		return UndefinedValue, bindError(bindError(err, "second argument"), f.describe())
 	}
 
-	values := make(map[string]bool)
+	values := make(map[string]bool, len(first))
 	for _, f := range first {
 		values[f] = false
 	}
 
-	res := make([]string, 0, int(math.Min(float64(len(first)), float64(len(second)))))
+	res := make([]string, 0, int(math.Min(float64(len(values)), float64(len(second)))))
 
 	for _, s := range second {
 		if found, ok := values[s]; ok && !found {
