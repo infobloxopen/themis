@@ -2,6 +2,7 @@ package pip
 
 import (
 	"sync"
+	"time"
 
 	"github.com/infobloxopen/themis/pip/client"
 )
@@ -11,26 +12,101 @@ type clientsPool struct {
 
 	net string
 	k8s bool
-	m   map[string]client.Client
+	m   map[string]timedClient
 }
 
-var (
-	pipClients = &clientsPool{
+func NewTCPClientsPool() *clientsPool {
+	return &clientsPool{
 		net: "tcp",
-		m:   make(map[string]client.Client),
+		m:   make(map[string]timedClient),
 	}
+}
 
-	pipUnixClients = &clientsPool{
+func NewUnixClientsPool() *clientsPool {
+	return &clientsPool{
 		net: "unix",
-		m:   make(map[string]client.Client),
+		m:   make(map[string]timedClient),
 	}
+}
 
-	pipK8sClients = &clientsPool{
+func NewK8sClientsPool() *clientsPool {
+	return &clientsPool{
 		net: "tcp",
 		k8s: true,
-		m:   make(map[string]client.Client),
+		m:   make(map[string]timedClient),
 	}
-)
+}
+
+func (p *clientsPool) cleaner(ch <-chan time.Time, done <-chan struct{}) {
+	var t *time.Ticker
+	if ch == nil {
+		t = time.NewTicker(10 * time.Second)
+		ch = t.C
+	}
+
+Loop:
+	for {
+		select {
+		case _, ok := <-done:
+			if !ok {
+				break Loop
+			}
+		case now := <-ch:
+			p.cleanupAll(now)
+		}
+	}
+
+	if t != nil {
+		t.Stop()
+	}
+
+	p.Lock()
+	defer p.Unlock()
+	for a, c := range p.m {
+		delete(p.m, a)
+		c.c.Close()
+	}
+}
+
+func (p *clientsPool) getExpired(t int64) (string, timedClient) {
+	p.RLock()
+	defer p.RUnlock()
+
+	for a, c := range p.m {
+		if c.check(t) {
+			return a, c
+		}
+	}
+
+	return "", timedClient{}
+}
+
+func (p *clientsPool) cleanup(a string, c timedClient, t int64) client.Client {
+	p.Lock()
+	defer p.Unlock()
+
+	if c.check(t) {
+		delete(p.m, a)
+		return c.c
+	}
+
+	return nil
+}
+
+func (p *clientsPool) cleanupAll(t time.Time) {
+	tns := t.UnixNano()
+
+	for {
+		a, c := p.getExpired(tns)
+		if len(a) <= 0 {
+			break
+		}
+
+		if cc := p.cleanup(a, c, tns); cc != nil {
+			cc.Close()
+		}
+	}
+}
 
 func (p *clientsPool) Get(addr string) (client.Client, error) {
 	if c, ok := p.rawGet(addr); ok {
@@ -40,12 +116,24 @@ func (p *clientsPool) Get(addr string) (client.Client, error) {
 	return p.getOrNew(addr)
 }
 
+func (p *clientsPool) Free(addr string) {
+	p.RLock()
+	defer p.RUnlock()
+
+	if c, ok := p.m[addr]; ok {
+		c.free()
+	}
+}
+
 func (p *clientsPool) rawGet(addr string) (client.Client, bool) {
 	p.RLock()
 	defer p.RUnlock()
 
-	c, ok := p.m[addr]
-	return c, ok
+	if c, ok := p.m[addr]; ok {
+		return c.markAndGet(), true
+	}
+
+	return nil, false
 }
 
 func (p *clientsPool) getOrNew(addr string) (client.Client, error) {
@@ -53,29 +141,14 @@ func (p *clientsPool) getOrNew(addr string) (client.Client, error) {
 	defer p.Unlock()
 
 	if c, ok := p.m[addr]; ok {
-		return c, nil
+		return c.markAndGet(), nil
 	}
 
-	opts := []client.Option{
-		client.WithNetwork(p.net),
-		client.WithAddress(addr),
-		client.WithHotSpotBalancer(),
-	}
-	if p.k8s {
-		opts = append(opts,
-			client.WithK8sRadar(),
-		)
-	} else {
-		opts = append(opts,
-			client.WithDNSRadar(),
-		)
-	}
-
-	c := client.NewClient(opts...)
-	if err := c.Connect(); err != nil {
+	c, err := makeTimedClient(p.net, addr, p.k8s)
+	if err != nil {
 		return nil, err
 	}
 
 	p.m[addr] = c
-	return c, nil
+	return c.markAndGet(), nil
 }

@@ -12,7 +12,9 @@ import (
 )
 
 func TestMakePipSelector(t *testing.T) {
+	pc := NewTCPClientsPool()
 	e, err := MakePipSelector(
+		pc,
 		makeTestURL("pip://localhost:5600/content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeString,
@@ -25,8 +27,8 @@ func TestMakePipSelector(t *testing.T) {
 	} else if s, ok := e.(PipSelector); !ok {
 		t.Errorf("expected PipSelector but got %T (%#v)", e, e)
 
-		if s.clients != pipClients {
-			t.Errorf("expected TCP PIP clients but got %#v", s.clients)
+		if s.clients != pc {
+			t.Errorf("expected %#v clients but got %#v", pc, s.clients)
 		}
 
 		if s.net != "tcp" {
@@ -50,7 +52,9 @@ func TestMakePipSelector(t *testing.T) {
 		}
 	}
 
+	uc := NewUnixClientsPool()
 	e, err = MakePipSelector(
+		uc,
 		makeTestURL("pip+unix:/var/run/pip.socket#content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeString,
@@ -63,8 +67,8 @@ func TestMakePipSelector(t *testing.T) {
 	} else if s, ok := e.(PipSelector); !ok {
 		t.Errorf("expected PipSelector but got %T (%#v)", e, e)
 
-		if s.clients != pipUnixClients {
-			t.Errorf("expected unix PIP clients but got %#v", s.clients)
+		if s.clients != uc {
+			t.Errorf("expected %#v clients but got %#v", uc, s.clients)
 		}
 
 		if s.net != "unix" {
@@ -88,7 +92,9 @@ func TestMakePipSelector(t *testing.T) {
 		}
 	}
 
+	kc := NewK8sClientsPool()
 	e, err = MakePipSelector(
+		kc,
 		makeTestURL("pip+k8s://value.key.namespace:5600/content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeString,
@@ -101,8 +107,8 @@ func TestMakePipSelector(t *testing.T) {
 	} else if s, ok := e.(PipSelector); !ok {
 		t.Errorf("expected PipSelector but got %T (%#v)", e, e)
 
-		if s.clients != pipK8sClients {
-			t.Errorf("expected TCP kubernetes PIP clients but got %#v", s.clients)
+		if s.clients != kc {
+			t.Errorf("expected %#v clients but got %#v", kc, s.clients)
 		}
 
 		if s.net != "tcp" {
@@ -127,6 +133,7 @@ func TestMakePipSelector(t *testing.T) {
 	}
 
 	_, err = MakePipSelector(
+		pc,
 		makeTestURL("local:content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeString,
@@ -140,7 +147,14 @@ func TestPipSelectorCalculate(t *testing.T) {
 	s := startTestEchoServer(t)
 	defer s.stop(t)
 
+	done := make(chan struct{})
+	defer close(done)
+
+	pc := NewTCPClientsPool()
+	go pc.cleaner(nil, done)
+
 	e, err := MakePipSelector(
+		pc,
 		makeTestURL("pip://localhost:5600/content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeString,

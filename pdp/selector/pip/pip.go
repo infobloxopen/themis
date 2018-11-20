@@ -14,7 +14,9 @@ const (
 	pipK8sSelectorScheme  = "pip+k8s"
 )
 
-type selector struct{}
+type selector struct {
+	pool *clientsPool
+}
 
 func (s *selector) Scheme() string {
 	return pipSelectorScheme
@@ -25,12 +27,17 @@ func (s *selector) Enabled() bool {
 }
 
 func (s *selector) SelectorFunc(uri *url.URL, path []pdp.Expression, t pdp.Type) (pdp.Expression, error) {
-	return MakePipSelector(uri, path, t)
+	return MakePipSelector(s.pool, uri, path, t)
 }
 
-func (s *selector) Initialize() {}
+func (s *selector) Initialize() {
+	s.pool = NewTCPClientsPool()
+	go s.pool.cleaner(nil, make(chan struct{}))
+}
 
-type selectorUnix struct{}
+type selectorUnix struct {
+	pool *clientsPool
+}
 
 func (s *selectorUnix) Scheme() string {
 	return pipUnixSelectorScheme
@@ -41,12 +48,17 @@ func (s *selectorUnix) Enabled() bool {
 }
 
 func (s *selectorUnix) SelectorFunc(uri *url.URL, path []pdp.Expression, t pdp.Type) (pdp.Expression, error) {
-	return MakePipSelector(uri, path, t)
+	return MakePipSelector(s.pool, uri, path, t)
 }
 
-func (s *selectorUnix) Initialize() {}
+func (s *selectorUnix) Initialize() {
+	s.pool = NewUnixClientsPool()
+	go s.pool.cleaner(nil, make(chan struct{}))
+}
 
-type selectorK8s struct{}
+type selectorK8s struct {
+	pool *clientsPool
+}
 
 func (s *selectorK8s) Scheme() string {
 	return pipK8sSelectorScheme
@@ -57,10 +69,13 @@ func (s *selectorK8s) Enabled() bool {
 }
 
 func (s *selectorK8s) SelectorFunc(uri *url.URL, path []pdp.Expression, t pdp.Type) (pdp.Expression, error) {
-	return MakePipSelector(uri, path, t)
+	return MakePipSelector(s.pool, uri, path, t)
 }
 
-func (s *selectorK8s) Initialize() {}
+func (s *selectorK8s) Initialize() {
+	s.pool = NewK8sClientsPool()
+	go s.pool.cleaner(nil, make(chan struct{}))
+}
 
 type PipSelector struct {
 	clients *clientsPool
@@ -74,11 +89,11 @@ type PipSelector struct {
 	t    pdp.Type
 }
 
-func MakePipSelector(uri *url.URL, path []pdp.Expression, t pdp.Type) (pdp.Expression, error) {
+func MakePipSelector(clients *clientsPool, uri *url.URL, path []pdp.Expression, t pdp.Type) (pdp.Expression, error) {
 	switch strings.ToLower(uri.Scheme) {
 	case pipSelectorScheme:
 		return PipSelector{
-			clients: pipClients,
+			clients: clients,
 			net:     "tcp",
 			addr:    uri.Host,
 			id:      uri.Path,
@@ -88,7 +103,7 @@ func MakePipSelector(uri *url.URL, path []pdp.Expression, t pdp.Type) (pdp.Expre
 
 	case pipUnixSelectorScheme:
 		return PipSelector{
-			clients: pipUnixClients,
+			clients: clients,
 			net:     "unix",
 			addr:    uri.Path,
 			id:      uri.Fragment,
@@ -98,7 +113,7 @@ func MakePipSelector(uri *url.URL, path []pdp.Expression, t pdp.Type) (pdp.Expre
 
 	case pipK8sSelectorScheme:
 		return PipSelector{
-			clients: pipK8sClients,
+			clients: clients,
 			net:     "tcp",
 			k8s:     true,
 			addr:    uri.Host,
@@ -130,6 +145,7 @@ func (s PipSelector) Calculate(ctx *pdp.Context) (pdp.AttributeValue, error) {
 	if err != nil {
 		return pdp.UndefinedValue, fmt.Errorf("Failed to get PIP client for %s: %s", s.addr, err)
 	}
+	defer s.clients.Free(s.addr)
 
 	r, err := c.Get(s.id, vals)
 	if err != nil {
