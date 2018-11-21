@@ -204,6 +204,16 @@ policies:
       - val:
          type: string
          content: string
+    - equal:
+      - attr: lsAttr
+      - val:
+         type: list of strings
+         content: [first, second, third]
+    - equal:
+      - attr: ssAttr
+      - val:
+         type: set of strings
+         content: [first, second, third]
     - all:
       - contains:
         - val:

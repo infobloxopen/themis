@@ -20,6 +20,8 @@ var FunctionArgumentValidators = map[string][]functionArgumentValidator{
 		functionStringEqualValidator,
 		functionIntegerEqualValidator,
 		functionFloatEqualValidator,
+		functionListOfStringsEqualValidator,
+		functionSetOfStringsEqualValidator,
 	},
 	"greater": {
 		functionIntegerGreaterValidator,
@@ -43,10 +45,12 @@ var FunctionArgumentValidators = map[string][]functionArgumentValidator{
 	},
 	"contains": {
 		functionStringContainsValidator,
+		functionListOfStringsContainsValidator,
 		functionNetworkContainsAddressValidator,
 		functionSetOfStringsContainsValidator,
 		functionSetOfNetworksContainsAddressValidator,
-		functionSetOfDomainsContainsValidator},
+		functionSetOfDomainsContainsValidator,
+	},
 	"not": {functionBooleanNotValidator},
 	"or":  {functionBooleanOrValidator},
 	"and": {functionBooleanAndValidator},
@@ -56,6 +60,14 @@ var FunctionArgumentValidators = map[string][]functionArgumentValidator{
 	},
 	"list of strings": {
 		functionListOfStringsValidator,
+	},
+	"intersect": {
+		functionListOfStringsIntersectValidator,
+		functionSetOfStringsIntersectValidator,
+	},
+	"len": {
+		functionListOfStringsLenValidator,
+		functionSetOfStringsLenValidator,
 	},
 	"concat": {
 		functionConcatValidator,

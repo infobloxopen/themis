@@ -196,7 +196,11 @@ var TargetCompatibleExpressions = map[string]map[Type]map[Type]twoArgumentsFunct
 		TypeInteger: {
 			TypeInteger: makeFunctionIntegerEqual},
 		TypeFloat: {
-			TypeFloat: makeFunctionFloatEqual}},
+			TypeFloat: makeFunctionFloatEqual},
+		TypeListOfStrings: {
+			TypeListOfStrings: makeFunctionListOfStringsEqual},
+		TypeSetOfStrings: {
+			TypeSetOfStrings: makeFunctionSetOfStringsEqual}},
 	"greater": {
 		TypeInteger: {
 			TypeInteger: makeFunctionIntegerGreater},
@@ -209,6 +213,8 @@ var TargetCompatibleExpressions = map[string]map[Type]map[Type]twoArgumentsFunct
 			TypeNetwork: makeFunctionNetworkAddressContainedByNetwork},
 		TypeNetwork: {
 			TypeAddress: makeFunctionNetworkContainsAddress},
+		TypeListOfStrings: {
+			TypeString: makeFunctionListOfStringsContains},
 		TypeSetOfStrings: {
 			TypeString: makeFunctionSetOfStringsContains},
 		TypeSetOfNetworks: {

@@ -1,6 +1,9 @@
 package pdp
 
 import (
+	"fmt"
+	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/infobloxopen/go-trees/strtree"
@@ -209,6 +212,319 @@ func TestFunctionListOfStrings(t *testing.T) {
 	m = findValidator("list of strings", MakeStringValue("test"))
 	if m != nil {
 		t.Errorf("Expected nil but got %v", m)
+	}
+}
+
+func TestListOfStringsContains(t *testing.T) {
+	ctx, err := NewContext(nil, 0, nil)
+	if err != nil {
+		t.Fatalf("Expected context but got error %s", err)
+	}
+
+	testCases := []struct {
+		a []string
+		b string
+		c bool
+	}{
+		{
+			a: []string{},
+			b: "",
+			c: false,
+		},
+		{
+			a: []string{"foo"},
+			b: "",
+			c: false,
+		},
+		{
+			a: []string{""},
+			b: "",
+			c: true,
+		},
+		{
+			a: []string{"a", "a", "b", ""},
+			b: "",
+			c: true,
+		},
+		{
+			a: []string{},
+			b: "foo",
+			c: false,
+		},
+		{
+			a: []string{"banana"},
+			b: "banana",
+			c: true,
+		},
+		{
+			a: []string{"foo", "bar"},
+			b: "foo",
+			c: true,
+		},
+		{
+			a: []string{"foo", "bar"},
+			b: "boo",
+			c: false,
+		},
+		{
+			a: []string{"foo", "bar", "boo", "boo", "mar", "foo", "boo", "foo"},
+			b: "mar",
+			c: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("List of Strings Contains %v + %v", tc.a, tc.b), func(t *testing.T) {
+			a := MakeListOfStringsValue(tc.a)
+			b := MakeStringValue(tc.b)
+			e := makeFunctionListOfStringsContains(a, b)
+
+			v, err := e.Calculate(ctx)
+			if err != nil {
+				t.Errorf("Expect Calculate() returns no error, but got '%s'", err)
+				return
+			}
+
+			res, err := v.boolean()
+			if err != nil {
+				t.Errorf("Expect boolean result with no error, but got '%s'", err)
+			} else if res != tc.c {
+				t.Errorf("Expect result '%v', but got '%v'", tc.c, res)
+			}
+		})
+	}
+}
+
+func TestListOfStringsEqual(t *testing.T) {
+	ctx, err := NewContext(nil, 0, nil)
+	if err != nil {
+		t.Fatalf("Expected context but got error %s", err)
+	}
+
+	testCases := []struct {
+		a, b []string
+		c    bool
+	}{
+		{
+			a: []string{},
+			b: []string{},
+			c: true,
+		},
+		{
+			a: []string{"foo"},
+			b: []string{},
+			c: false,
+		},
+		{
+			a: []string{"foo"},
+			b: []string{"foo"},
+			c: true,
+		},
+		{
+			a: []string{"foo"},
+			b: []string{"bar"},
+			c: false,
+		},
+		{
+			a: []string{"foo", "bar"},
+			b: []string{"foo", "bar"},
+			c: true,
+		},
+		{
+			a: []string{"foo", "foo"},
+			b: []string{"foo"},
+			c: false,
+		},
+		{
+			a: []string{"foo", "bar"},
+			b: []string{"bar", "foo"},
+			c: false,
+		},
+		{
+			a: []string{"foo", "bar", "this"},
+			b: []string{"foo", "bar", "this", "extra"},
+			c: false,
+		},
+		{
+			a: []string{"foo", "bar", "for", "bor", "far", "bao"},
+			b: []string{"foo", "bar", "for", "bor", "far", "bao"},
+			c: true,
+		},
+		{
+			a: []string{"foo", "bar", "for", "bor", "far", "bao"},
+			b: []string{"foo", "bar", "for", "bor", "nar", "bao"},
+			c: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("List of Strings Equal %v + %v", tc.a, tc.b), func(t *testing.T) {
+			a := MakeListOfStringsValue(tc.a)
+			b := MakeListOfStringsValue(tc.b)
+			e := makeFunctionListOfStringsEqual(a, b)
+
+			v, err := e.Calculate(ctx)
+			if err != nil {
+				t.Errorf("Expect Calculate() returns no error, but got '%s'", err)
+				return
+			}
+
+			res, err := v.boolean()
+			if err != nil {
+				t.Errorf("Expect boolean result with no error, but got '%s'", err)
+			} else if res != tc.c {
+				t.Errorf("Expect result '%v', but got '%v'", tc.c, res)
+			}
+		})
+	}
+}
+
+func TestListOfStringsIntersect(t *testing.T) {
+	ctx, err := NewContext(nil, 0, nil)
+	if err != nil {
+		t.Fatalf("Expected context but got error %s", err)
+	}
+
+	testCases := []struct {
+		a, b, c []string
+	}{
+		{
+			a: []string{},
+			b: []string{},
+			c: []string{},
+		},
+		{
+			a: []string{"foo"},
+			b: []string{},
+			c: []string{},
+		},
+		{
+			a: []string{},
+			b: []string{"foo"},
+			c: []string{},
+		},
+		{
+			a: []string{"foo", "bar", "doo"},
+			b: []string{"boo", "mar", "aoo"},
+			c: []string{},
+		},
+		{
+			a: []string{"foo", "bar"},
+			b: []string{"boo", "mar", "foo"},
+			c: []string{"foo"},
+		},
+		{
+			a: []string{"boo", "mar", "foo"},
+			b: []string{"foo", "bar"},
+			c: []string{"foo"},
+		},
+		{
+			a: []string{"foo", "bar", "boo"},
+			b: []string{"boo", "mar", "foo"},
+			c: []string{"boo", "foo"},
+		},
+		{
+			a: []string{"boo", "mar", "foo"},
+			b: []string{"foo", "bar", "boo"},
+			c: []string{"boo", "foo"},
+		},
+		{
+			a: []string{"foo", "foo", "bar", "bar", "bar"},
+			b: []string{"bar", "foo", "foo", "moo"},
+			c: []string{"bar", "foo"},
+		},
+		{
+			a: []string{"bar", "foo", "foo", "moo"},
+			b: []string{"foo", "foo", "bar", "bar", "bar"},
+			c: []string{"bar", "foo"},
+		},
+		{
+			a: []string{"1", "2", "2", "3", "3", "3", "4", "4", "4", "4"},
+			b: []string{"4", "3", "3", "2", "2", "2", "1", "1", "1", "1"},
+			c: []string{"1", "2", "3", "4"},
+		},
+		{
+			a: []string{"4", "3", "3", "2", "2", "2", "1", "1", "1", "1"},
+			b: []string{"1", "2", "2", "3", "3", "3", "4", "4", "4", "4"},
+			c: []string{"1", "2", "3", "4"},
+		},
+		{
+			a: []string{"foo", "bar", "far", "boo", "for", "for"},
+			b: []string{"foo", "foo", "foo", "foo", "foo", "foo", "bar", "foo"},
+			c: []string{"bar", "foo"},
+		},
+		{
+			a: []string{"foo", "foo", "foo", "foo", "foo", "foo", "bar", "foo"},
+			b: []string{"foo", "bar", "far", "boo", "for", "for"},
+			c: []string{"bar", "foo"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("List of Strings Intersect %v + %v", tc.a, tc.b), func(t *testing.T) {
+			a := MakeListOfStringsValue(tc.a)
+			b := MakeListOfStringsValue(tc.b)
+			e := makeFunctionListOfStringsIntersect(a, b)
+			sort.Strings(tc.c)
+
+			v, err := e.Calculate(ctx)
+			if err != nil {
+				t.Errorf("Expect Calculate() returns no error, but got '%s'", err)
+				return
+			}
+
+			res, err := v.listOfStrings()
+			if err != nil {
+				t.Errorf("Expect list of strings result with no error, but got '%s'", err)
+			} else if sort.Strings(res); !reflect.DeepEqual(tc.c, res) {
+				t.Errorf("Expect result '%v', but got '%v'", tc.c, res)
+			}
+		})
+	}
+}
+
+func TestListOfStringsLen(t *testing.T) {
+	ctx, err := NewContext(nil, 0, nil)
+	if err != nil {
+		t.Fatalf("Expected context but got error %s", err)
+	}
+
+	testCases := []struct {
+		a []string
+		b int64
+	}{
+		{
+			a: []string{},
+			b: 0,
+		},
+		{
+			a: []string{"foo", "bar"},
+			b: 2,
+		},
+		{
+			a: []string{"foo", "bar", "boo", "boo", "mar", "foo", "boo", "foo"},
+			b: 8,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("List of Strings Len %v", tc.a), func(t *testing.T) {
+			a := MakeListOfStringsValue(tc.a)
+			e := makeFunctionListOfStringsLen(a)
+
+			v, err := e.Calculate(ctx)
+			if err != nil {
+				t.Errorf("Expect Calculate() returns no error, but got '%s'", err)
+				return
+			}
+
+			res, err := v.integer()
+			if err != nil {
+				t.Errorf("Expect integer result with no error, but got '%s'", err)
+			} else if res != tc.b {
+				t.Errorf("Expect result '%v', but got '%v'", tc.b, res)
+			}
+		})
 	}
 }
 
