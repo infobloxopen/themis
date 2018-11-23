@@ -1,6 +1,9 @@
 package pdp
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // FlagsType instance represents cutom flags type.
 type FlagsType struct {
@@ -97,4 +100,22 @@ func (t *FlagsType) GetFlagBit(f string) int {
 	}
 
 	return -1
+}
+
+var abstractFlagTypes = make([]Type, 0, 64)
+
+func init() {
+	flags := make([]string, 64)
+	for i := range flags {
+		flags[i] = fmt.Sprintf("f%02d", i+1)
+	}
+
+	for i := range flags {
+		ft, err := NewFlagsType(fmt.Sprintf("abstractSetOfFlags%02d", i+1), flags[:i+1]...)
+		if err != nil {
+			panic(err)
+		}
+
+		abstractFlagTypes = append(abstractFlagTypes, ft)
+	}
 }

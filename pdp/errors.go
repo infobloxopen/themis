@@ -138,62 +138,63 @@ const (
 	requestAttributeCountErrorID                          = 121
 	requestAttributeMarshallingTypeErrorID                = 122
 	requestAttributeUnmarshallingTypeErrorID              = 123
-	requestAttributeUnmarshallingBooleanTypeErrorID       = 124
-	requestAttributeUnmarshallingStringTypeErrorID        = 125
-	requestAttributeUnmarshallingIntegerTypeErrorID       = 126
-	requestAttributeUnmarshallingFloatTypeErrorID         = 127
-	requestAttributeUnmarshallingAddressTypeErrorID       = 128
-	requestAttributeUnmarshallingNetworkTypeErrorID       = 129
-	requestAttributeUnmarshallingDomainTypeErrorID        = 130
-	requestAttributeUnmarshallingSetOfStringsTypeErrorID  = 131
-	requestAttributeUnmarshallingSetOfNetworksTypeErrorID = 132
-	requestAttributeUnmarshallingSetOfDomainsTypeErrorID  = 133
-	requestAttributeUnmarshallingListOfStringsTypeErrorID = 134
-	requestAttributeMarshallingNotImplementedErrorID      = 135
-	requestAttributeUnmarshallingNotImplementedErrorID    = 136
-	requestTooLongAttributeNameErrorID                    = 137
-	requestTooLongStringValueErrorID                      = 138
-	requestAddressValueErrorID                            = 139
-	requestInvalidNetworkValueErrorID                     = 140
-	requestIPv4InvalidMaskErrorID                         = 141
-	requestIPv6InvalidMaskErrorID                         = 142
-	requestTooLongCollectionValueErrorID                  = 143
-	requestInvalidExpressionErrorID                       = 144
-	requestAssignmentsOverflowErrorID                     = 145
-	requestValuesOverflowErrorID                          = 146
-	requestUnmarshalEffectConstErrorID                    = 147
-	requestUnmarshalEffectTypeErrorID                     = 148
-	requestUnmarshalStatusConstErrorID                    = 149
-	requestUnmarshalStatusTypeErrorID                     = 150
-	requestUnmarshalBooleanConstErrorID                   = 151
-	requestUnmarshalBooleanTypeErrorID                    = 152
-	requestUnmarshalStringConstErrorID                    = 153
-	requestUnmarshalStringTypeErrorID                     = 154
-	requestUnmarshalIntegerConstErrorID                   = 155
-	requestUnmarshalIntegerTypeErrorID                    = 156
-	requestUnmarshalIntegerOverflowErrorID                = 157
-	requestUnmarshalIntegerUnderflowErrorID               = 158
-	requestUnmarshalFloatConstErrorID                     = 159
-	requestUnmarshalFloatTypeErrorID                      = 160
-	requestUnmarshalAddressConstErrorID                   = 161
-	requestUnmarshalAddressTypeErrorID                    = 162
-	requestUnmarshalNetworkConstErrorID                   = 163
-	requestUnmarshalNetworkTypeErrorID                    = 164
-	requestUnmarshalDomainConstErrorID                    = 165
-	requestUnmarshalDomainTypeErrorID                     = 166
-	requestUnmarshalSetOfStringsConstErrorID              = 167
-	requestUnmarshalSetOfStringsTypeErrorID               = 168
-	requestUnmarshalSetOfNetworksConstErrorID             = 169
-	requestUnmarshalSetOfNetworksTypeErrorID              = 170
-	requestUnmarshalSetOfDomainsConstErrorID              = 171
-	requestUnmarshalSetOfDomainsTypeErrorID               = 172
-	requestUnmarshalListOfStringsConstErrorID             = 173
-	requestUnmarshalListOfStringsTypeErrorID              = 174
-	responseEffectErrorID                                 = 175
-	ResponseServerErrorID                                 = 176
-	policyCalculationErrorID                              = 177
-	obligationCalculationErrorID                          = 178
-	noInformationalErrorID                                = 179
+	requestAttributeUnmarshallingFlagsSizeErrorID         = 124
+	requestAttributeUnmarshallingBooleanTypeErrorID       = 125
+	requestAttributeUnmarshallingStringTypeErrorID        = 126
+	requestAttributeUnmarshallingIntegerTypeErrorID       = 127
+	requestAttributeUnmarshallingFloatTypeErrorID         = 128
+	requestAttributeUnmarshallingAddressTypeErrorID       = 129
+	requestAttributeUnmarshallingNetworkTypeErrorID       = 130
+	requestAttributeUnmarshallingDomainTypeErrorID        = 131
+	requestAttributeUnmarshallingSetOfStringsTypeErrorID  = 132
+	requestAttributeUnmarshallingSetOfNetworksTypeErrorID = 133
+	requestAttributeUnmarshallingSetOfDomainsTypeErrorID  = 134
+	requestAttributeUnmarshallingListOfStringsTypeErrorID = 135
+	requestAttributeMarshallingNotImplementedErrorID      = 136
+	requestAttributeUnmarshallingNotImplementedErrorID    = 137
+	requestTooLongAttributeNameErrorID                    = 138
+	requestTooLongStringValueErrorID                      = 139
+	requestAddressValueErrorID                            = 140
+	requestInvalidNetworkValueErrorID                     = 141
+	requestIPv4InvalidMaskErrorID                         = 142
+	requestIPv6InvalidMaskErrorID                         = 143
+	requestTooLongCollectionValueErrorID                  = 144
+	requestInvalidExpressionErrorID                       = 145
+	requestAssignmentsOverflowErrorID                     = 146
+	requestValuesOverflowErrorID                          = 147
+	requestUnmarshalEffectConstErrorID                    = 148
+	requestUnmarshalEffectTypeErrorID                     = 149
+	requestUnmarshalStatusConstErrorID                    = 150
+	requestUnmarshalStatusTypeErrorID                     = 151
+	requestUnmarshalBooleanConstErrorID                   = 152
+	requestUnmarshalBooleanTypeErrorID                    = 153
+	requestUnmarshalStringConstErrorID                    = 154
+	requestUnmarshalStringTypeErrorID                     = 155
+	requestUnmarshalIntegerConstErrorID                   = 156
+	requestUnmarshalIntegerTypeErrorID                    = 157
+	requestUnmarshalIntegerOverflowErrorID                = 158
+	requestUnmarshalIntegerUnderflowErrorID               = 159
+	requestUnmarshalFloatConstErrorID                     = 160
+	requestUnmarshalFloatTypeErrorID                      = 161
+	requestUnmarshalAddressConstErrorID                   = 162
+	requestUnmarshalAddressTypeErrorID                    = 163
+	requestUnmarshalNetworkConstErrorID                   = 164
+	requestUnmarshalNetworkTypeErrorID                    = 165
+	requestUnmarshalDomainConstErrorID                    = 166
+	requestUnmarshalDomainTypeErrorID                     = 167
+	requestUnmarshalSetOfStringsConstErrorID              = 168
+	requestUnmarshalSetOfStringsTypeErrorID               = 169
+	requestUnmarshalSetOfNetworksConstErrorID             = 170
+	requestUnmarshalSetOfNetworksTypeErrorID              = 171
+	requestUnmarshalSetOfDomainsConstErrorID              = 172
+	requestUnmarshalSetOfDomainsTypeErrorID               = 173
+	requestUnmarshalListOfStringsConstErrorID             = 174
+	requestUnmarshalListOfStringsTypeErrorID              = 175
+	responseEffectErrorID                                 = 176
+	ResponseServerErrorID                                 = 177
+	policyCalculationErrorID                              = 178
+	obligationCalculationErrorID                          = 179
+	noInformationalErrorID                                = 180
 )
 
 type externalError struct {
@@ -2154,6 +2155,21 @@ func newRequestAttributeUnmarshallingTypeError(t int) *requestAttributeUnmarshal
 
 func (e *requestAttributeUnmarshallingTypeError) Error() string {
 	return e.errorf("Unknown attribute type in request %d", e.t)
+}
+
+type requestAttributeUnmarshallingFlagsSizeError struct {
+	errorLink
+	s int
+}
+
+func newRequestAttributeUnmarshallingFlagsSizeError(s int) *requestAttributeUnmarshallingFlagsSizeError {
+	return &requestAttributeUnmarshallingFlagsSizeError{
+		errorLink: errorLink{id: requestAttributeUnmarshallingFlagsSizeErrorID},
+		s:         s}
+}
+
+func (e *requestAttributeUnmarshallingFlagsSizeError) Error() string {
+	return e.errorf("Expected total number of flags from 1 to 64 but got %d", e.s)
 }
 
 type requestAttributeUnmarshallingBooleanTypeError struct {

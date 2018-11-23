@@ -1019,6 +1019,119 @@ func TestGetRequestListOfStringsValue(t *testing.T) {
 	}
 }
 
+func TestGetRequestAbstractSetOfFlagsValue(t *testing.T) {
+	testWireSetOfFlags8Value := []byte{
+		8, 0x55,
+	}
+
+	v, s, n, err := getRequestAbstractSetOfFlagsValue(testWireSetOfFlags8Value)
+	if err != nil {
+		t.Error(err)
+	} else if n != len(testWireSetOfFlags8Value) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireSetOfFlags8Value), n)
+	} else {
+		if s != 8 {
+			t.Errorf("expected %d flags size but got %d", 8, s)
+		}
+
+		if v != 0x55 {
+			t.Errorf("expected 0x%02x flags value but got 0x%02x", 0x55, v)
+		}
+	}
+
+	testWireSetOfFlags16Value := []byte{
+		16, 0x55, 0x55,
+	}
+
+	v, s, n, err = getRequestAbstractSetOfFlagsValue(testWireSetOfFlags16Value)
+	if err != nil {
+		t.Error(err)
+	} else if n != len(testWireSetOfFlags16Value) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireSetOfFlags16Value), n)
+	} else {
+		if s != 16 {
+			t.Errorf("expected %d flags size but got %d", 16, s)
+		}
+
+		if v != 0x5555 {
+			t.Errorf("expected 0x%04x flags value but got 0x%04x", 0x5555, v)
+		}
+	}
+
+	testWireSetOfFlags32Value := []byte{
+		32, 0x55, 0x55, 0x55, 0x55,
+	}
+
+	v, s, n, err = getRequestAbstractSetOfFlagsValue(testWireSetOfFlags32Value)
+	if err != nil {
+		t.Error(err)
+	} else if n != len(testWireSetOfFlags32Value) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireSetOfFlags32Value), n)
+	} else {
+		if s != 32 {
+			t.Errorf("expected %d flags size but got %d", 32, s)
+		}
+
+		if v != 0x55555555 {
+			t.Errorf("expected 0x%08x flags value but got 0x%08x", 0x55555555, v)
+		}
+	}
+
+	testWireSetOfFlags64Value := []byte{
+		64, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+	}
+
+	v, s, n, err = getRequestAbstractSetOfFlagsValue(testWireSetOfFlags64Value)
+	if err != nil {
+		t.Error(err)
+	} else if n != len(testWireSetOfFlags64Value) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireSetOfFlags64Value), n)
+	} else {
+		if s != 64 {
+			t.Errorf("expected %d flags size but got %d", 64, s)
+		}
+
+		if v != 0x5555555555555555 {
+			t.Errorf("expected 0x%016x flags value but got 0x%016x", 0x5555555555555555, v)
+		}
+	}
+
+	v, s, _, err = getRequestAbstractSetOfFlagsValue([]byte{})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got set of flags (%d) 0x%016x", s, v)
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, s, _, err = getRequestAbstractSetOfFlagsValue(testWireSetOfFlags8Value[:1])
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got set of flags (%d) 0x%016x", s, v)
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, s, _, err = getRequestAbstractSetOfFlagsValue(testWireSetOfFlags16Value[:2])
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got set of flags (%d) 0x%016x", s, v)
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, s, _, err = getRequestAbstractSetOfFlagsValue(testWireSetOfFlags32Value[:4])
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got set of flags (%d) 0x%016x", s, v)
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, s, _, err = getRequestAbstractSetOfFlagsValue(testWireSetOfFlags64Value[:8])
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got set of flags (%d) 0x%016x", s, v)
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+}
+
 func TestGetInfoRequestBooleanValue(t *testing.T) {
 	v, out, err := GetInfoRequestBooleanValue([]byte{byte(requestWireTypeBooleanFalse)})
 	if err != nil {
@@ -1899,6 +2012,94 @@ func TestGetRequestAttributeValueWithType(t *testing.T) {
 		}
 	}
 
+	testWireSetOfFlags8Value := []byte{
+		8, 0x07,
+	}
+	v, n, err = getRequestAttributeValueWithType(requestWireTypeSetOfFlags, testWireSetOfFlags8Value)
+	if err != nil {
+		t.Error(err)
+	} else if n != len(testWireSetOfFlags8Value) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireSetOfFlags8Value), n)
+	} else if vt := v.GetResultType(); vt != abstractFlagTypes[7] {
+		t.Errorf("expected value of %q type but got %q %s", abstractFlagTypes[7], vt, v.describe())
+	} else {
+		s, err := v.Serialize()
+		if err != nil {
+			t.Error(err)
+		} else {
+			e := "\"f01\",\"f02\",\"f03\""
+			if s != e {
+				t.Errorf("expected %q but got %q", e, s)
+			}
+		}
+	}
+
+	testWireSetOfFlags16Value := []byte{
+		16, 0x07, 0x00,
+	}
+	v, n, err = getRequestAttributeValueWithType(requestWireTypeSetOfFlags, testWireSetOfFlags16Value)
+	if err != nil {
+		t.Error(err)
+	} else if n != len(testWireSetOfFlags16Value) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireSetOfFlags16Value), n)
+	} else if vt := v.GetResultType(); vt != abstractFlagTypes[15] {
+		t.Errorf("expected value of %q type but got %q %s", abstractFlagTypes[15], vt, v.describe())
+	} else {
+		s, err := v.Serialize()
+		if err != nil {
+			t.Error(err)
+		} else {
+			e := "\"f01\",\"f02\",\"f03\""
+			if s != e {
+				t.Errorf("expected %q but got %q", e, s)
+			}
+		}
+	}
+
+	testWireSetOfFlags32Value := []byte{
+		32, 0x07, 0x00, 0x00, 0x00,
+	}
+	v, n, err = getRequestAttributeValueWithType(requestWireTypeSetOfFlags, testWireSetOfFlags32Value)
+	if err != nil {
+		t.Error(err)
+	} else if n != len(testWireSetOfFlags32Value) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireSetOfFlags32Value), n)
+	} else if vt := v.GetResultType(); vt != abstractFlagTypes[31] {
+		t.Errorf("expected value of %q type but got %q %s", abstractFlagTypes[31], vt, v.describe())
+	} else {
+		s, err := v.Serialize()
+		if err != nil {
+			t.Error(err)
+		} else {
+			e := "\"f01\",\"f02\",\"f03\""
+			if s != e {
+				t.Errorf("expected %q but got %q", e, s)
+			}
+		}
+	}
+
+	testWireSetOfFlags64Value := []byte{
+		64, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	}
+	v, n, err = getRequestAttributeValueWithType(requestWireTypeSetOfFlags, testWireSetOfFlags64Value)
+	if err != nil {
+		t.Error(err)
+	} else if n != len(testWireSetOfFlags64Value) {
+		t.Errorf("expected whole buffer consumed (%d) but got (%d)", len(testWireSetOfFlags64Value), n)
+	} else if vt := v.GetResultType(); vt != abstractFlagTypes[63] {
+		t.Errorf("expected value of %q type but got %q %s", abstractFlagTypes[63], vt, v.describe())
+	} else {
+		s, err := v.Serialize()
+		if err != nil {
+			t.Error(err)
+		} else {
+			e := "\"f01\",\"f02\",\"f03\""
+			if s != e {
+				t.Errorf("expected %q but got %q", e, s)
+			}
+		}
+	}
+
 	v, _, err = getRequestAttributeValueWithType(255, []byte{})
 	if err == nil {
 		t.Errorf("expected *requestAttributeUnmarshallingTypeError but got %s", v.describe())
@@ -2020,6 +2221,24 @@ func TestGetRequestAttributeValueWithType(t *testing.T) {
 		t.Errorf("expected *requestBufferUnderflowError but got %s", v.describe())
 	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
 		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, _, err = getRequestAttributeValueWithType(requestWireTypeSetOfFlags, []byte{
+		64, 0x55, 0x55, 0x55, 0x55,
+	})
+	if err == nil {
+		t.Errorf("expected *requestBufferUnderflowError but got %s", v.describe())
+	} else if _, ok := err.(*requestBufferUnderflowError); !ok {
+		t.Errorf("expected *requestBufferUnderflowError but got %T (%s)", err, err)
+	}
+
+	v, _, err = getRequestAttributeValueWithType(requestWireTypeSetOfFlags, []byte{
+		72, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+	})
+	if err == nil {
+		t.Errorf("expected *requestAttributeUnmarshallingFlagsSizeError but got %s", v.describe())
+	} else if _, ok := err.(*requestAttributeUnmarshallingFlagsSizeError); !ok {
+		t.Errorf("expected *requestAttributeUnmarshallingFlagsSizeError but got %T (%s)", err, err)
 	}
 }
 
@@ -2264,6 +2483,26 @@ func TestPutRequestAttributeValue(t *testing.T) {
 		3, 0, 'o', 'n', 'e',
 		3, 0, 't', 'w', 'o',
 		5, 0, 't', 'h', 'r', 'e', 'e',
+	)
+
+	n, err = putRequestAttributeValue(b[:3], MakeFlagsValue8(0x55, abstractFlagTypes[7]))
+	assertRequestBytesBuffer(t, "putRequestAttributeValue(set of flags 8)", err, b[:3], n,
+		byte(requestWireTypeSetOfFlags), 8, 0x55,
+	)
+
+	n, err = putRequestAttributeValue(b[:4], MakeFlagsValue16(0x5555, abstractFlagTypes[15]))
+	assertRequestBytesBuffer(t, "putRequestAttributeValue(set of flags 16)", err, b[:4], n,
+		byte(requestWireTypeSetOfFlags), 16, 0x55, 0x55,
+	)
+
+	n, err = putRequestAttributeValue(b[:6], MakeFlagsValue32(0x55555555, abstractFlagTypes[31]))
+	assertRequestBytesBuffer(t, "putRequestAttributeValue(set of flags 32)", err, b[:6], n,
+		byte(requestWireTypeSetOfFlags), 32, 0x55, 0x55, 0x55, 0x55,
+	)
+
+	n, err = putRequestAttributeValue(b[:10], MakeFlagsValue64(0x5555555555555555, abstractFlagTypes[63]))
+	assertRequestBytesBuffer(t, "putRequestAttributeValue(set of flags 64)", err, b[:10], n,
+		byte(requestWireTypeSetOfFlags), 64, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
 	)
 
 	n, err = putRequestAttributeValue(b[:], UndefinedValue)
@@ -2780,6 +3019,66 @@ func TestPutRequestListOfStringsValue(t *testing.T) {
 	} else if _, ok := err.(*requestTooLongStringValueError); !ok {
 		t.Errorf("expected *requestTooLongStringValueError but got %T (%s)", err, err)
 	}
+}
+
+func TestPutRequestSetOfFlags8Value(t *testing.T) {
+	var b [3]byte
+
+	n, err := putRequestSetOfFlags8Value(b[:], 0x55, abstractFlagTypes[7].(*FlagsType))
+	assertRequestBytesBuffer(t, "putRequestSetOfFlags8Value", err, b[:], n,
+		byte(requestWireTypeSetOfFlags), 8, 0x55,
+	)
+
+	n, err = putRequestSetOfFlags8Value(nil, 0x55, abstractFlagTypes[7].(*FlagsType))
+	assertRequestBufferOverflow(t, "putRequestSetOfFlags8Value", err, n)
+
+	n, err = putRequestSetOfFlags8Value(b[:1], 0x55, abstractFlagTypes[7].(*FlagsType))
+	assertRequestBufferOverflow(t, "putRequestSetOfFlags8Value(buffer)", err, n)
+}
+
+func TestPutRequestSetOfFlags16Value(t *testing.T) {
+	var b [4]byte
+
+	n, err := putRequestSetOfFlags16Value(b[:], 0x5555, abstractFlagTypes[15].(*FlagsType))
+	assertRequestBytesBuffer(t, "putRequestSetOfFlags16Value", err, b[:], n,
+		byte(requestWireTypeSetOfFlags), 16, 0x55, 0x55,
+	)
+
+	n, err = putRequestSetOfFlags16Value(nil, 0x5555, abstractFlagTypes[15].(*FlagsType))
+	assertRequestBufferOverflow(t, "putRequestSetOfFlags16Value", err, n)
+
+	n, err = putRequestSetOfFlags16Value(b[:1], 0x5555, abstractFlagTypes[15].(*FlagsType))
+	assertRequestBufferOverflow(t, "putRequestSetOfFlags16Value(buffer)", err, n)
+}
+
+func TestPutRequestSetOfFlags32Value(t *testing.T) {
+	var b [6]byte
+
+	n, err := putRequestSetOfFlags32Value(b[:], 0x55555555, abstractFlagTypes[31].(*FlagsType))
+	assertRequestBytesBuffer(t, "putRequestSetOfFlags32Value", err, b[:], n,
+		byte(requestWireTypeSetOfFlags), 32, 0x55, 0x55, 0x55, 0x55,
+	)
+
+	n, err = putRequestSetOfFlags32Value(nil, 0x55555555, abstractFlagTypes[31].(*FlagsType))
+	assertRequestBufferOverflow(t, "putRequestSetOfFlags32Value", err, n)
+
+	n, err = putRequestSetOfFlags32Value(b[:1], 0x55555555, abstractFlagTypes[31].(*FlagsType))
+	assertRequestBufferOverflow(t, "putRequestSetOfFlags32Value(buffer)", err, n)
+}
+
+func TestPutRequestSetOfFlags64Value(t *testing.T) {
+	var b [10]byte
+
+	n, err := putRequestSetOfFlags64Value(b[:], 0x5555555555555555, abstractFlagTypes[63].(*FlagsType))
+	assertRequestBytesBuffer(t, "putRequestSetOfFlags64Value", err, b[:], n,
+		byte(requestWireTypeSetOfFlags), 64, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+	)
+
+	n, err = putRequestSetOfFlags64Value(nil, 0x5555555555555555, abstractFlagTypes[63].(*FlagsType))
+	assertRequestBufferOverflow(t, "putRequestSetOfFlags64Value", err, n)
+
+	n, err = putRequestSetOfFlags64Value(b[:1], 0x5555555555555555, abstractFlagTypes[63].(*FlagsType))
+	assertRequestBufferOverflow(t, "putRequestSetOfFlags64Value(buffer)", err, n)
 }
 
 func TestCalcRequestSize(t *testing.T) {

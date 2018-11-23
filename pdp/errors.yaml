@@ -1074,6 +1074,14 @@ errors:
   args:
   - field: t
 
+- id: requestAttributeUnmarshallingFlagsSizeError
+  fields:
+  - id: s
+    type: int
+  msg: "Expected total number of flags from 1 to 64 but got %d"
+  args:
+  - field: s
+
 - id: requestAttributeUnmarshallingBooleanTypeError
   fields:
   - id: t

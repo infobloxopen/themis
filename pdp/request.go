@@ -30,6 +30,7 @@ const (
 	requestWireTypeSetOfNetworks
 	requestWireTypeSetOfDomains
 	requestWireTypeListOfStrings
+	requestWireTypeSetOfFlags
 
 	requestWireTypesTotal
 )
@@ -50,6 +51,7 @@ var (
 		"set of networks",
 		"set of domains",
 		"list of strings",
+		"set of flags",
 	}
 
 	builtinTypeByWire = []Type{
@@ -453,6 +455,24 @@ func putRequestAttribute(b []byte, name string, value AttributeValue) (int, erro
 
 func putRequestAttributeValue(b []byte, value AttributeValue) (int, error) {
 	t := value.GetResultType()
+	if t, ok := t.(*FlagsType); ok {
+		switch t.c {
+		case 8:
+			v, _ := value.flags8()
+			return putRequestSetOfFlags8Value(b, v, t)
+
+		case 16:
+			v, _ := value.flags16()
+			return putRequestSetOfFlags16Value(b, v, t)
+
+		case 32:
+			v, _ := value.flags32()
+			return putRequestSetOfFlags32Value(b, v, t)
+		}
+
+		v, _ := value.flags64()
+		return putRequestSetOfFlags64Value(b, v, t)
+	}
 
 	switch t {
 	case TypeBoolean:
@@ -634,6 +654,31 @@ func getRequestAttributeValueWithType(t int, b []byte) (AttributeValue, int, err
 		}
 
 		return MakeListOfStringsValue(ls), n, nil
+
+	case requestWireTypeSetOfFlags:
+		v, s, n, err := getRequestAbstractSetOfFlagsValue(b)
+		if err != nil {
+			return UndefinedValue, 0, err
+		}
+
+		if s <= 0 || s > len(abstractFlagTypes)+1 {
+			return UndefinedValue, 0, newRequestAttributeUnmarshallingFlagsSizeError(s)
+		}
+
+		ft := abstractFlagTypes[s-1]
+
+		switch {
+		case s <= 8:
+			return MakeFlagsValue8(uint8(v), ft), n, nil
+
+		case s <= 16:
+			return MakeFlagsValue16(uint16(v), ft), n, nil
+
+		case s <= 32:
+			return MakeFlagsValue32(uint32(v), ft), n, nil
+		}
+
+		return MakeFlagsValue64(v, ft), n, nil
 	}
 
 	return UndefinedValue, 0, newRequestAttributeUnmarshallingTypeError(t)
@@ -1583,6 +1628,74 @@ func putRequestListOfStringsValue(b []byte, value []string) (int, error) {
 	return off, nil
 }
 
+func putRequestSetOfFlags8Value(b []byte, value uint8, t *FlagsType) (int, error) {
+	off, err := putRequestAttributeType(b, requestWireTypeSetOfFlags)
+	if err != nil {
+		return 0, err
+	}
+
+	total := reqSmallCounterSize + 1
+	if len(b[off:]) < total {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	b[off] = byte(len(t.b))
+	b[off+1] = value
+
+	return off + total, nil
+}
+
+func putRequestSetOfFlags16Value(b []byte, value uint16, t *FlagsType) (int, error) {
+	off, err := putRequestAttributeType(b, requestWireTypeSetOfFlags)
+	if err != nil {
+		return 0, err
+	}
+
+	total := reqSmallCounterSize + 2
+	if len(b[off:]) < total {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	b[off] = byte(len(t.b))
+	binary.LittleEndian.PutUint16(b[off+1:], value)
+
+	return off + total, nil
+}
+
+func putRequestSetOfFlags32Value(b []byte, value uint32, t *FlagsType) (int, error) {
+	off, err := putRequestAttributeType(b, requestWireTypeSetOfFlags)
+	if err != nil {
+		return 0, err
+	}
+
+	total := reqSmallCounterSize + 4
+	if len(b[off:]) < total {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	b[off] = byte(len(t.b))
+	binary.LittleEndian.PutUint32(b[off+1:], value)
+
+	return off + total, nil
+}
+
+func putRequestSetOfFlags64Value(b []byte, value uint64, t *FlagsType) (int, error) {
+	off, err := putRequestAttributeType(b, requestWireTypeSetOfFlags)
+	if err != nil {
+		return 0, err
+	}
+
+	total := reqSmallCounterSize + 8
+	if len(b[off:]) < total {
+		return 0, newRequestBufferOverflowError()
+	}
+
+	b[off] = byte(len(t.b))
+	binary.LittleEndian.PutUint64(b[off+1:], value)
+
+	return off + total, nil
+}
+
 func getRequestListOfStringsValue(b []byte) ([]string, int, error) {
 	if len(b) < reqBigCounterSize {
 		return nil, 0, newRequestBufferUnderflowError()
@@ -1625,6 +1738,44 @@ func GetInfoRequestListOfStringsValue(b []byte) ([]string, []byte, error) {
 	}
 
 	return v, b[n:], nil
+}
+
+func getRequestAbstractSetOfFlagsValue(b []byte) (uint64, int, int, error) {
+	if len(b) < reqSmallCounterSize {
+		return 0, 0, 0, newRequestBufferUnderflowError()
+	}
+
+	s := int(b[0])
+	b = b[1:]
+
+	switch {
+	case s <= 8:
+		if len(b) < 1 {
+			return 0, 0, 0, newRequestBufferUnderflowError()
+		}
+
+		return uint64(b[0]), s, reqSmallCounterSize + 1, nil
+
+	case s <= 16:
+		if len(b) < 2 {
+			return 0, 0, 0, newRequestBufferUnderflowError()
+		}
+
+		return uint64(binary.LittleEndian.Uint16(b)), s, reqSmallCounterSize + 2, nil
+
+	case s <= 32:
+		if len(b) < 4 {
+			return 0, 0, 0, newRequestBufferUnderflowError()
+		}
+
+		return uint64(binary.LittleEndian.Uint32(b)), s, reqSmallCounterSize + 4, nil
+	}
+
+	if len(b) < 8 {
+		return 0, 0, 0, newRequestBufferUnderflowError()
+	}
+
+	return binary.LittleEndian.Uint64(b), s, reqSmallCounterSize + 8, nil
 }
 
 func calcRequestSize(in []AttributeAssignment) (int, error) {
