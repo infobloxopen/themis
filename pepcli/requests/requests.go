@@ -22,7 +22,7 @@ type requests struct {
 	Requests   []map[string]interface{}
 }
 
-// Load reads given YAML file and porduces list of requests to run.
+// Load reads given YAML file and produces list of requests to run.
 func Load(name string, size uint32) ([]pb.Msg, error) {
 	b, err := ioutil.ReadFile(name)
 	if err != nil {
@@ -80,7 +80,8 @@ var marshallers = map[pdp.Type]attributeMarshaller{
 	pdp.TypeFloat:   floatMarshaller,
 	pdp.TypeAddress: addressMarshaller,
 	pdp.TypeNetwork: networkMarshaller,
-	pdp.TypeDomain:  domainMarshaller}
+	pdp.TypeDomain:  domainMarshaller,
+	pdp.TypeListOfStrings: listOfStringsMarshaller}
 
 func makeAttribute(name string, value interface{}, symbols map[string]pdp.Type) (pdp.AttributeAssignment, error) {
 	t, ok := symbols[name]
@@ -120,6 +121,9 @@ func guessType(value interface{}) (pdp.Type, error) {
 		return pdp.TypeNetwork, nil
 	case *net.IPNet:
 		return pdp.TypeNetwork, nil
+	case []interface{}: // []string is same thing--go tests for []interface{}
+		// TODO put in check for subtype string here
+		return pdp.TypeListOfStrings, nil
 	}
 
 	return pdp.TypeUndefined, fmt.Errorf("marshaling hasn't been implemented for %T", value)
@@ -264,4 +268,26 @@ func domainMarshaller(value interface{}) (pdp.AttributeValue, error) {
 	}
 
 	return pdp.MakeDomainValue(d), nil
+}
+
+func listOfStringsMarshaller(value interface{}) (pdp.AttributeValue, error) {
+	v, ok := value.([]interface{})
+	if !ok {
+		return pdp.UndefinedValue, fmt.Errorf("can't marshal %T as list of interface{}", value)
+	}
+	if len(v) == 0 {
+		return pdp.MakeListOfStringsValue([]string{}), nil
+	}
+
+	los := make([]string, len(v))
+	for i, s := range v {
+		switch value := s.(type) {
+		case string:
+			los[i] = value
+		default:
+			return pdp.UndefinedValue, fmt.Errorf("can't marshal %T as string in list of strings", s)
+		}
+	}
+
+	return pdp.MakeListOfStringsValue(los), nil
 }
