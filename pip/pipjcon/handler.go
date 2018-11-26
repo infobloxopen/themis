@@ -46,6 +46,10 @@ func (s *srv) process(b []byte) (pdp.AttributeValue, error) {
 		return pdp.UndefinedValue, err
 	}
 
+	if path[0] == '/' {
+		path = path[1:]
+	}
+
 	loc := strings.Split(path, "/")
 	if len(loc) != 2 {
 		return pdp.UndefinedValue, fmt.Errorf("expected path in form of <Content-ID>/<Item-ID> got %s", path)
