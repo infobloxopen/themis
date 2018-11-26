@@ -34,10 +34,14 @@ func Exec(addr string, opts []pep.Option, maxRequestSize, maxResponseObligations
 	}
 	defer c.Close()
 
-	recs, err := measurement(c, n, v.(config).parallel, v.(config).limit, reqs, maxResponseObligations)
+	recs, err := measurement(c, n, v.(config).parallel, v.(config).limit, v.(config).noDump, reqs, maxResponseObligations)
 	if err != nil {
 		return err
 	}
 
-	return dump(recs, out)
+	if len(recs) > 0 {
+		return dump(recs, out)
+	}
+
+	return nil
 }
