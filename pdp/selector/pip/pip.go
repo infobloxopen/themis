@@ -77,6 +77,7 @@ func (s *selectorK8s) Initialize() {
 	go s.pool.cleaner(nil, make(chan struct{}))
 }
 
+// PipSelector represents selector for Unified PIP.
 type PipSelector struct {
 	clients *clientsPool
 
@@ -89,6 +90,8 @@ type PipSelector struct {
 	t    pdp.Type
 }
 
+// MakePipSelector creates an expression base on PIP selector. Client pool must
+// correspond to URI schema.
 func MakePipSelector(clients *clientsPool, uri *url.URL, path []pdp.Expression, t pdp.Type) (pdp.Expression, error) {
 	switch strings.ToLower(uri.Scheme) {
 	case pipSelectorScheme:
@@ -126,10 +129,14 @@ func MakePipSelector(clients *clientsPool, uri *url.URL, path []pdp.Expression, 
 	return PipSelector{}, fmt.Errorf("Unknown pip selector scheme %q", uri.Scheme)
 }
 
+// GetResultType implements pdp.Expression interface and returns type of
+// selector's result.
 func (s PipSelector) GetResultType() pdp.Type {
 	return s.t
 }
 
+// Calculate implements pdp.Expression interface and obtains result from
+// unified PIP for given context.
 func (s PipSelector) Calculate(ctx *pdp.Context) (pdp.AttributeValue, error) {
 	vals := make([]pdp.AttributeValue, 0, len(s.path))
 	for i, item := range s.path {

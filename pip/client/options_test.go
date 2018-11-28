@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/infobloxopen/themis/pdp"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -83,6 +85,42 @@ func TestWithConnErrHandler(t *testing.T) {
 	f := func(net.Addr, error) {}
 	WithConnErrHandler(f)(&o)
 	assert.Equal(t, reflect.ValueOf(f).Pointer(), reflect.ValueOf(o.onErr).Pointer())
+}
+
+func TestWithCacheTTL(t *testing.T) {
+	var o options
+
+	WithCacheTTL(time.Minute)(&o)
+	assert.True(t, o.cache)
+	assert.Equal(t, time.Minute, o.cacheTTL)
+	assert.Zero(t, o.cacheMaxSize)
+
+	WithCacheTTL(-1 * time.Second)(&o)
+	assert.True(t, o.cache)
+	assert.Zero(t, o.cacheTTL)
+	assert.Zero(t, o.cacheMaxSize)
+}
+
+func TestWithCacheTTLAndMaxSize(t *testing.T) {
+	var o options
+
+	WithCacheTTLAndMaxSize(time.Minute, 1024*1024)(&o)
+	assert.True(t, o.cache)
+	assert.Equal(t, time.Minute, o.cacheTTL)
+	assert.Equal(t, 1024*1024, o.cacheMaxSize)
+
+	WithCacheTTLAndMaxSize(-1*time.Second, -1)(&o)
+	assert.True(t, o.cache)
+	assert.Zero(t, o.cacheTTL)
+	assert.Zero(t, o.cacheMaxSize)
+}
+
+func TestWithCacheHitHandler(t *testing.T) {
+	var o options
+
+	f := func(string, []pdp.AttributeValue, pdp.AttributeValue, error) {}
+	WithCacheHitHandler(f)(&o)
+	assert.Equal(t, reflect.ValueOf(f).Pointer(), reflect.ValueOf(o.onCache).Pointer())
 }
 
 func TestWithConnTimeout(t *testing.T) {

@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	_ "github.com/infobloxopen/themis/pdp/selector"
+	"github.com/infobloxopen/themis/pdp/selector/pip"
 	"github.com/infobloxopen/themis/pdpserver/server"
 )
 
@@ -15,6 +16,16 @@ func main() {
 
 	logger := log.StandardLogger()
 	logger.Info("Starting PDP server")
+
+	if !conf.pipNoCache {
+		if conf.pipCacheMaxSize > 0 {
+			pip.SetCacheWithTTLAndMaxSize(conf.pipCacheTTL, conf.pipCacheMaxSize)
+		} else {
+			pip.SetCacheWithTTL(conf.pipCacheTTL)
+		}
+	} else {
+		pip.ClearCache()
+	}
 
 	pdp := server.NewServer(
 		server.WithLogger(logger),

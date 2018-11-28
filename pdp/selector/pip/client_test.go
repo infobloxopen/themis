@@ -6,6 +6,143 @@ import (
 	"time"
 )
 
+func TestSetClientTTL(t *testing.T) {
+	defer SetClientTTL(time.Minute)
+
+	SetClientTTL(time.Hour)
+	if d := atomic.LoadInt64(clientTTL); d != time.Hour.Nanoseconds() {
+		t.Errorf("expected %s TTL but got %s", time.Hour, time.Duration(d))
+	}
+}
+
+func TestSetBalancer(t *testing.T) {
+	defer SetHotSpotBalancer()
+
+	SetRoundRobinBalancer()
+	if b := atomic.LoadInt64(isHotSpot); b != 0 {
+		t.Errorf("expected %d but got %d", 0, b)
+	}
+
+	SetHotSpotBalancer()
+	if b := atomic.LoadInt64(isHotSpot); b != 1 {
+		t.Errorf("expected %d but got %d", 1, b)
+	}
+}
+
+func TestCacheOptions(t *testing.T) {
+	defer ClearCache()
+
+	SetCacheWithTTL(time.Hour)
+	v := cacheOpts.Load()
+	if v == nil {
+		t.Error("expected cache options but got nothing")
+	} else if co, ok := v.(cacheOptions); ok {
+		if !co.cache {
+			t.Errorf("expected cache enabled but got %#v", co.cache)
+		}
+
+		if co.ttl != time.Hour {
+			t.Errorf("expected %s TTL but got %s", time.Hour, co.ttl)
+		}
+
+		if co.size != 0 {
+			t.Errorf("expected no size limit but got %d", co.size)
+		}
+	} else {
+		t.Errorf("expected cacheOptions but got %T (%#v)", v, v)
+	}
+
+	SetCacheWithTTLAndMaxSize(time.Minute, 1024*1024)
+	v = cacheOpts.Load()
+	if v == nil {
+		t.Error("expected cache options but got nothing")
+	} else if co, ok := v.(cacheOptions); ok {
+		if !co.cache {
+			t.Errorf("expected cache enabled but got %#v", co.cache)
+		}
+
+		if co.ttl != time.Minute {
+			t.Errorf("expected %s TTL but got %s", time.Minute, co.ttl)
+		}
+
+		if co.size != 1024*1024 {
+			t.Errorf("expected %d size limit but got %d", 1024*1024, co.size)
+		}
+	} else {
+		t.Errorf("expected cacheOptions but got %T (%#v)", v, v)
+	}
+
+	ClearCache()
+	v = cacheOpts.Load()
+	if v == nil {
+		t.Error("expected cache options but got nothing")
+	} else if co, ok := v.(cacheOptions); ok {
+		if co.cache {
+			t.Errorf("expected cache disabled but got %#v", co.cache)
+		}
+
+		if co.ttl != 0 {
+			t.Errorf("expected %s TTL but got %s", time.Duration(0), co.ttl)
+		}
+
+		if co.size != 0 {
+			t.Errorf("expected no size limit but got %d", co.size)
+		}
+	} else {
+		t.Errorf("expected cacheOptions but got %T (%#v)", v, v)
+	}
+}
+
+func TestMakeClientOptions(t *testing.T) {
+	opts := makeClientOptions("tcp", "localhost:5600", false)
+	if len(opts) <= 0 {
+		t.Errorf("expected some options but got %#v", opts)
+	}
+}
+
+func TestMakeBalancerOption(t *testing.T) {
+	defer SetHotSpotBalancer()
+
+	SetRoundRobinBalancer()
+	if opt := makeBalancerOption(); opt == nil {
+		t.Error("expected some option")
+	}
+
+	SetHotSpotBalancer()
+	if opt := makeBalancerOption(); opt == nil {
+		t.Error("expected some option")
+	}
+}
+
+func TestMakeRadarOption(t *testing.T) {
+	if opt := makeRadarOption(true); opt == nil {
+		t.Error("expected some option")
+	}
+
+	if opt := makeRadarOption(false); opt == nil {
+		t.Error("expected some option")
+	}
+}
+
+func TestMakeCacheOptions(t *testing.T) {
+	defer ClearCache()
+
+	SetCacheWithTTL(time.Minute)
+	if opts := makeCacheOptions(); len(opts) != 1 {
+		t.Errorf("expected an option but got %#v", opts)
+	}
+
+	SetCacheWithTTLAndMaxSize(time.Minute, 1024*1024)
+	if opts := makeCacheOptions(); len(opts) != 1 {
+		t.Errorf("expected an option but got %#v", opts)
+	}
+
+	ClearCache()
+	if opts := makeCacheOptions(); len(opts) != 0 {
+		t.Errorf("expected no options but got %#v", opts)
+	}
+}
+
 func TestMakeTimedClient(t *testing.T) {
 	c, err := makeTimedClient("tcp", "localhost:5600", false)
 	if err != nil {

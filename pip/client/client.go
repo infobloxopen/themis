@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/allegro/bigcache"
+
 	"github.com/infobloxopen/themis/pdp"
 )
 
@@ -56,9 +58,10 @@ type client struct {
 	state *uint32
 	pool  byteBufferPool
 
-	d dialer
-	r radar
-	p *provider
+	d     dialer
+	r     radar
+	p     *provider
+	cache *bigcache.BigCache
 
 	autoID *uint64
 }
@@ -80,12 +83,18 @@ func (c *client) Connect() error {
 		atomic.StoreUint32(c.state, state)
 	}()
 
+	cache, err := newCacheFromOptions(c.opts)
+	if err != nil {
+		return err
+	}
+
 	addrs, r, err := c.newAddressesAndRadar()
 	if err != nil {
 		return err
 	}
 
 	c.r = r
+	c.cache = cache
 	c.p.start(c, addrs)
 
 	state = pipClientConnected
@@ -100,6 +109,11 @@ func (c *client) Close() {
 	defer atomic.StoreUint32(c.state, pipClientIdle)
 
 	c.p.stop()
+
+	if c.cache != nil {
+		c.cache.Reset()
+		c.cache = nil
+	}
 }
 
 func (c *client) Get(path string, args []pdp.AttributeValue) (pdp.AttributeValue, error) {
@@ -133,6 +147,31 @@ func (c *client) tryGet(path string, args []pdp.AttributeValue) (pdp.AttributeVa
 	}
 	b.b = b.b[:n]
 
+	var (
+		key   string
+		cache *bigcache.BigCache
+	)
+
+	if c.cache != nil {
+		cache = c.cache
+		key = string(b.b)
+
+		var out []byte
+		if out, err = cache.Get(key); err == nil {
+			var v pdp.AttributeValue
+			v, err = pdp.UnmarshalInfoResponse(out)
+			if err != nil {
+				return pdp.UndefinedValue, false, err
+			}
+
+			if c.opts.onCache != nil {
+				c.opts.onCache(path, args, v, err)
+			}
+
+			return v, false, nil
+		}
+	}
+
 	b, err = conn.get(b)
 	if err != nil {
 		c.p.report(conn)
@@ -147,6 +186,10 @@ func (c *client) tryGet(path string, args []pdp.AttributeValue) (pdp.AttributeVa
 
 		c.p.report(conn)
 		return pdp.UndefinedValue, true, err
+	}
+
+	if cache != nil {
+		cache.Set(key, b.b)
 	}
 
 	return v, false, nil

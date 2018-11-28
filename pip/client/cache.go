@@ -1,4 +1,4 @@
-package pep
+package client
 
 import (
 	"math"
@@ -12,7 +12,7 @@ func newCacheFromOptions(opts options) (*bigcache.BigCache, error) {
 	}
 
 	cfg := bigcache.DefaultConfig(opts.cacheTTL)
-	cfg.MaxEntrySize = int(opts.maxRequestSize)
+	cfg.MaxEntrySize = int(opts.maxSize)
 	cfg.HardMaxCacheSize = opts.cacheMaxSize
 
 	return bigcache.NewBigCache(adjustCacheConfig(cfg))

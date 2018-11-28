@@ -7,6 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/infobloxopen/themis/pdp"
 	"github.com/infobloxopen/themis/pip/server"
@@ -66,6 +67,54 @@ func BenchmarkParallel(b *testing.B) {
 	idx := 0
 
 	b.Run("BenchmarkParallel", func(b *testing.B) {
+		idx++
+		*p = 0
+		b.SetParallelism(N)
+		b.RunParallel(func(pb *testing.PB) {
+			atomic.AddInt64(p, 1)
+			for pb.Next() {
+				v, err := c.Get("test", a)
+				if err != nil {
+					panic(fmt.Errorf("failed to get data: %s", err))
+				}
+
+				s, err := v.Serialize()
+				if err != nil {
+					panic(fmt.Errorf("failed to serialize returned value: %s", err))
+				}
+
+				if s != "test" {
+					panic(fmt.Errorf("expected %q but got %q", "test", s))
+				}
+			}
+		})
+	})
+
+	b.Logf("number of goroutines: %d (GOMAXPROCS=%d)", *p, gmp)
+}
+
+func BenchmarkWithCache(b *testing.B) {
+	s := startBenchEchoServer(b)
+	defer s.stop(b)
+
+	a := []pdp.AttributeValue{
+		pdp.MakeStringValue("test"),
+	}
+
+	gmp := runtime.GOMAXPROCS(0)
+	c := NewClient(
+		WithMaxQueue(N*gmp),
+		WithCacheTTL(time.Minute),
+	)
+	if err := c.Connect(); err != nil {
+		b.Fatalf("failed to connect to server %s", err)
+	}
+	defer c.Close()
+
+	p := new(int64)
+	idx := 0
+
+	b.Run("BenchmarkWithCache", func(b *testing.B) {
 		idx++
 		*p = 0
 		b.SetParallelism(N)

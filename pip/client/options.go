@@ -7,6 +7,8 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/infobloxopen/themis/pdp"
 )
 
 // An Option allows to set such options as address, balancer and so on.
@@ -131,6 +133,53 @@ func WithConnErrHandler(f ConnErrHandler) Option {
 	}
 }
 
+// WithCacheTTL returns an Option which adds cache with given TTL for cached
+// requests. Cache size isn't limited in the case and can consume all available
+// memory on machine.
+func WithCacheTTL(d time.Duration) Option {
+	return func(o *options) {
+		o.cache = true
+
+		if d >= 0 {
+			o.cacheTTL = d
+		} else {
+			o.cacheTTL = 0
+		}
+	}
+}
+
+// WithCacheTTLAndMaxSize returns an Option which adds cache with given TTL
+// and size limit for entire cache in MB. When the limit is reached then new
+// requests override the oldest ones.
+func WithCacheTTLAndMaxSize(d time.Duration, size int) Option {
+	return func(o *options) {
+		o.cache = true
+
+		if d >= 0 {
+			o.cacheTTL = d
+		} else {
+			o.cacheTTL = 0
+		}
+
+		if size >= 0 {
+			o.cacheMaxSize = size
+		} else {
+			o.cacheMaxSize = 0
+		}
+	}
+}
+
+// CacheHitHandler defines a function prototype to call on each cache hit
+// if cache has been enabled.
+type CacheHitHandler func(path string, args []pdp.AttributeValue, v pdp.AttributeValue, err error)
+
+// WithCacheHitHandler returns an Option which sets handler for cache hits.
+func WithCacheHitHandler(h CacheHitHandler) Option {
+	return func(o *options) {
+		o.onCache = h
+	}
+}
+
 // WithConnTimeout returns an Option which sets connection timeout.
 func WithConnTimeout(d time.Duration) Option {
 	return func(o *options) {
@@ -180,6 +229,10 @@ type options struct {
 	maxQueue           int
 	bufSize            int
 	onErr              ConnErrHandler
+	cache              bool
+	cacheTTL           time.Duration
+	cacheMaxSize       int
+	onCache            CacheHitHandler
 	radar              int
 	radarInt           time.Duration
 	connTimeout        time.Duration

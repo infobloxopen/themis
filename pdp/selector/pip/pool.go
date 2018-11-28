@@ -15,6 +15,7 @@ type clientsPool struct {
 	m   map[string]timedClient
 }
 
+// NewTCPClientsPool creates PIP clients pool for "pip" selector schema.
 func NewTCPClientsPool() *clientsPool {
 	return &clientsPool{
 		net: "tcp",
@@ -22,6 +23,7 @@ func NewTCPClientsPool() *clientsPool {
 	}
 }
 
+// NewUnixClientsPool creates PIP clients pool for "pip+unix" selector schema.
 func NewUnixClientsPool() *clientsPool {
 	return &clientsPool{
 		net: "unix",
@@ -29,6 +31,7 @@ func NewUnixClientsPool() *clientsPool {
 	}
 }
 
+// NewK8sClientsPool creates PIP clients pool for "pip+k8s" selector schema.
 func NewK8sClientsPool() *clientsPool {
 	return &clientsPool{
 		net: "tcp",

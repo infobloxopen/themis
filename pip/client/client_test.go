@@ -129,6 +129,37 @@ func TestClientClose(t *testing.T) {
 	}
 }
 
+func TestClientCloseWithCache(t *testing.T) {
+	s := newTestServerForClient(t,
+		server.WithHandler(testServerForClientHandler),
+	)
+	defer s.stop(t)
+
+	c := NewClient(
+		WithCacheTTL(time.Minute),
+	)
+
+	if assert.NoError(t, c.Connect()) {
+		if cc, ok := c.(*client); assert.True(t, ok) {
+			assert.NotZero(t, cc.cache)
+		}
+
+		c.Close()
+		if cc, ok := c.(*client); assert.True(t, ok) {
+			assert.Equal(t, pipClientIdle, atomic.LoadUint32(cc.state))
+		}
+
+		if cc, ok := c.(*client); assert.True(t, ok) {
+			assert.Zero(t, cc.cache)
+		}
+
+		c.Close()
+		if cc, ok := c.(*client); assert.True(t, ok) {
+			assert.Equal(t, pipClientIdle, atomic.LoadUint32(cc.state))
+		}
+	}
+}
+
 func TestClientCloseWithDifferentRequests(t *testing.T) {
 	sc, err := net.Listen(defNet, defAddr)
 	if !assert.NoError(t, err) {
@@ -252,6 +283,40 @@ func TestClientTryGet(t *testing.T) {
 		assert.Equal(t, pdp.MakeStringValue("test"), v)
 		assert.False(t, ok)
 		assert.NoError(t, err)
+	}
+}
+
+func TestClientTryGetWithCache(t *testing.T) {
+	s := newTestServerForClient(t,
+		server.WithHandler(testServerForClientHandler),
+	)
+	defer s.stop(t)
+
+	hits := 0
+	c := NewClient(
+		WithCacheTTL(time.Minute),
+		WithCacheHitHandler(func(string, []pdp.AttributeValue, pdp.AttributeValue, error) {
+			hits++
+		}),
+	).(*client)
+	if err := c.Connect(); assert.NoError(t, err) {
+		defer c.Close()
+
+		assert.Zero(t, c.cache.Len())
+
+		v, ok, err := c.tryGet("test", []pdp.AttributeValue{pdp.MakeStringValue("test")})
+		assert.Equal(t, pdp.MakeStringValue("test"), v)
+		assert.False(t, ok)
+		assert.NoError(t, err)
+		assert.Equal(t, 1, c.cache.Len())
+		assert.Zero(t, hits)
+
+		v, ok, err = c.tryGet("test", []pdp.AttributeValue{pdp.MakeStringValue("test")})
+		assert.Equal(t, pdp.MakeStringValue("test"), v)
+		assert.False(t, ok)
+		assert.NoError(t, err)
+		assert.Equal(t, 1, c.cache.Len())
+		assert.Equal(t, 1, hits)
 	}
 }
 
