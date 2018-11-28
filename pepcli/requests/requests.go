@@ -74,13 +74,13 @@ func Load(name string, size uint32) ([]pb.Msg, error) {
 type attributeMarshaller func(value interface{}) (pdp.AttributeValue, error)
 
 var marshallers = map[pdp.Type]attributeMarshaller{
-	pdp.TypeBoolean: booleanMarshaller,
-	pdp.TypeString:  stringMarshaller,
-	pdp.TypeInteger: integerMarshaller,
-	pdp.TypeFloat:   floatMarshaller,
-	pdp.TypeAddress: addressMarshaller,
-	pdp.TypeNetwork: networkMarshaller,
-	pdp.TypeDomain:  domainMarshaller,
+	pdp.TypeBoolean:       booleanMarshaller,
+	pdp.TypeString:        stringMarshaller,
+	pdp.TypeInteger:       integerMarshaller,
+	pdp.TypeFloat:         floatMarshaller,
+	pdp.TypeAddress:       addressMarshaller,
+	pdp.TypeNetwork:       networkMarshaller,
+	pdp.TypeDomain:        domainMarshaller,
 	pdp.TypeListOfStrings: listOfStringsMarshaller}
 
 func makeAttribute(name string, value interface{}, symbols map[string]pdp.Type) (pdp.AttributeAssignment, error) {
@@ -110,7 +110,7 @@ func makeAttribute(name string, value interface{}, symbols map[string]pdp.Type) 
 }
 
 func guessType(value interface{}) (pdp.Type, error) {
-	switch value.(type) {
+	switch value := value.(type) {
 	case bool:
 		return pdp.TypeBoolean, nil
 	case string:
@@ -121,9 +121,14 @@ func guessType(value interface{}) (pdp.Type, error) {
 		return pdp.TypeNetwork, nil
 	case *net.IPNet:
 		return pdp.TypeNetwork, nil
-	case []interface{}: // []string is same thing--go tests for []interface{}
-		// TODO put in check for subtype string here
-		return pdp.TypeListOfStrings, nil
+	case []interface{}:
+		if len(value) == 0 {
+			return pdp.TypeUndefined, fmt.Errorf("unable to unmarshal empty array of unknown type %T", value)
+		}
+		switch value[0].(type) {
+		case string:
+			return pdp.TypeListOfStrings, nil
+		}
 	}
 
 	return pdp.TypeUndefined, fmt.Errorf("marshaling hasn't been implemented for %T", value)
@@ -280,10 +285,10 @@ func listOfStringsMarshaller(value interface{}) (pdp.AttributeValue, error) {
 	}
 
 	los := make([]string, len(v))
-	for i, s := range v {
+	for _, s := range v {
 		switch value := s.(type) {
 		case string:
-			los[i] = value
+			los = append(los, value)
 		default:
 			return pdp.UndefinedValue, fmt.Errorf("can't marshal %T as string in list of strings", s)
 		}
