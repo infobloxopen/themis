@@ -278,7 +278,7 @@ func domainMarshaller(value interface{}) (pdp.AttributeValue, error) {
 func listOfStringsMarshaller(value interface{}) (pdp.AttributeValue, error) {
 	v, ok := value.([]interface{})
 	if !ok {
-		return pdp.UndefinedValue, fmt.Errorf("can't marshal %T as list of interface{}", value)
+		return pdp.UndefinedValue, fmt.Errorf("can't marshal %T as list of string", value)
 	}
 	if len(v) == 0 {
 		return pdp.MakeListOfStringsValue([]string{}), nil

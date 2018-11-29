@@ -1,0 +1,32 @@
+attributes:
+  ls: list of strings
+  i: list of strings
+
+policies:
+  alg: FirstApplicableEffect
+  obligations:
+  - i:
+      intersect:
+      - val:
+          type: list of strings
+          content:
+          - foo
+          - bar
+      - attr: ls
+  rules:
+  - effect: Permit
+    condition:
+      not:
+      - equal:
+        - len:
+          - intersect:
+            - val:
+                type: list of strings
+                content:
+                - foo
+                - bar
+            - attr: ls
+        - val:
+            type: integer
+            content: 0
+  - effect: Deny
