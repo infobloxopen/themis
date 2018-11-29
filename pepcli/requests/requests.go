@@ -20,8 +20,9 @@ import (
 )
 
 const (
-	YAML = "yaml"
-	JSON = "json"
+	YAML          = "yaml"
+	JSON          = "json"
+	MaxFloat64Int = 1 << 53 // 9,007,199,254,740,992--the maximum IEEE-754 double float integer is not a golang const
 )
 
 type requests struct {
@@ -211,7 +212,7 @@ func integerMarshaller(value interface{}) (pdp.AttributeValue, error) {
 		err = fmt.Errorf("can't marshal %T (%d) as int64", value, value)
 
 	case float64:
-		if value > -9007199254740992 && value < 9007199254740992 {
+		if value > -MaxFloat64Int && value < MaxFloat64Int {
 			return pdp.MakeIntegerValue(int64(value)), nil
 		}
 		err = fmt.Errorf("can't marshal %T (%g) as int64", value, value)
