@@ -48,7 +48,7 @@ python grinder.py -o test.html -t Test ./
 The latest command collects all test-&lt;number&gt;.json files and creates report based on all of them.
 
 ## Formats
-PEPCLI expects requests as YAML file. The file should contain two sections **attributes** and **requests**. Attributes section represents map which defines attribute and its type. Requests section lists all requests. Each request is a map of attribute name to its value:
+PEPCLI can take in PDP requests as a filepath pointing to a YAML or JSON file, or raw JSON. This guide will use requests as a YAML file. The file should contain two sections **attributes** and **requests**. Attributes section represents map which defines attribute and its type. Requests section lists all requests. Each request is a map of attribute name to its value:
 ```yaml
 attributes:
   s: string

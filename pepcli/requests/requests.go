@@ -4,11 +4,13 @@ package requests
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-service && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/service.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-service && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-service"
 
 import (
+	"encoding/json"
 	"fmt"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"math"
 	"net"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -17,22 +19,48 @@ import (
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
+const (
+	YAML = "yaml"
+	JSON = "json"
+)
+
 type requests struct {
 	Attributes map[string]string
 	Requests   []map[string]interface{}
 }
 
-// Load reads given YAML file and produces list of requests to run.
-func Load(name string, size uint32) ([]pb.Msg, error) {
-	b, err := ioutil.ReadFile(name)
-	if err != nil {
-		return nil, err
-	}
-
+// Load reads given data--if it is a filepath that ends in a yaml or json extension and can be read,
+// the respective unmarshaler will be used; otherwise, the input is processed as raw JSON.
+func Load(data string, size uint32) ([]pb.Msg, error) {
 	in := &requests{}
-	err = yaml.Unmarshal(b, in)
-	if err != nil {
-		return nil, err
+
+	switch strings.TrimLeft(strings.ToLower(filepath.Ext(data)), ".") {
+	case YAML:
+		b, err := ioutil.ReadFile(data)
+		if err != nil {
+			return nil, err
+		}
+
+		err = yaml.Unmarshal(b, in)
+		if err != nil {
+			return nil, err
+		}
+	case JSON:
+		b, err := ioutil.ReadFile(data)
+		if err != nil {
+			return nil, err
+		}
+
+		err = json.Unmarshal(b, in)
+		if err != nil {
+			return nil, err
+		}
+	default: // assuming JSON-formatted string
+		err := json.Unmarshal([]byte(data), in)
+
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	symbols := make(map[string]pdp.Type)
