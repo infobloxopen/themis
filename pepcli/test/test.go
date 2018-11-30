@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/infobloxopen/themis/pdp"
@@ -60,7 +61,7 @@ func Exec(addr string, opts []pep.Option, maxRequestSize, maxResponseObligations
 			return fmt.Errorf("can't send request %d (%d): %s", idx, i, err)
 		}
 
-		err = dump(res, f)
+		err = dump(res, f, v.(config).sort)
 		if err != nil {
 			return fmt.Errorf("can't dump response for reqiest %d (%d): %s", idx, i, err)
 		}
@@ -69,7 +70,9 @@ func Exec(addr string, opts []pep.Option, maxRequestSize, maxResponseObligations
 	return nil
 }
 
-func dump(r pdp.Response, f io.Writer) error {
+// dump prints the pdp response to the writer; if the boolean s is set to true, dump will
+// sort the list of strings pdp return value for deterministic automated testing
+func dump(r pdp.Response, f io.Writer, s bool) error {
 	lines := []string{fmt.Sprintf("- effect: %s", pdp.EffectNameFromEnum(r.Effect))}
 	if r.Status != nil {
 		lines = append(lines, fmt.Sprintf("  reason: %q", r.Status))
@@ -83,6 +86,10 @@ func dump(r pdp.Response, f io.Writer) error {
 				return fmt.Errorf("can't get %d obligation: %s", i+1, err)
 			}
 
+			if s && t == "list of strings" {
+				v = sortDelimitedListOfStrings(v, ",")
+			}
+
 			lines = append(lines, fmt.Sprintf("    - id: %q", id))
 			lines = append(lines, fmt.Sprintf("      type: %q", t))
 			lines = append(lines, fmt.Sprintf("      value: %q", v))
@@ -94,4 +101,13 @@ func dump(r pdp.Response, f io.Writer) error {
 
 	_, err := fmt.Fprintf(f, "%s\n", strings.Join(lines, "\n"))
 	return err
+}
+
+func sortDelimitedListOfStrings(unsortedCommaList string, delimiter string) string {
+	list := strings.Split(unsortedCommaList, delimiter)
+	for i := range list {
+		list[i] = strings.TrimSpace(list[i])
+	}
+	sort.Strings(list)
+	return strings.Join(list, delimiter)
 }
