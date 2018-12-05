@@ -11,6 +11,7 @@ import (
 	"github.com/infobloxopen/themis/pdp"
 	"github.com/infobloxopen/themis/pep"
 
+	"encoding/json"
 	"github.com/infobloxopen/themis/pepcli/requests"
 )
 
@@ -87,7 +88,11 @@ func dump(r pdp.Response, f io.Writer, s bool) error {
 			}
 
 			if s && t == "list of strings" {
-				v = sortDelimitedListOfStrings(v, ",")
+				if list, err := sortListOfStrings(v, ","); err == nil {
+					v = list
+				} else {
+					return fmt.Errorf("can't sort list of strings: %s", err)
+				}
 			}
 
 			lines = append(lines, fmt.Sprintf("    - id: %q", id))
@@ -103,11 +108,14 @@ func dump(r pdp.Response, f io.Writer, s bool) error {
 	return err
 }
 
-func sortDelimitedListOfStrings(unsortedCommaList string, delimiter string) string {
-	list := strings.Split(unsortedCommaList, delimiter)
+func sortListOfStrings(unsortedList, delimiter string) (string, error) {
+	var list []string
+	if err := json.Unmarshal([]byte("["+unsortedList+"]"), &list); err != nil {
+		return "", err
+	}
 	for i := range list {
-		list[i] = strings.TrimSpace(list[i])
+		list[i] = "\"" + strings.TrimSpace(list[i]) + "\""
 	}
 	sort.Strings(list)
-	return strings.Join(list, delimiter)
+	return strings.Join(list, delimiter), nil
 }

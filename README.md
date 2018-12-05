@@ -767,7 +767,7 @@ Other pdpserver options:
 - `-v` - log verbosity (0 - error, 1 - warn (default), 2 - info, 3 - debug).
 
 ## Requests
-To make decision requests there are 3 options. Create client from scratch which implements protocol defined by `proto/service.proto`, use golang client package `themis\pep` to implement client application (see `contrib/coredns/policy`) and for debug use simple PEPCLI client. To use PEPCLI client create requests YAML file for example:
+To make decision requests, there are 3 options: create client from scratch which implements protocol defined by `proto/service.proto`, use golang client package `themis\pep` to implement client application (see `contrib/coredns/policy`), and for debug use simple PEPCLI client. To use PEPCLI, requests can be read in with `-i` (strings ending in `.yaml` or `.json` will be treated as a filepath; anything else is parsed as raw JSON), for example:
 ```yaml
 attributes:
   s: string

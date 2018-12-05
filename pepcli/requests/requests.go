@@ -314,12 +314,12 @@ func listOfStringsMarshaller(value interface{}) (pdp.AttributeValue, error) {
 	}
 
 	los := make([]string, len(v))
-	for _, s := range v {
+	for i, s := range v {
 		switch value := s.(type) {
 		case string:
 			los = append(los, value)
 		default:
-			return pdp.UndefinedValue, fmt.Errorf("can't marshal %T as string in list of strings", s)
+			return pdp.UndefinedValue, fmt.Errorf("can't marshal %T at %d as string in list of strings", s, i+1)
 		}
 	}
 
