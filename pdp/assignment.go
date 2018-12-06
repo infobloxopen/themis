@@ -12,6 +12,8 @@ import (
 	"github.com/pmezard/go-difflib/difflib"
 )
 
+var emptyCtx, _ = NewContext(nil, 0, nil)
+
 // AttributeAssignment represents assignment of arbitrary result to
 // an attribute.
 type AttributeAssignment struct {
@@ -21,10 +23,9 @@ type AttributeAssignment struct {
 
 // AttribAssignFmt is the json marshal format of serialized AttributeAssignment
 type AttribAssignFmt struct {
-	Name      string
-	NameType  string
-	Value     string
-	ValueType string
+	Name  string
+	Type  string
+	Value string
 }
 
 // MakeAttributeAssignment creates assignment of given expression to given
@@ -462,7 +463,7 @@ func (a AttributeAssignment) Serialize(ctx *Context) (string, string, string, er
 }
 
 func (a AttributeAssignment) String() string {
-	name, valueType, value, err := a.Serialize(nil)
+	name, valueType, value, err := a.Serialize(emptyCtx)
 	if err != nil {
 		return err.Error()
 	}
@@ -471,15 +472,14 @@ func (a AttributeAssignment) String() string {
 
 // MarshalJSON satisfies Marshaler interface
 func (a AttributeAssignment) MarshalJSON() ([]byte, error) {
-	name, valueType, value, err := a.Serialize(nil)
+	name, valueType, value, err := a.Serialize(emptyCtx)
 	if err != nil {
 		return nil, err
 	}
 	return json.Marshal(AttribAssignFmt{
-		Name:      name,
-		NameType:  a.a.t.GetKey(),
-		Value:     value,
-		ValueType: valueType,
+		Name:  name,
+		Type:  valueType,
+		Value: value,
 	})
 }
 
