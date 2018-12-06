@@ -1,4 +1,4 @@
-// pipexample is a generated PIP server handler package. DO NOT EDIT.
+// Package pipexample is a generated PIP server handler package. DO NOT EDIT.
 package pipexample
 
 import (
@@ -9,10 +9,11 @@ import (
 	"net"
 )
 
+// Handler is a customized PIP handler for given input and output.
 type Handler func(string, net.IP) (*net.IPNet, error)
 
 const (
-	reqIdSize         = 4
+	reqIDSize         = 4
 	reqVersionSize    = 2
 	reqVersion        = uint16(1)
 	reqArgs           = uint16(2)
@@ -26,12 +27,13 @@ var (
 	errInvalidArgCount   = errors.New("invalid count of request arguments")
 )
 
+// WrapHandler converts custom Handler to generic PIP ServiceHandler.
 func WrapHandler(f Handler) server.ServiceHandler {
 	return func(b []byte) []byte {
-		if len(b) < reqIdSize {
+		if len(b) < reqIDSize {
 			panic("missing request id")
 		}
-		in := b[reqIdSize:]
+		in := b[reqIDSize:]
 
 		r, err := handler(in, f)
 		if err != nil {
@@ -40,7 +42,7 @@ func WrapHandler(f Handler) server.ServiceHandler {
 				panic(err)
 			}
 
-			return b[:reqIdSize+n]
+			return b[:reqIDSize+n]
 		}
 
 		n, err := pdp.MarshalInfoResponseNetwork(in[:cap(in)], r)
@@ -48,7 +50,7 @@ func WrapHandler(f Handler) server.ServiceHandler {
 			panic(err)
 		}
 
-		return b[:reqIdSize+n]
+		return b[:reqIDSize+n]
 	}
 }
 
@@ -61,6 +63,14 @@ func handler(in []byte, f Handler) (*net.IPNet, error) {
 		return nil, errInvalidReqVersion
 	}
 	in = in[reqVersionSize:]
+
+	skip := binary.LittleEndian.Uint16(in)
+	in = in[reqBigCounterSize:]
+
+	if len(in) < int(skip)+reqBigCounterSize {
+		return nil, errFragment
+	}
+	in = in[skip:]
 
 	if c := binary.LittleEndian.Uint16(in); c != reqArgs {
 		return nil, errInvalidArgCount

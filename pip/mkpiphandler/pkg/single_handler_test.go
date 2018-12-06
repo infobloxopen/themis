@@ -2,11 +2,107 @@ package pkg
 
 import (
 	"bytes"
+	"io/ioutil"
+	"os"
+	"path"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestSchemaGenHandler(t *testing.T) {
+	tmp, err := ioutil.TempDir("", "")
+	if err != nil {
+		assert.FailNow(t, "ioutil.TempDir(\"\", \"\"): %q", err)
+	}
+
+	defer func() {
+		assert.NoError(t, os.RemoveAll(tmp))
+	}()
+
+	p := &Endpoint{
+		Args: []string{
+			"Boolean",
+			"Address",
+			"Domain",
+		},
+		Result: "List of Strings",
+	}
+	s := &Schema{
+		Package: "test",
+		Endpoints: map[string]*Endpoint{
+			"*": p,
+		},
+	}
+	err = s.postProcess()
+	if err != nil {
+		assert.FailNow(t, "s.(*Schema).postProcess(): %q", err)
+	}
+
+	err = s.genHandler(tmp, p)
+	if assert.NoError(t, err) {
+		f, err := os.Open(path.Join(tmp, handlerDst))
+		if assert.NoError(t, err) {
+			defer func() {
+				assert.NoError(t, f.Close())
+			}()
+		}
+	}
+}
+
+func TestSchemaGenHandlerWithInvalidDirectory(t *testing.T) {
+	p := &Endpoint{
+		Args: []string{
+			"Boolean",
+			"Address",
+			"Domain",
+		},
+		Result: "List of Strings",
+	}
+	s := &Schema{
+		Package: "test",
+		Endpoints: map[string]*Endpoint{
+			"*": p,
+		},
+	}
+	err := s.postProcess()
+	if err != nil {
+		assert.FailNow(t, "s.(*Schema).postProcess(): %q", err)
+	}
+
+	err = s.genHandler("/dev/null", p)
+	if !assert.Error(t, err) {
+		if err = os.Remove(path.Join("/dev/null", handlerDst)); err != nil {
+			assert.FailNow(t, "os.Remove(path.Join(\"/dev/null\", handlerDst)): %q", err)
+		}
+	}
+}
+
+func TestSchemaGenHandlerWithInvalidEndpoint(t *testing.T) {
+	tmp, err := ioutil.TempDir("", "")
+	if err != nil {
+		assert.FailNow(t, "ioutil.TempDir(\"\", \"\"): %q", err)
+	}
+
+	defer func() {
+		assert.NoError(t, os.RemoveAll(tmp))
+	}()
+
+	p := &Endpoint{
+		Args:   []string{"unknown"},
+		Result: "unknown",
+	}
+	s := &Schema{
+		Package: "test",
+		Endpoints: map[string]*Endpoint{
+			"*": p,
+		},
+	}
+
+	err = s.genHandler(tmp, s.Endpoints["*"])
+	assert.EqualError(t, err, "argument 0: unknown type \"unknown\"")
+}
 
 func TestSchemaMakeSingleHandler(t *testing.T) {
 	p := &Endpoint{
@@ -104,7 +200,7 @@ import (
 type Handler func() (bool, error)
 
 const (
-	reqIdSize         = 4
+	reqIDSize         = 4
 	reqVersionSize    = 2
 	reqVersion        = uint16(1)
 	reqArgs           = uint16(0)
@@ -121,10 +217,10 @@ var (
 // WrapHandler converts custom Handler to generic PIP ServiceHandler.
 func WrapHandler(f Handler) server.ServiceHandler {
 	return func(b []byte) []byte {
-		if len(b) < reqIdSize {
+		if len(b) < reqIDSize {
 			panic("missing request id")
 		}
-		in := b[reqIdSize:]
+		in := b[reqIDSize:]
 
 		r, err := handler(in, f)
 		if err != nil {
@@ -133,7 +229,7 @@ func WrapHandler(f Handler) server.ServiceHandler {
 				panic(err)
 			}
 
-			return b[:reqIdSize+n]
+			return b[:reqIDSize+n]
 		}
 
 		n, err := pdp.MarshalInfoResponseBoolean(in[:cap(in)], r)
@@ -141,7 +237,7 @@ func WrapHandler(f Handler) server.ServiceHandler {
 			panic(err)
 		}
 
-		return b[:reqIdSize+n]
+		return b[:reqIDSize+n]
 	}
 }
 
@@ -154,6 +250,14 @@ func handler(in []byte, f Handler) (bool, error) {
 		return false, errInvalidReqVersion
 	}
 	in = in[reqVersionSize:]
+
+	skip := binary.LittleEndian.Uint16(in)
+	in = in[reqBigCounterSize:]
+
+	if len(in) < int(skip)+reqBigCounterSize {
+		return false, errFragment
+	}
+	in = in[skip:]
 
 	if c := binary.LittleEndian.Uint16(in); c != reqArgs {
 		return false, errInvalidArgCount
