@@ -23,3 +23,11 @@ INFO[0000] PIP example server
 INFO[0000] Binding server
 INFO[0000] Serving requests
 ```
+
+## Package spipexample
+
+The package is generated from single-schema.yaml and placed into "sipexample" subdirectory. It's obtained with command:
+```
+$ mkpiphandler -s single-schema.yaml -d .
+INFO[0000] making pip handler                            output=. schema=single-schema.yaml
+```

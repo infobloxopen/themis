@@ -1,23 +1,13 @@
 package pkg
 
 import (
-	"fmt"
 	"io"
 	"strings"
 	"text/template"
 )
 
-const handlerDst = "handler.go"
-
-func (s *Schema) genHandler(dir string, p *Endpoint) error {
-	return toFile(dir, handlerDst, func(w io.Writer) error {
-		sh, err := s.makeSingleHandler(p)
-		if err != nil {
-			return err
-		}
-
-		return sh.execute(w)
-	})
+func (s *Schema) genSingleHandler(dir string, p *Endpoint) error {
+	return toFile(dir, handlerDst, s.makeSingleHandler(p).execute)
 }
 
 type singleHandler struct {
@@ -33,38 +23,18 @@ type singleHandler struct {
 	Marshaller string
 }
 
-func (s *Schema) makeSingleHandler(p *Endpoint) (singleHandler, error) {
-	args := make([]string, 0, len(p.Args))
-	for i := range p.Args {
-		args = append(args, fmt.Sprintf("v%d", i))
-	}
-
-	parsers, err := makeArgParsers(p.Args, p.goResultZero)
-	if err != nil {
-		return singleHandler{}, err
-	}
-
-	argParsers := strings.Join(parsers, "\n")
-	if len(argParsers) > 0 {
-		argParsers += "\n"
-	}
-
-	marshaller, ok := marshallerMap[strings.ToLower(p.Result)]
-	if !ok {
-		return singleHandler{}, fmt.Errorf("result: unknown type %q", p.Result)
-	}
-
+func (s *Schema) makeSingleHandler(p *Endpoint) singleHandler {
 	return singleHandler{
 		Package:    s.Package,
 		Imports:    strings.Join(makeImports(p.goArgPkgs|p.goResultPkg, singleHandlerImports...), "\n\t"),
 		ArgCount:   len(p.goArgs),
 		Types:      strings.Join(p.goArgs, ", "),
-		Args:       strings.Join(args, ", "),
-		ArgParsers: argParsers,
+		Args:       p.goArgList,
+		ArgParsers: p.goParsers,
 		ResultType: p.goResult,
 		ResultZero: p.goResultZero,
-		Marshaller: marshaller,
-	}, nil
+		Marshaller: p.goMarshaller,
+	}
 }
 
 func (t singleHandler) execute(w io.Writer) error {
@@ -96,7 +66,6 @@ const (
 	reqVersion        = uint16(1)
 	reqArgs           = uint16({{.ArgCount}})
 	reqBigCounterSize = 2
-	reqTypeSize       = 1
 )
 
 var (

@@ -5,30 +5,31 @@ import (
 	"strings"
 )
 
-func makeArgParsers(args []string, z string) ([]string, error) {
-	out := make([]string, 0, len(args))
-	for i, a := range args {
-		p, err := makeArgParser(i, a, z)
-		if err != nil {
-			return nil, err
-		}
-
-		out = append(out, p)
+func makeArgParsers(args []string, z string) []string {
+	if len(args) <= 0 {
+		return nil
 	}
 
-	return out, nil
+	out := make([]string, 0, len(args))
+
+	last := len(args) - 1
+	for i, a := range args {
+		out = append(out, makeArgParser(i, a, z, i >= last))
+	}
+
+	return out
 }
 
-func makeArgParser(i int, t, z string) (string, error) {
-	n, ok := parserNameMap[strings.ToLower(t)]
-	if !ok {
-		return "", fmt.Errorf("argument %d: unknown type %q", i, t)
+func makeArgParser(i int, t, z string, last bool) string {
+	buf := "in"
+	if last {
+		buf = "_"
 	}
 
-	return fmt.Sprintf("\tv%d, in, err := %s(in)\n"+
+	return fmt.Sprintf("\tv%d, %s, err := %s(in)\n"+
 		"\tif err != nil {\n"+
 		"\t\treturn %s, err\n"+
-		"\t}\n", i, n, z), nil
+		"\t}\n", i, buf, parserNameMap[strings.ToLower(t)], z)
 }
 
 const (

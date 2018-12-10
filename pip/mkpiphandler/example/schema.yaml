@@ -1,6 +1,20 @@
 package: pipexample
 
 endpoints:
+  "set":
+    args:
+    - integer
+    - domain
+
+    result: set of strings
+
+  "list":
+    args:
+    - integer
+    - domain
+
+    result: list of strings
+
   "*":
     args:
     - string

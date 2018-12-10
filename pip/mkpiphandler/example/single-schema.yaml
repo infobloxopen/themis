@@ -1,0 +1,9 @@
+package: spipexample
+
+endpoints:
+  "*":
+    args:
+    - string
+    - address
+
+    result: network

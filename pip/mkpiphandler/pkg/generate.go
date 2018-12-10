@@ -12,16 +12,36 @@ import (
 // places code to the subdirectory.
 func (s *Schema) Generate(root string) error {
 	return inSubDirectory(root, s.Package, func(dir string) error {
-		_, p, err := s.getFirstEndpoint()
+		k, p, err := s.getFirstEndpoint()
 		if err != nil {
 			return err
 		}
 
-		if err = s.genHandler(dir, p); err != nil {
+		if len(s.Endpoints) == 1 && isDefaultEndpoint(k) {
+			if err = s.genSingleHandler(dir, p); err != nil {
+				return err
+			}
+
+			return fixImports(dir, handlerDst)
+		}
+
+		if err = s.genEndpointsInterface(dir); err != nil {
 			return err
 		}
 
-		return fixImports(dir, handlerDst)
+		if err = s.genHandler(dir); err != nil {
+			return err
+		}
+
+		if err = s.genDispatcher(dir); err != nil {
+			return err
+		}
+
+		if err = s.genHandlers(dir); err != nil {
+			return err
+		}
+
+		return fixImports(dir, endpointsDst)
 	})
 }
 
