@@ -9,6 +9,7 @@ import (
 )
 
 type config struct {
+	sort bool
 }
 
 var testFlagSet = flag.NewFlagSet(Name, flag.ExitOnError)
@@ -18,6 +19,7 @@ func FlagsParser(args []string) interface{} {
 	conf := config{}
 
 	testFlagSet.Usage = usage
+	testFlagSet.BoolVar(&conf.sort, "sort", false, "sort lists of strings in returned obligations")
 	testFlagSet.Parse(args)
 
 	count := testFlagSet.NArg()

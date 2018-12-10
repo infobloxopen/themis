@@ -89,7 +89,7 @@ func init() {
 	flag.Var(&conf.servers, "s", "PDP server to work with (default 127.0.0.1:5555, "+
 		"allowed use multiple to distribute load)")
 	flag.BoolVar(&conf.hotSpot, "hot-spot", false, "enables \"hot spot\" balancer (works only for gRPC streaming")
-	flag.StringVar(&conf.input, "i", "requests.yaml", "file with YAML formatted list of requests to send to PDP")
+	flag.StringVar(&conf.input, "i", "requests.yaml", "formatted list of requests to send to PDP, may be one of 1) YAML filepath, 2) JSON filepath, or 3) raw JSON")
 	flag.IntVar(&conf.count, "n", 0, "number or requests to send\n\t"+
 		"(default and value less than one means all requests from file)")
 	flag.IntVar(&conf.streams, "streams", 0, "number of streams to use with gRPC streaming (< 1 unary gRPC)")

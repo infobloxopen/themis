@@ -1,6 +1,10 @@
 # PEPCLI - Policy Enforcement Point Command Line Interface
 PEPCLI implements simple PEP as well as a tool to measure performance of PDP server.
 
+## Input
+PEPCLI can take in PDP requests in three different ways using `-i`: raw JSON, or as a filepath pointing to a YAML or JSON file.
+Any string ending in `.yaml` or `.json` will be recognized as pointing to a file; anything other input is processed as raw JSON.
+
 ## Decision requests
 The utility can make decision requests with help of `test` command. There is a bunch of [examples](../examples) in the repository. Additionally, PEPCLI can reach server on remote machine if its address is specified like below:
 ```
@@ -48,7 +52,7 @@ python grinder.py -o test.html -t Test ./
 The latest command collects all test-&lt;number&gt;.json files and creates report based on all of them.
 
 ## Formats
-PEPCLI expects requests as YAML file. The file should contain two sections **attributes** and **requests**. Attributes section represents map which defines attribute and its type. Requests section lists all requests. Each request is a map of attribute name to its value:
+This guide will use requests input as a YAML file. The file should contain two sections, **attributes** and **requests**. Attributes section represents map which defines attribute and its type. Requests section lists all requests. Each request is a map of attribute name to its value:
 ```yaml
 attributes:
   s: string

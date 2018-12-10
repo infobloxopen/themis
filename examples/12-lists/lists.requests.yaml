@@ -1,0 +1,17 @@
+attributes:
+  ls: list of strings
+
+requests:
+- ls: []
+
+- ls:
+  - baz
+
+- ls:
+  - foo
+  - baz
+
+- ls:
+  - foo
+  - bar
+  - baz

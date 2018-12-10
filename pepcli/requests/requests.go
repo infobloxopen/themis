@@ -4,11 +4,13 @@ package requests
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-service && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/service.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-service && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-service"
 
 import (
+	"encoding/json"
 	"fmt"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"math"
 	"net"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -17,22 +19,49 @@ import (
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
+const (
+	YAML          = "yaml"
+	JSON          = "json"
+	MaxFloat64Int = 1 << 53 // 9,007,199,254,740,992--the maximum IEEE-754 double float integer is not a golang const
+)
+
 type requests struct {
 	Attributes map[string]string
 	Requests   []map[string]interface{}
 }
 
-// Load reads given YAML file and porduces list of requests to run.
-func Load(name string, size uint32) ([]pb.Msg, error) {
-	b, err := ioutil.ReadFile(name)
-	if err != nil {
-		return nil, err
-	}
-
+// Load reads given data--if it is a filepath that ends in a yaml or json extension and can be read,
+// the respective unmarshaler will be used; otherwise, the input is processed as raw JSON.
+func Load(data string, size uint32) ([]pb.Msg, error) {
 	in := &requests{}
-	err = yaml.Unmarshal(b, in)
-	if err != nil {
-		return nil, err
+
+	switch strings.TrimLeft(strings.ToLower(filepath.Ext(data)), ".") {
+	case YAML:
+		b, err := ioutil.ReadFile(data)
+		if err != nil {
+			return nil, err
+		}
+
+		err = yaml.Unmarshal(b, in)
+		if err != nil {
+			return nil, err
+		}
+	case JSON:
+		b, err := ioutil.ReadFile(data)
+		if err != nil {
+			return nil, err
+		}
+
+		err = json.Unmarshal(b, in)
+		if err != nil {
+			return nil, err
+		}
+	default: // assuming JSON-formatted string
+		err := json.Unmarshal([]byte(data), in)
+
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	symbols := make(map[string]pdp.Type)
@@ -74,13 +103,14 @@ func Load(name string, size uint32) ([]pb.Msg, error) {
 type attributeMarshaller func(value interface{}) (pdp.AttributeValue, error)
 
 var marshallers = map[pdp.Type]attributeMarshaller{
-	pdp.TypeBoolean: booleanMarshaller,
-	pdp.TypeString:  stringMarshaller,
-	pdp.TypeInteger: integerMarshaller,
-	pdp.TypeFloat:   floatMarshaller,
-	pdp.TypeAddress: addressMarshaller,
-	pdp.TypeNetwork: networkMarshaller,
-	pdp.TypeDomain:  domainMarshaller}
+	pdp.TypeBoolean:       booleanMarshaller,
+	pdp.TypeString:        stringMarshaller,
+	pdp.TypeInteger:       integerMarshaller,
+	pdp.TypeFloat:         floatMarshaller,
+	pdp.TypeAddress:       addressMarshaller,
+	pdp.TypeNetwork:       networkMarshaller,
+	pdp.TypeDomain:        domainMarshaller,
+	pdp.TypeListOfStrings: listOfStringsMarshaller}
 
 func makeAttribute(name string, value interface{}, symbols map[string]pdp.Type) (pdp.AttributeAssignment, error) {
 	t, ok := symbols[name]
@@ -109,7 +139,7 @@ func makeAttribute(name string, value interface{}, symbols map[string]pdp.Type) 
 }
 
 func guessType(value interface{}) (pdp.Type, error) {
-	switch value.(type) {
+	switch value := value.(type) {
 	case bool:
 		return pdp.TypeBoolean, nil
 	case string:
@@ -120,6 +150,14 @@ func guessType(value interface{}) (pdp.Type, error) {
 		return pdp.TypeNetwork, nil
 	case *net.IPNet:
 		return pdp.TypeNetwork, nil
+	case []interface{}:
+		if len(value) == 0 {
+			return pdp.TypeUndefined, fmt.Errorf("unable to unmarshal empty array of unknown type %T", value)
+		}
+		switch value[0].(type) {
+		case string:
+			return pdp.TypeListOfStrings, nil
+		}
 	}
 
 	return pdp.TypeUndefined, fmt.Errorf("marshaling hasn't been implemented for %T", value)
@@ -174,7 +212,7 @@ func integerMarshaller(value interface{}) (pdp.AttributeValue, error) {
 		err = fmt.Errorf("can't marshal %T (%d) as int64", value, value)
 
 	case float64:
-		if value > -9007199254740992 && value < 9007199254740992 {
+		if value > -MaxFloat64Int && value < MaxFloat64Int {
 			return pdp.MakeIntegerValue(int64(value)), nil
 		}
 		err = fmt.Errorf("can't marshal %T (%g) as int64", value, value)
@@ -264,4 +302,26 @@ func domainMarshaller(value interface{}) (pdp.AttributeValue, error) {
 	}
 
 	return pdp.MakeDomainValue(d), nil
+}
+
+func listOfStringsMarshaller(value interface{}) (pdp.AttributeValue, error) {
+	v, ok := value.([]interface{})
+	if !ok {
+		return pdp.UndefinedValue, fmt.Errorf("can't marshal %T as list of string", value)
+	}
+	if len(v) == 0 {
+		return pdp.MakeListOfStringsValue([]string{}), nil
+	}
+
+	los := make([]string, len(v))
+	for i, s := range v {
+		switch value := s.(type) {
+		case string:
+			los = append(los, value)
+		default:
+			return pdp.UndefinedValue, fmt.Errorf("can't marshal %T at %d as string in list of strings", s, i+1)
+		}
+	}
+
+	return pdp.MakeListOfStringsValue(los), nil
 }
