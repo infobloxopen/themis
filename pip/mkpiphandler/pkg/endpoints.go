@@ -120,6 +120,7 @@ import (
 	{{.Imports}}
 )
 
+// Endpoints is the interface that wraps PIP handlers.
 type Endpoints interface {
 	{{.Methods}}
 }

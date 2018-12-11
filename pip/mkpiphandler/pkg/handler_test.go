@@ -86,6 +86,7 @@ import (
 
 const reqIDSize = 4
 
+// MakeHandler creates PIP service handler for given Endpoints.
 func MakeHandler(e Endpoints) server.ServiceHandler {
 	return func(b []byte) []byte {
 		if len(b) < reqIDSize {

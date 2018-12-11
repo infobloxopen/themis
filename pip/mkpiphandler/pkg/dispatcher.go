@@ -88,6 +88,10 @@ func dispatch(b []byte, e Endpoints) (int, error) {
 	}
 
 	path := in[:size]
+	if len(path) > 0 && path[0] == '/' {
+		path = path[1:]
+	}
+
 	in = in[size:]
 
 	c := int(binary.LittleEndian.Uint16(in))

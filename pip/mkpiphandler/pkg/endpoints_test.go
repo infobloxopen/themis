@@ -176,6 +176,7 @@ import (
 	"net"
 )
 
+// Endpoints is the interface that wraps PIP handlers.
 type Endpoints interface {
 	Test(*net.IPNet) (string, error)
 }
