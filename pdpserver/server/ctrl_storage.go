@@ -101,7 +101,9 @@ func (handler *storageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 	switch cmd {
 	case queryCmd:
+		handler.s.RLock()
 		handleQuery(w, handler.s.p, resourcePath, urlQuery)
+		handler.s.RUnlock()
 	default:
 		http.Error(w, fmt.Sprintf("Unknown resource %s\n%s", cmd, usage), http.StatusNotFound)
 	}

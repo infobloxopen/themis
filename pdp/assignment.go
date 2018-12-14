@@ -471,6 +471,8 @@ func (a AttributeAssignment) String() string {
 }
 
 // MarshalJSON satisfies Marshaler interface
+// Only works for assignment expression where righthand doesn't depend on context
+// E.g.: values, constant expression, selector that don't rely on attributes or local content
 func (a AttributeAssignment) MarshalJSON() ([]byte, error) {
 	name, valueType, value, err := a.Serialize(emptyCtx)
 	if err != nil {
