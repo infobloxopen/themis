@@ -1,6 +1,8 @@
 package pkg
 
 import (
+	"fmt"
+	"io"
 	"os"
 	"path"
 )
@@ -9,18 +11,80 @@ import (
 // It makes a subdirectory with name of the package in the given directory and
 // places code to the subdirectory.
 func (s *Schema) Generate(root string) error {
-	dir := path.Join(root, s.Package)
-	if err := os.RemoveAll(dir); err != nil {
-		return err
+	return inSubDirectory(root, s.Package, func(dir string) error {
+		k, p, err := s.getFirstEndpoint()
+		if err != nil {
+			return err
+		}
+
+		if len(s.Endpoints) == 1 && isDefaultEndpoint(k) {
+			if err = s.genSingleHandler(dir, p); err != nil {
+				return err
+			}
+
+			return fixImports(dir, handlerDst)
+		}
+
+		if err = s.genEndpointsInterface(dir); err != nil {
+			return err
+		}
+
+		if err = s.genHandler(dir); err != nil {
+			return err
+		}
+
+		if err = s.genDispatcher(dir); err != nil {
+			return err
+		}
+
+		if err = s.genHandlers(dir); err != nil {
+			return err
+		}
+
+		return fixImports(dir, endpointsDst)
+	})
+}
+
+func inSubDirectory(root, name string, f func(string) error) (err error) {
+	dir := path.Join(root, name)
+
+	err = os.RemoveAll(dir)
+	if err != nil {
+		return
 	}
 
-	if err := os.MkdirAll(dir, 0750); err != nil {
-		return err
+	err = os.MkdirAll(dir, 0750)
+	if err != nil {
+		return
 	}
+	defer func() {
+		if err != nil {
+			if rErr := os.RemoveAll(dir); rErr != nil {
+				err = fmt.Errorf("%s; %s", err, rErr)
+			}
+		}
+	}()
 
-	if err := s.genHandler(dir); err != nil {
-		return err
+	err = f(dir)
+	return
+}
+
+func toFile(dir, name string, f func(io.Writer) error) (err error) {
+	w, err := os.Create(path.Join(dir, name))
+	if err != nil {
+		return
 	}
+	defer func() {
+		cErr := w.Close()
+		if cErr != nil {
+			if err != nil {
+				err = fmt.Errorf("%s; %s", err, cErr)
+			} else {
+				err = cErr
+			}
+		}
+	}()
 
-	return fixImports(dir, handlerDst)
+	err = f(w)
+	return
 }

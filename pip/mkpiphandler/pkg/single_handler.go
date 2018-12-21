@@ -1,11 +1,14 @@
 package pkg
 
 import (
-	"fmt"
 	"io"
 	"strings"
 	"text/template"
 )
+
+func (s *Schema) genSingleHandler(dir string, p *Endpoint) error {
+	return toFile(dir, handlerDst, s.makeSingleHandler(p).execute)
+}
 
 type singleHandler struct {
 	Package string
@@ -20,38 +23,18 @@ type singleHandler struct {
 	Marshaller string
 }
 
-func (s *Schema) makeSingleHandler(p *Endpoint) (singleHandler, error) {
-	args := make([]string, 0, len(p.Args))
-	for i := range p.Args {
-		args = append(args, fmt.Sprintf("v%d", i))
-	}
-
-	parsers, err := makeArgParsers(p.Args, p.goResultZero)
-	if err != nil {
-		return singleHandler{}, err
-	}
-
-	argParsers := strings.Join(parsers, "\n")
-	if len(argParsers) > 0 {
-		argParsers += "\n"
-	}
-
-	marshaller, ok := marshallerMap[strings.ToLower(p.Result)]
-	if !ok {
-		return singleHandler{}, fmt.Errorf("result: unknown type %q", p.Result)
-	}
-
+func (s *Schema) makeSingleHandler(p *Endpoint) singleHandler {
 	return singleHandler{
 		Package:    s.Package,
 		Imports:    strings.Join(makeImports(p.goArgPkgs|p.goResultPkg, singleHandlerImports...), "\n\t"),
 		ArgCount:   len(p.goArgs),
 		Types:      strings.Join(p.goArgs, ", "),
-		Args:       strings.Join(args, ", "),
-		ArgParsers: argParsers,
+		Args:       p.goArgList,
+		ArgParsers: p.goParsers,
 		ResultType: p.goResult,
 		ResultZero: p.goResultZero,
-		Marshaller: marshaller,
-	}, nil
+		Marshaller: p.goMarshaller,
+	}
 }
 
 func (t singleHandler) execute(w io.Writer) error {
@@ -78,12 +61,11 @@ import (
 type Handler func({{.Types}}) ({{.ResultType}}, error)
 
 const (
-	reqIdSize         = 4
+	reqIDSize         = 4
 	reqVersionSize    = 2
 	reqVersion        = uint16(1)
 	reqArgs           = uint16({{.ArgCount}})
 	reqBigCounterSize = 2
-	reqTypeSize       = 1
 )
 
 var (
@@ -95,10 +77,10 @@ var (
 // WrapHandler converts custom Handler to generic PIP ServiceHandler.
 func WrapHandler(f Handler) server.ServiceHandler {
 	return func(b []byte) []byte {
-		if len(b) < reqIdSize {
+		if len(b) < reqIDSize {
 			panic("missing request id")
 		}
-		in := b[reqIdSize:]
+		in := b[reqIDSize:]
 
 		r, err := handler(in, f)
 		if err != nil {
@@ -107,7 +89,7 @@ func WrapHandler(f Handler) server.ServiceHandler {
 				panic(err)
 			}
 
-			return b[:reqIdSize+n]
+			return b[:reqIDSize+n]
 		}
 
 		n, err := {{.Marshaller}}(in[:cap(in)], r)
@@ -115,7 +97,7 @@ func WrapHandler(f Handler) server.ServiceHandler {
 			panic(err)
 		}
 
-		return b[:reqIdSize+n]
+		return b[:reqIDSize+n]
 	}
 }
 
@@ -128,6 +110,14 @@ func handler(in []byte, f Handler) ({{.ResultType}}, error) {
 		return {{.ResultZero}}, errInvalidReqVersion
 	}
 	in = in[reqVersionSize:]
+
+	skip := binary.LittleEndian.Uint16(in)
+	in = in[reqBigCounterSize:]
+
+	if len(in) < int(skip)+reqBigCounterSize {
+		return {{.ResultZero}}, errFragment
+	}
+	in = in[skip:]
 
 	if c := binary.LittleEndian.Uint16(in); c != reqArgs {
 		return {{.ResultZero}}, errInvalidArgCount

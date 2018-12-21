@@ -22,9 +22,15 @@ type Schema struct {
 // Endpoint defines input arguments for request and result of response.
 // All arguments are required.
 type Endpoint struct {
+	goName string
+
 	Args      []string
 	goArgs    []string
+	goArgList string
 	goArgPkgs int
+
+	goParsers    string
+	goMarshaller string
 
 	Result       string
 	goResult     string
@@ -58,17 +64,21 @@ func NewSchemaFromFile(path string) (s *Schema, err error) {
 }
 
 func (s *Schema) postProcess() error {
-	if len(s.Endpoints) > 1 {
-		return fmt.Errorf("code generation for more than one endpoint hasn't been implemented yet "+
-			"(got %d)", len(s.Endpoints))
+	k, v, err := s.getFirstEndpoint()
+	if err != nil {
+		return err
+	}
+
+	if len(s.Endpoints) == 1 && isDefaultEndpoint(k) {
+		if err := v.postProcess(k, true); err != nil {
+			return fmt.Errorf("endpoint %q: %s", k, err)
+		}
+
+		return nil
 	}
 
 	for k, v := range s.Endpoints {
-		if k != "*" {
-			return fmt.Errorf("implemented code generation only for \"*\" endpoint but got %q", k)
-		}
-
-		if err := v.postProcess(); err != nil {
+		if err := v.postProcess(k, false); err != nil {
 			return fmt.Errorf("endpoint %q: %s", k, err)
 		}
 	}

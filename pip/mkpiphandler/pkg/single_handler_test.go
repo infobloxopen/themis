@@ -2,14 +2,52 @@ package pkg
 
 import (
 	"bytes"
+	"io/ioutil"
+	"os"
+	"path"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
+func TestSchemaGenSingleHandler(t *testing.T) {
+	tmp, err := ioutil.TempDir("", "")
+	if err != nil {
+		assert.FailNow(t, "ioutil.TempDir(\"\", \"\"): %q", err)
+	}
+
+	defer func() {
+		assert.NoError(t, os.RemoveAll(tmp))
+	}()
+
+	p := &Endpoint{
+		Args: []string{
+			"Boolean",
+			"Address",
+			"Domain",
+		},
+		Result: "List of Strings",
+	}
+	s := &Schema{
+		Package: "test",
+		Endpoints: map[string]*Endpoint{
+			defaultEndpointAlias: p,
+		},
+	}
+	err = s.postProcess()
+	if err != nil {
+		assert.FailNow(t, "s.(*Schema).postProcess(): %q", err)
+	}
+
+	err = s.genSingleHandler(tmp, p)
+	assert.NoError(t, err)
+	assert.FileExists(t, path.Join(tmp, handlerDst))
+}
+
 func TestSchemaMakeSingleHandler(t *testing.T) {
 	p := &Endpoint{
+		goName: "Default",
 		Args: []string{
 			pipTypeBoolean,
 			pipTypeInteger,
@@ -20,7 +58,11 @@ func TestSchemaMakeSingleHandler(t *testing.T) {
 			goTypeInt64,
 			goTypeNetIPNet,
 		},
+		goArgList: "v0, v1, v2",
 		goArgPkgs: goPkgNetMask,
+
+		goParsers:    testParsersSnippet,
+		goMarshaller: pdpMarshallerFloat,
 
 		Result:       pipTypeFloat,
 		goResult:     goTypeFloat64,
@@ -30,13 +72,11 @@ func TestSchemaMakeSingleHandler(t *testing.T) {
 	s := &Schema{
 		Package: "test",
 		Endpoints: map[string]*Endpoint{
-			"*": p,
+			defaultEndpointAlias: p,
 		},
 	}
 
-	h, err := s.makeSingleHandler(p)
-	assert.NoError(t, err)
-
+	h := s.makeSingleHandler(p)
 	assert.Equal(t, "test", h.Package)
 	assert.Contains(t, h.Imports, goPkgNetName)
 	assert.Equal(t, h.ArgCount, 3)
@@ -49,26 +89,7 @@ func TestSchemaMakeSingleHandler(t *testing.T) {
 	assert.NotZero(t, h.ArgParsers)
 	assert.Equal(t, goTypeFloat64, h.ResultType)
 	assert.Equal(t, "0", h.ResultZero)
-}
-
-func TestSchemaMakeSingleHandlerWithUnknownTypes(t *testing.T) {
-	p := &Endpoint{
-		Args:   []string{"unknown"},
-		Result: "unknown",
-	}
-	s := &Schema{
-		Package: "test",
-		Endpoints: map[string]*Endpoint{
-			"*": p,
-		},
-	}
-
-	h, err := s.makeSingleHandler(p)
-	assert.EqualError(t, err, "argument 0: unknown type \"unknown\"", "handler: %#v", h)
-
-	p.Args[0] = "boolean"
-	h, err = s.makeSingleHandler(p)
-	assert.EqualError(t, err, "result: unknown type \"unknown\"", "handler: %#v", h)
+	assert.Equal(t, pdpMarshallerFloat, h.Marshaller)
 }
 
 func TestSingleHandlerExecute(t *testing.T) {
@@ -104,12 +125,11 @@ import (
 type Handler func() (bool, error)
 
 const (
-	reqIdSize         = 4
+	reqIDSize         = 4
 	reqVersionSize    = 2
 	reqVersion        = uint16(1)
 	reqArgs           = uint16(0)
 	reqBigCounterSize = 2
-	reqTypeSize       = 1
 )
 
 var (
@@ -121,10 +141,10 @@ var (
 // WrapHandler converts custom Handler to generic PIP ServiceHandler.
 func WrapHandler(f Handler) server.ServiceHandler {
 	return func(b []byte) []byte {
-		if len(b) < reqIdSize {
+		if len(b) < reqIDSize {
 			panic("missing request id")
 		}
-		in := b[reqIdSize:]
+		in := b[reqIDSize:]
 
 		r, err := handler(in, f)
 		if err != nil {
@@ -133,7 +153,7 @@ func WrapHandler(f Handler) server.ServiceHandler {
 				panic(err)
 			}
 
-			return b[:reqIdSize+n]
+			return b[:reqIDSize+n]
 		}
 
 		n, err := pdp.MarshalInfoResponseBoolean(in[:cap(in)], r)
@@ -141,7 +161,7 @@ func WrapHandler(f Handler) server.ServiceHandler {
 			panic(err)
 		}
 
-		return b[:reqIdSize+n]
+		return b[:reqIDSize+n]
 	}
 }
 
@@ -154,6 +174,14 @@ func handler(in []byte, f Handler) (bool, error) {
 		return false, errInvalidReqVersion
 	}
 	in = in[reqVersionSize:]
+
+	skip := binary.LittleEndian.Uint16(in)
+	in = in[reqBigCounterSize:]
+
+	if len(in) < int(skip)+reqBigCounterSize {
+		return false, errFragment
+	}
+	in = in[skip:]
 
 	if c := binary.LittleEndian.Uint16(in); c != reqArgs {
 		return false, errInvalidArgCount

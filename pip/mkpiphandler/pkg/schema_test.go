@@ -19,7 +19,8 @@ func TestNewSchemaFromFile(t *testing.T) {
 	assert.Equal(t, &Schema{
 		Package: "test",
 		Endpoints: map[string]*Endpoint{
-			"*": {
+			defaultEndpointAlias: {
+				goName: "Default",
 				Args: []string{
 					"boolean",
 					"integer",
@@ -30,7 +31,11 @@ func TestNewSchemaFromFile(t *testing.T) {
 					goTypeInt64,
 					goTypeNetIPNet,
 				},
+				goArgList: "v0, v1, v2",
 				goArgPkgs: goPkgNetMask,
+
+				goParsers:    testParsersSnippetForSingleHandler,
+				goMarshaller: pdpMarshallerSetOfDomains,
 
 				Result:       "set of domains",
 				goResult:     goTypeDomainTree,
@@ -65,7 +70,7 @@ func TestSchemaPostProcess(t *testing.T) {
 	s := &Schema{
 		Package: "test",
 		Endpoints: map[string]*Endpoint{
-			"*": {
+			"test": {
 				Args: []string{
 					"boolean",
 					"integer",
@@ -81,7 +86,8 @@ func TestSchemaPostProcess(t *testing.T) {
 	assert.Equal(t, &Schema{
 		Package: "test",
 		Endpoints: map[string]*Endpoint{
-			"*": {
+			"test": {
+				goName: "Test",
 				Args: []string{
 					"boolean",
 					"integer",
@@ -92,28 +98,49 @@ func TestSchemaPostProcess(t *testing.T) {
 					goTypeInt64,
 					goTypeNetIPNet,
 				},
+				goArgList: "v0, v1, v2",
 				goArgPkgs: goPkgNetMask,
+
+				goParsers:    testParsersSnippet,
+				goMarshaller: pdpMarshallerSetOfDomains,
 
 				Result:       "set of domains",
 				goResult:     goTypeDomainTree,
-				goResultZero: "nil",
+				goResultZero: "0",
 				goResultPkg:  goPkgDomainTreeMask,
 			},
 		},
 	}, s)
 }
 
-func TestSchemaPostProcessWithSeveralEndpoints(t *testing.T) {
+func TestSchemaPostProcessWithInvalidResult(t *testing.T) {
 	s := &Schema{
 		Package: "test",
 		Endpoints: map[string]*Endpoint{
 			"test": {
-				Args: []string{
-					"set of domains",
-				},
-				Result: "list of strings",
+				Result: "unknown",
 			},
-			"*": {
+		},
+	}
+
+	err := s.postProcess()
+	assert.Error(t, err, "schema: %#v", s)
+}
+
+func TestSchemaPostProcessWithNoEndpoints(t *testing.T) {
+	s := &Schema{
+		Package: "test",
+	}
+
+	err := s.postProcess()
+	assert.Equal(t, errNoEndpoints, err)
+}
+
+func TestSchemaPostProcessForSingleHandler(t *testing.T) {
+	s := &Schema{
+		Package: "test",
+		Endpoints: map[string]*Endpoint{
+			defaultEndpointAlias: {
 				Args: []string{
 					"boolean",
 					"integer",
@@ -125,31 +152,42 @@ func TestSchemaPostProcessWithSeveralEndpoints(t *testing.T) {
 	}
 
 	err := s.postProcess()
-	assert.Error(t, err, "schema: %#v", s)
-}
-
-func TestSchemaPostProcessWithInvalidPath(t *testing.T) {
-	s := &Schema{
+	assert.NoError(t, err)
+	assert.Equal(t, &Schema{
 		Package: "test",
 		Endpoints: map[string]*Endpoint{
-			"test": {
+			defaultEndpointAlias: {
+				goName: "Default",
 				Args: []string{
-					"set of domains",
+					"boolean",
+					"integer",
+					"network",
 				},
-				Result: "list of strings",
+				goArgs: []string{
+					goTypeBool,
+					goTypeInt64,
+					goTypeNetIPNet,
+				},
+				goArgList: "v0, v1, v2",
+				goArgPkgs: goPkgNetMask,
+
+				goParsers:    testParsersSnippetForSingleHandler,
+				goMarshaller: pdpMarshallerSetOfDomains,
+
+				Result:       "set of domains",
+				goResult:     goTypeDomainTree,
+				goResultZero: "nil",
+				goResultPkg:  goPkgDomainTreeMask,
 			},
 		},
-	}
-
-	err := s.postProcess()
-	assert.Error(t, err, "schema: %#v", s)
+	}, s)
 }
 
-func TestSchemaPostProcessWithInvalidResult(t *testing.T) {
+func TestSchemaPostProcessForSingleHandlerWithInvalidResult(t *testing.T) {
 	s := &Schema{
 		Package: "test",
 		Endpoints: map[string]*Endpoint{
-			"*": {
+			defaultEndpointAlias: {
 				Result: "unknown",
 			},
 		},
@@ -159,7 +197,8 @@ func TestSchemaPostProcessWithInvalidResult(t *testing.T) {
 	assert.Error(t, err, "schema: %#v", s)
 }
 
-const testYAMLSchema = `# Test schema for PIP server handler
+const (
+	testYAMLSchema = `# Test schema for PIP server handler
 package: test
 endpoints:
   "*":
@@ -169,6 +208,41 @@ endpoints:
     - network
     result: set of domains
 `
+
+	testParsersSnippet = `	v0, in, err := pdp.GetInfoRequestBooleanValue(in)
+	if err != nil {
+		return 0, err
+	}
+
+	v1, in, err := pdp.GetInfoRequestIntegerValue(in)
+	if err != nil {
+		return 0, err
+	}
+
+	v2, _, err := pdp.GetInfoRequestNetworkValue(in)
+	if err != nil {
+		return 0, err
+	}
+
+`
+
+	testParsersSnippetForSingleHandler = `	v0, in, err := pdp.GetInfoRequestBooleanValue(in)
+	if err != nil {
+		return nil, err
+	}
+
+	v1, in, err := pdp.GetInfoRequestIntegerValue(in)
+	if err != nil {
+		return nil, err
+	}
+
+	v2, _, err := pdp.GetInfoRequestNetworkValue(in)
+	if err != nil {
+		return nil, err
+	}
+
+`
+)
 
 func writeTestSchema(t *testing.T, s string) string {
 	tmp, err := ioutil.TempFile("", "")

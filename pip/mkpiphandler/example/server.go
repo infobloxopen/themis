@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/infobloxopen/go-trees/domain"
+	"github.com/infobloxopen/go-trees/strtree"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/infobloxopen/themis/pip/mkpiphandler/example/pipexample"
@@ -16,7 +18,7 @@ func main() {
 	log.Info("PIP example server")
 	s := server.NewServer(
 		server.WithConnErrHandler(errorLogger),
-		server.WithHandler(pipexample.WrapHandler(handler)),
+		server.WithHandler(pipexample.MakeHandler(new(endpoints))),
 	)
 
 	log.Info("Binding server")
@@ -41,7 +43,36 @@ func main() {
 	log.Info("Done")
 }
 
-func handler(s string, addr net.IP) (*net.IPNet, error) {
+type endpoints struct {
+}
+
+func (e *endpoints) Set(i int64, dn domain.Name) (*strtree.Tree, error) {
+	if i != 1 {
+		return nil, fmt.Errorf("unknown key %d", i)
+	}
+
+	t := strtree.NewTree()
+	if dn.String() == "example.com" {
+		t.InplaceInsert("example", 0)
+	}
+
+	return t, nil
+}
+
+func (e *endpoints) List(i int64, dn domain.Name) ([]string, error) {
+	if i != 3 {
+		return nil, fmt.Errorf("unknown key %d", i)
+	}
+
+	s := []string{}
+	if dn.String() == "example.com" {
+		s = append(s, "example")
+	}
+
+	return s, nil
+}
+
+func (e *endpoints) Default(s string, addr net.IP) (*net.IPNet, error) {
 	if s != serverKey {
 		return nil, fmt.Errorf("unknown key %q", s)
 	}

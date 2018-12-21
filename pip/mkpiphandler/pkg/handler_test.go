@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"bytes"
 	"io/ioutil"
 	"os"
 	"path"
@@ -19,17 +20,14 @@ func TestSchemaGenHandler(t *testing.T) {
 		assert.NoError(t, os.RemoveAll(tmp))
 	}()
 
+	p := &Endpoint{
+		Args:   []string{"String"},
+		Result: "String",
+	}
 	s := &Schema{
 		Package: "test",
 		Endpoints: map[string]*Endpoint{
-			"*": {
-				Args: []string{
-					"Boolean",
-					"Address",
-					"Domain",
-				},
-				Result: "List of Strings",
-			},
+			"test": p,
 		},
 	}
 	err = s.postProcess()
@@ -38,81 +36,73 @@ func TestSchemaGenHandler(t *testing.T) {
 	}
 
 	err = s.genHandler(tmp)
-	if assert.NoError(t, err) {
-		f, err := os.Open(path.Join(tmp, handlerDst))
-		if assert.NoError(t, err) {
-			defer func() {
-				assert.NoError(t, f.Close())
-			}()
-		}
-	}
+	assert.NoError(t, err)
+	assert.FileExists(t, path.Join(tmp, handlerDst))
 }
 
-func TestSchemaGenHandlerWithInvalidDirectory(t *testing.T) {
+func TestSchemaMakeHandler(t *testing.T) {
+	p := &Endpoint{
+		goName: "Test",
+		Args: []string{
+			pipTypeString,
+		},
+		goArgs: []string{
+			goTypeString,
+		},
+
+		Result:       pipTypeString,
+		goResult:     goTypeString,
+		goResultZero: "\"\"",
+	}
 	s := &Schema{
 		Package: "test",
 		Endpoints: map[string]*Endpoint{
-			"*": {
-				Args: []string{
-					"Boolean",
-					"Address",
-					"Domain",
-				},
-				Result: "List of Strings",
-			},
+			"test": p,
 		},
 	}
-	err := s.postProcess()
-	if err != nil {
-		assert.FailNow(t, "s.(*Schema).postProcess(): %q", err)
+
+	h := s.makeHandler()
+	assert.Equal(t, "test", h.Package)
+}
+
+func TestHandlerExecute(t *testing.T) {
+	h := handler{
+		Package: "test",
 	}
 
-	err = s.genHandler("/dev/null")
-	if !assert.Error(t, err) {
-		if err = os.Remove(path.Join("/dev/null", handlerDst)); err != nil {
-			assert.FailNow(t, "os.Remove(path.Join(\"/dev/null\", handlerDst)): %q", err)
+	b := new(bytes.Buffer)
+	err := h.execute(b)
+	assert.NoError(t, err)
+	assert.Equal(t, testHandlerSource, b.String())
+}
+
+const testHandlerSource = `// Package test is a generated PIP server handler package. DO NOT EDIT.
+package test
+
+import (
+	"github.com/infobloxopen/themis/pdp"
+	"github.com/infobloxopen/themis/pip/server"
+)
+
+const reqIDSize = 4
+
+// MakeHandler creates PIP service handler for given Endpoints.
+func MakeHandler(e Endpoints) server.ServiceHandler {
+	return func(b []byte) []byte {
+		if len(b) < reqIDSize {
+			panic("missing request id")
 		}
+		in := b[reqIDSize:]
+
+		n, err := dispatch(in, e)
+		if err != nil {
+			n, err = pdp.MarshalInfoError(in[:cap(in)], err)
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		return b[:reqIDSize+n]
 	}
 }
-
-func TestSchemaGenHandlerWithNoEndpoints(t *testing.T) {
-	tmp, err := ioutil.TempDir("", "")
-	if err != nil {
-		assert.FailNow(t, "ioutil.TempDir(\"\", \"\"): %q", err)
-	}
-
-	defer func() {
-		assert.NoError(t, os.RemoveAll(tmp))
-	}()
-
-	s := &Schema{
-		Package: "test",
-	}
-
-	err = s.genHandler(tmp)
-	assert.Equal(t, errNoEndpoints, err)
-}
-
-func TestSchemaGenHandlerWithInvalidEndpoint(t *testing.T) {
-	tmp, err := ioutil.TempDir("", "")
-	if err != nil {
-		assert.FailNow(t, "ioutil.TempDir(\"\", \"\"): %q", err)
-	}
-
-	defer func() {
-		assert.NoError(t, os.RemoveAll(tmp))
-	}()
-
-	s := &Schema{
-		Package: "test",
-		Endpoints: map[string]*Endpoint{
-			"*": {
-				Args:   []string{"unknown"},
-				Result: "unknown",
-			},
-		},
-	}
-
-	err = s.genHandler(tmp)
-	assert.EqualError(t, err, "argument 0: unknown type \"unknown\"")
-}
+`

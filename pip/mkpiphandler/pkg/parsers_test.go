@@ -6,25 +6,37 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestParserNameMap(t *testing.T) {
+	for k := range typeMap {
+		_, ok := parserNameMap[k]
+		assert.True(t, ok, "missing marshaller for type %q", k)
+	}
+
+	for k := range parserNameMap {
+		_, ok := typeMap[k]
+		assert.True(t, ok, "extra marshaller for unknown type %q", k)
+	}
+}
+
 func TestMakeArgParsers(t *testing.T) {
-	p, err := makeArgParsers([]string{
+	p := makeArgParsers([]string{
 		"BoOlEaN",
 		"InTeGeR",
 		"NeTwOrK",
 		"SeT Of dOmAiNs",
 	}, "false")
-	assert.NoError(t, err)
 	assert.NotEmpty(t, p)
 
-	p, err = makeArgParsers([]string{"unknown"}, "false")
-	assert.EqualError(t, err, "argument 0: unknown type \"unknown\"", "parser: %#v", p)
+	p = makeArgParsers(nil, "nil")
+	assert.Empty(t, p)
 }
 
 func TestMakeArgParser(t *testing.T) {
-	p, err := makeArgParser(0, "BoOlEaN", "false")
-	assert.NoError(t, err)
+	p := makeArgParser(0, "BoOlEaN", "false", false)
 	assert.NotZero(t, p)
+	assert.Contains(t, p, "in,")
 
-	p, err = makeArgParser(0, "unknown", "")
-	assert.EqualError(t, err, "argument 0: unknown type \"unknown\"", "parser: %q", p)
+	p = makeArgParser(0, "BoOlEaN", "false", true)
+	assert.NotZero(t, p)
+	assert.Contains(t, p, "_,")
 }
