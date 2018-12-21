@@ -15,7 +15,7 @@
 # Using all stock Ubuntu Bionic packaging except for:
 # - cl: want latest
 # - d: dmd does not come with Ubuntu
-# - dart: does not come with Ubuntu
+# - dart: does not come with Ubuntu. Pinned to last 1.x release
 # - dotnet: does not come with Ubuntu
 # - go: want latest
 # - nodejs: want v8, bionic comes with v6
@@ -46,6 +46,7 @@ RUN apt-get update && \
 RUN curl https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - && \
     curl https://storage.googleapis.com/download.dartlang.org/linux/debian/dart_stable.list > \
       /etc/apt/sources.list.d/dart_stable.list
+ENV DART_VERSION 1.24.3-1
 
 # dotnet (netcore)
 RUN curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.gpg && \
@@ -88,7 +89,7 @@ RUN apt-get install -y --no-install-recommends \
 `# csharp (mono) dependencies` \
       mono-devel
 
-ENV SBCL_VERSION 1.4.9
+ENV SBCL_VERSION 1.4.12
 RUN \
 `# Common Lisp (sbcl) dependencies` \
     curl --version && \
@@ -100,8 +101,8 @@ RUN \
     cd .. && \
     rm -rf sbcl*
 
-ENV D_VERSION     2.081.0
-ENV DMD_DEB       dmd_2.081.0-0_amd64.deb
+ENV D_VERSION     2.082.1
+ENV DMD_DEB       dmd_2.082.1-0_amd64.deb
 RUN \
 `# D dependencies` \
     wget -q http://downloads.dlang.org/releases/2.x/${D_VERSION}/${DMD_DEB} && \
@@ -119,7 +120,7 @@ RUN \
 
 RUN apt-get install -y --no-install-recommends \
       `# Dart dependencies` \
-      dart/stable
+      dart=$DART_VERSION
 ENV PATH /usr/lib/dart/bin:$PATH
 
 RUN apt-get install -y --no-install-recommends \
@@ -139,9 +140,9 @@ RUN apt-get install -y --no-install-recommends \
       libglib2.0-dev
 
 # golang
-ENV GOLANG_VERSION 1.10.3
+ENV GOLANG_VERSION 1.11.1
 ENV GOLANG_DOWNLOAD_URL https://golang.org/dl/go$GOLANG_VERSION.linux-amd64.tar.gz
-ENV GOLANG_DOWNLOAD_SHA256 fa1b0e45d3b647c252f51f5e1204aba049cde4af177ef9f2181f43004f901035
+ENV GOLANG_DOWNLOAD_SHA256 2871270d8ff0c8c69f161aaae42f9f28739855ff5c5204752a8d92a1c9f63993
 RUN curl -fsSL "$GOLANG_DOWNLOAD_URL" -o golang.tar.gz && \
       echo "$GOLANG_DOWNLOAD_SHA256  golang.tar.gz" | sha256sum -c - && \
             tar -C /usr/local -xzf golang.tar.gz && \
@@ -180,6 +181,11 @@ RUN apt-get install -y --no-install-recommends \
 RUN apt-get install -y --no-install-recommends \
 `# Node.js dependencies` \
       nodejs
+
+# Test dependencies for running puppeteer
+RUN apt-get install -y --no-install-recommends \
+`# JS dependencies` \
+      libxss1
 
 RUN apt-get install -y --no-install-recommends \
 `# OCaml dependencies` \

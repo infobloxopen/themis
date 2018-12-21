@@ -11,7 +11,8 @@ GOTEST = go test -v
 COVER = $(GOTEST) -coverprofile=$(COVERTMP) -covermode=atomic
 JOINCOVER = cat $(COVERTMP) >> $(COVEROUT)
 GOTESTRACE = $(COVER) -race && $(JOINCOVER)
-GOBENCH = $(GOTEST) -run=BypassAllTestsAndRunOnlyBenchmarks -bench=
+GOTESTINTEGRACE = $(COVER) -race -coverpkg github.com/infobloxopen/themis/pdp,github.com/infobloxopen/themis/pdp/ast,github.com/infobloxopen/themis/pdp/ast/yast,github.com/infobloxopen/themis/pdp/ast/jast && $(JOINCOVER)
+GOBENCH = $(GOTEST) -run=\^\$$ -bench=
 GOBENCHALL = $(GOBENCH).
 
 .PHONY: all
@@ -31,16 +32,16 @@ clean:
 	@$(RM) $(BUILDPATH)
 
 .PHONY: fmt
-fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdp-itests fmt-local-selector fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-plugin fmt-egen
+fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdp-itests fmt-local-selector fmt-pip-selector fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-pip-server fmt-pip-client fmt-pip-gen fmt-pip-genpkg fmt-pipjcon fmt-pipcli fmt-pipcli-global fmt-pipcli-subflags fmt-pipcli-test fmt-pipcli-perf fmt-plugin fmt-egen
 
 .PHONY: build
-build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-egen
+build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-egen build-pip-gen build-pipjcon build-pipcli
 
 .PHONY: test
-test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-local-selector test-pep test-plugin
+test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-local-selector test-pip-selector test-pep test-pip-server test-pip-client test-pip-genpkg test-plugin
 
 .PHONY: bench
-bench: bench-pep bench-pdpserver-pkg bench-plugin
+bench: bench-pep bench-pip-server bench-pip-client bench-pdpserver-pkg bench-plugin
 
 .PHONY: cover-out
 cover-out:
@@ -76,6 +77,11 @@ fmt-pdp-itests:
 fmt-local-selector:
 	@echo "Checking PDP local selector format..."
 	@$(AT)/pdp/selector/local && $(GOFMTCHECK)
+
+.PHONY: fmt-pip-selector
+fmt-pip-selector:
+	@echo "Checking PDP PIP selector format..."
+	@$(AT)/pdp/selector/pip && $(GOFMTCHECK)
 
 .PHONY: fmt-pdpctrl-client
 fmt-pdpctrl-client:
@@ -122,6 +128,56 @@ fmt-pdpserver:
 	@echo "Checking PDP server format..."
 	@$(AT)/pdpserver && $(GOFMTCHECK)
 
+.PHONY: fmt-pip-server
+fmt-pip-server:
+	@echo "Checking PIP server package format..."
+	@$(AT)/pip/server && $(GOFMTCHECK)
+
+.PHONY: fmt-pip-client
+fmt-pip-client:
+	@echo "Checking PIP client package format..."
+	@$(AT)/pip/client && $(GOFMTCHECK)
+
+.PHONY: fmt-pip-gen
+fmt-pip-gen:
+	@echo "Checking PIP handler generator format..."
+	@$(AT)/pip/mkpiphandler && $(GOFMTCHECK)
+
+.PHONY: fmt-pip-genpkg
+fmt-pip-genpkg:
+	@echo "Checking PIP handler generator package format..."
+	@$(AT)/pip/mkpiphandler/pkg && $(GOFMTCHECK)
+
+.PHONY: fmt-pipjcon
+fmt-pipjcon:
+	@echo "Checking PIP JCon server format..."
+	@$(AT)/pip/pipjcon && $(GOFMTCHECK)
+
+.PHONY: fmt-pipcli
+fmt-pipcli:
+	@echo "Checking PIP CLI format..."
+	@$(AT)/pip/pipcli && $(GOFMTCHECK)
+
+.PHONY: fmt-pipcli-global
+fmt-pipcli-global:
+	@echo "Checking PIP CLI global options package format..."
+	@$(AT)/pip/pipcli/global && $(GOFMTCHECK)
+
+.PHONY: fmt-pipcli-subflags
+fmt-pipcli-subflags:
+	@echo "Checking PIP CLI command flags package format..."
+	@$(AT)/pip/pipcli/subflags && $(GOFMTCHECK)
+
+.PHONY: fmt-pipcli-test
+fmt-pipcli-test:
+	@echo "Checking PIP CLI test command package format..."
+	@$(AT)/pip/pipcli/test && $(GOFMTCHECK)
+
+.PHONY: fmt-pipcli-perf
+fmt-pipcli-perf:
+	@echo "Checking PIP CLI perf command package format..."
+	@$(AT)/pip/pipcli/perf && $(GOFMTCHECK)
+
 .PHONY: fmt-plugin
 fmt-plugin:
 	@echo "Checking CoreDNS PEP plugin format..."
@@ -160,13 +216,25 @@ build-plugin: build-dir
 build-egen: build-dir
 	$(AT)/egen && $(GOBUILD) -o $(BUILDPATH)/egen
 
+.PHONY: build-pip-gen
+build-pip-gen: build-dir
+	$(AT)/pip/mkpiphandler && $(GOBUILD) -o $(BUILDPATH)/mkpiphandler
+
+.PHONY: build-pipjcon
+build-pipjcon: build-dir
+	$(AT)/pip/pipjcon && $(GOBUILD) -o $(BUILDPATH)/pipjcon
+
+.PHONY: build-pipcli
+build-pipcli: build-dir
+	$(AT)/pip/pipcli && $(GOBUILD) -o $(BUILDPATH)/pipcli
+
 .PHONY: test-pdp
 test-pdp: cover-out
 	$(AT)/pdp && $(GOTESTRACE)
 
 .PHONY: test-pdp-integration
 test-pdp-integration: cover-out
-	$(AT)/pdp/integration_tests && $(GOTESTRACE)
+	$(AT)/pdp/integration_tests && $(GOTESTINTEGRACE)
 
 .PHONY: test-pdp-yast
 test-pdp-yast: cover-out
@@ -184,9 +252,25 @@ test-pdp-jcon: cover-out
 test-local-selector: cover-out
 	$(AT)/pdp/selector/local && $(GOTESTRACE)
 
+.PHONY: test-pip-selector
+test-pip-selector: cover-out
+	$(AT)/pdp/selector/pip && $(GOTESTRACE)
+
 .PHONY: test-pep
 test-pep: build-pdpserver cover-out
 	$(AT)/pep && $(GOTESTRACE)
+
+.PHONY: test-pip-server
+test-pip-server:
+	$(AT)/pip/server && $(GOTESTRACE)
+
+.PHONY: test-pip-client
+test-pip-client:
+	$(AT)/pip/client && $(GOTESTRACE)
+
+.PHONY: test-pip-genpkg
+test-pip-genpkg:
+	$(AT)/pip/mkpiphandler/pkg && $(GOTESTRACE)
 
 .PHONY: test-plugin
 test-plugin: cover-out
@@ -195,6 +279,14 @@ test-plugin: cover-out
 .PHONY: bench-pep
 bench-pep: build-pdpserver
 	$(AT)/pep && $(GOBENCHALL)
+
+.PHONY: bench-pip-server
+bench-pip-server:
+	$(AT)/pip/server && $(GOBENCHALL)
+
+.PHONY: bench-pip-client
+bench-pip-client:
+	$(AT)/pip/client && $(GOBENCHALL)
 
 .PHONY: bench-pdpserver-pkg
 bench-pdpserver-pkg:

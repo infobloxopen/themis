@@ -987,6 +987,70 @@ func TestLocalContentStorage(t *testing.T) {
 	}
 }
 
+func TestLocalContentStorageGetByValues(t *testing.T) {
+	mc := MakeContentValueItem(
+		"map",
+		TypeString,
+		"first",
+	)
+
+	v, err := mc.GetByValues([]AttributeValue{})
+	if err != nil {
+		t.Errorf("Expected no error but got %T (%s)", err, err)
+	} else {
+		e := "first"
+		s, err := v.Serialize()
+		if err != nil {
+			t.Errorf("Expected no error but got %T (%s)", err, err)
+		} else if s != e {
+			t.Errorf("Expected %q but got %q", e, s)
+		}
+	}
+
+	sm1 := strtree.NewTree()
+	sm1.InplaceInsert("1-first", "first-first")
+	sm1.InplaceInsert("2-second", "second-first")
+	sm1.InplaceInsert("3-third", "third-first")
+
+	sm2 := strtree.NewTree()
+	sm2.InplaceInsert("1-first", "first-second")
+	sm2.InplaceInsert("2-second", "second-second")
+	sm2.InplaceInsert("3-third", "third-second")
+
+	sm3 := strtree.NewTree()
+	sm3.InplaceInsert("1-first", "first-third")
+	sm3.InplaceInsert("2-second", "second-third")
+	sm3.InplaceInsert("3-third", "third-third")
+
+	ssm := strtree.NewTree()
+	ssm.InplaceInsert("1-first", MakeContentStringMap(sm1))
+	ssm.InplaceInsert("2-second", MakeContentStringMap(sm2))
+	ssm.InplaceInsert("3-third", MakeContentStringMap(sm3))
+
+	ssmc := MakeContentMappingItem(
+		"str-str-map",
+		TypeString,
+		MakeSignature(TypeString, TypeString),
+		MakeContentStringMap(ssm),
+	)
+
+	v, err = ssmc.GetByValues([]AttributeValue{
+		MakeStringValue("1-first"),
+		MakeStringValue("2-second"),
+	})
+	if err != nil {
+		t.Errorf("Expected no error but got %T (%s)", err, err)
+	} else {
+		e := "second-first"
+		s, err := v.Serialize()
+		if err != nil {
+			t.Errorf("Expected no error but got %T (%s)", err, err)
+		} else if s != e {
+			t.Errorf("Expected %q but got %q", e, s)
+		}
+	}
+}
+
 func checkSymbolsForTypes(t *testing.T, symbols Symbols, types ...Type) {
 	for _, typ := range types {
 		gotTyp := symbols.GetType(typ.GetKey())

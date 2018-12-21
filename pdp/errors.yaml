@@ -457,6 +457,27 @@ errors:
         	actual = strings.Join(strs, "/")
         }
 
+- id: invalidSelectorValuePathError
+  fields:
+  - id: expected
+    type: Signature
+  - id: actual
+    type: "[]AttributeValue"
+  msg: "Invalid value path. Expected %s path but got %s"
+  args:
+  - field: expected
+  - snippet:
+      result: actual
+      code: |
+        actual := "nothing"
+        if len(e.actual) > 0 {
+        	strs := make([]string, len(e.actual))
+        	for i, e := range e.actual {
+        		strs[i] = e.GetResultType().String()
+        	}
+        	actual = strings.Join(strs, "/")
+        }
+
 - id: networkMapKeyValueTypeError
   fields:
   - id: t
@@ -1026,6 +1047,17 @@ errors:
   - expr: math.MaxUint16
   - field: n
 
+- id: requestAttributeCountError
+  fields:
+  - id: actual
+    type: uint16
+  - id: expected
+    type: uint16
+  msg: "Expected exactly %d values but got %d"
+  args:
+  - field: expected
+  - field: actual
+
 - id: requestAttributeMarshallingTypeError
   fields:
   - id: t
@@ -1041,6 +1073,116 @@ errors:
   msg: "Unknown attribute type in request %d"
   args:
   - field: t
+
+- id: requestAttributeUnmarshallingFlagsSizeError
+  fields:
+  - id: s
+    type: int
+  msg: "Expected total number of flags from 1 to 64 but got %d"
+  args:
+  - field: s
+
+- id: requestAttributeUnmarshallingBooleanTypeError
+  fields:
+  - id: t
+    type: int
+  msg: "Expected %q or %q value but got %q"
+  args:
+  - expr: getRequestWireTypeName(requestWireTypeBooleanFalse)
+  - expr: getRequestWireTypeName(requestWireTypeBooleanTrue)
+  - expr: getRequestWireTypeName(e.t)
+
+- id: requestAttributeUnmarshallingStringTypeError
+  fields:
+  - id: t
+    type: int
+  msg: "Expected %q value but got %q"
+  args:
+  - expr: getRequestWireTypeName(requestWireTypeString)
+  - expr: getRequestWireTypeName(e.t)
+
+- id: requestAttributeUnmarshallingIntegerTypeError
+  fields:
+  - id: t
+    type: int
+  msg: "Expected %q value but got %q"
+  args:
+  - expr: getRequestWireTypeName(requestWireTypeInteger)
+  - expr: getRequestWireTypeName(e.t)
+
+- id: requestAttributeUnmarshallingFloatTypeError
+  fields:
+  - id: t
+    type: int
+  msg: "Expected %q value but got %q"
+  args:
+  - expr: getRequestWireTypeName(requestWireTypeFloat)
+  - expr: getRequestWireTypeName(e.t)
+
+- id: requestAttributeUnmarshallingAddressTypeError
+  fields:
+  - id: t
+    type: int
+  msg: "Expected %q or %q value but got %q"
+  args:
+  - expr: getRequestWireTypeName(requestWireTypeIPv4Address)
+  - expr: getRequestWireTypeName(requestWireTypeIPv6Address)
+  - expr: getRequestWireTypeName(e.t)
+
+- id: requestAttributeUnmarshallingNetworkTypeError
+  fields:
+  - id: t
+    type: int
+  msg: "Expected %q or %q value but got %q"
+  args:
+  - expr: getRequestWireTypeName(requestWireTypeIPv4Network)
+  - expr: getRequestWireTypeName(requestWireTypeIPv6Network)
+  - expr: getRequestWireTypeName(e.t)
+
+- id: requestAttributeUnmarshallingDomainTypeError
+  fields:
+  - id: t
+    type: int
+  msg: "Expected %q value but got %q"
+  args:
+  - expr: getRequestWireTypeName(requestWireTypeDomain)
+  - expr: getRequestWireTypeName(e.t)
+
+- id: requestAttributeUnmarshallingSetOfStringsTypeError
+  fields:
+  - id: t
+    type: int
+  msg: "Expected %q value but got %q"
+  args:
+  - expr: getRequestWireTypeName(requestWireTypeSetOfStrings)
+  - expr: getRequestWireTypeName(e.t)
+
+- id: requestAttributeUnmarshallingSetOfNetworksTypeError
+  fields:
+  - id: t
+    type: int
+  msg: "Expected %q value but got %q"
+  args:
+  - expr: getRequestWireTypeName(requestWireTypeSetOfNetworks)
+  - expr: getRequestWireTypeName(e.t)
+
+- id: requestAttributeUnmarshallingSetOfDomainsTypeError
+  fields:
+  - id: t
+    type: int
+  msg: "Expected %q value but got %q"
+  args:
+  - expr: getRequestWireTypeName(requestWireTypeSetOfDomains)
+  - expr: getRequestWireTypeName(e.t)
+
+- id: requestAttributeUnmarshallingListOfStringsTypeError
+  fields:
+  - id: t
+    type: int
+  msg: "Expected %q value but got %q"
+  args:
+  - expr: getRequestWireTypeName(requestWireTypeListOfStrings)
+  - expr: getRequestWireTypeName(e.t)
 
 - id: requestAttributeMarshallingNotImplementedError
   fields:
@@ -1136,6 +1278,17 @@ errors:
   - id: expected
     type: int
   msg: "Expected buffer for at least %d assignments but got %d"
+  args:
+  - field: expected
+  - field: actual
+
+- id: requestValuesOverflowError
+  fields:
+  - id: actual
+    type: int
+  - id: expected
+    type: int
+  msg: "Expected buffer for at least %d values but got %d"
   args:
   - field: expected
   - field: actual
@@ -1405,3 +1558,6 @@ errors:
   args:
   - field: a.describe()
   - field: err
+
+- id: noInformationalError
+  msg: "No information error providied to marshaller"

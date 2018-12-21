@@ -19,13 +19,13 @@ import (
 	"math"
 	"net/http"
 	"runtime"
+	"sort"
 	"strings"
-	"time"
-
-	"github.com/golang/protobuf/proto"
-	"github.com/prometheus/common/expfmt"
 
 	dto "github.com/prometheus/client_model/go"
+	"github.com/prometheus/common/expfmt"
+
+	"github.com/golang/protobuf/proto"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -113,7 +113,7 @@ func ExampleCounter() {
 	pushComplete := make(chan struct{})
 	// TODO: Start a goroutine that performs repository pushes and reports
 	// each completion via the channel.
-	for range pushComplete {
+	for _ = range pushComplete {
 		pushCounter.Inc()
 	}
 	// Output:
@@ -165,6 +165,19 @@ func ExampleInstrumentHandler() {
 	http.Handle("/metrics", prometheus.InstrumentHandler(
 		"metrics", prometheus.UninstrumentedHandler(),
 	))
+}
+
+func ExampleLabelPairSorter() {
+	labelPairs := []*dto.LabelPair{
+		&dto.LabelPair{Name: proto.String("status"), Value: proto.String("404")},
+		&dto.LabelPair{Name: proto.String("method"), Value: proto.String("get")},
+	}
+
+	sort.Sort(prometheus.LabelPairSorter(labelPairs))
+
+	fmt.Println(labelPairs)
+	// Output:
+	// [name:"method" value:"get"  name:"status" value:"404" ]
 }
 
 func ExampleRegister() {
@@ -321,9 +334,8 @@ func ExampleRegister() {
 
 func ExampleSummary() {
 	temps := prometheus.NewSummary(prometheus.SummaryOpts{
-		Name:       "pond_temperature_celsius",
-		Help:       "The temperature of the frog pond.",
-		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+		Name: "pond_temperature_celsius",
+		Help: "The temperature of the frog pond.", // Sorry, we can't measure how badly it smells.
 	})
 
 	// Simulate some observations.
@@ -360,9 +372,8 @@ func ExampleSummary() {
 func ExampleSummaryVec() {
 	temps := prometheus.NewSummaryVec(
 		prometheus.SummaryOpts{
-			Name:       "pond_temperature_celsius",
-			Help:       "The temperature of the frog pond.",
-			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+			Name: "pond_temperature_celsius",
+			Help: "The temperature of the frog pond.", // Sorry, we can't measure how badly it smells.
 		},
 		[]string{"species"},
 	)
@@ -629,7 +640,6 @@ func ExampleAlreadyRegisteredError() {
 			panic(err)
 		}
 	}
-	reqCounter.Inc()
 }
 
 func ExampleGatherers() {
@@ -699,7 +709,7 @@ humidity_percent{location="inside"} 33.2
 # HELP temperature_kelvin Temperature in Kelvin.
 # Duplicate metric:
 temperature_kelvin{location="outside"} 265.3
- # Missing location label (note that this is undesirable but valid):
+ # Wrong labels:
 temperature_kelvin 4.5
 `
 
@@ -727,47 +737,15 @@ temperature_kelvin 4.5
 	// temperature_kelvin{location="outside"} 273.14
 	// temperature_kelvin{location="somewhere else"} 4.5
 	// ----------
-	// collected metric "temperature_kelvin" { label:<name:"location" value:"outside" > gauge:<value:265.3 > } was collected before with the same name and label values
+	// 2 error(s) occurred:
+	// * collected metric temperature_kelvin label:<name:"location" value:"outside" > gauge:<value:265.3 >  was collected before with the same name and label values
+	// * collected metric temperature_kelvin gauge:<value:4.5 >  has label dimensions inconsistent with previously collected metrics in the same metric family
 	// # HELP humidity_percent Humidity in %.
 	// # TYPE humidity_percent gauge
 	// humidity_percent{location="inside"} 33.2
 	// humidity_percent{location="outside"} 45.4
 	// # HELP temperature_kelvin Temperature in Kelvin.
 	// # TYPE temperature_kelvin gauge
-	// temperature_kelvin 4.5
 	// temperature_kelvin{location="inside"} 298.44
 	// temperature_kelvin{location="outside"} 273.14
-}
-
-func ExampleNewMetricWithTimestamp() {
-	desc := prometheus.NewDesc(
-		"temperature_kelvin",
-		"Current temperature in Kelvin.",
-		nil, nil,
-	)
-
-	// Create a constant gauge from values we got from an external
-	// temperature reporting system. Those values are reported with a slight
-	// delay, so we want to add the timestamp of the actual measurement.
-	temperatureReportedByExternalSystem := 298.15
-	timeReportedByExternalSystem := time.Date(2009, time.November, 10, 23, 0, 0, 12345678, time.UTC)
-	s := prometheus.NewMetricWithTimestamp(
-		timeReportedByExternalSystem,
-		prometheus.MustNewConstMetric(
-			desc, prometheus.GaugeValue, temperatureReportedByExternalSystem,
-		),
-	)
-
-	// Just for demonstration, let's check the state of the gauge by
-	// (ab)using its Write method (which is usually only used by Prometheus
-	// internally).
-	metric := &dto.Metric{}
-	s.Write(metric)
-	fmt.Println(proto.MarshalTextString(metric))
-
-	// Output:
-	// gauge: <
-	//   value: 298.15
-	// >
-	// timestamp_ms: 1257894000012
 }

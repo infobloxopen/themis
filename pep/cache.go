@@ -26,7 +26,7 @@ func adjustCacheConfig(cfg bigcache.Config) bigcache.Config {
 
 	win := size * 1024 * 1024 / cfg.MaxEntrySize
 	shrd := 1024 * win / 600000
-	shrd = int(math.Pow(2, round(math.Log2(float64(shrd)))))
+	shrd = int(math.Pow(2, math.Round(math.Log2(float64(shrd)))))
 	if shrd < 256 {
 		shrd = 256
 	}
@@ -39,19 +39,4 @@ func adjustCacheConfig(cfg bigcache.Config) bigcache.Config {
 	cfg.MaxEntriesInWindow = win
 
 	return cfg
-}
-
-func round(x float64) float64 {
-	n, f := math.Modf(x)
-	if n >= 0 {
-		if f >= 0.5 {
-			return float64(n + 1)
-		}
-	} else {
-		if f <= -0.5 {
-			return float64(n - 1)
-		}
-	}
-
-	return float64(n)
 }

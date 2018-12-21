@@ -24,21 +24,3 @@ func TestAdjustCacheConfig(t *testing.T) {
 			1024, 536870, cfg.Shards, cfg.MaxEntriesInWindow)
 	}
 }
-
-func TestRound(t *testing.T) {
-	if n := round(1.4); n != 1 {
-		t.Errorf("Expected 1.4 rounded to 1 but got %g", n)
-	}
-
-	if n := round(1.5); n != 2 {
-		t.Errorf("Expected 1.5 rounded to 2 but got %g", n)
-	}
-
-	if n := round(-1.4); n != -1 {
-		t.Errorf("Expected -1.4 rounded to -1 but got %g", n)
-	}
-
-	if n := round(-1.5); n != -2 {
-		t.Errorf("Expected -1.5 rounded to -2 but got %g", n)
-	}
-}

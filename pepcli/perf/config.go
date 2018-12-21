@@ -11,6 +11,7 @@ import (
 type config struct {
 	parallel int
 	limit    int64
+	noDump   bool
 }
 
 var perfFlagSet = flag.NewFlagSet(Name, flag.ExitOnError)
@@ -26,6 +27,8 @@ func FlagsParser(args []string) interface{} {
 	perfFlagSet.Int64Var(&conf.limit, "l", 0, "limit request rate by adding 1s/limit pauses\n\t"+
 		"(default and less than one - no limit;\n\t"+
 		" shouldn't be more than 1,000,000,000)")
+	perfFlagSet.BoolVar(&conf.noDump, "no-dump", false, "don't save each timestamp\n\t"+
+		"(measures only average rate and latency")
 	perfFlagSet.Parse(args)
 
 	count := perfFlagSet.NArg()

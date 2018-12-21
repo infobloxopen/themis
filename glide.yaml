@@ -48,18 +48,36 @@ import:
   subpackages:
   - difflib
 - package: github.com/prometheus/client_golang
-  version: 3525612fea19680dd3d49c768802ec082ca853b2
+  version: v0.8.0
   subpackages:
   - prometheus
 - package: github.com/sirupsen/logrus
 - package: golang.org/x/crypto
-  version: 0e37d006457bf46f9e6692014ba72ef82c33022c
+  version: 0c41d7ab0a0ee717d4590a44bcb987dfd9e183eb
+- package: golang.org/x/net
+  subpackages:
+  - context
 - package: google.golang.org/grpc
   subpackages:
   - balancer
   - naming
 - package: gopkg.in/yaml.v2
+- package: k8s.io/api
+  subpackages:
+  - core/v1
+- package: k8s.io/apimachinery
+  subpackages:
+  - pkg/labels
+- package: k8s.io/client-go
+  subpackages:
+  - informers
+  - kubernetes
+  - rest
+  - tools/cache
 testImport:
 - package: github.com/prometheus/client_model
   subpackages:
   - go
+- package: github.com/stretchr/testify
+  subpackages:
+  - assert

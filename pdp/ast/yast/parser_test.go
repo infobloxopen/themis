@@ -788,6 +788,54 @@ policies:
           - val:
               type: flags64
               content: [f00, f76]
+
+  - id: PipSelector
+    alg:
+      id: Mapper
+      map:
+        selector:
+          uri: "pip://localhost:5600/content/item"
+          type: string
+          path:
+          - attr: strAttr
+      default: Default
+    rules:
+    - id: Permit
+      effect: Permit
+    - id: Default
+      effect: Deny
+
+  - id: PipUnixSelector
+    alg:
+      id: Mapper
+      map:
+        selector:
+          uri: "pip+unix:/var/run/pip.socket#content/item"
+          type: string
+          path:
+          - attr: strAttr
+      default: Default
+    rules:
+    - id: Permit
+      effect: Permit
+    - id: Default
+      effect: Deny
+
+  - id: PipK8sSelector
+    alg:
+      id: Mapper
+      map:
+        selector:
+          uri: "pip+k8s://value.key.namespace:5600/content/item"
+          type: string
+          path:
+          - attr: strAttr
+      default: Default
+    rules:
+    - id: Permit
+      effect: Permit
+    - id: Default
+      effect: Deny
 `
 
 	missingSubAlgPCAPolicy = `# Policies YAML with missing mapper subalgorithm

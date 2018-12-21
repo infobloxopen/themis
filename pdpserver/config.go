@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"math"
+	"os"
 	"strings"
 	"time"
 
@@ -42,6 +43,9 @@ type config struct {
 	memProfDumpPath     string
 	memProfNumGC        uint
 	memProfDelay        time.Duration
+	pipNoCache          bool
+	pipCacheTTL         time.Duration
+	pipCacheMaxSize     int
 }
 
 type stringSet []string
@@ -57,7 +61,9 @@ func (s *stringSet) Set(v string) error {
 
 var conf config
 
-func init() {
+func parseCommandLine() {
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
 	verbose := flag.Int("v", 1, "log verbosity (0 - error, 1 - warn (default), 2 - info, 3 - debug)")
 	flag.StringVar(&conf.policy, "p", "", "policy file to start with")
 	policyFmt := flag.String("pfmt", policyFormatNameYAML, "policy data format \"yaml\" or \"json\"")
@@ -83,6 +89,11 @@ func init() {
 	flag.DurationVar(&conf.memProfDelay, "mem-prof-delay", 0,
 		"delay after request serving start for first memory profile dump\n"+
 			"(zero and below - dump from programm start)")
+	flag.BoolVar(&conf.pipNoCache, "pip-no-cache", false, "disables pip selector cache")
+	flag.DurationVar(&conf.pipCacheTTL, "pip-cache-ttl", time.Minute,
+		"enables pip selector cache and sets its TTL")
+	flag.IntVar(&conf.pipCacheMaxSize, "pip-cache-size", 10*1024*1024,
+		"enables pip selector cache and sets its size limit")
 
 	flag.Parse()
 
