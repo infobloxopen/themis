@@ -50,8 +50,7 @@ func TestHandleQuery(t *testing.T) {
 	root := pdp.NewPolicySet("test", false, pdp.Target{}, []pdp.Evaluable{policy},
 		pdp.PolicyCombiningAlgs["firstapplicableeffect"], nil, nil)
 
-	p := pdp.NewPolicyStorage(root, pdp.Symbols{}, nil)
-	s := &Server{p: p}
+	s := pdp.NewPolicyStorage(root, pdp.Symbols{}, nil)
 
 	handleQuery(&w, s, []string{}, url.Values{"depth": []string{"nine"}})
 	assertEqualWriter(t, mockResponseWriter{

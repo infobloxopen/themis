@@ -36,10 +36,10 @@ Parameters:
 GET /query/<path>?depth=<depth>`
 )
 
-func handleQuery(w http.ResponseWriter, server *Server,
+func handleQuery(w http.ResponseWriter, storage *pdp.PolicyStorage,
 	path []string, urlQuery url.Values) {
 	// sanity check
-	if server == nil || server.p == nil {
+	if storage == nil {
 		http.Error(w, missingStorageMsg, http.StatusNotFound)
 		return
 	}
@@ -59,9 +59,7 @@ func handleQuery(w http.ResponseWriter, server *Server,
 	}
 
 	// parse path
-	server.RLock()
-	target, err := server.p.GetAtPath(path)
-	server.RUnlock()
+	target, err := storage.GetAtPath(path)
 	if err != nil {
 		var errCode int
 		if _, ok := err.(*pdp.PathNotFoundError); ok {
@@ -103,7 +101,10 @@ func (handler *storageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 	switch cmd {
 	case queryCmd:
-		handleQuery(w, handler.s, resourcePath, urlQuery)
+		handler.s.RLock()
+		storage := handler.s.p
+		handler.s.RUnlock()
+		handleQuery(w, storage, resourcePath, urlQuery)
 	default:
 		http.Error(w, fmt.Sprintf("Unknown resource %s\n%s", cmd, usage), http.StatusNotFound)
 	}
