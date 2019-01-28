@@ -11,12 +11,14 @@ const (
 	typeEDNS0Bytes = iota
 	typeEDNS0Hex
 	typeEDNS0IP
+	typeEDNS0Domain
 )
 
 var edns0Types = map[string]uint16{
 	"bytes":   typeEDNS0Bytes,
 	"hex":     typeEDNS0Hex,
 	"address": typeEDNS0IP,
+	"domain":  typeEDNS0Domain,
 }
 
 type edns0Opt struct {
