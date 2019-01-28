@@ -74,6 +74,13 @@ func makeAssignmentByType(o *edns0Opt, b []byte) (pdp.AttributeAssignment, bool)
 
 	case typeEDNS0IP:
 		return pdp.MakeAddressAssignment(o.name, net.IP(b)), true
+
+	case typeEDNS0Domain:
+		dn, err := domain.MakeNameFromString(string(b))
+		if err != nil {
+			log.Warningf("Bad domain name %s, err: %s", string(b), err)
+		}
+		return pdp.MakeDomainAssignment(o.name, dn), true
 	}
 
 	panic(fmt.Errorf("unknown attribute type %d", o.dataType))
