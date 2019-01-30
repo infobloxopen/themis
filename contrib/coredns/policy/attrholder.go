@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"encoding/binary"
 	"fmt"
 	"net"
 
@@ -81,6 +82,10 @@ func makeAssignmentByType(o *edns0Opt, b []byte) (pdp.AttributeAssignment, bool)
 			log.Warningf("Bad domain name %s, err: %s", string(b), err)
 		}
 		return pdp.MakeDomainAssignment(o.name, dn), true
+
+	case typeEDNS0Number:
+		num := binary.BigEndian.Uint64(b)
+		return pdp.MakeIntegerAssignment(o.name, int64(num)), true
 	}
 
 	panic(fmt.Errorf("unknown attribute type %d", o.dataType))

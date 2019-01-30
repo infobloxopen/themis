@@ -12,6 +12,7 @@ const (
 	typeEDNS0Hex
 	typeEDNS0IP
 	typeEDNS0Domain
+	typeEDNS0Number
 )
 
 var edns0Types = map[string]uint16{
@@ -19,6 +20,7 @@ var edns0Types = map[string]uint16{
 	"hex":     typeEDNS0Hex,
 	"address": typeEDNS0IP,
 	"domain":  typeEDNS0Domain,
+	"number":  typeEDNS0Number,
 }
 
 type edns0Opt struct {
