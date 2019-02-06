@@ -1,6 +1,7 @@
 package pdp
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 
@@ -11,11 +12,20 @@ import (
 	"github.com/pmezard/go-difflib/difflib"
 )
 
+var emptyCtx, _ = NewContext(nil, 0, nil)
+
 // AttributeAssignment represents assignment of arbitrary result to
 // an attribute.
 type AttributeAssignment struct {
 	a Attribute
 	e Expression
+}
+
+// AttribAssignFmt is the json marshal format of serialized AttributeAssignment
+type AttribAssignFmt struct {
+	Name  string
+	Type  string
+	Value string
 }
 
 // MakeAttributeAssignment creates assignment of given expression to given
@@ -453,11 +463,26 @@ func (a AttributeAssignment) Serialize(ctx *Context) (string, string, string, er
 }
 
 func (a AttributeAssignment) String() string {
-	name, valueType, value, err := a.Serialize(nil)
+	name, valueType, value, err := a.Serialize(emptyCtx)
 	if err != nil {
 		return err.Error()
 	}
 	return fmt.Sprintf("(%s)%s:%s", valueType, name, value)
+}
+
+// MarshalJSON satisfies Marshaler interface
+// Only works for assignment expression where righthand doesn't depend on context
+// E.g.: values, constant expression, selector that don't rely on attributes or local content
+func (a AttributeAssignment) MarshalJSON() ([]byte, error) {
+	name, valueType, value, err := a.Serialize(emptyCtx)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(AttribAssignFmt{
+		Name:  name,
+		Type:  valueType,
+		Value: value,
+	})
 }
 
 func (a AttributeAssignment) bindError(err error) error {

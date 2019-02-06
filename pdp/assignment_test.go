@@ -1,8 +1,10 @@
 package pdp
 
 import (
+	"encoding/json"
 	"math"
 	"net"
+	"strings"
 	"testing"
 )
 
@@ -24,6 +26,15 @@ func TestAttributeAssignment(t *testing.T) {
 		t.Errorf("Expected no error but got %s", err)
 	} else if id != a.id || tKey != a.t.GetKey() || s != expect {
 		t.Errorf("Expected %q, %q, %q but got %q, %q, %q", a.id, a.t.GetKey(), expect, id, tKey, s)
+	}
+
+	bjson, err := json.Marshal(aa)
+	expectb := `{"Name":"test-id","Type":"string","Value":"test-value"}`
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if strings.Compare(expectb, string(bjson)) != 0 {
+		t.Errorf("Expected marshaled as '%s' but got '%s'",
+			expectb, string(bjson))
 	}
 
 	dv := MakeDomainValue(makeTestDomain("example.com"))
@@ -112,6 +123,15 @@ func TestAttributeAssignment(t *testing.T) {
 		t.Errorf("Expected %q, %q, %q but got %q, %q, %q", a.id, a.t.GetKey(), expect, id, tKey, s)
 	}
 
+	bjson, err = json.Marshal(aa)
+	expectb = `{"Name":"test-id","Type":"float","Value":"45679.23"}`
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if strings.Compare(expectb, string(bjson)) != 0 {
+		t.Errorf("Expected marshaled as '%s' but got '%s'",
+			expectb, string(bjson))
+	}
+
 	v = MakeIntegerValue(12345)
 	a = Attribute{
 		id: "test-id",
@@ -151,6 +171,15 @@ func TestMakeExpressionAssignment(t *testing.T) {
 		),
 	)
 
+	bjson, err := json.Marshal(aa)
+	expectb := `{"Name":"test-id","Type":"boolean","Value":"false"}`
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if strings.Compare(expectb, string(bjson)) != 0 {
+		t.Errorf("Expected marshaled as '%s' but got '%s'",
+			expectb, string(bjson))
+	}
+
 	v, err := aa.calculate(ctx)
 	if err != nil {
 		t.Error(err)
@@ -187,6 +216,15 @@ func TestBooleanAssignment(t *testing.T) {
 
 	aa := MakeBooleanAssignment("test-id", true)
 
+	bjson, err := json.Marshal(aa)
+	expectb := `{"Name":"test-id","Type":"boolean","Value":"true"}`
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if strings.Compare(expectb, string(bjson)) != 0 {
+		t.Errorf("Expected marshaled as '%s' but got '%s'",
+			expectb, string(bjson))
+	}
+
 	b, err := aa.GetBoolean(ctx)
 	if err != nil {
 		t.Error(err)
@@ -221,6 +259,15 @@ func TestStringAssignment(t *testing.T) {
 	}
 
 	aa := MakeStringAssignment("test-id", "test")
+
+	bjson, err := json.Marshal(aa)
+	expectb := `{"Name":"test-id","Type":"string","Value":"test"}`
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if strings.Compare(expectb, string(bjson)) != 0 {
+		t.Errorf("Expected marshaled as '%s' but got '%s'",
+			expectb, string(bjson))
+	}
 
 	s, err := aa.GetString(ctx)
 	if err != nil {
@@ -257,6 +304,15 @@ func TestIntegerAssignment(t *testing.T) {
 
 	aa := MakeIntegerAssignment("test-id", math.MaxInt64)
 
+	bjson, err := json.Marshal(aa)
+	expectb := `{"Name":"test-id","Type":"integer","Value":"9223372036854775807"}`
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if strings.Compare(expectb, string(bjson)) != 0 {
+		t.Errorf("Expected marshaled as '%s' but got '%s'",
+			expectb, string(bjson))
+	}
+
 	i, err := aa.GetInteger(ctx)
 	if err != nil {
 		t.Error(err)
@@ -291,6 +347,15 @@ func TestFloatAssignment(t *testing.T) {
 	}
 
 	aa := MakeFloatAssignment("test-id", math.SmallestNonzeroFloat64)
+
+	bjson, err := json.Marshal(aa)
+	expectb := `{"Name":"test-id","Type":"float","Value":"5E-324"}`
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if strings.Compare(expectb, string(bjson)) != 0 {
+		t.Errorf("Expected marshaled as '%s' but got '%s'",
+			expectb, string(bjson))
+	}
 
 	f, err := aa.GetFloat(ctx)
 	if err != nil {
@@ -327,6 +392,15 @@ func TestAddressAssignment(t *testing.T) {
 
 	aa := MakeAddressAssignment("test-id", net.ParseIP("192.0.2.1"))
 
+	bjson, err := json.Marshal(aa)
+	expectb := `{"Name":"test-id","Type":"address","Value":"192.0.2.1"}`
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if strings.Compare(expectb, string(bjson)) != 0 {
+		t.Errorf("Expected marshaled as '%s' but got '%s'",
+			expectb, string(bjson))
+	}
+
 	a, err := aa.GetAddress(ctx)
 	if err != nil {
 		t.Error(err)
@@ -361,6 +435,15 @@ func TestNetworkAssignment(t *testing.T) {
 	}
 
 	aa := MakeNetworkAssignment("test-id", makeTestNetwork("192.0.2.0/24"))
+
+	bjson, err := json.Marshal(aa)
+	expectb := `{"Name":"test-id","Type":"network","Value":"192.0.2.0/24"}`
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if strings.Compare(expectb, string(bjson)) != 0 {
+		t.Errorf("Expected marshaled as '%s' but got '%s'",
+			expectb, string(bjson))
+	}
 
 	n, err := aa.GetNetwork(ctx)
 	if err != nil {
@@ -397,6 +480,15 @@ func TestDomainAssignment(t *testing.T) {
 
 	aa := MakeDomainAssignment("test-id", makeTestDomain("example.com"))
 
+	bjson, err := json.Marshal(aa)
+	expectb := `{"Name":"test-id","Type":"domain","Value":"example.com"}`
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if strings.Compare(expectb, string(bjson)) != 0 {
+		t.Errorf("Expected marshaled as '%s' but got '%s'",
+			expectb, string(bjson))
+	}
+
 	d, err := aa.GetDomain(ctx)
 	if err != nil {
 		t.Error(err)
@@ -431,6 +523,15 @@ func TestSetOfStringsAssignment(t *testing.T) {
 	}
 
 	aa := MakeSetOfStringsAssignment("test-id", newStrTree("one", "two", "three"))
+
+	bjson, err := json.Marshal(aa)
+	expectb := `{"Name":"test-id","Type":"set of strings","Value":"\"one\",\"two\",\"three\""}`
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if strings.Compare(expectb, string(bjson)) != 0 {
+		t.Errorf("Expected marshaled as '%s' but got '%s'",
+			expectb, string(bjson))
+	}
 
 	ss, err := aa.GetSetOfStrings(ctx)
 	if err != nil {
@@ -474,6 +575,15 @@ func TestSetOfNetworksAssignment(t *testing.T) {
 		),
 	)
 
+	bjson, err := json.Marshal(aa)
+	expectb := `{"Name":"test-id","Type":"set of networks","Value":"\"192.0.2.16/28\",\"192.0.2.32/28\",\"192.0.2.48/28\""}`
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if strings.Compare(expectb, string(bjson)) != 0 {
+		t.Errorf("Expected marshaled as '%s' but got '%s'",
+			expectb, string(bjson))
+	}
+
 	sn, err := aa.GetSetOfNetworks(ctx)
 	if err != nil {
 		t.Error(err)
@@ -516,6 +626,15 @@ func TestSetOfDomainsAssignment(t *testing.T) {
 		),
 	)
 
+	bjson, err := json.Marshal(aa)
+	expectb := `{"Name":"test-id","Type":"set of domains","Value":"\"example.com\",\"example.net\",\"example.org\""}`
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if strings.Compare(expectb, string(bjson)) != 0 {
+		t.Errorf("Expected marshaled as '%s' but got '%s'",
+			expectb, string(bjson))
+	}
+
 	sd, err := aa.GetSetOfDomains(ctx)
 	if err != nil {
 		t.Error(err)
@@ -551,6 +670,15 @@ func TestListOfStringsAssignment(t *testing.T) {
 	}
 
 	aa := MakeListOfStringsAssignment("test-id", []string{"one", "two", "three"})
+
+	bjson, err := json.Marshal(aa)
+	expectb := `{"Name":"test-id","Type":"list of strings","Value":"\"one\",\"two\",\"three\""}`
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if strings.Compare(expectb, string(bjson)) != 0 {
+		t.Errorf("Expected marshaled as '%s' but got '%s'",
+			expectb, string(bjson))
+	}
 
 	ls, err := aa.GetListOfStrings(ctx)
 	if err != nil {
@@ -600,6 +728,15 @@ func TestFlags8Assignment(t *testing.T) {
 
 	aa := MakeFlags8Assignment("test-id", nt, 21)
 
+	bjson, err := json.Marshal(aa)
+	expectb := `{"Name":"test-id","Type":"f8flags","Value":"\"f00\",\"f02\",\"f04\""}`
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if strings.Compare(expectb, string(bjson)) != 0 {
+		t.Errorf("Expected marshaled as '%s' but got '%s'",
+			expectb, string(bjson))
+	}
+
 	f8, err := aa.GetFlags8(ctx)
 	if err != nil {
 		t.Error(err)
@@ -648,6 +785,15 @@ func TestFlags16Assignment(t *testing.T) {
 	}
 
 	aa := MakeFlags16Assignment("test-id", nt, 21)
+
+	bjson, err := json.Marshal(aa)
+	expectb := `{"Name":"test-id","Type":"f16flags","Value":"\"f00\",\"f02\",\"f04\""}`
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if strings.Compare(expectb, string(bjson)) != 0 {
+		t.Errorf("Expected marshaled as '%s' but got '%s'",
+			expectb, string(bjson))
+	}
 
 	f16, err := aa.GetFlags16(ctx)
 	if err != nil {
@@ -699,6 +845,15 @@ func TestFlags32Assignment(t *testing.T) {
 	}
 
 	aa := MakeFlags32Assignment("test-id", nt, 21)
+
+	bjson, err := json.Marshal(aa)
+	expectb := `{"Name":"test-id","Type":"f32flags","Value":"\"f00\",\"f02\",\"f04\""}`
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if strings.Compare(expectb, string(bjson)) != 0 {
+		t.Errorf("Expected marshaled as '%s' but got '%s'",
+			expectb, string(bjson))
+	}
 
 	f32, err := aa.GetFlags32(ctx)
 	if err != nil {
@@ -754,6 +909,15 @@ func TestFlags64Assignment(t *testing.T) {
 	}
 
 	aa := MakeFlags64Assignment("test-id", nt, 21)
+
+	bjson, err := json.Marshal(aa)
+	expectb := `{"Name":"test-id","Type":"f64flags","Value":"\"f00\",\"f02\",\"f04\""}`
+	if err != nil {
+		t.Errorf("Expected no error but got %s", err)
+	} else if strings.Compare(expectb, string(bjson)) != 0 {
+		t.Errorf("Expected marshaled as '%s' but got '%s'",
+			expectb, string(bjson))
+	}
 
 	f64, err := aa.GetFlags64(ctx)
 	if err != nil {
