@@ -183,10 +183,10 @@ func (conf *config) parseDnstap(c *caddy.Controller) error {
 	if err != nil {
 		return c.Err(err.Error())
 	}
-	if num < 0 || num >= maxDnstapLists {
+	if num <= 0 || num > maxDnstapLists {
 		return c.Err("Incorrect dnstap log level")
 	}
-	return conf.parseAttributes(c, attrListTypeDnstap+num)
+	return conf.parseAttributes(c, attrListTypeDnstap+num-1)
 }
 
 func (conf *config) parseStreams(c *caddy.Controller) error {

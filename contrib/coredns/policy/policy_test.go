@@ -151,8 +151,8 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 				";example.com.debug.local.\tCH\t TXT\n\n"+
 				";; ANSWER SECTION:\n"+
 				"example.com.debug.local.\t0\tCH\tTXT\t\"Ident: <DEBUG>\" "+
-				"\"PDP response {Effect: Permit, Obligations: [policy_action: allow]}\" "+
-				"\"PDP response {Effect: Permit, Obligations: [policy_action: allow]}\" "+
+				"\"PDP response {Effect: Permit, Obligations: [policy_action: allow, log: 1]}\" "+
+				"\"PDP response {Effect: Permit, Obligations: [policy_action: allow, log: 1]}\" "+
 				"\"Domain resolution: resolved\"\n",
 		) {
 			t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
@@ -400,7 +400,7 @@ func TestPolicyPluginServeDNS(t *testing.T) {
 				";example.com.debug.local.\tCH\t TXT\n\n"+
 				";; ANSWER SECTION:\n"+
 				"example.com.debug.local.\t0\tCH\tTXT\t\"Ident: <DEBUG>\" "+
-				"\"PDP response {Effect: Permit, Obligations: [policy_action: allow]}\" "+
+				"\"PDP response {Effect: Permit, Obligations: [policy_action: allow, log: 1]}\" "+
 				"\"Domain resolution: failed\"\n",
 		) {
 			t.Logf("=== plugin logs ===\n%s--- plugin logs ---", logs)
@@ -751,6 +751,10 @@ policies:
           val:
             type: integer
             content: 2
+      - log:
+          val:
+            type: integer
+            content: 1
     - id: "Redirect example.log and log 0"
       target:
       - contains:
@@ -772,7 +776,7 @@ policies:
       - log:
           val:
             type: integer
-            content: 0
+            content: 1
     - id: "Redirect example.redirect"
       target:
       - contains:
@@ -791,6 +795,10 @@ policies:
           val:
             type: string
             content: "192.0.2.254"
+      - log:
+          val:
+            type: integer
+            content: 1
     - id: "Block example.block"
       target:
       - contains:
@@ -805,6 +813,10 @@ policies:
           val:
             type: integer
             content: 3
+      - log:
+          val:
+            type: integer
+            content: 1
     - id: "Refuse example.refuse"
       target:
       - contains:
@@ -871,6 +883,10 @@ policies:
           val:
             type: integer
             content: 2
+      - log:
+          val:
+            type: integer
+            content: 1
     - id: "Block 192.0.2.96/28 and log 1"
       target:
       - contains:
@@ -888,7 +904,7 @@ policies:
       - log:
           val:
             type: integer
-            content: 1
+            content: 2
     - id: "Redirect 192.0.2.0/28"
       target:
       - contains:
@@ -907,6 +923,10 @@ policies:
           val:
             type: string
             content: "192.0.2.253"
+      - log:
+          val:
+            type: integer
+            content: 1
     - id: "Block 192.0.2.16/28"
       target:
       - contains:
@@ -921,6 +941,10 @@ policies:
           val:
             type: integer
             content: 3
+      - log:
+          val:
+            type: integer
+            content: 1
     - id: "Refuse 192.0.2.32/28"
       target:
       - contains:

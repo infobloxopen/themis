@@ -83,7 +83,7 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 				w.WriteMsg(r)
 			}
 
-			if p.tapIO != nil && dbgMsgr == nil {
+			if p.tapIO != nil && dbgMsgr == nil && ah.logValue() > 0 {
 				p.tapIO.sendCRExtraMsg(w, r, ah.dnstapList())
 			}
 		}

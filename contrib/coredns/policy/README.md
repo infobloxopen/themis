@@ -55,7 +55,7 @@ coredns_policy_recent_queries{attribute="uid",value="9e868487da91153c"} 153
 
 The counter is decremented when queries get expired. The default expiration period is 1 minute. If no new query is received during the expiration period for the given attribute/value then the related counter is removed to save memory.
 
-Option **dnstap** defines the attributes to be included in extra field of DNStap message if those attributes are available. The option can be used repeatedly with different values of *LEVEL* parameter to define different sets of dnstap attributes. Value of *LEVEL* should be in range [0..2]. The level of dnstap logging is defined by PDP response with `log` attribute. The default value for log level is 0.
+Option **dnstap** defines the attributes to be included in extra field of DNStap message if those attributes are available. The option can be used repeatedly with different values of *LEVEL* parameter to define different sets of dnstap attributes. Value of *LEVEL* should be in range [1..3]. The level of dnstap logging for particular DNS message is defined by `log` attribute which could be got from PDP response or predefined in plugin configuration.
 
 The *ATTR_N* parameters have the syntax like `<name>[=<value>]` where value can be one of quoted string, number or IP address. See examples below.
 
@@ -87,7 +87,7 @@ Policy plugin recognizes the following predefined attributes:
 
  - *redirect_to* (type string) - can be assigned with a value defined in default_decision option or with a value taken from PDP response. The valid formats are string representation of IPv4 or IPv6 or domain name.
 
- - *log* (type integer) - can be assigned with a value defined in default_decision option or with a value taken from PDP response. The attribute defines the dnstap log level, i.e. the attribute set to be sent with DNStap message. See option **dnstap** above. The valid range is from 0 to 2 (inclusive).
+ - *log* (type integer) - can be assigned with a value defined in default_decision option or with a value taken from PDP response. The attribute defines the dnstap log level, i.e. the attribute set to be sent with DNStap message. See option **dnstap** above. The valid range is from 0 to 3 (inclusive). The value 0 of log attribute means to not send DNSTAP message at all. The default value for log attribute is 0.
 
 ## Example
 
@@ -106,9 +106,9 @@ policy {
     validation2 type="response" address
     default_decision policy_action=2 log=1 client_ip=192.168.0.101
     metrics client_name
-    dnstap 0 policy_action
-    dnstap 1 policy_action client_id
-    dnstap 2 policy_action client_id group_id uid
+    dnstap 1 policy_action
+    dnstap 2 policy_action client_id
+    dnstap 3 policy_action client_id group_id uid
 
     passthrough mycompanyname.com. mycompanyname.org.
     debug_query_suffix debug.

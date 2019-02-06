@@ -304,8 +304,8 @@ func TestPolicyConfigParse(t *testing.T) {
 							validation2 type="response" address pid
 							default_decision policy_action=2
 							metrics id policy_action
-							dnstap 0 src="policy_plugin"
-							dnstap 2 policy_id policy_plugin src="policy_plugin"
+							dnstap 1 src="policy_plugin"
+							dnstap 3 policy_id policy_plugin src="policy_plugin"
 						}
 					}`,
 			attrs: &attrsConfig{
@@ -380,7 +380,7 @@ func TestPolicyConfigParse(t *testing.T) {
 			input: `.:53 {
 						policy {
 							endpoint 10.2.4.1:5555
-							dnstap 0
+							dnstap 1
 						}
 					}`,
 			err: errors.New("Wrong argument count or unexpected line ending"),

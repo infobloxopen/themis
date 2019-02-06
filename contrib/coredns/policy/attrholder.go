@@ -133,12 +133,16 @@ func (ah *attrHolder) attrList(buf []pdp.AttributeAssignment, listType int) []pd
 
 // dnstapList returns list of non-empty dnstap attributes according to defined log level
 func (ah *attrHolder) dnstapList() []*pb.DnstapAttribute {
-	cfgList := ah.cfg.confLists[attrListTypeDnstap+ah.logValue()]
+	l := ah.logValue() - 1
+	if l < 0 {
+		return nil
+	}
+	cfgList := ah.cfg.confLists[attrListTypeDnstap+l]
 	if len(cfgList) <= 0 {
 		return nil
 	}
 
-	ah.resetAttrList(attrListTypeDnstap + ah.logValue())
+	ah.resetAttrList(attrListTypeDnstap + l)
 	out := make([]*pb.DnstapAttribute, 0, len(cfgList))
 
 	for _, ac := range cfgList {
@@ -171,7 +175,7 @@ func (ah *attrHolder) actionValue() int {
 // logValue returns the dnstap log level
 func (ah *attrHolder) logValue() int {
 	log64, err := ah.attrs[attrIndexLog].GetInteger(emptyCtx)
-	if err == nil && log64 > 0 && log64 < maxDnstapLists {
+	if err == nil && log64 > 0 && log64 <= maxDnstapLists {
 		return int(log64)
 	}
 	return 0
