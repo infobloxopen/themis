@@ -18,6 +18,7 @@ func TestMakePipSelector(t *testing.T) {
 		makeTestURL("pip://localhost:5600/content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeString,
+		nil, nil,
 	)
 	if err != nil {
 		t.Errorf("expected no error but got %#v", err)
@@ -58,6 +59,7 @@ func TestMakePipSelector(t *testing.T) {
 		makeTestURL("pip+unix:/var/run/pip.socket#content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeString,
+		nil, nil,
 	)
 	if err != nil {
 		t.Errorf("expected no error but got %#v", err)
@@ -98,6 +100,7 @@ func TestMakePipSelector(t *testing.T) {
 		makeTestURL("pip+k8s://value.key.namespace:5600/content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeString,
+		nil, nil,
 	)
 	if err != nil {
 		t.Errorf("expected no error but got %#v", err)
@@ -137,6 +140,7 @@ func TestMakePipSelector(t *testing.T) {
 		makeTestURL("local:content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeString,
+		nil, nil,
 	)
 	if err == nil {
 		t.Error("expected error")
@@ -158,6 +162,7 @@ func TestPipSelectorCalculate(t *testing.T) {
 		makeTestURL("pip://localhost:5600/content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeString,
+		nil, nil,
 	)
 	if err != nil {
 		t.Errorf("expected no error but got %#v", err)
@@ -172,6 +177,30 @@ func TestPipSelectorCalculate(t *testing.T) {
 			t.Errorf("failed to serialize result %#v", err)
 		} else if s != "test" {
 			t.Errorf("expected %q from PIP but got %q", "test", s)
+		}
+	}
+
+	e, err = MakePipSelector(
+		pc,
+		makeTestURL("pip://localhost:5600/content/item"),
+		[]pdp.Expression{pdp.MakeStringValue("test")},
+		pdp.TypeInteger,
+		nil,
+		pdp.MakeIntegerValue(5),
+	)
+	if err != nil {
+		t.Errorf("expected no error but got %#v", err)
+	} else {
+		v, err := e.Calculate(nil)
+		if err != nil {
+			t.Errorf("expected no error but got %#v", err)
+		}
+
+		s, err := v.Serialize()
+		if err != nil {
+			t.Errorf("failed to serialize result %#v", err)
+		} else if s != "5" {
+			t.Errorf("expected %q from PIP but got %q", "5", s)
 		}
 	}
 }

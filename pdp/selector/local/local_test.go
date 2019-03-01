@@ -32,7 +32,7 @@ func TestMakeLocalSelector(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error but got: %s", err)
 	} else {
-		e, err := pdp.MakeSelector(uri, path, pdp.TypeString)
+		e, err := pdp.MakeSelector(uri, path, pdp.TypeString, nil, nil)
 		if err != nil {
 			t.Errorf("Expected no error but got: %s", err)
 		} else if _, ok := e.(LocalSelector); !ok {
@@ -49,7 +49,7 @@ func TestMakeLocalSelector(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error but got: %s", err)
 	} else {
-		e, err := pdp.MakeSelector(uri, path, pdp.TypeString)
+		e, err := pdp.MakeSelector(uri, path, pdp.TypeString, nil, nil)
 		if err == nil {
 			t.Errorf("Expected error but got selector expression %T (%#v)", e, e)
 		}
@@ -72,7 +72,7 @@ func TestSelectorCalculate(t *testing.T) {
 		t.Fatalf("Expected no error but got: %s", err)
 	}
 
-	e, err := pdp.MakeSelector(uri, path, sft)
+	e, err := pdp.MakeSelector(uri, path, sft, nil, nil)
 	if err != nil {
 		t.Fatalf("Expected no error but got: %s", err)
 	}
@@ -131,7 +131,7 @@ func TestSelectorCalculate(t *testing.T) {
 		}
 	}
 
-	e, err = pdp.MakeSelector(uri, path, pdp.TypeString)
+	e, err = pdp.MakeSelector(uri, path, pdp.TypeString, nil, nil)
 	if err != nil {
 		t.Errorf("Expected no error but got: %s", err)
 	} else {
@@ -170,11 +170,74 @@ func TestSelectorCalculate(t *testing.T) {
 		t.Errorf("Expected *MissingValueError but got %T (%s)", err, err)
 	}
 
+	defVal := pdp.MakeFlagsValue8(4, cft)
+	errVal := pdp.MakeFlagsValue8(7, cft)
+
+	e, err = pdp.MakeSelector(uri, path, sft, defVal, nil)
+	if err != nil {
+		t.Errorf("Expected no error but got: %s", err)
+	} else {
+		v, err := e.Calculate(ctx)
+		if err != nil {
+			t.Errorf("Expected no error but got: %s", err)
+		} else {
+			s, err := v.Serialize()
+			if err != nil {
+				t.Errorf("Expected no error but got: %s", err)
+			} else {
+				e := "\"third\""
+				if s != e {
+					t.Errorf("Expected %q value from selector but got %q", e, s)
+				}
+			}
+		}
+	}
+
+	e, err = pdp.MakeSelector(uri, path, sft, nil, errVal)
+	if err != nil {
+		t.Errorf("Expected no error but got: %s", err)
+	} else {
+		v, err := e.Calculate(ctx)
+		if err != nil {
+			t.Errorf("Expected no error but got: %s", err)
+		} else {
+			s, err := v.Serialize()
+			if err != nil {
+				t.Errorf("Expected no error but got: %s", err)
+			} else {
+				e := "\"first\",\"second\",\"third\""
+				if s != e {
+					t.Errorf("Expected %q value from selector but got %q", e, s)
+				}
+			}
+		}
+	}
+
+	e, err = pdp.MakeSelector(uri, path, sft, defVal, errVal)
+	if err != nil {
+		t.Errorf("Expected no error but got: %s", err)
+	} else {
+		v, err := e.Calculate(ctx)
+		if err != nil {
+			t.Errorf("Expected no error but got: %s", err)
+		} else {
+			s, err := v.Serialize()
+			if err != nil {
+				t.Errorf("Expected no error but got: %s", err)
+			} else {
+				e := "\"third\""
+				if s != e {
+					t.Errorf("Expected %q value from selector but got %q", e, s)
+				}
+			}
+		}
+	}
+
 	uri, err = url.Parse("local:test-content/missing-item")
 	if err != nil {
 		t.Errorf("Expected no error but got: %s", err)
 	} else {
-		e, err := pdp.MakeSelector(uri, path, sft)
+		e, err := pdp.MakeSelector(uri, path, sft, nil, nil)
 		if err != nil {
 			t.Errorf("Expected no error but got: %s", err)
 		} else {
@@ -190,6 +253,26 @@ func TestSelectorCalculate(t *testing.T) {
 				t.Errorf("Expected *MissingContentItemError but got %T (%s)", err, err)
 			}
 
+		}
+	}
+
+	e, err = pdp.MakeSelector(uri, path, sft, defVal, errVal)
+	if err != nil {
+		t.Errorf("Expected no error but got: %s", err)
+	} else {
+		v, err := e.Calculate(ctx)
+		if err != nil {
+			t.Errorf("Expected no error but got: %s", err)
+		} else {
+			s, err := v.Serialize()
+			if err != nil {
+				t.Errorf("Expected no error but got: %s", err)
+			} else {
+				e := "\"first\",\"second\",\"third\""
+				if s != e {
+					t.Errorf("Expected %q value from selector but got %q", e, s)
+				}
+			}
 		}
 	}
 }

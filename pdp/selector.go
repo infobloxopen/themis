@@ -14,15 +14,17 @@ type Selector interface {
 	// by InitializeSelectors.
 	Initialize()
 	// SelectorFunc returns selector expression for given URI,
-	// set of arguments and desired result type.
-	SelectorFunc(*url.URL, []Expression, Type) (Expression, error)
+	// set of arguments and desired result type. The last two arguments
+	// define the values selector to return in case of missing content value
+	// or other errors
+	SelectorFunc(*url.URL, []Expression, Type, Expression, Expression) (Expression, error)
 }
 
 var selectorMap = make(map[string]Selector)
 
 // MakeSelector returns new selector for given uri with path as a set of
 // arguments and desired result type.
-func MakeSelector(uri *url.URL, path []Expression, t Type) (Expression, error) {
+func MakeSelector(uri *url.URL, path []Expression, t Type, def, err Expression) (Expression, error) {
 	s := GetSelector(uri.Scheme)
 	if s == nil {
 		return nil, newUnsupportedSelectorSchemeError(uri)
@@ -30,7 +32,7 @@ func MakeSelector(uri *url.URL, path []Expression, t Type) (Expression, error) {
 	if !s.Enabled() {
 		return nil, newDisabledSelectorError(s)
 	}
-	return s.SelectorFunc(uri, path, t)
+	return s.SelectorFunc(uri, path, t, def, err)
 }
 
 // RegisterSelector puts given selector to PDP's registry.

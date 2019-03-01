@@ -836,6 +836,49 @@ policies:
       effect: Permit
     - id: Default
       effect: Deny
+
+  - id: LocalSelectorDefaultError
+    alg:
+      id: Mapper
+      map:
+        selector:
+          uri: "local:content/content-item"
+          type: string
+          path:
+          - attr: netAttr
+          - attr: netAttr
+          default:
+            val:
+              type: string
+              content: Default
+          error:
+            attr: strAttr
+    rules:
+    - id: Permit
+      effect: Permit
+    - id: Default
+      effect: Deny
+
+  - id: PipSelectorDefaultError
+    alg:
+      id: Mapper
+      map:
+        selector:
+          uri: "pip://localhost:5600/content/item"
+          type: string
+          path:
+          - attr: strAttr
+          default:
+            val:
+              type: string
+              content: Default
+          error:
+            attr: strAttr
+    rules:
+    - id: Permit
+      effect: Permit
+    - id: Default
+      effect: Deny
 `
 
 	missingSubAlgPCAPolicy = `# Policies YAML with missing mapper subalgorithm
@@ -986,9 +1029,9 @@ func TestUnmarshal(t *testing.T) {
 			effect, o, err := r.Effect, r.Obligations, r.Status
 			if effect != pdp.EffectDeny {
 				if err != nil {
-					t.Errorf("Expected deny as a response for Simple All Permit Policy but got %d (%s)", effect, err)
+					t.Errorf("Expected deny as a response for All Features Policy but got %d (%s)", effect, err)
 				} else {
-					t.Errorf("Expected deny as a response for Simple All Permit Policy but got %d", effect)
+					t.Errorf("Expected deny as a response for All Features Policy but got %d", effect)
 				}
 			}
 

@@ -1621,6 +1621,79 @@ const (
             "effect": "Deny"
           }
         ]
+      },
+      {
+        "id": "LocalSelectorDefaultError",
+        "alg": {
+          "id": "Mapper",
+          "map": {
+            "selector": {
+              "uri": "local:content/content-item",
+              "type": "string",
+              "path": [
+                {
+                  "attr": "netAttr",
+                  "attr": "netAttr"
+                }
+              ],
+              "default": {
+                "val": {
+                  "type": "string",
+                  "content": "Default"
+                }
+              },
+              "error": {
+                "attr": "strAttr"
+              }
+            }
+          }
+        },
+        "rules": [
+          {
+            "id": "Permit",
+            "effect": "Permit"
+          },
+          {
+            "id": "Default",
+            "effect": "Deny"
+          }
+        ]
+      },
+      {
+        "id": "PipSelectorDefaultError",
+        "alg": {
+          "id": "Mapper",
+          "map": {
+            "selector": {
+              "uri": "pip://localhost:5600/content/item",
+              "type": "string",
+              "path": [
+                {
+                  "attr": "strAttr"
+                }
+              ],
+              "default": {
+                "val": {
+                  "type": "string",
+                  "content": "Default"
+                }
+              },
+              "error": {
+                "attr": "strAttr"
+              }
+            }
+          }
+        },
+        "rules": [
+          {
+            "id": "Permit",
+            "effect": "Permit"
+          },
+          {
+            "id": "Default",
+            "effect": "Deny"
+          }
+        ]
       }
     ]
   }
