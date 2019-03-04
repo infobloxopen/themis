@@ -545,6 +545,8 @@ Local selector uses local content data (see below) and has following fields:
 - **uri** - URI of local content ("local:&lt;content-id&gt;/&lt;content-item-id&gt;);
 - **path** - defines path to data in local content (optional, if not set selector extracts immediate value from content item). Path represents a list of expressions. It should match to content item keys (see below). Selector calculates path expressions one by one and extracts value from next mapping step of content item until reaches desired value;
 - **type** - type of data in local content (any of available types).
+- **default** - optional expression to be calculated and returned if value is absent from content for given path. The result type of expression must be the same as defined in `type` field. If `default` field is not set the expression from `error` field is calculated. If both `default` and `error` are not set the error is returned to outer object.
+- **error** - optional expression to be calculated and returned if error occured when getting the value from content. The result type of expression must be the same as defined in `type` field. If `error` field is not set the error is returned to outer object.
 
 Example of local selector:
 ```yaml
@@ -558,6 +560,12 @@ selector:
       content: good
   - attr: d
   type: set of networks
+  default:
+    attr: x
+  error:
+    val:
+      type: set of networks
+      content: ["192.0.74.0/24", "192.0.94.0/24"]
 ```
 
 Content for the example:

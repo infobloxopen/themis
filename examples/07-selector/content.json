@@ -14,6 +14,16 @@
           "test.com": ["2001:db8:3000::/40", "2001:db8:4000::/40"]
         }
       }
+    },
+    "advanced": {
+      "keys": ["domain"],
+      "type": "string",
+      "data": {
+        "example.com": "good",
+        "test.com": "good",
+        "example.net": "bad",
+        "test.net": "bad"
+      }
     }
   }
 }

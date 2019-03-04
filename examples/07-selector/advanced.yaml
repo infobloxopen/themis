@@ -1,0 +1,88 @@
+# Advanced selector example
+attributes:
+  d: domain
+  s: string
+
+policies:
+  alg: FirstApplicableEffect
+  rules:
+  - condition:
+      equal:
+      - selector:
+          uri: "local:content/advanced"
+          path:
+          - attr: d
+          type: string
+          default:
+            val:
+              type: string
+              content: default
+          error:
+            val:
+              type: string
+              content: error
+      - val:
+          type: string
+          content: default
+    effect: Deny
+    obligations:
+    - s:
+        val:
+          type: string
+          content: default
+  - condition:
+      equal:
+      - selector:
+          uri: "local:content/advanced"
+          path:
+          - attr: d
+          type: string
+          default:
+            val:
+              type: string
+              content: default
+          error:
+            val:
+              type: string
+              content: error
+      - val:
+          type: string
+          content: error
+    effect: Deny
+    obligations:
+    - s:
+        val:
+          type: string
+          content: error
+  - condition:
+      equal:
+      - selector:
+          uri: "local:content/advanced"
+          path:
+          - attr: d
+          type: string
+      - val:
+          type: string
+          content: good
+    effect: Permit
+    obligations:
+    - s:
+        val:
+          type: string
+          content: good
+  - condition:
+      equal:
+      - selector:
+          uri: "local:content/advanced"
+          path:
+          - attr: d
+          type: string
+      - val:
+          type: string
+          content: bad
+    effect: Permit
+    obligations:
+    - s:
+        val:
+          type: string
+          content: bad
