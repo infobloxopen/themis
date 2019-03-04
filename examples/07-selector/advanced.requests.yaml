@@ -1,0 +1,15 @@
+attributes:
+  d: domain
+
+requests:
+# good
+- d: test.com
+
+# bad
+- d: example.net
+
+# default
+- d: domain.org
+
+# error
+- s: error

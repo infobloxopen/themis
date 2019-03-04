@@ -20,6 +20,9 @@ func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.Expression, error) {
 		uri  string
 		path []pdp.Expression
 		st   string
+
+		defExp pdp.Expression
+		errExp pdp.Expression
 	)
 
 	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
@@ -58,6 +61,30 @@ func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.Expression, error) {
 			}
 
 			return nil
+
+		case yastTagDefault:
+			err = jparser.CheckObjectStart(d, "expression")
+			if err != nil {
+				return err
+			}
+			defExp, err = ctx.unmarshalExpression(d)
+			if err != nil {
+				return bindError(err, "selector default")
+			}
+
+			return nil
+
+		case yastTagError:
+			err = jparser.CheckObjectStart(d, "expression")
+			if err != nil {
+				return err
+			}
+			errExp, err = ctx.unmarshalExpression(d)
+			if err != nil {
+				return bindError(err, "selector error")
+			}
+
+			return nil
 		}
 
 		return newUnknownFieldError(k)
@@ -79,8 +106,16 @@ func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.Expression, error) {
 		return ret, bindErrorf(newInvalidTypeError(t), "selector(%s)", uri)
 	}
 
+	if defExp != nil && defExp.GetResultType() != t {
+		return ret, bindErrorf(newInvalidTypeError(t), "selector(%s).default", uri)
+	}
+
+	if errExp != nil && errExp.GetResultType() != t {
+		return ret, bindErrorf(newInvalidTypeError(t), "selector(%s).error", uri)
+	}
+
 	var e error
-	ret, e = pdp.MakeSelector(id, path, t)
+	ret, e = pdp.MakeSelector(id, path, t, defExp, errExp)
 	if e != nil {
 		return ret, bindErrorf(e, "selector(%s)", uri)
 	}

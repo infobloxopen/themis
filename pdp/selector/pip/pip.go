@@ -26,8 +26,8 @@ func (s *selector) Enabled() bool {
 	return true
 }
 
-func (s *selector) SelectorFunc(uri *url.URL, path []pdp.Expression, t pdp.Type) (pdp.Expression, error) {
-	return MakePipSelector(s.pool, uri, path, t)
+func (s *selector) SelectorFunc(uri *url.URL, path []pdp.Expression, t pdp.Type, def, err pdp.Expression) (pdp.Expression, error) {
+	return MakePipSelector(s.pool, uri, path, t, def, err)
 }
 
 func (s *selector) Initialize() {
@@ -47,8 +47,8 @@ func (s *selectorUnix) Enabled() bool {
 	return true
 }
 
-func (s *selectorUnix) SelectorFunc(uri *url.URL, path []pdp.Expression, t pdp.Type) (pdp.Expression, error) {
-	return MakePipSelector(s.pool, uri, path, t)
+func (s *selectorUnix) SelectorFunc(uri *url.URL, path []pdp.Expression, t pdp.Type, def, err pdp.Expression) (pdp.Expression, error) {
+	return MakePipSelector(s.pool, uri, path, t, def, err)
 }
 
 func (s *selectorUnix) Initialize() {
@@ -68,8 +68,8 @@ func (s *selectorK8s) Enabled() bool {
 	return true
 }
 
-func (s *selectorK8s) SelectorFunc(uri *url.URL, path []pdp.Expression, t pdp.Type) (pdp.Expression, error) {
-	return MakePipSelector(s.pool, uri, path, t)
+func (s *selectorK8s) SelectorFunc(uri *url.URL, path []pdp.Expression, t pdp.Type, def, err pdp.Expression) (pdp.Expression, error) {
+	return MakePipSelector(s.pool, uri, path, t, def, err)
 }
 
 func (s *selectorK8s) Initialize() {
@@ -88,11 +88,14 @@ type PipSelector struct {
 
 	path []pdp.Expression
 	t    pdp.Type
+
+	def pdp.Expression
+	err pdp.Expression
 }
 
 // MakePipSelector creates an expression base on PIP selector. Client pool must
 // correspond to URI schema.
-func MakePipSelector(clients *clientsPool, uri *url.URL, path []pdp.Expression, t pdp.Type) (pdp.Expression, error) {
+func MakePipSelector(clients *clientsPool, uri *url.URL, path []pdp.Expression, t pdp.Type, def, err pdp.Expression) (pdp.Expression, error) {
 	switch strings.ToLower(uri.Scheme) {
 	case pipSelectorScheme:
 		return PipSelector{
@@ -102,6 +105,8 @@ func MakePipSelector(clients *clientsPool, uri *url.URL, path []pdp.Expression, 
 			id:      uri.Path,
 			path:    path,
 			t:       t,
+			def:     def,
+			err:     err,
 		}, nil
 
 	case pipUnixSelectorScheme:
@@ -112,6 +117,8 @@ func MakePipSelector(clients *clientsPool, uri *url.URL, path []pdp.Expression, 
 			id:      uri.Fragment,
 			path:    path,
 			t:       t,
+			def:     def,
+			err:     err,
 		}, nil
 
 	case pipK8sSelectorScheme:
@@ -123,6 +130,8 @@ func MakePipSelector(clients *clientsPool, uri *url.URL, path []pdp.Expression, 
 			id:      uri.Path,
 			path:    path,
 			t:       t,
+			def:     def,
+			err:     err,
 		}, nil
 	}
 
@@ -142,7 +151,7 @@ func (s PipSelector) Calculate(ctx *pdp.Context) (pdp.AttributeValue, error) {
 	for i, item := range s.path {
 		v, err := item.Calculate(ctx)
 		if err != nil {
-			return pdp.UndefinedValue, fmt.Errorf("Failed to calculate argument %d: %s", i+1, err)
+			return s.handleError(ctx, fmt.Errorf("Failed to calculate argument %d: %s", i+1, err))
 		}
 
 		vals = append(vals, v)
@@ -150,20 +159,31 @@ func (s PipSelector) Calculate(ctx *pdp.Context) (pdp.AttributeValue, error) {
 
 	c, err := s.clients.Get(s.addr)
 	if err != nil {
-		return pdp.UndefinedValue, fmt.Errorf("Failed to get PIP client for %s: %s", s.addr, err)
+		return s.handleError(ctx, fmt.Errorf("Failed to get PIP client for %s: %s", s.addr, err))
 	}
 	defer s.clients.Free(s.addr)
 
 	r, err := c.Get(s.id, vals)
 	if err != nil {
-		return pdp.UndefinedValue, fmt.Errorf("Failed to get information from PIP: %s", err)
+		return s.handleError(ctx, fmt.Errorf("Failed to get information from PIP: %s", err))
 	}
 
 	r, err = r.Rebind(s.t)
 	if err != nil {
-		return pdp.UndefinedValue, fmt.Errorf("Expected content with value type %q but got %q", s.t, r.GetResultType())
-
+		return s.handleError(ctx, fmt.Errorf("Expected content with value type %q but got %q", s.t, r.GetResultType()))
 	}
 
 	return r, nil
+}
+
+func (s PipSelector) handleError(ctx *pdp.Context, err error) (pdp.AttributeValue, error) {
+	if _, ok := err.(*pdp.MissingValueError); ok && s.def != nil {
+		return s.def.Calculate(ctx)
+	}
+
+	if s.err != nil {
+		return s.err.Calculate(ctx)
+	}
+
+	return pdp.UndefinedValue, err
 }
