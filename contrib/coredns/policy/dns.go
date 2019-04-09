@@ -114,29 +114,14 @@ func resetTTL(r *dns.Msg) *dns.Msg {
 }
 
 func (p *policyPlugin) setRedirectQueryAnswer(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, dst string) (int, error) {
-	var rr dns.RR
 
 	qName, qClass := getNameAndClass(r)
 
 	ip := net.ParseIP(dst)
-	if ipv4 := ip.To4(); ipv4 != nil {
-		rr = &dns.A{
-			Hdr: dns.RR_Header{
-				Name:   qName,
-				Rrtype: dns.TypeA,
-				Class:  qClass,
-			},
-			A: ipv4,
-		}
-	} else if ipv6 := ip.To16(); ipv6 != nil {
-		rr = &dns.AAAA{
-			Hdr: dns.RR_Header{
-				Name:   qName,
-				Rrtype: dns.TypeAAAA,
-				Class:  qClass,
-			},
-			AAAA: ipv6,
-		}
+	rr := ip2rr(ip)
+	if rr != nil && rr.Header() != nil {
+		rr.Header().Name = qName
+		rr.Header().Class = qClass
 	} else {
 		dst = dns.Fqdn(dst)
 		rr = &dns.CNAME{
@@ -172,4 +157,24 @@ func (p *policyPlugin) setRedirectQueryAnswer(ctx context.Context, w dns.Respons
 	r.Answer = []dns.RR{rr}
 	r.Rcode = dns.RcodeSuccess
 	return r.Rcode, nil
+}
+
+// ip2rr returns a dns.A if ip is v4 and dns.AAAA if ip is v6, nil otherwise
+func ip2rr(ip net.IP) dns.RR {
+	if ipv4 := ip.To4(); ipv4 != nil {
+		return &dns.A{
+			Hdr: dns.RR_Header{
+				Rrtype: dns.TypeA,
+			},
+			A: ipv4,
+		}
+	} else if ipv6 := ip.To16(); ipv6 != nil {
+		return &dns.AAAA{
+			Hdr: dns.RR_Header{
+				Rrtype: dns.TypeAAAA,
+			},
+			AAAA: ipv6,
+		}
+	}
+	return nil
 }

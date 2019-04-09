@@ -301,3 +301,33 @@ func TestSetRedirectQueryAnswer(t *testing.T) {
 			"redirect.example.com.\tIN\t A\n",
 	)
 }
+
+func TestIp2rr(t *testing.T) {
+	testCases := []struct {
+		ip  net.IP
+		exp dns.RR
+	}{
+		{net.ParseIP("192.0.0.44"), &dns.A{
+			Hdr: dns.RR_Header{
+				Rrtype: dns.TypeA,
+			},
+			A: net.ParseIP("192.0.0.44"),
+		}},
+		{net.ParseIP("2001:db8::68"), &dns.AAAA{
+			Hdr: dns.RR_Header{
+				Rrtype: dns.TypeAAAA,
+			},
+			AAAA: net.ParseIP("2001:db8::68"),
+		}},
+		{net.ParseIP(""), nil},
+	}
+
+	for _, tc := range testCases {
+		act := ip2rr(tc.ip)
+		if act == nil && tc.exp != nil ||
+			act != nil && tc.exp == nil ||
+			act != nil && tc.exp != nil && act.String() != tc.exp.String() {
+			t.Errorf("Expected %s, got %s", tc.exp, act)
+		}
+	}
+}
