@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"strings"
@@ -91,6 +92,45 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		p.attrPool.Put(tmpAttrBuffer)
 		p.attrPool.Put(attrBuffer)
 	}()
+
+	if p.conf.ownIPEndpoint != "" {
+		var buff bytes.Buffer
+		buff.Write([]byte(p.conf.ownIPEndpoint))
+		buff.Write([]byte("."))
+		buff.Write([]byte(p.conf.debugSuffix))
+
+		if r != nil && len(r.Question) > 0 && r.Question[0].Name == buff.String() {
+			var rr dns.RR
+			srcIP := getRemoteIP(w)
+			if srcIP == nil {
+				status = dns.RcodeServerFailure
+				return dns.RcodeSuccess, nil
+			}
+			qName, qClass := getNameAndClass(r)
+			if ipv4 := srcIP.To4(); ipv4 != nil {
+				rr = &dns.A{
+					Hdr: dns.RR_Header{
+						Name:   qName,
+						Rrtype: dns.TypeA,
+						Class:  qClass,
+					},
+					A: ipv4,
+				}
+			} else if ipv6 := srcIP.To16(); ipv6 != nil {
+				rr = &dns.AAAA{
+					Hdr: dns.RR_Header{
+						Name:   qName,
+						Rrtype: dns.TypeAAAA,
+						Class:  qClass,
+					},
+					AAAA: ipv6,
+				}
+			}
+			r.Answer = []dns.RR{rr}
+			status = dns.RcodeSuccess
+			return dns.RcodeSuccess, nil
+		}
+	}
 
 	for _, s := range p.conf.passthrough {
 		if strings.HasSuffix(dn, s) {
