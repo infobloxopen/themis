@@ -24,6 +24,7 @@ policy {
     debug_query_suffix SUFFIX
     debug_id ID
     log
+    own_ip_endpoint ADDR
 }
 ~~~
 
@@ -70,6 +71,8 @@ dig @127.0.0.1 test.com.debug txt ch
 Option **debug_id** defines a string to be sent with debug response to identify a CoreDNS instance.
 
 Option **log** enables logging PDP request and response attributes
+
+Option **own_ip_endpoint** defines the endpoint for which debug requests to it will be responded with the client's own IP(v4/v6).
 
 ## Predefined attributes
 

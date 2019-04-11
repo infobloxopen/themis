@@ -119,7 +119,7 @@ func (conf *config) parseOption(c *caddy.Controller) error {
 	case "cache":
 		return conf.parseCache(c)
 
-	case "ownIPEndpoint":
+	case "own_ip_endpoint":
 		return conf.parseOwnIPEndpoint(c)
 	}
 
