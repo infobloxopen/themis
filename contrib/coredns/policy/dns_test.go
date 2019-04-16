@@ -304,29 +304,21 @@ func TestSetRedirectQueryAnswer(t *testing.T) {
 
 func TestIp2rr(t *testing.T) {
 	testCases := []struct {
-		ip  net.IP
-		exp dns.RR
+		ip    net.IP
+		name  string
+		class uint16
+		exp   string
 	}{
-		{net.ParseIP("192.0.0.44"), &dns.A{
-			Hdr: dns.RR_Header{
-				Rrtype: dns.TypeA,
-			},
-			A: net.ParseIP("192.0.0.44"),
-		}},
-		{net.ParseIP("2001:db8::68"), &dns.AAAA{
-			Hdr: dns.RR_Header{
-				Rrtype: dns.TypeAAAA,
-			},
-			AAAA: net.ParseIP("2001:db8::68"),
-		}},
-		{net.ParseIP(""), nil},
+		{net.ParseIP("192.0.0.44"), "amazon.com", dns.ClassINET, "amazon.com	0	IN	A	192.0.0.44"},
+		{net.ParseIP("2001:db8::68"), "google.com", dns.ClassCHAOS, "google.com	0	CH	AAAA	2001:db8::68"},
+		{net.ParseIP(""), "hotstar.com", dns.ClassANY, ""},
 	}
 
 	for _, tc := range testCases {
-		act := ip2rr(tc.ip)
-		if act == nil && tc.exp != nil ||
-			act != nil && tc.exp == nil ||
-			act != nil && tc.exp != nil && act.String() != tc.exp.String() {
+		act := ip2rr(tc.ip, tc.name, tc.class)
+		if len(tc.exp) == 0 && act != nil {
+			t.Errorf("Expected no ip, got %s", act)
+		} else if len(tc.exp) > 0 && (act == nil || act.String() != tc.exp) {
 			t.Errorf("Expected %s, got %s", tc.exp, act)
 		}
 	}

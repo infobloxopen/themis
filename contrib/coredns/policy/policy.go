@@ -214,13 +214,11 @@ func (p *policyPlugin) checkOwnIPEndpointDebug(w dns.ResponseWriter, r *dns.Msg)
 		}
 
 		qName, qClass := getNameAndClass(r)
-		rr := ip2rr(srcIP)
-		if rr == nil || rr.Header() == nil {
+		rr := ip2rr(srcIP, qName, qClass)
+		if rr == nil {
 			return dns.RcodeServerFailure, true
 		}
 
-		rr.Header().Name = qName
-		rr.Header().Class = qClass
 		r.Answer = []dns.RR{rr}
 		return dns.RcodeSuccess, true
 	}

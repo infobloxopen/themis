@@ -1,7 +1,6 @@
 package policy
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"math"
@@ -56,11 +55,7 @@ func policyParse(c *caddy.Controller) (*policyPlugin, error) {
 				}
 			}
 			if len(p.conf.ownIPEndpoint) > 0 && len(p.conf.debugSuffix) > 0 {
-				var buff bytes.Buffer
-				buff.Write([]byte(p.conf.ownIPEndpoint))
-				buff.Write([]byte("."))
-				buff.Write([]byte(p.conf.debugSuffix))
-				p.conf.ownIPEndpoint = buff.String()
+				p.conf.ownIPEndpoint = p.conf.ownIPEndpoint + "." + p.conf.debugSuffix
 			}
 			p.attrPool = createAttrPoolFromConfig(&p.conf)
 			return p, nil

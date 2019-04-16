@@ -118,11 +118,9 @@ func (p *policyPlugin) setRedirectQueryAnswer(ctx context.Context, w dns.Respons
 	qName, qClass := getNameAndClass(r)
 
 	ip := net.ParseIP(dst)
-	rr := ip2rr(ip)
-	if rr != nil && rr.Header() != nil {
-		rr.Header().Name = qName
-		rr.Header().Class = qClass
-	} else {
+	rr := ip2rr(ip, qName, qClass)
+	if rr != nil {
+
 		dst = dns.Fqdn(dst)
 		rr = &dns.CNAME{
 			Hdr: dns.RR_Header{
@@ -160,18 +158,22 @@ func (p *policyPlugin) setRedirectQueryAnswer(ctx context.Context, w dns.Respons
 }
 
 // ip2rr returns a dns.A if ip is v4 and dns.AAAA if ip is v6, nil otherwise
-func ip2rr(ip net.IP) dns.RR {
+func ip2rr(ip net.IP, name string, class uint16) dns.RR {
 	if ipv4 := ip.To4(); ipv4 != nil {
 		return &dns.A{
 			Hdr: dns.RR_Header{
+				Name:   name,
 				Rrtype: dns.TypeA,
+				Class:  class,
 			},
 			A: ipv4,
 		}
 	} else if ipv6 := ip.To16(); ipv6 != nil {
 		return &dns.AAAA{
 			Hdr: dns.RR_Header{
+				Name:   name,
 				Rrtype: dns.TypeAAAA,
+				Class:  class,
 			},
 			AAAA: ipv6,
 		}
