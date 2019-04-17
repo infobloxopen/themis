@@ -56,6 +56,8 @@ func policyParse(c *caddy.Controller) (*policyPlugin, error) {
 			}
 			if len(p.conf.ownIPEndpoint) > 0 && len(p.conf.debugSuffix) > 0 {
 				p.conf.ownIPEndpoint = p.conf.ownIPEndpoint + "." + p.conf.debugSuffix
+			} else {
+				p.conf.ownIPEndpoint = ""
 			}
 			p.attrPool = createAttrPoolFromConfig(&p.conf)
 			return p, nil

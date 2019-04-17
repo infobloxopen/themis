@@ -119,7 +119,7 @@ func (p *policyPlugin) setRedirectQueryAnswer(ctx context.Context, w dns.Respons
 
 	ip := net.ParseIP(dst)
 	rr := ip2rr(ip, qName, qClass)
-	if rr != nil {
+	if rr == nil {
 
 		dst = dns.Fqdn(dst)
 		rr = &dns.CNAME{

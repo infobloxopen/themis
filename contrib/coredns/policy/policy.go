@@ -204,8 +204,7 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 
 // checkOwnIPEndpointDebug checks if query made to configured ownIPEndpoint and is debug, then returns the status accordingly
 func (p *policyPlugin) checkOwnIPEndpointDebug(w dns.ResponseWriter, r *dns.Msg) (int, bool) {
-	if strings.HasSuffix(p.conf.ownIPEndpoint, p.conf.debugSuffix) &&
-		r != nil && len(r.Question) > 0 &&
+	if r != nil && len(r.Question) > 0 &&
 		r.Question[0].Name == p.conf.ownIPEndpoint {
 
 		srcIP := getRemoteIP(w)
