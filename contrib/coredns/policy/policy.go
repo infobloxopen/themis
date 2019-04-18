@@ -92,6 +92,11 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		p.attrPool.Put(attrBuffer)
 	}()
 
+	if ret, ok := p.checkOwnIPEndpointDebug(w, r); ok {
+		status = ret
+		return dns.RcodeSuccess, nil
+	}
+
 	for _, s := range p.conf.passthrough {
 		if strings.HasSuffix(dn, s) {
 			nw := nonwriter.New(w)
@@ -195,4 +200,27 @@ func (p *policyPlugin) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 
 	status = dns.RcodeServerFailure
 	return dns.RcodeSuccess, errInvalidAction
+}
+
+// checkOwnIPEndpointDebug checks if query made to configured ownIPEndpoint and is debug, then returns the status accordingly
+func (p *policyPlugin) checkOwnIPEndpointDebug(w dns.ResponseWriter, r *dns.Msg) (int, bool) {
+	if r != nil && len(r.Question) > 0 &&
+		r.Question[0].Name == p.conf.ownIPEndpoint {
+
+		srcIP := getRemoteIP(w)
+		if srcIP == nil {
+			return dns.RcodeServerFailure, true
+		}
+
+		qName, qClass := getNameAndClass(r)
+		rr := ip2rr(srcIP, qName, qClass)
+		if rr == nil {
+			return dns.RcodeServerFailure, true
+		}
+
+		r.Answer = []dns.RR{rr}
+		return dns.RcodeSuccess, true
+	}
+
+	return -1, false
 }

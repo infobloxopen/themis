@@ -14,22 +14,23 @@ import (
 var errInvalidOption = errors.New("invalid policy plugin option")
 
 type config struct {
-	endpoints    []string
-	options      map[uint16][]*edns0Opt
-	attrs        *attrsConfig
-	debugID      string
-	debugSuffix  string
-	streams      int
-	hotSpot      bool
-	passthrough  []string
-	connTimeout  time.Duration
-	autoReqSize  bool
-	maxReqSize   int
-	autoResAttrs bool
-	maxResAttrs  int
-	log          bool
-	cacheTTL     time.Duration
-	cacheLimit   int
+	endpoints     []string
+	options       map[uint16][]*edns0Opt
+	attrs         *attrsConfig
+	debugID       string
+	debugSuffix   string
+	ownIPEndpoint string
+	streams       int
+	hotSpot       bool
+	passthrough   []string
+	connTimeout   time.Duration
+	autoReqSize   bool
+	maxReqSize    int
+	autoResAttrs  bool
+	maxResAttrs   int
+	log           bool
+	cacheTTL      time.Duration
+	cacheLimit    int
 }
 
 func newConfig() config {
@@ -52,6 +53,11 @@ func policyParse(c *caddy.Controller) (*policyPlugin, error) {
 				if err := p.conf.parseOption(c); err != nil {
 					return nil, err
 				}
+			}
+			if len(p.conf.ownIPEndpoint) > 0 && len(p.conf.debugSuffix) > 0 {
+				p.conf.ownIPEndpoint = p.conf.ownIPEndpoint + "." + p.conf.debugSuffix
+			} else {
+				p.conf.ownIPEndpoint = ""
 			}
 			p.attrPool = createAttrPoolFromConfig(&p.conf)
 			return p, nil
@@ -109,6 +115,9 @@ func (conf *config) parseOption(c *caddy.Controller) error {
 
 	case "cache":
 		return conf.parseCache(c)
+
+	case "own_ip_endpoint":
+		return conf.parseOwnIPEndpoint(c)
 	}
 
 	return errInvalidOption
@@ -373,5 +382,16 @@ func (conf *config) parseCache(c *caddy.Controller) error {
 		conf.cacheLimit = int(n)
 	}
 
+	return nil
+}
+
+// parseOwnIPEndpoint attempts to parse the entry for ownIPEndpoint , expects only one endpoint for it.
+func (conf *config) parseOwnIPEndpoint(c *caddy.Controller) error {
+	args := c.RemainingArgs()
+	if len(args) != 1 {
+		return c.ArgErr()
+	}
+
+	conf.ownIPEndpoint = args[0]
 	return nil
 }
