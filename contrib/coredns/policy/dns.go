@@ -4,13 +4,29 @@ import (
 	"context"
 	"errors"
 	"net"
+	"strings"
 
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/pkg/nonwriter"
 	"github.com/miekg/dns"
 )
 
-var errInvalidDNSMessage = errors.New("invalid DNS message")
+var (
+	errInvalidDNSMessage         = errors.New("invalid DNS message")
+	errInvalidRedirectActionData = errors.New("Invalid redirect data for incoming query type in policy config")
+)
+
+// rrCodePrefixes holds all the rrCodes that we check for in the action_data of redirect policy
+// Several rrCodes could be configured together separated by rrCodeDelimiter
+var (
+	rrCodePrefixes = []uint16{
+		dns.TypeA,
+		dns.TypeAAAA,
+		dns.TypeTXT,
+	}
+	rrCodeDelimiter       = ";"
+	rrCodePrefixDelimiter = ":"
+)
 
 func getNameAndType(r *dns.Msg) (string, uint16) {
 	if r == nil || len(r.Question) <= 0 {
@@ -28,6 +44,16 @@ func getNameAndClass(r *dns.Msg) (string, uint16) {
 
 	q := r.Question[0]
 	return q.Name, q.Qclass
+}
+
+// helper function to get name, type and class from the question section of the request
+func getNameTypeAndClass(r *dns.Msg) (string, uint16, uint16) {
+	if r == nil || len(r.Question) <= 0 {
+		return ".", dns.TypeNone, dns.ClassNONE
+	}
+
+	q := r.Question[0]
+	return q.Name, q.Qtype, q.Qclass
 }
 
 func getRemoteIP(w dns.ResponseWriter) net.IP {
@@ -114,42 +140,49 @@ func resetTTL(r *dns.Msg) *dns.Msg {
 }
 
 func (p *policyPlugin) setRedirectQueryAnswer(ctx context.Context, w dns.ResponseWriter, r *dns.Msg, dst string) (int, error) {
+	qName, qType, qClass := getNameTypeAndClass(r)
+	rr, err := getRRByType(dst, qName, qType, qClass)
+	if err != nil {
+		return dns.RcodeServerFailure, err
+	}
 
-	qName, qClass := getNameAndClass(r)
-
-	ip := net.ParseIP(dst)
-	rr := ip2rr(ip, qName, qClass)
+	// if not get rr by qType, then try to get it by the data format of dst
 	if rr == nil {
+		ip := net.ParseIP(dst)
+		rr = ip2rr(ip, qName, qClass)
 
-		dst = dns.Fqdn(dst)
-		rr = &dns.CNAME{
-			Hdr: dns.RR_Header{
-				Name:   qName,
-				Rrtype: dns.TypeCNAME,
-				Class:  qClass,
-			},
-			Target: dst,
-		}
+		if rr == nil {
+			dst = dns.Fqdn(dst)
+			rr = &dns.CNAME{
+				Hdr: dns.RR_Header{
+					Name:   qName,
+					Rrtype: dns.TypeCNAME,
+					Class:  qClass,
+				},
+				Target: dst,
+			}
 
-		if r == nil || len(r.Question) <= 0 {
-			return dns.RcodeServerFailure, errInvalidDNSMessage
-		}
+			if r == nil || len(r.Question) <= 0 {
+				return dns.RcodeServerFailure, errInvalidDNSMessage
+			}
 
-		origName := qName
-		r.Question[0].Name = dst
+			origName := qName
+			r.Question[0].Name = dst
 
-		nw := nonwriter.New(w)
-		if _, err := plugin.NextOrFailure(p.Name(), p.next, ctx, nw, r); err != nil {
+			nw := nonwriter.New(w)
+
+			if _, err := plugin.NextOrFailure(p.Name(), p.next, ctx, nw, r); err != nil {
+				r.Question[0].Name = origName
+				return dns.RcodeServerFailure, err
+			}
+
+			nw.Msg.CopyTo(r)
 			r.Question[0].Name = origName
-			return dns.RcodeServerFailure, err
+
+			r.Answer = append([]dns.RR{rr}, r.Answer...)
+			r.Authoritative = true
+			return r.Rcode, nil
 		}
-
-		nw.Msg.CopyTo(r)
-		r.Question[0].Name = origName
-
-		r.Answer = append([]dns.RR{rr}, r.Answer...)
-		r.Authoritative = true
-		return r.Rcode, nil
 	}
 
 	r.Answer = []dns.RR{rr}
@@ -179,4 +212,80 @@ func ip2rr(ip net.IP, name string, class uint16) dns.RR {
 		}
 	}
 	return nil
+}
+
+// check if rrCode: prefix is present in dst and return all the values for each type. No validation of the action data is done here
+func getRRCodePrefix(dst string) map[uint16]string {
+	redirectForRRCodes := map[uint16]string{}
+	for _, each := range strings.Split(dst, rrCodeDelimiter) {
+		for _, typ := range rrCodePrefixes {
+			prefix := dns.TypeToString[typ] + rrCodePrefixDelimiter
+			if strings.HasPrefix(each, prefix) {
+				redirectForRRCodes[typ] = strings.TrimPrefix(each, prefix)
+			}
+		}
+	}
+
+	if len(redirectForRRCodes) > 0 {
+		return redirectForRRCodes
+	}
+	return nil
+}
+
+// try to get RR based on the typ
+func getRRByType(dst, name string, typ, class uint16) (dns.RR, error) {
+	var rr dns.RR
+	redirectForRRCodes := getRRCodePrefix(dst)
+
+	// if rrcode: is not present in redirect action_data, then return to get rr by data format only.
+	if redirectForRRCodes == nil {
+		return nil, nil
+	}
+
+	dest := redirectForRRCodes[typ]
+	// if rrcode: is present in redirect action_data, but not for incoming query type, then cannot determine by type or dataformat also, so err out
+	if len(dest) == 0 {
+		return nil, errInvalidRedirectActionData
+	}
+
+	switch typ {
+	case dns.TypeTXT:
+		rr = &dns.TXT{
+			Hdr: dns.RR_Header{
+				Name:   name,
+				Rrtype: dns.TypeTXT,
+				Class:  class,
+			},
+			Txt: []string{dest},
+		}
+	case dns.TypeA:
+		if ip := net.ParseIP(dest); ip != nil && ip.To4() != nil {
+			rr = &dns.A{
+				Hdr: dns.RR_Header{
+					Name:   name,
+					Rrtype: dns.TypeA,
+					Class:  class,
+				},
+				A: ip,
+			}
+		} else {
+			return nil, errInvalidRedirectActionData
+		}
+	case dns.TypeAAAA:
+		ip := net.ParseIP(dest)
+		if ip != nil && ip.To16() != nil {
+			rr = &dns.AAAA{
+				Hdr: dns.RR_Header{
+					Name:   name,
+					Rrtype: dns.TypeAAAA,
+					Class:  class,
+				},
+				AAAA: ip,
+			}
+		} else {
+			return nil, errInvalidRedirectActionData
+		}
+	}
+
+	return rr, nil
 }

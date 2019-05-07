@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"reflect"
 	"testing"
 
 	"github.com/infobloxopen/themis/contrib/coredns/policy/testutil"
@@ -51,6 +52,38 @@ func TestGetNameAndClass(t *testing.T) {
 	qName, qClass = getNameAndClass(nil)
 	if qName != fqdn {
 		t.Errorf("expected %q as query name but got %q", fqdn, qName)
+	}
+
+	if qClass != dns.ClassNONE {
+		t.Errorf("expected %d as query class but got %d", dns.ClassNONE, qClass)
+	}
+}
+
+func TestGetNameTypeAndClass(t *testing.T) {
+	fqdn := dns.Fqdn("example.com")
+	m := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+
+	qName, qType, qClass := getNameTypeAndClass(m)
+	if qName != fqdn {
+		t.Errorf("expected %q as query name but got %q", fqdn, qName)
+	}
+
+	if qType != dns.TypeA {
+		t.Errorf("expected %d as query type but got %d", dns.TypeA, qType)
+	}
+
+	if qClass != dns.ClassINET {
+		t.Errorf("expected %d as query class but got %d", dns.ClassINET, qClass)
+	}
+
+	fqdn = "."
+	qName, qType, qClass = getNameTypeAndClass(nil)
+	if qName != fqdn {
+		t.Errorf("expected %q as query name but got %q", fqdn, qName)
+	}
+
+	if qType != dns.TypeNone {
+		t.Errorf("expected %d as query type but got %d", dns.TypeA, qType)
 	}
 
 	if qClass != dns.ClassNONE {
@@ -320,6 +353,114 @@ func TestIp2rr(t *testing.T) {
 			t.Errorf("Expected no ip, got %s", act)
 		} else if len(tc.exp) > 0 && (act == nil || act.String() != tc.exp) {
 			t.Errorf("Expected %s, got %s", tc.exp, act)
+		}
+	}
+}
+
+func TestGetRRCodesPrefix(t *testing.T) {
+	testCases := []struct {
+		dst string
+		exp map[uint16]string
+	}{
+		{"A:1.1.1.1", map[uint16]string{dns.TypeA: "1.1.1.1"}},
+		{"AAAA:23ef:3546::8732", map[uint16]string{dns.TypeAAAA: "23ef:3546::8732"}},
+		{"TXT:dummytoken", map[uint16]string{dns.TypeTXT: "dummytoken"}},
+		{"1.1.1.1", nil},
+		{"", nil},
+	}
+
+	for idx, tc := range testCases {
+		act := getRRCodePrefix(tc.dst)
+		if !reflect.DeepEqual(act, tc.exp) {
+			t.Errorf("expected %v but got %v : %d", tc.exp, act, idx)
+		}
+	}
+}
+
+func TestGetRRByType(t *testing.T) {
+	testCases := []struct {
+		dst,
+		name string
+		typ,
+		class uint16
+		err error
+		exp dns.RR
+	}{
+		// check for TXT action_data with TXT query type
+		{"TXT:dummytoken", "test.net", dns.TypeTXT, dns.ClassINET, nil, &dns.TXT{
+			Hdr: dns.RR_Header{
+				Name:   "test.net",
+				Rrtype: dns.TypeTXT,
+				Class:  dns.ClassINET,
+			},
+			Txt: []string{"dummytoken"},
+		},
+		},
+		// check for A action_data with A query type
+		{"A:1.1.1.1", "test.net", dns.TypeA, dns.ClassINET, nil, &dns.A{
+			Hdr: dns.RR_Header{
+				Name:   "test.net",
+				Rrtype: dns.TypeA,
+				Class:  dns.ClassINET,
+			},
+			A: net.ParseIP("1.1.1.1"),
+		},
+		},
+		// check for AAAA action_data with AAAA query type
+		{"AAAA:23ef:3546::8732", "test.net", dns.TypeAAAA, dns.ClassINET, nil, &dns.AAAA{
+			Hdr: dns.RR_Header{
+				Name:   "test.net",
+				Rrtype: dns.TypeAAAA,
+				Class:  dns.ClassINET,
+			},
+			AAAA: net.ParseIP("23ef:3546::8732"),
+		},
+		},
+		// check for all action_data with TXT query type
+		{"A:1.1.1.1;AAAA:23ef:3546::8732;TXT:dummytoken", "test.net", dns.TypeTXT, dns.ClassINET, nil, &dns.TXT{
+			Hdr: dns.RR_Header{
+				Name:   "test.net",
+				Rrtype: dns.TypeTXT,
+				Class:  dns.ClassINET,
+			},
+			Txt: []string{"dummytoken"},
+		},
+		},
+		// check for all action_data with A query type
+		{"A:1.1.1.1;AAAA:23ef:3546::8732;TXT:dummytoken", "test.net", dns.TypeA, dns.ClassINET, nil, &dns.A{
+			Hdr: dns.RR_Header{
+				Name:   "test.net",
+				Rrtype: dns.TypeA,
+				Class:  dns.ClassINET,
+			},
+			A: net.ParseIP("1.1.1.1"),
+		},
+		},
+		// check for all action_data with AAAA query type
+		{"A:1.1.1.1;AAAA:23ef:3546::8732;TXT:dummytoken", "test.net", dns.TypeAAAA, dns.ClassINET, nil, &dns.AAAA{
+			Hdr: dns.RR_Header{
+				Name:   "test.net",
+				Rrtype: dns.TypeAAAA,
+				Class:  dns.ClassINET,
+			},
+			AAAA: net.ParseIP("23ef:3546::8732"),
+		},
+		},
+		// check for all action_data with diff query type(non-supported)
+		{"A:1.1.1.1;AAAA:23ef:3546::8732;TXT:dummytoken", "test.net", dns.TypeAVC, dns.ClassINET, errInvalidRedirectActionData, nil},
+		// check for no AAAA action_data with AAAA query type
+		{"A:1.1.1.1;TXT:dummytoken", "test.net", dns.TypeAAAA, dns.ClassINET, errInvalidRedirectActionData, nil},
+		// check for all old format action_data with A query type(for backward compatibility)
+		{"1.1.1.1", "test.net", dns.TypeA, dns.ClassINET, nil, nil},
+	}
+
+	for idx, tc := range testCases {
+		act, err := getRRByType(tc.dst, tc.name, tc.typ, tc.class)
+		if err != tc.err {
+			t.Errorf("expected %v but got %v : %d", tc.err, err, idx)
+		}
+		if !reflect.DeepEqual(act, tc.exp) {
+			t.Errorf("expected %v but got %v : %d", tc.exp, act, idx)
 		}
 	}
 }
