@@ -58,6 +58,38 @@ func TestGetNameAndClass(t *testing.T) {
 	}
 }
 
+func TestGetNameTypeAndClass(t *testing.T) {
+	fqdn := dns.Fqdn("example.com")
+	m := testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+
+	qName, qType, qClass := getNameTypeAndClass(m)
+	if qName != fqdn {
+		t.Errorf("expected %q as query name but got %q", fqdn, qName)
+	}
+
+	if qType != dns.TypeA {
+		t.Errorf("expected %d as query type but got %d", dns.TypeA, qType)
+	}
+
+	if qClass != dns.ClassINET {
+		t.Errorf("expected %d as query class but got %d", dns.ClassINET, qClass)
+	}
+
+	fqdn = "."
+	qName, qType, qClass = getNameTypeAndClass(nil)
+	if qName != fqdn {
+		t.Errorf("expected %q as query name but got %q", fqdn, qName)
+	}
+
+	if qType != dns.TypeNone {
+		t.Errorf("expected %d as query type but got %d", dns.TypeA, qType)
+	}
+
+	if qClass != dns.ClassNONE {
+		t.Errorf("expected %d as query class but got %d", dns.ClassNONE, qClass)
+	}
+}
+
 func TestGetRemoteIP(t *testing.T) {
 	w := testutil.NewTestAddressedNonwriter("192.0.2.1")
 	a := getRemoteIP(w)
@@ -300,6 +332,144 @@ func TestSetRedirectQueryAnswer(t *testing.T) {
 			";; QUESTION SECTION:\n;"+
 			"redirect.example.com.\tIN\t A\n",
 	)
+
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
+
+	rc, err = p.setRedirectQueryAnswer(context.TODO(), w, m, "A=127.0.0.1;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com")
+	if err != nil {
+		t.Error(err)
+	}
+	testutil.AssertDNSMessage(t, "setRedirectQueryAnswer(A=127.0.0.1;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com, query type = A)", rc, m, dns.RcodeSuccess,
+		";; opcode: QUERY, status: NOERROR, id: 0\n"+
+			";; flags:; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
+			";; QUESTION SECTION:\n"+
+			";example.com.\tIN\t A\n\n"+
+			";; ANSWER SECTION:\n"+
+			"example.com.\t0\tIN\tA\t127.0.0.1\n",
+	)
+
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeAAAA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
+
+	rc, err = p.setRedirectQueryAnswer(context.TODO(), w, m, "A=127.0.0.1;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com")
+	if err != nil {
+		t.Error(err)
+	}
+	testutil.AssertDNSMessage(t, "setRedirectQueryAnswer(A=127.0.0.1;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com, query type = AAAA)", rc, m, dns.RcodeSuccess,
+		";; opcode: QUERY, status: NOERROR, id: 0\n"+
+			";; flags:; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
+			";; QUESTION SECTION:\n"+
+			";example.com.\tIN\t AAAA\n\n"+
+			";; ANSWER SECTION:\n"+
+			"example.com.\t0\tIN\tAAAA\t23ef:3546::8732\n",
+	)
+
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeTXT, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
+
+	rc, err = p.setRedirectQueryAnswer(context.TODO(), w, m, "A=127.0.0.1;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com")
+	if err != nil {
+		t.Error(err)
+	}
+	testutil.AssertDNSMessage(t, "setRedirectQueryAnswer(A=127.0.0.1;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com, query type = TXT)", rc, m, dns.RcodeSuccess,
+		";; opcode: QUERY, status: NOERROR, id: 0\n"+
+			";; flags:; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
+			";; QUESTION SECTION:\n"+
+			";example.com.\tIN\t TXT\n\n"+
+			";; ANSWER SECTION:\n"+
+			"example.com.\t0\tIN\tTXT\t\"Ghguyw7g7yiug7\"\n",
+	)
+
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
+	mp.Err = nil
+
+	rc, err = p.setRedirectQueryAnswer(context.TODO(), w, m, "AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com")
+	if err != nil {
+		t.Error(err)
+	}
+
+	testutil.AssertDNSMessage(t, "setRedirectQueryAnswer(AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com, query type = A)", rc, m, dns.RcodeSuccess,
+		";; opcode: QUERY, status: NOERROR, id: 0\n"+
+			";; flags: qr aa; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
+			";; QUESTION SECTION:\n"+
+			";example.com.\tIN\t A\n\n"+
+			";; ANSWER SECTION:\nexample.com.\t0\tIN\tCNAME\tgoogle.com.\ngoogle.com.\t0\tIN\tA\t192.0.2.153\n",
+	)
+
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
+
+	rc, err = p.setRedirectQueryAnswer(context.TODO(), w, m, "A=amazon.com;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com")
+
+	testutil.AssertDNSMessage(t, "setRedirectQueryAnswer(A=amazon.com;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com, query type = A)", rc, m, dns.RcodeSuccess,
+		";; opcode: QUERY, status: NOERROR, id: 0\n"+
+			";; flags: qr aa; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
+			";; QUESTION SECTION:\n"+
+			";example.com.\tIN\t A\n\n"+
+			";; ANSWER SECTION:\nexample.com.\t0\tIN\tCNAME\tgoogle.com.\ngoogle.com.\t0\tIN\tA\t192.0.2.153\n",
+	)
+
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeCNAME, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
+
+	rc, err = p.setRedirectQueryAnswer(context.TODO(), w, m, "A=127.0.0.1;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com")
+	if err != nil {
+		t.Error(err)
+	}
+	testutil.AssertDNSMessage(t, "setRedirectQueryAnswer(A=127.0.0.1;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com, query type = CNAME)", rc, m, dns.RcodeSuccess,
+		";; opcode: QUERY, status: NOERROR, id: 0\n"+
+			";; flags:; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
+			";; QUESTION SECTION:\n"+
+			";example.com.\tIN\t CNAME\n\n"+
+			";; ANSWER SECTION:\n"+
+			"example.com.\t0\tIN\tCNAME\tgoogle.com\n",
+	)
+
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
+
+	rc, err = p.setRedirectQueryAnswer(context.TODO(), w, m, "A=127.0.0.1")
+	if err != nil {
+		t.Error(err)
+	}
+	testutil.AssertDNSMessage(t, "setRedirectQueryAnswer(A=127.0.0.1, query type = A)", rc, m, dns.RcodeSuccess,
+		";; opcode: QUERY, status: NOERROR, id: 0\n"+
+			";; flags:; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
+			";; QUESTION SECTION:\n"+
+			";example.com.\tIN\t A\n\n"+
+			";; ANSWER SECTION:\n"+
+			"example.com.\t0\tIN\tA\t127.0.0.1\n",
+	)
+
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeAAAA, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
+
+	rc, err = p.setRedirectQueryAnswer(context.TODO(), w, m, "A=127.0.0.1")
+	if err != nil {
+		t.Error(err)
+	}
+	testutil.AssertDNSMessage(t, "setRedirectQueryAnswer(A=127.0.0.1, query type = AAAA)", rc, m, dns.RcodeSuccess,
+		";; opcode: QUERY, status: NOERROR, id: 0\n"+
+			";; flags:; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
+			";; QUESTION SECTION:\n"+
+			";example.com.\tIN\t AAAA\n",
+	)
+
+	m = testutil.MakeTestDNSMsg("example.com", dns.TypeTXT, dns.ClassINET)
+	w = testutil.NewTestAddressedNonwriter("192.0.2.1")
+
+	rc, err = p.setRedirectQueryAnswer(context.TODO(), w, m, "A=127.0.0.1")
+	if err != nil {
+		t.Error(err)
+	}
+	testutil.AssertDNSMessage(t, "setRedirectQueryAnswer(A=127.0.0.1, query type = TXT)", rc, m, dns.RcodeSuccess,
+		";; opcode: QUERY, status: NOERROR, id: 0\n"+
+			";; flags:; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
+			";; QUESTION SECTION:\n"+
+			";example.com.\tIN\t TXT\n",
+	)
 }
 
 func TestIp2rr(t *testing.T) {
@@ -320,6 +490,57 @@ func TestIp2rr(t *testing.T) {
 			t.Errorf("Expected no ip, got %s", act)
 		} else if len(tc.exp) > 0 && (act == nil || act.String() != tc.exp) {
 			t.Errorf("Expected %s, got %s", tc.exp, act)
+		}
+	}
+}
+
+func TestFindRecord(t *testing.T) {
+	testCases := []struct {
+		dst string
+		typ uint16
+		exp string
+	}{
+		// complete string in rrCodeFormat
+		{"A=127.0.0.1;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com", dns.TypeA, "127.0.0.1"},
+		{"A=127.0.0.1;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com", dns.TypeAAAA, "23ef:3546::8732"},
+		{"A=127.0.0.1;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com", dns.TypeTXT, "Ghguyw7g7yiug7"},
+		{"A=127.0.0.1;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com", dns.TypeCNAME, "google.com"},
+
+		// no value for A in rrCodeFormat
+		{"A=;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com", dns.TypeA, ""},
+		{"A=;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com", dns.TypeCNAME, "google.com"},
+
+		// no entry/record for A in rrCodeFormat
+		{"AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com", dns.TypeA, ""},
+		{"AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com", dns.TypeCNAME, "google.com"},
+
+		// invalid ip for A in rrCodeFormat
+		{"A=xxxyyyzzz;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com", dns.TypeA, "xxxyyyzzz"},
+		{"A=xxxyyyzzz;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com", dns.TypeCNAME, "google.com"},
+
+		// invalid string in complete string of rrCodeFormat
+		{"A=127.0.0.1;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com;aaabbbcccc", dns.TypeA, "A=127.0.0.1;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com;aaabbbcccc"},
+		{"A=127.0.0.1;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com;aaabbbcccc", dns.TypeCNAME, "A=127.0.0.1;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com;aaabbbcccc"},
+
+		// invalid string in incomplete string of rrCodeFormat
+		{"A=127.0.0.1;aaabbbccc;TXT=Ghguyw7g7yiug7;CNAME=google.com", dns.TypeA, "A=127.0.0.1;aaabbbccc;TXT=Ghguyw7g7yiug7;CNAME=google.com"},
+		{"A=127.0.0.1;aaabbbccc;TXT=Ghguyw7g7yiug7;CNAME=google.com", dns.TypeCNAME, "A=127.0.0.1;aaabbbccc;TXT=Ghguyw7g7yiug7;CNAME=google.com"},
+
+		// domain name for A in rrCodeFormat
+		{"A=amazon.com;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com", dns.TypeA, "amazon.com"},
+		{"A=amazon.com;AAAA=23ef:3546::8732;TXT=Ghguyw7g7yiug7;CNAME=google.com", dns.TypeCNAME, "google.com"},
+
+		// non-rrCodeFormat
+		{"127.0.0.1", dns.TypeA, "127.0.0.1"},
+		{"127.0.0.1", dns.TypeAAAA, "127.0.0.1"},
+		{"127.0.0.1", dns.TypeTXT, "127.0.0.1"},
+		{"127.0.0.1", dns.TypeCNAME, "127.0.0.1"},
+		{"amazon.com", dns.TypeA, "amazon.com"},
+	}
+
+	for idx, tc := range testCases {
+		if act := findRecord(tc.dst, tc.typ); act != tc.exp {
+			t.Errorf("expected %s ,got %s : %d", tc.exp, act, idx)
 		}
 	}
 }
