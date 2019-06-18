@@ -95,6 +95,72 @@ func TestContext(t *testing.T) {
 	}
 }
 
+func TestCalcValues(t *testing.T) {
+	testcases := []struct {
+		input    []AttributeAssignment
+		expErrs  []string
+		expAttrs []AttributeAssignment
+	}{
+		{
+
+			[]AttributeAssignment{
+				MakeStringAssignment("string", "test"),
+				MakeBooleanAssignment("bool", true),
+				MakeIntegerAssignment("integer", 1234567890),
+			},
+			[]string{},
+			[]AttributeAssignment{
+				MakeStringAssignment("string", "test"),
+				MakeBooleanAssignment("bool", true),
+				MakeIntegerAssignment("integer", 1234567890),
+			},
+		},
+		{
+
+			[]AttributeAssignment{
+				MakeStringAssignment("string", "test"),
+				MakeExpressionAssignment("bad", MakeAttributeDesignator(MakeAttribute("x", TypeBoolean))),
+				MakeIntegerAssignment("integer", 1234567890),
+			},
+			[]string{"#b3: Failed to calculate obligation for attr(bad.Boolean): #02 (attr(x.Boolean)): Missing attribute"},
+			[]AttributeAssignment{
+				MakeStringAssignment("string", "test"),
+				MakeIntegerAssignment("integer", 1234567890),
+			},
+		},
+	}
+
+	ctx, _ := NewContext(nil, 0, nil)
+
+	for i, tc := range testcases {
+		r := Response{Effect: EffectPermit, Obligations: tc.input}
+
+		aa, err := r.calcValues(ctx)
+
+		if len(err) == len(tc.expErrs) {
+			for j, es := range tc.expErrs {
+				as := err[j].Error()
+				if es != as {
+					t.Errorf("tc#%d unexpected error#%d: expected %s, actual %s", i, j, es, as)
+				}
+			}
+		} else {
+			t.Errorf("tc#%d unexpected count of errors: expected %d, actual %d", i, len(tc.expErrs), len(err))
+		}
+		if len(aa) == len(tc.expAttrs) {
+			for j, ea := range tc.expAttrs {
+				es := ea.String()
+				as := aa[j].String()
+				if es != as {
+					t.Errorf("tc#%d unexpected attribute#%d: expected %s, actual %s", i, j, es, as)
+				}
+			}
+		} else {
+			t.Errorf("tc#%d unexpected count of attributes: expected %d, actual %d", i, len(tc.expAttrs), len(aa))
+		}
+	}
+}
+
 func TestResponse(t *testing.T) {
 	r := Response{
 		Effect:      EffectPermit,

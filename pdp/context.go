@@ -392,91 +392,50 @@ type Response struct {
 	Obligations []AttributeAssignment
 }
 
-// Marshal encodes response as a sequence of bytes.
-func (r Response) Marshal(ctx *Context) ([]byte, error) {
-	var errs [2]error
+// calcValues returns calculated attributes and errors
+func (r Response) calcValues(ctx *Context) ([]AttributeAssignment, []error) {
+	var errs []error
 
-	nErr := 0
 	if r.Status != nil {
-		errs[nErr] = newPolicyCalculationError(r.Status)
-		nErr++
+		errs = append(errs, newPolicyCalculationError(r.Status))
 	}
 
-	a := make([]AttributeAssignment, len(r.Obligations))
-	for i, e := range r.Obligations {
+	a := make([]AttributeAssignment, 0, len(r.Obligations))
+	for _, e := range r.Obligations {
 		v, err := e.e.Calculate(ctx)
 		if err != nil {
-			a = a[:i]
-
-			errs[nErr] = newObligationCalculationError(e.a, err)
-			nErr++
-
-			break
+			errs = append(errs, newObligationCalculationError(e.a, err))
+			continue
 		}
 
-		a[i] = MakeAttributeAssignment(e.a, v)
+		a = append(a, MakeAttributeAssignment(e.a, v))
 	}
 
-	return marshalResponse(r.Effect, a, errs[:nErr]...)
+	return a, errs
+}
+
+// Marshal encodes response as a sequence of bytes.
+func (r Response) Marshal(ctx *Context) ([]byte, error) {
+	a, errs := r.calcValues(ctx)
+
+	return marshalResponse(r.Effect, a, errs...)
 }
 
 // MarshalWithAllocator encodes response as a sequence of bytes. It uses given
 // allocator to create required response buffer. The allocator is expected
 // to take number of bytes required and return slice of that length.
 func (r Response) MarshalWithAllocator(f func(n int) ([]byte, error), ctx *Context) ([]byte, error) {
-	var errs [2]error
+	a, errs := r.calcValues(ctx)
 
-	nErr := 0
-	if r.Status != nil {
-		errs[nErr] = newPolicyCalculationError(r.Status)
-		nErr++
-	}
-
-	a := make([]AttributeAssignment, len(r.Obligations))
-	for i, e := range r.Obligations {
-		v, err := e.e.Calculate(ctx)
-		if err != nil {
-			a = a[:i]
-
-			errs[nErr] = newObligationCalculationError(e.a, err)
-			nErr++
-
-			break
-		}
-
-		a[i] = MakeAttributeAssignment(e.a, v)
-	}
-
-	return marshalResponseWithAllocator(f, r.Effect, a, errs[:nErr]...)
+	return marshalResponseWithAllocator(f, r.Effect, a, errs...)
 }
 
 // MarshalToBuffer fills given byte array with marshalled representation
 // of the response. The method returns number of bytes filled or error.
 func (r Response) MarshalToBuffer(b []byte, ctx *Context) (int, error) {
-	var errs [2]error
+	a, errs := r.calcValues(ctx)
 
-	nErr := 0
-	if r.Status != nil {
-		errs[nErr] = newPolicyCalculationError(r.Status)
-		nErr++
-	}
-
-	a := make([]AttributeAssignment, len(r.Obligations))
-	for i, e := range r.Obligations {
-		v, err := e.e.Calculate(ctx)
-		if err != nil {
-			a = a[:i]
-
-			errs[nErr] = newObligationCalculationError(e.a, err)
-			nErr++
-
-			break
-		}
-
-		a[i] = MakeAttributeAssignment(e.a, v)
-	}
-
-	return marshalResponseToBuffer(b, r.Effect, a, errs[:nErr]...)
+	return marshalResponseToBuffer(b, r.Effect, a, errs...)
 }
 
 // Evaluable interface defines abstract PDP's entity which can be evaluated
