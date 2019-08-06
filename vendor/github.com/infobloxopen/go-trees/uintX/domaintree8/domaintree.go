@@ -91,6 +91,9 @@ func (n *Node) Get(d domain.Name) (uint8, bool) {
 		return 0, false
 	}
 
+	var value uint8
+	hasValue := false
+
 	d.GetLabels(func(label string) error {
 		next, ok := n.branches.rawGet(label)
 		if !ok {
@@ -98,10 +101,14 @@ func (n *Node) Get(d domain.Name) (uint8, bool) {
 		}
 
 		n = next
+		if n.hasValue {
+			value = n.value
+			hasValue = true
+		}
 		return nil
 	})
 
-	return n.value, n.hasValue
+	return value, hasValue
 }
 
 // DeleteSubdomains removes current domain and all its subdomains if any. It returns new tree and flag if deletion indeed occurs.

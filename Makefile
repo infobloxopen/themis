@@ -23,8 +23,11 @@ build-dir:
 	mkdir -p $(BUILDPATH)
 
 .PHONY: bootstrap
-bootstrap:
-	glide install --strip-vendor
+bootstrap: build-dir
+
+.PHONY: vendor
+vendor:
+	GO111MODULE=on go mod vendor
 
 .PHONY: clean
 clean:

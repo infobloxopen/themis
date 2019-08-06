@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/caddyserver/caddy"
 	"github.com/infobloxopen/themis/contrib/coredns/policy/testutil"
 	"github.com/infobloxopen/themis/pdp"
-	"github.com/mholt/caddy"
 )
 
 func TestPolicyConfigParse(t *testing.T) {
