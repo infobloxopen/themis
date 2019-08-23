@@ -11,7 +11,13 @@ import (
 const txtLenLimit = 255
 const initTxtCount = 5
 
-var actionNames [actionsTotal]string
+var (
+	actionNames [actionsTotal]string
+	debugQtypes = map[string]uint16{
+		"a":    dns.TypeA,
+		"aaaa": dns.TypeAAAA,
+	}
+)
 
 func init() {
 	actionNames[actionInvalid] = "invalid"
@@ -45,10 +51,23 @@ func (p *policyPlugin) patchDebugMsg(r *dns.Msg) *dbgMessenger {
 	if q.Qclass != dns.ClassCHAOS || q.Qtype != dns.TypeTXT || !strings.HasSuffix(q.Name, p.conf.debugSuffix) {
 		return nil
 	}
+	parts := strings.FieldsFunc(strings.TrimSuffix(q.Name, p.conf.debugSuffix), func(c rune) bool {
+		return c == '.'
+	})
+	// qname can be of forms: <...>.<tld>.<qtype>. or <...>.<tld>.
+	// assert valid <tld> is not any of debugQtypes
+	nparts := len(parts)
+	if nparts > 0 {
+		if qtype, ok := debugQtypes[strings.ToLower(parts[nparts-1])]; ok {
+			q.Qtype = qtype
+			parts = parts[:nparts-1]
+		} else { // <...>.<tld> use A type
+			q.Qtype = dns.TypeA
+		}
+	}
 
 	orgName := q.Name
-	q.Name = dns.Fqdn(strings.TrimSuffix(q.Name, p.conf.debugSuffix))
-	q.Qtype = dns.TypeA
+	q.Name = dns.Fqdn(strings.Join(parts, "."))
 	q.Qclass = dns.ClassINET
 
 	return newDbgMessenger(orgName, p.conf.debugID)

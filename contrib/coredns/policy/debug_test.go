@@ -473,6 +473,82 @@ func TestSetDebugQueryAnswer(t *testing.T) {
 				"\"Domain resolution: resolved\"\n",
 		)
 	})
+
+	t.Run("IPv4Option", func(t *testing.T) {
+		p := newPolicyPlugin()
+		p.conf.debugSuffix = "debug.local."
+		p.conf.debugID = "<DEBUG>"
+
+		mpc := testutil.NewMockPdpClient(t)
+		p.pdp = mpc
+
+		m := testutil.MakeTestDNSMsg("example.com.a.debug.local.", dns.TypeTXT, dns.ClassCHAOS)
+		w := testutil.NewTestAddressedNonwriter("192.0.2.1")
+		dm := p.patchDebugMsg(m)
+
+		cfg := newConfig()
+		cfg.attrs.parseAttrList(attrListTypeVal1, "domain_name")
+
+		ah := newAttrHolder(nil, cfg.attrs)
+		ah.addDnsQuery(w, m, cfg.options)
+		mpc.Out = []pdp.AttributeAssignment{
+			pdp.MakeStringAssignment(attrNameRedirectTo, "192.0.2.54"),
+			pdp.MakeIntegerAssignment("policy_action", 4),
+		}
+		mpc.Effect = pdp.EffectPermit
+
+		p.validate(nil, ah, attrListTypeVal1, dm)
+
+		dm.setDebugQueryAnswer(m, dns.RcodeSuccess)
+		testutil.AssertDNSMessage(t, "setDebugQueryAnswer", 0, m, 0,
+			";; opcode: QUERY, status: NOERROR, id: 0\n"+
+				";; flags:; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
+				";; QUESTION SECTION:\n"+
+				";example.com.\tIN\t A\n\n"+
+				";; ANSWER SECTION:\n"+
+				"example.com.a.debug.local.\t0\tCH\tTXT\t\"Ident: <DEBUG>\" "+
+				"\"PDP response {Effect: Permit, Obligations: [redirect_to: 192.0.2.54, policy_action: redirect]}\" "+
+				"\"Domain resolution: resolved\"\n",
+		)
+	})
+
+	t.Run("IPv6Option", func(t *testing.T) {
+		p := newPolicyPlugin()
+		p.conf.debugSuffix = "debug.local."
+		p.conf.debugID = "<DEBUG>"
+
+		mpc := testutil.NewMockPdpClient(t)
+		p.pdp = mpc
+
+		m := testutil.MakeTestDNSMsg("example.com.aaaa.debug.local.", dns.TypeTXT, dns.ClassCHAOS)
+		w := testutil.NewTestAddressedNonwriter("192.0.2.1")
+		dm := p.patchDebugMsg(m)
+
+		cfg := newConfig()
+		cfg.attrs.parseAttrList(attrListTypeVal1, "domain_name")
+
+		ah := newAttrHolder(nil, cfg.attrs)
+		ah.addDnsQuery(w, m, cfg.options)
+		mpc.Out = []pdp.AttributeAssignment{
+			pdp.MakeStringAssignment(attrNameRedirectTo, "192.0.2.54"),
+			pdp.MakeIntegerAssignment("policy_action", 4),
+		}
+		mpc.Effect = pdp.EffectPermit
+
+		p.validate(nil, ah, attrListTypeVal1, dm)
+
+		dm.setDebugQueryAnswer(m, dns.RcodeSuccess)
+		testutil.AssertDNSMessage(t, "setDebugQueryAnswer", 0, m, 0,
+			";; opcode: QUERY, status: NOERROR, id: 0\n"+
+				";; flags:; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n\n"+
+				";; QUESTION SECTION:\n"+
+				";example.com.\tIN\t AAAA\n\n"+
+				";; ANSWER SECTION:\n"+
+				"example.com.aaaa.debug.local.\t0\tCH\tTXT\t\"Ident: <DEBUG>\" "+
+				"\"PDP response {Effect: Permit, Obligations: [redirect_to: 192.0.2.54, policy_action: redirect]}\" "+
+				"\"Domain resolution: resolved\"\n",
+		)
+	})
 }
 
 const testOrgName = "test.com.debug."
