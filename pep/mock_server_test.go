@@ -27,7 +27,7 @@ type MockServer struct {
 // and spawns goroutine to serve incoming requests
 func NewMockServer(listenAddrPort string, validateSecs int, t *testing.T) *MockServer {
 	s := &MockServer{
-                t:              t,
+		t:              t,
 		listenAddrPort: listenAddrPort,
 		validateSecs:   validateSecs,
 	}

@@ -6,7 +6,7 @@ COVERTMP=/tmp/cover.out
 AT = cd $(SRCROOT)
 RM = rm -fv
 GOBUILD = go build -v
-GOFMTCHECK = test -z `gofmt -l -s -w *.go | tee /dev/stderr`
+GOFMTCHECK = test -z `gofmt -s -d *.go | tee /dev/stderr`
 GOTEST = go test -v
 COVER = $(GOTEST) -coverprofile=$(COVERTMP) -covermode=atomic
 JOINCOVER = cat $(COVERTMP) >> $(COVEROUT)

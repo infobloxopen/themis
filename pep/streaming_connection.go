@@ -36,7 +36,7 @@ const (
 
 const connectionResetPercent float64 = 0.3
 
-func makeStreamConns(addrs []string, streams int, tracer opentracing.Tracer, timeout time.Duration, cb ConnectionStateNotificationCallback) ([]*streamConn, *connRetryPool) {
+func makeStreamConns(ctx context.Context, addrs []string, streams int, tracer opentracing.Tracer, timeout time.Duration, cb ConnectionStateNotificationCallback) ([]*streamConn, *connRetryPool) {
 	total := len(addrs)
 	if total > streams {
 		total = streams
@@ -51,7 +51,7 @@ func makeStreamConns(addrs []string, streams int, tracer opentracing.Tracer, tim
 			count++
 		}
 
-		conns[i] = newStreamConn(addrs[i], count, tracer, cb)
+		conns[i] = newStreamConn(ctx, addrs[i], count, tracer, cb)
 	}
 
 	crp := newConnRetryPool(conns, timeout)
@@ -85,6 +85,7 @@ var (
 var closeWaitDuration = 5 * time.Second
 
 type streamConn struct {
+	ctx    context.Context
 	addr   string
 	tracer opentracing.Tracer
 	crp    *connRetryPool
@@ -102,8 +103,9 @@ type streamConn struct {
 	notify ConnectionStateNotificationCallback
 }
 
-func newStreamConn(addr string, streams int, tracer opentracing.Tracer, cb ConnectionStateNotificationCallback) *streamConn {
+func newStreamConn(ctx context.Context, addr string, streams int, tracer opentracing.Tracer, cb ConnectionStateNotificationCallback) *streamConn {
 	c := &streamConn{
+		ctx:     ctx,
 		addr:    addr,
 		tracer:  tracer,
 		limit:   int(float64(streams)*connectionResetPercent + 0.5),
@@ -197,7 +199,12 @@ func (c *streamConn) tryConnect(addr string, tracer opentracing.Tracer, timeout 
 		)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx := c.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	var conn *grpc.ClientConn

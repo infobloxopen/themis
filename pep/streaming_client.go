@@ -84,7 +84,8 @@ func (c *streamingClient) Connect(addr string) error {
 		return err
 	}
 
-	conns, crp := makeStreamConns(addrs, c.opts.maxStreams, c.opts.tracer, c.opts.connTimeout, c.opts.connStateCb)
+	conns, crp := makeStreamConns(c.opts.ctx, addrs, c.opts.maxStreams,
+		c.opts.tracer, c.opts.connTimeout, c.opts.connStateCb)
 	c.conns = conns
 	c.crp = crp
 	c.cache = cache

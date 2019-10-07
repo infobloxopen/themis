@@ -190,7 +190,8 @@ func TestUnaryClientValidateTimeout(t *testing.T) {
 		waitForPortClosed(service)
 	}()
 
-	c := NewClient(WithConnectionTimeout(1 * time.Second))
+	c := NewClient(WithConnectionTimeout(1*time.Second),
+		WithContext(mockSvr.cancelableCtx))
 	err := c.Connect(service)
 	if err != nil {
 		t.Fatalf("expected no connect error but got %s", err)

@@ -84,16 +84,19 @@ func (c *unaryClient) Connect(addr string) error {
 		return err
 	}
 
-	var conn *grpc.ClientConn
-	if c.opts.connTimeout > 0 {
-		opts = append(opts, grpc.WithBlock())
-		toCtx, toCancelFn := context.WithTimeout(context.Background(), c.opts.connTimeout)
-		defer toCancelFn()
-		conn, err = grpc.DialContext(toCtx, addr, opts...)
-	} else {
-		conn, err = grpc.Dial(addr, opts...)
+	ctx := c.opts.ctx
+	if ctx == nil {
+		ctx = context.Background()
 	}
 
+	if c.opts.connTimeout > 0 {
+		var cancelFn context.CancelFunc
+		ctx, cancelFn = context.WithTimeout(ctx, c.opts.connTimeout)
+		defer cancelFn()
+	}
+
+	opts = append(opts, grpc.WithBlock())
+	conn, err := grpc.DialContext(ctx, addr, opts...)
 	if err != nil {
 		return err
 	}
@@ -171,14 +174,18 @@ func (c *unaryClient) Validate(in, out interface{}) error {
 		}
 	}
 
-	toCtx := context.Background()
-	var toCancelFn context.CancelFunc
-	if c.opts.connTimeout > 0 {
-		toCtx, toCancelFn = context.WithTimeout(context.Background(), c.opts.connTimeout)
-		defer toCancelFn()
+	ctx := c.opts.ctx
+	if ctx == nil {
+		ctx = context.Background()
 	}
 
-	res, err := (*uc).Validate(toCtx, &req, grpc.FailFast(false))
+	if c.opts.connTimeout > 0 {
+		var cancelFn context.CancelFunc
+		ctx, cancelFn = context.WithTimeout(ctx, c.opts.connTimeout)
+		defer cancelFn()
+	}
+
+	res, err := (*uc).Validate(ctx, &req, grpc.FailFast(false))
 	if err != nil {
 		return err
 	}
