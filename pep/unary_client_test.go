@@ -1,10 +1,14 @@
 package pep
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/infobloxopen/themis/pdp"
 	pb "github.com/infobloxopen/themis/pdp-service"
@@ -166,4 +170,58 @@ func startTestPDPServer(p string, s uint16, t *testing.T) *loggedServer {
 		t.Fatalf("can't connect to PDP server: %s", err)
 	}
 	return primary
+}
+
+func TestUnaryClientConnectTimeout(t *testing.T) {
+	c := NewClient(WithConnectionTimeout(1 * time.Second))
+	err := c.Connect("127.0.0.1:5555")
+	if err == nil {
+		t.Fatalf("expected DeadlineExceeded error")
+	} else if err != context.DeadlineExceeded {
+		t.Fatalf("expected DeadlineExceeded error but got %s", err)
+	}
+}
+
+func TestUnaryClientValidateTimeout(t *testing.T) {
+	service := "127.0.0.1:5555"
+	mockSvr := startMockPDPServer(service, 2, t)
+	defer func() {
+		mockSvr.Stop()
+		waitForPortClosed(service)
+	}()
+
+	c := NewClient(WithConnectionTimeout(1*time.Second),
+		WithContext(mockSvr.cancelableCtx))
+	err := c.Connect(service)
+	if err != nil {
+		t.Fatalf("expected no connect error but got %s", err)
+	}
+
+	in := decisionRequest{
+		Direction: "Any",
+		Policy:    "AllPermitPolicy",
+		Domain:    "example.com",
+	}
+	var out decisionResponse
+	err = c.Validate(in, &out)
+	if err == nil {
+		t.Fatalf("expected DeadlineExceeded error")
+	} else if status.Code(err) != codes.DeadlineExceeded {
+		t.Fatalf("expected DeadlineExceeded error but got %s", err)
+	}
+}
+
+func startMockPDPServer(listenAddrPort string, validateSecs int, t *testing.T) *MockServer {
+	if err := waitForPortClosed(listenAddrPort); err != nil {
+		t.Fatalf("port still in use: %s", err)
+	}
+
+	mockSvr := NewMockServer(listenAddrPort, validateSecs, t)
+
+	if err := waitForPortOpened(listenAddrPort); err != nil {
+		mockSvr.Stop()
+		t.Fatalf("can't connect to PDP server: %s", err)
+	}
+
+	return mockSvr
 }

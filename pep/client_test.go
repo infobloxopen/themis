@@ -1,6 +1,7 @@
 package pep
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -116,5 +117,36 @@ func TestNewClientWithCacheTTLAndMaxSize(t *testing.T) {
 	if !uc.opts.cache || uc.opts.cacheTTL != 5*time.Second || uc.opts.cacheMaxSize != 1024 {
 		t.Errorf("Expected cache with TTL %s and size limit %d but got %#v, %s, %d",
 			5*time.Second, 1024, uc.opts.cache, uc.opts.cacheTTL, uc.opts.cacheMaxSize)
+	}
+}
+
+func TestNewClientWithContext(t *testing.T) {
+	c := NewClient()
+	uc, ok := c.(*unaryClient)
+	if !ok {
+		t.Fatalf("Expected *unaryClient from NewClient got %#v", c)
+	}
+	if uc.opts.ctx != nil {
+		t.Errorf("Expected default client to have nil context")
+	}
+
+	c = NewClient(WithContext(nil))
+	uc, ok = c.(*unaryClient)
+	if !ok {
+		t.Fatalf("Expected *unaryClient from NewClient got %#v", c)
+	}
+	if uc.opts.ctx != nil {
+		t.Errorf("Expected nil context to default to nil context")
+	}
+
+	toCtx, toCancelFn := context.WithTimeout(context.Background(), 1*time.Second)
+	defer toCancelFn()
+	c = NewClient(WithContext(toCtx))
+	uc, ok = c.(*unaryClient)
+	if !ok {
+		t.Fatalf("Expected *unaryClient from NewClient got %#v", c)
+	}
+	if uc.opts.ctx != toCtx {
+		t.Errorf("Expected timeout context")
 	}
 }

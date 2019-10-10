@@ -10,6 +10,7 @@ package pep
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-service && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/service.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-service && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-service"
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -113,6 +114,14 @@ func WithStreams(n int) Option {
 	}
 }
 
+// WithContext returns an Option which sets context for the client.
+// If nil, defaults to context.Background().
+func WithContext(ctx context.Context) Option {
+	return func(o *options) {
+		o.ctx = ctx
+	}
+}
+
 // WithConnectionTimeout returns an Option which sets validation timeout
 // for the case when no connection can be established. Negative value means
 // no timeout. Zero - don't wait for connection, fail immediately.
@@ -204,6 +213,7 @@ type options struct {
 	balancer          int
 	tracer            ot.Tracer
 	maxStreams        int
+	ctx               context.Context
 	connTimeout       time.Duration
 	connStateCb       ConnectionStateNotificationCallback
 	autoRequestSize   bool

@@ -84,7 +84,19 @@ func (c *unaryClient) Connect(addr string) error {
 		return err
 	}
 
-	conn, err := grpc.Dial(addr, opts...)
+	ctx := c.opts.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	if c.opts.connTimeout > 0 {
+		var cancelFn context.CancelFunc
+		ctx, cancelFn = context.WithTimeout(ctx, c.opts.connTimeout)
+		defer cancelFn()
+	}
+
+	opts = append(opts, grpc.WithBlock())
+	conn, err := grpc.DialContext(ctx, addr, opts...)
 	if err != nil {
 		return err
 	}
@@ -162,7 +174,18 @@ func (c *unaryClient) Validate(in, out interface{}) error {
 		}
 	}
 
-	res, err := (*uc).Validate(context.Background(), &req, grpc.FailFast(false))
+	ctx := c.opts.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	if c.opts.connTimeout > 0 {
+		var cancelFn context.CancelFunc
+		ctx, cancelFn = context.WithTimeout(ctx, c.opts.connTimeout)
+		defer cancelFn()
+	}
+
+	res, err := (*uc).Validate(ctx, &req, grpc.FailFast(false))
 	if err != nil {
 		return err
 	}
