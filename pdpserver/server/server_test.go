@@ -63,10 +63,10 @@ func TestValidate_hook_post(t *testing.T) {
 func TestValidate_hook_context(t *testing.T) {
 
 	var (
-		preCalled bool
-		called    bool
-		hasKey    bool
-		key       int = 1
+		preCalled  bool
+		postCalled bool
+		hasKey     bool
+		key        int = 1
 	)
 
 	preHook := func(ctx context.Context) context.Context {
@@ -75,7 +75,7 @@ func TestValidate_hook_context(t *testing.T) {
 	}
 
 	hook := func(ctx context.Context, msg *pb.Msg, err error) {
-		called = true
+		postCalled = true
 		_, ok := ctx.Value(key).(struct{})
 		if ok {
 			hasKey = true
@@ -96,11 +96,11 @@ func TestValidate_hook_context(t *testing.T) {
 	}
 
 	if e := true; preCalled != e {
-		t.Error("hook was not called")
+		t.Error("pre hook was not called")
 	}
 
-	if e := true; called != e {
-		t.Error("hook was not called")
+	if e := true; postCalled != e {
+		t.Error("post hook was not called")
 	}
 
 }
