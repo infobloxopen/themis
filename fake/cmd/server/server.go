@@ -20,6 +20,7 @@ const (
 type Server struct {}
 
 func (s *Server) Validate(ctx context.Context, msg *pb.Msg) (*pb.Msg, error) {
+  log.Printf("Receiving Validate")
   resp := &pdp.Response{}
 
   resp.Effect = pdp.EffectPermit
@@ -32,10 +33,13 @@ func (s *Server) Validate(ctx context.Context, msg *pb.Msg) (*pb.Msg, error) {
 }
 
 func (s *Server) NewValidationStream(srv pb.PDP_NewValidationStreamServer) error {
+  log.Printf("Receiving NewValidationStream")
   return status.Errorf(codes.Unimplemented, "NewValidationStream is not supported")
 }
 
 func main(){
+  log.Printf("Starting on port: %v", port)
+
   lis, err := net.Listen("tcp", port)
   if err != nil {
     log.Fatalf("failed to listen: %v", err)
