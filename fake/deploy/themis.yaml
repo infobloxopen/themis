@@ -1,0 +1,44 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: authz
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: themis
+    namespace: authz
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: themis
+    template:
+        metadata:
+            labels:
+                app: themis
+        spec:
+            containers:
+                - name: themis
+                  image: infobloxopen/themis:fake-v1
+                  imagePullPolicy: IfNotPresent
+                  ports:
+                    - containerPort: 5555
+                      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: themis
+    namespace: authz
+    labels:
+        app: themis
+spec:
+    type: ClusterIP
+    ports:
+        - port: 5555
+          targetPort: 5555
+          protocol: TCP
+    selector:
+        app: themis
