@@ -10,7 +10,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o ./fake/bin/server ./fake/cmd/server/
 FROM alpine:latest AS runner
 WORKDIR /bin
 COPY --from=builder /go/src/github.com/infobloxopen/themis/fake/bin/server .
-COPY ./fake/docker/entrypoint.sh /bin
 
 
-ENTRYPOINT ["sh", "entrypoint.sh"]
+ENTRYPOINT ["server"]
