@@ -1,6 +1,10 @@
 package pdp
 
-import "net/url"
+import (
+	"net/url"
+
+	log "github.com/sirupsen/logrus"
+)
 
 // Selector provides a generic way to access external data may required
 // by policies.
@@ -53,6 +57,7 @@ func GetSelector(scheme string) Selector {
 func InitializeSelectors() {
 	for _, s := range selectorMap {
 		if s.Enabled() {
+			log.WithField("scheme", s.Scheme()).Info("initializing selector")
 			s.Initialize()
 		}
 	}
