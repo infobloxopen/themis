@@ -21,11 +21,11 @@ type Server struct {}
 
 func (s *Server) Validate(ctx context.Context, msg *pb.Msg) (*pb.Msg, error) {
   log.Printf("Receiving Validate")
-  resp := &pdp.Response{}
 
+  resp := &pdp.Response{}
   resp.Effect = pdp.EffectPermit
-  resp.Obligations = []pdp.AttributeAssignment{}
   resp.Status = nil
+  resp.Obligations = []pdp.AttributeAssignment{}
 
   body, _ := resp.Marshal(nil)
 
