@@ -19,7 +19,7 @@ const (
 
 type Server struct {}
 
-func (s *Server) Validate(ctx context.Context, msg *pb.Msg) (*pb.Msg, error) {
+func (s *Server) Validate(ctx context.Context, in *pb.Msg) (*pb.Msg, error) {
   log.Printf("Receiving Validate")
 
   resp := &pdp.Response{}
@@ -32,7 +32,7 @@ func (s *Server) Validate(ctx context.Context, msg *pb.Msg) (*pb.Msg, error) {
   return &pb.Msg{Body: body}, nil
 }
 
-func (s *Server) NewValidationStream(srv pb.PDP_NewValidationStreamServer) error {
+func (s *Server) NewValidationStream(stream pb.PDP_NewValidationStreamServer) error {
   log.Printf("Receiving NewValidationStream")
   return status.Errorf(codes.Unimplemented, "NewValidationStream is not supported")
 }
