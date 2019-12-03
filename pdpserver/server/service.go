@@ -154,24 +154,41 @@ func (s *Server) rawValidateToBuffer(p *pdp.PolicyStorage, c *pdp.LocalContentSt
 
 // Validate is a server handler for gRPC call
 // It handles PDP decision requests
+// Return variables are named, so they can be passed to validate
+// hooks.
 func (s *Server) Validate(ctx context.Context, in *pb.Msg) (*pb.Msg, error) {
+
+	var preCtx context.Context
+	if s.opts.validatePreHook != nil {
+		preCtx = s.opts.validatePreHook(ctx)
+	}
+
+	// Initialize message
+	msg := new(pb.Msg)
+	var err error
+
+	defer func() {
+		if s.opts.validatePostHook != nil {
+			// Pass context from preHook to postHook
+			s.opts.validatePostHook(preCtx, msg, err)
+		}
+	}()
+
 	s.RLock()
 	p := s.p
 	c := s.c
 	s.RUnlock()
 
 	if s.opts.autoResponseSize {
-		return &pb.Msg{
-			Body: s.rawValidate(p, c, in.Body),
-		}, nil
+		msg.Body = s.rawValidate(p, c, in.Body)
+		return msg, err
 	}
 
 	b := s.pool.Get()
-	defer s.pool.Put(b)
+	msg.Body = s.rawValidateToBuffer(p, c, in.Body, b)
+	s.pool.Put(b)
 
-	return &pb.Msg{
-		Body: s.rawValidateToBuffer(p, c, in.Body, b),
-	}, nil
+	return msg, err
 }
 
 type obligations struct {

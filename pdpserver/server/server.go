@@ -5,6 +5,7 @@ package server
 //go:generate bash -c "mkdir -p $GOPATH/src/github.com/infobloxopen/themis/pdp-control && protoc -I $GOPATH/src/github.com/infobloxopen/themis/proto/ $GOPATH/src/github.com/infobloxopen/themis/proto/control.proto --go_out=plugins=grpc:$GOPATH/src/github.com/infobloxopen/themis/pdp-control && ls $GOPATH/src/github.com/infobloxopen/themis/pdp-control"
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/infobloxopen/themis/pdp"
 	pbc "github.com/infobloxopen/themis/pdp-control"
+	pb "github.com/infobloxopen/themis/pdp-service"
 	pbs "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pdp/ast"
 	"github.com/infobloxopen/themis/pdp/jcon"
@@ -44,6 +46,26 @@ func WithLogger(logger *log.Logger) Option {
 func WithPolicyParser(parser ast.Parser) Option {
 	return func(o *options) {
 		o.parser = parser
+	}
+}
+
+// ValidatePreHookFn is called when passed to WithValidatePreHook
+type ValidatePreHookFn func(ctx context.Context) context.Context
+
+// ValidatePostHookFn is called when passed to WithValidatePostHook
+type ValidatePostHookFn func(ctx context.Context, msg *pb.Msg, err error)
+
+// WithValidatePreHook calls the passed func at the start of Validate()
+func WithValidatePreHook(f ValidatePreHookFn) Option {
+	return func(o *options) {
+		o.validatePreHook = f
+	}
+}
+
+// WithValidatePostHook calls the passed func at the end of Validate()
+func WithValidatePostHook(f ValidatePostHookFn) Option {
+	return func(o *options) {
+		o.validatePostHook = f
 	}
 }
 
@@ -156,6 +178,9 @@ type options struct {
 	memProfDumpPath     string
 	memProfNumGC        uint32
 	memProfDelay        time.Duration
+
+	validatePreHook  ValidatePreHookFn
+	validatePostHook ValidatePostHookFn
 }
 
 // Server structure is PDP server object

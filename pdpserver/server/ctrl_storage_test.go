@@ -62,7 +62,7 @@ func TestHandleQuery(t *testing.T) {
 	handleQuery(&w, s, []string{"test", "second"}, url.Values{"depth": []string{"3"}})
 	assertEqualWriter(t, mockResponseWriter{
 		statusCode: http.StatusNotFound,
-		msg:        "\"#72: Path [test second] not found\"",
+		msg:        "\"#73: Path [test second] not found\"",
 	}, w, "On not found path:")
 	w.clear()
 
@@ -75,6 +75,7 @@ func TestHandleQuery(t *testing.T) {
 }
 
 func assertEqualWriter(t *testing.T, expect, got mockResponseWriter, failPrefix string) {
+	t.Helper()
 	if expect.statusCode != got.statusCode {
 		t.Errorf(failPrefix+"expected status %d, got %d", expect.statusCode, got.statusCode)
 	}
