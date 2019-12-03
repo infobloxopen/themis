@@ -1,6 +1,6 @@
-# themis fake
+# themis fake (only for local testing)
 
-This project acts as a fake of themis.
+This project acts as a fake of themis. If your application depends on themis, instead of connecting to a real themis endpoint, you can deploy this project to a local k3d on your computer.
 
 # Deploy themis fake to k3d
 
