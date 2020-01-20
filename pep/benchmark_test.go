@@ -1236,14 +1236,11 @@ func waitForPortOpened(address string) error {
 		err error
 	)
 
-	for i := 0; i < 20; i++ {
-		after := time.After(500 * time.Millisecond)
-		c, err = net.DialTimeout("tcp", address, 500*time.Millisecond)
+	for i := 0; i < 2000; i++ {
+		c, err = net.DialTimeout("tcp", address, 10*time.Millisecond)
 		if err == nil {
 			return c.Close()
 		}
-
-		<-after
 	}
 
 	return err
@@ -1255,15 +1252,13 @@ func waitForPortClosed(address string) error {
 		err error
 	)
 
-	for i := 0; i < 20; i++ {
-		after := time.After(500 * time.Millisecond)
-		c, err = net.DialTimeout("tcp", address, 500*time.Millisecond)
+	for i := 0; i < 2000; i++ {
+		c, err = net.DialTimeout("tcp", address, 10*time.Millisecond)
 		if err != nil {
 			return nil
 		}
 
 		c.Close()
-		<-after
 	}
 
 	return fmt.Errorf("port at %s hasn't been closed yet", address)

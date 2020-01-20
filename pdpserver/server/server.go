@@ -35,6 +35,13 @@ type transport struct {
 // Option configures how we set up PDP server.
 type Option func(*options)
 
+// WithServerOption specifies gRPC Server Options
+func WithGRPCOptions(opt ...grpc.ServerOption) Option {
+	return func(o *options) {
+		o.grpcOpts = opt
+	}
+}
+
 // WithLogger returns a Option which sets logger
 func WithLogger(logger *log.Logger) Option {
 	return func(o *options) {
@@ -159,6 +166,8 @@ func WithMemProfDumping(path string, numGC uint32, delay time.Duration) Option {
 const memStatsCheckInterval = 100 * time.Millisecond
 
 type options struct {
+	grpcOpts []grpc.ServerOption
+
 	logger    *log.Logger
 	parser    ast.Parser
 	service   string
@@ -239,7 +248,7 @@ func NewServer(opts ...Option) *Server {
 		pool = makeBytePool(int(o.maxResponseSize), false)
 	}
 
-	return &Server{
+	s := &Server{
 		opts:                o,
 		errCh:               make(chan error, 100),
 		q:                   newQueue(),
@@ -247,6 +256,19 @@ func NewServer(opts ...Option) *Server {
 		memProfBaseDumpDone: memProfBaseDumpDone,
 		pool:                pool,
 	}
+
+	o.logger.Info("Creating service protocol handler")
+
+	requests := grpc.NewServer(s.configureRequests()...)
+	pbs.RegisterPDPServer(requests, s)
+	s.requests.proto = requests
+
+	return s
+}
+
+// GRPCServer expose the underlying gRPC Server
+func (s *Server) GRPCServer() *grpc.Server {
+	return s.requests.proto
 }
 
 // LoadPolicies loads policies from file
@@ -437,7 +459,7 @@ func (s *Server) configureRequests() []grpc.ServerOption {
 		}
 	}
 
-	return opts
+	return append(opts, s.opts.grpcOpts...)
 }
 
 func (s *Server) serveRequests() error {
@@ -536,10 +558,9 @@ func (s *Server) Serve() error {
 		}(s.storageCtrl)
 	}
 
-	s.opts.logger.Info("Creating service protocol handler")
-	s.requests.proto = grpc.NewServer(s.configureRequests()...)
-	pbs.RegisterPDPServer(s.requests.proto, s)
-	defer s.requests.proto.Stop()
+	if s.requests.proto != nil {
+		defer s.requests.proto.Stop()
+	}
 
 	go s.memoryChecker()
 
@@ -560,7 +581,7 @@ func (s *Server) Serve() error {
 
 	if s.control.iface != nil {
 		s.opts.logger.Info("Creating control protocol handler")
-		s.control.proto = grpc.NewServer()
+		s.control.proto = grpc.NewServer(s.opts.grpcOpts...)
 		pbc.RegisterPDPControlServer(s.control.proto, s)
 		defer s.control.proto.Stop()
 
