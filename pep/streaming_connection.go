@@ -210,6 +210,14 @@ func (c *streamConn) tryConnect(addr string, tracer opentracing.Tracer, timeout 
 	var conn *grpc.ClientConn
 	conn, err = grpc.DialContext(ctx, addr, opts...)
 	if err != nil {
+		c.lock.Lock()
+		defer c.lock.Unlock()
+
+		if c.state == scisClosing {
+			c.state = scisDisconnected
+			err = errStreamConnWrongState
+		}
+
 		return
 	}
 
