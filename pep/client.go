@@ -218,19 +218,20 @@ const (
 )
 
 type options struct {
-	addresses               []string
-	balancer                int
-	tracer                  ot.Tracer
-	maxStreams              int
-	ctx                     context.Context
+	addresses       []string
+	balancer        int
+	tracer          ot.Tracer
+	maxStreams      int
+	ctx             context.Context
+	connStateCb     ConnectionStateNotificationCallback
+	autoRequestSize bool
+	maxRequestSize  uint32
+	noPool          bool
+	cache           bool
+	cacheTTL        time.Duration
+	cacheMaxSize    int
+	// ignored by Unary client
 	connTimeout             time.Duration
-	connStateCb             ConnectionStateNotificationCallback
-	autoRequestSize         bool
-	maxRequestSize          uint32
-	noPool                  bool
-	cache                   bool
-	cacheTTL                time.Duration
-	cacheMaxSize            int
 	onCacheHitHandler       OnCacheHitHandler
 	clientUnaryInterceptors []grpc.UnaryClientInterceptor
 }
@@ -238,7 +239,6 @@ type options struct {
 // NewClient creates client instance using given options.
 func NewClient(opts ...Option) Client {
 	o := options{
-		connTimeout:    -1,
 		maxRequestSize: 10240,
 	}
 	for _, opt := range opts {

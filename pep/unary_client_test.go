@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/status"
 
 	"github.com/infobloxopen/themis/pdp"
@@ -88,9 +89,9 @@ func TestUnaryClientValidationWithCache(t *testing.T) {
 	}
 	defer c.Close()
 
-	uc, ok := c.(*unaryClient)
+	uc, ok := c.(*UnaryClient)
 	if !ok {
-		t.Fatalf("expected *unaryClient but got %#v", c)
+		t.Fatalf("expected *UnaryClient but got %#v", c)
 	}
 	bc := uc.cache
 	if bc == nil {
@@ -173,12 +174,20 @@ func startTestPDPServer(p string, s uint16, t *testing.T) *loggedServer {
 }
 
 func TestUnaryClientConnectTimeout(t *testing.T) {
-	c := NewClient(WithConnectionTimeout(1 * time.Second))
+	c := NewClient().(*UnaryClient)
 	err := c.Connect("127.0.0.1:5555")
-	if err == nil {
-		t.Fatalf("expected DeadlineExceeded error")
-	} else if err != context.DeadlineExceeded {
-		t.Fatalf("expected DeadlineExceeded error but got %s", err)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+	defer cancel()
+	c.conn.WaitForStateChange(ctx, connectivity.Idle)
+	c.conn.WaitForStateChange(ctx, connectivity.Connecting)
+	if e := connectivity.TransientFailure; e != c.conn.GetState() {
+		t.Errorf("wanted: %s got: %s", e, c.conn.GetState())
+	}
+	if ctx.Err() != nil {
+		t.Fatal(ctx.Err())
 	}
 }
 

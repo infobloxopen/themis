@@ -11,19 +11,19 @@ import (
 
 func TestNewClient(t *testing.T) {
 	c := NewClient()
-	if _, ok := c.(*unaryClient); !ok {
-		t.Errorf("Expected *unaryClient from NewClient got %#v", c)
+	if _, ok := c.(*UnaryClient); !ok {
+		t.Errorf("Expected *UnaryClient from NewClient got %#v", c)
 	}
 }
 
 func TestNewBalancedClient(t *testing.T) {
 	c := NewClient(WithRoundRobinBalancer("127.0.0.1:1000", "127.0.0.1:1001"))
-	if uc, ok := c.(*unaryClient); ok {
+	if uc, ok := c.(*UnaryClient); ok {
 		if len(uc.opts.addresses) <= 0 {
 			t.Errorf("Expected balancer to be set but got nothing")
 		}
 	} else {
-		t.Errorf("Expected *unaryClient from NewClient got %#v", c)
+		t.Errorf("Expected *UnaryClient from NewClient got %#v", c)
 	}
 
 	c = NewClient(WithHotSpotBalancer("127.0.0.1:1000", "127.0.0.1:1001"), WithStreams(5))
@@ -50,9 +50,9 @@ func TestNewStreamingClient(t *testing.T) {
 func TestNewClientWithTracer(t *testing.T) {
 	tr := &ot.NoopTracer{}
 	c := NewClient(WithTracer(tr))
-	uc, ok := c.(*unaryClient)
+	uc, ok := c.(*UnaryClient)
 	if !ok {
-		t.Fatalf("Expected *unaryClient from NewClient got %#v", c)
+		t.Fatalf("Expected *UnaryClient from NewClient got %#v", c)
 	}
 
 	if uc.opts.tracer != tr {
@@ -67,9 +67,9 @@ var noOpClientInterceptor grpc.UnaryClientInterceptor = func(ctx context.Context
 func TestNewClientWithInterceptor(t *testing.T) {
 	ci := noOpClientInterceptor
 	c := NewClient(WithClientUnaryInterceptors(ci))
-	uc, ok := c.(*unaryClient)
+	uc, ok := c.(*UnaryClient)
 	if !ok {
-		t.Fatalf("Expected *unaryClient from NewClient got %#v", c)
+		t.Fatalf("Expected *UnaryClient from NewClient got %#v", c)
 	}
 
 	if len(uc.opts.clientUnaryInterceptors) == 0 {
@@ -79,9 +79,9 @@ func TestNewClientWithInterceptor(t *testing.T) {
 
 func TestNewClientWithAutoRequestSize(t *testing.T) {
 	c := NewClient(WithAutoRequestSize(true))
-	uc, ok := c.(*unaryClient)
+	uc, ok := c.(*UnaryClient)
 	if !ok {
-		t.Fatalf("Expected *unaryClient from NewClient got %#v", c)
+		t.Fatalf("Expected *UnaryClient from NewClient got %#v", c)
 	}
 
 	if !uc.opts.autoRequestSize {
@@ -91,9 +91,9 @@ func TestNewClientWithAutoRequestSize(t *testing.T) {
 
 func TestNewClientWithMaxRequestSize(t *testing.T) {
 	c := NewClient(WithMaxRequestSize(1024))
-	uc, ok := c.(*unaryClient)
+	uc, ok := c.(*UnaryClient)
 	if !ok {
-		t.Fatalf("Expected *unaryClient from NewClient got %#v", c)
+		t.Fatalf("Expected *UnaryClient from NewClient got %#v", c)
 	}
 
 	if uc.opts.maxRequestSize != 1024 {
@@ -103,9 +103,9 @@ func TestNewClientWithMaxRequestSize(t *testing.T) {
 
 func TestNewClientWithNoRequestBufferPool(t *testing.T) {
 	c := NewClient(WithNoRequestBufferPool())
-	uc, ok := c.(*unaryClient)
+	uc, ok := c.(*UnaryClient)
 	if !ok {
-		t.Fatalf("Expected *unaryClient from NewClient got %#v", c)
+		t.Fatalf("Expected *UnaryClient from NewClient got %#v", c)
 	}
 
 	if uc.pool.b != nil {
@@ -115,9 +115,9 @@ func TestNewClientWithNoRequestBufferPool(t *testing.T) {
 
 func TestNewClientWithCacheTTL(t *testing.T) {
 	c := NewClient(WithCacheTTL(5 * time.Second))
-	uc, ok := c.(*unaryClient)
+	uc, ok := c.(*UnaryClient)
 	if !ok {
-		t.Fatalf("Expected *unaryClient from NewClient got %#v", c)
+		t.Fatalf("Expected *UnaryClient from NewClient got %#v", c)
 	}
 
 	if !uc.opts.cache || uc.opts.cacheTTL != 5*time.Second {
@@ -127,9 +127,9 @@ func TestNewClientWithCacheTTL(t *testing.T) {
 
 func TestNewClientWithCacheTTLAndMaxSize(t *testing.T) {
 	c := NewClient(WithCacheTTLAndMaxSize(5*time.Second, 1024))
-	uc, ok := c.(*unaryClient)
+	uc, ok := c.(*UnaryClient)
 	if !ok {
-		t.Fatalf("Expected *unaryClient from NewClient got %#v", c)
+		t.Fatalf("Expected *UnaryClient from NewClient got %#v", c)
 	}
 
 	if !uc.opts.cache || uc.opts.cacheTTL != 5*time.Second || uc.opts.cacheMaxSize != 1024 {
@@ -140,18 +140,18 @@ func TestNewClientWithCacheTTLAndMaxSize(t *testing.T) {
 
 func TestNewClientWithContext(t *testing.T) {
 	c := NewClient()
-	uc, ok := c.(*unaryClient)
+	uc, ok := c.(*UnaryClient)
 	if !ok {
-		t.Fatalf("Expected *unaryClient from NewClient got %#v", c)
+		t.Fatalf("Expected *UnaryClient from NewClient got %#v", c)
 	}
 	if uc.opts.ctx != nil {
 		t.Errorf("Expected default client to have nil context")
 	}
 
 	c = NewClient(WithContext(nil))
-	uc, ok = c.(*unaryClient)
+	uc, ok = c.(*UnaryClient)
 	if !ok {
-		t.Fatalf("Expected *unaryClient from NewClient got %#v", c)
+		t.Fatalf("Expected *UnaryClient from NewClient got %#v", c)
 	}
 	if uc.opts.ctx != nil {
 		t.Errorf("Expected nil context to default to nil context")
@@ -160,9 +160,9 @@ func TestNewClientWithContext(t *testing.T) {
 	toCtx, toCancelFn := context.WithTimeout(context.Background(), 1*time.Second)
 	defer toCancelFn()
 	c = NewClient(WithContext(toCtx))
-	uc, ok = c.(*unaryClient)
+	uc, ok = c.(*UnaryClient)
 	if !ok {
-		t.Fatalf("Expected *unaryClient from NewClient got %#v", c)
+		t.Fatalf("Expected *UnaryClient from NewClient got %#v", c)
 	}
 	if uc.opts.ctx != toCtx {
 		t.Errorf("Expected timeout context")
