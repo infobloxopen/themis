@@ -6,6 +6,7 @@ import (
 	"time"
 
 	ot "github.com/opentracing/opentracing-go"
+	"google.golang.org/grpc"
 )
 
 func TestNewClient(t *testing.T) {
@@ -56,6 +57,23 @@ func TestNewClientWithTracer(t *testing.T) {
 
 	if uc.opts.tracer != tr {
 		t.Errorf("Expected NoopTracer as client option but got %v", uc.opts.tracer)
+	}
+}
+
+var noOpClientInterceptor grpc.UnaryClientInterceptor = func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	return nil
+}
+
+func TestNewClientWithInterceptor(t *testing.T) {
+	ci := noOpClientInterceptor
+	c := NewClient(WithClientUnaryInterceptors(ci))
+	uc, ok := c.(*unaryClient)
+	if !ok {
+		t.Fatalf("Expected *unaryClient from NewClient got %#v", c)
+	}
+
+	if len(uc.opts.clientUnaryInterceptors) == 0 {
+		t.Errorf("Expected noOpClientInterceptor as client option but got %v", uc.opts.clientUnaryInterceptors)
 	}
 }
 

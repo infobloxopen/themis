@@ -15,6 +15,7 @@ import (
 	"time"
 
 	ot "github.com/opentracing/opentracing-go"
+	"google.golang.org/grpc"
 )
 
 var (
@@ -82,6 +83,14 @@ type Client interface {
 type Option func(*options)
 
 const virtualServerAddress = "pdp"
+
+// WithClientUnaryInterceptors returns an Options which appends to
+// the client unary interceptors of the underlying connection to pdp
+func WithClientUnaryInterceptors(interceptors ...grpc.UnaryClientInterceptor) Option {
+	return func(o *options) {
+		o.clientUnaryInterceptors = append([]grpc.UnaryClientInterceptor{}, interceptors...)
+	}
+}
 
 // WithRoundRobinBalancer returns an Option which sets round-robin balancer with given set of servers.
 func WithRoundRobinBalancer(addresses ...string) Option {
@@ -209,20 +218,21 @@ const (
 )
 
 type options struct {
-	addresses         []string
-	balancer          int
-	tracer            ot.Tracer
-	maxStreams        int
-	ctx               context.Context
-	connTimeout       time.Duration
-	connStateCb       ConnectionStateNotificationCallback
-	autoRequestSize   bool
-	maxRequestSize    uint32
-	noPool            bool
-	cache             bool
-	cacheTTL          time.Duration
-	cacheMaxSize      int
-	onCacheHitHandler OnCacheHitHandler
+	addresses               []string
+	balancer                int
+	tracer                  ot.Tracer
+	maxStreams              int
+	ctx                     context.Context
+	connTimeout             time.Duration
+	connStateCb             ConnectionStateNotificationCallback
+	autoRequestSize         bool
+	maxRequestSize          uint32
+	noPool                  bool
+	cache                   bool
+	cacheTTL                time.Duration
+	cacheMaxSize            int
+	onCacheHitHandler       OnCacheHitHandler
+	clientUnaryInterceptors []grpc.UnaryClientInterceptor
 }
 
 // NewClient creates client instance using given options.
