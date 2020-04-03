@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/allegro/bigcache"
+	"github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	ot "github.com/opentracing/opentracing-go"
 	"google.golang.org/grpc"
@@ -64,20 +65,26 @@ func (c *unaryClient) Connect(addr string) error {
 		}
 	}
 
+	var interceptors []grpc.UnaryClientInterceptor
+
 	if c.opts.tracer != nil {
-		opts = append(opts,
-			grpc.WithUnaryInterceptor(
-				otgrpc.OpenTracingClientInterceptor(
-					c.opts.tracer,
-					otgrpc.IncludingSpans(
-						func(parentSpanCtx ot.SpanContext, method string, req, resp interface{}) bool {
-							return parentSpanCtx != nil
-						},
-					),
+		interceptors = append(interceptors,
+			otgrpc.OpenTracingClientInterceptor(
+				c.opts.tracer,
+				otgrpc.IncludingSpans(
+					func(parentSpanCtx ot.SpanContext, method string, req, resp interface{}) bool {
+						return parentSpanCtx != nil
+					},
 				),
-			),
-		)
+			))
 	}
+
+	if c.opts.clientUnaryInterceptors != nil {
+		interceptors = append(interceptors, c.opts.clientUnaryInterceptors...)
+	}
+	opts = append(opts, grpc.WithUnaryInterceptor(
+		grpc_middleware.ChainUnaryClient(interceptors...),
+	))
 
 	cache, err := newCacheFromOptions(c.opts)
 	if err != nil {
