@@ -629,6 +629,7 @@ There are several other functions available:
 
 ### Local Content
 Local content is a set of content **items** (see example above). It's identified by **id** field which can be any string with no slash character (`/`). Each content item also has id (key of "items" JSON object) and following fields:
+- **aggregation** - defines how to aggreagate data from several paths, see corresponding section below (optional, default value is `disable`);
 - **keys** - list of types of nested maps (optional, if not present data should contain immediate value of type);
 - **type** - any built-in type (or flags type definition or name for domain map);
 - **data** - list of nested maps with keys of mentioned types or immediate value of given type.
@@ -670,6 +671,49 @@ For example:
   }
 }
 ```
+
+#### Aggregation
+In case if content item expects `string` key and selector provides a key of type `list of strings` the content item can iterate over several paths using each string from the provided `list of string` key as an individual `string` key. The result will be an aggregated value obtained from several paths. The way how data is aggregated depends on the `aggregation` field defined for the content item.
+
+The allowable values for `aggregation` fields are
+- **disable** - aggregation is disabled (default value). If selector provides `list of strings` key instead of `string` key to the content item with disabled aggregation - it will result in error.
+- **return first** - content item will return the value from the first encountered existing path. Other paths corresponding to the remaining strings in the `list of strings` key will be skipped. This aggregation type can be defined with any content item type.
+- **append** - this aggregation type can only be applied to content item of type `list of strings`. The aggregated value will be the list of all strings from the content values found at the paths constructed from the `list of strings` key. The order of strings in the aggregated value is preserved.
+- **append unique** - the same as aggregation type **append** but all duplicate strings will be removed from the aggregated value.
+
+
+See below an example where user roles are mapped to actions allowed
+
+```json
+{
+  "id": "content",
+  "items": {
+    "example-aggregation": {
+      "aggregation": "append",
+      "type": "list of strings",
+      "keys": ["string"],
+      "data": {
+        "admin": ["create","reset"],
+        "reader": ["read"],
+        "writer": ["read", "write"]
+      }
+    }
+  }
+}
+```
+
+In case if one person has several roles it's possible to obtain all allowed actions with a selector like below, where attribute `roles` has type `list of strings` and includes all roles assigned to the person.
+
+```yaml
+...
+selector:
+  path:
+  - attr: roles
+  type: list of strings
+  uri: "local:content/example-aggregation"
+```
+
+Thus, if attrubite `roles` has value ["admin","supervisor","reader"] the selector above will return value ["create","reset","read"] (no actions for "supervisor" were defined).
 
 ### Policy and Rule Combining Algorithms
 Policy and rule combining algorithms define how to use child policies or rules of given policy set or policy and how to combine their effects, statuses and obligations. Themis supports following algorithms:
