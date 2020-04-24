@@ -31,6 +31,7 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeString, TypeString),
 		MakeContentStringMap(strtree.NewTree()),
+		AggTypeDisable,
 	)
 
 	sTree := strtree.NewTree()
@@ -43,6 +44,7 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeString),
 		MakeContentStringMap(sTree),
+		AggTypeDisable,
 	)
 
 	snmc := MakeContentMappingItem(
@@ -50,6 +52,7 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeString, TypeNetwork),
 		MakeContentStringMap(strtree.NewTree()),
+		AggTypeDisable,
 	)
 
 	nTree := iptree.NewTree()
@@ -62,6 +65,7 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeNetwork),
 		MakeContentNetworkMap(nTree),
+		AggTypeDisable,
 	)
 
 	sdmc := MakeContentMappingItem(
@@ -69,6 +73,7 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeString, TypeDomain),
 		MakeContentStringMap(strtree.NewTree()),
+		AggTypeDisable,
 	)
 
 	dTree := new(domaintree.Node)
@@ -81,6 +86,7 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeDomain),
 		MakeContentDomainMap(dTree),
+		AggTypeDisable,
 	)
 
 	sTree = strtree.NewTree()
@@ -93,6 +99,7 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeString),
 		MakeContentStringMap(sTree),
+		AggTypeDisable,
 	)
 
 	nTree = iptree.NewTree()
@@ -105,6 +112,7 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeNetwork),
 		MakeContentNetworkMap(nTree),
+		AggTypeDisable,
 	)
 
 	dTree = new(domaintree.Node)
@@ -117,6 +125,7 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeDomain),
 		MakeContentDomainMap(dTree),
+		AggTypeDisable,
 	)
 
 	dTree = &domaintree.Node{}
@@ -129,6 +138,7 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeDomain),
 		MakeContentDomainMap(dTree),
+		AggTypeDisable,
 	)
 
 	dTree = new(domaintree.Node)
@@ -141,6 +151,7 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeDomain),
 		MakeContentDomainMap(dTree),
+		AggTypeDisable,
 	)
 
 	st := MakeSymbols()
@@ -210,6 +221,7 @@ func TestLocalContentStorage(t *testing.T) {
 		ft8,
 		MakeSignature(TypeString),
 		MakeContentStringFlags8Map(sTree8),
+		AggTypeDisable,
 	)
 
 	sTree16 := strtree16.NewTree()
@@ -222,6 +234,7 @@ func TestLocalContentStorage(t *testing.T) {
 		ft16,
 		MakeSignature(TypeString),
 		MakeContentStringFlags16Map(sTree16),
+		AggTypeDisable,
 	)
 
 	sTree32 := strtree32.NewTree()
@@ -234,6 +247,7 @@ func TestLocalContentStorage(t *testing.T) {
 		ft32,
 		MakeSignature(TypeString),
 		MakeContentStringFlags32Map(sTree32),
+		AggTypeDisable,
 	)
 
 	sTree64 := strtree64.NewTree()
@@ -246,6 +260,7 @@ func TestLocalContentStorage(t *testing.T) {
 		ft64,
 		MakeSignature(TypeString),
 		MakeContentStringFlags64Map(sTree64),
+		AggTypeDisable,
 	)
 
 	sa := "2001:db8:8000::1"
@@ -265,6 +280,7 @@ func TestLocalContentStorage(t *testing.T) {
 		ft8,
 		MakeSignature(TypeNetwork),
 		MakeContentNetworkFlags8Map(nTree8),
+		AggTypeDisable,
 	)
 
 	nTree16 := iptree16.NewTree()
@@ -278,6 +294,7 @@ func TestLocalContentStorage(t *testing.T) {
 		ft16,
 		MakeSignature(TypeNetwork),
 		MakeContentNetworkFlags16Map(nTree16),
+		AggTypeDisable,
 	)
 
 	nTree32 := iptree32.NewTree()
@@ -291,6 +308,7 @@ func TestLocalContentStorage(t *testing.T) {
 		ft32,
 		MakeSignature(TypeNetwork),
 		MakeContentNetworkFlags32Map(nTree32),
+		AggTypeDisable,
 	)
 
 	nTree64 := iptree64.NewTree()
@@ -304,6 +322,7 @@ func TestLocalContentStorage(t *testing.T) {
 		ft64,
 		MakeSignature(TypeNetwork),
 		MakeContentNetworkFlags64Map(nTree64),
+		AggTypeDisable,
 	)
 
 	dTree8 := &domaintree8.Node{}
@@ -316,6 +335,7 @@ func TestLocalContentStorage(t *testing.T) {
 		ft8,
 		MakeSignature(TypeDomain),
 		MakeContentDomainFlags8Map(dTree8),
+		AggTypeDisable,
 	)
 
 	dTree16 := &domaintree16.Node{}
@@ -328,6 +348,7 @@ func TestLocalContentStorage(t *testing.T) {
 		ft16,
 		MakeSignature(TypeDomain),
 		MakeContentDomainFlags16Map(dTree16),
+		AggTypeDisable,
 	)
 
 	dTree32 := &domaintree32.Node{}
@@ -340,6 +361,7 @@ func TestLocalContentStorage(t *testing.T) {
 		ft32,
 		MakeSignature(TypeDomain),
 		MakeContentDomainFlags32Map(dTree32),
+		AggTypeDisable,
 	)
 
 	dTree64 := &domaintree64.Node{}
@@ -352,6 +374,7 @@ func TestLocalContentStorage(t *testing.T) {
 		ft64,
 		MakeSignature(TypeDomain),
 		MakeContentDomainFlags64Map(dTree64),
+		AggTypeDisable,
 	)
 
 	items := []*ContentItem{
@@ -374,6 +397,7 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeDomain),
 		MakeContentDomainMap(dTree),
+		AggTypeDisable,
 	)
 	s = s.Add(NewLocalContent("second", &tag, st, []*ContentItem{dmc}))
 
@@ -1032,6 +1056,7 @@ func TestLocalContentStorageGetByValues(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeString, TypeString),
 		MakeContentStringMap(ssm),
+		AggTypeDisable,
 	)
 
 	v, err = ssmc.GetByValues([]AttributeValue{
@@ -1047,6 +1072,245 @@ func TestLocalContentStorageGetByValues(t *testing.T) {
 			t.Errorf("Expected no error but got %T (%s)", err, err)
 		} else if s != e {
 			t.Errorf("Expected %q but got %q", e, s)
+		}
+	}
+}
+
+func TestLocalContentStorageGet(t *testing.T) {
+
+	sm1 := strtree.NewTree()
+	sm1.InplaceInsert("1-first", []string{"first-first"})
+	sm1.InplaceInsert("2-second", []string{"second-first-1", "second-first-2"})
+	sm1.InplaceInsert("3-third", []string{"third-first"})
+
+	sm2 := strtree.NewTree()
+	sm2.InplaceInsert("1-first", []string{"first-second-1"})
+	sm2.InplaceInsert("2-second", []string{"second-second", "duplicate", "duplicate"})
+	sm2.InplaceInsert("3-third", []string{"third-second"})
+
+	sm3 := strtree.NewTree()
+	sm3.InplaceInsert("1-first", []string{"first-third"})
+	sm3.InplaceInsert("2-second", []string{"second-third", "second-third-2", "duplicate"})
+	sm3.InplaceInsert("3-third", []string{"third-third-1"})
+
+	ssm := strtree.NewTree()
+	ssm.InplaceInsert("1-first", MakeContentStringMap(sm1))
+	ssm.InplaceInsert("2-second", MakeContentStringMap(sm2))
+	ssm.InplaceInsert("3-third", MakeContentStringMap(sm3))
+
+	cilos := MakeContentMappingItem(
+		"str-str-los",
+		TypeListOfStrings,
+		MakeSignature(TypeString, TypeString),
+		MakeContentStringMap(ssm),
+		AggTypeDisable,
+	)
+
+	sm4 := strtree.NewTree()
+	sm4.InplaceInsert("1-first", int64(111))
+	sm4.InplaceInsert("2-second", int64(222))
+	sm4.InplaceInsert("3-third", int64(333))
+
+	ciint := MakeContentMappingItem(
+		"str-int",
+		TypeInteger,
+		MakeSignature(TypeString),
+		MakeContentStringMap(sm4),
+		AggTypeDisable,
+	)
+
+	cases := [][]struct {
+		name   string
+		path   []Expression
+		a      AggType
+		result string
+		err    string
+	}{
+		{
+			{
+				"invalid path length",
+				[]Expression{MakeStringValue("2-second")},
+				AggTypeDisable, ``, `#33: Invalid selector path. Expected "String"/"String" path but got String`,
+			},
+			{
+				"error key calculation",
+				[]Expression{MakeStringValue("1-first"), MakeAttributeDesignator(Attribute{id: "test", t: TypeString})},
+				AggTypeDisable, ``, `#02 (/"1-first">attr(test.String)): Missing attribute`,
+			},
+			{
+				"unknown key 1",
+				[]Expression{MakeStringValue("unknown"), MakeStringValue("2-second")},
+				AggTypeDisable, ``, `#03 (/"unknown"): Missing value`,
+			},
+			{
+				"unknown key 2",
+				[]Expression{MakeStringValue("1-first"), MakeStringValue("unknown")},
+				AggTypeDisable, ``, `#03 (/"1-first"/"unknown"): Missing value`,
+			},
+			{
+				"no error",
+				[]Expression{MakeStringValue("1-first"), MakeStringValue("2-second")},
+				AggTypeDisable, `"second-first-1","second-first-2"`, ``,
+			},
+			{
+				"LOS key without aggregation",
+				[]Expression{MakeListOfStringsValue([]string{"1-first"}), MakeStringValue("2-second")},
+				AggTypeDisable, ``, `#0e (/["1-first"]>["1-first"]): Expected "String" value but got "List of Strings"`,
+			},
+			{
+				"LOS key with no keys inside with aggregation 'return first'",
+				[]Expression{MakeListOfStringsValue(nil), MakeStringValue("2-second")},
+				AggTypeReturnFirst, ``, `#03 (/[]): Missing value`,
+			},
+			{
+				"LOS key with single unknown key inside with aggregation 'return first'",
+				[]Expression{MakeListOfStringsValue([]string{"unknown"}), MakeStringValue("2-second")},
+				AggTypeReturnFirst, ``, `#03 (/"unknown"): Missing value`,
+			},
+			{
+				"LOS key with single valid key inside with aggregation 'return first'",
+				[]Expression{MakeListOfStringsValue([]string{"1-first"}), MakeStringValue("2-second")},
+				AggTypeReturnFirst, `"second-first-1","second-first-2"`, ``,
+			},
+			{
+				"LOS key with valid+unknown keys inside with aggregation 'return first'",
+				[]Expression{MakeListOfStringsValue([]string{"1-first", "unknown"}), MakeStringValue("2-second")},
+				AggTypeReturnFirst, `"second-first-1","second-first-2"`, ``,
+			},
+			{
+				"LOS key with unknown+valid keys inside with aggregation 'return first'",
+				[]Expression{MakeListOfStringsValue([]string{"unknown", "1-first"}), MakeStringValue("2-second")},
+				AggTypeReturnFirst, `"second-first-1","second-first-2"`, ``,
+			},
+			{
+				"LOS key with 2 valid keys inside with aggregation 'return first'",
+				[]Expression{MakeListOfStringsValue([]string{"1-first", "2-second"}), MakeStringValue("2-second")},
+				AggTypeReturnFirst, `"second-first-1","second-first-2"`, ``,
+			},
+			{
+				"LOS key with single unknown key inside with aggregation 'append'",
+				[]Expression{MakeListOfStringsValue([]string{"unknown"}), MakeStringValue("2-second")},
+				AggTypeAppend, ``, `#03 (/"unknown"): Missing value`,
+			},
+			{
+				"LOS key with single valid key inside with aggregation 'append'",
+				[]Expression{MakeListOfStringsValue([]string{"1-first"}), MakeStringValue("2-second")},
+				AggTypeAppend, `"second-first-1","second-first-2"`, ``,
+			},
+			{
+				"LOS key with valid+unknown keys inside with aggregation 'append'",
+				[]Expression{MakeListOfStringsValue([]string{"1-first", "unknown"}), MakeStringValue("2-second")},
+				AggTypeAppend, `"second-first-1","second-first-2"`, ``,
+			},
+			{
+				"LOS key with unknown+valid keys inside with aggregation 'append'",
+				[]Expression{MakeListOfStringsValue([]string{"unknown", "1-first"}), MakeStringValue("2-second")},
+				AggTypeAppend, `"second-first-1","second-first-2"`, ``,
+			},
+			{
+				"LOS key with 2 valid keys inside with aggregation 'append'",
+				[]Expression{MakeListOfStringsValue([]string{"2-second", "3-third"}), MakeStringValue("2-second")},
+				AggTypeAppend, `"second-second","duplicate","duplicate","second-third","second-third-2","duplicate"`, ``,
+			},
+			{
+				"LOS key with 2 reordered keys inside with aggregation 'append'",
+				[]Expression{MakeListOfStringsValue([]string{"3-third", "2-second"}), MakeStringValue("2-second")},
+				AggTypeAppend, `"second-third","second-third-2","duplicate","second-second","duplicate","duplicate"`, ``,
+			},
+			{
+				"LOS key with single unknown key inside with aggregation 'append unique'",
+				[]Expression{MakeListOfStringsValue([]string{"unknown"}), MakeStringValue("2-second")},
+				AggTypeAppendUnique, ``, `#03 (/"unknown"): Missing value`,
+			},
+			{
+				"LOS key with single valid key inside with aggregation 'append unique'",
+				[]Expression{MakeListOfStringsValue([]string{"2-second"}), MakeStringValue("2-second")},
+				AggTypeAppendUnique, `"second-second","duplicate"`, ``,
+			},
+			{
+				"LOS key with valid+unknown keys inside with aggregation 'append unique'",
+				[]Expression{MakeListOfStringsValue([]string{"1-first", "unknown"}), MakeStringValue("2-second")},
+				AggTypeAppendUnique, `"second-first-1","second-first-2"`, ``,
+			},
+			{
+				"LOS key with unknown+valid keys inside with aggregation 'append unique'",
+				[]Expression{MakeListOfStringsValue([]string{"unknown", "1-first"}), MakeStringValue("2-second")},
+				AggTypeAppendUnique, `"second-first-1","second-first-2"`, ``,
+			},
+			{
+				"LOS key with 2 valid keys inside with aggregation 'append unique'",
+				[]Expression{MakeListOfStringsValue([]string{"2-second", "3-third"}), MakeStringValue("2-second")},
+				AggTypeAppendUnique, `"second-second","duplicate","second-third","second-third-2"`, ``,
+			},
+			{
+				"LOS key with 2 reordered keys inside with aggregation 'append unique'",
+				[]Expression{MakeListOfStringsValue([]string{"3-third", "2-second"}), MakeStringValue("2-second")},
+				AggTypeAppendUnique, `"second-third","second-third-2","duplicate","second-second"`, ``,
+			},
+			{
+				"error key calculation with aggregation 'append'",
+				[]Expression{
+					MakeListOfStringsValue([]string{"3-third", "2-second"}),
+					MakeAttributeDesignator(Attribute{id: "test", t: TypeString}),
+				},
+				AggTypeAppend, ``, `#02 (/"3-third">attr(test.String)): Missing attribute`,
+			},
+		},
+		{
+			{
+				"LOS key with 2 valid keys inside with aggregation 'return first' with Integer content type",
+				[]Expression{MakeListOfStringsValue([]string{"1-first", "2-second"})},
+				AggTypeReturnFirst, `111`, ``,
+			},
+			{
+				"LOS key with 2 reordered keys inside with aggregation 'return first' with Integer content type",
+				[]Expression{MakeListOfStringsValue([]string{"2-second", "1-first"})},
+				AggTypeReturnFirst, `222`, ``,
+			},
+			{
+				"LOS key with no keys inside with aggregation 'append' with Integer content type",
+				[]Expression{MakeListOfStringsValue([]string{})},
+				AggTypeAppend, ``, `#03 (/[]): Missing value`,
+			},
+			{
+				"LOS key with unknown key inside with aggregation 'append' with Integer content type",
+				[]Expression{MakeListOfStringsValue([]string{"unknown"})},
+				AggTypeAppend, ``, `#03 (/"unknown"): Missing value`,
+			},
+			{
+				"LOS key with a single valid key inside with aggregation 'append' with Integer content type",
+				[]Expression{MakeListOfStringsValue([]string{"1-first"})},
+				AggTypeAppend, ``, `#0e (/"1-first">111): Expected "List of Strings" value but got "Integer"`,
+			},
+			{
+				"LOS key with a single valid key inside with aggregation 'append unique' with Integer content type",
+				[]Expression{MakeListOfStringsValue([]string{"2-second"})},
+				AggTypeAppendUnique, ``, `#0e (/"2-second">222): Expected "List of Strings" value but got "Integer"`,
+			},
+		},
+	}
+
+	cis := []*ContentItem{cilos, ciint}
+	ctx, _ := NewContext(nil, 0, nil)
+
+	for tsi, ts := range cases {
+		for _, tc := range ts {
+			cis[tsi].a = tc.a
+			v, err := cis[tsi].Get(tc.path, ctx)
+			if tc.err != "" {
+				if err == nil {
+					t.Errorf("case %q: expected no error but got (%T) %q", tc.name, err, err)
+				} else if err.Error() != tc.err {
+					t.Errorf("case %q: expected error %q but got (%T) %q", tc.name, tc.err, err, err)
+				}
+			} else {
+				s, err := v.Serialize()
+				if err != nil {
+					t.Errorf("case %q: failed to serialize result with error %q", tc.name, err)
+				} else if s != tc.result {
+					t.Errorf("case %q: expected %q but got %q", tc.name, tc.result, s)
+				}
+			}
 		}
 	}
 }

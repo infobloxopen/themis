@@ -100,6 +100,7 @@ func TestSelectorCalculate(t *testing.T) {
 					cft,
 					pdp.MakeSignature(pdp.TypeDomain),
 					pdp.MakeContentDomainFlags8Map(dTree8),
+					pdp.AggTypeDisable,
 				),
 			},
 		),

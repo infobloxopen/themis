@@ -27,6 +27,9 @@ type contentItem struct {
 	v      interface{}
 	vOk    bool
 	vReady bool
+
+	a   pdp.AggType
+	aOk bool
 }
 
 func (c *contentItem) unmarshalTypeField(d *json.Decoder) error {
@@ -51,6 +54,15 @@ func (c *contentItem) unmarshalTypeField(d *json.Decoder) error {
 
 		if c.t == pdp.TypeUndefined {
 			return newInvalidContentItemTypeError(c.t)
+		}
+
+		if c.aOk {
+			switch c.a {
+			case pdp.AggTypeAppend, pdp.AggTypeAppendUnique:
+				if c.t != pdp.TypeListOfStrings {
+					return newInvalidContentAggregationTypeError(pdp.AggTypeNames[c.a], c.t)
+				}
+			}
 		}
 
 		c.tOk = true
@@ -531,6 +543,33 @@ func (c *contentItem) unmarshalDataField(d *json.Decoder) error {
 	return nil
 }
 
+func (c *contentItem) unmarshalAggregationField(d *json.Decoder) error {
+	if c.aOk {
+		return newDuplicateContentItemFieldError("aggregation")
+	}
+
+	s, err := jparser.GetString(d, "aggregation")
+	if err != nil {
+		return err
+	}
+
+	c.a, c.aOk = pdp.AggTypeIDs[strings.ToLower(s)]
+	if !c.aOk {
+		return newUnknownContentAggregationTypeError(s)
+	}
+
+	if c.tOk {
+		switch c.a {
+		case pdp.AggTypeAppend, pdp.AggTypeAppendUnique:
+			if c.t != pdp.TypeListOfStrings {
+				return newInvalidContentAggregationTypeError(pdp.AggTypeNames[c.a], c.t)
+			}
+		}
+	}
+
+	return nil
+}
+
 func (c *contentItem) unmarshal(k string, d *json.Decoder) error {
 	switch strings.ToLower(k) {
 	case "type":
@@ -541,6 +580,9 @@ func (c *contentItem) unmarshal(k string, d *json.Decoder) error {
 
 	case "data":
 		return c.unmarshalDataField(d)
+
+	case "aggregation":
+		return c.unmarshalAggregationField(d)
 	}
 
 	return newUnknownContentItemFieldError(k)
@@ -565,7 +607,7 @@ func (c *contentItem) get() (*pdp.ContentItem, error) {
 	}
 
 	if c.vReady {
-		return pdp.MakeContentMappingItem(c.id, c.t, c.k, c.adjustValue(c.v)), nil
+		return pdp.MakeContentMappingItem(c.id, c.t, c.k, c.adjustValue(c.v), c.a), nil
 	}
 
 	v, err := c.postProcess(c.v, 0)
@@ -577,7 +619,7 @@ func (c *contentItem) get() (*pdp.ContentItem, error) {
 		return pdp.MakeContentValueItem(c.id, c.t, v), nil
 	}
 
-	return pdp.MakeContentMappingItem(c.id, c.t, c.k, c.adjustValue(v)), nil
+	return pdp.MakeContentMappingItem(c.id, c.t, c.k, c.adjustValue(v), c.a), nil
 }
 
 func unmarshalContentItem(id string, s pdp.Symbols, d *json.Decoder) (*pdp.ContentItem, error) {
