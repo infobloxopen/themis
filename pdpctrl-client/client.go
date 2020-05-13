@@ -118,7 +118,7 @@ func (c *Client) Upload(id int32, r io.Reader) (int32, error) {
 		if n > 0 {
 			chunk := &pb.Chunk{
 				Id:   id,
-				Data: string(p[:n])}
+				Data: p[:n]}
 			if err := u.Send(chunk); err != nil {
 				return -1, err
 			}
