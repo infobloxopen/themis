@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+option go_package = ".;control";
+
 package control;
 
 service PDPControl {
@@ -22,7 +24,7 @@ message Item {
 
 message Chunk {
   int32 id = 1;
-  string data = 2;
+  bytes data = 2;
 }
 
 message Update {

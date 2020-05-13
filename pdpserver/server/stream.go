@@ -17,11 +17,11 @@ type streamReader struct {
 	logger *log.Logger
 }
 
-func newStreamReader(id int32, head string, stream pb.PDPControl_UploadServer, logger *log.Logger) *streamReader {
+func newStreamReader(id int32, head []byte, stream pb.PDPControl_UploadServer, logger *log.Logger) *streamReader {
 	return &streamReader{
 		id:     id,
 		stream: stream,
-		chunk:  []byte(head),
+		chunk:  head,
 		logger: logger}
 }
 
