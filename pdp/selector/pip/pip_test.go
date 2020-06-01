@@ -11,10 +11,10 @@ import (
 	"github.com/infobloxopen/themis/pip/server"
 )
 
-func TestMakePipSelector(t *testing.T) {
-	pc := NewTCPClientsPool()
-	e, err := MakePipSelector(
-		pc,
+func TestSelectorFunc(t *testing.T) {
+	pipS := &selector{}
+	pipS.Initialize()
+	e, err := pipS.SelectorFunc(
 		makeTestURL("pip://localhost:5600/content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeString,
@@ -27,8 +27,8 @@ func TestMakePipSelector(t *testing.T) {
 	} else if s, ok := e.(PipSelector); !ok {
 		t.Errorf("expected PipSelector but got %T (%#v)", e, e)
 
-		if s.clients != pc {
-			t.Errorf("expected %#v clients but got %#v", pc, s.clients)
+		if s.clients != pipS.pool {
+			t.Errorf("expected %#v clients but got %#v", pipS.pool, s.clients)
 		}
 
 		if s.net != "tcp" {
@@ -52,9 +52,9 @@ func TestMakePipSelector(t *testing.T) {
 		}
 	}
 
-	uc := NewUnixClientsPool()
-	e, err = MakePipSelector(
-		uc,
+	unixS := &selectorUnix{}
+	unixS.Initialize()
+	e, err = unixS.SelectorFunc(
 		makeTestURL("pip+unix:/var/run/pip.socket#content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeString,
@@ -67,8 +67,8 @@ func TestMakePipSelector(t *testing.T) {
 	} else if s, ok := e.(PipSelector); !ok {
 		t.Errorf("expected PipSelector but got %T (%#v)", e, e)
 
-		if s.clients != uc {
-			t.Errorf("expected %#v clients but got %#v", uc, s.clients)
+		if s.clients != unixS.pool {
+			t.Errorf("expected %#v clients but got %#v", unixS.pool, s.clients)
 		}
 
 		if s.net != "unix" {
@@ -92,9 +92,9 @@ func TestMakePipSelector(t *testing.T) {
 		}
 	}
 
-	kc := NewK8sClientsPool()
-	e, err = MakePipSelector(
-		kc,
+	k8sS := &selectorK8s{}
+	k8sS.Initialize()
+	e, err = k8sS.SelectorFunc(
 		makeTestURL("pip+k8s://value.key.namespace:5600/content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeString,
@@ -107,8 +107,8 @@ func TestMakePipSelector(t *testing.T) {
 	} else if s, ok := e.(PipSelector); !ok {
 		t.Errorf("expected PipSelector but got %T (%#v)", e, e)
 
-		if s.clients != kc {
-			t.Errorf("expected %#v clients but got %#v", kc, s.clients)
+		if s.clients != k8sS.pool {
+			t.Errorf("expected %#v clients but got %#v", k8sS.pool, s.clients)
 		}
 
 		if s.net != "tcp" {
@@ -132,8 +132,7 @@ func TestMakePipSelector(t *testing.T) {
 		}
 	}
 
-	_, err = MakePipSelector(
-		pc,
+	_, err = pipS.SelectorFunc(
 		makeTestURL("local:content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeString,
