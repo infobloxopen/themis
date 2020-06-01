@@ -20,8 +20,8 @@ func (s *selector) Enabled() bool {
 	return true
 }
 
-func (s *selector) SelectorFunc(uri *url.URL, path []pdp.Expression, t pdp.Type, def, err pdp.Expression) (pdp.Expression, error) {
-	return MakeLocalSelector(uri, path, t, def, err)
+func (s *selector) SelectorFunc(uri *url.URL, path []pdp.Expression, t pdp.Type, opts ...pdp.SelectorOption) (pdp.Expression, error) {
+	return MakeLocalSelector(uri, path, t, opts...)
 }
 
 func (s *selector) Initialize() {}
@@ -45,20 +45,36 @@ type LocalSelector struct {
 // If content storage doesn't have a value for given path the value of
 // def expression is returned if it was provided. In case if other error occurs
 // the value of err expression is returned if it was provided.
-func MakeLocalSelector(uri *url.URL, path []pdp.Expression, t pdp.Type, def, err pdp.Expression) (pdp.Expression, error) {
+func MakeLocalSelector(uri *url.URL, path []pdp.Expression, t pdp.Type, opts ...pdp.SelectorOption) (pdp.Expression, error) {
 	loc := strings.Split(uri.Opaque, "/")
 	if len(loc) != 2 {
 		return nil, fmt.Errorf("Expected selector location in form of <Content-ID>/<Item-ID> got %s", uri)
 	}
 
-	return LocalSelector{
+	ls := LocalSelector{
 		content: loc[0],
 		item:    loc[1],
 		path:    path,
 		t:       t,
-		def:     def,
-		err:     err,
-	}, nil
+	}
+
+	for _, opt := range opts {
+		switch opt.Name {
+		case pdp.SelectorOptionDefault:
+			if exp, ok := opt.Data.(pdp.Expression); ok {
+				ls.def = exp
+			} else {
+				panic("bad data provided as local selector option " + pdp.SelectorOptionDefault)
+			}
+		case pdp.SelectorOptionError:
+			if exp, ok := opt.Data.(pdp.Expression); ok {
+				ls.err = exp
+			} else {
+				panic("bad data provided as local selector option " + pdp.SelectorOptionError)
+			}
+		}
+	}
+	return ls, nil
 }
 
 // GetResultType implements Expression interface and returns type of final value
