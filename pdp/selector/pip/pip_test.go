@@ -199,6 +199,38 @@ func TestPipSelectorCalculate(t *testing.T) {
 	}
 }
 
+func TestPanicOnBadDefaultOption(t *testing.T) {
+	checkPanicOnBadOption(t, pdp.SelectorOption{
+		Name: pdp.SelectorOptionDefault,
+		Data: "must be expression",
+	})
+}
+
+func TestPanicOnBadErrorOption(t *testing.T) {
+	checkPanicOnBadOption(t, pdp.SelectorOption{
+		Name: pdp.SelectorOptionError,
+		Data: "must be expression",
+	})
+}
+
+func checkPanicOnBadOption(t *testing.T, opt pdp.SelectorOption) {
+	t.Helper()
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("no panic on incorrect selector option")
+		}
+	}()
+
+	MakePipSelector(
+		NewTCPClientsPool(),
+		makeTestURL("pip://localhost:5600/content/item"),
+		[]pdp.Expression{},
+		pdp.TypeString,
+		opt,
+	)
+}
+
 func makeTestURL(s string) *url.URL {
 	u, err := url.Parse(s)
 	if err != nil {

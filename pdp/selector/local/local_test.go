@@ -284,6 +284,38 @@ func TestSelectorCalculate(t *testing.T) {
 	}
 }
 
+func TestPanicOnBadDefaultOption(t *testing.T) {
+	checkPanicOnBadOption(t, pdp.SelectorOption{
+		Name: pdp.SelectorOptionDefault,
+		Data: "must be expression",
+	})
+}
+
+func TestPanicOnBadErrorOption(t *testing.T) {
+	checkPanicOnBadOption(t, pdp.SelectorOption{
+		Name: pdp.SelectorOptionError,
+		Data: "must be expression",
+	})
+}
+
+func checkPanicOnBadOption(t *testing.T, opt pdp.SelectorOption) {
+	t.Helper()
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("no panic on incorrect selector option")
+		}
+	}()
+
+	path := []pdp.Expression{}
+	uri, err := url.Parse("local:content/item")
+	if err != nil {
+		t.Errorf("Expected no error but got: %s", err)
+	} else {
+		pdp.MakeSelector(uri, path, pdp.TypeString, opt)
+	}
+}
+
 func makeTestDN(t *testing.T, s string) domain.Name {
 	d, err := domain.MakeNameFromString(s)
 	if err != nil {
