@@ -11,14 +11,13 @@ import (
 	"github.com/infobloxopen/themis/pip/server"
 )
 
-func TestMakePipSelector(t *testing.T) {
-	pc := NewTCPClientsPool()
-	e, err := MakePipSelector(
-		pc,
+func TestSelectorFunc(t *testing.T) {
+	pipS := &selector{}
+	pipS.Initialize()
+	e, err := pipS.SelectorFunc(
 		makeTestURL("pip://localhost:5600/content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeString,
-		nil, nil,
 	)
 	if err != nil {
 		t.Errorf("expected no error but got %#v", err)
@@ -28,8 +27,8 @@ func TestMakePipSelector(t *testing.T) {
 	} else if s, ok := e.(PipSelector); !ok {
 		t.Errorf("expected PipSelector but got %T (%#v)", e, e)
 
-		if s.clients != pc {
-			t.Errorf("expected %#v clients but got %#v", pc, s.clients)
+		if s.clients != pipS.pool {
+			t.Errorf("expected %#v clients but got %#v", pipS.pool, s.clients)
 		}
 
 		if s.net != "tcp" {
@@ -53,13 +52,12 @@ func TestMakePipSelector(t *testing.T) {
 		}
 	}
 
-	uc := NewUnixClientsPool()
-	e, err = MakePipSelector(
-		uc,
+	unixS := &selectorUnix{}
+	unixS.Initialize()
+	e, err = unixS.SelectorFunc(
 		makeTestURL("pip+unix:/var/run/pip.socket#content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeString,
-		nil, nil,
 	)
 	if err != nil {
 		t.Errorf("expected no error but got %#v", err)
@@ -69,8 +67,8 @@ func TestMakePipSelector(t *testing.T) {
 	} else if s, ok := e.(PipSelector); !ok {
 		t.Errorf("expected PipSelector but got %T (%#v)", e, e)
 
-		if s.clients != uc {
-			t.Errorf("expected %#v clients but got %#v", uc, s.clients)
+		if s.clients != unixS.pool {
+			t.Errorf("expected %#v clients but got %#v", unixS.pool, s.clients)
 		}
 
 		if s.net != "unix" {
@@ -94,13 +92,12 @@ func TestMakePipSelector(t *testing.T) {
 		}
 	}
 
-	kc := NewK8sClientsPool()
-	e, err = MakePipSelector(
-		kc,
+	k8sS := &selectorK8s{}
+	k8sS.Initialize()
+	e, err = k8sS.SelectorFunc(
 		makeTestURL("pip+k8s://value.key.namespace:5600/content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeString,
-		nil, nil,
 	)
 	if err != nil {
 		t.Errorf("expected no error but got %#v", err)
@@ -110,8 +107,8 @@ func TestMakePipSelector(t *testing.T) {
 	} else if s, ok := e.(PipSelector); !ok {
 		t.Errorf("expected PipSelector but got %T (%#v)", e, e)
 
-		if s.clients != kc {
-			t.Errorf("expected %#v clients but got %#v", kc, s.clients)
+		if s.clients != k8sS.pool {
+			t.Errorf("expected %#v clients but got %#v", k8sS.pool, s.clients)
 		}
 
 		if s.net != "tcp" {
@@ -135,12 +132,10 @@ func TestMakePipSelector(t *testing.T) {
 		}
 	}
 
-	_, err = MakePipSelector(
-		pc,
+	_, err = pipS.SelectorFunc(
 		makeTestURL("local:content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeString,
-		nil, nil,
 	)
 	if err == nil {
 		t.Error("expected error")
@@ -162,7 +157,6 @@ func TestPipSelectorCalculate(t *testing.T) {
 		makeTestURL("pip://localhost:5600/content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeString,
-		nil, nil,
 	)
 	if err != nil {
 		t.Errorf("expected no error but got %#v", err)
@@ -185,8 +179,7 @@ func TestPipSelectorCalculate(t *testing.T) {
 		makeTestURL("pip://localhost:5600/content/item"),
 		[]pdp.Expression{pdp.MakeStringValue("test")},
 		pdp.TypeInteger,
-		nil,
-		pdp.MakeIntegerValue(5),
+		pdp.SelectorOption{Name: pdp.SelectorOptionError, Data: pdp.MakeIntegerValue(5)},
 	)
 	if err != nil {
 		t.Errorf("expected no error but got %#v", err)
@@ -203,6 +196,38 @@ func TestPipSelectorCalculate(t *testing.T) {
 			t.Errorf("expected %q from PIP but got %q", "5", s)
 		}
 	}
+}
+
+func TestPanicOnBadDefaultOption(t *testing.T) {
+	checkPanicOnBadOption(t, pdp.SelectorOption{
+		Name: pdp.SelectorOptionDefault,
+		Data: "must be expression",
+	})
+}
+
+func TestPanicOnBadErrorOption(t *testing.T) {
+	checkPanicOnBadOption(t, pdp.SelectorOption{
+		Name: pdp.SelectorOptionError,
+		Data: "must be expression",
+	})
+}
+
+func checkPanicOnBadOption(t *testing.T, opt pdp.SelectorOption) {
+	t.Helper()
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("no panic on incorrect selector option")
+		}
+	}()
+
+	MakePipSelector(
+		NewTCPClientsPool(),
+		makeTestURL("pip://localhost:5600/content/item"),
+		[]pdp.Expression{},
+		pdp.TypeString,
+		opt,
+	)
 }
 
 func makeTestURL(s string) *url.URL {

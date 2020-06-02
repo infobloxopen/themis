@@ -26,8 +26,8 @@ func (s *selector) Enabled() bool {
 	return true
 }
 
-func (s *selector) SelectorFunc(uri *url.URL, path []pdp.Expression, t pdp.Type, def, err pdp.Expression) (pdp.Expression, error) {
-	return MakePipSelector(s.pool, uri, path, t, def, err)
+func (s *selector) SelectorFunc(uri *url.URL, path []pdp.Expression, t pdp.Type, opts ...pdp.SelectorOption) (pdp.Expression, error) {
+	return MakePipSelector(s.pool, uri, path, t, opts...)
 }
 
 func (s *selector) Initialize() {
@@ -47,8 +47,8 @@ func (s *selectorUnix) Enabled() bool {
 	return true
 }
 
-func (s *selectorUnix) SelectorFunc(uri *url.URL, path []pdp.Expression, t pdp.Type, def, err pdp.Expression) (pdp.Expression, error) {
-	return MakePipSelector(s.pool, uri, path, t, def, err)
+func (s *selectorUnix) SelectorFunc(uri *url.URL, path []pdp.Expression, t pdp.Type, opts ...pdp.SelectorOption) (pdp.Expression, error) {
+	return MakePipSelector(s.pool, uri, path, t, opts...)
 }
 
 func (s *selectorUnix) Initialize() {
@@ -68,8 +68,8 @@ func (s *selectorK8s) Enabled() bool {
 	return true
 }
 
-func (s *selectorK8s) SelectorFunc(uri *url.URL, path []pdp.Expression, t pdp.Type, def, err pdp.Expression) (pdp.Expression, error) {
-	return MakePipSelector(s.pool, uri, path, t, def, err)
+func (s *selectorK8s) SelectorFunc(uri *url.URL, path []pdp.Expression, t pdp.Type, opts ...pdp.SelectorOption) (pdp.Expression, error) {
+	return MakePipSelector(s.pool, uri, path, t, opts...)
 }
 
 func (s *selectorK8s) Initialize() {
@@ -95,47 +95,49 @@ type PipSelector struct {
 
 // MakePipSelector creates an expression base on PIP selector. Client pool must
 // correspond to URI schema.
-func MakePipSelector(clients *clientsPool, uri *url.URL, path []pdp.Expression, t pdp.Type, def, err pdp.Expression) (pdp.Expression, error) {
-	switch strings.ToLower(uri.Scheme) {
-	case pipSelectorScheme:
-		return PipSelector{
-			clients: clients,
-			net:     "tcp",
-			addr:    uri.Host,
-			id:      uri.Path,
-			path:    path,
-			t:       t,
-			def:     def,
-			err:     err,
-		}, nil
-
-	case pipUnixSelectorScheme:
-		return PipSelector{
-			clients: clients,
-			net:     "unix",
-			addr:    uri.Path,
-			id:      uri.Fragment,
-			path:    path,
-			t:       t,
-			def:     def,
-			err:     err,
-		}, nil
-
-	case pipK8sSelectorScheme:
-		return PipSelector{
-			clients: clients,
-			net:     "tcp",
-			k8s:     true,
-			addr:    uri.Host,
-			id:      uri.Path,
-			path:    path,
-			t:       t,
-			def:     def,
-			err:     err,
-		}, nil
+func MakePipSelector(clients *clientsPool, uri *url.URL, path []pdp.Expression, t pdp.Type, opts ...pdp.SelectorOption) (pdp.Expression, error) {
+	ps := PipSelector{
+		clients: clients,
+		net:     "tcp",
+		addr:    uri.Host,
+		id:      uri.Path,
+		path:    path,
+		t:       t,
 	}
 
-	return PipSelector{}, fmt.Errorf("Unknown pip selector scheme %q", uri.Scheme)
+	for _, opt := range opts {
+		switch opt.Name {
+		case pdp.SelectorOptionDefault:
+			if exp, ok := opt.Data.(pdp.Expression); ok {
+				ps.def = exp
+			} else {
+				panic("bad data provided as pip selector option " + pdp.SelectorOptionDefault)
+			}
+		case pdp.SelectorOptionError:
+			if exp, ok := opt.Data.(pdp.Expression); ok {
+				ps.err = exp
+			} else {
+				panic("bad data provided as pip selector option " + pdp.SelectorOptionError)
+			}
+		}
+	}
+
+	switch strings.ToLower(uri.Scheme) {
+	case pipSelectorScheme:
+
+	case pipUnixSelectorScheme:
+		ps.net = "unix"
+		ps.addr = uri.Path
+		ps.id = uri.Fragment
+
+	case pipK8sSelectorScheme:
+		ps.k8s = true
+
+	default:
+		return PipSelector{}, fmt.Errorf("Unknown pip selector scheme %q", uri.Scheme)
+	}
+
+	return ps, nil
 }
 
 // GetResultType implements pdp.Expression interface and returns type of

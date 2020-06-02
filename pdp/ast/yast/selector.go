@@ -75,15 +75,22 @@ func (ctx context) unmarshalSelector(v interface{}) (pdp.Expression, boundError)
 		return nil, bindErrorf(newInvalidTypeError(t), "selector(%s)", uri)
 	}
 
-	if defExp != nil && defExp.GetResultType() != t {
-		return nil, bindErrorf(newInvalidTypeError(t), "selector(%s).default", uri)
+	var opts []pdp.SelectorOption
+	if defExp != nil {
+		if defExp.GetResultType() != t {
+			return nil, bindErrorf(newInvalidTypeError(t), "selector(%s).default", uri)
+		}
+		opts = append(opts, pdp.SelectorOption{Name: pdp.SelectorOptionDefault, Data: defExp})
 	}
 
-	if errExp != nil && errExp.GetResultType() != t {
-		return nil, bindErrorf(newInvalidTypeError(t), "selector(%s).error", uri)
+	if errExp != nil {
+		if errExp.GetResultType() != t {
+			return nil, bindErrorf(newInvalidTypeError(t), "selector(%s).error", uri)
+		}
+		opts = append(opts, pdp.SelectorOption{Name: pdp.SelectorOptionError, Data: errExp})
 	}
 
-	e, eErr := pdp.MakeSelector(id, path, t, defExp, errExp)
+	e, eErr := pdp.MakeSelector(id, path, t, opts...)
 	if eErr != nil {
 		return nil, bindErrorf(eErr, "selector(%s)", uri)
 	}

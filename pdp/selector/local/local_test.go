@@ -32,7 +32,7 @@ func TestMakeLocalSelector(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error but got: %s", err)
 	} else {
-		e, err := pdp.MakeSelector(uri, path, pdp.TypeString, nil, nil)
+		e, err := pdp.MakeSelector(uri, path, pdp.TypeString)
 		if err != nil {
 			t.Errorf("Expected no error but got: %s", err)
 		} else if _, ok := e.(LocalSelector); !ok {
@@ -49,7 +49,7 @@ func TestMakeLocalSelector(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error but got: %s", err)
 	} else {
-		e, err := pdp.MakeSelector(uri, path, pdp.TypeString, nil, nil)
+		e, err := pdp.MakeSelector(uri, path, pdp.TypeString)
 		if err == nil {
 			t.Errorf("Expected error but got selector expression %T (%#v)", e, e)
 		}
@@ -72,7 +72,7 @@ func TestSelectorCalculate(t *testing.T) {
 		t.Fatalf("Expected no error but got: %s", err)
 	}
 
-	e, err := pdp.MakeSelector(uri, path, sft, nil, nil)
+	e, err := pdp.MakeSelector(uri, path, sft)
 	if err != nil {
 		t.Fatalf("Expected no error but got: %s", err)
 	}
@@ -132,7 +132,7 @@ func TestSelectorCalculate(t *testing.T) {
 		}
 	}
 
-	e, err = pdp.MakeSelector(uri, path, pdp.TypeString, nil, nil)
+	e, err = pdp.MakeSelector(uri, path, pdp.TypeString)
 	if err != nil {
 		t.Errorf("Expected no error but got: %s", err)
 	} else {
@@ -171,10 +171,16 @@ func TestSelectorCalculate(t *testing.T) {
 		t.Errorf("Expected *MissingValueError but got %T (%s)", err, err)
 	}
 
-	defVal := pdp.MakeFlagsValue8(4, cft)
-	errVal := pdp.MakeFlagsValue8(7, cft)
+	defOpt := pdp.SelectorOption{
+		Name: pdp.SelectorOptionDefault,
+		Data: pdp.MakeFlagsValue8(4, cft),
+	}
+	errOpt := pdp.SelectorOption{
+		Name: pdp.SelectorOptionError,
+		Data: pdp.MakeFlagsValue8(7, cft),
+	}
 
-	e, err = pdp.MakeSelector(uri, path, sft, defVal, nil)
+	e, err = pdp.MakeSelector(uri, path, sft, defOpt)
 	if err != nil {
 		t.Errorf("Expected no error but got: %s", err)
 	} else {
@@ -194,7 +200,7 @@ func TestSelectorCalculate(t *testing.T) {
 		}
 	}
 
-	e, err = pdp.MakeSelector(uri, path, sft, nil, errVal)
+	e, err = pdp.MakeSelector(uri, path, sft, errOpt)
 	if err != nil {
 		t.Errorf("Expected no error but got: %s", err)
 	} else {
@@ -214,7 +220,7 @@ func TestSelectorCalculate(t *testing.T) {
 		}
 	}
 
-	e, err = pdp.MakeSelector(uri, path, sft, defVal, errVal)
+	e, err = pdp.MakeSelector(uri, path, sft, defOpt, errOpt)
 	if err != nil {
 		t.Errorf("Expected no error but got: %s", err)
 	} else {
@@ -238,7 +244,7 @@ func TestSelectorCalculate(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error but got: %s", err)
 	} else {
-		e, err := pdp.MakeSelector(uri, path, sft, nil, nil)
+		e, err := pdp.MakeSelector(uri, path, sft)
 		if err != nil {
 			t.Errorf("Expected no error but got: %s", err)
 		} else {
@@ -257,7 +263,7 @@ func TestSelectorCalculate(t *testing.T) {
 		}
 	}
 
-	e, err = pdp.MakeSelector(uri, path, sft, defVal, errVal)
+	e, err = pdp.MakeSelector(uri, path, sft, defOpt, errOpt)
 	if err != nil {
 		t.Errorf("Expected no error but got: %s", err)
 	} else {
@@ -275,6 +281,38 @@ func TestSelectorCalculate(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func TestPanicOnBadDefaultOption(t *testing.T) {
+	checkPanicOnBadOption(t, pdp.SelectorOption{
+		Name: pdp.SelectorOptionDefault,
+		Data: "must be expression",
+	})
+}
+
+func TestPanicOnBadErrorOption(t *testing.T) {
+	checkPanicOnBadOption(t, pdp.SelectorOption{
+		Name: pdp.SelectorOptionError,
+		Data: "must be expression",
+	})
+}
+
+func checkPanicOnBadOption(t *testing.T, opt pdp.SelectorOption) {
+	t.Helper()
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("no panic on incorrect selector option")
+		}
+	}()
+
+	path := []pdp.Expression{}
+	uri, err := url.Parse("local:content/item")
+	if err != nil {
+		t.Errorf("Expected no error but got: %s", err)
+	} else {
+		pdp.MakeSelector(uri, path, pdp.TypeString, opt)
 	}
 }
 

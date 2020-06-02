@@ -106,16 +106,23 @@ func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.Expression, error) {
 		return ret, bindErrorf(newInvalidTypeError(t), "selector(%s)", uri)
 	}
 
-	if defExp != nil && defExp.GetResultType() != t {
-		return ret, bindErrorf(newInvalidTypeError(t), "selector(%s).default", uri)
+	var opts []pdp.SelectorOption
+	if defExp != nil {
+		if defExp.GetResultType() != t {
+			return ret, bindErrorf(newInvalidTypeError(t), "selector(%s).default", uri)
+		}
+		opts = append(opts, pdp.SelectorOption{Name: pdp.SelectorOptionDefault, Data: defExp})
 	}
 
-	if errExp != nil && errExp.GetResultType() != t {
-		return ret, bindErrorf(newInvalidTypeError(t), "selector(%s).error", uri)
+	if errExp != nil {
+		if errExp.GetResultType() != t {
+			return ret, bindErrorf(newInvalidTypeError(t), "selector(%s).error", uri)
+		}
+		opts = append(opts, pdp.SelectorOption{Name: pdp.SelectorOptionError, Data: errExp})
 	}
 
 	var e error
-	ret, e = pdp.MakeSelector(id, path, t, defExp, errExp)
+	ret, e = pdp.MakeSelector(id, path, t, opts...)
 	if e != nil {
 		return ret, bindErrorf(e, "selector(%s)", uri)
 	}
