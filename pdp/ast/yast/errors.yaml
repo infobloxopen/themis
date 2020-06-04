@@ -502,3 +502,22 @@ errors:
   args:
   - field: t
   - field: name
+
+- id: unknownAggregationTypeError
+  fields:
+  - id: a
+    type: string
+  msg: "Unknown aggregation type %q"
+  args:
+  - field: a
+
+- id: invalidAggregationTypeError
+  fields:
+  - id: a
+    type: string
+  - id: t
+    type: pdp.Type
+  msg: "Inappropriate aggregation type %q for selector type %q"
+  args:
+  - field: a
+  - field: t

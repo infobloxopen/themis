@@ -23,6 +23,7 @@ func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.Expression, error) {
 
 		defExp pdp.Expression
 		errExp pdp.Expression
+		aggStr string
 	)
 
 	if err := jparser.UnmarshalObject(d, func(k string, d *json.Decoder) error {
@@ -85,6 +86,10 @@ func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.Expression, error) {
 			}
 
 			return nil
+
+		case yastTagAggregation:
+			aggStr, err = jparser.GetString(d, "aggregation")
+			return err
 		}
 
 		return newUnknownFieldError(k)
@@ -119,6 +124,17 @@ func (ctx context) unmarshalSelector(d *json.Decoder) (pdp.Expression, error) {
 			return ret, bindErrorf(newInvalidTypeError(t), "selector(%s).error", uri)
 		}
 		opts = append(opts, pdp.SelectorOption{Name: pdp.SelectorOptionError, Data: errExp})
+	}
+
+	if aggStr != "" {
+		a, ok := pdp.AggTypeIDs[strings.ToLower(aggStr)]
+		if !ok {
+			return nil, bindErrorf(newUnknownAggregationTypeError(aggStr), "selector(%s).aggregation", uri)
+		}
+		if (a == pdp.AggTypeAppend || a == pdp.AggTypeAppendUnique) && t != pdp.TypeListOfStrings {
+			return nil, bindErrorf(newInvalidAggregationTypeError(aggStr, t), "selector(%s).aggregation", uri)
+		}
+		opts = append(opts, pdp.SelectorOption{Name: pdp.SelectorOptionAggregation, Data: a})
 	}
 
 	var e error

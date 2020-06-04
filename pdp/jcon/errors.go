@@ -4,6 +4,7 @@ package jcon
 
 import (
 	"encoding/json"
+
 	"github.com/infobloxopen/themis/pdp"
 )
 
@@ -41,8 +42,6 @@ const (
 	missingCommandEntityErrorID           = 30
 	unknownContentUpdateOperationErrorID  = 31
 	arrayEndDelimiterErrorID              = 32
-	unknownContentAggregationTypeErrorID  = 33
-	invalidContentAggregationTypeErrorID  = 34
 )
 
 type externalError struct {
@@ -544,36 +543,4 @@ func newArrayEndDelimiterError(actual json.Delim, expected, desc string) *arrayE
 
 func (e *arrayEndDelimiterError) Error() string {
 	return e.errorf("Expected %s JSON array end %q but got delimiter %q", e.desc, e.expected, e.actual)
-}
-
-type unknownContentAggregationTypeError struct {
-	errorLink
-	a string
-}
-
-func newUnknownContentAggregationTypeError(a string) *unknownContentAggregationTypeError {
-	return &unknownContentAggregationTypeError{
-		errorLink: errorLink{id: unknownContentAggregationTypeErrorID},
-		a:         a}
-}
-
-func (e *unknownContentAggregationTypeError) Error() string {
-	return e.errorf("Unknown content item aggregation type %q", e.a)
-}
-
-type invalidContentAggregationTypeError struct {
-	errorLink
-	a string
-	t pdp.Type
-}
-
-func newInvalidContentAggregationTypeError(a string, t pdp.Type) *invalidContentAggregationTypeError {
-	return &invalidContentAggregationTypeError{
-		errorLink: errorLink{id: invalidContentAggregationTypeErrorID},
-		a:         a,
-		t:         t}
-}
-
-func (e *invalidContentAggregationTypeError) Error() string {
-	return e.errorf("Inappropriate aggregation type %q for content type %q", e.a, e.t)
 }

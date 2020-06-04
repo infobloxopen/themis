@@ -1787,6 +1787,557 @@ const (
   }
 }
 `
+	aggregation = `{
+  "attributes": {
+    "s": "string"
+  },
+  "policies": {
+    "alg": {
+      "id": "mapper",
+      "map": {
+        "attr": "s"
+      }
+    },
+    "policies": [
+      {
+        "id": "disable",
+        "alg": {
+          "id": "mapper",
+          "map": {
+            "selector": {
+              "aggregation": "disable",
+              "path": [
+                {
+                  "attr": "s"
+                }
+              ],
+              "type": "string",
+              "uri": "local:content/map"
+            }
+          }
+        },
+        "rules": [
+          {
+            "effect": "Deny"
+          }
+        ]
+      },
+      {
+        "id": "return first",
+        "alg": {
+          "id": "mapper",
+          "map": {
+            "selector": {
+              "aggregation": "return first",
+              "path": [
+                {
+                  "attr": "s"
+                }
+              ],
+              "type": "string",
+              "uri": "local:content/map"
+            }
+          }
+        },
+        "rules": [
+          {
+            "effect": "Deny"
+          }
+        ]
+      },
+      {
+        "id": "append",
+        "alg": {
+          "alg": "FirstApplicableEffect",
+          "id": "mapper",
+          "map": {
+            "selector": {
+              "aggregation": "append",
+              "path": [
+                {
+                  "attr": "s"
+                }
+              ],
+              "type": "list of strings",
+              "uri": "local:content/map"
+            }
+          }
+        },
+        "rules": [
+          {
+            "effect": "Deny"
+          }
+        ]
+      },
+      {
+        "id": "append unique",
+        "alg": {
+          "alg": "FirstApplicableEffect",
+          "id": "mapper",
+          "map": {
+            "selector": {
+              "aggregation": "append unique",
+              "path": [
+                {
+                  "attr": "s"
+                }
+              ],
+              "type": "list of strings",
+              "uri": "local:content/map"
+            }
+          }
+        },
+        "rules": [
+          {
+            "effect": "Deny"
+          }
+        ]
+      }
+    ]
+  }
+}
+`
+	aggregationUnknown = `{
+  "attributes": {
+    "s": "string"
+  },
+  "policies": {
+    "alg": {
+      "id": "mapper",
+      "map": {
+        "selector": {
+          "aggregation": "unknown",
+          "path": [
+            {
+              "attr": "s"
+            }
+          ],
+          "type": "string",
+          "uri": "local:content/map"
+        }
+      }
+    },
+    "policies": [
+      {
+        "id": "x",
+        "alg": "FirstApplicableEffect",
+        "rules": [
+          {
+            "effect": "Deny"
+          }
+        ]
+      }
+    ]
+  }
+}
+`
+	aggregationBadAppend = `{
+  "attributes": {
+    "s": "string"
+  },
+  "policies": {
+    "alg": {
+      "id": "mapper",
+      "map": {
+        "selector": {
+          "aggregation": "append",
+          "path": [
+            {
+              "attr": "s"
+            }
+          ],
+          "type": "string",
+          "uri": "local:content/map"
+        }
+      }
+    },
+    "policies": [
+      {
+        "id": "x",
+        "alg": "FirstApplicableEffect",
+        "rules": [
+          {
+            "effect": "Deny"
+          }
+        ]
+      }
+    ]
+  }
+}
+`
+	aggregationBadAppendUnique = `{
+  "attributes": {
+    "s": "string"
+  },
+  "policies": {
+    "alg": {
+      "id": "mapper",
+      "map": {
+        "selector": {
+          "aggregation": "append unique",
+          "path": [
+            {
+              "attr": "s"
+            }
+          ],
+          "type": "string",
+          "uri": "local:content/map"
+        }
+      }
+    },
+    "policies": [
+      {
+        "id": "x",
+        "alg": "FirstApplicableEffect",
+        "rules": [
+          {
+            "effect": "Deny"
+          }
+        ]
+      }
+    ]
+  }
+}
+`
+	aggregationBad = `{
+  "attributes": {
+    "s": "string"
+  },
+  "policies": {
+    "alg": {
+      "id": "mapper",
+      "map": {
+        "selector": {
+          "aggregation": 2,
+          "path": [
+            {
+              "attr": "s"
+            }
+          ],
+          "type": "string",
+          "uri": "local:content/map"
+        }
+      }
+    },
+    "policies": [
+      {
+        "id": "x",
+        "alg": "FirstApplicableEffect",
+        "rules": [
+          {
+            "effect": "Deny"
+          }
+        ]
+      }
+    ]
+  }
+}
+`
+	selectorBadType = `{
+  "attributes": {
+    "s": "string"
+  },
+  "policies": {
+    "alg": {
+      "id": "mapper",
+      "map": {
+        "selector": {
+          "path": [
+            {
+              "attr": "s"
+            }
+          ],
+          "type": 2,
+          "uri": "local:content/map"
+        }
+      }
+    },
+    "policies": [
+      {
+        "id": "x",
+        "alg": "FirstApplicableEffect",
+        "rules": [
+          {
+            "effect": "Deny"
+          }
+        ]
+      }
+    ]
+  }
+}
+`
+	selectorUndefinedType = `{
+  "attributes": {
+    "s": "string"
+  },
+  "policies": {
+    "alg": {
+      "id": "mapper",
+      "map": {
+        "selector": {
+          "path": [
+            {
+              "attr": "s"
+            }
+          ],
+          "type": "undefined",
+          "uri": "local:content/map"
+        }
+      }
+    },
+    "policies": [
+      {
+        "id": "x",
+        "alg": "FirstApplicableEffect",
+        "rules": [
+          {
+            "effect": "Deny"
+          }
+        ]
+      }
+    ]
+  }
+}
+`
+	selectorUnknownType = `{
+  "attributes": {
+    "s": "string"
+  },
+  "policies": {
+    "alg": {
+      "id": "mapper",
+      "map": {
+        "selector": {
+          "path": [
+            {
+              "attr": "s"
+            }
+          ],
+          "type": "unknown",
+          "uri": "local:content/map"
+        }
+      }
+    },
+    "policies": [
+      {
+        "id": "x",
+        "alg": "FirstApplicableEffect",
+        "rules": [
+          {
+            "effect": "Deny"
+          }
+        ]
+      }
+    ]
+  }
+}
+`
+	selectorBadDefault = `{
+  "attributes": {
+    "s": "string"
+  },
+  "policies": {
+    "alg": {
+      "id": "mapper",
+      "map": {
+        "selector": {
+          "path": [
+            {
+              "attr": "s"
+            }
+          ],
+          "type": "string",
+          "uri": "local:content/map",
+          "default": 2
+        }
+      }
+    },
+    "policies": [
+      {
+        "id": "x",
+        "alg": "FirstApplicableEffect",
+        "rules": [
+          {
+            "effect": "Deny"
+          }
+        ]
+      }
+    ]
+  }
+}
+`
+	selectorBadDefaultExpr = `{
+  "attributes": {
+    "s": "string"
+  },
+  "policies": {
+    "alg": {
+      "id": "mapper",
+      "map": {
+        "selector": {
+          "path": [
+            {
+              "attr": "s"
+            }
+          ],
+          "type": "string",
+          "uri": "local:content/map",
+          "default": {"badexpr":2}
+        }
+      }
+    },
+    "policies": [
+      {
+        "id": "x",
+        "alg": "FirstApplicableEffect",
+        "rules": [
+          {
+            "effect": "Deny"
+          }
+        ]
+      }
+    ]
+  }
+}
+`
+	selectorBadDefaultExprType = `{
+  "attributes": {
+    "s": "string",
+    "i": "integer"
+  },
+  "policies": {
+    "alg": {
+      "id": "mapper",
+      "map": {
+        "selector": {
+          "path": [
+            {
+              "attr": "s"
+            }
+          ],
+          "type": "string",
+          "uri": "local:content/map",
+          "default": {"attr":"i"}
+        }
+      }
+    },
+    "policies": [
+      {
+        "id": "x",
+        "alg": "FirstApplicableEffect",
+        "rules": [
+          {
+            "effect": "Deny"
+          }
+        ]
+      }
+    ]
+  }
+}
+`
+	selectorBadError = `{
+  "attributes": {
+    "s": "string"
+  },
+  "policies": {
+    "alg": {
+      "id": "mapper",
+      "map": {
+        "selector": {
+          "path": [
+            {
+              "attr": "s"
+            }
+          ],
+          "type": "string",
+          "uri": "local:content/map",
+          "error": 2
+        }
+      }
+    },
+    "policies": [
+      {
+        "id": "x",
+        "alg": "FirstApplicableEffect",
+        "rules": [
+          {
+            "effect": "Deny"
+          }
+        ]
+      }
+    ]
+  }
+}
+`
+	selectorBadErrorExpr = `{
+  "attributes": {
+    "s": "string"
+  },
+  "policies": {
+    "alg": {
+      "id": "mapper",
+      "map": {
+        "selector": {
+          "path": [
+            {
+              "attr": "s"
+            }
+          ],
+          "type": "string",
+          "uri": "local:content/map",
+          "error": {"badexpr":2}
+        }
+      }
+    },
+    "policies": [
+      {
+        "id": "x",
+        "alg": "FirstApplicableEffect",
+        "rules": [
+          {
+            "effect": "Deny"
+          }
+        ]
+      }
+    ]
+  }
+}
+`
+	selectorBadErrorExprType = `{
+  "attributes": {
+    "s": "string",
+    "i": "integer"
+  },
+  "policies": {
+    "alg": {
+      "id": "mapper",
+      "map": {
+        "selector": {
+          "path": [
+            {
+              "attr": "s"
+            }
+          ],
+          "type": "string",
+          "uri": "local:content/map",
+          "error": {"attr":"i"}
+        }
+      }
+    },
+    "policies": [
+      {
+        "id": "x",
+        "alg": "FirstApplicableEffect",
+        "rules": [
+          {
+            "effect": "Deny"
+          }
+        ]
+      }
+    ]
+  }
+}
+`
 )
 
 func TestUnmarshal(t *testing.T) {
@@ -1979,6 +2530,124 @@ func TestUnmarshalUpdate(t *testing.T) {
 
 	attrs = map[string]string{"a": "Useless policy"}
 	assertPolicy(s, attrs, "Default Deny Policy", "\"deleted useless policy\"", t)
+}
+
+func TestSelectorWithAggregation(t *testing.T) {
+	p := Parser{}
+	_, err := p.Unmarshal(strings.NewReader(aggregation), nil)
+	if err != nil {
+		t.Errorf("unexpected error %v", err)
+	}
+
+	p = Parser{}
+	_, err = p.Unmarshal(strings.NewReader(aggregationUnknown), nil)
+	if err == nil {
+		t.Errorf("expected *unknownAggregationTypeError but got no error")
+	} else if _, ok := err.(*unknownAggregationTypeError); !ok {
+		t.Errorf("expected *unknownAggregationTypeError but got %T: %s", err, err)
+	}
+
+	p = Parser{}
+	_, err = p.Unmarshal(strings.NewReader(aggregationBadAppend), nil)
+	if err == nil {
+		t.Errorf("expected *invalidAggregationTypeError but got no error")
+	} else if _, ok := err.(*invalidAggregationTypeError); !ok {
+		t.Errorf("expected *invalidAggregationTypeError but got %T: %s", err, err)
+	}
+
+	p = Parser{}
+	_, err = p.Unmarshal(strings.NewReader(aggregationBadAppendUnique), nil)
+	if err == nil {
+		t.Errorf("expected *invalidAggregationTypeError but got no error")
+	} else if _, ok := err.(*invalidAggregationTypeError); !ok {
+		t.Errorf("expected *invalidAggregationTypeError but got %T: %s", err, err)
+	}
+
+	p = Parser{}
+	_, err = p.Unmarshal(strings.NewReader(aggregationBad), nil)
+	if err == nil {
+		t.Errorf("expected *externalError but got no error")
+	} else if _, ok := err.(*externalError); !ok {
+		t.Errorf("expected *externalError but got %T: %s", err, err)
+	}
+}
+
+func TestSelectorBadType(t *testing.T) {
+	p := Parser{}
+	_, err := p.Unmarshal(strings.NewReader(selectorBadType), nil)
+	if err == nil {
+		t.Errorf("expected *externalError but got no error")
+	} else if _, ok := err.(*externalError); !ok {
+		t.Errorf("expected *externalError but got %T: %s", err, err)
+	}
+
+	p = Parser{}
+	_, err = p.Unmarshal(strings.NewReader(selectorUndefinedType), nil)
+	if err == nil {
+		t.Errorf("expected *invalidTypeError but got no error")
+	} else if _, ok := err.(*invalidTypeError); !ok {
+		t.Errorf("expected *invalidTypeError but got %T: %s", err, err)
+	}
+
+	p = Parser{}
+	_, err = p.Unmarshal(strings.NewReader(selectorUnknownType), nil)
+	if err == nil {
+		t.Errorf("expected *unknownTypeError but got no error")
+	} else if _, ok := err.(*unknownTypeError); !ok {
+		t.Errorf("expected *unknownTypeError but got %T: %s", err, err)
+	}
+}
+
+func TestSelectorBadDefault(t *testing.T) {
+	p := Parser{}
+	_, err := p.Unmarshal(strings.NewReader(selectorBadDefault), nil)
+	if err == nil {
+		t.Errorf("expected *externalError but got no error")
+	} else if _, ok := err.(*externalError); !ok {
+		t.Errorf("expected *externalError but got %T: %s", err, err)
+	}
+
+	p = Parser{}
+	_, err = p.Unmarshal(strings.NewReader(selectorBadDefaultExpr), nil)
+	if err == nil {
+		t.Errorf("expected *unknownFunctionError but got no error")
+	} else if _, ok := err.(*unknownFunctionError); !ok {
+		t.Errorf("expected *unknownFunctionError but got %T: %s", err, err)
+	}
+
+	p = Parser{}
+	_, err = p.Unmarshal(strings.NewReader(selectorBadDefaultExprType), nil)
+	if err == nil {
+		t.Errorf("expected *invalidTypeError but got no error")
+	} else if _, ok := err.(*invalidTypeError); !ok {
+		t.Errorf("expected *invalidTypeError but got %T: %s", err, err)
+	}
+}
+
+func TestSelectorBadError(t *testing.T) {
+	p := Parser{}
+	_, err := p.Unmarshal(strings.NewReader(selectorBadError), nil)
+	if err == nil {
+		t.Errorf("expected *externalError but got no error")
+	} else if _, ok := err.(*externalError); !ok {
+		t.Errorf("expected *externalError but got %T: %s", err, err)
+	}
+
+	p = Parser{}
+	_, err = p.Unmarshal(strings.NewReader(selectorBadErrorExpr), nil)
+	if err == nil {
+		t.Errorf("expected *unknownFunctionError but got no error")
+	} else if _, ok := err.(*unknownFunctionError); !ok {
+		t.Errorf("expected *unknownFunctionError but got %T: %s", err, err)
+	}
+
+	p = Parser{}
+	_, err = p.Unmarshal(strings.NewReader(selectorBadErrorExprType), nil)
+	if err == nil {
+		t.Errorf("expected *invalidTypeError but got no error")
+	} else if _, ok := err.(*invalidTypeError); !ok {
+		t.Errorf("expected *invalidTypeError but got %T: %s", err, err)
+	}
 }
 
 func assertPolicy(s *pdp.PolicyStorage, attrs map[string]string, e, desc string, t *testing.T) {

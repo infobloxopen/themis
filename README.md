@@ -547,6 +547,7 @@ Local selector uses local content data (see below) and has following fields:
 - **type** - type of data in local content (any of available types).
 - **default** - optional expression to be calculated and returned if value is absent from content for given path. The result type of expression must be the same as defined in `type` field. If `default` field is not set the expression from `error` field is calculated. If both `default` and `error` are not set the error is returned to outer object.
 - **error** - optional expression to be calculated and returned if error occured when getting the value from content. The result type of expression must be the same as defined in `type` field. If `error` field is not set the error is returned to outer object.
+- **aggregation** - defines how to aggreagate data from several paths, see corresponding section below (optional, default value is `disable`);
 
 Example of local selector:
 ```yaml
@@ -629,7 +630,6 @@ There are several other functions available:
 
 ### Local Content
 Local content is a set of content **items** (see example above). It's identified by **id** field which can be any string with no slash character (`/`). Each content item also has id (key of "items" JSON object) and following fields:
-- **aggregation** - defines how to aggreagate data from several paths, see corresponding section below (optional, default value is `disable`);
 - **keys** - list of types of nested maps (optional, if not present data should contain immediate value of type);
 - **type** - any built-in type (or flags type definition or name for domain map);
 - **data** - list of nested maps with keys of mentioned types or immediate value of given type.
@@ -673,11 +673,11 @@ For example:
 ```
 
 #### Aggregation
-In case if content item expects `string` key and selector provides a key of type `list of strings` the content item can iterate over several paths using each string from the provided `list of string` key as an individual `string` key. The result will be an aggregated value obtained from several paths. The way how data is aggregated depends on the `aggregation` field defined for the content item.
+In case if content item expects `string` key and selector provides a key of type `list of strings` the content item can iterate over several paths using each string from the provided `list of string` key as an individual `string` key. The result will be an aggregated value obtained from several paths. The way how data is aggregated depends on the `aggregation` field defined in selector expression.
 
 The allowable values for `aggregation` fields are
-- **disable** - aggregation is disabled (default value). If selector provides `list of strings` key instead of `string` key to the content item with disabled aggregation - it will result in error.
-- **return first** - content item will return the value from the first encountered existing path. Other paths corresponding to the remaining strings in the `list of strings` key will be skipped. This aggregation type can be defined with any content item type.
+- **disable** - aggregation is disabled (default value). If selector provides `list of strings` key where `string` key is expected by content item - it will result in error.
+- **return first** - selector will return the value from the first encountered existing path. Other paths corresponding to the remaining strings in the `list of strings` key will be skipped. This aggregation type can be defined with any content item type.
 - **append** - this aggregation type can only be applied to content item of type `list of strings`. The aggregated value will be the list of all strings from the content values found at the paths constructed from the `list of strings` key. The order of strings in the aggregated value is preserved.
 - **append unique** - the same as aggregation type **append** but all duplicate strings will be removed from the aggregated value.
 
@@ -689,7 +689,6 @@ See below an example where user roles are mapped to actions allowed
   "id": "content",
   "items": {
     "example-aggregation": {
-      "aggregation": "append",
       "type": "list of strings",
       "keys": ["string"],
       "data": {
@@ -707,6 +706,7 @@ In case if one person has several roles it's possible to obtain all allowed acti
 ```yaml
 ...
 selector:
+  aggregation: append
   path:
   - attr: roles
   type: list of strings

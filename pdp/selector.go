@@ -17,6 +17,8 @@ const (
 	SelectorOptionDefault = "default"
 	// SelectorOptionError defines an expression to return in case of error
 	SelectorOptionError = "error"
+	// SelectorOptionAggregation specifies how to aggregate data
+	SelectorOptionAggregation = "aggregation"
 )
 
 // Selector provides a generic way to access external data may required

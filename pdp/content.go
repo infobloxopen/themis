@@ -478,7 +478,6 @@ type ContentItem struct {
 	r  ContentSubItem
 	t  Type
 	k  []Type
-	a  AggType
 }
 
 // MakeContentValueItem creates content item which represents immediate value
@@ -493,24 +492,17 @@ func MakeContentValueItem(id string, t Type, v interface{}) *ContentItem {
 // MakeContentMappingItem creates mapping content item. Argument t is type
 // of final value while k list is a list of types from ContentKeyTypes and
 // defines which maps the item consists from.
-func MakeContentMappingItem(id string, t Type, k []Type, v ContentSubItem, a AggType) *ContentItem {
+func MakeContentMappingItem(id string, t Type, k []Type, v ContentSubItem) *ContentItem {
 	return &ContentItem{
 		id: id,
 		r:  v,
 		t:  t,
-		k:  k,
-		a:  a,
-	}
+		k:  k}
 }
 
 // GetType returns content item type
 func (c *ContentItem) GetType() Type {
 	return c.t
-}
-
-// GetAggregation returns aggregation type
-func (c *ContentItem) GetAggregation() AggType {
-	return c.a
 }
 
 func (c *ContentItem) typeCheck(path []AttributeValue, v interface{}) (ContentSubItem, error) {
@@ -704,7 +696,7 @@ func (c *ContentItem) add(ID string, path []AttributeValue, v interface{}) (*Con
 		}
 	}
 
-	return MakeContentMappingItem(ID, c.t, c.k, m, c.a), nil
+	return MakeContentMappingItem(ID, c.t, c.k, m), nil
 }
 
 func (c *ContentItem) del(ID string, path []AttributeValue) (*ContentItem, error) {
@@ -753,14 +745,55 @@ func (c *ContentItem) del(ID string, path []AttributeValue) (*ContentItem, error
 		}
 	}
 
-	return MakeContentMappingItem(ID, c.t, c.k, m, c.a), nil
+	return MakeContentMappingItem(ID, c.t, c.k, m), nil
 }
 
 // Get returns value from content item by given path. It sequentially evaluates
 // path expressions and extracts next subitem until gets final value or error.
+func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, error) {
+	d := len(path)
+	if d != len(c.k) {
+		return UndefinedValue, newInvalidSelectorPathError(c.k, path)
+	}
+
+	if d > 0 {
+		m := c.r
+		loc := []string{""}
+		for _, e := range path[:d-1] {
+			key, err := e.Calculate(ctx)
+			if err != nil {
+				return UndefinedValue, bindError(err, strings.Join(loc, "/"))
+			}
+
+			loc = append(loc, key.describe())
+
+			m, err = m.next(key)
+			if err != nil {
+				return UndefinedValue, bindError(err, strings.Join(loc, "/"))
+			}
+		}
+
+		key, err := path[d-1].Calculate(ctx)
+		if err != nil {
+			return UndefinedValue, bindError(err, strings.Join(loc, "/"))
+		}
+
+		v, err := m.getValue(key, c.t)
+		if err != nil {
+			return UndefinedValue, bindError(err, strings.Join(append(loc, key.describe()), "/"))
+		}
+
+		return v, nil
+	}
+
+	return c.r.getValue(UndefinedValue, c.t)
+}
+
+// GetAggregated returns value from content item by given path. It sequentially evaluates
+// path expressions and extracts next subitem until gets final value or error.
 // Get may aggregate values from different paths if the "list of strings" key is
 // provided where "string" key is expected
-func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, error) {
+func (c *ContentItem) GetAggregated(path []Expression, ctx *Context, at AggType) (AttributeValue, error) {
 	d := len(path)
 	if d != len(c.k) {
 		return UndefinedValue, newInvalidSelectorPathError(c.k, path)
@@ -770,7 +803,7 @@ func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, erro
 		return buildGetError(c.getRecursively(func(i int) (AttributeValue, bool, error) {
 			k, e := path[i].Calculate(ctx)
 			return k, i == len(path)-1, e
-		}, 0, c.r))
+		}, 0, c.r, at))
 	}
 
 	return c.r.getValue(UndefinedValue, c.t)
@@ -778,7 +811,7 @@ func (c *ContentItem) Get(path []Expression, ctx *Context) (AttributeValue, erro
 
 type keyProvider func(i int) (AttributeValue, bool, error)
 
-func (c *ContentItem) getRecursively(kp keyProvider, keyindex int, m ContentSubItem) (AttributeValue, []AttributeValue, error) {
+func (c *ContentItem) getRecursively(kp keyProvider, keyindex int, m ContentSubItem, at AggType) (AttributeValue, []AttributeValue, error) {
 	var (
 		a       *aggregator
 		av      = UndefinedValue
@@ -795,11 +828,11 @@ func (c *ContentItem) getRecursively(kp keyProvider, keyindex int, m ContentSubI
 		return UndefinedValue, errKeys, err
 	}
 
-	if c.a != AggTypeDisable && key.GetResultType() == TypeListOfStrings && c.k[keyindex] == TypeString {
+	if at != AggTypeDisable && key.GetResultType() == TypeListOfStrings && c.k[keyindex] == TypeString {
 		aggKeys, _ = key.listOfStrings()
 		if len(aggKeys) > 0 {
 			key = MakeStringValue(aggKeys[0])
-			a = newAggregator(c.a)
+			a = newAggregator(at)
 		} else {
 			err = newMissingValueError()
 			stop = true
@@ -813,7 +846,7 @@ func (c *ContentItem) getRecursively(kp keyProvider, keyindex int, m ContentSubI
 		} else {
 			var next ContentSubItem
 			if next, err = m.next(key); err == nil {
-				v, errKeys, err = c.getRecursively(kp, keyindex+1, next)
+				v, errKeys, err = c.getRecursively(kp, keyindex+1, next, at)
 			}
 		}
 
@@ -893,7 +926,7 @@ func buildGetError(v AttributeValue, errKeys []AttributeValue, err error) (Attri
 
 // GetByValues returns value from content item by given path which must
 // consist of attribute values.
-func (c *ContentItem) GetByValues(path []AttributeValue) (AttributeValue, error) {
+func (c *ContentItem) GetByValues(path []AttributeValue, a AggType) (AttributeValue, error) {
 	if len(path) != len(c.k) {
 		return UndefinedValue, newInvalidSelectorValuePathError(c.k, path)
 	}
@@ -901,7 +934,7 @@ func (c *ContentItem) GetByValues(path []AttributeValue) (AttributeValue, error)
 	if len(path) > 0 {
 		return buildGetError(c.getRecursively(func(i int) (AttributeValue, bool, error) {
 			return path[i], i == len(path)-1, nil
-		}, 0, c.r))
+		}, 0, c.r, a))
 	}
 
 	return c.r.getValue(UndefinedValue, c.t)
