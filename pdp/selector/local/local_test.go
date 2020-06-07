@@ -100,7 +100,6 @@ func TestSelectorCalculate(t *testing.T) {
 					cft,
 					pdp.MakeSignature(pdp.TypeDomain),
 					pdp.MakeContentDomainFlags8Map(dTree8),
-					pdp.AggTypeDisable,
 				),
 			},
 		),
@@ -295,6 +294,13 @@ func TestPanicOnBadErrorOption(t *testing.T) {
 	checkPanicOnBadOption(t, pdp.SelectorOption{
 		Name: pdp.SelectorOptionError,
 		Data: "must be expression",
+	})
+}
+
+func TestPanicOnBadAggregationOption(t *testing.T) {
+	checkPanicOnBadOption(t, pdp.SelectorOption{
+		Name: pdp.SelectorOptionAggregation,
+		Data: "must be AggType",
 	})
 }
 

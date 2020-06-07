@@ -64,5 +64,5 @@ func (s *srv) process(b []byte) (pdp.AttributeValue, error) {
 		return pdp.UndefinedValue, err
 	}
 
-	return item.GetByValues(args[:n])
+	return item.GetByValues(args[:n], pdp.AggTypeDisable)
 }

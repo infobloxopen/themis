@@ -31,7 +31,6 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeString, TypeString),
 		MakeContentStringMap(strtree.NewTree()),
-		AggTypeDisable,
 	)
 
 	sTree := strtree.NewTree()
@@ -44,7 +43,6 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeString),
 		MakeContentStringMap(sTree),
-		AggTypeDisable,
 	)
 
 	snmc := MakeContentMappingItem(
@@ -52,7 +50,6 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeString, TypeNetwork),
 		MakeContentStringMap(strtree.NewTree()),
-		AggTypeDisable,
 	)
 
 	nTree := iptree.NewTree()
@@ -65,7 +62,6 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeNetwork),
 		MakeContentNetworkMap(nTree),
-		AggTypeDisable,
 	)
 
 	sdmc := MakeContentMappingItem(
@@ -73,7 +69,6 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeString, TypeDomain),
 		MakeContentStringMap(strtree.NewTree()),
-		AggTypeDisable,
 	)
 
 	dTree := new(domaintree.Node)
@@ -86,7 +81,6 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeDomain),
 		MakeContentDomainMap(dTree),
-		AggTypeDisable,
 	)
 
 	sTree = strtree.NewTree()
@@ -99,7 +93,6 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeString),
 		MakeContentStringMap(sTree),
-		AggTypeDisable,
 	)
 
 	nTree = iptree.NewTree()
@@ -112,7 +105,6 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeNetwork),
 		MakeContentNetworkMap(nTree),
-		AggTypeDisable,
 	)
 
 	dTree = new(domaintree.Node)
@@ -125,7 +117,6 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeDomain),
 		MakeContentDomainMap(dTree),
-		AggTypeDisable,
 	)
 
 	dTree = &domaintree.Node{}
@@ -138,7 +129,6 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeDomain),
 		MakeContentDomainMap(dTree),
-		AggTypeDisable,
 	)
 
 	dTree = new(domaintree.Node)
@@ -151,7 +141,6 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeDomain),
 		MakeContentDomainMap(dTree),
-		AggTypeDisable,
 	)
 
 	st := MakeSymbols()
@@ -221,7 +210,6 @@ func TestLocalContentStorage(t *testing.T) {
 		ft8,
 		MakeSignature(TypeString),
 		MakeContentStringFlags8Map(sTree8),
-		AggTypeDisable,
 	)
 
 	sTree16 := strtree16.NewTree()
@@ -234,7 +222,6 @@ func TestLocalContentStorage(t *testing.T) {
 		ft16,
 		MakeSignature(TypeString),
 		MakeContentStringFlags16Map(sTree16),
-		AggTypeDisable,
 	)
 
 	sTree32 := strtree32.NewTree()
@@ -247,7 +234,6 @@ func TestLocalContentStorage(t *testing.T) {
 		ft32,
 		MakeSignature(TypeString),
 		MakeContentStringFlags32Map(sTree32),
-		AggTypeDisable,
 	)
 
 	sTree64 := strtree64.NewTree()
@@ -260,7 +246,6 @@ func TestLocalContentStorage(t *testing.T) {
 		ft64,
 		MakeSignature(TypeString),
 		MakeContentStringFlags64Map(sTree64),
-		AggTypeDisable,
 	)
 
 	sa := "2001:db8:8000::1"
@@ -280,7 +265,6 @@ func TestLocalContentStorage(t *testing.T) {
 		ft8,
 		MakeSignature(TypeNetwork),
 		MakeContentNetworkFlags8Map(nTree8),
-		AggTypeDisable,
 	)
 
 	nTree16 := iptree16.NewTree()
@@ -294,7 +278,6 @@ func TestLocalContentStorage(t *testing.T) {
 		ft16,
 		MakeSignature(TypeNetwork),
 		MakeContentNetworkFlags16Map(nTree16),
-		AggTypeDisable,
 	)
 
 	nTree32 := iptree32.NewTree()
@@ -308,7 +291,6 @@ func TestLocalContentStorage(t *testing.T) {
 		ft32,
 		MakeSignature(TypeNetwork),
 		MakeContentNetworkFlags32Map(nTree32),
-		AggTypeDisable,
 	)
 
 	nTree64 := iptree64.NewTree()
@@ -322,7 +304,6 @@ func TestLocalContentStorage(t *testing.T) {
 		ft64,
 		MakeSignature(TypeNetwork),
 		MakeContentNetworkFlags64Map(nTree64),
-		AggTypeDisable,
 	)
 
 	dTree8 := &domaintree8.Node{}
@@ -335,7 +316,6 @@ func TestLocalContentStorage(t *testing.T) {
 		ft8,
 		MakeSignature(TypeDomain),
 		MakeContentDomainFlags8Map(dTree8),
-		AggTypeDisable,
 	)
 
 	dTree16 := &domaintree16.Node{}
@@ -348,7 +328,6 @@ func TestLocalContentStorage(t *testing.T) {
 		ft16,
 		MakeSignature(TypeDomain),
 		MakeContentDomainFlags16Map(dTree16),
-		AggTypeDisable,
 	)
 
 	dTree32 := &domaintree32.Node{}
@@ -361,7 +340,6 @@ func TestLocalContentStorage(t *testing.T) {
 		ft32,
 		MakeSignature(TypeDomain),
 		MakeContentDomainFlags32Map(dTree32),
-		AggTypeDisable,
 	)
 
 	dTree64 := &domaintree64.Node{}
@@ -374,7 +352,6 @@ func TestLocalContentStorage(t *testing.T) {
 		ft64,
 		MakeSignature(TypeDomain),
 		MakeContentDomainFlags64Map(dTree64),
-		AggTypeDisable,
 	)
 
 	items := []*ContentItem{
@@ -397,7 +374,6 @@ func TestLocalContentStorage(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeDomain),
 		MakeContentDomainMap(dTree),
-		AggTypeDisable,
 	)
 	s = s.Add(NewLocalContent("second", &tag, st, []*ContentItem{dmc}))
 
@@ -1018,7 +994,7 @@ func TestLocalContentStorageGetByValues(t *testing.T) {
 		"first",
 	)
 
-	v, err := mc.GetByValues([]AttributeValue{})
+	v, err := mc.GetByValues([]AttributeValue{}, AggTypeDisable)
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
@@ -1056,13 +1032,12 @@ func TestLocalContentStorageGetByValues(t *testing.T) {
 		TypeString,
 		MakeSignature(TypeString, TypeString),
 		MakeContentStringMap(ssm),
-		AggTypeDisable,
 	)
 
 	v, err = ssmc.GetByValues([]AttributeValue{
 		MakeStringValue("1-first"),
 		MakeStringValue("2-second"),
-	})
+	}, AggTypeDisable)
 	if err != nil {
 		t.Errorf("Expected no error but got %T (%s)", err, err)
 	} else {
@@ -1076,7 +1051,7 @@ func TestLocalContentStorageGetByValues(t *testing.T) {
 	}
 }
 
-func TestLocalContentStorageGet(t *testing.T) {
+func TestLocalContentStorageGetAggregated(t *testing.T) {
 
 	sm1 := strtree.NewTree()
 	sm1.InplaceInsert("1-first", []string{"first-first"})
@@ -1103,7 +1078,6 @@ func TestLocalContentStorageGet(t *testing.T) {
 		TypeListOfStrings,
 		MakeSignature(TypeString, TypeString),
 		MakeContentStringMap(ssm),
-		AggTypeDisable,
 	)
 
 	sm4 := strtree.NewTree()
@@ -1116,7 +1090,6 @@ func TestLocalContentStorageGet(t *testing.T) {
 		TypeInteger,
 		MakeSignature(TypeString),
 		MakeContentStringMap(sm4),
-		AggTypeDisable,
 	)
 
 	cases := [][]struct {
@@ -1295,8 +1268,7 @@ func TestLocalContentStorageGet(t *testing.T) {
 
 	for tsi, ts := range cases {
 		for _, tc := range ts {
-			cis[tsi].a = tc.a
-			v, err := cis[tsi].Get(tc.path, ctx)
+			v, err := cis[tsi].GetAggregated(tc.path, ctx, tc.a)
 			if tc.err != "" {
 				if err == nil {
 					t.Errorf("case %q: expected no error but got (%T) %q", tc.name, err, err)

@@ -36,6 +36,7 @@ type LocalSelector struct {
 	t       pdp.Type
 	def     pdp.Expression
 	err     pdp.Expression
+	agg     pdp.AggType
 }
 
 // MakeLocalSelector creates instance of local selector. Arguments content and
@@ -58,20 +59,18 @@ func MakeLocalSelector(uri *url.URL, path []pdp.Expression, t pdp.Type, opts ...
 		t:       t,
 	}
 
+	ok := true
 	for _, opt := range opts {
 		switch opt.Name {
 		case pdp.SelectorOptionDefault:
-			if exp, ok := opt.Data.(pdp.Expression); ok {
-				ls.def = exp
-			} else {
-				panic("bad data provided as local selector option " + pdp.SelectorOptionDefault)
-			}
+			ls.def, ok = opt.Data.(pdp.Expression)
 		case pdp.SelectorOptionError:
-			if exp, ok := opt.Data.(pdp.Expression); ok {
-				ls.err = exp
-			} else {
-				panic("bad data provided as local selector option " + pdp.SelectorOptionError)
-			}
+			ls.err, ok = opt.Data.(pdp.Expression)
+		case pdp.SelectorOptionAggregation:
+			ls.agg, ok = opt.Data.(pdp.AggType)
+		}
+		if !ok {
+			panic("bad data provided as local selector option " + opt.Name)
 		}
 	}
 	return ls, nil
@@ -90,7 +89,7 @@ func (s LocalSelector) Calculate(ctx *pdp.Context) (pdp.AttributeValue, error) {
 		return s.handleError(ctx, err)
 	}
 
-	r, err := item.Get(s.path, ctx)
+	r, err := item.GetAggregated(s.path, ctx, s.agg)
 	if err != nil {
 		return s.handleError(ctx, err)
 	}

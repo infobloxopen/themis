@@ -68,6 +68,8 @@ const (
 	unknownPolicyUpdateOperationErrorID   = 55
 	invalidPolicyUpdatePathElementErrorID = 56
 	unknownFlagNameErrorID                = 57
+	unknownAggregationTypeErrorID         = 58
+	invalidAggregationTypeErrorID         = 59
 )
 
 type externalError struct {
@@ -977,4 +979,36 @@ func newUnknownFlagNameError(name string, t *pdp.FlagsType) *unknownFlagNameErro
 
 func (e *unknownFlagNameError) Error() string {
 	return e.errorf("Type %q doesn't have flag %q", e.t, e.name)
+}
+
+type unknownAggregationTypeError struct {
+	errorLink
+	a string
+}
+
+func newUnknownAggregationTypeError(a string) *unknownAggregationTypeError {
+	return &unknownAggregationTypeError{
+		errorLink: errorLink{id: unknownAggregationTypeErrorID},
+		a:         a}
+}
+
+func (e *unknownAggregationTypeError) Error() string {
+	return e.errorf("Unknown aggregation type %q", e.a)
+}
+
+type invalidAggregationTypeError struct {
+	errorLink
+	a string
+	t pdp.Type
+}
+
+func newInvalidAggregationTypeError(a string, t pdp.Type) *invalidAggregationTypeError {
+	return &invalidAggregationTypeError{
+		errorLink: errorLink{id: invalidAggregationTypeErrorID},
+		a:         a,
+		t:         t}
+}
+
+func (e *invalidAggregationTypeError) Error() string {
+	return e.errorf("Inappropriate aggregation type %q for selector type %q", e.a, e.t)
 }

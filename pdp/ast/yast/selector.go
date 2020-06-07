@@ -2,6 +2,7 @@ package yast
 
 import (
 	"net/url"
+	"strings"
 
 	"github.com/infobloxopen/themis/pdp"
 )
@@ -42,30 +43,6 @@ func (ctx context) unmarshalSelector(v interface{}) (pdp.Expression, boundError)
 		return nil, bindErrorf(err, "selector(%s)", uri)
 	}
 
-	var defExp pdp.Expression
-	defMap, ok, err := ctx.extractMapOpt(m, yastTagDefault, "default")
-	if err != nil {
-		return nil, bindErrorf(err, "selector(%s).default", uri)
-	}
-	if ok {
-		defExp, err = ctx.unmarshalExpression(defMap)
-		if err != nil {
-			return nil, bindErrorf(err, "selector(%s).default", uri)
-		}
-	}
-
-	var errExp pdp.Expression
-	errMap, ok, err := ctx.extractMapOpt(m, yastTagError, "error")
-	if err != nil {
-		return nil, bindErrorf(err, "selector(%s).error", uri)
-	}
-	if ok {
-		errExp, err = ctx.unmarshalExpression(errMap)
-		if err != nil {
-			return nil, bindErrorf(err, "selector(%s).error", uri)
-		}
-	}
-
 	t := ctx.symbols.GetType(st)
 	if t == nil {
 		return nil, bindErrorf(newUnknownTypeError(st), "selector(%s)", uri)
@@ -76,18 +53,55 @@ func (ctx context) unmarshalSelector(v interface{}) (pdp.Expression, boundError)
 	}
 
 	var opts []pdp.SelectorOption
-	if defExp != nil {
-		if defExp.GetResultType() != t {
-			return nil, bindErrorf(newInvalidTypeError(t), "selector(%s).default", uri)
+
+	defMap, ok, err := ctx.extractMapOpt(m, yastTagDefault, "default")
+	if err != nil {
+		return nil, bindErrorf(err, "selector(%s).default", uri)
+	}
+	if ok {
+		defExp, err := ctx.unmarshalExpression(defMap)
+		if err != nil {
+			return nil, bindErrorf(err, "selector(%s).default", uri)
 		}
-		opts = append(opts, pdp.SelectorOption{Name: pdp.SelectorOptionDefault, Data: defExp})
+		if defExp != nil {
+			if defExp.GetResultType() != t {
+				return nil, bindErrorf(newInvalidTypeError(t), "selector(%s).default", uri)
+			}
+			opts = append(opts, pdp.SelectorOption{Name: pdp.SelectorOptionDefault, Data: defExp})
+		}
 	}
 
-	if errExp != nil {
-		if errExp.GetResultType() != t {
-			return nil, bindErrorf(newInvalidTypeError(t), "selector(%s).error", uri)
+	errMap, ok, err := ctx.extractMapOpt(m, yastTagError, "error")
+	if err != nil {
+		return nil, bindErrorf(err, "selector(%s).error", uri)
+	}
+	if ok {
+		errExp, err := ctx.unmarshalExpression(errMap)
+		if err != nil {
+			return nil, bindErrorf(err, "selector(%s).error", uri)
 		}
-		opts = append(opts, pdp.SelectorOption{Name: pdp.SelectorOptionError, Data: errExp})
+		if errExp != nil {
+			if errExp.GetResultType() != t {
+				return nil, bindErrorf(newInvalidTypeError(t), "selector(%s).error", uri)
+			}
+			opts = append(opts, pdp.SelectorOption{Name: pdp.SelectorOptionError, Data: errExp})
+		}
+	}
+
+	aggStr, ok, err := ctx.extractStringOpt(m, yastTagAggregation, "aggregation")
+	if err != nil {
+		return nil, bindErrorf(err, "selector(%s)", uri)
+	}
+
+	if ok && aggStr != "" {
+		a, ok := pdp.AggTypeIDs[strings.ToLower(aggStr)]
+		if !ok {
+			return nil, bindErrorf(newUnknownAggregationTypeError(aggStr), "selector(%s).aggregation", uri)
+		}
+		if (a == pdp.AggTypeAppend || a == pdp.AggTypeAppendUnique) && t != pdp.TypeListOfStrings {
+			return nil, bindErrorf(newInvalidAggregationTypeError(aggStr, t), "selector(%s).aggregation", uri)
+		}
+		opts = append(opts, pdp.SelectorOption{Name: pdp.SelectorOptionAggregation, Data: a})
 	}
 
 	e, eErr := pdp.MakeSelector(id, path, t, opts...)
