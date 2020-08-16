@@ -9,6 +9,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	ot "github.com/opentracing/opentracing-go"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/balancer/roundrobin"
 
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
@@ -57,7 +58,7 @@ func (c *unaryClient) Connect(addr string) error {
 			panic(fmt.Errorf("invalid balancer %d", c.opts.balancer))
 
 		case roundRobinBalancer:
-			opts = append(opts, grpc.WithBalancer(grpc.RoundRobin(newStaticResolver(addr, c.opts.addresses...))))
+			opts = append(opts, grpc.WithBalancerName(roundrobin.Name))
 
 		case hotSpotBalancer:
 			return ErrorHotSpotBalancerUnsupported
