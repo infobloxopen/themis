@@ -515,7 +515,7 @@ func TestPolicyConfigParse(t *testing.T) {
 							connection_timeout invalid
 						}
 					}`,
-			err: errors.New("Could not parse timeout: time: invalid duration invalid"),
+			err: errors.New("Could not parse timeout: time: invalid duration \"invalid\""),
 		},
 		{
 			desc: "Log",

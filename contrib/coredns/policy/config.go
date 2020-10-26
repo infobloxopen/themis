@@ -273,7 +273,7 @@ func (conf *config) parseConnectionTimeout(c *caddy.Controller) error {
 	} else {
 		timeout, err := time.ParseDuration(args[0])
 		if err != nil {
-			return fmt.Errorf("Could not parse timeout: %s", err)
+			return fmt.Errorf("Could not parse timeout: time: invalid duration \"%s\"", args[0])
 		}
 
 		conf.connTimeout = timeout

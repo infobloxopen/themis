@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/allegro/bigcache"
+	"github.com/allegro/bigcache/v2"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	ot "github.com/opentracing/opentracing-go"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/balancer/roundrobin"
+	"google.golang.org/grpc/resolver"
+	"google.golang.org/grpc/resolver/manual"
 
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
@@ -38,6 +41,19 @@ func newUnaryClient(opts options) *unaryClient {
 	return c
 }
 
+func createResolver(addrs []string) *manual.Resolver {
+	ret := manual.NewBuilderWithScheme(virtualServerAddress)
+
+	addresses := make([]resolver.Address, len(addrs))
+	for i, addr := range addrs {
+		addresses[i] = resolver.Address{Addr: addr}
+	}
+
+	ret.InitialState(resolver.State{Addresses: addresses})
+
+	return ret
+}
+
 func (c *unaryClient) Connect(addr string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -51,13 +67,13 @@ func (c *unaryClient) Connect(addr string) error {
 	}
 
 	if len(c.opts.addresses) > 0 {
-		addr = virtualServerAddress
+		addr = virtualServerAddress + ":///"
 		switch c.opts.balancer {
 		default:
 			panic(fmt.Errorf("invalid balancer %d", c.opts.balancer))
 
 		case roundRobinBalancer:
-			opts = append(opts, grpc.WithBalancer(grpc.RoundRobin(newStaticResolver(addr, c.opts.addresses...))))
+			opts = append(opts, grpc.WithResolvers(createResolver(c.opts.addresses)), grpc.WithBalancerName(roundrobin.Name))
 
 		case hotSpotBalancer:
 			return ErrorHotSpotBalancerUnsupported

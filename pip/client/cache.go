@@ -3,7 +3,7 @@ package client
 import (
 	"math"
 
-	"github.com/allegro/bigcache"
+	"github.com/allegro/bigcache/v2"
 )
 
 func newCacheFromOptions(opts options) (*bigcache.BigCache, error) {

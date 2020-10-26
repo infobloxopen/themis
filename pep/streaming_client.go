@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/allegro/bigcache"
+	"github.com/allegro/bigcache/v2"
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
