@@ -4,7 +4,9 @@ import (
 	"strings"
 
 	ot "github.com/opentracing/opentracing-go"
-	zipkin "github.com/openzipkin/zipkin-go-opentracing"
+	zipkinot "github.com/openzipkin-contrib/zipkin-go-opentracing"
+	zipkin "github.com/openzipkin/zipkin-go"
+	zipkinhttp "github.com/openzipkin/zipkin-go/reporter/http"
 )
 
 func initTracing(tracingType, tracingEP string) (ot.Tracer, error) {
@@ -22,15 +24,17 @@ func initTracing(tracingType, tracingEP string) (ot.Tracer, error) {
 }
 
 func setupZipkin(tracingEP string) (ot.Tracer, error) {
-	if strings.Index(tracingEP, "http") == -1 {
-		tracingEP = "http://" + tracingEP + "/api/v1/spans"
-	}
-
-	collector, err := zipkin.NewHTTPCollector(tracingEP)
+	reporter := zipkinhttp.NewReporter(tracingEP)
+	recorder, err := zipkin.NewEndpoint("PDP", "")
 	if err != nil {
 		return nil, err
 	}
-
-	recorder := zipkin.NewRecorder(collector, false, "", "PDP")
-	return zipkin.NewTracer(recorder)
+	tracer, err := zipkin.NewTracer(
+		reporter,
+		zipkin.WithLocalEndpoint(recorder),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return zipkinot.Wrap(tracer), nil
 }
