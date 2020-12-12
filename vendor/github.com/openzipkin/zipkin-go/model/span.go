@@ -17,7 +17,6 @@ package model
 import (
 	"encoding/json"
 	"errors"
-	"strings"
 	"time"
 )
 
@@ -87,8 +86,6 @@ func (s SpanModel) MarshalJSON() ([]byte, error) {
 		// will be naturally rounded. See TestSpanDurationRounding in span_test.go
 		s.Duration += 500 * time.Nanosecond
 	}
-
-	s.Name = strings.ToLower(s.Name)
 
 	if s.LocalEndpoint.Empty() {
 		s.LocalEndpoint = nil

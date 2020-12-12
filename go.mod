@@ -14,13 +14,13 @@ require (
 	github.com/miekg/dns v1.1.35
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/openzipkin-contrib/zipkin-go-opentracing v0.4.5
-	github.com/openzipkin/zipkin-go v0.2.5
+	github.com/openzipkin/zipkin-go v0.2.2
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/prometheus/client_golang v1.1.0
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.5.1
-	google.golang.org/grpc v1.34.0
+	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.25.0
 	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.19.3
@@ -32,4 +32,6 @@ replace (
 	k8s.io/api => k8s.io/api v0.19.3
 	k8s.io/apimachinery => k8s.io/apimachinery v0.19.3
 	k8s.io/client-go => k8s.io/client-go v0.19.3
+	// Required by coredns/coredns https://github.com/coredns/coredns/blob/v1.7.1/go.mod#L34
+	google.golang.org/grpc => google.golang.org/grpc v1.29.1
 )
