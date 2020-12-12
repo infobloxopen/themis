@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/coredns/coredns/core/dnsserver"
-	clog "github.com/coredns/coredns/plugin/pkg/log"
 
 	"github.com/caddyserver/caddy"
 )
@@ -82,7 +81,6 @@ func Run() {
 		mustLogFatal(err)
 	}
 
-	logVersion()
 	if !dnsserver.Quiet {
 		showVersion()
 	}
@@ -141,12 +139,6 @@ func defaultLoader(serverType string) (caddy.Input, error) {
 	}, nil
 }
 
-// logVersion logs the version that is starting.
-func logVersion() {
-	clog.Info(versionString())
-	clog.Info(releaseString())
-}
-
 // showVersion prints the version that is starting.
 func showVersion() {
 	fmt.Print(versionString())
@@ -178,8 +170,7 @@ func setVersion() {
 	// Only set the appVersion if -ldflags was used
 	if gitNearestTag != "" || gitTag != "" {
 		if devBuild && gitNearestTag != "" {
-			appVersion = fmt.Sprintf("%s (+%s %s)",
-				strings.TrimPrefix(gitNearestTag, "v"), GitCommit, buildDate)
+			appVersion = fmt.Sprintf("%s (+%s %s)", strings.TrimPrefix(gitNearestTag, "v"), GitCommit, buildDate)
 		} else if gitTag != "" {
 			appVersion = strings.TrimPrefix(gitTag, "v")
 		}
@@ -189,7 +180,6 @@ func setVersion() {
 // Flags that control program flow or startup
 var (
 	conf    string
-	logfile bool
 	version bool
 	plugins bool
 )
