@@ -2,15 +2,13 @@
 ## explicit
 github.com/allegro/bigcache/v2
 github.com/allegro/bigcache/v2/queue
-# github.com/beorn7/perks v1.0.0
+# github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
-# github.com/caddyserver/caddy v1.0.1
+# github.com/caddyserver/caddy v1.0.5
 ## explicit
 github.com/caddyserver/caddy
 github.com/caddyserver/caddy/caddyfile
 github.com/caddyserver/caddy/telemetry
-# github.com/cenkalti/backoff v2.1.1+incompatible
-github.com/cenkalti/backoff
 # github.com/coredns/coredns v1.6.1
 ## explicit
 github.com/coredns/coredns/core/dnsserver
@@ -50,23 +48,6 @@ github.com/evanphx/json-patch
 github.com/farsightsec/golang-framestream
 # github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568
 github.com/flynn/go-shlex
-# github.com/go-acme/lego v2.5.0+incompatible
-github.com/go-acme/lego/acme
-github.com/go-acme/lego/acme/api
-github.com/go-acme/lego/acme/api/internal/nonces
-github.com/go-acme/lego/acme/api/internal/secure
-github.com/go-acme/lego/acme/api/internal/sender
-github.com/go-acme/lego/certcrypto
-github.com/go-acme/lego/certificate
-github.com/go-acme/lego/challenge
-github.com/go-acme/lego/challenge/dns01
-github.com/go-acme/lego/challenge/http01
-github.com/go-acme/lego/challenge/resolver
-github.com/go-acme/lego/challenge/tlsalpn01
-github.com/go-acme/lego/lego
-github.com/go-acme/lego/log
-github.com/go-acme/lego/platform/wait
-github.com/go-acme/lego/registration
 # github.com/go-logr/logr v0.2.0
 github.com/go-logr/logr
 # github.com/gogo/protobuf v1.3.1
@@ -79,7 +60,7 @@ github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
-# github.com/google/go-cmp v0.4.0
+# github.com/google/go-cmp v0.5.0
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
@@ -97,7 +78,7 @@ github.com/googleapis/gnostic/openapiv2
 # github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645
 ## explicit
 github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc
-# github.com/hashicorp/golang-lru v0.5.1
+# github.com/hashicorp/golang-lru v0.5.3
 github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru
 # github.com/infobloxopen/go-trees v0.0.0-20190313150506-2af4e13f9062
@@ -122,12 +103,8 @@ github.com/infobloxopen/go-trees/uintX/strtree64
 github.com/infobloxopen/go-trees/uintX/strtree8
 # github.com/json-iterator/go v1.1.10
 github.com/json-iterator/go
-# github.com/klauspost/cpuid v1.2.0
-github.com/klauspost/cpuid
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
-# github.com/mholt/certmagic v0.6.2-0.20190624175158-6a42ef9fe8c2
-github.com/mholt/certmagic
 # github.com/miekg/dns v1.1.35
 ## explicit
 github.com/miekg/dns
@@ -145,7 +122,7 @@ github.com/opentracing/opentracing-go/log
 # github.com/openzipkin-contrib/zipkin-go-opentracing v0.4.5
 ## explicit
 github.com/openzipkin-contrib/zipkin-go-opentracing
-# github.com/openzipkin/zipkin-go v0.2.1
+# github.com/openzipkin/zipkin-go v0.2.5
 ## explicit
 github.com/openzipkin/zipkin-go
 github.com/openzipkin/zipkin-go/idgenerator
@@ -159,7 +136,7 @@ github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 github.com/pmezard/go-difflib/difflib
-# github.com/prometheus/client_golang v1.0.0
+# github.com/prometheus/client_golang v1.1.0
 ## explicit
 github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/internal
@@ -171,20 +148,18 @@ github.com/prometheus/client_model/go
 github.com/prometheus/common/expfmt
 github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
 github.com/prometheus/common/model
-# github.com/prometheus/procfs v0.0.2
+# github.com/prometheus/procfs v0.0.3
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 # github.com/sirupsen/logrus v1.7.0
 ## explicit
 github.com/sirupsen/logrus
-# github.com/stretchr/testify v1.4.0
+# github.com/stretchr/testify v1.5.1
 ## explicit
 github.com/stretchr/testify/assert
 # golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 golang.org/x/crypto/ed25519
 golang.org/x/crypto/ed25519/internal/edwards25519
-golang.org/x/crypto/ocsp
-golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/ssh/terminal
 # golang.org/x/net v0.0.0-20200707034311-ab3426394381
 golang.org/x/net/bpf
@@ -224,7 +199,7 @@ google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
 # google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.33.1
+# google.golang.org/grpc v1.34.0
 ## explicit
 google.golang.org/grpc
 google.golang.org/grpc/attributes
@@ -252,12 +227,15 @@ google.golang.org/grpc/internal/grpclog
 google.golang.org/grpc/internal/grpcrand
 google.golang.org/grpc/internal/grpcsync
 google.golang.org/grpc/internal/grpcutil
+google.golang.org/grpc/internal/resolver
 google.golang.org/grpc/internal/resolver/dns
 google.golang.org/grpc/internal/resolver/passthrough
+google.golang.org/grpc/internal/resolver/unix
 google.golang.org/grpc/internal/serviceconfig
 google.golang.org/grpc/internal/status
 google.golang.org/grpc/internal/syscall
 google.golang.org/grpc/internal/transport
+google.golang.org/grpc/internal/transport/networktype
 google.golang.org/grpc/keepalive
 google.golang.org/grpc/metadata
 google.golang.org/grpc/peer
@@ -267,7 +245,7 @@ google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
-# google.golang.org/protobuf v1.24.0
+# google.golang.org/protobuf v1.25.0
 ## explicit
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
@@ -279,12 +257,11 @@ google.golang.org/protobuf/internal/encoding/messageset
 google.golang.org/protobuf/internal/encoding/tag
 google.golang.org/protobuf/internal/encoding/text
 google.golang.org/protobuf/internal/errors
-google.golang.org/protobuf/internal/fieldnum
 google.golang.org/protobuf/internal/fieldsort
 google.golang.org/protobuf/internal/filedesc
 google.golang.org/protobuf/internal/filetype
 google.golang.org/protobuf/internal/flags
-google.golang.org/protobuf/internal/genname
+google.golang.org/protobuf/internal/genid
 google.golang.org/protobuf/internal/impl
 google.golang.org/protobuf/internal/mapsort
 google.golang.org/protobuf/internal/pragma
@@ -301,10 +278,6 @@ google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/timestamppb
 # gopkg.in/inf.v0 v0.9.1
 gopkg.in/inf.v0
-# gopkg.in/square/go-jose.v2 v2.2.2
-gopkg.in/square/go-jose.v2
-gopkg.in/square/go-jose.v2/cipher
-gopkg.in/square/go-jose.v2/json
 # gopkg.in/yaml.v2 v2.2.8
 ## explicit
 gopkg.in/yaml.v2
