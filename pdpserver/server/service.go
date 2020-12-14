@@ -176,9 +176,8 @@ func (s *Server) Validate(ctx context.Context, in *pb.Msg) (*pb.Msg, error) {
 	}
 
 	b := s.pool.Get()
-	body, err := s.rawValidateToBuffer(p, c, in.Body, b)
+	msg.Body, err = s.rawValidateToBuffer(p, c, in.Body, b)
 	s.pool.Put(b)
-	msg.Body = body
 
 	return msg, err
 }
