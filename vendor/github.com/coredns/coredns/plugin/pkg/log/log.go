@@ -1,7 +1,7 @@
-// Package log implements a small wrapper around the std lib log package.
-// It implements log levels by prefixing the logs with the current time
-// with in RFC3339Milli and [INFO], [DEBUG], [WARNING] or [ERROR].
-// Debug logging is available and enabled if the *debug* plugin is used.
+// Package log implements a small wrapper around the std lib log package. It
+// implements log levels by prefixing the logs with [INFO], [DEBUG], [WARNING]
+// or [ERROR]. Debug logging is available and enabled if the *debug* plugin is
+// used.
 //
 // log.Info("this is some logging"), will log on the Info level.
 //
@@ -14,7 +14,6 @@ import (
 	golog "log"
 	"os"
 	"sync"
-	"time"
 )
 
 // D controls whether we should output debug logs. If true, we do, once set
@@ -26,14 +25,21 @@ type d struct {
 	sync.RWMutex
 }
 
-// Set sets d to true.
+// Set enables debug logging.
 func (d *d) Set() {
 	d.Lock()
 	d.on = true
 	d.Unlock()
 }
 
-// Value return the boolean value of d.
+// Clear disables debug logging.
+func (d *d) Clear() {
+	d.Lock()
+	d.on = false
+	d.Unlock()
+}
+
+// Value returns if debug logging is enabled.
 func (d *d) Value() bool {
 	d.RLock()
 	b := d.on
@@ -41,17 +47,14 @@ func (d *d) Value() bool {
 	return b
 }
 
-// RFC3339Milli doesn't exist, invent it here.
-func clock() string { return time.Now().Format("2006-01-02T15:04:05.000Z07:00") }
-
 // logf calls log.Printf prefixed with level.
 func logf(level, format string, v ...interface{}) {
-	golog.Print(clock(), level, fmt.Sprintf(format, v...))
+	golog.Print(level, fmt.Sprintf(format, v...))
 }
 
 // log calls log.Print prefixed with level.
 func log(level string, v ...interface{}) {
-	golog.Print(clock(), level, fmt.Sprint(v...))
+	golog.Print(level, fmt.Sprint(v...))
 }
 
 // Debug is equivalent to log.Print(), but prefixed with "[DEBUG] ". It only outputs something
@@ -102,9 +105,9 @@ func Fatalf(format string, v ...interface{}) { logf(fatal, format, v...); os.Exi
 func Discard() { golog.SetOutput(ioutil.Discard) }
 
 const (
-	debug   = " [DEBUG] "
-	err     = " [ERROR] "
-	fatal   = " [FATAL] "
-	info    = " [INFO] "
-	warning = " [WARNING] "
+	debug   = "[DEBUG] "
+	err     = "[ERROR] "
+	fatal   = "[FATAL] "
+	info    = "[INFO] "
+	warning = "[WARNING] "
 )

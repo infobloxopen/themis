@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,10 +15,12 @@ import (
 	"github.com/coredns/coredns/plugin/pkg/edns"
 	"github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/coredns/coredns/plugin/pkg/rcode"
+	"github.com/coredns/coredns/plugin/pkg/reuseport"
 	"github.com/coredns/coredns/plugin/pkg/trace"
 	"github.com/coredns/coredns/plugin/pkg/transport"
 	"github.com/coredns/coredns/request"
 
+	"github.com/caddyserver/caddy"
 	"github.com/miekg/dns"
 	ot "github.com/opentracing/opentracing-go"
 )
@@ -90,8 +93,16 @@ func NewServer(addr string, group []*Config) (*Server, error) {
 		site.pluginChain = stack
 	}
 
+	if !s.debug {
+		// When reloading we need to explicitly disable debug logging if it is now disabled.
+		log.D.Clear()
+	}
+
 	return s, nil
 }
+
+// Compile-time check to ensure Server implements the caddy.GracefulServer interface
+var _ caddy.GracefulServer = &Server{}
 
 // Serve starts the server with an existing listener. It blocks until the server stops.
 // This implements caddy.TCPServer interface.
@@ -121,7 +132,7 @@ func (s *Server) ServePacket(p net.PacketConn) error {
 
 // Listen implements caddy.TCPServer interface.
 func (s *Server) Listen() (net.Listener, error) {
-	l, err := listen("tcp", s.Addr[len(transport.DNS+"://"):])
+	l, err := reuseport.Listen("tcp", s.Addr[len(transport.DNS+"://"):])
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +146,7 @@ func (s *Server) WrapListener(ln net.Listener) net.Listener {
 
 // ListenPacket implements caddy.UDPServer interface.
 func (s *Server) ListenPacket() (net.PacketConn, error) {
-	p, err := listenPacket("udp", s.Addr[len(transport.DNS+"://"):])
+	p, err := reuseport.ListenPacket("udp", s.Addr[len(transport.DNS+"://"):])
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +194,7 @@ func (s *Server) Stop() (err error) {
 // Address together with Stop() implement caddy.GracefulServer.
 func (s *Server) Address() string { return s.Addr }
 
-// ServeDNS is the entry point for every request to the address that s
+// ServeDNS is the entry point for every request to the address that
 // is bound to. It acts as a multiplexer for the requests zonename as
 // defined in the request so that the correct zone
 // (configuration and plugin stack) will handle the request.
@@ -217,27 +228,18 @@ func (s *Server) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg)
 		return
 	}
 
-	q := r.Question[0].Name
-	b := make([]byte, len(q))
-	var off int
-	var end bool
-
-	var dshandler *Config
-
 	// Wrap the response writer in a ScrubWriter so we automatically make the reply fit in the client's buffer.
 	w = request.NewScrubWriter(r, w)
 
-	for {
-		l := len(q[off:])
-		for i := 0; i < l; i++ {
-			b[i] = q[off+i]
-			// normalize the name for the lookup
-			if b[i] >= 'A' && b[i] <= 'Z' {
-				b[i] |= ('a' - 'A')
-			}
-		}
+	q := strings.ToLower(r.Question[0].Name)
+	var (
+		off       int
+		end       bool
+		dshandler *Config
+	)
 
-		if h, ok := s.zones[string(b[:l])]; ok {
+	for {
+		if h, ok := s.zones[q[off:]]; ok {
 			if r.Question[0].Qtype != dns.TypeDS {
 				if h.FilterFunc == nil {
 					rcode, _ := h.pluginChain.ServeDNS(ctx, w, r)
@@ -259,7 +261,7 @@ func (s *Server) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg)
 			// The type is DS, keep the handler, but keep on searching as maybe we are serving
 			// the parent as well and the DS should be routed to it - this will probably *misroute* DS
 			// queries to a possibly grand parent, but there is no way for us to know at this point
-			// if there is an actually delegation from grandparent -> parent -> zone.
+			// if there is an actual delegation from grandparent -> parent -> zone.
 			// In all fairness: direct DS queries should not be needed.
 			dshandler = h
 		}
@@ -302,7 +304,6 @@ func (s *Server) OnStartupComplete() {
 	if out != "" {
 		fmt.Print(out)
 	}
-	return
 }
 
 // Tracer returns the tracer in the server if defined.

@@ -12,7 +12,7 @@ import (
 
 // See core/dnsserver/address.go - we should unify these two impls.
 
-// Zones respresents a lists of zone names.
+// Zones represents a lists of zone names.
 type Zones []string
 
 // Matches checks if qname is a subdomain of any of the zones in z.  The match
@@ -61,13 +61,26 @@ type (
 
 // Normalize will return the host portion of host, stripping
 // of any port or transport. The host will also be fully qualified and lowercased.
+// An empty string is returned on failure
 func (h Host) Normalize() string {
+	// The error can be ignored here, because this function should only be called after the corefile has already been vetted.
+	host, _ := h.MustNormalize()
+	return host
+}
+
+// MustNormalize will return the host portion of host, stripping
+// of any port or transport. The host will also be fully qualified and lowercased.
+// An error is returned on error
+func (h Host) MustNormalize() (string, error) {
 	s := string(h)
 	_, s = parse.Transport(s)
 
-	// The error can be ignore here, because this function is called after the corefile has already been vetted.
-	host, _, _, _ := SplitHostPort(s)
-	return Name(host).Normalize()
+	// The error can be ignored here, because this function is called after the corefile has already been vetted.
+	host, _, _, err := SplitHostPort(s)
+	if err != nil {
+		return "", err
+	}
+	return Name(host).Normalize(), nil
 }
 
 // SplitHostPort splits s up in a host and port portion, taking reverse address notation into account.
@@ -76,7 +89,7 @@ func (h Host) Normalize() string {
 func SplitHostPort(s string) (host, port string, ipnet *net.IPNet, err error) {
 	// If there is: :[0-9]+ on the end we assume this is the port. This works for (ascii) domain
 	// names and our reverse syntax, which always needs a /mask *before* the port.
-	// So from the back, find first colon, and then check if its a number.
+	// So from the back, find first colon, and then check if it's a number.
 	host = s
 
 	colon := strings.LastIndex(s, ":")

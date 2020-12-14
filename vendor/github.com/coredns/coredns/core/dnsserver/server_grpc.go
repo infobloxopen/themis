@@ -8,8 +8,10 @@ import (
 	"net"
 
 	"github.com/coredns/coredns/pb"
+	"github.com/coredns/coredns/plugin/pkg/reuseport"
 	"github.com/coredns/coredns/plugin/pkg/transport"
 
+	"github.com/caddyserver/caddy"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	"github.com/miekg/dns"
 	"github.com/opentracing/opentracing-go"
@@ -32,7 +34,7 @@ func NewServergRPC(addr string, group []*Config) (*ServergRPC, error) {
 		return nil, err
 	}
 	// The *tls* plugin must make sure that multiple conflicting
-	// TLS configuration return an error: it can only be specified once.
+	// TLS configuration returns an error: it can only be specified once.
 	var tlsConfig *tls.Config
 	for _, conf := range s.zones {
 		// Should we error if some configs *don't* have TLS?
@@ -41,6 +43,9 @@ func NewServergRPC(addr string, group []*Config) (*ServergRPC, error) {
 
 	return &ServergRPC{Server: s, tlsConfig: tlsConfig}, nil
 }
+
+// Compile-time check to ensure Server implements the caddy.GracefulServer interface
+var _ caddy.GracefulServer = &Server{}
 
 // Serve implements caddy.TCPServer interface.
 func (s *ServergRPC) Serve(l net.Listener) error {
@@ -72,7 +77,7 @@ func (s *ServergRPC) ServePacket(p net.PacketConn) error { return nil }
 // Listen implements caddy.TCPServer interface.
 func (s *ServergRPC) Listen() (net.Listener, error) {
 
-	l, err := net.Listen("tcp", s.Addr[len(transport.GRPC+"://"):])
+	l, err := reuseport.Listen("tcp", s.Addr[len(transport.GRPC+"://"):])
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +98,6 @@ func (s *ServergRPC) OnStartupComplete() {
 	if out != "" {
 		fmt.Print(out)
 	}
-	return
 }
 
 // Stop stops the server. It blocks until the server is
@@ -165,8 +169,8 @@ func (r *gRPCresponse) Write(b []byte) (int, error) {
 // These methods implement the dns.ResponseWriter interface from Go DNS.
 func (r *gRPCresponse) Close() error              { return nil }
 func (r *gRPCresponse) TsigStatus() error         { return nil }
-func (r *gRPCresponse) TsigTimersOnly(b bool)     { return }
-func (r *gRPCresponse) Hijack()                   { return }
+func (r *gRPCresponse) TsigTimersOnly(b bool)     {}
+func (r *gRPCresponse) Hijack()                   {}
 func (r *gRPCresponse) LocalAddr() net.Addr       { return r.localAddr }
 func (r *gRPCresponse) RemoteAddr() net.Addr      { return r.remoteAddr }
 func (r *gRPCresponse) WriteMsg(m *dns.Msg) error { r.Msg = m; return nil }

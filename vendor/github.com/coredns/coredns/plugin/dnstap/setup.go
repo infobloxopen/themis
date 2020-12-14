@@ -6,21 +6,12 @@ import (
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/dnstap/dnstapio"
-	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/coredns/coredns/plugin/pkg/parse"
 
 	"github.com/caddyserver/caddy"
-	"github.com/caddyserver/caddy/caddyfile"
 )
 
-var log = clog.NewWithPlugin("dnstap")
-
-func init() {
-	caddy.RegisterPlugin("dnstap", caddy.Plugin{
-		ServerType: "dns",
-		Action:     wrapSetup,
-	})
-}
+func init() { plugin.Register("dnstap", wrapSetup) }
 
 func wrapSetup(c *caddy.Controller) error {
 	if err := setup(c); err != nil {
@@ -35,7 +26,7 @@ type config struct {
 	full   bool
 }
 
-func parseConfig(d *caddyfile.Dispenser) (c config, err error) {
+func parseConfig(d *caddy.Controller) (c config, err error) {
 	d.Next() // directive name
 
 	if !d.Args(&c.target) {
@@ -51,9 +42,7 @@ func parseConfig(d *caddyfile.Dispenser) (c config, err error) {
 		c.target = servers[0]
 	} else {
 		// default to UNIX socket
-		if strings.HasPrefix(c.target, "unix://") {
-			c.target = c.target[7:]
-		}
+		c.target = strings.TrimPrefix(c.target, "unix://")
 		c.socket = true
 	}
 
@@ -63,7 +52,7 @@ func parseConfig(d *caddyfile.Dispenser) (c config, err error) {
 }
 
 func setup(c *caddy.Controller) error {
-	conf, err := parseConfig(&c.Dispenser)
+	conf, err := parseConfig(c)
 	if err != nil {
 		return err
 	}
