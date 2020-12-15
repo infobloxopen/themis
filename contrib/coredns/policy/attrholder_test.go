@@ -359,8 +359,8 @@ func TestDnstapList(t *testing.T) {
 
 	// empty/wrong log attribute
 	testutil.AssertDnstapList(t, ah.dnstapList(),
-		&pb.DnstapAttribute{"d0", "D0val"},
-		&pb.DnstapAttribute{"d", "Dval"},
+		&pb.DnstapAttribute{Id: "d0", Value: "D0val"},
+		&pb.DnstapAttribute{Id: "d", Value: "Dval"},
 	)
 
 	// log=1 - no attributes
@@ -370,14 +370,14 @@ func TestDnstapList(t *testing.T) {
 	// log=2
 	ah.addAttrList([]pdp.AttributeAssignment{pdp.MakeIntegerAssignment(attrNameLog, 2)})
 	testutil.AssertDnstapList(t, ah.dnstapList(),
-		&pb.DnstapAttribute{"d2", "D2val"},
-		&pb.DnstapAttribute{"d", "Dval"},
+		&pb.DnstapAttribute{Id: "d2", Value: "D2val"},
+		&pb.DnstapAttribute{Id: "d", Value: "Dval"},
 	)
 
 	// log=3 (out of range)
 	ah.addAttrList([]pdp.AttributeAssignment{pdp.MakeIntegerAssignment(attrNameLog, 3)})
 	testutil.AssertDnstapList(t, ah.dnstapList(),
-		&pb.DnstapAttribute{"d0", "D0val"},
-		&pb.DnstapAttribute{"d", "Dval"},
+		&pb.DnstapAttribute{Id: "d0", Value: "D0val"},
+		&pb.DnstapAttribute{Id: "d", Value: "Dval"},
 	)
 }
