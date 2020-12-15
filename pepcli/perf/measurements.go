@@ -10,7 +10,7 @@ import (
 	"github.com/infobloxopen/themis/pep"
 )
 
-func measurement(c pep.Client, n, routineLimit int, rateLimit int64, noDump bool, reqs []pb.Msg, maxResponseObligations uint32) ([]timing, error) {
+func measurement(c pep.Client, n, routineLimit int, rateLimit int64, noDump bool, reqs []*pb.Msg, maxResponseObligations uint32) ([]timing, error) {
 	var pause time.Duration
 	if rateLimit > 0 {
 		pause = time.Second / time.Duration(rateLimit)
@@ -45,7 +45,7 @@ func measurement(c pep.Client, n, routineLimit int, rateLimit int64, noDump bool
 	return sequential(c, n, reqs, maxResponseObligations)
 }
 
-func sequential(c pep.Client, n int, reqs []pb.Msg, maxResponseObligations uint32) ([]timing, error) {
+func sequential(c pep.Client, n int, reqs []*pb.Msg, maxResponseObligations uint32) ([]timing, error) {
 	out := make([]timing, n)
 
 	var res pdp.Response
@@ -67,7 +67,7 @@ func sequential(c pep.Client, n int, reqs []pb.Msg, maxResponseObligations uint3
 	return out, nil
 }
 
-func sequentialWithPause(c pep.Client, n int, p time.Duration, reqs []pb.Msg, maxResponseObligations uint32) ([]timing, error) {
+func sequentialWithPause(c pep.Client, n int, p time.Duration, reqs []*pb.Msg, maxResponseObligations uint32) ([]timing, error) {
 	out := make([]timing, n)
 
 	var res pdp.Response
@@ -91,7 +91,7 @@ func sequentialWithPause(c pep.Client, n int, p time.Duration, reqs []pb.Msg, ma
 	return out, nil
 }
 
-func parallel(c pep.Client, n int, reqs []pb.Msg, maxResponseObligations uint32) ([]timing, error) {
+func parallel(c pep.Client, n int, reqs []*pb.Msg, maxResponseObligations uint32) ([]timing, error) {
 	out := make([]timing, n)
 
 	pool := makeObligationsPool(maxResponseObligations)
@@ -99,7 +99,7 @@ func parallel(c pep.Client, n int, reqs []pb.Msg, maxResponseObligations uint32)
 	var wg sync.WaitGroup
 	for i := 0; i < n; i++ {
 		wg.Add(1)
-		go func(i int, req pb.Msg) {
+		go func(i int, req *pb.Msg) {
 			obligation := pool.get()
 
 			defer func() {
@@ -125,7 +125,7 @@ func parallel(c pep.Client, n int, reqs []pb.Msg, maxResponseObligations uint32)
 	return out, nil
 }
 
-func parallelWithPause(c pep.Client, n int, p time.Duration, reqs []pb.Msg, maxResponseObligations uint32) ([]timing, error) {
+func parallelWithPause(c pep.Client, n int, p time.Duration, reqs []*pb.Msg, maxResponseObligations uint32) ([]timing, error) {
 	out := make([]timing, n)
 
 	pool := makeObligationsPool(maxResponseObligations)
@@ -133,7 +133,7 @@ func parallelWithPause(c pep.Client, n int, p time.Duration, reqs []pb.Msg, maxR
 	var wg sync.WaitGroup
 	for i := 0; i < n; i++ {
 		wg.Add(1)
-		go func(i int, req pb.Msg) {
+		go func(i int, req *pb.Msg) {
 			obligation := pool.get()
 
 			defer func() {
@@ -161,7 +161,7 @@ func parallelWithPause(c pep.Client, n int, p time.Duration, reqs []pb.Msg, maxR
 	return out, nil
 }
 
-func parallelWithLimit(c pep.Client, n, l int, reqs []pb.Msg, maxResponseObligations uint32) ([]timing, error) {
+func parallelWithLimit(c pep.Client, n, l int, reqs []*pb.Msg, maxResponseObligations uint32) ([]timing, error) {
 	out := make([]timing, n)
 
 	obligations := make(chan []pdp.AttributeAssignment, l)
@@ -176,7 +176,7 @@ func parallelWithLimit(c pep.Client, n, l int, reqs []pb.Msg, maxResponseObligat
 		ch <- 0
 
 		wg.Add(1)
-		go func(i int, req pb.Msg) {
+		go func(i int, req *pb.Msg) {
 			obligation := <-obligations
 
 			defer func() {
@@ -203,7 +203,7 @@ func parallelWithLimit(c pep.Client, n, l int, reqs []pb.Msg, maxResponseObligat
 	return out, nil
 }
 
-func parallelWithLimitNoDump(c pep.Client, n, l int, reqs []pb.Msg, maxResponseObligations uint32) ([]timing, error) {
+func parallelWithLimitNoDump(c pep.Client, n, l int, reqs []*pb.Msg, maxResponseObligations uint32) ([]timing, error) {
 	obligations := make(chan []pdp.AttributeAssignment, l)
 	for i := 0; i < cap(obligations); i++ {
 		obligations <- make([]pdp.AttributeAssignment, maxResponseObligations)
@@ -220,7 +220,7 @@ func parallelWithLimitNoDump(c pep.Client, n, l int, reqs []pb.Msg, maxResponseO
 		ch <- 0
 
 		wg.Add(1)
-		go func(i int, req pb.Msg) {
+		go func(i int, req *pb.Msg) {
 			obligation := <-obligations
 
 			defer func() {
@@ -260,7 +260,7 @@ func parallelWithLimitNoDump(c pep.Client, n, l int, reqs []pb.Msg, maxResponseO
 	return nil, nil
 }
 
-func parallelWithLimitAndPause(c pep.Client, n, l int, p time.Duration, reqs []pb.Msg, maxResponseObligations uint32) ([]timing, error) {
+func parallelWithLimitAndPause(c pep.Client, n, l int, p time.Duration, reqs []*pb.Msg, maxResponseObligations uint32) ([]timing, error) {
 	out := make([]timing, n)
 
 	obligations := make(chan []pdp.AttributeAssignment, l)
@@ -275,7 +275,7 @@ func parallelWithLimitAndPause(c pep.Client, n, l int, p time.Duration, reqs []p
 		ch <- 0
 
 		wg.Add(1)
-		go func(i int, req pb.Msg) {
+		go func(i int, req *pb.Msg) {
 			obligation := <-obligations
 
 			defer func() {

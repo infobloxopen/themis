@@ -6,13 +6,14 @@ package requests
 import (
 	"encoding/json"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"math"
 	"net"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 
 	"github.com/infobloxopen/go-trees/domain"
 	"github.com/infobloxopen/themis/pdp"
@@ -32,7 +33,7 @@ type requests struct {
 
 // Load reads given data--if it is a filepath that ends in a yaml or json extension and can be read,
 // the respective unmarshaler will be used; otherwise, the input is processed as raw JSON.
-func Load(data string, size uint32) ([]pb.Msg, error) {
+func Load(data string, size uint32) ([]*pb.Msg, error) {
 	in := &requests{}
 
 	switch strings.TrimLeft(strings.ToLower(filepath.Ext(data)), ".") {
@@ -74,7 +75,7 @@ func Load(data string, size uint32) ([]pb.Msg, error) {
 		symbols[k] = t
 	}
 
-	out := make([]pb.Msg, len(in.Requests))
+	out := make([]*pb.Msg, len(in.Requests))
 	for i, r := range in.Requests {
 		attrs := make([]pdp.AttributeAssignment, len(r))
 		j := 0
@@ -94,7 +95,7 @@ func Load(data string, size uint32) ([]pb.Msg, error) {
 			return nil, fmt.Errorf("can't create request: %s", err)
 		}
 
-		out[i] = pb.Msg{Body: b[:n]}
+		out[i] = &pb.Msg{Body: b[:n]}
 	}
 
 	return out, nil

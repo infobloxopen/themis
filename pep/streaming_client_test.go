@@ -101,7 +101,7 @@ func TestStreamingClientValidationWithCache(t *testing.T) {
 			ei, err := it.Value()
 			if err != nil {
 				t.Errorf("can't get value from cache: %s", err)
-			} else if err := fillResponse(pb.Msg{Body: ei.Value()}, &out); err != nil {
+			} else if err := fillResponse(&pb.Msg{Body: ei.Value()}, &out); err != nil {
 				t.Errorf("can't unmarshal response from cache: %s", err)
 			} else if out.Effect != pdp.EffectPermit || out.Reason != nil || out.X != "AllPermitRule" {
 				t.Errorf("got unexpected response from cache: %s", out)

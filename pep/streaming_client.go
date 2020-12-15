@@ -16,7 +16,7 @@ const (
 	scsClosed
 )
 
-type validator func(m *pb.Msg) (pb.Msg, error)
+type validator func(m *pb.Msg) (*pb.Msg, error)
 
 type streamingClient struct {
 	opts options
@@ -112,7 +112,7 @@ func (c *streamingClient) Close() {
 
 func (c *streamingClient) Validate(in, out interface{}) error {
 	var (
-		m   pb.Msg
+		m   *pb.Msg
 		err error
 	)
 
@@ -137,7 +137,7 @@ func (c *streamingClient) Validate(in, out interface{}) error {
 	if c.cache != nil {
 		var b []byte
 		if b, err = c.cache.Get(string(m.Body)); err == nil {
-			err = fillResponse(pb.Msg{Body: b}, out)
+			err = fillResponse(&pb.Msg{Body: b}, out)
 			if c.opts.onCacheHitHandler != nil {
 				if err != nil {
 					c.opts.onCacheHitHandler.Handle(in, b, err)
@@ -158,7 +158,7 @@ func (c *streamingClient) Validate(in, out interface{}) error {
 		}
 
 		for i := 0; i < len(c.conns); i++ {
-			r, err := c.validate(&m)
+			r, err := c.validate(m)
 			if err == nil {
 				if c.cache != nil {
 					c.cache.Set(string(m.Body), r.Body)
@@ -180,7 +180,7 @@ func (c *streamingClient) Validate(in, out interface{}) error {
 }
 
 func (c *streamingClient) makeSimpleValidator() validator {
-	return func(m *pb.Msg) (pb.Msg, error) {
+	return func(m *pb.Msg) (*pb.Msg, error) {
 		conn := c.conns[0]
 		r, err := conn.validate(m)
 		if err == errConnFailure {
@@ -192,7 +192,7 @@ func (c *streamingClient) makeSimpleValidator() validator {
 }
 
 func (c *streamingClient) makeRoundRobinValidator() validator {
-	return func(m *pb.Msg) (pb.Msg, error) {
+	return func(m *pb.Msg) (*pb.Msg, error) {
 		i := int((atomic.AddUint64(c.counter, 1) - 1) % uint64(len(c.conns)))
 		conn := c.conns[i]
 		r, err := conn.validate(m)
@@ -205,7 +205,7 @@ func (c *streamingClient) makeRoundRobinValidator() validator {
 }
 
 func (c *streamingClient) makeHotSpotValidator() validator {
-	return func(m *pb.Msg) (pb.Msg, error) {
+	return func(m *pb.Msg) (*pb.Msg, error) {
 		total := uint64(len(c.conns))
 		start := atomic.LoadUint64(c.counter)
 		i := int(start % total)

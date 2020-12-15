@@ -359,7 +359,7 @@ func TestUnmarshalInvalidStructures(t *testing.T) {
 }
 
 func TestFillResponse(t *testing.T) {
-	r := pb.Msg{
+	r := &pb.Msg{
 		Body: TestResponse,
 	}
 

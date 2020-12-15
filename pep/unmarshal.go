@@ -37,10 +37,12 @@ var (
 	}
 )
 
-func fillResponse(res pb.Msg, v interface{}) error {
+func fillResponse(res *pb.Msg, v interface{}) error {
 	switch v := v.(type) {
 	case *pb.Msg:
-		*v = res
+		// pb.Msg can't be copied
+		v = new(pb.Msg)
+		v.Body = res.Body
 		return nil
 
 	case *pdp.Response:

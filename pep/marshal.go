@@ -230,16 +230,16 @@ var (
 	typeCacheLock = sync.RWMutex{}
 )
 
-func makeRequest(v interface{}) (pb.Msg, error) {
+func makeRequest(v interface{}) (*pb.Msg, error) {
 	switch v := v.(type) {
 	case []byte:
-		return pb.Msg{Body: v}, nil
+		return &pb.Msg{Body: v}, nil
 
 	case pb.Msg:
-		return v, nil
+		return &v, nil
 
 	case *pb.Msg:
-		return *v, nil
+		return v, nil
 	}
 
 	var (
@@ -254,22 +254,22 @@ func makeRequest(v interface{}) (pb.Msg, error) {
 	}
 
 	if err != nil {
-		return pb.Msg{}, err
+		return &pb.Msg{}, err
 	}
 
-	return pb.Msg{Body: b}, nil
+	return &pb.Msg{Body: b}, nil
 }
 
-func makeRequestWithBuffer(v interface{}, b []byte) (pb.Msg, error) {
+func makeRequestWithBuffer(v interface{}, b []byte) (*pb.Msg, error) {
 	switch v := v.(type) {
 	case []byte:
-		return pb.Msg{Body: v}, nil
+		return &pb.Msg{Body: v}, nil
 
 	case pb.Msg:
-		return v, nil
+		return &v, nil
 
 	case *pb.Msg:
-		return *v, nil
+		return v, nil
 	}
 
 	var (
@@ -283,10 +283,10 @@ func makeRequestWithBuffer(v interface{}, b []byte) (pb.Msg, error) {
 		n, err = marshalValueToBuffer(reflect.ValueOf(v), b)
 	}
 	if err != nil {
-		return pb.Msg{}, err
+		return &pb.Msg{}, err
 	}
 
-	return pb.Msg{Body: b[:n]}, nil
+	return &pb.Msg{Body: b[:n]}, nil
 }
 
 func marshalValue(v reflect.Value) ([]byte, error) {
