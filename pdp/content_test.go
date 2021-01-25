@@ -1276,6 +1276,9 @@ func TestLocalContentStorageGetAggregated(t *testing.T) {
 					t.Errorf("case %q: expected error %q but got (%T) %q", tc.name, tc.err, err, err)
 				}
 			} else {
+				if err != nil {
+					t.Errorf("case %q: expected no error but got (%T) %q", tc.name, err, err)
+				}
 				s, err := v.Serialize()
 				if err != nil {
 					t.Errorf("case %q: failed to serialize result with error %q", tc.name, err)

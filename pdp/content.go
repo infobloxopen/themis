@@ -905,10 +905,10 @@ func (a *aggregator) aggregate(v AttributeValue, err error) (AttributeValue, boo
 		}
 		return MakeListOfStringsValue(a.al), false, nil
 	} else if _, ok := err.(*MissingValueError); ok {
-		if a.a == AggTypeReturnFirst {
+		if a.a == AggTypeReturnFirst || a.al == nil {
 			return UndefinedValue, false, err
 		}
-		return MakeListOfStringsValue(a.al), false, err
+		return MakeListOfStringsValue(a.al), false, nil
 	}
 	return UndefinedValue, true, err
 }
