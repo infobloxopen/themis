@@ -1,3 +1,6 @@
+# Themis is looking for new maintainers. This project is no longer maintained by infobloxopen
+
+
 # Themis
 Themis represents a set of tools for managing and enforcing security policies along with framework to create such tools:
 - **pdp** - Policy Decision Point (core component of Themis);
@@ -1093,4 +1096,3 @@ Contents with different ids and policies can be updated independently and in par
 
 # References
 **[XACML-V3.0]** *eXtensible Access Control Markup Language (XACML) Version 3.0.* 22 January 2013. OASIS Standard. http://docs.oasis-open.org/xacml/3.0/xacml-3.0-core-spec-os-en.html.
-
