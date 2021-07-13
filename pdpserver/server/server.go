@@ -519,7 +519,7 @@ func (s *Server) Serve() error {
 	if s.health.iface != nil {
 		healthMux := http.NewServeMux()
 		healthMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-			s.opts.logger.Info("Health check responding with OK")
+			s.opts.logger.Debug("Health check responding with OK")
 			io.WriteString(w, "OK")
 		})
 
