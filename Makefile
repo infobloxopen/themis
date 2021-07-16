@@ -43,6 +43,7 @@ build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-eg
 
 .PHONY: test
 test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-local-selector test-pip-selector test-pep test-pip-server test-pip-client test-pip-genpkg test-plugin
+	go vet ./...
 
 .PHONY: bench
 bench: bench-pep bench-pip-server bench-pip-client bench-pdpserver-pkg bench-plugin

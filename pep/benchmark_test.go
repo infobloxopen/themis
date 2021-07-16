@@ -786,7 +786,7 @@ var (
 	}
 
 	decisionRequests []decisionRequest
-	rawRequests      []pb.Msg
+	rawRequests      []*pb.Msg
 )
 
 type testRequest3Keys struct {
@@ -805,7 +805,7 @@ func init() {
 		}
 	}
 
-	rawRequests = make([]pb.Msg, len(decisionRequests))
+	rawRequests = make([]*pb.Msg, len(decisionRequests))
 	for i := range rawRequests {
 		b := make([]byte, 128)
 

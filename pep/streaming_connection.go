@@ -479,10 +479,10 @@ func (c *streamConn) putStream(s boundStream) error {
 	return nil
 }
 
-func (c *streamConn) validate(m *pb.Msg) (pb.Msg, error) {
+func (c *streamConn) validate(m *pb.Msg) (*pb.Msg, error) {
 	s, err := c.getStream()
 	if err != nil {
-		return pb.Msg{}, err
+		return &pb.Msg{}, err
 	}
 
 	r, err := s.s.validate(m)
@@ -493,21 +493,21 @@ func (c *streamConn) validate(m *pb.Msg) (pb.Msg, error) {
 			s.retry <- s
 		}
 
-		return pb.Msg{}, err
+		return &pb.Msg{}, err
 	}
 
 	c.putStream(s)
 	return r, nil
 }
 
-func (c *streamConn) tryValidate(m *pb.Msg) (pb.Msg, bool, error) {
+func (c *streamConn) tryValidate(m *pb.Msg) (*pb.Msg, bool, error) {
 	s, ok, err := c.tryGetStream()
 	if err != nil {
-		return pb.Msg{}, false, err
+		return &pb.Msg{}, false, err
 	}
 
 	if !ok {
-		return pb.Msg{}, false, nil
+		return &pb.Msg{}, false, nil
 	}
 
 	r, err := s.s.validate(m)

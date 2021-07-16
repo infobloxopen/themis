@@ -153,7 +153,7 @@ func (c *unaryClient) Validate(in, out interface{}) error {
 	}
 
 	var (
-		req pb.Msg
+		req *pb.Msg
 		err error
 	)
 
@@ -178,7 +178,7 @@ func (c *unaryClient) Validate(in, out interface{}) error {
 	if c.cache != nil {
 		var b []byte
 		if b, err = c.cache.Get(string(req.Body)); err == nil {
-			err = fillResponse(pb.Msg{Body: b}, out)
+			err = fillResponse(&pb.Msg{Body: b}, out)
 			if c.opts.onCacheHitHandler != nil {
 				if err != nil {
 					c.opts.onCacheHitHandler.Handle(in, b, err)
@@ -201,7 +201,7 @@ func (c *unaryClient) Validate(in, out interface{}) error {
 		defer cancelFn()
 	}
 
-	res, err := (*uc).Validate(ctx, &req, grpc.FailFast(false))
+	res, err := (*uc).Validate(ctx, req, grpc.FailFast(false))
 	if err != nil {
 		return err
 	}
@@ -210,5 +210,5 @@ func (c *unaryClient) Validate(in, out interface{}) error {
 		c.cache.Set(string(req.Body), res.Body)
 	}
 
-	return fillResponse(*res, out)
+	return fillResponse(res, out)
 }
