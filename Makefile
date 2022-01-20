@@ -42,10 +42,10 @@ fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdp-itests fmt-local-sel
 build: build-dir build-pepcli build-papcli build-pdpserver build-egen build-pip-gen build-pipjcon build-pipcli
 
 .PHONY: test
-test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-local-selector test-pip-selector test-pep test-pip-server test-pip-client test-pip-genpkg test-plugin
+test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-local-selector test-pip-selector test-pep test-pip-server test-pip-client test-pip-genpkg
 
 .PHONY: bench
-bench: bench-pep bench-pip-server bench-pip-client bench-pdpserver-pkg bench-plugin
+bench: bench-pep bench-pip-server bench-pip-client bench-pdpserver-pkg 
 
 .PHONY: cover-out
 cover-out:
@@ -266,10 +266,6 @@ test-pip-client:
 test-pip-genpkg:
 	$(AT)/pip/mkpiphandler/pkg && $(GOTESTRACE)
 
-.PHONY: test-plugin
-test-plugin: cover-out
-	$(AT)/contrib/coredns/policy && $(GOTESTRACE)
-
 .PHONY: bench-pep
 bench-pep: build-pdpserver
 	$(AT)/pep && $(GOBENCHALL)
@@ -286,6 +282,3 @@ bench-pip-client:
 bench-pdpserver-pkg:
 	$(AT)/pdpserver/server && $(GOBENCHALL)
 
-.PHONY: bench-plugin
-bench-plugin:
-	$(AT)/contrib/coredns/policy && $(GOBENCHALL)
