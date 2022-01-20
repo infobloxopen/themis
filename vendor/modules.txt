@@ -1,75 +1,18 @@
-# github.com/Shopify/sarama v1.21.0
-## explicit
 # github.com/allegro/bigcache/v2 v2.2.4
 ## explicit
 github.com/allegro/bigcache/v2
 github.com/allegro/bigcache/v2/queue
-# github.com/beorn7/perks v1.0.1
-github.com/beorn7/perks/quantile
-# github.com/bifurcation/mint v0.0.0-20180715133206-93c51c6ce115
-## explicit
-# github.com/caddyserver/caddy v1.0.5
-## explicit
-github.com/caddyserver/caddy
-github.com/caddyserver/caddy/caddyfile
-github.com/caddyserver/caddy/telemetry
-# github.com/cespare/xxhash/v2 v2.1.1
-github.com/cespare/xxhash/v2
-# github.com/coredns/coredns v1.7.1
-## explicit
-github.com/coredns/coredns/core/dnsserver
-github.com/coredns/coredns/coremain
-github.com/coredns/coredns/pb
-github.com/coredns/coredns/plugin
-github.com/coredns/coredns/plugin/dnstap
-github.com/coredns/coredns/plugin/dnstap/dnstapio
-github.com/coredns/coredns/plugin/dnstap/msg
-github.com/coredns/coredns/plugin/dnstap/taprw
-github.com/coredns/coredns/plugin/dnstap/test
-github.com/coredns/coredns/plugin/etcd/msg
-github.com/coredns/coredns/plugin/metrics
-github.com/coredns/coredns/plugin/metrics/vars
-github.com/coredns/coredns/plugin/pkg/dnstest
-github.com/coredns/coredns/plugin/pkg/dnsutil
-github.com/coredns/coredns/plugin/pkg/doh
-github.com/coredns/coredns/plugin/pkg/edns
-github.com/coredns/coredns/plugin/pkg/log
-github.com/coredns/coredns/plugin/pkg/nonwriter
-github.com/coredns/coredns/plugin/pkg/parse
-github.com/coredns/coredns/plugin/pkg/rcode
-github.com/coredns/coredns/plugin/pkg/response
-github.com/coredns/coredns/plugin/pkg/reuseport
-github.com/coredns/coredns/plugin/pkg/trace
-github.com/coredns/coredns/plugin/pkg/transport
-github.com/coredns/coredns/plugin/pkg/uniq
-github.com/coredns/coredns/plugin/test
-github.com/coredns/coredns/request
-# github.com/coreos/bbolt v1.3.2
-## explicit
-# github.com/coreos/etcd v3.3.13+incompatible
-## explicit
-# github.com/coreos/go-systemd v0.0.0-20190212144455-93d5ec2c7f76
-## explicit
-# github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f
-## explicit
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/dnstap/golang-dnstap v0.2.1
-## explicit
-github.com/dnstap/golang-dnstap
 # github.com/evanphx/json-patch v4.9.0+incompatible
 github.com/evanphx/json-patch
-# github.com/farsightsec/golang-framestream v0.3.0
-github.com/farsightsec/golang-framestream
-# github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568
-github.com/flynn/go-shlex
-# github.com/go-acme/lego v2.5.0+incompatible
-## explicit
 # github.com/go-logr/logr v0.2.0
 github.com/go-logr/logr
 # github.com/gogo/protobuf v1.3.1
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
+# github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
+## explicit
 # github.com/golang/protobuf v1.4.3
 ## explicit
 github.com/golang/protobuf/proto
@@ -96,6 +39,7 @@ github.com/googleapis/gnostic/openapiv2
 ## explicit
 github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc
 # github.com/hashicorp/golang-lru v0.5.4
+## explicit
 github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru
 # github.com/infobloxopen/go-trees v0.0.0-20190313150506-2af4e13f9062
@@ -120,17 +64,6 @@ github.com/infobloxopen/go-trees/uintX/strtree64
 github.com/infobloxopen/go-trees/uintX/strtree8
 # github.com/json-iterator/go v1.1.10
 github.com/json-iterator/go
-# github.com/lucas-clemente/aes12 v0.0.0-20171027163421-cd47fb39b79f
-## explicit
-# github.com/lucas-clemente/quic-clients v0.1.0
-## explicit
-# github.com/lucas-clemente/quic-go-certificates v0.0.0-20160823095156-d2f86524cced
-## explicit
-# github.com/matttproud/golang_protobuf_extensions v1.0.1
-github.com/matttproud/golang_protobuf_extensions/pbutil
-# github.com/miekg/dns v1.1.35
-## explicit
-github.com/miekg/dns
 # github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.1
@@ -159,53 +92,29 @@ github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 github.com/pmezard/go-difflib/difflib
-# github.com/prometheus/client_golang v1.7.1
-## explicit
-github.com/prometheus/client_golang/prometheus
-github.com/prometheus/client_golang/prometheus/internal
-github.com/prometheus/client_golang/prometheus/promauto
-github.com/prometheus/client_golang/prometheus/promhttp
-# github.com/prometheus/client_model v0.2.0
-## explicit
-github.com/prometheus/client_model/go
-# github.com/prometheus/common v0.13.0
-github.com/prometheus/common/expfmt
-github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
-github.com/prometheus/common/model
-# github.com/prometheus/procfs v0.1.3
-github.com/prometheus/procfs
-github.com/prometheus/procfs/internal/fs
-github.com/prometheus/procfs/internal/util
 # github.com/sirupsen/logrus v1.7.0
 ## explicit
 github.com/sirupsen/logrus
 # github.com/stretchr/testify v1.5.1
 ## explicit
 github.com/stretchr/testify/assert
-# github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5
-## explicit
 # golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-golang.org/x/crypto/ed25519
-golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/ssh/terminal
 # golang.org/x/net v0.0.0-20200707034311-ab3426394381
-golang.org/x/net/bpf
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
-golang.org/x/net/internal/iana
-golang.org/x/net/internal/socket
 golang.org/x/net/internal/timeseries
-golang.org/x/net/ipv4
-golang.org/x/net/ipv6
 golang.org/x/net/trace
 # golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+## explicit
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
 # golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae
+## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows

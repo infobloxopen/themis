@@ -36,16 +36,16 @@ clean:
 	@$(RM) $(BUILDPATH)
 
 .PHONY: fmt
-fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdp-itests fmt-local-selector fmt-pip-selector fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-pip-server fmt-pip-client fmt-pip-gen fmt-pip-genpkg fmt-pipjcon fmt-pipcli fmt-pipcli-global fmt-pipcli-subflags fmt-pipcli-test fmt-pipcli-perf fmt-plugin fmt-egen
+fmt: fmt-pdp fmt-pdp-yast fmt-pdp-jast fmt-pdp-jcon fmt-pdp-itests fmt-local-selector fmt-pip-selector fmt-pdpctrl-client fmt-papcli fmt-pep fmt-pepcli fmt-pepcli-requests fmt-pepcli-test fmt-pepcli-perf fmt-pdpserver-pkg fmt-pdpserver fmt-pip-server fmt-pip-client fmt-pip-gen fmt-pip-genpkg fmt-pipjcon fmt-pipcli fmt-pipcli-global fmt-pipcli-subflags fmt-pipcli-test fmt-pipcli-perf fmt-egen
 
 .PHONY: build
-build: build-dir build-pepcli build-papcli build-pdpserver build-plugin build-egen build-pip-gen build-pipjcon build-pipcli
+build: build-dir build-pepcli build-papcli build-pdpserver build-egen build-pip-gen build-pipjcon build-pipcli
 
 .PHONY: test
-test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-local-selector test-pip-selector test-pep test-pip-server test-pip-client test-pip-genpkg test-plugin
+test: cover-out test-pdp test-pdp-integration test-pdp-yast test-pdp-jast test-pdp-jcon test-local-selector test-pip-selector test-pep test-pip-server test-pip-client test-pip-genpkg
 
 .PHONY: bench
-bench: bench-pep bench-pip-server bench-pip-client bench-pdpserver-pkg bench-plugin
+bench: bench-pep bench-pip-server bench-pip-client bench-pdpserver-pkg 
 
 .PHONY: cover-out
 cover-out:
@@ -182,12 +182,6 @@ fmt-pipcli-perf:
 	@echo "Checking PIP CLI perf command package format..."
 	@$(AT)/pip/pipcli/perf && $(GOFMTCHECK)
 
-.PHONY: fmt-plugin
-fmt-plugin:
-	@echo "Checking CoreDNS PEP plugin format..."
-	@$(AT)/contrib/coredns/policy && $(GOFMTCHECK)
-	@$(AT)/contrib/coredns/policy/dnstap && $(GOFMTCHECK)
-
 .PHONY: fmt-egen
 fmt-egen:
 	@echo "Checking EGen format..."
@@ -211,10 +205,6 @@ build-papcli: build-dir
 .PHONY: build-pdpserver
 build-pdpserver: build-dir
 	$(AT)/pdpserver && $(GOBUILD) -o $(BUILDPATH)/pdpserver
-
-.PHONY: build-plugin
-build-plugin: build-dir
-	$(AT)/contrib/coredns/policy && $(GOBUILD)
 
 .PHONY: build-egen
 build-egen: build-dir
@@ -276,10 +266,6 @@ test-pip-client:
 test-pip-genpkg:
 	$(AT)/pip/mkpiphandler/pkg && $(GOTESTRACE)
 
-.PHONY: test-plugin
-test-plugin: cover-out
-	$(AT)/contrib/coredns/policy && $(GOTESTRACE)
-
 .PHONY: bench-pep
 bench-pep: build-pdpserver
 	$(AT)/pep && $(GOBENCHALL)
@@ -296,6 +282,3 @@ bench-pip-client:
 bench-pdpserver-pkg:
 	$(AT)/pdpserver/server && $(GOBENCHALL)
 
-.PHONY: bench-plugin
-bench-plugin:
-	$(AT)/contrib/coredns/policy && $(GOBENCHALL)
