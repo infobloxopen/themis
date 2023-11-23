@@ -88,6 +88,11 @@ const (
 	reqNetworkCIDRSize      = 1
 )
 
+type AttributeKeyValuePair struct {
+	ID    string
+	Value AttributeValue
+}
+
 // MarshalRequestAssignments marshals list of assignments to sequence of bytes.
 // It requires each assignment to have immediate value as an expression (which
 // can be created with MakeStringValue or similar functions).
@@ -521,6 +526,25 @@ func putRequestAttributeValue(b []byte, value AttributeValue) (int, error) {
 	}
 
 	return 0, newRequestAttributeMarshallingNotImplementedError(t)
+}
+
+func getAllRequestAttributes(b []byte, offset, count int) ([]AttributeKeyValuePair, error) {
+	attributeKeyValuePairs := make([]AttributeKeyValuePair, 0)
+
+	for i := 0; i < count; i++ {
+		ID, v, n, err := getRequestAttribute(b[offset:])
+		if err != nil {
+			return nil, bindErrorf(err, "%d", i+1)
+		}
+
+		attributeKeyValuePairs = append(attributeKeyValuePairs, AttributeKeyValuePair{
+			ID:    ID,
+			Value: v,
+		})
+
+		offset += n
+	}
+	return attributeKeyValuePairs, nil
 }
 
 func getRequestAttribute(b []byte) (string, AttributeValue, int, error) {

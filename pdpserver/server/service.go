@@ -11,8 +11,8 @@ import (
 	pb "github.com/infobloxopen/themis/pdp-service"
 )
 
-func (s *Server) newContext(c *pdp.LocalContentStorage, in []byte) (*pdp.Context, error) {
-	ctx, err := pdp.NewContextFromBytes(c, in)
+func (s *Server) newContext(c *pdp.LocalContentStorage, in []byte, currentContext *pdp.Context) (*pdp.Context, error) {
+	ctx, err := pdp.NewContextFromBytes(c, in, currentContext)
 	if err != nil {
 		return nil, newContextCreationError(err)
 	}
@@ -52,7 +52,7 @@ func (s *Server) rawValidate(p *pdp.PolicyStorage, c *pdp.LocalContentStorage, i
 		return makeFailureResponse(newMissingPolicyError())
 	}
 
-	ctx, err := s.newContext(c, in)
+	ctx, err := s.newContext(c, in, nil)
 	if err != nil {
 		return makeFailureResponse(err)
 	}
@@ -87,7 +87,7 @@ func (s *Server) rawValidateWithAllocator(p *pdp.PolicyStorage, c *pdp.LocalCont
 		return makeFailureResponseWithAllocator(f, newMissingPolicyError())
 	}
 
-	ctx, err := s.newContext(c, in)
+	ctx, err := s.newContext(c, in, nil)
 	if err != nil {
 		return makeFailureResponseWithAllocator(f, err)
 	}
@@ -122,34 +122,48 @@ func (s *Server) rawValidateToBuffer(p *pdp.PolicyStorage, c *pdp.LocalContentSt
 		return makeFailureResponseWithBuffer(out, newMissingPolicyError())
 	}
 
-	ctx, err := s.newContext(c, in)
-	if err != nil {
-		return makeFailureResponseWithBuffer(out, err)
+	var currentContext *pdp.Context
+
+	for {
+		ctx, err := s.newContext(c, in, currentContext)
+		if err != nil {
+			return makeFailureResponseWithBuffer(out, err)
+		}
+
+		if ctx == nil {
+			// No more contexts to fill
+			break
+		}
+
+		// Set the current context for the next iteration
+		currentContext = ctx
+
+		if s.opts.logger.Level >= log.DebugLevel {
+			s.opts.logger.WithField("context", ctx).Debug("Request context")
+		}
+
+		r := p.Root().Calculate(ctx)
+
+		if s.opts.logger.Level >= log.DebugLevel {
+			s.opts.logger.WithFields(log.Fields{
+				"effect": pdp.EffectNameFromEnum(r.Effect),
+				"reason": r.Status,
+				"obligations": obligations{
+					ctx: ctx,
+					o:   r.Obligations,
+				},
+			}).Debug("Response")
+		}
+
+		n, err := r.MarshalToBuffer(out, ctx)
+		if err != nil {
+			panic(err)
+		}
+
+		// Adjust the output buffer to append the new result
+		out = out[:n]
 	}
-
-	if s.opts.logger.Level >= log.DebugLevel {
-		s.opts.logger.WithField("context", ctx).Debug("Request context")
-	}
-
-	r := p.Root().Calculate(ctx)
-
-	if s.opts.logger.Level >= log.DebugLevel {
-		s.opts.logger.WithFields(log.Fields{
-			"effect": pdp.EffectNameFromEnum(r.Effect),
-			"reason": r.Status,
-			"obligations": obligations{
-				ctx: ctx,
-				o:   r.Obligations,
-			},
-		}).Debug("Response")
-	}
-
-	n, err := r.MarshalToBuffer(out, ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	return out[:n]
+	return out
 }
 
 // Validate is a server handler for gRPC call

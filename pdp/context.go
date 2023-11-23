@@ -105,7 +105,7 @@ func NewContext(c *LocalContentStorage, count int, f func(i int) (string, Attrib
 // Requirements for the storage are the same as NewContext function has.
 // The request umarshaled to sequence of attributes as descirbed by
 // (Un)MarshalRequest* functions help.
-func NewContextFromBytes(c *LocalContentStorage, b []byte) (*Context, error) {
+func NewContextFromBytes(c *LocalContentStorage, b []byte, currentContext *Context) (*Context, error) {
 	off, err := checkRequestVersion(b)
 	if err != nil {
 		return nil, err
@@ -117,21 +117,76 @@ func NewContextFromBytes(c *LocalContentStorage, b []byte) (*Context, error) {
 	}
 	off += n
 
-	ctx := &Context{a: make(map[string]interface{}, count), c: c}
-	for i := 0; i < count; i++ {
-		ID, v, n, err := getRequestAttribute(b[off:])
-		if err != nil {
-			return nil, bindErrorf(err, "%d", i+1)
-		}
-		off += n
+	var previousContext *Context
 
-		err = ctx.putAttribute(ID, v)
-		if err != nil {
-			return nil, bindErrorf(err, "%d", i+1)
+	// Create a new context when we call function for the first time in for loop
+	if currentContext == nil {
+		currentContext = &Context{a: make(map[string]interface{}, count), c: c}
+	} else {
+		// Keep track of old context while we fill in a new context for the current iteration
+		previousContext = currentContext
+		currentContext = &Context{a: make(map[string]interface{}, count), c: c}
+	}
+
+	attributeKeyValPairs, err := getAllRequestAttributes(b, off, count)
+	if err != nil {
+		return nil, err
+	}
+
+	var newCnameOrAddrFound bool
+	var currCtxContainsAddr bool
+	var currCtxContainsCName bool
+
+	for _, pai := range attributeKeyValPairs {
+		id := pai.ID
+		typ := pai.Value.GetResultType()
+
+		// Non-CNAME, non-Address types need to be in every context
+		if typ != TypeAddress || typ != TypeDomain {
+			if err := currentContext.putAttribute(id, pai.Value); err != nil {
+				return nil, err
+			}
+		}
+
+		if typ == TypeAddress {
+			// Check if Address was added to previous context and if current context already has an address
+			var addrExists bool
+			if previousContext != nil {
+				_, addrExists = previousContext.a[id]
+			}
+
+			if !addrExists && !currCtxContainsAddr {
+				if err := currentContext.putAttribute(id, pai.Value); err != nil {
+					return nil, err
+				}
+				currCtxContainsAddr = true
+				newCnameOrAddrFound = true
+			}
+		}
+
+		if typ == TypeDomain {
+			// Check if CNAME was added to previous context and if current context already has an CNAME
+			var cnameExists bool
+			if previousContext != nil {
+				_, cnameExists = previousContext.a[id]
+			}
+
+			if !cnameExists && !currCtxContainsCName {
+				if err := currentContext.putAttribute(id, pai.Value); err != nil {
+					return nil, err
+				}
+				currCtxContainsCName = true
+				newCnameOrAddrFound = true
+			}
 		}
 	}
 
-	return ctx, nil
+	// If no new CNAME or Address was added to the current context, return nil
+	if !newCnameOrAddrFound {
+		return nil, nil
+	}
+
+	return currentContext, nil
 }
 
 // String implements Stringer interface.
